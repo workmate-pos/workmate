@@ -1,0 +1,23 @@
+{
+  "name": "teifi-shopify-app-template",
+  "version": "1.0.0",
+  "exports": "./dist/index.js",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "dev": "shopify app dev",
+    "deploy": "shopify app deploy"
+  },
+  "dependencies": {
+    "@shopify/app": "3.49.7",
+    "@shopify/cli": "3.49.7"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.7.5",
+    "eslint": "^8.51.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "prettier": "^3.0.3"
+  },
+  "author": "frankheijden"
+}

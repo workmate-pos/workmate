@@ -1,0 +1,38 @@
+{
+  "name": "teifi-shopify-app-template-frontend",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite"
+  },
+  "engines": {
+    "node": ">= 18.15"
+  },
+  "stylelint": {
+    "extends": "@shopify/stylelint-polaris"
+  },
+  "dependencies": {
+    "@apollo/client": "^3.8.1",
+    "@shopify/app-bridge": "^3.7.9",
+    "@shopify/app-bridge-react": "^3.7.9",
+    "@shopify/polaris": "^11.11.0",
+    "@shopify/stylelint-polaris": "^13.0.8",
+    "@teifi-digital/shopify-app-react": "^0.0.9",
+    "@vitejs/plugin-react": "4.0.4",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-query": "^3.39.3",
+    "react-router-dom": "^6.15.0",
+    "react-string-replace": "^1.1.1",
+    "vite": "^4.4.9"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.7.2",
+    "@typescript-eslint/eslint-plugin": "^6.4.0",
+    "history": "^5.3.0",
+    "jsdom": "^22.1.0",
+    "prettier": "^3.0.2",
+    "vi-fetch": "^0.8.0"
+  }
+}
