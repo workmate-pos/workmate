@@ -1,0 +1,13 @@
+{
+  "name": "work-orders-pos",
+  "private": true,
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@shopify/retail-ui-extensions-react": "^1.4.0",
+    "react": "^17.0.2"
+  },
+  "overrides": {
+    "@types/react": "17.0.30"
+  }
+}
