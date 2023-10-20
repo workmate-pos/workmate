@@ -19,8 +19,9 @@ Then, your file should look like this:
 ```
 Unfortunately, due to how npmrc works, you will need to symlink the file to the subprojects:
 ```bash
-ln -s .npmrc web/.npmrc
-ln -s .npmrc web/frontend/.npmrc
+cd web && ln -s ../.npmrc .npmrc
+cd frontend && ln -s ../../.npmrc .npmrc
+cd ../..
 ```
 
 Then, you can install the dependencies for all subprojects:
