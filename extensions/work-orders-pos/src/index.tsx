@@ -1,12 +1,17 @@
-import React from 'react';
-import {Tile, Text, Screen, Navigator, render, useExtensionApi} from '@shopify/retail-ui-extensions-react';
+import { Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { WorkOrder } from './screens/WorkOrder';
+import { ItemConfig } from './screens/popups/ItemConfig';
+import { EmployeeSelector } from './screens/popups/EmployeeSelector';
+import { ItemSelector } from './screens/popups/ItemSelector';
+import { Error } from './screens/Error';
+import { Entry } from './screens/Entry';
+import { WorkOrderSelector } from './screens/popups/WorkOrderSelector';
 
 const SmartGridTile = () => {
-  const api = useExtensionApi();
+  const api = useExtensionApi<'pos.home.tile.render'>();
   return (
     <Tile
-      title="My app"
-      subtitle="SmartGrid Extension"
+      title="Work Order"
       onPress={() => {
         api.smartGrid.presentModal();
       }}
@@ -18,12 +23,16 @@ const SmartGridTile = () => {
 const SmartGridModal = () => {
   return (
     <Navigator>
-      <Screen name="HelloWorld" title="Hello World!">
-        <Text>Welcome to the extension!</Text>
-      </Screen>
+      <Entry />
+      <WorkOrder />
+      <ItemConfig />
+      <EmployeeSelector />
+      <ItemSelector />
+      <WorkOrderSelector />
+      <Error />
     </Navigator>
   );
-}
+};
 
 render('pos.home.tile.render', () => <SmartGridTile />);
 render('pos.home.modal.render', () => <SmartGridModal />);
