@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string"
+    },
+    "customer": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "price": {
+      "type": "object",
+      "properties": {
+        "deposit": {
+          "type": "number"
+        },
+        "tax": {
+          "type": "number"
+        },
+        "discount": {
+          "type": "number"
+        },
+        "shipping": {
+          "type": "number"
+        }
+      },
+      "required": ["deposit", "tax", "discount", "shipping"],
+      "additionalProperties": false
+    },
+    "dueDate": {
+      "type": "string"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number"
+          },
+          "unitPrice": {
+            "type": "number"
+          }
+        },
+        "required": ["productId", "quantity", "unitPrice"],
+        "additionalProperties": false
+      }
+    },
+    "employeeAssignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string"
+          }
+        },
+        "required": ["employeeId"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["status", "customer", "price", "dueDate", "items", "employeeAssignments"],
+  "additionalProperties": false
+}

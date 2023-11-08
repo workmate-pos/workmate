@@ -20,7 +20,11 @@ export default function Routes({ pages }) {
     <Route key={path} path={path} element={<Component />} />
   ));
 
-  const NotFound = routes.find(({ path }) => path === '/404').component;
+  const NotFound = routes.find(({ path }) => path === '/404')?.component;
+
+  if (!NotFound) {
+    throw new Error('No 404 page found. Create a /pages/404.jsx file to resolve this.');
+  }
 
   return (
     <ReactRouterRoutes>

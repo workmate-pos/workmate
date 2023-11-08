@@ -6,6 +6,13 @@ import { ItemSelector } from './screens/popups/ItemSelector';
 import { Error } from './screens/Error';
 import { Entry } from './screens/Entry';
 import { WorkOrderSelector } from './screens/popups/WorkOrderSelector';
+import { ReactQueryProvider } from './providers/ReactQueryProvider';
+import { SettingsProvider } from './providers/SettingsProvider';
+import { StatusSelector } from './screens/popups/StatusSelector';
+import { CustomerSelector } from './screens/popups/CustomerSelector';
+import { DepositSelector } from './screens/popups/DepositSelector';
+import { DiscountSelector } from './screens/popups/DiscountSelector';
+import { ShippingConfig } from './screens/popups/ShippingConfig';
 
 const SmartGridTile = () => {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -22,15 +29,25 @@ const SmartGridTile = () => {
 
 const SmartGridModal = () => {
   return (
-    <Navigator>
-      <Entry />
-      <WorkOrder />
-      <ItemConfig />
-      <EmployeeSelector />
-      <ItemSelector />
-      <WorkOrderSelector />
-      <Error />
-    </Navigator>
+    <ReactQueryProvider>
+      <SettingsProvider>
+        <Navigator>
+          <Entry />
+          <Error />
+          <WorkOrder />
+
+          <CustomerSelector />
+          <DepositSelector />
+          <DiscountSelector />
+          <EmployeeSelector />
+          <ItemConfig />
+          <ItemSelector />
+          <ShippingConfig />
+          <StatusSelector />
+          <WorkOrderSelector />
+        </Navigator>
+      </SettingsProvider>
+    </ReactQueryProvider>
   );
 };
 

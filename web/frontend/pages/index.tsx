@@ -1,11 +1,11 @@
-import { Card, Page, Layout, HorizontalStack, Text, Spinner, VerticalStack, Frame } from '@shopify/polaris';
+import { Card, Page, Layout, InlineStack, Text, Spinner, BlockStack, Frame } from '@shopify/polaris';
 import { TitleBar } from '@shopify/app-bridge-react';
 import React, { useEffect, useState } from 'react';
 import { AppInfo } from '../../controllers/api/app-info';
 import { useAuthenticatedFetch, useToast } from '@teifi-digital/shopify-app-react';
 
 export default function HomePage() {
-  const [appInfo, setAppInfo] = useState<AppInfo>(null);
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch(setToastAction);
 
@@ -19,25 +19,25 @@ export default function HomePage() {
     appInfo == null ? (
       <Spinner accessibilityLabel="AppInfo is loading" size="small" />
     ) : (
-      <VerticalStack>
+      <BlockStack>
         <Text variant="headingMd" as="h1">
           {appInfo.name} is running 🎉
         </Text>
-        <HorizontalStack gap="1" blockAlign="center">
+        <InlineStack gap="100" blockAlign="center">
           <Text variant="headingSm" as="span">
             App Version:
           </Text>
           <Text variant="bodySm" as="span">
             {appInfo.version}
           </Text>
-        </HorizontalStack>
-      </VerticalStack>
+        </InlineStack>
+      </BlockStack>
     );
 
   return (
     <Frame>
       <Page narrowWidth>
-        <TitleBar title={appInfo?.name ?? ''} primaryAction={null} />
+        <TitleBar title={appInfo?.name ?? ''} />
         <Layout>
           <Layout.Section>
             <Card>{appInfoMarkup}</Card>

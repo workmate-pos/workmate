@@ -4,9 +4,15 @@ import { named } from '@teifi-digital/shopify-app-express/utils/query-utils.js';
 import { camelCase, camelCaseObj } from '@teifi-digital/shopify-app-express/utils/string-utils.js';
 import { SessionStorage } from '@shopify/shopify-app-session-storage';
 import { Session } from '@shopify/shopify-api';
+import type { ShopSettings } from '../schemas/generated/shop-settings.js';
+import { getDefaultShopSetting, getShopSettingKeys } from './settings/default-settings.js';
 
 export const TableNames = {
   ShopifySessions: 'shopify_sessions',
+  Settings: 'settings',
+  WorkOrders: 'work_orders',
+  WorkOrderAssignments: 'work_order_assignments',
+  WorkOrderItems: 'work_order_items',
 } as const;
 
 export const Tables = {
@@ -20,6 +26,45 @@ export const Tables = {
       ['expires', 'integer'],
       ['onlineAccessInfo', 'text'],
       ['accessToken', 'text'],
+    ],
+    conflictKeys: ['id'],
+  },
+  Settings: {
+    columnDefinitions: [
+      ['shop', 'text NOT NULL'],
+      ['key', 'text NOT NULL'],
+      ['value', 'text'],
+    ],
+    extraDefinitions: ['PRIMARY KEY (shop, key)'],
+    conflictKeys: ['shop', 'key'],
+  },
+  WorkOrders: {
+    columnDefinitions: [
+      ['id', 'text NOT NULL PRIMARY KEY'],
+      ['status', 'text NOT NULL'],
+      ['customer_id', 'text NOT NULL'],
+      ['deposit_amount', 'integer NOT NULL'],
+      ['tax_amount', 'integer NOT NULL'],
+      ['discount_amount', 'integer NOT NULL'],
+      ['due_date', 'date NOT NULL'],
+    ],
+    conflictKeys: ['id'],
+  },
+  WorkOrderAssignments: {
+    columnDefinitions: [
+      ['id', 'serial PRIMARY KEY'],
+      ['work_order_id', 'text NOT NULL'],
+      ['employee_id', 'text NOT NULL'],
+    ],
+    conflictKeys: ['id'],
+  },
+  WorkOrderItems: {
+    columnDefinitions: [
+      ['id', 'serial PRIMARY KEY'],
+      ['work_order_id', 'text NOT NULL'],
+      ['product_id', 'text NOT NULL'],
+      ['unit_price', 'integer NOT NULL'],
+      ['quantity', 'integer NOT NULL'],
     ],
     conflictKeys: ['id'],
   },
@@ -138,6 +183,49 @@ export class PostgresDatabase implements SessionStorage {
     return await this.pool
       .query(`SELECT * FROM shopify_sessions WHERE isonline = false AND shop = $1;`, [shop])
       .then(({ rows }) => this.databaseRowToSession(rows?.[0]));
+  }
+
+  public async updateSetting<const K extends keyof ShopSettings>(
+    shop: string,
+    key: K,
+    value: ShopSettings[K],
+  ): Promise<void> {
+    await this.ready;
+    await this.upsert('Settings', {
+      shop,
+      key,
+      value: JSON.stringify(value),
+    });
+  }
+
+  public async findSettingsByShop(shop: string): Promise<ShopSettings> {
+    await this.ready;
+    const { rows } = await this.pool.query(
+      format(
+        `
+          SELECT key, value FROM %I
+          WHERE shop = $1;
+        `,
+        TableNames.Settings,
+      ),
+      [shop],
+    );
+
+    const shopSettings = {};
+
+    for (const { key, value } of rows) {
+      shopSettings[key] = JSON.parse(value);
+    }
+
+    for (const key of getShopSettingKeys()) {
+      if (key in shopSettings) continue;
+
+      const value = getDefaultShopSetting(key);
+      await this.updateSetting(shop, key, value);
+      shopSettings[key] = value;
+    }
+
+    return shopSettings as ShopSettings;
   }
 
   private getKeys<K extends keyof typeof TableNames>(
@@ -301,4 +389,24 @@ END$$;
   public getPool(): PG.Pool {
     return this.pool;
   }
+
+  // private dbTxStorage = new AsyncLocalStorage<{ client: PG.PoolClient }>();
+  //
+  // public async transaction<T>(tx: () => Promise<T>): Promise<T> {
+  //   const client = await this.pool.connect();
+  //   await client.query('BEGIN');
+  //
+  //   return this.dbTxStorage.run({ client }, async () => {
+  //     try {
+  //       const result = await tx();
+  //       await client.query('COMMIT');
+  //       return result;
+  //     } catch (e) {
+  //       await client.query('ROLLBACK');
+  //       throw e;
+  //     } finally {
+  //       client.release();
+  //     }
+  //   });
+  // }
 }

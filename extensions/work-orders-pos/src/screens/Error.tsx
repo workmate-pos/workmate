@@ -1,7 +1,7 @@
 import { Screen, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 
-export const Error = () => {
+export function Error() {
   const [error, setError] = useState('');
 
   return (
@@ -19,4 +19,4 @@ export const Error = () => {
       </Stack>
     </Screen>
   );
-};
+}

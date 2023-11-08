@@ -1,13 +1,9 @@
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import type { WorkOrderItem } from '../WorkOrder';
 import { useScreen } from '../../hooks/use-screen';
+import type { WorkOrderItem } from '../WorkOrder';
 
-export type ItemConfigParams = {
-  item: WorkOrderItem;
-};
-
-export const ItemConfig = () => {
+export function ItemConfig() {
   const [item, setItem] = useState<WorkOrderItem | null>(null);
   const updateItem = <K extends keyof WorkOrderItem>(key: K, value: WorkOrderItem[K]) => {
     setItem(item => (item ? { ...item, [key]: value } : null));
@@ -16,17 +12,17 @@ export const ItemConfig = () => {
   const { Screen, closePopup } = useScreen('ItemConfig', setItem);
 
   return (
-    <Screen title={item?.title ?? 'Item'} isLoading={!item} presentation={{ sheet: true }}>
+    <Screen title={item?.name ?? 'Item'} isLoading={!item} presentation={{ sheet: true }}>
       {item && (
         <ScrollView>
           <Stack direction="vertical" spacing={5}>
             <Stack direction="vertical">
-              <Text variant="headingLarge">{item.title}</Text>
+              <Text variant="headingLarge">{item.name}</Text>
               <Text variant="body" color="TextSubdued">
                 {item.sku}
               </Text>
               <Text variant="body" color="TextSubdued">
-                ${item.price}
+                CA$ {item.unitPrice}
               </Text>
             </Stack>
             <Stack direction="vertical" spacing={2}>
@@ -60,4 +56,4 @@ export const ItemConfig = () => {
       )}
     </Screen>
   );
-};
+}

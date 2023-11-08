@@ -10,10 +10,10 @@ import { ScreenInputOutput } from '../screens/routes';
  *
  * The latter is especially important for the reusability of pop-up screens.
  */
-export const useScreen = <const ScreenName extends ScreenNames>(
+export function useScreen<const ScreenName extends ScreenNames>(
   screenName: ScreenName,
   onInput?: (input: ScreenInputOutput[ScreenName][0]) => void,
-) => {
+) {
   const [params, setParams] = useState<Params | null>(null);
 
   useEffect(() => {
@@ -24,10 +24,7 @@ export const useScreen = <const ScreenName extends ScreenNames>(
   /**
    * A managed navigation function and event handler that returns the popup result.
    */
-  const usePopup = <DestinationScreenName extends PopupScreenNames>(
-    destinationScreenName: DestinationScreenName,
-    onResult?: (result: ScreenInputOutput[DestinationScreenName][1]) => void,
-  ) => {
+  const usePopup: UsePopupFn = (destinationScreenName, onResult) => {
     const api = useExtensionApi<'pos.home.modal.render'>();
 
     // using an id ensures we can use the same pop-up screen for multiple purposes
@@ -38,13 +35,7 @@ export const useScreen = <const ScreenName extends ScreenNames>(
       onResult?.(params.result);
     }, [params]);
 
-    type PopupNavigateFn = <const DestinationScreenName extends PopupScreenNames>(
-      ...args: ScreenInputOutput[DestinationScreenName][0] extends undefined
-        ? []
-        : [input: ScreenInputOutput[DestinationScreenName][0]]
-    ) => void;
-
-    const navigate: PopupNavigateFn = (input = undefined) => {
+    const navigate: PopupNavigateFn<typeof destinationScreenName> = (input = undefined) => {
       api.navigation.navigate(destinationScreenName, {
         returnTo: [...(params?.returnTo ?? []), screenName],
         id,
@@ -68,25 +59,21 @@ export const useScreen = <const ScreenName extends ScreenNames>(
       return;
     }
 
-    if (!params.returnTo.length) {
+    if (!params.returnTo!.length) {
       api.navigation.navigate('Error', {
         error: 'No returnTo',
       });
       return;
     }
 
-    api.navigation.navigate(params.returnTo.at(-1), {
+    api.navigation.navigate(params.returnTo!.at(-1)!, {
       id: params.id,
       result,
-      returnTo: params.returnTo.slice(0, -1),
+      returnTo: params.returnTo!.slice(0, -1),
     } satisfies Params);
   };
 
-  type NavigateFn = <const DestinationScreenName extends NormalScreenNames>(
-    ...args: ScreenInputOutput[DestinationScreenName][0] extends undefined
-      ? [destinationScreenName: DestinationScreenName]
-      : [destinationScreenName: DestinationScreenName, input: ScreenInputOutput[DestinationScreenName][0]]
-  ) => void;
+  const dismiss = () => api.navigation.dismiss();
 
   /**
    * Anonymous navigation function.
@@ -96,6 +83,7 @@ export const useScreen = <const ScreenName extends ScreenNames>(
     api.navigation.navigate(destinationScreenName, { input } satisfies Params);
   };
 
+  // TODO: context that provides usePopup and Navigate? No more passing usePopup and navigate to children anymore this way
   const WrappedScreen = useCallback(
     (props: Omit<ScreenProps, 'name' | 'onReceiveParams'>) => (
       <Screen {...props} name={screenName} onReceiveParams={setParams} />
@@ -107,9 +95,10 @@ export const useScreen = <const ScreenName extends ScreenNames>(
     usePopup,
     closePopup,
     navigate,
+    dismiss,
     Screen: WrappedScreen,
   };
-};
+}
 
 type Params = {
   returnTo?: string[];
@@ -121,3 +110,22 @@ type Params = {
 type ScreenNames = keyof ScreenInputOutput;
 type PopupScreenNames = { [K in ScreenNames]: ScreenInputOutput[K][1] extends undefined ? never : K }[ScreenNames];
 type NormalScreenNames = { [K in ScreenNames]: ScreenInputOutput[K][1] extends undefined ? K : never }[ScreenNames];
+
+type PopupNavigateFn<DestinationScreenName extends PopupScreenNames> = (
+  ...args: ScreenInputOutput[DestinationScreenName][0] extends undefined
+    ? []
+    : [input: ScreenInputOutput[DestinationScreenName][0]]
+) => void;
+
+export type NavigateFn = <const DestinationScreenName extends NormalScreenNames>(
+  ...args: ScreenInputOutput[DestinationScreenName][0] extends undefined
+    ? [destinationScreenName: DestinationScreenName]
+    : [destinationScreenName: DestinationScreenName, input: ScreenInputOutput[DestinationScreenName][0]]
+) => void;
+
+export type UsePopupFn = <const DestinationScreenName extends PopupScreenNames>(
+  destinationScreenName: DestinationScreenName,
+  onResult?: (result: ScreenInputOutput[DestinationScreenName][1]) => void,
+) => {
+  navigate: PopupNavigateFn<DestinationScreenName>;
+};

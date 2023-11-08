@@ -1,7 +1,7 @@
 import { useScreen } from '../hooks/use-screen';
 import { Button, Stack } from '@shopify/retail-ui-extensions-react';
 
-export const Entry = () => {
+export function Entry() {
   const { Screen, navigate } = useScreen('Entry');
 
   return (
@@ -16,4 +16,4 @@ export const Entry = () => {
       </Stack>
     </Screen>
   );
-};
+}

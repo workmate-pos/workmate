@@ -1,0 +1,171 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "idFormat": {
+      "type": "string"
+    },
+    "statuses": {
+      "type": "array",
+      "items": {
+        "title": "status",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "bgHex": {
+            "type": "string"
+          },
+          "textHex": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "bgHex", "textHex"],
+        "additionalProperties": false
+      }
+    },
+    "discountShortcuts": {
+      "type": "array",
+      "items": {
+        "title": "discount-shortcut",
+        "$ref": "#/definitions/number-unit-object"
+      }
+    },
+    "depositShortcuts": {
+      "type": "array",
+      "items": {
+        "title": "deposit-shortcut",
+        "$ref": "#/definitions/number-unit-object"
+      }
+    },
+    "discountRules": {
+      "title": "discount-rules",
+      "oneOf": [
+        { "$ref": "#/definitions/discount-rule-only-allow-shortcuts" },
+        { "$ref": "#/definitions/discount-rule-do-not-allow-shortcuts" }
+      ]
+    },
+    "depositRules": {
+      "title": "deposit-rules",
+      "oneOf": [
+        { "$ref": "#/definitions/deposit-rule-only-allow-shortcuts" },
+        { "$ref": "#/definitions/deposit-rule-do-not-allow-shortcuts" }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "unit": {
+      "enum": ["percentage", "currency"]
+    },
+    "number-unit-object": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "$ref": "#/definitions/unit" }
+      },
+      "required": ["value", "unit"],
+      "additionalProperties": false
+    },
+    "percentage-range": {
+      "type": "array",
+      "items": [
+        { "type": "number", "minimum": 0, "maximum": 100 },
+        { "type": "number", "minimum": 0, "maximum": 100 }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "currency-range": {
+      "type": "array",
+      "items": [
+        { "type": "number", "minimum": 0 },
+        { "type": "number", "minimum": 0 }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "discount-rule-only-allow-shortcuts": {
+      "type": "object",
+      "properties": {
+        "onlyAllowShortcuts": {
+          "const": true
+        },
+        "allowedPercentageRange": {
+          "type": "null"
+        },
+        "allowedCurrencyRange": {
+          "type": "null"
+        }
+      },
+      "required": ["onlyAllowShortcuts", "allowedPercentageRange", "allowedCurrencyRange"],
+      "additionalProperties": false
+    },
+    "deposit-rule-only-allow-shortcuts": {
+      "type": "object",
+      "properties": {
+        "onlyAllowShortcuts": {
+          "const": true
+        },
+        "onlyAllowHighestAbsoluteShortcut": {
+          "type": "boolean",
+          "description": "If enabled, only the deposit shortcut that would result in the highest currency amount will be allowed.\n\nExamples with deposit shortcuts of 40% and 100$:\n- an order of 150$ would have a deposit of 100$\n- an order of 1000$ would have a deposit of 400$."
+        },
+        "allowedPercentageRange": {
+          "type": "null"
+        },
+        "allowedCurrencyRange": {
+          "type": "null"
+        }
+      },
+      "required": [
+        "onlyAllowShortcuts",
+        "onlyAllowHighestAbsoluteShortcut",
+        "allowedPercentageRange",
+        "allowedCurrencyRange"
+      ],
+      "additionalProperties": false
+    },
+    "deposit-rule-do-not-allow-shortcuts": {
+      "type": "object",
+      "properties": {
+        "onlyAllowShortcuts": {
+          "const": false
+        },
+        "onlyAllowHighestAbsoluteShortcut": {
+          "const": false
+        },
+        "allowedPercentageRange": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/percentage-range" }]
+        },
+        "allowedCurrencyRange": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/currency-range" }]
+        }
+      },
+      "required": [
+        "onlyAllowShortcuts",
+        "onlyAllowHighestAbsoluteShortcut",
+        "allowedPercentageRange",
+        "allowedCurrencyRange"
+      ],
+      "additionalProperties": false
+    },
+    "discount-rule-do-not-allow-shortcuts": {
+      "type": "object",
+      "properties": {
+        "onlyAllowShortcuts": {
+          "const": false
+        },
+        "allowedPercentageRange": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/percentage-range" }]
+        },
+        "allowedCurrencyRange": {
+          "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/currency-range" }]
+        }
+      },
+      "required": ["onlyAllowShortcuts", "allowedPercentageRange", "allowedCurrencyRange"],
+      "additionalProperties": false
+    }
+  }
+}

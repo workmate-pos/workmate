@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { useScreen } from '../../hooks/use-screen';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref';
 
-export const ItemSelector = () => {
+export function ItemSelector() {
   const { Screen, closePopup } = useScreen('ItemSelector');
   const api = useExtensionApi<'pos.home.modal.render'>();
 
@@ -27,14 +27,14 @@ export const ItemSelector = () => {
       setRows(
         products.items.flatMap(product =>
           product.variants.map(variant => ({
-            id: `${variant.id}`,
+            id: String(variant.id),
             onPress: () => {
               closeRef.current({
-                id: variant.id,
-                title: variant.displayName,
-                sku: variant.sku,
+                productId: String(variant.id),
+                name: variant.displayName,
+                sku: variant.sku ?? '',
                 quantity: 1,
-                price: Number(variant.price),
+                unitPrice: Number(variant.price),
               });
             },
             leftSide: {
@@ -53,7 +53,7 @@ export const ItemSelector = () => {
     fetchProducts();
   }, []);
 
-  const getSubtitleText = (subtitle: ListRowLeftSide['subtitle'][0]): string => {
+  const getSubtitleText = (subtitle: NonNullable<ListRowLeftSide['subtitle']>[0]): string => {
     if (typeof subtitle === 'string') {
       return subtitle;
     }
@@ -78,4 +78,4 @@ export const ItemSelector = () => {
       </ScrollView>
     </Screen>
   );
-};
+}
