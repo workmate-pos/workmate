@@ -1,87 +1,55 @@
-import { db } from '../../db.js';
 import { Controller } from '@teifi-digital/shopify-app-express/controllers';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
-import { validateCreateWorkOrder } from '../../services/work-orders.js';
-import format from 'pg-format';
-import { TableNames } from '../../services/postgres.js';
-import { camelCaseObj } from '@teifi-digital/shopify-app-express/utils/string-utils.js';
+import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
+import {
+  getPaginatedWorkOrders,
+  getWorkOrder,
+  upsertWorkOrder,
+  validateCreateWorkOrder,
+} from '../../services/work-order.js';
+import { Session } from '@shopify/shopify-api';
 
-async function createWorkOrder(req, res) {
-  const session = res.locals.shopify.session;
+async function createWorkOrder(req: any, res: any) {
+  const session: Session = res.locals.shopify.session;
   const createWorkOrder: CreateWorkOrder = req.body;
 
-  console.log('got req', createWorkOrder);
+  const validationResult = await validateCreateWorkOrder(session.shop, createWorkOrder);
 
-  const settings = await db.findSettingsByShop(session.shop);
-  const validationErrors = validateCreateWorkOrder(createWorkOrder, settings);
-
-  if (validationErrors) {
-    return res.status(400).json({ errors: validationErrors });
+  if (validationResult.type === 'error') {
+    return res.status(400).json({ errors: validationResult.errors });
   }
 
-  // TODO: create a sequence for every shop, and use it as {id}
-  const id = settings.idFormat.replace('{id}', Math.round(Math.random() * 1000).toString());
+  await upsertWorkOrder(session.shop, validationResult.validated);
 
-  const workOrder = await db.upsert(
-    'WorkOrders',
-    {
-      id: id,
-      status: createWorkOrder.status,
-      customerId: createWorkOrder.customer.id,
-      depositAmount: Math.ceil(100 * createWorkOrder.price.deposit),
-      taxAmount: Math.ceil(100 * createWorkOrder.price.tax),
-      discountAmount: Math.ceil(100 * createWorkOrder.price.discount),
-      dueDate: new Date(createWorkOrder.dueDate),
-    },
-    [],
-    ['id'],
-  );
+  return res.json({ success: true });
+}
 
-  for (const item of createWorkOrder.items) {
-    await db.store('WorkOrderItems', {
-      workOrderId: workOrder.id,
-      productId: item.productId,
-      quantity: item.quantity,
-      unitPrice: Math.ceil(100 * item.unitPrice),
-    });
-  }
+async function fetchWorkOrderInfoPage(req: any, res: any) {
+  const session: Session = res.locals.shopify.session;
+  const paginationOptions: WorkOrderPaginationOptions = req.query;
 
-  for (const assignment of createWorkOrder.employeeAssignments) {
-    await db.store('WorkOrderAssignments', {
-      workOrderId: workOrder.id,
-      employeeId: assignment.employeeId,
-    });
+  const workOrders = await getPaginatedWorkOrders(session.shop, paginationOptions);
+
+  return res.json({ workOrders });
+}
+
+async function fetchWorkOrder(req: any, res: any) {
+  const session: Session = res.locals.shopify.session;
+  const { name } = req.params;
+
+  const workOrder = await getWorkOrder(session.shop, name);
+
+  if (!workOrder) {
+    return res.status(404).json({ error: 'Work order not found' });
   }
 
   return res.json({ workOrder });
 }
 
-// TODO: pagination etc
-async function fetchWorkOrders(req, res) {
-  const workOrders = await db
-    .getPool()
-    .query(
-      format(
-        `
-      SELECT wo.id, COUNT(woi.id) as item_count, COUNT(woa.id) as assignment_count
-      FROM %I as wo
-      LEFT JOIN %I as woi ON woi.work_order_id = wo.id
-      LEFT JOIN %I as woa ON woa.work_order_id = wo.id
-      GROUP BY wo.id
-      `,
-        TableNames.WorkOrders,
-        TableNames.WorkOrderItems,
-        TableNames.WorkOrderAssignments,
-      ),
-    )
-    .then(({ rows }) => rows.map(camelCaseObj) as { id: string; itemCount: number; assignmentCount: number }[]);
-
-  return res.json({ workOrders });
-}
-
 export default {
   endpoints: [
-    ['/', 'POST', createWorkOrder, { jsonSchemaName: 'create-work-order' }],
-    ['/', 'GET', fetchWorkOrders],
+    ['/', 'POST', createWorkOrder, { bodySchemaName: 'create-work-order' }],
+    ['/', 'GET', fetchWorkOrderInfoPage, { querySchemaName: 'work-order-pagination-options' }],
+    ['/:name', 'GET', fetchWorkOrder],
   ],
 } satisfies Controller;

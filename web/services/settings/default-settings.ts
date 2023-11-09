@@ -6,14 +6,14 @@ const defaultShopSettings: ShopSettings = {
     { name: 'In Progress', bgHex: '#3ace3a', textHex: '#ffffff' },
     { name: 'Done', bgHex: '#7e98ac', textHex: '#ffffff' },
   ],
-  idFormat: 'W-#{id}',
+  idFormat: 'WO-#{id}',
   discountShortcuts: [
     { value: 10, unit: 'percentage' },
     { value: 100, unit: 'currency' },
   ],
   discountRules: {
-    onlyAllowShortcuts: false,
-    allowedPercentageRange: [1, 20],
+    onlyAllowShortcuts: true,
+    allowedPercentageRange: null,
     allowedCurrencyRange: null,
   },
   depositShortcuts: [

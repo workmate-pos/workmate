@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model ShopifySession {
+  id               String    @id
+  shop             String
+  state            String
+  isOnline         Boolean
+  scope            String?
+  expires          DateTime?
+  onlineAccessInfo String?
+  accessToken      String?
+}
+
+model Settings {
+  shop  String
+  key   String
+  value String
+
+  @@id([shop, key])
+}
+
+model WorkOrder {
+  id                  Int                  @id @default(autoincrement())
+  shop                String
+  /// Used as ID within this shop
+  name                String
+  status              String
+  depositAmount       Int
+  taxAmount           Int
+  discountAmount      Int
+  shippingAmount      Int
+  description         String
+  dueDate             DateTime
+  createdAt           DateTime             @default(now())
+  employeeAssignments EmployeeAssignment[]
+  products            WorkOrderProduct[]
+
+  customer   Customer @relation(fields: [customerId], references: [id])
+  customerId String
+
+  @@unique([shop, name])
+}
+
+model WorkOrderProduct {
+  id        Int    @id @default(autoincrement())
+  productId String
+  unitPrice Int
+  quantity  Int
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+}
+
+model EmployeeAssignment {
+  id   Int    @id @default(autoincrement())
+  shop String
+
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  employeeId String
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+}
+
+model Employee {
+  id          String               @id
+  shop        String
+  assignments EmployeeAssignment[]
+  name        String
+
+  @@unique([id, shop])
+}
+
+model Customer {
+  id         String      @id
+  shop       String
+  workOrders WorkOrder[]
+  name       String
+
+  @@unique([id, shop])
+}

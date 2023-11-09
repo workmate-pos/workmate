@@ -16,10 +16,6 @@ export default function App() {
             <NavigationMenu
               navigationLinks={[
                 {
-                  label: 'Work Orders',
-                  destination: '/workorders',
-                },
-                {
                   label: 'Settings',
                   destination: '/settings',
                 },

@@ -13,10 +13,8 @@
     "typeRoots": ["node_modules/@types"],
     "skipLibCheck": true,
     "sourceMap": true,
-    "sourceRoot": "/"
+    "sourceRoot": "/",
+    "strict": true
   },
-  "exclude": [
-    "node_modules",
-    "frontend"
-  ]
+  "exclude": ["node_modules", "frontend"]
 }

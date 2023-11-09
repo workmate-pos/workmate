@@ -1,23 +1,22 @@
-import { db } from '../../db.js';
 import { Controller } from '@teifi-digital/shopify-app-express/controllers';
 import type { PartialShopSettings } from '../../schemas/generated/partial-shop-settings.js';
+import { getSettingsByShop, upsertSetting } from '../../services/settings.js';
+import { prisma } from '../../services/prisma.js';
+import { Session } from '@shopify/shopify-api';
 
-async function fetchSettings(req, res) {
-  const session = res.locals.shopify.session;
-  const settings = await db.findSettingsByShop(session.shop);
+async function fetchSettings(req: any, res: any) {
+  const session: Session = res.locals.shopify.session;
+  const settings = await getSettingsByShop(session.shop);
 
   return res.json({ settings });
 }
 
-async function updateSetting(req, res) {
-  const session = res.locals.shopify.session;
+async function updateSetting(req: any, res: any) {
+  const session: Session = res.locals.shopify.session;
   const settings: PartialShopSettings = req.body;
 
   const keys = Object.keys(settings) as (keyof PartialShopSettings)[];
-  for (const key of keys) {
-    const value = settings[key];
-    await db.updateSetting(session.shop, key, value);
-  }
+  await prisma.$transaction(keys.map(key => upsertSetting(session.shop, key, settings[key]!)));
 
   return res.json({ success: true });
 }
@@ -25,6 +24,6 @@ async function updateSetting(req, res) {
 export default {
   endpoints: [
     ['/', 'GET', fetchSettings],
-    ['/', 'POST', updateSetting, { jsonSchemaName: 'partial-shop-settings' }],
+    ['/', 'POST', updateSetting, { bodySchemaName: 'partial-shop-settings' }],
   ],
 } satisfies Controller;

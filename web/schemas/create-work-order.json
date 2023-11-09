@@ -2,6 +2,10 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
     "status": {
       "type": "string"
     },
@@ -19,16 +23,20 @@
       "type": "object",
       "properties": {
         "deposit": {
-          "type": "number"
+          "type": "integer",
+          "minimum": 0
         },
         "tax": {
-          "type": "number"
+          "type": "integer",
+          "minimum": 0
         },
         "discount": {
-          "type": "number"
+          "type": "integer",
+          "minimum": 0
         },
         "shipping": {
-          "type": "number"
+          "type": "integer",
+          "minimum": 0
         }
       },
       "required": ["deposit", "tax", "discount", "shipping"],
@@ -37,7 +45,7 @@
     "dueDate": {
       "type": "string"
     },
-    "items": {
+    "products": {
       "type": "array",
       "items": {
         "type": "object",
@@ -46,10 +54,12 @@
             "type": "string"
           },
           "quantity": {
-            "type": "number"
+            "type": "integer",
+            "minimum": 0
           },
           "unitPrice": {
-            "type": "number"
+            "type": "integer",
+            "minimum": 0
           }
         },
         "required": ["productId", "quantity", "unitPrice"],
@@ -68,8 +78,11 @@
         "required": ["employeeId"],
         "additionalProperties": false
       }
+    },
+    "description": {
+      "type": "string"
     }
   },
-  "required": ["status", "customer", "price", "dueDate", "items", "employeeAssignments"],
+  "required": ["status", "customer", "price", "dueDate", "products", "employeeAssignments", "description"],
   "additionalProperties": false
 }

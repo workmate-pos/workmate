@@ -82,6 +82,11 @@ export default function Settings() {
           content: 'Could not save settings',
         });
       },
+      onSuccess() {
+        setToastAction({
+          content: 'Saved settings',
+        });
+      },
     },
   );
 

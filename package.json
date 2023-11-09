@@ -1,5 +1,5 @@
 {
-  "name": "teifi-shopify-app-template",
+  "name": "teifi-shopify-pos-work-orders",
   "version": "1.0.0",
   "exports": "./dist/index.js",
   "license": "UNLICENSED",
@@ -19,5 +19,5 @@
     "eslint-plugin-prettier": "^5.0.1",
     "prettier": "^3.0.3"
   },
-  "author": "frankheijden"
+  "author": "timvandam"
 }
