@@ -2,7 +2,13 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import { useQuery } from 'react-query';
 
 // TODO: status filter
-export const useWorkOrderInfoPageQuery = (lastWorkOrderName?: string, enabled: boolean = true) => {
+export const useWorkOrderInfoPageQuery = ({
+  lastWorkOrderName,
+  enabled = true,
+}: {
+  lastWorkOrderName?: string;
+  enabled?: boolean;
+}) => {
   const fetch = useAuthenticatedFetch();
 
   const query = useQuery(

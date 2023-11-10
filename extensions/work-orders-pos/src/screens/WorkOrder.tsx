@@ -38,6 +38,8 @@ export function WorkOrder() {
 
   const { Screen, usePopup, navigate, dismiss } = useScreen('WorkOrder', async action => {
     setLoadingWorkOrder(true);
+    removeVisualHints();
+
     try {
       if (action.type === 'new-work-order') {
         setTitle('New Work Order');
@@ -91,14 +93,13 @@ export function WorkOrder() {
     }
   }, [saveWorkOrderMutation.data]);
 
-  useEffect(
-    function reset() {
-      setErrorMessage(null);
-      setValidationErrors(null);
-      setShowWorkOrderSavedBanner(false);
-    },
-    [workOrder],
-  );
+  useEffect(removeVisualHints, [workOrder]);
+
+  function removeVisualHints() {
+    setErrorMessage(null);
+    setValidationErrors(null);
+    setShowWorkOrderSavedBanner(false);
+  }
 
   return (
     <Screen title={title} isLoading={!settings || loadingWorkOrder}>
@@ -122,7 +123,7 @@ export function WorkOrder() {
               label="Description"
               value={workOrder.description}
               onChange={value => dispatchWorkOrder({ type: 'set-field', field: 'description', value: value })}
-              error={validationErrors?.description}
+              error={validationErrors?.description ?? ''}
             />
             <WorkOrderAssignment
               workOrder={workOrder}
@@ -142,7 +143,7 @@ export function WorkOrder() {
                 variant="confirmation"
                 visible
                 action="Back to work orders"
-                onPress={() => navigate('Entry')}
+                onPress={() => navigate('Entry', { forceReload: true })}
               />
             )}
 
@@ -309,7 +310,7 @@ const WorkOrderProperties = ({
         placeholder="Status"
         onFocus={() => statusSelectorPopup.navigate()}
         value={workOrder.status ?? ''}
-        error={validationErrors?.status}
+        error={validationErrors?.status ?? ''}
       />
       <TextField
         label="Customer"
@@ -317,7 +318,7 @@ const WorkOrderProperties = ({
         placeholder="Customer"
         onFocus={() => customerSelectorPopup.navigate()}
         value={workOrder.customer?.name ?? ''}
-        error={validationErrors?.customer}
+        error={validationErrors?.customer ?? ''}
       />
     </Stack>
   );
@@ -514,7 +515,7 @@ const WorkOrderAssignment = ({
         label="Due date"
         value={workOrder.dueDate?.toLocaleDateString('en-CA')}
         onChange={setDueDate}
-        error={validationErrors?.dueDate}
+        error={validationErrors?.dueDate ?? ''}
       />
     </Stack>
   );

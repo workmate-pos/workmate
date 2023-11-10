@@ -4,23 +4,45 @@ import { useEffect, useState } from 'react';
 import { useWorkOrderInfoPageQuery, WorkOrderInfo } from '../queries/use-work-order-info-page-query';
 
 export function NewEntry() {
-  const { Screen, navigate } = useScreen('Entry');
-  const [query, setQuery] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const { Screen, navigate } = useScreen('Entry', ({ forceReload = false } = {}) => {
+    if (forceReload) {
+      setResetting(true);
+      setWorkOrderInfos([]);
+      setLoadMore(true);
+      setError(null);
+    }
+  });
 
+  useEffect(() => {
+    if (resetting) {
+      setResetting(false);
+    } else {
+      workOrderInfoPageQuery.remove();
+    }
+  }, [resetting]);
+
+  const [query, setQuery] = useState<string | null>(null);
   const [workOrderInfos, setWorkOrderInfos] = useState<WorkOrderInfo[]>([]);
   const [loadMore, setLoadMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const workOrderInfoPageQuery = useWorkOrderInfoPageQuery(workOrderInfos.at(-1)?.name, loadMore);
+  const workOrderInfoPageQuery = useWorkOrderInfoPageQuery({
+    lastWorkOrderName: workOrderInfos.at(-1)?.name,
+    enabled: loadMore && !resetting,
+  });
 
   useEffect(() => {
+    if (resetting) return;
+
     const { data } = workOrderInfoPageQuery;
     if (data === undefined) return;
 
     if (data === null) {
       setError('Error loading work orders');
     } else {
-      setWorkOrderInfos(info => [...info, ...data.workOrders]);
+      setWorkOrderInfos(workOrders => [...workOrders, ...data.workOrders]);
     }
+
     setLoadMore(false);
   }, [workOrderInfoPageQuery.data]);
 
