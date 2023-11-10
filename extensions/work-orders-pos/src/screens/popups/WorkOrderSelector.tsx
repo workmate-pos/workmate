@@ -8,21 +8,32 @@ export type WorkOrderSelectorParams = {
   filter?: 'active' | 'historical';
 };
 
+type FetchedWorkOrder = {
+  name: string;
+  status: string;
+  discountAmount: number;
+  depositAmount: number;
+  taxAmount: number;
+  products: {
+    unitPrice: number;
+    quantity: number;
+  }[];
+};
+
 export function WorkOrderSelector() {
   const [params, setParams] = useState<WorkOrderSelectorParams | null>(null);
 
-  const { Screen } = useScreen('WorkOrderSelector', setParams);
+  const { Screen, navigate } = useScreen('WorkOrderSelector', setParams);
 
   const title = params?.filter ? `${titleCase(params.filter)} Work Orders` : 'Work Orders';
   const [query, setQuery] = useState<string | null>(null);
 
-  type WorkOrderInfo = { id: string; itemCount: number; assignmentCount: number };
-  const [workOrders, setWorkOrders] = useState<WorkOrderInfo[]>([]);
+  const [workOrders, setWorkOrders] = useState<FetchedWorkOrder[]>([]);
 
   const fetch = useAuthenticatedFetch();
   const getWorkOrdersQuery = useQuery(
     [],
-    (): Promise<{ workOrders: WorkOrderInfo[] }> => fetch('/api/work-order').then(res => res.json()),
+    (): Promise<{ workOrders: FetchedWorkOrder[] }> => fetch('/api/work-order').then(res => res.json()),
     {
       onSuccess({ workOrders }) {
         setWorkOrders(workOrders);
@@ -30,22 +41,29 @@ export function WorkOrderSelector() {
     },
   );
 
-  const rows = workOrders.map<ListRow>(({ id, itemCount, assignmentCount }) => ({
-    id: id,
-    onPress: () => {},
-    leftSide: {
-      label: id,
-      subtitle: [`${itemCount} items`, `${assignmentCount} assignments`],
-    },
-    rightSide: {
-      showChevron: true,
-    },
-  }));
+  const rows = workOrders.map<ListRow>(({ name, products, discountAmount, taxAmount, status }) => {
+    const productTotal = products.reduce((total, { unitPrice, quantity }) => total + unitPrice * quantity, 0);
+    const total = productTotal + taxAmount - discountAmount;
+
+    return {
+      id: name,
+      onPress: () => {
+        navigate('WorkOrder', { type: 'load-work-order', name });
+      },
+      leftSide: {
+        label: name,
+        subtitle: [`CA$ ${(total / 100).toFixed(2)}`, status],
+      },
+      rightSide: {
+        showChevron: true,
+      },
+    };
+  });
 
   return (
-    <Screen title={title} isLoading={getWorkOrdersQuery.isLoading}>
+    <Screen title={title} isLoading={!getWorkOrdersQuery.data && !getWorkOrdersQuery.isError}>
       <ScrollView>
-        <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search customers" />
+        <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search work orders" />
         <List data={rows} />
       </ScrollView>
     </Screen>

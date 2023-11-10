@@ -77,7 +77,7 @@ export function EmployeeSelector() {
   };
 
   return (
-    <Screen title="Select employee" presentation={{ sheet: true }} overrideNavigateBack={close}>
+    <Screen title="Select employee" presentation={{ sheet: true }} onNavigateBack={close}>
       <ScrollView>
         <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search employees" />
         <List data={employeeRows} />

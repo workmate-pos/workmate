@@ -7,7 +7,7 @@ export function StatusSelector() {
   const settings = useSettings();
 
   return (
-    <Screen title="Select Status">
+    <Screen title="Select Status" presentation={{ sheet: true }}>
       <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
         {settings?.statuses.map(status => <Button title={status.name} onPress={() => closePopup(status.name)} />)}
       </Stack>

@@ -18,6 +18,18 @@ const names = [
   'Liam Anderson',
 ];
 
+const getCustomerEmail = (name: string) => {
+  return `${name.replace(' ', '-').replace(/[A-Z]/g, l => l.toLowerCase())}@shopify.com`;
+};
+
+const getCustomerPhoneNumber = (name: string) => {
+  const seed = [...name].map(l => l.charCodeAt(0)).reduce((sum, n) => sum + n, 0);
+  const areaCode = (seed % 800) + 200;
+  const exchange = ((areaCode + 231) % 800) + 100;
+  const subscriber = (seed % 8000) + 2000;
+  return `+1 ${areaCode}-${exchange}-${subscriber}`;
+};
+
 export function CustomerSelector() {
   const { Screen, closePopup } = useScreen('CustomerSelector');
 
@@ -39,6 +51,7 @@ export function CustomerSelector() {
     },
     leftSide: {
       label: name,
+      subtitle: [getCustomerEmail(name), getCustomerPhoneNumber(name)],
     },
     rightSide: {
       showChevron: true,
@@ -46,7 +59,7 @@ export function CustomerSelector() {
   }));
 
   return (
-    <Screen title="Select Customer">
+    <Screen title="Select Customer" presentation={{ sheet: true }}>
       <ScrollView>
         <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search customers" />
         <List data={customerRows} />

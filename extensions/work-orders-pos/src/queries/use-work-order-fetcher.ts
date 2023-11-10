@@ -40,7 +40,10 @@ export const useWorkOrderFetcher = () => {
       },
       dueDate: new Date(workOrder.dueDate),
       description: workOrder.description,
-      employeeAssignments: workOrder.employeeAssignments.map(e => ({ name: e.name, employeeId: e.id })),
+      employeeAssignments: workOrder.employeeAssignments.map(({ employee }) => ({
+        name: employee.name,
+        employeeId: employee.id,
+      })),
       customer: workOrder.customer,
       products: workOrder.products.map(p => ({
         productId: p.productId,
@@ -64,8 +67,10 @@ type ExistingWorkOrder = {
   dueDate: string;
   description: string;
   employeeAssignments: {
-    id: string;
-    name: string;
+    employee: {
+      id: string;
+      name: string;
+    };
   }[];
   customer: {
     id: string;

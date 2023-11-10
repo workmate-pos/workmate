@@ -1,14 +1,27 @@
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import { useQuery } from 'react-query';
 
-export const useWorkOrderPageQuery = (lastWorkOrderName?: string) => {
+// TODO: status filter
+export const useWorkOrderInfoPageQuery = (lastWorkOrderName?: string, enabled: boolean = true) => {
   const fetch = useAuthenticatedFetch();
 
-  const query = useQuery(['work-order-page-items', lastWorkOrderName], (): Promise<{ workOrders: WorkOrderInfo[] }> => {
-    const searchParams = new URLSearchParams({});
-    if (lastWorkOrderName) searchParams.set('fromName', lastWorkOrderName);
-    return fetch(`/api/work-order?${searchParams}`).then(res => res.json());
-  });
+  const query = useQuery(
+    ['work-order-page-items', lastWorkOrderName],
+    async (): Promise<{ workOrders: WorkOrderInfo[] } | null> => {
+      const searchParams = new URLSearchParams({
+        limit: '25',
+      });
+      if (lastWorkOrderName) searchParams.set('fromName', lastWorkOrderName);
+      const response = await fetch(`/api/work-order?${searchParams}`);
+
+      if (!response.ok) {
+        return null;
+      }
+
+      return response.json();
+    },
+    { enabled },
+  );
 
   return query;
 };

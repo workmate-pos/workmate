@@ -7,25 +7,21 @@ import type { WorkOrderSelectorParams } from './popups/WorkOrderSelector';
  */
 export type ScreenInputOutput = {
   Entry: [undefined, undefined];
-  WorkOrder: [undefined, undefined];
+  WorkOrder: [{ type: 'load-work-order'; name: string } | { type: 'new-work-order' }, undefined];
   WorkOrderSelector: [WorkOrderSelectorParams, undefined];
   ItemSelector: [undefined, WorkOrderItem];
   ItemConfig: [WorkOrderItem, { type: 'update' | 'remove'; item: WorkOrderItem }];
   StatusSelector: [undefined, WorkOrderStatus];
   CustomerSelector: [undefined, WorkOrderCustomer];
   ShippingConfig: [undefined, number];
-
-  // TODO: Allow selecting multiple employees
   EmployeeSelector: [undefined, WorkOrderEmployee[]];
 
-  // TODO: Deduplicate these (literally identical except for names)
   // TODO: Allow custom amounts instead of shortcuts (if settings allow it)
-  DepositSelector: [
-    { subTotal: number },
-    { type: 'currency'; currencyAmount: number } | { type: 'percentage'; percentage: number; currencyAmount: number },
-  ];
-  DiscountSelector: [
-    { subTotal: number },
-    { type: 'currency'; currencyAmount: number } | { type: 'percentage'; percentage: number; currencyAmount: number },
+  DiscountOrDepositSelector: [
+    { select: 'discount' | 'deposit'; subTotal: number },
+    (
+      | { select: 'discount' | 'deposit'; type: 'currency'; currencyAmount: number }
+      | { select: 'discount' | 'deposit'; type: 'percentage'; percentage: number; currencyAmount: number }
+    ),
   ];
 };

@@ -1,5 +1,5 @@
-import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { HOST } from '../config';
+import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 
 export const useAuthenticatedFetch = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
