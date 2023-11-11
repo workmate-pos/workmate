@@ -24,6 +24,6 @@ async function updateSetting(req: any, res: any) {
 export default {
   endpoints: [
     ['/', 'GET', fetchSettings],
-    ['/', 'POST', updateSetting, { bodySchemaName: 'partial-shop-settings' }],
+    ['/', 'POST', updateSetting, { jsonSchemaName: 'partial-shop-settings' }],
   ],
 } satisfies Controller;

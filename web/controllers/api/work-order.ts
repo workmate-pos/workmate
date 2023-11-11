@@ -26,7 +26,11 @@ async function createWorkOrder(req: any, res: any) {
 
 async function fetchWorkOrderInfoPage(req: any, res: any) {
   const session: Session = res.locals.shopify.session;
-  const paginationOptions: WorkOrderPaginationOptions = req.query;
+  const paginationOptions: WorkOrderPaginationOptions = {
+    status: req.query.status,
+    fromName: req.query.fromName,
+    limit: Number.isNaN(parseInt(req.query.limit)) ? 25 : parseInt(req.query.limit),
+  };
 
   const workOrders = await getPaginatedWorkOrders(session.shop, paginationOptions);
 
@@ -48,8 +52,8 @@ async function fetchWorkOrder(req: any, res: any) {
 
 export default {
   endpoints: [
-    ['/', 'POST', createWorkOrder, { bodySchemaName: 'create-work-order' }],
-    ['/', 'GET', fetchWorkOrderInfoPage, { querySchemaName: 'work-order-pagination-options' }],
+    ['/', 'POST', createWorkOrder, { jsonSchemaName: 'create-work-order' }],
+    ['/', 'GET', fetchWorkOrderInfoPage],
     ['/:name', 'GET', fetchWorkOrder],
   ],
 } satisfies Controller;
