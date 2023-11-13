@@ -513,7 +513,7 @@ const WorkOrderAssignment = ({
       <TextField label="Assigned Employees" onFocus={() => employeeSelectorPopup.navigate()} value={employeeNames} />
       <DateField
         label="Due date"
-        value={workOrder.dueDate?.toLocaleDateString('en-CA')}
+        value={workOrder.dueDate?.toISOString()}
         onChange={setDueDate}
         error={validationErrors?.dueDate ?? ''}
       />
