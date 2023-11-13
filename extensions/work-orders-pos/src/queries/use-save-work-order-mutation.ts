@@ -27,7 +27,7 @@ export const useSaveWorkOrderMutation = () => {
           discount: toCents(workOrder.price.discount),
           shipping: toCents(workOrder.price.shipping),
         },
-        dueDate: workOrder.dueDate.toDateString(),
+        dueDate: workOrder.dueDate.toISOString(),
         products: workOrder.products.map(item => ({
           productId: item.productId,
           quantity: item.quantity,
