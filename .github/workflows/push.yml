@@ -16,9 +16,9 @@ jobs:
       sentry_org: ${{ vars.SENTRY_ORG }}
       sentry_project: ${{ vars.SENTRY_PROJECT }}
     secrets: inherit
-  deploy:
-    uses: teifi-digital/shopify-app-deployments/.github/workflows/pulumi-up.yml@master
-    needs: teifi-shopify-app
-    with:
-      stack_name: ${{ vars.PRODUCTION_STACK_NAME }}
-    secrets: inherit
+#  deploy:
+#    uses: teifi-digital/shopify-app-deployments/.github/workflows/pulumi-up.yml@master
+#    needs: teifi-shopify-app
+#    with:
+#      stack_name: ${{ vars.PRODUCTION_STACK_NAME }}
+#    secrets: inherit
