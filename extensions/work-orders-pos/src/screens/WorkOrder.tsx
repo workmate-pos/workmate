@@ -504,8 +504,10 @@ const WorkOrderAssignment = ({
 
   const employeeNames = workOrder.employeeAssignments?.map(employee => employee.name).join(', ') || 'None';
 
-  const setDueDate = (date: string) => {
-    dispatchWorkOrder({ type: 'set-field', field: 'dueDate', value: new Date(date) });
+  const setDueDate = (dateStr: string) => {
+    const localDate = new Date(dateStr);
+    const date = new Date(localDate.getTime() - localDate.getTimezoneOffset()*1000*60);
+    dispatchWorkOrder({ type: 'set-field', field: 'dueDate', value: date });
   };
 
   return (
