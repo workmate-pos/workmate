@@ -290,14 +290,6 @@ const WorkOrderProperties = ({
     dispatchWorkOrder({ type: 'set-field', field: 'customer', value: result });
   });
 
-  // <TextField
-  //   label="Address"
-  //   required
-  //   placeholder="Address"
-  //   onChange={value => dispatchWorkOrder({ type: 'set-field', field: 'address', value })}
-  //   value={workOrder.address}
-  // />
-
   return (
     <Stack direction="horizontal" flexChildren>
       <TextField label="Work Order ID" disabled value={workOrder.name ?? ''} />

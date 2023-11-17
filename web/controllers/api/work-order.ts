@@ -1,13 +1,8 @@
 import { Controller } from '@teifi-digital/shopify-app-express/controllers';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
-import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
-import {
-  getPaginatedWorkOrders,
-  getWorkOrder,
-  upsertWorkOrder,
-  validateCreateWorkOrder,
-} from '../../services/work-order.js';
+import { getWorkOrder, upsertWorkOrder, validateCreateWorkOrder } from '../../services/work-order.js';
 import { Session } from '@shopify/shopify-api';
+import { db } from '../../services/db/index.js';
 
 async function createWorkOrder(req: any, res: any) {
   const session: Session = res.locals.shopify.session;
@@ -25,15 +20,20 @@ async function createWorkOrder(req: any, res: any) {
 }
 
 async function fetchWorkOrderInfoPage(req: any, res: any) {
-  const session: Session = res.locals.shopify.session;
-  const paginationOptions: WorkOrderPaginationOptions = {
+  const { shop }: Session = res.locals.shopify.session;
+  // TODO: use querySchemaName https://github.com/Teifi-Digital/shopify-app-express/pull/2
+  const paginationOptions = {
     status: req.query.status,
-    fromName: req.query.fromName,
-    // TODO: use querySchemaName https://github.com/Teifi-Digital/shopify-app-express/pull/2
     limit: Number.isNaN(parseInt(req.query.limit)) ? 25 : parseInt(req.query.limit),
+    offset: Number.isNaN(parseInt(req.query.offset)) ? 0 : parseInt(req.query.offset),
   };
 
-  const infoPage = await getPaginatedWorkOrders(session.shop, paginationOptions);
+  const infoPage = await db.workOrder.infoPage({
+    shop,
+    status: paginationOptions.status,
+    offset: paginationOptions.offset,
+    limit: paginationOptions.limit,
+  });
 
   return res.json({ infoPage });
 }

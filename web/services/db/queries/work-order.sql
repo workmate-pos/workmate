@@ -39,10 +39,10 @@ FROM "WorkOrder" wo
 LEFT JOIN "WorkOrderProduct" wop ON wo.id = wop."workOrderId"
 WHERE shop = :shop!
   AND status = COALESCE(:status, status)
-  AND wo.id < COALESCE(:cursorId, wo.id + 1)
 GROUP BY wo.id
-ORDER BY "createdAt" DESC
-LIMIT :limit;
+ORDER BY wo.id DESC
+LIMIT :limit!
+OFFSET :offset;
 
 /* @name get */
 SELECT *

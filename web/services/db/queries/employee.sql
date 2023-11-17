@@ -12,3 +12,12 @@ SELECT e.*
 FROM "Employee" e
 INNER JOIN "EmployeeAssignment" ea ON ea."employeeId" = e."id"
 WHERE ea."workOrderId" = :workOrderId!;
+
+/* @name page */
+SELECT *
+FROM "Employee"
+WHERE shop = :shop!
+ORDER BY name ASC
+LIMIT :limit!
+OFFSET :offset!;
+

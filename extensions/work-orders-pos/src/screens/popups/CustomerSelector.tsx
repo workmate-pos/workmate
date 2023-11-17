@@ -1,69 +1,48 @@
-import { useScreen } from '../../hooks/use-screen';
-import { useMemo, useState } from 'react';
+import { ClosePopupFn, useScreen } from '../../hooks/use-screen';
+import { useEffect, useState } from 'react';
 import { List, ListRow, ScrollView, SearchBar } from '@shopify/retail-ui-extensions-react';
-
-// TODO: load from database
-const names = [
-  'Sophia Johnson',
-  'Ethan Davis',
-  'Olivia Bennett',
-  'William Carter',
-  'Ava Nelson',
-  'James Mitchell',
-  'Emma Williams',
-  'Benjamin White',
-  'Isabella Parker',
-  'Mason Turner',
-  'Charlotte Smith',
-  'Liam Anderson',
-];
-
-const getCustomerEmail = (name: string) => {
-  return `${name.replace(' ', '-').replace(/[A-Z]/g, l => l.toLowerCase())}@shopify.com`;
-};
-
-const getCustomerPhoneNumber = (name: string) => {
-  const seed = [...name].map(l => l.charCodeAt(0)).reduce((sum, n) => sum + n, 0);
-  const areaCode = (seed % 800) + 200;
-  const exchange = ((areaCode + 231) % 800) + 100;
-  const subscriber = (seed % 8000) + 2000;
-  return `+1 ${areaCode}-${exchange}-${subscriber}`;
-};
+import { Customer, useCustomersQuery } from '../../queries/use-customers-query';
 
 export function CustomerSelector() {
   const { Screen, closePopup } = useScreen('CustomerSelector');
 
+  const [loadMore, setLoadMore] = useState(true);
   const [query, setQuery] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const customersQuery = useCustomersQuery({ offset: customers.length, enabled: loadMore });
 
-  const customers = useMemo(
-    () =>
-      names.map((name, i) => ({
-        name,
-        id: String(i),
-      })),
-    [],
+  useEffect(() => {
+    const { data } = customersQuery;
+    if (!data) return;
+
+    setCustomers(prev => [...prev, ...data.customers]);
+    setLoadMore(false);
+  }, [customersQuery.data]);
+
+  const rows = getCustomerRows(customers, closePopup);
+
+  return (
+    <Screen title="Select Customer" presentation={{ sheet: true }}>
+      <ScrollView>
+        <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search customers" />
+        <List data={rows} onEndReached={() => setLoadMore(true)} isLoadingMore={customersQuery.isLoading} />
+      </ScrollView>
+    </Screen>
   );
+}
 
-  const customerRows = customers.map<ListRow>(({ id, name }) => ({
+function getCustomerRows(customers: Customer[], closePopup: ClosePopupFn<'CustomerSelector'>): ListRow[] {
+  return customers.map<ListRow>(({ id, name }) => ({
     id,
     onPress: () => {
       closePopup({ id, name });
     },
     leftSide: {
       label: name,
-      subtitle: [getCustomerEmail(name), getCustomerPhoneNumber(name)],
+      subtitle: ['info here'],
     },
     rightSide: {
       showChevron: true,
     },
   }));
-
-  return (
-    <Screen title="Select Customer" presentation={{ sheet: true }}>
-      <ScrollView>
-        <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search customers" />
-        <List data={customerRows} />
-      </ScrollView>
-    </Screen>
-  );
 }

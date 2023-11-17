@@ -1,6 +1,5 @@
 import { CreateWorkOrder } from '../schemas/generated/create-work-order.js';
 import { getSettingsByShop } from './settings.js';
-import type { WorkOrderPaginationOptions } from '../schemas/generated/work-order-pagination-options.js';
 import { getFormattedId } from './id-format.js';
 import { db } from './db/index.js';
 import { never } from '../util/never.js';
@@ -8,20 +7,13 @@ import { unit } from './db/unit-of-work.js';
 
 export async function upsertWorkOrder(shop: string, createWorkOrder: ValidatedCreateWorkOrder) {
   return await unit(async () => {
-    // TODO: Remove these once customers and employees are supported
-    const customerId = '0';
-    await db.workOrder.createTestCustomerIfNotExists({ customerId, shop });
-
-    const employeeId = '0';
-    await db.workOrder.createTestEmployeeIfNotExists({ employeeId, shop });
-
     const isUpdate = createWorkOrder.name !== undefined;
 
     const [{ id } = never()] = await db.workOrder.upsert({
       shop,
       name: createWorkOrder.name ?? (await getFormattedId(shop)),
       status: createWorkOrder.status,
-      customerId: customerId,
+      customerId: createWorkOrder.customer.id,
       depositAmount: createWorkOrder.price.deposit,
       taxAmount: createWorkOrder.price.tax,
       discountAmount: createWorkOrder.price.discount,
@@ -36,12 +28,9 @@ export async function upsertWorkOrder(shop: string, createWorkOrder: ValidatedCr
       await db.workOrderProduct.remove({ workOrderId: id });
     }
 
-    // TODO: Remove these once customers and employees are supported
-    await db.employee.createEmployeeAssignment({ workOrderId: id, employeeId });
-
-    // for (const { employeeId } of createWorkOrder.employeeAssignments) {
-    //   await db.employee.createEmployeeAssignment({ workOrderId: id, employeeId });
-    // }
+    for (const { employeeId } of createWorkOrder.employeeAssignments) {
+      await db.employee.createEmployeeAssignment({ workOrderId: id, employeeId });
+    }
 
     for (const { productVariantId, quantity, unitPrice } of createWorkOrder.products) {
       await db.workOrderProduct.insert({ productVariantId, unitPrice, quantity, workOrderId: id });
@@ -69,25 +58,6 @@ export async function getWorkOrder(shop: string, name: string) {
     employees,
     products,
   };
-}
-
-export async function getPaginatedWorkOrders(shop: string, { fromName, status, limit }: WorkOrderPaginationOptions) {
-  let cursorId: null | number = null;
-
-  if (fromName) {
-    const [cursorWorkOrder] = await db.workOrder.get({ shop, name: fromName });
-    if (!cursorWorkOrder) {
-      throw new Error('Invalid cursor');
-    }
-    cursorId = cursorWorkOrder.id;
-  }
-
-  return await db.workOrder.infoPage({
-    shop,
-    cursorId,
-    status,
-    limit,
-  });
 }
 
 type ValidatedCreateWorkOrder = CreateWorkOrder & { _brand: readonly ['validated'] };

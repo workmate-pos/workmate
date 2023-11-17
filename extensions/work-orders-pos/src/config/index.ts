@@ -1,1 +1,1 @@
-export const HOST = 'https://mercedes-tar-disabilities-alex.trycloudflare.com';
+export const HOST = 'https://increase-retired-goat-postage.trycloudflare.com';

@@ -2,7 +2,6 @@ import { getDefaultShopSetting, getShopSettingKeys } from './settings/default-se
 import { ShopSettings } from '../schemas/generated/shop-settings.js';
 import { db } from './db/index.js';
 import { PartialShopSettings } from '../schemas/generated/partial-shop-settings.js';
-import { transaction } from './db/transaction.js';
 import { unit } from './db/unit-of-work.js';
 
 function serialize(value: ShopSettings[keyof ShopSettings]) {
@@ -36,9 +35,19 @@ export async function updateSettings(shop: string, partialShopSettings: PartialS
 
 export async function insertDefaultSettingsIfNotExists(shop: string) {
   await unit(async () => {
-    for (const key of getShopSettingKeys()) {
-      const value = getDefaultShopSetting(key);
-      await db.settings.insertSettingIfNotExists({ shop, key, value: serialize(value) });
-    }
+    const entries = getShopSettingKeys().map(key => [key, getDefaultShopSetting(key)]) as [
+      keyof ShopSettings,
+      ShopSettings[keyof ShopSettings],
+    ][];
+
+    return await Promise.all(
+      entries.map(([key, value]) =>
+        db.settings.insertSettingIfNotExists({
+          shop,
+          key,
+          value: serialize(value),
+        }),
+      ),
+    );
   });
 }

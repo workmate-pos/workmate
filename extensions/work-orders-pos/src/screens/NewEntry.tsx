@@ -27,7 +27,7 @@ export function NewEntry() {
   const [loadMore, setLoadMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const workOrderInfoPageQuery = useWorkOrderInfoPageQuery({
-    lastWorkOrderName: workOrderInfos.at(-1)?.name,
+    offset: workOrderInfos.length,
     enabled: loadMore && !resetting,
   });
 
@@ -91,9 +91,7 @@ export function NewEntry() {
 
 function getWorkOrderRows(workOrders: WorkOrderInfo[], navigate: NavigateFn): ListRow[] {
   return workOrders.map<ListRow>(({ name, productAmount, discountAmount, taxAmount, status, dueDate }) => {
-    // ToDO: re-add
     const total = productAmount + taxAmount - discountAmount;
-
     const dueDateString = new Date(dueDate).toLocaleDateString();
 
     return {

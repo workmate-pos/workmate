@@ -51,7 +51,7 @@ export function useScreen<const ScreenName extends ScreenNames>(
   /**
    * Navigates back to the screen that opened this screen, and provides it with a result.
    */
-  const closePopup = (result: ScreenInputOutput[ScreenName][1]) => {
+  const closePopup: ClosePopupFn<ScreenName> = (result: ScreenInputOutput[ScreenName][1]) => {
     if (!params) {
       api.navigation.navigate('Error', {
         error: `No params received ${JSON.stringify({ params, result })}`,
@@ -129,3 +129,5 @@ export type UsePopupFn = <const DestinationScreenName extends PopupScreenNames>(
 ) => {
   navigate: PopupNavigateFn<DestinationScreenName>;
 };
+
+export type ClosePopupFn<ScreenName extends ScreenNames> = (result: ScreenInputOutput[ScreenName][1]) => void;
