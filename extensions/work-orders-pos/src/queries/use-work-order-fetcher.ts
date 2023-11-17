@@ -15,9 +15,9 @@ export const useWorkOrderFetcher = () => {
       return null;
     }
 
-    const { workOrder } = (await response.json()) as { workOrder: ExistingWorkOrder };
+    const { workOrder, employees, customer, products } = (await response.json()) as FetchWorkOrderResponse;
 
-    const productVariantIds = workOrder.products.map(p => Number(p.productId));
+    const productVariantIds = products.map(p => Number(p.productVariantId));
 
     const productVariantBatchSize = 50;
     const productVariants = await Promise.all(
@@ -40,45 +40,42 @@ export const useWorkOrderFetcher = () => {
       },
       dueDate: new Date(workOrder.dueDate),
       description: workOrder.description,
-      employeeAssignments: workOrder.employeeAssignments.map(({ employee }) => ({
-        name: employee.name,
-        employeeId: employee.id,
-      })),
-      customer: workOrder.customer,
-      products: workOrder.products.map(p => ({
-        productId: p.productId,
+      employeeAssignments: employees.map(({ id, name }) => ({ name, employeeId: id })),
+      customer,
+      products: products.map(p => ({
+        productVariantId: p.productVariantId,
         unitPrice: p.unitPrice / 100,
         quantity: p.quantity,
-        name: productVariantMap[p.productId]?.displayName ?? 'Unknown product',
-        sku: productVariantMap[p.productId]?.sku ?? '',
+        name: productVariantMap[p.productVariantId]?.displayName ?? 'Unknown product',
+        sku: productVariantMap[p.productVariantId]?.sku ?? '',
       })),
     };
   };
 };
 
 // TODO: Have backend provide this type
-type ExistingWorkOrder = {
-  name: string;
-  status: string;
-  discountAmount: number;
-  depositAmount: number;
-  shippingAmount: number;
-  taxAmount: number;
-  dueDate: string;
-  description: string;
-  employeeAssignments: {
-    employee: {
-      id: string;
-      name: string;
-    };
-  }[];
+type FetchWorkOrderResponse = {
+  workOrder: {
+    name: string;
+    status: string;
+    discountAmount: number;
+    depositAmount: number;
+    shippingAmount: number;
+    taxAmount: number;
+    dueDate: string;
+    description: string;
+  };
   customer: {
     id: string;
     name: string;
   };
+  employees: {
+    id: string;
+    name: string;
+  }[];
   products: {
-    productId: string;
-    unitPrice: number;
+    productVariantId: string;
     quantity: number;
+    unitPrice: number;
   }[];
 };

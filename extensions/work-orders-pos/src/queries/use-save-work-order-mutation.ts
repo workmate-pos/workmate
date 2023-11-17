@@ -29,7 +29,7 @@ export const useSaveWorkOrderMutation = () => {
         },
         dueDate: workOrder.dueDate.toISOString(),
         products: workOrder.products.map(item => ({
-          productId: item.productId,
+          productVariantId: item.productVariantId,
           quantity: item.quantity,
           unitPrice: toCents(item.unitPrice),
         })),

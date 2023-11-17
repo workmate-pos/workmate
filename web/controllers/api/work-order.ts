@@ -29,25 +29,26 @@ async function fetchWorkOrderInfoPage(req: any, res: any) {
   const paginationOptions: WorkOrderPaginationOptions = {
     status: req.query.status,
     fromName: req.query.fromName,
+    // TODO: use querySchemaName https://github.com/Teifi-Digital/shopify-app-express/pull/2
     limit: Number.isNaN(parseInt(req.query.limit)) ? 25 : parseInt(req.query.limit),
   };
 
-  const workOrders = await getPaginatedWorkOrders(session.shop, paginationOptions);
+  const infoPage = await getPaginatedWorkOrders(session.shop, paginationOptions);
 
-  return res.json({ workOrders });
+  return res.json({ infoPage });
 }
 
 async function fetchWorkOrder(req: any, res: any) {
   const session: Session = res.locals.shopify.session;
   const { name } = req.params;
 
-  const workOrder = await getWorkOrder(session.shop, name);
+  const result = await getWorkOrder(session.shop, name);
 
-  if (!workOrder) {
+  if (!result) {
     return res.status(404).json({ error: 'Work order not found' });
   }
 
-  return res.json({ workOrder });
+  return res.json(result);
 }
 
 export default {

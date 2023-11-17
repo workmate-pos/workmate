@@ -1,159 +1,92 @@
 import { CreateWorkOrder } from '../schemas/generated/create-work-order.js';
-import { prisma } from './prisma.js';
-import { Prisma } from '@prisma/client';
 import { getSettingsByShop } from './settings.js';
 import type { WorkOrderPaginationOptions } from '../schemas/generated/work-order-pagination-options.js';
 import { getFormattedId } from './id-format.js';
+import { db } from './db/index.js';
+import { never } from '../util/never.js';
+import { unit } from './db/unit-of-work.js';
 
 export async function upsertWorkOrder(shop: string, createWorkOrder: ValidatedCreateWorkOrder) {
-  const data = {
-    shop,
-    name: createWorkOrder.name ?? (await getFormattedId(shop)),
-    status: createWorkOrder.status,
-    customer: {
-      // connect: {
-      //   id_shop: {
-      //     id: createWorkOrder.customer.id,
-      //     shop,
-      //   },
-      // },
-      // TODO: Remove this once customers are set up
-      connectOrCreate: {
-        create: {
-          id: '0',
-          name: 'Test Customer',
-          shop,
-        },
-        where: {
-          id: '0',
-        },
-      },
-    },
-    depositAmount: createWorkOrder.price.deposit,
-    taxAmount: createWorkOrder.price.tax,
-    discountAmount: createWorkOrder.price.discount,
-    shippingAmount: createWorkOrder.price.shipping,
-    dueDate: new Date(createWorkOrder.dueDate),
-    description: createWorkOrder.description,
-    products: {
-      createMany: {
-        data: createWorkOrder.products.map(product => ({
-          productId: product.productId,
-          quantity: product.quantity,
-          unitPrice: product.unitPrice,
-        })),
-      },
-    },
-    employeeAssignments: {
-      // createMany: {
-      // data: createWorkOrder.employeeAssignments.map(assignment => ({
-      //   employeeId: assignment.employeeId,
-      //   employeeShop: shop,
-      // })),
-      // },
-      // TODO: Remove this once employees are set up
-      create: {
-        shop,
-        employee: {
-          connectOrCreate: {
-            create: {
-              id: '0',
-              shop,
-              name: 'Test Employee',
-            },
-            where: {
-              id: '0',
-            },
-          },
-        },
-      },
-    },
-  } satisfies Prisma.WorkOrderCreateInput;
+  return await unit(async () => {
+    // TODO: Remove these once customers and employees are supported
+    const customerId = '0';
+    await db.workOrder.createTestCustomerIfNotExists({ customerId, shop });
 
-  if (createWorkOrder.name) {
-    return prisma.$transaction(async prisma => {
-      // clean up old products as the update will re-create them
-      await prisma.workOrderProduct.deleteMany({
-        where: {
-          workOrder: {
-            name: createWorkOrder.name,
-            shop,
-          },
-        },
-      });
+    const employeeId = '0';
+    await db.workOrder.createTestEmployeeIfNotExists({ employeeId, shop });
 
-      return prisma.workOrder.update({
-        where: { shop_name: { shop, name: data.name } },
-        data,
-      });
+    const isUpdate = createWorkOrder.name !== undefined;
+
+    const [{ id } = never()] = await db.workOrder.upsert({
+      shop,
+      name: createWorkOrder.name ?? (await getFormattedId(shop)),
+      status: createWorkOrder.status,
+      customerId: customerId,
+      depositAmount: createWorkOrder.price.deposit,
+      taxAmount: createWorkOrder.price.tax,
+      discountAmount: createWorkOrder.price.discount,
+      shippingAmount: createWorkOrder.price.shipping,
+      // TODO: Make sure everything is utc in front end and back end
+      dueDate: new Date(createWorkOrder.dueDate),
+      description: createWorkOrder.description,
     });
-  }
 
-  return prisma.workOrder.create({ data });
-}
+    if (isUpdate) {
+      await db.employee.deleteWorkOrderEmployeeAssignments({ workOrderId: id });
+      await db.workOrderProduct.remove({ workOrderId: id });
+    }
 
-export function getWorkOrder(shop: string, name: string) {
-  return prisma.workOrder.findUnique({
-    where: { shop_name: { shop, name } },
-    select: {
-      name: true,
-      status: true,
-      discountAmount: true,
-      shippingAmount: true,
-      depositAmount: true,
-      taxAmount: true,
-      dueDate: true,
-      description: true,
-      employeeAssignments: {
-        include: {
-          employee: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      customer: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      products: {
-        select: {
-          productId: true,
-          unitPrice: true,
-          quantity: true,
-        },
-      },
-    },
+    // TODO: Remove these once customers and employees are supported
+    await db.employee.createEmployeeAssignment({ workOrderId: id, employeeId });
+
+    // for (const { employeeId } of createWorkOrder.employeeAssignments) {
+    //   await db.employee.createEmployeeAssignment({ workOrderId: id, employeeId });
+    // }
+
+    for (const { productVariantId, quantity, unitPrice } of createWorkOrder.products) {
+      await db.workOrderProduct.insert({ productVariantId, unitPrice, quantity, workOrderId: id });
+    }
   });
 }
 
-export function getPaginatedWorkOrders(shop: string, { fromName, status, limit }: WorkOrderPaginationOptions) {
-  const cursor = fromName ? { shop_name: { shop, name: fromName } } : undefined;
+// TODO: figure out a way to share types between front end and back end
+export async function getWorkOrder(shop: string, name: string) {
+  const [workOrder] = await db.workOrder.get({ shop, name });
 
-  return prisma.workOrder.findMany({
-    where: { shop, status },
-    orderBy: { createdAt: 'desc' },
-    cursor,
-    skip: cursor ? 1 : undefined,
-    take: limit,
-    select: {
-      name: true,
-      status: true,
-      dueDate: true,
-      discountAmount: true,
-      depositAmount: true,
-      taxAmount: true,
-      products: {
-        select: {
-          unitPrice: true,
-          quantity: true,
-        },
-      },
-    },
+  if (!workOrder) {
+    return null;
+  }
+
+  const employees = await db.employee.getAssignedEmployees({ workOrderId: workOrder.id });
+  const [customer = never('Every work order has a customer')] = await db.customer.getWorkOrderCustomer({
+    workOrderId: workOrder.id,
+  });
+  const products = await db.workOrderProduct.get({ workOrderId: workOrder.id });
+
+  return {
+    workOrder,
+    customer,
+    employees,
+    products,
+  };
+}
+
+export async function getPaginatedWorkOrders(shop: string, { fromName, status, limit }: WorkOrderPaginationOptions) {
+  let cursorId: null | number = null;
+
+  if (fromName) {
+    const [cursorWorkOrder] = await db.workOrder.get({ shop, name: fromName });
+    if (!cursorWorkOrder) {
+      throw new Error('Invalid cursor');
+    }
+    cursorId = cursorWorkOrder.id;
+  }
+
+  return await db.workOrder.infoPage({
+    shop,
+    cursorId,
+    status,
+    limit,
   });
 }
 

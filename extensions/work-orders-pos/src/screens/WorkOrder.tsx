@@ -195,8 +195,8 @@ type WorkOrderAction =
 
 const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction): Partial<WorkOrder> => {
   if (action.type === 'add-item') {
-    const productId = action.item.productId;
-    const existingItem = workOrder.products?.find(item => item.productId === productId);
+    const productVariantId = action.item.productVariantId;
+    const existingItem = workOrder.products?.find(item => item.productVariantId === productVariantId);
     if (existingItem) {
       action = {
         type: 'update-item',
@@ -219,10 +219,10 @@ const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction
       };
 
     case 'remove-item': {
-      const productId = action.item.productId;
+      const productVariantId = action.item.productVariantId;
       return {
         ...workOrder,
-        products: (workOrder.products ?? []).filter(item => item.productId !== productId),
+        products: (workOrder.products ?? []).filter(item => item.productVariantId !== productVariantId),
       };
     }
 
@@ -230,7 +230,9 @@ const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction
       const updateItem = action.item;
       return {
         ...workOrder,
-        products: (workOrder.products ?? []).map(item => (item.productId === updateItem.productId ? updateItem : item)),
+        products: (workOrder.products ?? []).map(item =>
+          item.productVariantId === updateItem.productVariantId ? updateItem : item,
+        ),
       };
     }
 
@@ -298,12 +300,7 @@ const WorkOrderProperties = ({
 
   return (
     <Stack direction="horizontal" flexChildren>
-      <TextField
-        label="Work Order ID"
-        disabled
-        onFocus={() => navigate('WorkOrderSelector', {})}
-        value={workOrder.name ?? ''}
-      />
+      <TextField label="Work Order ID" disabled value={workOrder.name ?? ''} />
       <TextField
         label="Status"
         required
@@ -356,7 +353,7 @@ const WorkOrderItems = ({
           item.sku.toLowerCase().includes(query.toLowerCase()),
       )
       .map<ListRow>(item => ({
-        id: item.productId,
+        id: item.productVariantId,
         onPress: () => {
           itemConfigPopup.navigate(item);
         },

@@ -30,7 +30,7 @@ export function ItemSelector() {
             id: String(variant.id),
             onPress: () => {
               closeRef.current({
-                productId: String(variant.id),
+                productVariantId: String(variant.id),
                 name: variant.displayName,
                 sku: variant.sku ?? '',
                 quantity: 1,

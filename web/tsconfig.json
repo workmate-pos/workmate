@@ -1,7 +1,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "NodeNext",
     "lib": ["dom", "dom.iterable", "esnext"],
@@ -14,7 +14,8 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "sourceRoot": "/",
-    "strict": true
+    "strict": true,
+    "noUncheckedIndexedAccess": true
   },
-  "exclude": ["node_modules", "frontend"]
+  "exclude": ["node_modules", "frontend", "dist"]
 }

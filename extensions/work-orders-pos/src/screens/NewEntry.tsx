@@ -40,7 +40,7 @@ export function NewEntry() {
     if (data === null) {
       setError('Error loading work orders');
     } else {
-      setWorkOrderInfos(workOrders => [...workOrders, ...data.workOrders]);
+      setWorkOrderInfos(workOrders => [...workOrders, ...data.infoPage]);
     }
 
     setLoadMore(false);
@@ -90,9 +90,9 @@ export function NewEntry() {
 }
 
 function getWorkOrderRows(workOrders: WorkOrderInfo[], navigate: NavigateFn): ListRow[] {
-  return workOrders.map<ListRow>(({ name, products, discountAmount, taxAmount, status, dueDate }) => {
-    const productTotal = products.reduce((total, { unitPrice, quantity }) => total + unitPrice * quantity, 0);
-    const total = productTotal + taxAmount - discountAmount;
+  return workOrders.map<ListRow>(({ name, productAmount, discountAmount, taxAmount, status, dueDate }) => {
+    // ToDO: re-add
+    const total = productAmount + taxAmount - discountAmount;
 
     const dueDateString = new Date(dueDate).toLocaleDateString();
 

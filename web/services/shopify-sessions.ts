@@ -1,7 +1,7 @@
 import { TeifiSessionStorage } from '@teifi-digital/shopify-app-express/shopify.js';
-import { prisma } from './prisma.js';
 import { ShopifySession } from '@prisma/client';
 import { Session } from '@shopify/shopify-api';
+import { db } from './db/index.js';
 
 export class ShopifySessionStorage implements TeifiSessionStorage {
   deleteSession(id: string): Promise<boolean> {
@@ -9,25 +9,17 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
   }
 
   async deleteSessions(ids: string[]): Promise<boolean> {
-    const { count } = await prisma.shopifySession.deleteMany({
-      where: { id: { in: ids } },
-    });
-
-    return count === ids.length;
+    const deleted = await db.shopifySession.remove({ ids });
+    return deleted.length === ids.length;
   }
 
   async fetchAllOfflineSessions(): Promise<Session[]> {
-    const sessions = await prisma.shopifySession.findMany({
-      where: { isOnline: false },
-    });
-
+    const sessions = await db.shopifySession.get({ isOnline: false });
     return sessions.map(shopifySessionToSession);
   }
 
   async fetchOfflineSessionByShop(shop: string): Promise<Session | undefined> {
-    const session = await prisma.shopifySession.findFirst({
-      where: { shop, isOnline: false },
-    });
+    const [session] = await db.shopifySession.get({ shop, isOnline: false, limit: 1 });
 
     if (!session) {
       return undefined;
@@ -37,15 +29,12 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
   }
 
   async findSessionsByShop(shop: string): Promise<Session[]> {
-    const sessions = await prisma.shopifySession.findMany({
-      where: { shop },
-    });
-
+    const sessions = await db.shopifySession.get({ shop });
     return sessions.map(shopifySessionToSession);
   }
 
   async loadSession(id: string): Promise<Session | undefined> {
-    const session = await prisma.shopifySession.findUnique({ where: { id } });
+    const [session] = await db.shopifySession.get({ id, limit: 1 });
 
     if (!session) {
       return undefined;
@@ -56,13 +45,7 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
 
   async storeSession(session: Session): Promise<boolean> {
     const record = sessionToShopifySession(session);
-
-    await prisma.shopifySession.upsert({
-      where: { id: session.id },
-      update: record,
-      create: record,
-    });
-
+    await db.shopifySession.upsert(record);
     return true;
   }
 }

@@ -1,5 +1,4 @@
 import type { WorkOrderCustomer, WorkOrderEmployee, WorkOrderItem, WorkOrderStatus } from './WorkOrder';
-import type { WorkOrderSelectorParams } from './popups/WorkOrderSelector';
 
 /**
  * Screen input/output types.
@@ -8,7 +7,6 @@ import type { WorkOrderSelectorParams } from './popups/WorkOrderSelector';
 export type ScreenInputOutput = {
   Entry: [{ forceReload?: boolean } | undefined, undefined];
   WorkOrder: [{ type: 'load-work-order'; name: string } | { type: 'new-work-order' }, undefined];
-  WorkOrderSelector: [WorkOrderSelectorParams, undefined];
   ItemSelector: [undefined, WorkOrderItem];
   ItemConfig: [WorkOrderItem, { type: 'update' | 'remove'; item: WorkOrderItem }];
   StatusSelector: [undefined, WorkOrderStatus];

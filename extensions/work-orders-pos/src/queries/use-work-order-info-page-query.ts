@@ -13,7 +13,7 @@ export const useWorkOrderInfoPageQuery = ({
 
   const query = useQuery(
     ['work-order-page-items', lastWorkOrderName],
-    async (): Promise<{ workOrders: WorkOrderInfo[] } | null> => {
+    async (): Promise<{ infoPage: WorkOrderInfo[] } | null> => {
       const searchParams = new URLSearchParams({
         limit: '25',
       });
@@ -24,7 +24,7 @@ export const useWorkOrderInfoPageQuery = ({
         return null;
       }
 
-      return response.json();
+      return await response.json();
     },
     { enabled },
   );
@@ -35,12 +35,10 @@ export const useWorkOrderInfoPageQuery = ({
 export type WorkOrderInfo = {
   name: string;
   status: string;
-  discountAmount: number;
   depositAmount: number;
-  dueDate: string;
   taxAmount: number;
-  products: {
-    unitPrice: number;
-    quantity: number;
-  }[];
+  discountAmount: number;
+  shippingAmount: number;
+  productAmount: number;
+  dueDate: string;
 };

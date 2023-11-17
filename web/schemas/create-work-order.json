@@ -50,7 +50,7 @@
       "items": {
         "type": "object",
         "properties": {
-          "productId": {
+          "productVariantId": {
             "type": "string"
           },
           "quantity": {
@@ -62,7 +62,7 @@
             "minimum": 0
           }
         },
-        "required": ["productId", "quantity", "unitPrice"],
+        "required": ["productVariantId", "quantity", "unitPrice"],
         "additionalProperties": false
       }
     },

@@ -1,10 +1,9 @@
-import { Banner, Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { WorkOrder } from './screens/WorkOrder';
 import { ItemConfig } from './screens/popups/ItemConfig';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector';
 import { ItemSelector } from './screens/popups/ItemSelector';
 import { Error } from './screens/Error';
-import { WorkOrderSelector } from './screens/popups/WorkOrderSelector';
 import { ReactQueryProvider } from './providers/ReactQueryProvider';
 import { SettingsProvider } from './providers/SettingsProvider';
 import { StatusSelector } from './screens/popups/StatusSelector';
@@ -43,7 +42,6 @@ function SmartGridModal() {
           <ItemSelector />
           <ShippingConfig />
           <StatusSelector />
-          <WorkOrderSelector />
         </Navigator>
       </SettingsProvider>
     </ReactQueryProvider>

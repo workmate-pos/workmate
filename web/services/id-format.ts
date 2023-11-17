@@ -1,6 +1,8 @@
 import { ShopSettings } from '../schemas/generated/shop-settings.js';
 import { getSettingsByShop } from './settings.js';
-import { prisma } from './prisma.js';
+import { db } from './db/index.js';
+import { useClient } from './db/client.js';
+import { never } from '../util/never.js';
 
 const formatters: Record<
   string,
@@ -33,19 +35,18 @@ export async function getFormattedId(shop: string) {
 
 async function getNextIdForShop(shop: string) {
   await createIdSequenceForShopIfNotExists(shop);
-  const [{ id }] = await prisma.$queryRawUnsafe<{ id: number }[]>(
-    `SELECT NEXTVAL('"${getShopIdSequenceName(shop)}"') :: INTEGER AS "id";`,
-  );
-
-  if (Number.isNaN(id)) {
-    throw new Error('Unexpected non-number id');
-  }
+  const [{ id } = never('Sequence not found')] = await db.workOrder.getNextIdForShop({
+    shopSequenceName: getShopIdSequenceName(shop),
+  });
 
   return id;
 }
 
 async function createIdSequenceForShopIfNotExists(shop: string) {
-  await prisma.$executeRawUnsafe(`CREATE SEQUENCE IF NOT EXISTS "${getShopIdSequenceName(shop)}" AS INTEGER;`);
+  const query = `CREATE SEQUENCE IF NOT EXISTS "${getShopIdSequenceName(shop)}" AS INTEGER;`;
+
+  using client = await useClient();
+  await client.query(query);
 }
 
 function getShopIdSequenceName(shop: string) {

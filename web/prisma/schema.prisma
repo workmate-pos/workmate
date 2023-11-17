@@ -52,18 +52,17 @@ model WorkOrder {
 }
 
 model WorkOrderProduct {
-  id        Int    @id @default(autoincrement())
-  productId String
-  unitPrice Int
-  quantity  Int
+  id               Int    @id @default(autoincrement())
+  productVariantId String
+  unitPrice        Int
+  quantity         Int
 
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
 }
 
 model EmployeeAssignment {
-  id   Int    @id @default(autoincrement())
-  shop String
+  id Int @id @default(autoincrement())
 
   employee   Employee @relation(fields: [employeeId], references: [id])
   employeeId String
