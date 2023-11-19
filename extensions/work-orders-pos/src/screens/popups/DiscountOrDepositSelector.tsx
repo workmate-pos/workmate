@@ -2,6 +2,7 @@ import { useScreen } from '../../hooks/use-screen';
 import { useSettings } from '../../hooks/use-settings';
 import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
+import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
 
 export function DiscountOrDepositSelector() {
   const [selectType, setSelectType] = useState<'discount' | 'deposit' | null>(null);
@@ -65,6 +66,10 @@ export function DiscountOrDepositSelector() {
   const [currencyValue, setCurrencyValue] = useState<number>(allowedCurrencyRange?.[0] ?? 0);
   const [percentageValue, setPercentageValue] = useState<number>(allowedPercentageRange?.[0] ?? 0);
 
+  const percentageValueCurrencyAmount = Math.ceil((subTotal ?? 0) * (percentageValue / 100));
+
+  const currencyFormatter = useCurrencyFormatter();
+
   return (
     <Screen title={`Select ${title}`} isLoading={!settings || subTotal === null || selectType === null}>
       <ScrollView>
@@ -76,9 +81,9 @@ export function DiscountOrDepositSelector() {
                 let title = '';
 
                 if (obj.type === 'percentage') {
-                  title = `${obj.percentage}% (CA$ ${obj.currencyAmount.toFixed(2)})`;
+                  title = `${obj.percentage}% (${currencyFormatter(obj.currencyAmount)})`;
                 } else if (obj.type === 'currency') {
-                  title = `CA$ ${obj.currencyAmount.toFixed(2)}`;
+                  title = currencyFormatter(obj.currencyAmount);
                 }
 
                 return (
@@ -94,7 +99,7 @@ export function DiscountOrDepositSelector() {
 
           {customInputAllowed && (
             <Stack direction="vertical" spacing={2}>
-              <Text variant="headingLarge">Custom CA$</Text>
+              <Text variant="headingLarge">Custom Amount</Text>
 
               <Stack direction="horizontal" alignment="center" flexChildren paddingHorizontal="ExtraExtraLarge">
                 <Stepper
@@ -105,7 +110,7 @@ export function DiscountOrDepositSelector() {
                   onValueChanged={setCurrencyValue}
                 />
                 <Button
-                  title={`CA$ ${currencyValue}`}
+                  title={currencyFormatter(currencyValue)}
                   onPress={() => closePopup({ select: selectType!, type: 'currency', currencyAmount: currencyValue })}
                 />
               </Stack>
@@ -124,13 +129,13 @@ export function DiscountOrDepositSelector() {
                   onValueChanged={setPercentageValue}
                 />
                 <Button
-                  title={`${percentageValue}% (CA$ ${((subTotal ?? 0) * (percentageValue / 100)).toFixed(2)})`}
+                  title={`${percentageValue}% (${currencyFormatter(percentageValueCurrencyAmount)})`}
                   onPress={() =>
                     closePopup({
                       select: selectType!,
                       type: 'percentage',
                       percentage: percentageValue,
-                      currencyAmount: Math.ceil((subTotal ?? 0) * (percentageValue / 100)),
+                      currencyAmount: percentageValueCurrencyAmount,
                     })
                   }
                 />

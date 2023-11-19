@@ -21,3 +21,10 @@ ORDER BY name ASC
 LIMIT :limit!
 OFFSET :offset!;
 
+/* @name upsert */
+INSERT INTO "Employee" (id, shop, name)
+VALUES (:id!, :shop!, :name!)
+ON CONFLICT (id) DO UPDATE SET
+  shop = :shop!,
+  name = :name!
+RETURNING *;

@@ -18,6 +18,7 @@ import { useSettings } from '../hooks/use-settings';
 import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
 import { useWorkOrderFetcher } from '../queries/use-work-order-fetcher';
 import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation';
+import { useCurrencyFormatter } from '../hooks/use-currency-formatter';
 
 export type WorkOrder = Omit<CreateWorkOrder, 'products' | 'employeeAssignments' | 'dueDate' | 'customer'> & {
   products: ({ name: string; sku: string } & CreateWorkOrder['products'][number])[];
@@ -335,6 +336,7 @@ const WorkOrderItems = ({
   });
 
   const [query, setQuery] = useState('');
+  const currencyFormatter = useCurrencyFormatter();
 
   const rows: ListRow[] =
     workOrder.products
@@ -354,7 +356,7 @@ const WorkOrderItems = ({
           subtitle: [item.sku, `QTY: ${item.quantity}`],
         },
         rightSide: {
-          label: `CA$ ${(item.unitPrice * item.quantity).toFixed(2)}`,
+          label: currencyFormatter(item.unitPrice * item.quantity),
           showChevron: true,
         },
       })) ?? [];
@@ -436,33 +438,35 @@ const WorkOrderMoney = ({
     });
   }, [subTotal]);
 
+  const currencyFormatter = useCurrencyFormatter();
+
   return (
     <Stack direction="vertical">
       <Stack direction="horizontal" flexChildren flex={1}>
         <Stack direction="vertical" flex={1}>
-          <NumberField label="Subtotal" disabled value={'CA$ ' + subTotal.toFixed(2)} />
+          <NumberField label="Subtotal" disabled value={currencyFormatter(subTotal)} />
           <NumberField
             label={depositLabel}
-            value={'CA$ ' + price.deposit.toFixed(2)}
+            value={currencyFormatter(price.deposit)}
             onFocus={() => discountOrDepositSelectorPopup.navigate({ select: 'deposit', subTotal })}
           />
           <NumberField
             label={discountLabel}
-            value={'CA$ ' + price.discount.toFixed(2)}
+            value={currencyFormatter(price.discount)}
             onFocus={() => discountOrDepositSelectorPopup.navigate({ select: 'discount', subTotal })}
           />
           <NumberField
             label="Shipping"
-            value={'CA$ ' + price.shipping}
+            value={currencyFormatter(price.shipping)}
             onFocus={() => shippingConfigPopup.navigate()}
           />
-          <NumberField label={taxLabel} disabled value={'CA$ ' + price.tax.toFixed(2)} />
+          <NumberField label={taxLabel} disabled value={currencyFormatter(price.tax)} />
         </Stack>
       </Stack>
 
       <Stack direction="horizontal" flexChildren>
-        <NumberField label="Total" disabled value={'CA$ ' + total.toFixed(2)} />
-        <NumberField label="Balance Due" disabled value={'CA$ ' + due.toFixed(2)} />
+        <NumberField label="Total" disabled value={currencyFormatter(total)} />
+        <NumberField label="Balance Due" disabled value={currencyFormatter(due)} />
       </Stack>
     </Stack>
   );

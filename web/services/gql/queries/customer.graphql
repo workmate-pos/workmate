@@ -1,0 +1,16 @@
+query getCustomers($first: Int!, $after: String) {
+  customers (first: $first, after: $after) {
+    edges {
+      node {
+        id
+        displayName
+        phone
+        email
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { Controller } from '@teifi-digital/shopify-app-express/controllers';
 import { Session } from '@shopify/shopify-api';
-import { db } from '../../services/db/index.js';
+import { db } from '../../services/db/db.js';
+import { synchronizeEmployees } from '../../services/employee.js';
 
 async function fetchEmployees(req: any, res: any) {
   const { shop }: Session = res.locals.shopify.session;
@@ -19,6 +20,15 @@ async function fetchEmployees(req: any, res: any) {
   return res.json({ employees });
 }
 
+async function syncEmployees(req: any, res: any) {
+  const session: Session = res.locals.shopify.session;
+  await synchronizeEmployees(session);
+  return res.json({ success: true });
+}
+
 export default {
-  endpoints: [['/', 'GET', fetchEmployees]],
+  endpoints: [
+    ['/', 'GET', fetchEmployees],
+    ['/sync', 'POST', syncEmployees],
+  ],
 } satisfies Controller;

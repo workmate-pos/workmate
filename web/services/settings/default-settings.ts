@@ -6,7 +6,7 @@ const defaultShopSettings: ShopSettings = {
     { name: 'In Progress', bgHex: '#3ace3a', textHex: '#ffffff' },
     { name: 'Done', bgHex: '#7e98ac', textHex: '#ffffff' },
   ],
-  idFormat: 'WO-#{id}',
+  idFormat: 'WO-#{{id}}',
   discountShortcuts: [
     { value: 10, unit: 'percentage' },
     { value: 100, unit: 'currency' },

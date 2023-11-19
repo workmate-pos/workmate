@@ -4,6 +4,7 @@ import * as workOrderProduct from './queries/generated/work-order-product.sql.js
 import * as employee from './queries/generated/employee.sql.js';
 import * as customer from './queries/generated/customer.sql.js';
 import * as settings from './queries/generated/settings.sql.js';
+import * as storeProperties from './queries/generated/store-properties.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
 
@@ -17,10 +18,12 @@ export const db = {
   employee: wrapPreparedQueries(employee),
   customer: wrapPreparedQueries(customer),
   settings: wrapPreparedQueries(settings),
+  storeProperties: wrapPreparedQueries(storeProperties),
 };
 
 /**
  * Sql tagged template that automatically uses the correct client.
+ * Pgtyped will automatically create types whenever you this tag.
  */
 export const sql = <T extends { params: any; result: any }>(arr: TemplateStringsArray) => {
   const preparedQuery = sqlTaggedTemplate<T>(arr);

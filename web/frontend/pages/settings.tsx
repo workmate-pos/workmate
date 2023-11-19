@@ -1,4 +1,4 @@
-import { useAuthenticatedFetch, useToast } from '@teifi-digital/shopify-app-react';
+import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState } from 'react';
 import {
   Card,
@@ -16,24 +16,25 @@ import {
 } from '@shopify/polaris';
 import { Loading, TitleBar } from '@shopify/app-bridge-react';
 import type { ShopSettings } from '../../schemas/generated/shop-settings';
-import { useMutation, useQuery } from 'react-query';
 import { Rule, RuleSet } from '../components/RuleSet';
 import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider';
 import invariant from 'tiny-invariant';
+import { useSettingsQuery } from '../hooks/use-settings-query';
+import { useSettingsMutation } from '../hooks/use-settings-mutation';
+import { useDataSyncMutation } from '../hooks/use-data-sync-mutation';
+import { useStorePropertiesQuery } from '../hooks/use-store-properties-query';
+import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
 const ONLY_HIGHEST_SHORTCUT = 'ONLY_HIGHEST_SHORTCUT';
 const CURRENCY_RANGE = 'CURRENCY_RANGE';
 const PERCENTAGE_RANGE = 'PERCENTAGE_RANGE';
 
-const CURRENCY = 'CA$';
-
 type DiscountShortcutUnit = ShopSettings['discountShortcuts'][number]['unit'];
 type DepositShortcutUnit = ShopSettings['depositShortcuts'][number]['unit'];
 
 export default function Settings() {
   const [toast, setToastAction] = useToast();
-  const fetch = useAuthenticatedFetch();
   const [settings, setSettings] = useState<ShopSettings>(null!);
   const [init, setInit] = useState(false);
 
@@ -45,50 +46,54 @@ export default function Settings() {
 
   const [statusValue, setStatusValue] = useState('');
 
-  const getSettingsQuery = useQuery(
-    ['settings'],
-    () => fetch('/api/settings').then<{ settings: ShopSettings }>(res => res.json()),
-    {
-      refetchOnWindowFocus: false,
-      onSuccess({ settings }) {
-        setSettings(settings);
-        setInit(true);
-      },
-      onError() {
-        setToastAction({
-          content: 'Could not load settings',
-          action: {
-            content: 'Retry',
-            onAction() {
-              getSettingsQuery.refetch();
-            },
+  const getSettingsQuery = useSettingsQuery({
+    refetchOnWindowFocus: false,
+    onSuccess({ settings }) {
+      setSettings(settings);
+      setInit(true);
+    },
+    onError() {
+      setToastAction({
+        content: 'Could not load settings',
+        action: {
+          content: 'Retry',
+          onAction() {
+            getSettingsQuery.refetch();
           },
-        });
-      },
+        },
+      });
     },
-  );
+  });
 
-  const saveSettingsQuery = useMutation(
-    ['settings'],
-    (settings: ShopSettings) =>
-      fetch('/api/settings', {
-        method: 'POST',
-        body: JSON.stringify(settings),
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    {
-      onError() {
-        setToastAction({
-          content: 'Could not save settings',
-        });
-      },
-      onSuccess() {
-        setToastAction({
-          content: 'Saved settings',
-        });
-      },
+  const saveSettingsMutation = useSettingsMutation({
+    onError() {
+      setToastAction({
+        content: 'Could not save settings',
+      });
     },
-  );
+    onSuccess() {
+      setToastAction({
+        content: 'Saved settings',
+      });
+    },
+  });
+
+  const syncMutation = useDataSyncMutation({
+    onError() {
+      setToastAction({
+        content: 'Syncing failed',
+      });
+    },
+    onSuccess() {
+      setToastAction({
+        content: 'Syncing done!',
+      });
+    },
+  });
+
+  const storePropertiesQuery = useStorePropertiesQuery();
+  const currencyCode = storePropertiesQuery.data?.storeProperties.currencyCode;
+  const currencyFormatter = useCurrencyFormatter();
 
   if (!init || !settings) {
     return (
@@ -100,8 +105,8 @@ export default function Settings() {
     );
   }
 
-  const discountRules = getDiscountRules(settings, setSettings);
-  const depositRules = getDepositRules(settings, setSettings);
+  const discountRules = getDiscountRules(settings, setSettings, currencyFormatter);
+  const depositRules = getDepositRules(settings, setSettings, currencyFormatter);
 
   const activeDiscountRules = getActiveDiscountRules(settings);
   const activeDepositRules = getActiveDepositRules(settings);
@@ -114,10 +119,10 @@ export default function Settings() {
           primaryAction={{
             content: 'Save',
             target: 'APP',
-            loading: saveSettingsQuery.isLoading,
+            loading: saveSettingsMutation.isLoading,
             disabled: getSettingsQuery.isLoading,
             onAction() {
-              saveSettingsQuery.mutate(settings);
+              saveSettingsMutation.mutate(settings);
             },
           }}
         />
@@ -147,7 +152,7 @@ export default function Settings() {
                           labelHidden
                           options={[
                             { label: '%', value: 'percentage' },
-                            { label: CURRENCY, value: 'currency' },
+                            ...(currencyCode ? [{ label: currencyCode, value: 'currency' }] : []),
                           ]}
                           value={discountShortcutUnit}
                           onChange={(value: DiscountShortcutUnit) => setDiscountShortcutUnit(value)}
@@ -186,7 +191,8 @@ export default function Settings() {
                         })
                       }
                     >
-                      {String(shortcut.value)} {{ percentage: '%', currency: CURRENCY }[shortcut.unit]}
+                      {shortcut.unit === 'currency' ? currencyFormatter(shortcut.value) : null}
+                      {shortcut.unit === 'percentage' ? `${shortcut.value}%` : null}
                     </Tag>
                   ))}
                 </InlineStack>
@@ -216,7 +222,7 @@ export default function Settings() {
                           labelHidden
                           options={[
                             { label: '%', value: 'percentage' },
-                            { label: CURRENCY, value: 'currency' },
+                            ...(currencyCode ? [{ label: currencyCode, value: 'currency' }] : []),
                           ]}
                           value={depositShortcutUnit}
                           onChange={(value: DepositShortcutUnit) => setDepositShortcutUnit(value)}
@@ -254,7 +260,8 @@ export default function Settings() {
                         })
                       }
                     >
-                      {String(shortcut.value)} {{ percentage: '%', currency: CURRENCY }[shortcut.unit]}
+                      {shortcut.unit === 'currency' ? currencyFormatter(shortcut.value) : null}
+                      {shortcut.unit === 'percentage' ? `${shortcut.value}%` : null}
                     </Tag>
                   ))}
                 </InlineStack>
@@ -322,7 +329,7 @@ export default function Settings() {
                       <br />
                       Available variables:{' '}
                       <Text as="p" fontWeight="semibold">
-                        {'{id}, {year}, {month}, {day}, {hour}, {minute}'}
+                        {'{{id}}, {{year}}, {{month}}, {{day}}, {{hour}}, {{minute}}'}
                       </Text>
                     </>
                   }
@@ -335,6 +342,46 @@ export default function Settings() {
                   }
                 />
               </BlockStack>
+            </Card>{' '}
+            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+              <BlockStack gap="400">
+                <Text as="h3" variant="headingMd">
+                  Data Synchronization
+                </Text>
+                <Text as="p" tone={'subdued'} variant={'bodySm'}>
+                  You can sync the data we store with your Shopify store at any time to keep it up to date.
+                </Text>
+              </BlockStack>
+            </Box>
+            <Card roundedAbove="sm">
+              <BlockStack>
+                <InlineStack gap="400">
+                  <Button
+                    onClick={() => syncMutation.mutate('customer')}
+                    loading={syncMutation.isLoading && syncMutation.variables === 'customer'}
+                    disabled={syncMutation.isLoading}
+                    variant="primary"
+                  >
+                    Sync Customers
+                  </Button>
+                  <Button
+                    onClick={() => syncMutation.mutate('employee')}
+                    loading={syncMutation.isLoading && syncMutation.variables === 'employee'}
+                    disabled={syncMutation.isLoading}
+                    variant="primary"
+                  >
+                    Sync Employees
+                  </Button>
+                  <Button
+                    onClick={() => syncMutation.mutate('store-properties')}
+                    loading={syncMutation.isLoading && syncMutation.variables === 'store-properties'}
+                    disabled={syncMutation.isLoading}
+                    variant="primary"
+                  >
+                    Sync Store Settings
+                  </Button>
+                </InlineStack>
+              </BlockStack>
             </Card>
           </InlineGrid>
         </BlockStack>
@@ -344,7 +391,11 @@ export default function Settings() {
   );
 }
 
-function getDiscountRules(settings: ShopSettings, setSettings: (settings: ShopSettings) => void): Rule[] {
+function getDiscountRules(
+  settings: ShopSettings,
+  setSettings: (settings: ShopSettings) => void,
+  currencyFormatter: CurrencyFormatter,
+): Rule[] {
   return [
     {
       value: ONLY_SHORTCUTS,
@@ -404,7 +455,7 @@ function getDiscountRules(settings: ShopSettings, setSettings: (settings: ShopSe
             min={0}
             max={123}
             step={1}
-            formatter={num => `${CURRENCY} ${num}`}
+            formatter={currencyFormatter}
             value={settings.discountRules.allowedCurrencyRange}
             onChange={(value: [number, number]) =>
               setSettings({
@@ -472,7 +523,11 @@ function getDiscountRules(settings: ShopSettings, setSettings: (settings: ShopSe
   ];
 }
 
-function getDepositRules(settings: ShopSettings, setSettings: (settings: ShopSettings) => void): Rule[] {
+function getDepositRules(
+  settings: ShopSettings,
+  setSettings: (settings: ShopSettings) => void,
+  currencyFormatter: CurrencyFormatter,
+): Rule[] {
   return [
     {
       value: ONLY_SHORTCUTS,
@@ -559,7 +614,7 @@ function getDepositRules(settings: ShopSettings, setSettings: (settings: ShopSet
             min={0}
             max={123}
             step={1}
-            formatter={num => `${CURRENCY} ${num}`}
+            formatter={currencyFormatter}
             value={settings.depositRules.allowedCurrencyRange}
             onChange={(value: [number, number]) =>
               setSettings({

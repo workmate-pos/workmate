@@ -1,7 +1,7 @@
 import { CreateWorkOrder } from '../schemas/generated/create-work-order.js';
 import { getSettingsByShop } from './settings.js';
-import { getFormattedId } from './id-format.js';
-import { db } from './db/index.js';
+import { getFormattedId } from './id-formatting.js';
+import { db } from './db/db.js';
 import { never } from '../util/never.js';
 import { unit } from './db/unit-of-work.js';
 

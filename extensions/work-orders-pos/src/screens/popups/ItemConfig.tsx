@@ -2,6 +2,7 @@ import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-ext
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen';
 import type { WorkOrderItem } from '../WorkOrder';
+import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
 
 export function ItemConfig() {
   const [item, setItem] = useState<WorkOrderItem | null>(null);
@@ -10,6 +11,7 @@ export function ItemConfig() {
   };
 
   const { Screen, closePopup } = useScreen('ItemConfig', setItem);
+  const currencyFormatter = useCurrencyFormatter();
 
   return (
     <Screen title={item?.name ?? 'Item'} isLoading={!item} presentation={{ sheet: true }}>
@@ -22,7 +24,7 @@ export function ItemConfig() {
                 {item.sku}
               </Text>
               <Text variant="body" color="TextSubdued">
-                CA$ {item.unitPrice}
+                {currencyFormatter(item.unitPrice)}
               </Text>
             </Stack>
             <Stack direction="vertical" spacing={2}>

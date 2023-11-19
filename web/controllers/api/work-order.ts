@@ -2,7 +2,7 @@ import { Controller } from '@teifi-digital/shopify-app-express/controllers';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { getWorkOrder, upsertWorkOrder, validateCreateWorkOrder } from '../../services/work-order.js';
 import { Session } from '@shopify/shopify-api';
-import { db } from '../../services/db/index.js';
+import { db } from '../../services/db/db.js';
 
 async function createWorkOrder(req: any, res: any) {
   const session: Session = res.locals.shopify.session;

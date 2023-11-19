@@ -1,6 +1,6 @@
 import { ShopSettings } from '../schemas/generated/shop-settings.js';
 import { getSettingsByShop } from './settings.js';
-import { db } from './db/index.js';
+import { db } from './db/db.js';
 import { useClient } from './db/client.js';
 import { never } from '../util/never.js';
 
@@ -23,7 +23,7 @@ export async function getFormattedId(shop: string) {
   let formattedId = settings.idFormat;
 
   for (const [key, formatter] of Object.entries(formatters)) {
-    const template = `{${key}}`;
+    const template = `{{${key}}}`;
     if (formattedId.includes(template)) {
       const value = await formatter({ shop, settings });
       formattedId = formattedId.replace(template, value);

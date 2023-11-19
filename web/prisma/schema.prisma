@@ -21,6 +21,13 @@ model ShopifySession {
   accessToken      String?
 }
 
+model ShopifyStoreProperties {
+  shop           String @id
+  name           String
+  currencyCode   String
+  currencyFormat String
+}
+
 model Settings {
   shop  String
   key   String
@@ -81,10 +88,13 @@ model Employee {
 }
 
 model Customer {
-  id         String      @id
-  shop       String
+  id    String  @id
+  shop  String
+  name  String
+  phone String?
+  email String?
+
   workOrders WorkOrder[]
-  name       String
 
   @@unique([id, shop])
 }

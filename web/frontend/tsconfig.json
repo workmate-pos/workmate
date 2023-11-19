@@ -12,7 +12,8 @@
     "esModuleInterop": true,
     "typeRoots": ["node_modules/@types"],
     "skipLibCheck": true,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "noImplicitAny": true
   },
   "exclude": ["node_modules"]
 }

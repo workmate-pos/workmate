@@ -1,0 +1,16 @@
+query getStaffMembers($first: Int!, $after: String) {
+  shop {
+    staffMembers(first: $first, after: $after) {
+      edges {
+        node {
+          id
+          name
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

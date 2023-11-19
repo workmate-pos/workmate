@@ -11,6 +11,7 @@ import { CustomerSelector } from './screens/popups/CustomerSelector';
 import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSelector';
 import { ShippingConfig } from './screens/popups/ShippingConfig';
 import { NewEntry } from './screens/NewEntry';
+import { StorePropertiesProvider } from './providers/StorePropertiesProvider';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -30,19 +31,21 @@ function SmartGridModal() {
   return (
     <ReactQueryProvider>
       <SettingsProvider>
-        <Navigator>
-          <NewEntry />
-          <Error />
-          <WorkOrder />
+        <StorePropertiesProvider>
+          <Navigator>
+            <NewEntry />
+            <Error />
+            <WorkOrder />
 
-          <CustomerSelector />
-          <DiscountOrDepositSelector />
-          <EmployeeSelector />
-          <ItemConfig />
-          <ItemSelector />
-          <ShippingConfig />
-          <StatusSelector />
-        </Navigator>
+            <CustomerSelector />
+            <DiscountOrDepositSelector />
+            <EmployeeSelector />
+            <ItemConfig />
+            <ItemSelector />
+            <ShippingConfig />
+            <StatusSelector />
+          </Navigator>
+        </StorePropertiesProvider>
       </SettingsProvider>
     </ReactQueryProvider>
   );

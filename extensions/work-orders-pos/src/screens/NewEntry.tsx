@@ -2,6 +2,7 @@ import { NavigateFn, useScreen } from '../hooks/use-screen';
 import { Button, List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useState } from 'react';
 import { useWorkOrderInfoPageQuery, WorkOrderInfo } from '../queries/use-work-order-info-page-query';
+import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
 
 export function NewEntry() {
   const [resetting, setResetting] = useState(false);
@@ -46,7 +47,8 @@ export function NewEntry() {
     setLoadMore(false);
   }, [workOrderInfoPageQuery.data]);
 
-  const rows = getWorkOrderRows(workOrderInfos, navigate);
+  const currencyFormatter = useCurrencyFormatter();
+  const rows = getWorkOrderRows(workOrderInfos, navigate, currencyFormatter);
 
   return (
     <Screen title="Work Orders">
@@ -89,7 +91,11 @@ export function NewEntry() {
   );
 }
 
-function getWorkOrderRows(workOrders: WorkOrderInfo[], navigate: NavigateFn): ListRow[] {
+function getWorkOrderRows(
+  workOrders: WorkOrderInfo[],
+  navigate: NavigateFn,
+  currencyFormatter: CurrencyFormatter,
+): ListRow[] {
   return workOrders.map<ListRow>(({ name, productAmount, discountAmount, taxAmount, status, dueDate }) => {
     const total = productAmount + taxAmount - discountAmount;
     const dueDateString = new Date(dueDate).toLocaleDateString();
@@ -101,7 +107,7 @@ function getWorkOrderRows(workOrders: WorkOrderInfo[], navigate: NavigateFn): Li
       },
       leftSide: {
         label: name,
-        subtitle: [`CA$ ${(total / 100).toFixed(2)}`],
+        subtitle: [currencyFormatter(total / 100)],
         badges: [
           {
             variant: 'highlight',
