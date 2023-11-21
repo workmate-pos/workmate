@@ -13,9 +13,18 @@ export function CustomerSelector() {
   const rows = getCustomerRows(customers, closePopup);
 
   return (
-    <Screen title="Select Customer" presentation={{ sheet: true }}>
+    <Screen title="Select Customer" presentation={{ sheet: true }} onNavigate={() => setQuery('', true)}>
       <ScrollView>
-        <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search customers" />
+        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+          <Text variant="body" color="TextSubdued">
+            {customersQuery.isRefetching ? 'Reloading...' : ' '}
+          </Text>
+        </Stack>
+        <SearchBar
+          onTextChange={query => setQuery(query, query === '')}
+          onSearch={() => {}}
+          placeholder="Search customers"
+        />
         <List
           data={rows}
           onEndReached={() => customersQuery.fetchNextPage()}
@@ -28,7 +37,7 @@ export function CustomerSelector() {
             </Text>
           </Stack>
         )}
-        {!customersQuery.isSuccess && rows.length === 0 && (
+        {customersQuery.isSuccess && rows.length === 0 && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
               No customers found

@@ -26,10 +26,11 @@ export const useEmployeesQuery = ({ query = '' }: { query?: string } = {}) => {
       if (lastPage.employees.length < PAGE_SIZE) return undefined;
       return pages.map(page => page.employees.length).reduce((acc, curr) => acc + curr, 0);
     },
-    select: data => ({
-      pages: data.pages.flatMap(page => page.employees),
-      pageParams: data.pageParams,
+    select: ({ pages, pageParams }) => ({
+      pages: pages.flatMap(page => page.employees),
+      pageParams,
     }),
+    keepPreviousData: true,
   });
 };
 

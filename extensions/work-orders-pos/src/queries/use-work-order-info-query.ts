@@ -26,10 +26,11 @@ export const useWorkOrderInfoQuery = ({ query = '' }: { query?: string }) => {
       if (lastPage.infoPage.length < PAGE_SIZE) return undefined;
       return pages.map(page => page.infoPage.length).reduce((acc, curr) => acc + curr, 0);
     },
-    select: data => ({
-      pages: data.pages.flatMap(page => page.infoPage),
-      pageParams: data.pageParams,
+    select: ({ pages, pageParams }) => ({
+      pages: pages.flatMap(page => page.infoPage),
+      pageParams,
     }),
+    keepPreviousData: true,
   });
 };
 

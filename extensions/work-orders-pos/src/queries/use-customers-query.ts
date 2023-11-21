@@ -26,10 +26,11 @@ export const useCustomersQuery = ({ query = '' }: { query?: string } = {}) => {
       if (lastPage.customers.length < PAGE_SIZE) return undefined;
       return pages.map(page => page.customers.length).reduce((acc, curr) => acc + curr, 0);
     },
-    select: data => ({
-      pages: data.pages.flatMap(page => page.customers),
-      pageParams: data.pageParams,
+    select: ({ pages, pageParams }) => ({
+      pages: pages.flatMap(page => page.customers),
+      pageParams,
     }),
+    keepPreviousData: true,
   });
 };
 

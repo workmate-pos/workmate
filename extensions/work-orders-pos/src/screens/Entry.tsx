@@ -2,16 +2,10 @@ import { NavigateFn, useScreen } from '../hooks/use-screen';
 import { Button, List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useWorkOrderInfoQuery, WorkOrderInfo } from '../queries/use-work-order-info-query';
 import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
-import { useSettingsQuery } from '../queries/use-settings-query';
-import { useStorePropertiesQuery } from '../queries/use-store-properties-query';
 import { useQueryClient } from 'react-query';
 import { useDebouncedState } from '../hooks/use-debounced-state';
 
 export function Entry() {
-  // prefetch these queries so they're ready when we need them
-  useSettingsQuery();
-  useStorePropertiesQuery();
-
   const queryClient = useQueryClient();
   const { Screen, navigate } = useScreen('Entry', ({ forceReload = false } = {}) => {
     if (forceReload) {
@@ -29,7 +23,7 @@ export function Entry() {
   return (
     <Screen title="Work Orders">
       <ScrollView>
-        <Stack direction="vertical" spacing={2}>
+        <Stack direction="vertical">
           <Stack direction="horizontal" alignment="space-between">
             <Text variant="headingLarge">Work Orders</Text>
             <Button
@@ -38,7 +32,18 @@ export function Entry() {
               onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
             />
           </Stack>
-          <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search work orders" />
+          <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+            <Text variant="body" color="TextSubdued">
+              {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
+            </Text>
+          </Stack>
+          <SearchBar
+            onTextChange={query => {
+              setQuery(query, query === '');
+            }}
+            onSearch={() => {}}
+            placeholder="Search work orders"
+          />
           <List
             data={rows}
             onEndReached={() => workOrderInfoQuery.fetchNextPage()}

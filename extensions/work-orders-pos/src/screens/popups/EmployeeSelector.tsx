@@ -5,27 +5,45 @@ import { Employee, useEmployeesQuery } from '../../queries/use-employees-query';
 import { useDebouncedState } from '../../hooks/use-debounced-state';
 
 export function EmployeeSelector() {
-  const { Screen, closePopup } = useScreen('EmployeeSelector');
+  const { Screen, closePopup } = useScreen('EmployeeSelector', ({ selectedEmployeeIds }) => {
+    setSelectedEmployeeIds(selectedEmployeeIds);
+  });
 
   const [query, setQuery] = useDebouncedState('');
-  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const employeesQuery = useEmployeesQuery({ query });
   const employees = employeesQuery.data?.pages ?? [];
 
-  const rows = getEmployeeRows(employees, selectedEmployees, setSelectedEmployees);
+  const rows = getEmployeeRows(employees, selectedEmployeeIds, setSelectedEmployeeIds);
 
   const close = () => {
     const selected = employees
-      .filter(e => selectedEmployees.includes(e.id))
+      .filter(e => selectedEmployeeIds.includes(e.id))
       .map(e => ({ employeeId: e.id, name: e.name }));
 
     closePopup(selected);
   };
 
   return (
-    <Screen title="Select employee" presentation={{ sheet: true }} onNavigateBack={close}>
+    <Screen
+      title="Select employee"
+      presentation={{ sheet: true }}
+      onNavigateBack={close}
+      onNavigate={() => setQuery('', true)}
+    >
       <ScrollView>
-        <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search employees" />
+        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+          <Text variant="body" color="TextSubdued">
+            {employeesQuery.isRefetching ? 'Reloading...' : ' '}
+          </Text>
+        </Stack>
+        <SearchBar
+          onTextChange={query => {
+            setQuery(query, query === '');
+          }}
+          onSearch={() => {}}
+          placeholder="Search employees"
+        />
         <List data={rows} isLoadingMore={employeesQuery.isLoading} />
         {employeesQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">

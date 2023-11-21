@@ -1,82 +1,77 @@
-import {
-  List,
-  ListRow,
-  ListRowLeftSide,
-  ScrollView,
-  SearchBar,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
-import { useEffect, useState } from 'react';
-import { useScreen } from '../../hooks/use-screen';
+import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { ClosePopupFn, useScreen } from '../../hooks/use-screen';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref';
+import { useDebouncedState } from '../../hooks/use-debounced-state';
+import { useProductsQuery } from '../../queries/use-products-query';
+import { Product } from '@shopify/retail-ui-extensions/src/extension-api/types';
 
 export function ItemSelector() {
   const { Screen, closePopup } = useScreen('ItemSelector');
-  const api = useExtensionApi<'pos.home.modal.render'>();
 
-  const [query, setQuery] = useState<string>('');
-  const [rows, setRows] = useState<ListRow[]>([]);
+  const [query, setQuery] = useDebouncedState('');
+  const productsQuery = useProductsQuery({ query });
+  const products = productsQuery.data?.pages ?? [];
 
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
-
-  useEffect(() => {
-    // TODO: infinite scroller instead of fetching one batch
-    async function fetchProducts() {
-      // TODO: React query
-      const products = await api.productSearch.searchProducts({ first: 10, queryString: query });
-
-      setRows(
-        products.items.flatMap(product =>
-          product.variants.map(variant => ({
-            id: String(variant.id),
-            onPress: () => {
-              closeRef.current({
-                productVariantId: String(variant.id),
-                name: variant.displayName,
-                sku: variant.sku ?? '',
-                quantity: 1,
-                unitPrice: Number(variant.price),
-              });
-            },
-            leftSide: {
-              label: variant.displayName,
-              subtitle: [product.description],
-              image: { source: variant.image ?? product.featuredImage },
-            },
-            rightSide: {
-              showChevron: true,
-            },
-          })),
-        ),
-      );
-    }
-
-    fetchProducts();
-  }, []);
-
-  const getSubtitleText = (subtitle: NonNullable<ListRowLeftSide['subtitle']>[0]): string => {
-    if (typeof subtitle === 'string') {
-      return subtitle;
-    }
-
-    return subtitle.content;
-  };
-
-  const filteredRows = rows.filter(
-    row =>
-      !query ||
-      row.leftSide.label.toLowerCase().includes(query.toLowerCase()) ||
-      row.leftSide.subtitle?.some(
-        subtitle => subtitle && getSubtitleText(subtitle).toLowerCase().includes(query.toLowerCase()),
-      ),
-  );
+  const rows = getProductRows(products, closeRef);
 
   return (
-    <Screen title="Select item" presentation={{ sheet: true }}>
+    <Screen title="Select product" presentation={{ sheet: true }} onNavigate={() => setQuery('', true)}>
       <ScrollView>
-        <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search items" />
-        <List data={filteredRows} />
+        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+          <Text variant="body" color="TextSubdued">
+            {productsQuery.isRefetching ? 'Reloading...' : ' '}
+          </Text>
+        </Stack>
+        <SearchBar onTextChange={query => setQuery(query, !query)} onSearch={() => {}} placeholder="Search products" />
+        <List data={rows} onEndReached={() => productsQuery.fetchNextPage()} isLoadingMore={productsQuery.isLoading} />
+        {productsQuery.isLoading && (
+          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
+            <Text variant="body" color="TextSubdued">
+              Loading products...
+            </Text>
+          </Stack>
+        )}
+        {productsQuery.isSuccess && rows.length === 0 && (
+          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+            <Text variant="body" color="TextSubdued">
+              No products found
+            </Text>
+          </Stack>
+        )}
+        {productsQuery.isError && (
+          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+            <Text color="TextCritical" variant="body">
+              Error loading products
+            </Text>
+          </Stack>
+        )}
       </ScrollView>
     </Screen>
+  );
+}
+
+function getProductRows(products: Product[], closePopupRef: { current: ClosePopupFn<'ItemSelector'> }): ListRow[] {
+  return products.flatMap(product =>
+    product.variants.map(variant => ({
+      id: String(variant.id),
+      onPress: () => {
+        closePopupRef.current({
+          productVariantId: String(variant.id),
+          name: variant.displayName,
+          sku: variant.sku ?? '',
+          quantity: 1,
+          unitPrice: Number(variant.price),
+        });
+      },
+      leftSide: {
+        label: variant.displayName,
+        subtitle: [product.description],
+        image: { source: variant.image ?? product.featuredImage },
+      },
+      rightSide: {
+        showChevron: true,
+      },
+    })),
   );
 }

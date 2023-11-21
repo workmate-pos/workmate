@@ -14,7 +14,6 @@ import {
 } from '@shopify/retail-ui-extensions-react';
 import { Dispatch, useEffect, useReducer, useState } from 'react';
 import { UsePopupFn, useScreen } from '../hooks/use-screen';
-import { useSettingsQuery } from '../queries/use-settings-query';
 import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
 import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter';
@@ -34,13 +33,14 @@ export type WorkOrderStatus = WorkOrder['status'];
 
 export function WorkOrder() {
   const [title, setTitle] = useState('');
-  const [loadName, setLoadName] = useState<string | null>(null);
+  const [workOrderNameToLoad, setWorkOrderNameToLoad] = useState<string | null>(null);
   const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
-  const workOrderQuery = useWorkOrderQuery(loadName, {
+
+  const workOrderQuery = useWorkOrderQuery(workOrderNameToLoad, {
     onSuccess(workOrder) {
       if (!workOrder) return;
       dispatchWorkOrder({ type: 'set-work-order', workOrder });
-      setLoadName(null);
+      setWorkOrderNameToLoad(null);
     },
   });
 
@@ -52,11 +52,10 @@ export function WorkOrder() {
       dispatchWorkOrder({ type: 'reset-work-order' });
     } else if (action.type === 'load-work-order') {
       setTitle(`Edit Work Order ${action.name}`);
-      setLoadName(action.name);
+      setWorkOrderNameToLoad(action.name);
     }
   });
 
-  const settingsQuery = useSettingsQuery();
   const [errorMessage, setErrorMessage] = useState<null | string>(null);
   const [validationErrors, setValidationErrors] = useState<null | WorkOrderValidationErrors>(null);
   const [showWorkOrderSavedBanner, setShowWorkOrderSavedBanner] = useState(false);
@@ -101,7 +100,7 @@ export function WorkOrder() {
   }
 
   return (
-    <Screen title={title} isLoading={settingsQuery.isLoading || workOrderQuery.isLoading}>
+    <Screen title={title} isLoading={workOrderQuery.isLoading}>
       <ScrollView>
         {errorMessage && <Banner title={errorMessage} variant="error" visible />}
         <WorkOrderProperties
@@ -151,9 +150,8 @@ export function WorkOrder() {
                 onPress={() => dismiss()}
                 isDisabled={saveWorkOrderMutation.isLoading}
               />
-              <Button title="Print" isDisabled={saveWorkOrderMutation.isLoading} />
               <Button
-                title="Save & Print"
+                title="Save"
                 type="primary"
                 onPress={() => saveWorkOrderMutation.mutate(workOrder)}
                 isDisabled={saveWorkOrderMutation.isLoading}
@@ -481,7 +479,8 @@ const WorkOrderAssignment = ({
     dispatchWorkOrder({ type: 'set-assigned-employees', employees: result });
   });
 
-  const employeeNames = workOrder.employeeAssignments?.map(employee => employee.name).join(', ') || 'None';
+  const selectedEmployeeNames = workOrder.employeeAssignments?.map(employee => employee.name).join(', ') || 'None';
+  const selectedEmployeeIds = workOrder.employeeAssignments?.map(employee => employee.employeeId) ?? [];
 
   const setDueDate = (date: string) => {
     dispatchWorkOrder({ type: 'set-field', field: 'dueDate', value: new Date(date) });
@@ -489,7 +488,11 @@ const WorkOrderAssignment = ({
 
   return (
     <Stack direction="horizontal" flexChildren>
-      <TextField label="Assigned Employees" onFocus={() => employeeSelectorPopup.navigate()} value={employeeNames} />
+      <TextField
+        label="Assigned Employees"
+        onFocus={() => employeeSelectorPopup.navigate({ selectedEmployeeIds })}
+        value={selectedEmployeeNames}
+      />
       <DateField
         label="Due date"
         value={workOrder.dueDate?.toISOString()}

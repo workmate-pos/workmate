@@ -1,4 +1,4 @@
-import type { WorkOrderCustomer, WorkOrderEmployee, WorkOrderItem, WorkOrderStatus } from './WorkOrder';
+import type { WorkOrder, WorkOrderCustomer, WorkOrderEmployee, WorkOrderItem, WorkOrderStatus } from './WorkOrder';
 
 /**
  * Screen input/output types.
@@ -12,9 +12,7 @@ export type ScreenInputOutput = {
   StatusSelector: [undefined, WorkOrderStatus];
   CustomerSelector: [undefined, WorkOrderCustomer];
   ShippingConfig: [undefined, number];
-  EmployeeSelector: [undefined, WorkOrderEmployee[]];
-
-  // TODO: Allow custom amounts instead of shortcuts (if settings allow it)
+  EmployeeSelector: [{ selectedEmployeeIds: string[] }, WorkOrderEmployee[]];
   DiscountOrDepositSelector: [
     { select: 'discount' | 'deposit'; subTotal: number },
     (
@@ -22,4 +20,5 @@ export type ScreenInputOutput = {
       | { select: 'discount' | 'deposit'; type: 'percentage'; percentage: number; currencyAmount: number }
     ),
   ];
+  WorkOrderOverview: [Partial<WorkOrder>, undefined];
 };
