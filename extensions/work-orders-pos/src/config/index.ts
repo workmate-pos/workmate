@@ -1,1 +1,1 @@
-export const HOST = 'https://hiv-fl-eat-breaking.trycloudflare.com';
+export const HOST = 'https://vacancies-loving-leather-dp.trycloudflare.com';

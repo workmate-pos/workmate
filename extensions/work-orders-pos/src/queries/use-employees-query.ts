@@ -1,19 +1,14 @@
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import { useQuery } from 'react-query';
+import { useInfiniteQuery } from 'react-query';
 
 const PAGE_SIZE = 25;
 
-export const useEmployeesQuery = ({
-  offset = 0,
-  enabled = true,
-  query = '',
-}: { offset?: number; enabled?: boolean; query?: string } = {}) => {
+export const useEmployeesQuery = ({ query = '' }: { query?: string } = {}) => {
   const fetch = useAuthenticatedFetch();
 
-  // TODO: Investigate https://tanstack.com/query/v4/docs/react/guides/paginated-queries
-  return useQuery(
-    ['employees', query, offset],
-    async (): Promise<{ employees: Employee[] } | null> => {
+  return useInfiniteQuery<{ employees: Employee[] }, unknown, Employee>({
+    queryKey: ['employees', query],
+    queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(offset),
@@ -22,15 +17,20 @@ export const useEmployeesQuery = ({
       const response = await fetch(`/api/employee?${searchParams}`);
 
       if (!response.ok) {
-        return null;
+        throw new Error('Failed to fetch employees');
       }
 
       return await response.json();
     },
-    {
-      enabled,
+    getNextPageParam: (lastPage, pages) => {
+      if (lastPage.employees.length < PAGE_SIZE) return undefined;
+      return pages.map(page => page.employees.length).reduce((acc, curr) => acc + curr, 0);
     },
-  );
+    select: data => ({
+      pages: data.pages.flatMap(page => page.employees),
+      pageParams: data.pageParams,
+    }),
+  });
 };
 
 export type Employee = {

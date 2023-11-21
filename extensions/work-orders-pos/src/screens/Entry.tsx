@@ -1,10 +1,10 @@
 import { NavigateFn, useScreen } from '../hooks/use-screen';
 import { Button, List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useEffect, useState } from 'react';
-import { useWorkOrderInfoPageQuery, WorkOrderInfo } from '../queries/use-work-order-info-page-query';
+import { useWorkOrderInfoQuery, WorkOrderInfo } from '../queries/use-work-order-info-query';
 import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
 import { useSettingsQuery } from '../queries/use-settings-query';
 import { useStorePropertiesQuery } from '../queries/use-store-properties-query';
+import { useQueryClient } from 'react-query';
 import { useDebouncedState } from '../hooks/use-debounced-state';
 
 export function Entry() {
@@ -12,51 +12,19 @@ export function Entry() {
   useSettingsQuery();
   useStorePropertiesQuery();
 
-  const [reloading, setReloading] = useDebouncedState(false);
+  const queryClient = useQueryClient();
   const { Screen, navigate } = useScreen('Entry', ({ forceReload = false } = {}) => {
     if (forceReload) {
-      setReloading(true, true);
+      queryClient.invalidateQueries(['work-order-info']);
     }
   });
 
-  useEffect(() => {
-    if (reloading) {
-      setWorkOrderInfos([]);
-      setLoadMore(true);
-      setError(null);
-      setReloading(false, true);
-    } else {
-      workOrderInfoPageQuery.remove();
-    }
-  }, [reloading]);
-
-  const [query, setQuery] = useState('');
-  const [workOrderInfos, setWorkOrderInfos] = useState<WorkOrderInfo[]>([]);
-  const [loadMore, setLoadMore] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const workOrderInfoPageQuery = useWorkOrderInfoPageQuery({
-    offset: workOrderInfos.length,
-    enabled: loadMore,
-    query,
-  });
-
-  useEffect(() => {
-    if (reloading) return;
-
-    const { data } = workOrderInfoPageQuery;
-    if (data === undefined) return;
-
-    if (data === null) {
-      setError('Error loading work orders');
-    } else {
-      setWorkOrderInfos(workOrders => [...workOrders, ...data.infoPage]);
-    }
-
-    setLoadMore(false);
-  }, [workOrderInfoPageQuery.data]);
+  const [query, setQuery] = useDebouncedState('');
+  const workOrderInfoQuery = useWorkOrderInfoQuery({ query });
+  const workOrderInfo = workOrderInfoQuery.data?.pages ?? [];
 
   const currencyFormatter = useCurrencyFormatter();
-  const rows = getWorkOrderRows(workOrderInfos, navigate, currencyFormatter);
+  const rows = getWorkOrderRows(workOrderInfo, navigate, currencyFormatter);
 
   return (
     <Screen title="Work Orders">
@@ -70,33 +38,30 @@ export function Entry() {
               onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
             />
           </Stack>
-          <SearchBar
-            onTextChange={query => {
-              setQuery(query);
-              setReloading(true, !query);
-            }}
-            onSearch={() => {}}
-            placeholder="Search work orders"
+          <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search work orders" />
+          <List
+            data={rows}
+            onEndReached={() => workOrderInfoQuery.fetchNextPage()}
+            isLoadingMore={workOrderInfoQuery.isLoading}
           />
-          <List data={rows} onEndReached={() => setLoadMore(true)} isLoadingMore={workOrderInfoPageQuery.isLoading} />
-          {workOrderInfoPageQuery.isLoading && (
+          {workOrderInfoQuery.isLoading && (
             <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
               <Text variant="body" color="TextSubdued">
                 Loading work orders...
               </Text>
             </Stack>
           )}
-          {!workOrderInfoPageQuery.isLoading && !error && rows.length === 0 && (
+          {workOrderInfoQuery.isSuccess && rows.length === 0 && (
             <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
               <Text variant="body" color="TextSubdued">
                 No work orders found
               </Text>
             </Stack>
           )}
-          {error && (
+          {workOrderInfoQuery.isError && (
             <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
               <Text color="TextCritical" variant="body">
-                {error}
+                An error occurred while loading work orders
               </Text>
             </Stack>
           )}

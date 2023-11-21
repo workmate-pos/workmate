@@ -40,6 +40,7 @@ export function WorkOrder() {
     onSuccess(workOrder) {
       if (!workOrder) return;
       dispatchWorkOrder({ type: 'set-work-order', workOrder });
+      setLoadName(null);
     },
   });
 

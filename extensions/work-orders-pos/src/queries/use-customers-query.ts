@@ -1,19 +1,14 @@
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import { useQuery } from 'react-query';
+import { useInfiniteQuery } from 'react-query';
 
 const PAGE_SIZE = 25;
 
-export const useCustomersQuery = ({
-  offset = 0,
-  enabled = true,
-  query = '',
-}: { offset?: number; enabled?: boolean; query?: string } = {}) => {
+export const useCustomersQuery = ({ query = '' }: { query?: string } = {}) => {
   const fetch = useAuthenticatedFetch();
 
-  // TODO: useInfiniteQuery
-  return useQuery(
-    ['customers', query, offset],
-    async (): Promise<{ customers: Customer[] } | null> => {
+  return useInfiniteQuery<{ customers: Customer[] }, unknown, Customer>({
+    queryKey: ['customers', query],
+    queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(offset),
@@ -22,15 +17,20 @@ export const useCustomersQuery = ({
       const response = await fetch(`/api/customer?${searchParams}`);
 
       if (!response.ok) {
-        return null;
+        throw new Error('Failed to fetch customers');
       }
 
       return await response.json();
     },
-    {
-      enabled,
+    getNextPageParam: (lastPage, pages) => {
+      if (lastPage.customers.length < PAGE_SIZE) return undefined;
+      return pages.map(page => page.customers.length).reduce((acc, curr) => acc + curr, 0);
     },
-  );
+    select: data => ({
+      pages: data.pages.flatMap(page => page.customers),
+      pageParams: data.pageParams,
+    }),
+  });
 };
 
 export type Customer = {
