@@ -14,7 +14,7 @@ export function ItemSelector() {
   const { Screen, closePopup } = useScreen('ItemSelector');
   const api = useExtensionApi<'pos.home.modal.render'>();
 
-  const [query, setQuery] = useState<string | null>(null);
+  const [query, setQuery] = useState<string>('');
   const [rows, setRows] = useState<ListRow[]>([]);
 
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
@@ -22,7 +22,8 @@ export function ItemSelector() {
   useEffect(() => {
     // TODO: infinite scroller instead of fetching one batch
     async function fetchProducts() {
-      const products = await api.productSearch.searchProducts({ first: 10 });
+      // TODO: React query
+      const products = await api.productSearch.searchProducts({ first: 10, queryString: query });
 
       setRows(
         products.items.flatMap(product =>

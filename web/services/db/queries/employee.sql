@@ -17,6 +17,9 @@ WHERE ea."workOrderId" = :workOrderId!;
 SELECT *
 FROM "Employee"
 WHERE shop = :shop!
+AND (
+  name ILIKE COALESCE(:query, '%')
+  )
 ORDER BY name ASC
 LIMIT :limit!
 OFFSET :offset!;

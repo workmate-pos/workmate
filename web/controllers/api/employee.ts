@@ -9,12 +9,19 @@ async function fetchEmployees(req: any, res: any) {
   const paginationOptions = {
     limit: Number.isNaN(parseInt(req.query.limit)) ? 25 : parseInt(req.query.limit),
     offset: Number.isNaN(parseInt(req.query.offset)) ? 0 : parseInt(req.query.offset),
+    query: req.query.query,
   };
+
+  if (paginationOptions.query) {
+    paginationOptions.query = paginationOptions.query.replace(/%/g, '').replace(/_/g, '');
+    paginationOptions.query = `%${paginationOptions.query}%`;
+  }
 
   const employees = await db.employee.page({
     shop,
     limit: paginationOptions.limit,
     offset: paginationOptions.offset,
+    query: paginationOptions.query,
   });
 
   return res.json({ employees });

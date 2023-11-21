@@ -1,4 +1,4 @@
-import { useMutation } from 'react-query';
+import { useMutation, useQueryClient } from 'react-query';
 import type { WorkOrder } from '../screens/WorkOrder';
 import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
 import { toCents } from '../util/money-utils';
@@ -10,8 +10,9 @@ export type WorkOrderValidationErrors = {
 
 export const useSaveWorkOrderMutation = () => {
   const fetch = useAuthenticatedFetch();
+  const queryClient = useQueryClient();
 
-  const query = useMutation<{ success: boolean }, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>(
+  return useMutation<{ success: boolean }, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>(
     async workOrder => {
       validateWorkOrder(workOrder);
 
@@ -49,9 +50,14 @@ export const useSaveWorkOrderMutation = () => {
 
       return response.json();
     },
+    {
+      onSuccess(data, workOrder) {
+        if (workOrder.name) {
+          queryClient.invalidateQueries(['work-order', workOrder.name]);
+        }
+      },
+    },
   );
-
-  return query;
 };
 
 function validateWorkOrder(workOrder: Partial<WorkOrder>): asserts workOrder is WorkOrder {

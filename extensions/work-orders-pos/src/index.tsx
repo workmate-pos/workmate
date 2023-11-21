@@ -5,13 +5,11 @@ import { EmployeeSelector } from './screens/popups/EmployeeSelector';
 import { ItemSelector } from './screens/popups/ItemSelector';
 import { Error } from './screens/Error';
 import { ReactQueryProvider } from './providers/ReactQueryProvider';
-import { SettingsProvider } from './providers/SettingsProvider';
 import { StatusSelector } from './screens/popups/StatusSelector';
 import { CustomerSelector } from './screens/popups/CustomerSelector';
 import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSelector';
 import { ShippingConfig } from './screens/popups/ShippingConfig';
-import { NewEntry } from './screens/NewEntry';
-import { StorePropertiesProvider } from './providers/StorePropertiesProvider';
+import { Entry } from './screens/Entry';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -30,23 +28,19 @@ function SmartGridTile() {
 function SmartGridModal() {
   return (
     <ReactQueryProvider>
-      <SettingsProvider>
-        <StorePropertiesProvider>
-          <Navigator>
-            <NewEntry />
-            <Error />
-            <WorkOrder />
+      <Navigator>
+        <Entry />
+        <Error />
+        <WorkOrder />
 
-            <CustomerSelector />
-            <DiscountOrDepositSelector />
-            <EmployeeSelector />
-            <ItemConfig />
-            <ItemSelector />
-            <ShippingConfig />
-            <StatusSelector />
-          </Navigator>
-        </StorePropertiesProvider>
-      </SettingsProvider>
+        <CustomerSelector />
+        <DiscountOrDepositSelector />
+        <EmployeeSelector />
+        <ItemConfig />
+        <ItemSelector />
+        <ShippingConfig />
+        <StatusSelector />
+      </Navigator>
     </ReactQueryProvider>
   );
 }

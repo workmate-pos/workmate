@@ -8,6 +8,11 @@ WHERE wo.id = :workOrderId!;
 SELECT *
 FROM "Customer"
 WHERE shop = :shop!
+AND (
+  name ILIKE COALESCE(:query, '%') OR
+  email ILIKE COALESCE(:query, '%') OR
+  phone ILIKE COALESCE(:query, '%')
+  )
 ORDER BY name ASC
 LIMIT :limit! OFFSET :offset;
 

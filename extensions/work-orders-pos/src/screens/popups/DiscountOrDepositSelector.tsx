@@ -1,5 +1,5 @@
 import { useScreen } from '../../hooks/use-screen';
-import { useSettings } from '../../hooks/use-settings';
+import { useSettingsQuery } from '../../queries/use-settings-query';
 import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
@@ -11,7 +11,8 @@ export function DiscountOrDepositSelector() {
     setSelectType(select);
     setSubTotal(subTotal);
   });
-  const settings = useSettings();
+  const settingsQuery = useSettingsQuery();
+  const settings = settingsQuery.data?.settings;
 
   const shortcuts = {
     none: undefined,
@@ -71,7 +72,7 @@ export function DiscountOrDepositSelector() {
   const currencyFormatter = useCurrencyFormatter();
 
   return (
-    <Screen title={`Select ${title}`} isLoading={!settings || subTotal === null || selectType === null}>
+    <Screen title={`Select ${title}`} isLoading={settingsQuery.isLoading || subTotal === null || selectType === null}>
       <ScrollView>
         <Stack direction="vertical" spacing={8}>
           <Stack direction="vertical" spacing={2}>

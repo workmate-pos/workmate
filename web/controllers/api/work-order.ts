@@ -26,13 +26,20 @@ async function fetchWorkOrderInfoPage(req: any, res: any) {
     status: req.query.status,
     limit: Number.isNaN(parseInt(req.query.limit)) ? 25 : parseInt(req.query.limit),
     offset: Number.isNaN(parseInt(req.query.offset)) ? 0 : parseInt(req.query.offset),
+    query: req.query.query,
   };
+
+  if (paginationOptions.query) {
+    paginationOptions.query = paginationOptions.query.replace(/%/g, '').replace(/_/g, '');
+    paginationOptions.query = `%${paginationOptions.query}%`;
+  }
 
   const infoPage = await db.workOrder.infoPage({
     shop,
     status: paginationOptions.status,
     offset: paginationOptions.offset,
     limit: paginationOptions.limit,
+    query: paginationOptions.query,
   });
 
   return res.json({ infoPage });

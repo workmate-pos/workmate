@@ -37,8 +37,18 @@ SELECT wo.name,
        COALESCE(SUM(wop.quantity * wop."unitPrice"), 0) :: INTEGER AS "productAmount!"
 FROM "WorkOrder" wo
 LEFT JOIN "WorkOrderProduct" wop ON wo.id = wop."workOrderId"
-WHERE shop = :shop!
-  AND status = COALESCE(:status, status)
+LEFT JOIN "Customer" c ON wo."customerId" = c.id
+LEFT JOIN "EmployeeAssignment" ea ON ea."workOrderId" = wo.id
+LEFT JOIN "Employee" e ON ea."employeeId" = e.id
+WHERE wo.shop = :shop!
+  AND wo.status = COALESCE(:status, wo.status)
+  AND (
+    wo.status ILIKE COALESCE(:query, '%') OR
+    wo.name ILIKE COALESCE(:query, '%') OR
+    wo.description ILIKE COALESCE(:query, '%') OR
+    c.name ILIKE COALESCE(:query, '%') OR
+    e.name ILIKE COALESCE(:query, '%')
+  )
 GROUP BY wo.id
 ORDER BY wo.id DESC
 LIMIT :limit!

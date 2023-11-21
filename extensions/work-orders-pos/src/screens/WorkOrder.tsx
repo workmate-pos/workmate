@@ -13,12 +13,12 @@ import {
   TextField,
 } from '@shopify/retail-ui-extensions-react';
 import { Dispatch, useEffect, useReducer, useState } from 'react';
-import { NavigateFn, UsePopupFn, useScreen } from '../hooks/use-screen';
-import { useSettings } from '../hooks/use-settings';
+import { UsePopupFn, useScreen } from '../hooks/use-screen';
+import { useSettingsQuery } from '../queries/use-settings-query';
 import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
-import { useWorkOrderFetcher } from '../queries/use-work-order-fetcher';
 import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter';
+import { useWorkOrderQuery } from '../queries/use-work-order-query';
 
 export type WorkOrder = Omit<CreateWorkOrder, 'products' | 'employeeAssignments' | 'dueDate' | 'customer'> & {
   products: ({ name: string; sku: string } & CreateWorkOrder['products'][number])[];
@@ -33,32 +33,29 @@ export type WorkOrderCustomer = WorkOrder['customer'];
 export type WorkOrderStatus = WorkOrder['status'];
 
 export function WorkOrder() {
-  const fetchWorkOrder = useWorkOrderFetcher();
-  const [loadingWorkOrder, setLoadingWorkOrder] = useState(true);
   const [title, setTitle] = useState('');
+  const [loadName, setLoadName] = useState<string | null>(null);
+  const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
+  const workOrderQuery = useWorkOrderQuery(loadName, {
+    onSuccess(workOrder) {
+      if (!workOrder) return;
+      dispatchWorkOrder({ type: 'set-work-order', workOrder });
+    },
+  });
 
   const { Screen, usePopup, navigate, dismiss } = useScreen('WorkOrder', async action => {
-    setLoadingWorkOrder(true);
     removeVisualHints();
 
-    try {
-      if (action.type === 'new-work-order') {
-        setTitle('New Work Order');
-        dispatchWorkOrder({ type: 'reset-work-order' });
-      } else if (action.type === 'load-work-order') {
-        setTitle(`Edit Work Order ${action.name}`);
-        const workOrder = await fetchWorkOrder(action.name);
-        if (workOrder) {
-          dispatchWorkOrder({ type: 'set-work-order', workOrder });
-        }
-      }
-    } finally {
-      setLoadingWorkOrder(false);
+    if (action.type === 'new-work-order') {
+      setTitle('New Work Order');
+      dispatchWorkOrder({ type: 'reset-work-order' });
+    } else if (action.type === 'load-work-order') {
+      setTitle(`Edit Work Order ${action.name}`);
+      setLoadName(action.name);
     }
   });
 
-  const settings = useSettings();
-  const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
+  const settingsQuery = useSettingsQuery();
   const [errorMessage, setErrorMessage] = useState<null | string>(null);
   const [validationErrors, setValidationErrors] = useState<null | WorkOrderValidationErrors>(null);
   const [showWorkOrderSavedBanner, setShowWorkOrderSavedBanner] = useState(false);
@@ -103,14 +100,13 @@ export function WorkOrder() {
   }
 
   return (
-    <Screen title={title} isLoading={!settings || loadingWorkOrder}>
+    <Screen title={title} isLoading={settingsQuery.isLoading || workOrderQuery.isLoading}>
       <ScrollView>
         {errorMessage && <Banner title={errorMessage} variant="error" visible />}
         <WorkOrderProperties
           workOrder={workOrder}
           dispatchWorkOrder={dispatchWorkOrder}
           usePopup={usePopup}
-          navigate={navigate}
           validationErrors={validationErrors}
         />
 
@@ -118,7 +114,6 @@ export function WorkOrder() {
           <WorkOrderItems usePopup={usePopup} workOrder={workOrder} dispatchWorkOrder={dispatchWorkOrder} />
 
           <Stack direction="vertical" flex={1} alignment="flex-start">
-            <WorkOrderActions />
             <TextArea
               rows={3}
               label="Description"
@@ -274,13 +269,11 @@ const WorkOrderProperties = ({
   workOrder,
   dispatchWorkOrder,
   usePopup,
-  navigate,
   validationErrors,
 }: {
   workOrder: Partial<WorkOrder>;
   dispatchWorkOrder: Dispatch<WorkOrderAction>;
   usePopup: UsePopupFn;
-  navigate: NavigateFn;
   validationErrors: WorkOrderValidationErrors | null;
 }) => {
   const statusSelectorPopup = usePopup('StatusSelector', result => {
@@ -471,14 +464,6 @@ const WorkOrderMoney = ({
     </Stack>
   );
 };
-
-const WorkOrderActions = () => (
-  <Stack direction="horizontal" flexChildren>
-    <Button title="Deposit" />
-    <Button title="Overview" />
-    <Button title="Settings" />
-  </Stack>
-);
 
 const WorkOrderAssignment = ({
   workOrder,

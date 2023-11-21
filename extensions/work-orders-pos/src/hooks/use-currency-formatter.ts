@@ -1,12 +1,13 @@
-import { useStoreProperties } from './use-store-properties';
+import { useStorePropertiesQuery } from '../queries/use-store-properties-query';
 
 export const useCurrencyFormatter = () => {
-  const storeProperties = useStoreProperties();
+  const storePropertiesQuery = useStorePropertiesQuery();
 
   return (amount: number) => {
-    if (!storeProperties) return `$${amount.toFixed(2)}`;
+    const { data } = storePropertiesQuery;
+    if (!data) return `$${amount.toFixed(2)}`;
 
-    const { currencyFormat } = storeProperties;
+    const { currencyFormat } = data.storeProperties;
     const variables = {
       amount: amount.toFixed(2),
       amount_no_decimals: amount.toFixed(0),

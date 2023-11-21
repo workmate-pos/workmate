@@ -3,37 +3,45 @@ import { Button, List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shop
 import { useEffect, useState } from 'react';
 import { useWorkOrderInfoPageQuery, WorkOrderInfo } from '../queries/use-work-order-info-page-query';
 import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
+import { useSettingsQuery } from '../queries/use-settings-query';
+import { useStorePropertiesQuery } from '../queries/use-store-properties-query';
+import { useDebouncedState } from '../hooks/use-debounced-state';
 
-export function NewEntry() {
-  const [resetting, setResetting] = useState(false);
+export function Entry() {
+  // prefetch these queries so they're ready when we need them
+  useSettingsQuery();
+  useStorePropertiesQuery();
+
+  const [reloading, setReloading] = useDebouncedState(false);
   const { Screen, navigate } = useScreen('Entry', ({ forceReload = false } = {}) => {
     if (forceReload) {
-      setResetting(true);
-      setWorkOrderInfos([]);
-      setLoadMore(true);
-      setError(null);
+      setReloading(true, true);
     }
   });
 
   useEffect(() => {
-    if (resetting) {
-      setResetting(false);
+    if (reloading) {
+      setWorkOrderInfos([]);
+      setLoadMore(true);
+      setError(null);
+      setReloading(false, true);
     } else {
       workOrderInfoPageQuery.remove();
     }
-  }, [resetting]);
+  }, [reloading]);
 
-  const [query, setQuery] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const [workOrderInfos, setWorkOrderInfos] = useState<WorkOrderInfo[]>([]);
   const [loadMore, setLoadMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const workOrderInfoPageQuery = useWorkOrderInfoPageQuery({
     offset: workOrderInfos.length,
-    enabled: loadMore && !resetting,
+    enabled: loadMore,
+    query,
   });
 
   useEffect(() => {
-    if (resetting) return;
+    if (reloading) return;
 
     const { data } = workOrderInfoPageQuery;
     if (data === undefined) return;
@@ -62,7 +70,14 @@ export function NewEntry() {
               onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
             />
           </Stack>
-          <SearchBar onTextChange={setQuery} onSearch={() => {}} placeholder="Search work orders" />
+          <SearchBar
+            onTextChange={query => {
+              setQuery(query);
+              setReloading(true, !query);
+            }}
+            onSearch={() => {}}
+            placeholder="Search work orders"
+          />
           <List data={rows} onEndReached={() => setLoadMore(true)} isLoadingMore={workOrderInfoPageQuery.isLoading} />
           {workOrderInfoPageQuery.isLoading && (
             <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
