@@ -499,7 +499,7 @@ const WorkOrderMoney = ({
               value={currencyFormatter(deposited)}
               onFocus={() => discountOrDepositSelectorPopup.navigate({ select: 'deposit', subTotal })}
             />
-            <NumberField label={'Paid'} disabled={true} value={currencyFormatter(paid)} />
+            <NumberField label={'Paid'} disabled={true} value={currencyFormatter(paid - deposited)} />
           </Stack>
           {!workOrder.name && (
             <Text variant="body" color="TextSubdued">

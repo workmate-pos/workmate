@@ -2,7 +2,7 @@ import { useInfiniteQuery } from 'react-query';
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { PaginatedResult, Product } from '@shopify/retail-ui-extensions/src/extension-api/types';
 
-const PAGE_SIZE = 1;
+const PAGE_SIZE = 10;
 
 export const useProductsQuery = ({ query = '' }: { query?: string }) => {
   const api = useExtensionApi<'pos.home.modal.render'>();

@@ -1,5 +1,14 @@
 import { NavigateFn, useScreen } from '../hooks/use-screen';
-import { Button, List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import {
+  BadgeVariant,
+  Button,
+  List,
+  ListRow,
+  ScrollView,
+  SearchBar,
+  Stack,
+  Text,
+} from '@shopify/retail-ui-extensions-react';
 import { useWorkOrderInfoQuery, WorkOrderInfo } from '../queries/use-work-order-info-query';
 import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
 import { useQueryClient } from 'react-query';
@@ -26,11 +35,7 @@ export function Entry() {
         <Stack direction="vertical">
           <Stack direction="horizontal" alignment="space-between">
             <Text variant="headingLarge">Work Orders</Text>
-            <Button
-              title="New Work Order"
-              type="primary"
-              onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
-            />
+            <Button title="New Work Order" type="primary" onPress={() => print()} />
           </Stack>
           <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
             <Text variant="body" color="TextSubdued">
@@ -81,32 +86,41 @@ function getWorkOrderRows(
   navigate: NavigateFn,
   currencyFormatter: CurrencyFormatter,
 ): ListRow[] {
-  return workOrders.map<ListRow>(({ name, productAmount, discountAmount, taxAmount, status, dueDate }) => {
-    const total = productAmount + taxAmount - discountAmount;
-    const dueDateString = new Date(dueDate).toLocaleDateString();
+  return workOrders.map<ListRow>(
+    ({ name, productAmount, discountAmount, taxAmount, status, dueDate, paidAmount, shippingAmount, hasDeposit }) => {
+      const total = productAmount + taxAmount + shippingAmount - discountAmount;
+      const dueDateString = new Date(dueDate).toLocaleDateString();
 
-    return {
-      id: name,
-      onPress: () => {
-        navigate('WorkOrder', { type: 'load-work-order', name });
-      },
-      leftSide: {
-        label: name,
-        subtitle: [currencyFormatter(total / 100)],
-        badges: [
-          {
-            variant: 'highlight',
-            text: status,
-          },
-          {
-            variant: 'warning',
-            text: `Due ${dueDateString}`,
-          },
-        ],
-      },
-      rightSide: {
-        showChevron: true,
-      },
-    };
-  });
+      const paymentStatus = paidAmount >= total ? 'Paid' : hasDeposit ? 'Deposit' : 'Unpaid';
+      const paymentBadgeVariant: BadgeVariant = paidAmount >= total ? 'success' : hasDeposit ? 'highlight' : 'critical';
+
+      return {
+        id: name,
+        onPress: () => {
+          navigate('WorkOrder', { type: 'load-work-order', name });
+        },
+        leftSide: {
+          label: name,
+          subtitle: [currencyFormatter(total / 100)],
+          badges: [
+            {
+              variant: 'highlight',
+              text: status,
+            },
+            {
+              variant: 'warning',
+              text: `Due ${dueDateString}`,
+            },
+            {
+              variant: paymentBadgeVariant,
+              text: paymentStatus,
+            },
+          ],
+        },
+        rightSide: {
+          showChevron: true,
+        },
+      };
+    },
+  );
 }

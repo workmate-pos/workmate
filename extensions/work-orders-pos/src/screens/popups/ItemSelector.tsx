@@ -4,6 +4,7 @@ import { useDynamicRef } from '../../hooks/use-dynamic-ref';
 import { useDebouncedState } from '../../hooks/use-debounced-state';
 import { useProductsQuery } from '../../queries/use-products-query';
 import { Product } from '@shopify/retail-ui-extensions/src/extension-api/types';
+import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
 
 export function ItemSelector() {
   const { Screen, closePopup } = useScreen('ItemSelector');
@@ -11,9 +12,10 @@ export function ItemSelector() {
   const [query, setQuery] = useDebouncedState('');
   const productsQuery = useProductsQuery({ query });
   const products = productsQuery.data?.pages ?? [];
+  const currencyFormatter = useCurrencyFormatter();
 
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
-  const rows = getProductRows(products, closeRef);
+  const rows = getProductRows(products, closeRef, currencyFormatter);
 
   return (
     <Screen title="Select product" presentation={{ sheet: true }} onNavigate={() => setQuery('', true)}>
@@ -51,7 +53,11 @@ export function ItemSelector() {
   );
 }
 
-function getProductRows(products: Product[], closePopupRef: { current: ClosePopupFn<'ItemSelector'> }): ListRow[] {
+function getProductRows(
+  products: Product[],
+  closePopupRef: { current: ClosePopupFn<'ItemSelector'> },
+  currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
+): ListRow[] {
   return products.flatMap(product =>
     product.variants.map(variant => ({
       id: String(variant.id),
@@ -71,6 +77,7 @@ function getProductRows(products: Product[], closePopupRef: { current: ClosePopu
       },
       rightSide: {
         showChevron: true,
+        label: currencyFormatter(Number(variant.price)),
       },
     })),
   );

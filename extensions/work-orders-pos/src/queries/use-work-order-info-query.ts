@@ -39,10 +39,11 @@ export const useWorkOrderInfoQuery = ({ query = '' }: { query?: string }) => {
 export type WorkOrderInfo = {
   name: string;
   status: string;
-  depositAmount: number;
   taxAmount: number;
   discountAmount: number;
   shippingAmount: number;
   productAmount: number;
+  paidAmount: number;
   dueDate: string;
+  hasDeposit: boolean;
 };

@@ -11,14 +11,8 @@ export const usePaymentHandler = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePayment = async (
-    options: {
-      workOrderName: string;
-      amount: number;
-    } & (
-      | {
-          type: 'balance';
-          previouslyDeposited?: number;
-        }
+    options: { workOrderName: string; amount: number } & (
+      | { type: 'balance'; previouslyDeposited?: number }
       | { type: 'deposit' }
     ),
   ) => {

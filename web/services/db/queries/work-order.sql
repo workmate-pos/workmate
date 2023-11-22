@@ -16,26 +16,37 @@ ON CONFLICT ("shop", "name") DO UPDATE SET status           = EXCLUDED.status,
 RETURNING *;
 
 /* @name infoPage */
+WITH wo AS (SELECT id, name, status, "taxAmount", "discountAmount", "shippingAmount", "dueDate"
+            FROM "WorkOrder" wo
+            WHERE shop = :shop!
+              AND wo.status = COALESCE(:status, wo.status)
+              AND (
+                        wo.status ILIKE COALESCE(:query, '%') OR
+                        wo.name ILIKE COALESCE(:query, '%') OR
+                        wo.description ILIKE COALESCE(:query, '%'))
+            ORDER BY wo.id DESC
+            LIMIT :limit! OFFSET :offset),
+     prod AS (SELECT "workOrderId", COALESCE(SUM(quantity * "unitPrice"), 0) :: INTEGER AS "productAmount!"
+              FROM "WorkOrderProduct"
+              GROUP BY "workOrderId"),
+     pay AS (SELECT "workOrderId",
+                    COALESCE(SUM(amount), 0) :: INTEGER        AS "paidAmount!",
+                    COALESCE(BOOL_OR(type = 'DEPOSIT'), FALSE) AS "hasDeposit!"
+             FROM "WorkOrderPayment"
+             GROUP BY "workOrderId")
 SELECT wo.name,
        wo.status,
        wo."taxAmount",
        wo."discountAmount",
        wo."shippingAmount",
        wo."dueDate",
-       COALESCE(SUM(wop.quantity * wop."unitPrice"), 0) :: INTEGER AS "productAmount!"
-FROM "WorkOrder" wo
-LEFT JOIN "WorkOrderProduct" wop ON wo.id = wop."workOrderId"
-WHERE wo.shop = :shop!
-  AND wo.status = COALESCE(:status, wo.status)
-  AND (
-    wo.status ILIKE COALESCE(:query, '%') OR
-    wo.name ILIKE COALESCE(:query, '%') OR
-    wo.description ILIKE COALESCE(:query, '%')
-  )
-GROUP BY wo.id
-ORDER BY wo.id DESC
-LIMIT :limit!
-OFFSET :offset;
+       prod."productAmount!",
+       pay."paidAmount!",
+       pay."hasDeposit!"
+FROM wo
+LEFT JOIN prod ON wo.id = prod."workOrderId"
+LEFT JOIN pay ON wo.id = pay."workOrderId"
+ORDER BY wo.id DESC;
 
 /* @name get */
 SELECT *
