@@ -1,19 +1,27 @@
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
 import type { WorkOrder } from '../screens/WorkOrder';
 import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
 import { toCents } from '../util/money-utils';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 
 export type WorkOrderValidationErrors = {
   [key in keyof WorkOrder]?: string;
 };
 
-export const useSaveWorkOrderMutation = () => {
+export const useSaveWorkOrderMutation = (
+  options: Omit<
+    UseMutationOptions<SaveWorkOrderMutationResult, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>,
+    'mutationFn' | 'mutationKey'
+  >,
+) => {
   const fetch = useAuthenticatedFetch();
   const queryClient = useQueryClient();
+  const api = useExtensionApi();
 
-  return useMutation<{ success: boolean }, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>(
-    async workOrder => {
+  return useMutation<SaveWorkOrderMutationResult, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>({
+    ...options,
+    mutationFn: async workOrder => {
       validateWorkOrder(workOrder);
 
       const createWorkOrder: CreateWorkOrder = {
@@ -23,7 +31,6 @@ export const useSaveWorkOrderMutation = () => {
           id: workOrder.customer.id,
         },
         price: {
-          deposit: toCents(workOrder.price.deposit),
           tax: toCents(workOrder.price.tax),
           discount: toCents(workOrder.price.discount),
           shipping: toCents(workOrder.price.shipping),
@@ -50,14 +57,24 @@ export const useSaveWorkOrderMutation = () => {
 
       return await response.json();
     },
-    {
-      onSuccess(data, workOrder) {
-        if (workOrder.name) {
-          queryClient.invalidateQueries(['work-order', workOrder.name]);
-        }
-      },
+    async onSuccess(...args) {
+      const [{ workOrder }] = args;
+
+      if (workOrder.name) {
+        queryClient.invalidateQueries(['work-order', workOrder.name]);
+      }
+
+      options.onSuccess?.(...args);
     },
-  );
+  });
+};
+
+type SaveWorkOrderMutationResult = {
+  workOrder: {
+    name: string;
+    depositAmount: number;
+    customerId: string;
+  };
 };
 
 function validateWorkOrder(workOrder: Partial<WorkOrder>): asserts workOrder is WorkOrder {

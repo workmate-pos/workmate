@@ -1,6 +1,6 @@
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
-import { getWorkOrder, upsertWorkOrder, validateCreateWorkOrder } from '../../services/work-order.js';
+import { getWorkOrder, upsertWorkOrder } from '../../services/work-order.js';
 import { Session } from '@shopify/shopify-api';
 import { db } from '../../services/db/db.js';
 import {
@@ -19,15 +19,9 @@ export default class WorkOrderController {
     const session: Session = res.locals.shopify.session;
     const createWorkOrder: CreateWorkOrder = req.body;
 
-    const validationResult = await validateCreateWorkOrder(session.shop, createWorkOrder);
+    const workOrder = await upsertWorkOrder(session.shop, createWorkOrder);
 
-    if (validationResult.type === 'error') {
-      return res.status(400).json({ errors: validationResult.errors });
-    }
-
-    await upsertWorkOrder(session.shop, validationResult.validated);
-
-    return res.json({ success: true });
+    return res.json({ workOrder });
   }
 
   @Get('/')

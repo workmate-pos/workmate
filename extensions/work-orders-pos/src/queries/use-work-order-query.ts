@@ -3,14 +3,13 @@ import { useQuery, UseQueryOptions } from 'react-query';
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { WorkOrder } from '../screens/WorkOrder';
 
-export const useWorkOrderQuery = (
-  name: string | null,
-  options?: UseQueryOptions<WorkOrderQueryResponse, unknown, WorkOrderQueryResponse>,
-) => {
+// TODO: add deposit input box back, with MAKE PAYMENT next to it
+
+export const useWorkOrderQuery = (name: string | null, options?: UseQueryOptions<WorkOrderQueryResponse>) => {
   const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
 
-  return useQuery<WorkOrderQueryResponse, unknown, WorkOrderQueryResponse>(
+  return useQuery<WorkOrderQueryResponse>(
     ['work-order', name],
     async () => {
       if (!name) return null;
@@ -21,7 +20,7 @@ export const useWorkOrderQuery = (
         throw new Error(`useWorkOrderQuery HTTP Status ${response.status}`);
       }
 
-      const { workOrder, employees, customer, products } = (await response.json()) as FetchWorkOrderResponse;
+      const { workOrder, payments, employees, customer, products } = (await response.json()) as FetchWorkOrderResponse;
 
       const productVariantIds = products.map(p => Number(p.productVariantId));
 
@@ -46,17 +45,24 @@ export const useWorkOrderQuery = (
         },
         dueDate: new Date(workOrder.dueDate),
         description: workOrder.description,
-        employeeAssignments: employees.map(({ id, name }) => ({ name, employeeId: id })),
+        employeeAssignments: employees.map(({ id, name }) => ({
+          name,
+          employeeId: id,
+        })),
         customer: {
           id: customer.id,
           name: customer.displayName,
         },
-        products: products.map(p => ({
-          productVariantId: p.productVariantId,
-          unitPrice: p.unitPrice / 100,
-          quantity: p.quantity,
-          name: productVariantMap[p.productVariantId]?.displayName ?? 'Unknown product',
-          sku: productVariantMap[p.productVariantId]?.sku ?? '',
+        products: products.map(({ productVariantId, unitPrice, quantity }) => ({
+          productVariantId: productVariantId,
+          unitPrice: unitPrice / 100,
+          quantity: quantity,
+          name: productVariantMap[productVariantId]?.displayName ?? 'Unknown product',
+          sku: productVariantMap[productVariantId]?.sku ?? '',
+        })),
+        payments: payments.map(({ type, amount }) => ({
+          type,
+          amount: amount / 100,
         })),
       };
     },
@@ -92,5 +98,9 @@ type FetchWorkOrderResponse = {
     productVariantId: string;
     quantity: number;
     unitPrice: number;
+  }[];
+  payments: {
+    type: 'DEPOSIT' | 'BALANCE';
+    amount: number;
   }[];
 };

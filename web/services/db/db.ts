@@ -1,6 +1,8 @@
 import * as shopifySession from './queries/generated/shopify-session.sql.js';
 import * as workOrder from './queries/generated/work-order.sql.js';
 import * as workOrderProduct from './queries/generated/work-order-product.sql.js';
+import * as workOrderPayment from './queries/generated/work-order-payment.sql.js';
+import * as workOrderEmployeeAssignment from './queries/generated/work-order-employee-assignment.sql.js';
 import * as settings from './queries/generated/settings.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
@@ -12,6 +14,8 @@ export const db = {
   shopifySession: wrapPreparedQueries(shopifySession),
   workOrder: wrapPreparedQueries(workOrder),
   workOrderProduct: wrapPreparedQueries(workOrderProduct),
+  workOrderPayment: wrapPreparedQueries(workOrderPayment),
+  workOrderEmployeeAssignment: wrapPreparedQueries(workOrderEmployeeAssignment),
   settings: wrapPreparedQueries(settings),
 };
 

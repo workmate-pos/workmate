@@ -35,7 +35,6 @@ model WorkOrder {
   /// Used as ID within this shop
   name                String
   status              String
-  depositAmount       Int
   taxAmount           Int
   discountAmount      Int
   shippingAmount      Int
@@ -45,8 +44,23 @@ model WorkOrder {
   employeeAssignments EmployeeAssignment[]
   products            WorkOrderProduct[]
   customerId          String
+  payments            WorkOrderPayment[]
 
   @@unique([shop, name])
+}
+
+enum PaymentType {
+  DEPOSIT
+  BALANCE
+}
+
+model WorkOrderPayment {
+  id          Int         @id @default(autoincrement())
+  workOrder   WorkOrder   @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+  orderId     String
+  type        PaymentType
+  amount      Int
 }
 
 model WorkOrderProduct {

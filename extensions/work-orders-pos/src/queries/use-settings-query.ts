@@ -1,4 +1,4 @@
-import { ShopSettings } from '../../../../web/schemas/generated/shop-settings';
+import type { ShopSettings } from '../schemas/generated/shop-settings';
 import { useQuery, UseQueryOptions } from 'react-query';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 

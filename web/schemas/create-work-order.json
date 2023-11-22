@@ -22,10 +22,6 @@
     "price": {
       "type": "object",
       "properties": {
-        "deposit": {
-          "type": "integer",
-          "minimum": 0
-        },
         "tax": {
           "type": "integer",
           "minimum": 0
@@ -39,7 +35,7 @@
           "minimum": 0
         }
       },
-      "required": ["deposit", "tax", "discount", "shipping"],
+      "required": ["tax", "discount", "shipping"],
       "additionalProperties": false
     },
     "dueDate": {

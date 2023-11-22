@@ -2,24 +2,22 @@
 SELECT NEXTVAL(FORMAT('%I', :shopSequenceName! :: TEXT)) :: INTEGER AS "id!";
 
 /* @name upsert */
-INSERT INTO "WorkOrder" (shop, name, status, "depositAmount", "taxAmount", "discountAmount", "shippingAmount",
+INSERT INTO "WorkOrder" (shop, name, status, "taxAmount", "discountAmount", "shippingAmount",
                          description, "dueDate", "customerId")
-VALUES (:shop!, :name!, :status!, :depositAmount!, :taxAmount!, :discountAmount!, :shippingAmount!, :description!,
+VALUES (:shop!, :name!, :status!, :taxAmount!, :discountAmount!, :shippingAmount!, :description!,
         :dueDate!, :customerId!)
 ON CONFLICT ("shop", "name") DO UPDATE SET status           = EXCLUDED.status,
-                                           "depositAmount"  = EXCLUDED."depositAmount",
                                            "taxAmount"      = EXCLUDED."taxAmount",
                                            "discountAmount" = EXCLUDED."discountAmount",
                                            "shippingAmount" = EXCLUDED."shippingAmount",
                                            description      = EXCLUDED.description,
                                            "dueDate"        = EXCLUDED."dueDate",
                                            "customerId"     = EXCLUDED."customerId"
-RETURNING "id";
+RETURNING *;
 
 /* @name infoPage */
 SELECT wo.name,
        wo.status,
-       wo."depositAmount",
        wo."taxAmount",
        wo."discountAmount",
        wo."shippingAmount",
@@ -45,16 +43,3 @@ FROM "WorkOrder"
 WHERE id = COALESCE(:id, id)
   AND shop = COALESCE(:shop, shop)
   AND name = COALESCE(:name, name);
-
-/* @name removeAssignments */
-DELETE FROM "EmployeeAssignment"
-WHERE "workOrderId" = :workOrderId!;
-
-/* @name createAssignment */
-INSERT INTO "EmployeeAssignment" ("workOrderId", "employeeId")
-VALUES (:workOrderId!, :employeeId!);
-
-/* @name getAssignedEmployees */
-SELECT *
-FROM "EmployeeAssignment"
-WHERE "workOrderId" = :workOrderId!;

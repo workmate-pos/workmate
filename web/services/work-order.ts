@@ -1,5 +1,4 @@
-import { CreateWorkOrder } from '../schemas/generated/create-work-order.js';
-import { getSettingsByShop } from './settings.js';
+import type { CreateWorkOrder } from '../schemas/generated/create-work-order.js';
 import { getFormattedId } from './id-formatting.js';
 import { db } from './db/db.js';
 import { never } from '../util/never.js';
@@ -8,36 +7,36 @@ import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from './gql/gql.js';
 
-export async function upsertWorkOrder(shop: string, createWorkOrder: ValidatedCreateWorkOrder) {
+export async function upsertWorkOrder(shop: string, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
     const isUpdate = createWorkOrder.name !== undefined;
 
-    const [{ id } = never()] = await db.workOrder.upsert({
+    const [workOrder = never('XD')] = await db.workOrder.upsert({
       shop,
       name: createWorkOrder.name ?? (await getFormattedId(shop)),
       status: createWorkOrder.status,
       customerId: createWorkOrder.customer.id,
-      depositAmount: createWorkOrder.price.deposit,
       taxAmount: createWorkOrder.price.tax,
       discountAmount: createWorkOrder.price.discount,
       shippingAmount: createWorkOrder.price.shipping,
-      // TODO: Make sure everything is utc in front end and back end
       dueDate: new Date(createWorkOrder.dueDate),
       description: createWorkOrder.description,
     });
 
     if (isUpdate) {
-      await db.workOrder.removeAssignments({ workOrderId: id });
-      await db.workOrderProduct.remove({ workOrderId: id });
+      await db.workOrderEmployeeAssignment.remove({ workOrderId: workOrder.id });
+      await db.workOrderProduct.remove({ workOrderId: workOrder.id });
     }
 
     for (const { employeeId } of createWorkOrder.employeeAssignments) {
-      await db.workOrder.createAssignment({ workOrderId: id, employeeId });
+      await db.workOrderEmployeeAssignment.insert({ workOrderId: workOrder.id, employeeId });
     }
 
     for (const { productVariantId, quantity, unitPrice } of createWorkOrder.products) {
-      await db.workOrderProduct.insert({ productVariantId, unitPrice, quantity, workOrderId: id });
+      await db.workOrderProduct.insert({ productVariantId, unitPrice, quantity, workOrderId: workOrder.id });
     }
+
+    return workOrder;
   });
 }
 
@@ -52,60 +51,25 @@ export async function getWorkOrder(session: Session, name: string) {
   const graphql = new Graphql(session);
 
   const getEmployees = async () => {
-    const assignedEmployees = await db.workOrder.getAssignedEmployees({ workOrderId: workOrder.id });
+    const assignedEmployees = await db.workOrderEmployeeAssignment.get({ workOrderId: workOrder.id });
     const responses = await Promise.all(
       assignedEmployees.map(({ employeeId }) => gql.staffMember.getStaffMember(graphql, { id: employeeId })),
     );
     return responses.map(response => response.staffMember).filter(staffMember => staffMember?.active);
   };
 
-  const [products, customer, employees] = await Promise.all([
+  const [products, payments, customer, employees] = await Promise.all([
     db.workOrderProduct.get({ workOrderId: workOrder.id }),
+    db.workOrderPayment.get({ workOrderId: workOrder.id }),
     gql.customer.getCustomer(graphql, { id: workOrder.customerId }).then(response => response.customer),
     getEmployees(),
   ]);
 
   return {
     workOrder,
+    payments,
     customer,
     employees,
     products,
   };
-}
-
-type ValidatedCreateWorkOrder = CreateWorkOrder & { _brand: readonly ['validated'] };
-type CreateWorkOrderErrors = { [field in keyof CreateWorkOrder]?: string[] };
-
-export async function validateCreateWorkOrder(
-  shop: string,
-  workOrder: CreateWorkOrder,
-): Promise<
-  { type: 'error'; errors: CreateWorkOrderErrors } | { type: 'validated'; validated: ValidatedCreateWorkOrder }
-> {
-  const settings = await getSettingsByShop(shop);
-
-  const errors: CreateWorkOrderErrors = {};
-
-  if (!settings.statuses.some(status => workOrder.status === status.name)) {
-    errors.status = [`Invalid status: ${workOrder.status}`];
-  }
-
-  const dueDate = new Date(workOrder.dueDate);
-  if (dueDate.toString() === 'Invalid Date') {
-    errors.dueDate = ['Invalid due date'];
-  }
-
-  for (const product of workOrder.products) {
-    // TODO: check that this product exists in the database/shopify api
-  }
-
-  // TODO: Look these up in the database/shopify api
-  workOrder.employeeAssignments;
-  workOrder.customer;
-
-  if (Object.keys(errors).length > 0) {
-    return { type: 'error', errors };
-  }
-
-  return { type: 'validated', validated: workOrder as ValidatedCreateWorkOrder };
 }
