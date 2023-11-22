@@ -1,11 +1,8 @@
-query getCustomers($first: Int!, $after: String) {
-  customers (first: $first, after: $after) {
+query getCustomers($first: Int = 10, $after: String, $query: String) {
+  customers (first: $first, after: $after, query: $query, sortKey: NAME) {
     edges {
       node {
-        id
-        displayName
-        phone
-        email
+        ...customerFragment
       }
     }
     pageInfo {
@@ -13,4 +10,17 @@ query getCustomers($first: Int!, $after: String) {
       endCursor
     }
   }
+}
+
+query getCustomer($id: ID!) {
+  customer(id: $id) {
+    ...customerFragment
+  }
+}
+
+fragment customerFragment on Customer {
+  id
+  displayName
+  phone
+  email
 }

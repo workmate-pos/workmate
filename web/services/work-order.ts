@@ -4,6 +4,9 @@ import { getFormattedId } from './id-formatting.js';
 import { db } from './db/db.js';
 import { never } from '../util/never.js';
 import { unit } from './db/unit-of-work.js';
+import { Session } from '@shopify/shopify-api';
+import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { gql } from './gql/gql.js';
 
 export async function upsertWorkOrder(shop: string, createWorkOrder: ValidatedCreateWorkOrder) {
   return await unit(async () => {
@@ -24,12 +27,12 @@ export async function upsertWorkOrder(shop: string, createWorkOrder: ValidatedCr
     });
 
     if (isUpdate) {
-      await db.employee.deleteWorkOrderEmployeeAssignments({ workOrderId: id });
+      await db.workOrder.removeAssignments({ workOrderId: id });
       await db.workOrderProduct.remove({ workOrderId: id });
     }
 
     for (const { employeeId } of createWorkOrder.employeeAssignments) {
-      await db.employee.createEmployeeAssignment({ workOrderId: id, employeeId });
+      await db.workOrder.createAssignment({ workOrderId: id, employeeId });
     }
 
     for (const { productVariantId, quantity, unitPrice } of createWorkOrder.products) {
@@ -39,18 +42,28 @@ export async function upsertWorkOrder(shop: string, createWorkOrder: ValidatedCr
 }
 
 // TODO: figure out a way to share types between front end and back end
-export async function getWorkOrder(shop: string, name: string) {
-  const [workOrder] = await db.workOrder.get({ shop, name });
+export async function getWorkOrder(session: Session, name: string) {
+  const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
 
   if (!workOrder) {
     return null;
   }
 
-  const employees = await db.employee.getAssignedEmployees({ workOrderId: workOrder.id });
-  const [customer = never('Every work order has a customer')] = await db.customer.getWorkOrderCustomer({
-    workOrderId: workOrder.id,
-  });
-  const products = await db.workOrderProduct.get({ workOrderId: workOrder.id });
+  const graphql = new Graphql(session);
+
+  const getEmployees = async () => {
+    const assignedEmployees = await db.workOrder.getAssignedEmployees({ workOrderId: workOrder.id });
+    const responses = await Promise.all(
+      assignedEmployees.map(({ employeeId }) => gql.staffMember.getStaffMember(graphql, { id: employeeId })),
+    );
+    return responses.map(response => response.staffMember).filter(staffMember => staffMember?.active);
+  };
+
+  const [products, customer, employees] = await Promise.all([
+    db.workOrderProduct.get({ workOrderId: workOrder.id }),
+    gql.customer.getCustomer(graphql, { id: workOrder.customerId }).then(response => response.customer),
+    getEmployees(),
+  ]);
 
   return {
     workOrder,

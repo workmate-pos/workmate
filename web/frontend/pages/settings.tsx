@@ -21,7 +21,6 @@ import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider';
 import invariant from 'tiny-invariant';
 import { useSettingsQuery } from '../hooks/use-settings-query';
 import { useSettingsMutation } from '../hooks/use-settings-mutation';
-import { useDataSyncMutation } from '../hooks/use-data-sync-mutation';
 import { useStorePropertiesQuery } from '../hooks/use-store-properties-query';
 import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
 
@@ -74,19 +73,6 @@ export default function Settings() {
     onSuccess() {
       setToastAction({
         content: 'Saved settings',
-      });
-    },
-  });
-
-  const syncMutation = useDataSyncMutation({
-    onError() {
-      setToastAction({
-        content: 'Syncing failed',
-      });
-    },
-    onSuccess() {
-      setToastAction({
-        content: 'Syncing done!',
       });
     },
   });
@@ -343,46 +329,6 @@ export default function Settings() {
                 />
               </BlockStack>
             </Card>{' '}
-            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
-              <BlockStack gap="400">
-                <Text as="h3" variant="headingMd">
-                  Data Synchronization
-                </Text>
-                <Text as="p" tone={'subdued'} variant={'bodySm'}>
-                  You can sync the data we store with your Shopify store at any time to keep it up to date.
-                </Text>
-              </BlockStack>
-            </Box>
-            <Card roundedAbove="sm">
-              <BlockStack>
-                <InlineStack gap="400">
-                  <Button
-                    onClick={() => syncMutation.mutate('customer')}
-                    loading={syncMutation.isLoading && syncMutation.variables === 'customer'}
-                    disabled={syncMutation.isLoading}
-                    variant="primary"
-                  >
-                    Sync Customers
-                  </Button>
-                  <Button
-                    onClick={() => syncMutation.mutate('employee')}
-                    loading={syncMutation.isLoading && syncMutation.variables === 'employee'}
-                    disabled={syncMutation.isLoading}
-                    variant="primary"
-                  >
-                    Sync Employees
-                  </Button>
-                  <Button
-                    onClick={() => syncMutation.mutate('store-properties')}
-                    loading={syncMutation.isLoading && syncMutation.variables === 'store-properties'}
-                    disabled={syncMutation.isLoading}
-                    variant="primary"
-                  >
-                    Sync Store Settings
-                  </Button>
-                </InlineStack>
-              </BlockStack>
-            </Card>
           </InlineGrid>
         </BlockStack>
       </Page>

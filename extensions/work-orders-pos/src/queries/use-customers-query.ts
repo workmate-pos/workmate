@@ -1,19 +1,21 @@
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import { useInfiniteQuery } from 'react-query';
 
-const PAGE_SIZE = 25;
-
 export const useCustomersQuery = ({ query = '' }: { query?: string } = {}) => {
   const fetch = useAuthenticatedFetch();
 
-  return useInfiniteQuery<{ customers: Customer[] }, unknown, Customer>({
+  return useInfiniteQuery<
+    { customers: Customer[]; pageInfo: { hasNextPage: boolean; endCursor?: string | null } },
+    unknown,
+    Customer
+  >({
     queryKey: ['customers', query],
-    queryFn: async ({ pageParam: offset = 0 }) => {
-      const searchParams = new URLSearchParams({
-        limit: String(PAGE_SIZE),
-        offset: String(offset),
-      });
+    queryFn: async ({ pageParam: after }) => {
+      const searchParams = new URLSearchParams();
+
       if (query) searchParams.set('query', query);
+      if (after) searchParams.set('after', after);
+
       const response = await fetch(`/api/customer?${searchParams}`);
 
       if (!response.ok) {
@@ -22,9 +24,9 @@ export const useCustomersQuery = ({ query = '' }: { query?: string } = {}) => {
 
       return await response.json();
     },
-    getNextPageParam: (lastPage, pages) => {
-      if (lastPage.customers.length < PAGE_SIZE) return undefined;
-      return pages.map(page => page.customers.length).reduce((acc, curr) => acc + curr, 0);
+    getNextPageParam: lastPage => {
+      if (!lastPage.pageInfo.hasNextPage) return undefined;
+      return lastPage.pageInfo.endCursor;
     },
     select: ({ pages, pageParams }) => ({
       pages: pages.flatMap(page => page.customers),
@@ -36,5 +38,7 @@ export const useCustomersQuery = ({ query = '' }: { query?: string } = {}) => {
 
 export type Customer = {
   id: string;
-  name: string;
+  displayName: string;
+  phone?: string | null;
+  email?: string | null;
 };

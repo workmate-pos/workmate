@@ -47,7 +47,10 @@ export const useWorkOrderQuery = (
         dueDate: new Date(workOrder.dueDate),
         description: workOrder.description,
         employeeAssignments: employees.map(({ id, name }) => ({ name, employeeId: id })),
-        customer,
+        customer: {
+          id: customer.id,
+          name: customer.displayName,
+        },
         products: products.map(p => ({
           productVariantId: p.productVariantId,
           unitPrice: p.unitPrice / 100,
@@ -77,7 +80,9 @@ type FetchWorkOrderResponse = {
   };
   customer: {
     id: string;
-    name: string;
+    displayName: string;
+    phone?: string | null;
+    email?: string | null;
   };
   employees: {
     id: string;

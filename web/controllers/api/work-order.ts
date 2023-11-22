@@ -57,7 +57,7 @@ export default class WorkOrderController {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
-    const result = await getWorkOrder(session.shop, name);
+    const result = await getWorkOrder(session, name);
 
     if (!result) {
       return res.status(404).json({ error: 'Work order not found' });

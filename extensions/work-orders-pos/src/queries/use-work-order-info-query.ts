@@ -1,7 +1,7 @@
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import { useInfiniteQuery } from 'react-query';
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 10;
 
 export const useWorkOrderInfoQuery = ({ query = '' }: { query?: string }) => {
   const fetch = useAuthenticatedFetch();
@@ -13,7 +13,9 @@ export const useWorkOrderInfoQuery = ({ query = '' }: { query?: string }) => {
         limit: String(PAGE_SIZE),
         offset: String(offset),
       });
+
       if (query) searchParams.set('query', query);
+
       const response = await fetch(`/api/work-order?${searchParams}`);
 
       if (!response.ok) {

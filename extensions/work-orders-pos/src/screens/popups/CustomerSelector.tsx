@@ -57,7 +57,7 @@ export function CustomerSelector() {
 }
 
 function getCustomerRows(customers: Customer[], closePopup: ClosePopupFn<'CustomerSelector'>): ListRow[] {
-  return customers.map<ListRow>(({ id, name }) => ({
+  return customers.map<ListRow>(({ id, displayName: name }) => ({
     id,
     onPress: () => {
       closePopup({ id, name });

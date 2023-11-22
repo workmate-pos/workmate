@@ -1,10 +1,9 @@
-query getStaffMembers($first: Int!, $after: String) {
+query getStaffMembers($first: Int = 10, $after: String) {
   shop {
     staffMembers(first: $first, after: $after) {
       edges {
         node {
-          id
-          name
+          ...staffMemberFragment
         }
       }
       pageInfo {
@@ -13,4 +12,16 @@ query getStaffMembers($first: Int!, $after: String) {
       }
     }
   }
+}
+
+query getStaffMember($id: ID!) {
+  staffMember(id: $id) {
+    ...staffMemberFragment
+  }
+}
+
+fragment staffMemberFragment on StaffMember {
+  id
+  name
+  active
 }

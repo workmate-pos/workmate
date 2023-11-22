@@ -21,13 +21,6 @@ model ShopifySession {
   accessToken      String?
 }
 
-model ShopifyStoreProperties {
-  shop           String @id
-  name           String
-  currencyCode   String
-  currencyFormat String
-}
-
 model Settings {
   shop  String
   key   String
@@ -51,9 +44,7 @@ model WorkOrder {
   createdAt           DateTime             @default(now())
   employeeAssignments EmployeeAssignment[]
   products            WorkOrderProduct[]
-
-  customer   Customer @relation(fields: [customerId], references: [id])
-  customerId String
+  customerId          String
 
   @@unique([shop, name])
 }
@@ -71,30 +62,8 @@ model WorkOrderProduct {
 model EmployeeAssignment {
   id Int @id @default(autoincrement())
 
-  employee   Employee @relation(fields: [employeeId], references: [id])
   employeeId String
 
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
-}
-
-model Employee {
-  id          String               @id
-  shop        String
-  assignments EmployeeAssignment[]
-  name        String
-
-  @@unique([id, shop])
-}
-
-model Customer {
-  id    String  @id
-  shop  String
-  name  String
-  phone String?
-  email String?
-
-  workOrders WorkOrder[]
-
-  @@unique([id, shop])
 }

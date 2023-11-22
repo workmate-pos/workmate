@@ -1,37 +1,23 @@
-import { Get, Post, QuerySchema, Authenticated } from '@teifi-digital/shopify-app-express/decorators/default';
+import { Get, Authenticated } from '@teifi-digital/shopify-app-express/decorators/default';
 import { Session } from '@shopify/shopify-api';
-import { db } from '../../services/db/db.js';
-import { synchronizeCustomers } from '../../services/customer.js';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
+import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { gql } from '../../services/gql/gql.js';
 
 @Authenticated()
 export default class CustomerController {
   @Get('/')
-  @QuerySchema('pagination-options')
   async fetchCustomers(req: Request<unknown, unknown, unknown, PaginationOptions>, res: Response) {
-    const { shop }: Session = res.locals.shopify.session;
+    const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    if (paginationOptions.query) {
-      paginationOptions.query = paginationOptions.query.replace(/%/g, '').replace(/_/g, '');
-      paginationOptions.query = `%${paginationOptions.query}%`;
-    }
+    const graphql = new Graphql(session);
+    const response = await gql.customer.getCustomers(graphql, paginationOptions);
 
-    const customers = await db.customer.page({
-      shop,
-      limit: paginationOptions.limit,
-      offset: paginationOptions.offset,
-      query: paginationOptions.query,
-    });
+    const customers = response.customers.edges.map(({ node }) => node);
+    const pageInfo = response.customers.pageInfo;
 
-    return res.json({ customers });
-  }
-
-  @Post('/sync')
-  async syncCustomers(req: Request, res: Response) {
-    const session: Session = res.locals.shopify.session;
-    await synchronizeCustomers(session);
-    return res.json({ success: true });
+    return res.json({ customers, pageInfo });
   }
 }
