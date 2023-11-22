@@ -15,5 +15,6 @@
       "type": "string"
     }
   },
+  "required": ["offset", "limit"],
   "additionalProperties": false
 }

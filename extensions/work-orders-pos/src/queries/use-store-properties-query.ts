@@ -5,7 +5,15 @@ export const useStorePropertiesQuery = (options?: UseQueryOptions<StorePropertie
   const fetch = useAuthenticatedFetch();
   return useQuery<StorePropertiesQueryResponse>(
     ['store-properties'],
-    () => fetch('/api/store-properties').then(res => res.json()),
+    async () => {
+      const response = await fetch('/api/store-properties');
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch store properties');
+      }
+
+      return await response.json();
+    },
     options,
   );
 };

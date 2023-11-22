@@ -1,28 +1,26 @@
-import { Controller } from '@teifi-digital/shopify-app-express/controllers';
 import type { PartialShopSettings } from '../../schemas/generated/partial-shop-settings.js';
 import { getSettingsByShop, updateSettings } from '../../services/settings.js';
 import { Session } from '@shopify/shopify-api';
+import { Authenticated, BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators/default';
+import type { Request, Response } from 'express-serve-static-core';
 
-async function fetchSettings(req: any, res: any) {
-  const session: Session = res.locals.shopify.session;
+@Authenticated()
+export default class SettingsController {
+  @Get('/')
+  async fetchSettings(req: Request, res: Response) {
+    const session: Session = res.locals.shopify.session;
+    const settings = await getSettingsByShop(session.shop);
+    return res.json({ settings });
+  }
 
-  const settings = await getSettingsByShop(session.shop);
+  @Post('/')
+  @BodySchema('partial-shop-settings')
+  async updateSetting(req: Request<unknown, unknown, PartialShopSettings>, res: Response) {
+    const { shop }: Session = res.locals.shopify.session;
+    const settings = req.body;
 
-  return res.json({ settings });
+    await updateSettings(shop, settings);
+
+    return res.json({ success: true });
+  }
 }
-
-async function updateSetting(req: any, res: any) {
-  const { shop }: Session = res.locals.shopify.session;
-  const settings: PartialShopSettings = req.body;
-
-  await updateSettings(shop, settings);
-
-  return res.json({ success: true });
-}
-
-export default {
-  endpoints: [
-    ['/', 'GET', fetchSettings],
-    ['/', 'POST', updateSetting, { jsonSchemaName: 'partial-shop-settings' }],
-  ],
-} satisfies Controller;

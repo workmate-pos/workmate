@@ -5,14 +5,14 @@ import { WorkOrder } from '../screens/WorkOrder';
 
 export const useWorkOrderQuery = (
   name: string | null,
-  options?: UseQueryOptions<unknown, unknown, WorkOrderQueryResponse, (string | null)[]>,
+  options?: UseQueryOptions<WorkOrderQueryResponse, unknown, WorkOrderQueryResponse>,
 ) => {
   const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
 
-  return useQuery(
+  return useQuery<WorkOrderQueryResponse, unknown, WorkOrderQueryResponse>(
     ['work-order', name],
-    async (): Promise<WorkOrderQueryResponse> => {
+    async () => {
       if (!name) return null;
 
       const response = await fetch(`/api/work-order/${encodeURIComponent(name)}`);

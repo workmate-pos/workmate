@@ -18,5 +18,6 @@
       "type": "string"
     }
   },
+  "required": ["limit", "offset"],
   "additionalProperties": false
 }

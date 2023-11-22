@@ -48,7 +48,7 @@ export const useSaveWorkOrderMutation = () => {
         throw 'Something went wrong while saving this work order';
       }
 
-      return response.json();
+      return await response.json();
     },
     {
       onSuccess(data, workOrder) {

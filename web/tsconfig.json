@@ -15,7 +15,9 @@
     "sourceMap": true,
     "sourceRoot": "/",
     "strict": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true
   },
   "exclude": ["node_modules", "frontend", "dist"]
 }
