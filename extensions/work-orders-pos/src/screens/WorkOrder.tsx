@@ -70,6 +70,7 @@ export function WorkOrder() {
 
   const paymentHandler = usePaymentHandler();
 
+  // TODO: Replace with event stuff
   useEffect(() => {
     const { error } = saveWorkOrderMutation;
     if (!error) {

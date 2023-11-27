@@ -1,1 +1,1 @@
-export { queries as gql } from './queries/generated/queries.js';
+export { gql } from './queries/generated/queries.js';

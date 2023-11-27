@@ -2,4 +2,13 @@ schema:
   - "https://${SHOPIFY_SHOP}/admin/api/2023-07/graphql.json":
       headers:
         "X-Shopify-Access-Token": "${SHOPIFY_ACCESS_TOKEN}"
-documents: '**/*.graphql'
+documents: "**/queries/*.graphql"
+extensions:
+  genql:
+    schemaOutput: "./services/gql/queries/generated/schema.ts"
+    documentsOutput: "./services/gql/queries/generated/queries.ts"
+    scalarTypes:
+      FormattedString: "string"
+    documentHeader:
+      - "import type { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';"
+    queryTransformation: "(graphql: Graphql, variables: Variables & Record<string, any>) => graphql.query<Result>(query, variables)"
