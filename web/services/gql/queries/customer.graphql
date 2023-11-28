@@ -24,3 +24,4 @@ fragment customerFragment on Customer {
   phone
   email
 }
+

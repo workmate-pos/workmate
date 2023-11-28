@@ -13,9 +13,9 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject ./dist && sentry-cli sourcemaps upload ./dist",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "pgtyped:compile": "node -r dotenv/config $(npm root)/.bin/pgtyped -c pgtyped.config.json",
-    "pgtyped:watch": "node -r dotenv/config $(npm root)/.bin/pgtyped -c pgtyped.config.json -w",
-    "graphql-codegen:compile": "ts-node-esm -r dotenv/config services/gql/generation/cli.ts",
-    "graphql-codegen:watch": "ts-node-esm -r dotenv/config services/gql/generation/cli.ts",
+    "pgtyped:watch": "npm run pgtyped:compile -- -w",
+    "graphql-codegen:compile": "node -r dotenv/config $(npm root)/.bin/genql",
+    "graphql-codegen:watch": "npm run graphql-codegen:compile -- -w",
     "dev:watch": "concurrently -k -p \"[{name}]\" -n \"pgtyped,graphql-codegen\" -c \"blue.bold,pink.bold\" \"npm run pgtyped:watch\" \"npm run graphql-codegen:watch\""
   },
   "dependencies": {
@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@pgtyped/cli": "^2.3.0",
+    "@teifi-digital/genql": "^0.0.1",
     "@types/cors": "^2.8.15",
     "@types/express": "^4.17.20",
     "@types/jsonwebtoken": "^9.0.4",
@@ -45,7 +46,6 @@
     "graphql-config": "^5.0.3",
     "json-schema-to-typescript": "^13.1.1",
     "nodemon": "^3.0.1",
-    "ts-node": "^10.9.1",
-    "zod": "^3.22.4"
+    "ts-node": "^10.9.1"
   }
 }
