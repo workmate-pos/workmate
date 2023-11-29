@@ -35,7 +35,11 @@ export function Entry() {
         <Stack direction="vertical">
           <Stack direction="horizontal" alignment="space-between">
             <Text variant="headingLarge">Work Orders</Text>
-            <Button title="New Work Order" type="primary" onPress={() => print()} />
+            <Button
+              title="New Work Order"
+              type="primary"
+              onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
+            />
           </Stack>
           <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
             <Text variant="body" color="TextSubdued">

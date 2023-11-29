@@ -28,8 +28,8 @@ export function DiscountOrDepositSelector() {
 
   const title = {
     none: '',
-    discount: 'Discount',
-    deposit: 'Deposit',
+    discount: 'Select Discount',
+    deposit: 'Select Deposit',
   }[selectType ?? 'none'];
 
   const onlyAllowHighestDiscount =
@@ -72,11 +72,14 @@ export function DiscountOrDepositSelector() {
   const currencyFormatter = useCurrencyFormatter();
 
   return (
-    <Screen title={`Select ${title}`} isLoading={settingsQuery.isLoading || subTotal === null || selectType === null}>
+    <Screen title={title} isLoading={settingsQuery.isLoading || subTotal === null || selectType === null}>
       <ScrollView>
         <Stack direction="vertical" spacing={8}>
-          <Stack direction="vertical" spacing={2}>
-            <Text variant="headingLarge">Shortcuts</Text>
+          <Stack direction="vertical" spacing={2} paddingVertical={'Medium'}>
+            <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+              <Text variant="headingLarge">Shortcuts</Text>
+            </Stack>
+
             <Stack alignment="center" direction="horizontal" flex={1} flexChildren paddingHorizontal="ExtraExtraLarge">
               {shortcutButtons?.map(obj => {
                 let title = '';
@@ -99,8 +102,10 @@ export function DiscountOrDepositSelector() {
           </Stack>
 
           {customInputAllowed && (
-            <Stack direction="vertical" spacing={2}>
-              <Text variant="headingLarge">Custom Amount</Text>
+            <Stack direction="vertical" spacing={2} paddingVertical={'Medium'}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text variant="headingLarge">Custom Amount</Text>
+              </Stack>
 
               <Stack direction="horizontal" alignment="center" flexChildren paddingHorizontal="ExtraExtraLarge">
                 <Stepper
@@ -119,8 +124,11 @@ export function DiscountOrDepositSelector() {
           )}
 
           {customInputAllowed && (
-            <Stack direction="vertical" spacing={2}>
-              <Text variant="headingLarge">Custom %</Text>
+            <Stack direction="vertical" spacing={2} paddingVertical={'Medium'}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text variant="headingLarge">Custom %</Text>
+              </Stack>
+
               <Stack direction="horizontal" alignment="center" flexChildren paddingHorizontal="ExtraExtraLarge">
                 <Stepper
                   minimumValue={allowedPercentageRange?.[0] ?? 0}

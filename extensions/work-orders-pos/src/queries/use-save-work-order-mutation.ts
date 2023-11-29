@@ -17,7 +17,6 @@ export const useSaveWorkOrderMutation = (
 ) => {
   const fetch = useAuthenticatedFetch();
   const queryClient = useQueryClient();
-  const api = useExtensionApi();
 
   return useMutation<SaveWorkOrderMutationResult, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>({
     ...options,
@@ -35,7 +34,7 @@ export const useSaveWorkOrderMutation = (
           discount: toCents(workOrder.price.discount),
           shipping: toCents(workOrder.price.shipping),
         },
-        dueDate: workOrder.dueDate.toISOString(),
+        dueDate: workOrder.dueDate,
         products: workOrder.products.map(item => ({
           productVariantId: item.productVariantId,
           quantity: item.quantity,
@@ -72,8 +71,6 @@ export const useSaveWorkOrderMutation = (
 type SaveWorkOrderMutationResult = {
   workOrder: {
     name: string;
-    depositAmount: number;
-    customerId: string;
   };
 };
 

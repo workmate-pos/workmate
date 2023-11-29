@@ -20,5 +20,6 @@ export type ScreenInputOutput = {
       | { select: 'discount' | 'deposit'; type: 'percentage'; percentage: number; currencyAmount: number }
     ),
   ];
-  WorkOrderOverview: [Partial<WorkOrder>, undefined];
+  WorkOrderOverview: [{ name: string }, { saved: true; name: string } | { saved: false }];
+  WorkOrderSaved: [WorkOrder, undefined];
 };

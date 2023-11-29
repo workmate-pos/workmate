@@ -43,7 +43,7 @@ export const useWorkOrderQuery = (name: string | null, options?: UseQueryOptions
           tax: workOrder.taxAmount / 100,
           shipping: workOrder.shippingAmount / 100,
         },
-        dueDate: new Date(workOrder.dueDate),
+        dueDate: workOrder.dueDate,
         description: workOrder.description,
         employeeAssignments: employees.map(({ id, name }) => ({
           name,

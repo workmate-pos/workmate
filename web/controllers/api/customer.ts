@@ -16,7 +16,7 @@ export default class CustomerController {
     const graphql = new Graphql(session);
     const response = await gql.customer.getCustomers(graphql, paginationOptions);
 
-    const customers = response.customers.edges.map(({ node }) => node);
+    const customers = response.customers.nodes;
     const pageInfo = response.customers.pageInfo;
 
     return res.json({ customers, pageInfo });

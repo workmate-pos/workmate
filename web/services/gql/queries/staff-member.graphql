@@ -1,10 +1,8 @@
 query getStaffMembers($first: Int = 10, $after: String) {
   shop {
     staffMembers(first: $first, after: $after) {
-      edges {
-        node {
-          ...staffMemberFragment
-        }
+      nodes {
+        ...staffMemberFragment
       }
       pageInfo {
         hasNextPage

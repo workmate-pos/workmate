@@ -111,7 +111,7 @@ type ScreenNames = keyof ScreenInputOutput;
 type PopupScreenNames = { [K in ScreenNames]: ScreenInputOutput[K][1] extends undefined ? never : K }[ScreenNames];
 type NormalScreenNames = { [K in ScreenNames]: ScreenInputOutput[K][1] extends undefined ? K : never }[ScreenNames];
 
-type PopupNavigateFn<DestinationScreenName extends PopupScreenNames> = (
+type PopupNavigateFn<DestinationScreenName extends ScreenNames> = (
   ...args: ScreenInputOutput[DestinationScreenName][0] extends undefined
     ? []
     : [input: ScreenInputOutput[DestinationScreenName][0]]
@@ -123,7 +123,7 @@ export type NavigateFn = <const DestinationScreenName extends NormalScreenNames>
     : [destinationScreenName: DestinationScreenName, input: ScreenInputOutput[DestinationScreenName][0]]
 ) => void;
 
-export type UsePopupFn = <const DestinationScreenName extends PopupScreenNames>(
+export type UsePopupFn = <const DestinationScreenName extends ScreenNames>(
   destinationScreenName: DestinationScreenName,
   onResult?: (result: ScreenInputOutput[DestinationScreenName][1]) => void,
 ) => {

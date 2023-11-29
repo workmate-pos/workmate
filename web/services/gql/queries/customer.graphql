@@ -1,9 +1,7 @@
 query getCustomers($first: Int = 10, $after: String, $query: String) {
   customers (first: $first, after: $after, query: $query, sortKey: NAME) {
-    edges {
-      node {
-        ...customerFragment
-      }
+    nodes {
+      ...customerFragment
     }
     pageInfo {
       hasNextPage
@@ -24,4 +22,3 @@ fragment customerFragment on Customer {
   phone
   email
 }
-

@@ -16,7 +16,7 @@ export default class EmployeeController {
     const graphql = new Graphql(session);
     const response = await gql.staffMember.getStaffMembers(graphql, paginationOptions);
 
-    const employees = response.shop.staffMembers.edges.map(({ node }) => node);
+    const employees = response.shop.staffMembers.nodes;
     const pageInfo = response.shop.staffMembers.pageInfo;
 
     return res.json({ employees, pageInfo });

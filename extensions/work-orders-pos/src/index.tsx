@@ -11,6 +11,7 @@ import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSel
 import { ShippingConfig } from './screens/popups/ShippingConfig';
 import { Entry } from './screens/Entry';
 import { WorkOrderOverview } from './screens/popups/WorkOrderOverview';
+import { WorkOrderSaved } from './screens/popups/WorkOrderSaved';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -42,6 +43,7 @@ function SmartGridModal() {
         <ShippingConfig />
         <StatusSelector />
         <WorkOrderOverview />
+        <WorkOrderSaved />
       </Navigator>
     </ReactQueryProvider>
   );

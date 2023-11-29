@@ -19,11 +19,12 @@ import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter';
 import { useWorkOrderQuery } from '../queries/use-work-order-query';
 import { usePaymentHandler } from '../hooks/usePaymentHandler';
+import { getPriceDetails } from '../util/work-order';
 
 export type WorkOrder = Omit<CreateWorkOrder, 'products' | 'employeeAssignments' | 'dueDate' | 'customer'> & {
   products: ({ name: string; sku: string } & CreateWorkOrder['products'][number])[];
   employeeAssignments: ({ name: string } & NonNullable<CreateWorkOrder['employeeAssignments']>[number])[];
-  dueDate: Date;
+  dueDate: string;
   customer: { name: string } & CreateWorkOrder['customer'];
   payments: { type: 'DEPOSIT' | 'BALANCE'; amount: number }[];
 };
@@ -37,15 +38,17 @@ export function WorkOrder() {
   const [title, setTitle] = useState('');
   const [workOrderName, setWorkOrderName] = useState<string | null>(null);
   const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
+  const [savedPriceDetails, setSavedPriceDetails] = useState(getPriceDetails(workOrder));
 
   const workOrderQuery = useWorkOrderQuery(workOrderName, {
     onSuccess(workOrder) {
       if (!workOrder) return;
       dispatchWorkOrder({ type: 'set-work-order', workOrder });
+      setSavedPriceDetails(getPriceDetails(workOrder));
     },
   });
 
-  const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
+  const { Screen, usePopup } = useScreen('WorkOrder', async action => {
     removeVisualHints();
 
     if (action.type === 'new-work-order') {
@@ -59,45 +62,49 @@ export function WorkOrder() {
 
   const [errorMessage, setErrorMessage] = useState<null | string>(null);
   const [validationErrors, setValidationErrors] = useState<null | WorkOrderValidationErrors>(null);
-  const [showWorkOrderSavedBanner, setShowWorkOrderSavedBanner] = useState(false);
+
+  // TODO: Don't allow payment if its initially allowed, but then the prices change
+
+  const workOrderSavedPopup = usePopup('WorkOrderSaved');
+  const depositSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {
+    if (result.select === 'deposit') {
+      paymentHandler.handlePayment({
+        workOrderName: workOrder!.name!,
+        type: 'deposit',
+        amount: result.currencyAmount,
+      });
+    }
+  });
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation({
-    onSuccess({ workOrder }) {
-      setShowWorkOrderSavedBanner(true);
-      setWorkOrderName(workOrder.name);
+    onMutate() {
+      setErrorMessage(null);
+      setValidationErrors(null);
+    },
+    onSuccess(result) {
+      setWorkOrderName(result.workOrder.name);
+      workOrderSavedPopup.navigate({ ...workOrder, name: result.workOrder.name } as WorkOrder);
+    },
+    onError(error) {
+      if (typeof error === 'string') {
+        setErrorMessage(error);
+        setValidationErrors(null);
+      } else if (error instanceof Error) {
+        setErrorMessage(`Unexpected error (${error.message})`);
+        setValidationErrors(null);
+      } else {
+        setErrorMessage(null);
+        setValidationErrors(error);
+      }
     },
   });
 
   const paymentHandler = usePaymentHandler();
 
-  // TODO: Replace with event stuff
-  useEffect(() => {
-    const { error } = saveWorkOrderMutation;
-    if (!error) {
-      setErrorMessage(null);
-      setValidationErrors(null);
-      return;
-    }
-
-    if (typeof error === 'string') {
-      setErrorMessage(error);
-      setValidationErrors(null);
-    } else if (error instanceof Error) {
-      setErrorMessage(`Unexpected error (${error.message})`);
-      setValidationErrors(null);
-    } else {
-      setErrorMessage(null);
-      setValidationErrors(error);
-    }
-  }, [saveWorkOrderMutation.error]);
-
   function removeVisualHints() {
     setErrorMessage(null);
     setValidationErrors(null);
-    setShowWorkOrderSavedBanner(false);
   }
-
-  const priceDetails = getPriceDetails(workOrder);
 
   return (
     <Screen
@@ -106,16 +113,6 @@ export function WorkOrder() {
     >
       <ScrollView>
         {errorMessage && <Banner title={errorMessage} variant="error" visible />}
-
-        {showWorkOrderSavedBanner && (
-          <Banner
-            title="Work order saved successfully"
-            variant="confirmation"
-            visible
-            action="Back to work orders"
-            onPress={() => navigate('Entry', { forceReload: true })}
-          />
-        )}
 
         <WorkOrderProperties
           workOrder={workOrder}
@@ -141,30 +138,38 @@ export function WorkOrder() {
               usePopup={usePopup}
               validationErrors={validationErrors}
             />
-            <WorkOrderMoney
-              workOrder={workOrder}
-              dispatchWorkOrder={dispatchWorkOrder}
-              usePopup={usePopup}
-              paymentHandler={paymentHandler}
-            />
+            <WorkOrderMoney workOrder={workOrder} dispatchWorkOrder={dispatchWorkOrder} usePopup={usePopup} />
 
             {(errorMessage || validationErrors) && (
               <Banner title="An error occurred. Make sure that all fields are valid" variant="error" visible />
             )}
 
             <Stack direction="horizontal" flexChildren>
-              {workOrder.name && priceDetails.balanceDue > 0 && (
-                <Button
-                  title="Pay"
-                  onPress={() =>
-                    paymentHandler.handlePayment({
-                      workOrderName: workOrder.name!,
-                      type: 'balance',
-                      amount: priceDetails.total,
-                      previouslyDeposited: priceDetails.deposited,
-                    })
-                  }
-                />
+              {workOrder.name && savedPriceDetails.balanceDue > 0 && (
+                <>
+                  <Button
+                    title="Pay Balance"
+                    onPress={() =>
+                      paymentHandler.handlePayment({
+                        workOrderName: workOrder.name!,
+                        type: 'balance',
+                        amount: savedPriceDetails.total,
+                        previouslyDeposited: savedPriceDetails.deposited,
+                      })
+                    }
+                  />
+                  {savedPriceDetails.deposited === 0 && (
+                    <Button
+                      title="Pay Deposit"
+                      onPress={() =>
+                        depositSelectorPopup.navigate({
+                          select: 'deposit',
+                          subTotal: savedPriceDetails.subTotal,
+                        })
+                      }
+                    />
+                  )}
+                </>
               )}
               <Button
                 title="Save"
@@ -267,7 +272,7 @@ const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction
 const defaultWorkOrder: Partial<WorkOrder> = {
   dueDate: new Date(
     Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + 1000 * 60 * 60 * 24 * 7,
-  ),
+  ).toISOString(),
   customer: undefined,
   employeeAssignments: [],
   name: undefined,
@@ -387,29 +392,14 @@ const WorkOrderItems = ({
   );
 };
 
-function getPriceDetails(workOrder: Partial<WorkOrder>) {
-  const price = workOrder.price ?? { tax: 0, discount: 0, shipping: 0 };
-
-  const subTotal = workOrder.products?.map(item => item.unitPrice * item.quantity).reduce((a, b) => a + b, 0) ?? 0;
-  const total = subTotal + price.shipping + price.tax - price.discount;
-  const paid = workOrder.payments?.reduce((a, b) => a + b.amount, 0) ?? 0;
-  const deposited =
-    workOrder.payments?.filter(payment => payment.type === 'DEPOSIT').reduce((a, b) => a + b.amount, 0) ?? 0;
-  const balanceDue = total - paid;
-
-  return { subTotal, total, paid, balanceDue, deposited };
-}
-
 const WorkOrderMoney = ({
   workOrder,
   dispatchWorkOrder,
   usePopup,
-  paymentHandler,
 }: {
   workOrder: Partial<WorkOrder>;
   dispatchWorkOrder: Dispatch<WorkOrderAction>;
   usePopup: UsePopupFn;
-  paymentHandler: ReturnType<typeof usePaymentHandler>;
 }) => {
   const price = workOrder.price ?? { tax: 0, discount: 0, shipping: 0 };
 
@@ -420,7 +410,7 @@ const WorkOrderMoney = ({
   const taxPercentage = 13;
   const taxLabel = `Tax (${taxPercentage}%)`;
 
-  const discountOrDepositSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {
+  const discountSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {
     if (result.select === 'discount') {
       if (result.type === 'percentage') {
         setDiscountPercentage(result.percentage);
@@ -432,18 +422,6 @@ const WorkOrderMoney = ({
         type: 'set-field',
         field: 'price',
         value: { ...price, discount: result.currencyAmount },
-      });
-    } else if (result.select === 'deposit') {
-      // Add deposit details to the cart and close the app
-
-      if (!workOrder.name) {
-        throw new Error('Work order must be saved before adding a deposit');
-      }
-
-      await paymentHandler.handlePayment({
-        workOrderName: workOrder.name,
-        type: 'deposit',
-        amount: result.currencyAmount,
       });
     }
   });
@@ -476,7 +454,7 @@ const WorkOrderMoney = ({
           <NumberField
             label={discountLabel}
             value={currencyFormatter(price.discount)}
-            onFocus={() => discountOrDepositSelectorPopup.navigate({ select: 'discount', subTotal })}
+            onFocus={() => discountSelectorPopup.navigate({ select: 'discount', subTotal })}
           />
         </Stack>
         <Stack direction={'horizontal'} flexChildren flex={1}>
@@ -494,19 +472,9 @@ const WorkOrderMoney = ({
 
         <Stack direction={'vertical'}>
           <Stack direction={'horizontal'} flexChildren flex={1}>
-            <NumberField
-              label={'Deposit'}
-              disabled={deposited > 0 || !workOrder.name}
-              value={currencyFormatter(deposited)}
-              onFocus={() => discountOrDepositSelectorPopup.navigate({ select: 'deposit', subTotal })}
-            />
+            <NumberField label={'Deposited'} disabled={true} value={currencyFormatter(deposited)} />
             <NumberField label={'Paid'} disabled={true} value={currencyFormatter(paid - deposited)} />
           </Stack>
-          {!workOrder.name && (
-            <Text variant="body" color="TextSubdued">
-              You must save before adding a deposit
-            </Text>
-          )}
         </Stack>
 
         <NumberField label="Balance Due" disabled value={currencyFormatter(balanceDue)} />
@@ -536,7 +504,7 @@ const WorkOrderAssignment = ({
   const setDueDate = (date: string) => {
     const dueDate = new Date(date);
     const dueDateUtc = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60 * 1000);
-    dispatchWorkOrder({ type: 'set-field', field: 'dueDate', value: dueDateUtc });
+    dispatchWorkOrder({ type: 'set-field', field: 'dueDate', value: dueDateUtc.toISOString() });
   };
 
   return (
@@ -548,7 +516,7 @@ const WorkOrderAssignment = ({
       />
       <DateField
         label="Due date"
-        value={workOrder?.dueDate?.toISOString()}
+        value={workOrder?.dueDate}
         onChange={setDueDate}
         error={validationErrors?.dueDate ?? ''}
       />
