@@ -68,6 +68,7 @@ function getProductRows(
           sku: variant.sku ?? '',
           quantity: 1,
           unitPrice: Number(variant.price),
+          imageUrl: variant.image ?? product.featuredImage,
         });
       },
       leftSide: {

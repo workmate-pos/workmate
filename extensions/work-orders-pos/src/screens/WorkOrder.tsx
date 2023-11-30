@@ -18,11 +18,11 @@ import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
 import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter';
 import { useWorkOrderQuery } from '../queries/use-work-order-query';
-import { usePaymentHandler } from '../hooks/usePaymentHandler';
+import { usePaymentHandler } from '../hooks/use-payment-handler';
 import { getPriceDetails } from '../util/work-order';
 
 export type WorkOrder = Omit<CreateWorkOrder, 'products' | 'employeeAssignments' | 'dueDate' | 'customer'> & {
-  products: ({ name: string; sku: string } & CreateWorkOrder['products'][number])[];
+  products: ({ name: string; sku: string; imageUrl?: string } & CreateWorkOrder['products'][number])[];
   employeeAssignments: ({ name: string } & NonNullable<CreateWorkOrder['employeeAssignments']>[number])[];
   dueDate: string;
   customer: { name: string } & CreateWorkOrder['customer'];
@@ -172,7 +172,7 @@ export function WorkOrder() {
                 </>
               )}
               <Button
-                title="Save"
+                title={workOrder.name ? 'Update Order' : 'Create Order'}
                 type="primary"
                 onPress={() => saveWorkOrderMutation.mutate(workOrder)}
                 isDisabled={saveWorkOrderMutation.isLoading}
@@ -367,7 +367,11 @@ const WorkOrderItems = ({
         },
         leftSide: {
           label: item.name,
-          subtitle: [item.sku, `QTY: ${item.quantity}`],
+          subtitle: item.sku ? [item.sku] : undefined,
+          image: {
+            source: item.imageUrl ?? 'not found',
+            badge: item.quantity > 1 ? item.quantity : undefined,
+          },
         },
         rightSide: {
           label: currencyFormatter(item.unitPrice * item.quantity),
@@ -376,7 +380,7 @@ const WorkOrderItems = ({
       })) ?? [];
 
   return (
-    <Stack direction="vertical" flex={1}>
+    <Stack direction="vertical" flex={1} paddingVertical={'ExtraSmall'}>
       <Button title="Add Product" type="primary" onPress={() => itemSelectorPopup.navigate()} />
       <SearchBar placeholder="Search products" initialValue={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
@@ -498,7 +502,7 @@ const WorkOrderAssignment = ({
     dispatchWorkOrder({ type: 'set-assigned-employees', employees: result });
   });
 
-  const selectedEmployeeNames = workOrder.employeeAssignments?.map(employee => employee.name).join(', ') || 'None';
+  const selectedEmployeeNames = workOrder.employeeAssignments?.map(employee => employee.name).join('\n');
   const selectedEmployeeIds = workOrder.employeeAssignments?.map(employee => employee.employeeId) ?? [];
 
   const setDueDate = (date: string) => {
@@ -508,8 +512,9 @@ const WorkOrderAssignment = ({
   };
 
   return (
-    <Stack direction="horizontal" flexChildren>
-      <TextField
+    <Stack direction="vertical" flex={1} flexChildren>
+      <TextArea
+        rows={Math.max(1, selectedEmployeeIds.length) - 1}
         label="Assigned Employees"
         onFocus={() => employeeSelectorPopup.navigate({ selectedEmployeeIds })}
         value={selectedEmployeeNames}

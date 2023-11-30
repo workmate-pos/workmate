@@ -18,6 +18,8 @@ export const usePaymentHandler = () => {
   ) => {
     setIsLoading(true);
 
+    api.toast.show(`Preparing ${options.type} payment`);
+
     await api.cart.clearCart();
 
     const taxable = options.type === 'balance';

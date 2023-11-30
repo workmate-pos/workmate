@@ -17,6 +17,7 @@ export const useSaveWorkOrderMutation = (
 ) => {
   const fetch = useAuthenticatedFetch();
   const queryClient = useQueryClient();
+  const api = useExtensionApi<'pos.home.modal.render'>();
 
   return useMutation<SaveWorkOrderMutationResult, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>({
     ...options,
@@ -64,6 +65,11 @@ export const useSaveWorkOrderMutation = (
       }
 
       options.onSuccess?.(...args);
+    },
+    onMutate(...args) {
+      api.toast.show('Saving work order');
+
+      options.onMutate?.(...args);
     },
   });
 };

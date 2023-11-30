@@ -4,7 +4,7 @@ import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-r
 import { titleCase } from '../../util/casing';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
 import { useWorkOrderQuery } from '../../queries/use-work-order-query';
-import { usePaymentHandler } from '../../hooks/usePaymentHandler';
+import { usePaymentHandler } from '../../hooks/use-payment-handler';
 
 // TODO: Do error messages, etc, here instead of in the WorkOrder screen
 export function WorkOrderOverview() {

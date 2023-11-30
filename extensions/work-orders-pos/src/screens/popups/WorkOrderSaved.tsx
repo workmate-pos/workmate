@@ -3,7 +3,7 @@ import { useState } from 'react';
 import type { WorkOrder } from '../WorkOrder';
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { getPriceDetails } from '../../util/work-order';
-import { usePaymentHandler } from '../../hooks/usePaymentHandler';
+import { usePaymentHandler } from '../../hooks/use-payment-handler';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
 
 export function WorkOrderSaved() {

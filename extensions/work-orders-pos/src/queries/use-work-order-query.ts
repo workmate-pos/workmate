@@ -59,6 +59,8 @@ export const useWorkOrderQuery = (name: string | null, options?: UseQueryOptions
           quantity: quantity,
           name: productVariantMap[productVariantId]?.displayName ?? 'Unknown product',
           sku: productVariantMap[productVariantId]?.sku ?? '',
+          imageUrl:
+            productVariantMap[productVariantId]?.image ?? productVariantMap[productVariantId]?.product?.featuredImage,
         })),
         payments: payments.map(({ type, amount }) => ({
           type,
