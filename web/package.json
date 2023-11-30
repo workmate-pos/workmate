@@ -6,9 +6,9 @@
   "exports": "./dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "npm run typegen && tsc",
+    "build": "npm run typegen && npm run graphql-codegen:compile && tsc",
     "dev": "cross-env NODE_ENV=development nodemon --exec 'node --experimental-specifier-resolution=node --loader ts-node/esm' index.ts --ignore ./frontend",
-    "serve": "npm run graphql-codegen:compile && npm run prisma:migrate:deploy && npm run pgtyped:compile && cross-env NODE_ENV=production node dist/index.js",
+    "serve": "npm run prisma:migrate:deploy && cross-env NODE_ENV=production node dist/index.js",
     "typegen": "rm -rf schemas/generated/ && json2ts --style.singleQuote --cwd schemas/ -i 'schemas/*.json' -o schemas/generated/",
     "sentry:sourcemaps": "sentry-cli sourcemaps inject ./dist && sentry-cli sourcemaps upload ./dist",
     "prisma:migrate:deploy": "prisma migrate deploy",
