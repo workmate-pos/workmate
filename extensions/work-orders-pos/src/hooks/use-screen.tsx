@@ -1,7 +1,7 @@
 import { Screen, ScreenProps, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useCallback, useEffect, useState } from 'react';
-import { useId } from './use-id';
-import { ScreenInputOutput } from '../screens/routes';
+import { useId } from './use-id.js';
+import type { ScreenInputOutput } from '../screens/routes.js';
 
 /**
  * Hook that provides:

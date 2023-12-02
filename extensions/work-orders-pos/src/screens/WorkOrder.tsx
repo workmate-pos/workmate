@@ -13,20 +13,20 @@ import {
   TextField,
 } from '@shopify/retail-ui-extensions-react';
 import { Dispatch, useEffect, useReducer, useState } from 'react';
-import { UsePopupFn, useScreen } from '../hooks/use-screen';
-import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
-import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter';
-import { useWorkOrderQuery } from '../queries/use-work-order-query';
-import { usePaymentHandler } from '../hooks/use-payment-handler';
-import { getPriceDetails } from '../util/work-order';
+import { UsePopupFn, useScreen } from '../hooks/use-screen.js';
+import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
+import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation.js';
+import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
+import { PaymentType, useWorkOrderQuery } from '../queries/use-work-order-query.js';
+import { usePaymentHandler } from '../hooks/use-payment-handler.js';
+import { getPriceDetails } from '../util/work-order.js';
 
 export type WorkOrder = Omit<CreateWorkOrder, 'products' | 'employeeAssignments' | 'dueDate' | 'customer'> & {
   products: ({ name: string; sku: string; imageUrl?: string } & CreateWorkOrder['products'][number])[];
   employeeAssignments: ({ name: string } & NonNullable<CreateWorkOrder['employeeAssignments']>[number])[];
   dueDate: string;
   customer: { name: string } & CreateWorkOrder['customer'];
-  payments: { type: 'DEPOSIT' | 'BALANCE'; amount: number }[];
+  payments: { type: PaymentType; amount: number }[];
 };
 
 export type WorkOrderItem = WorkOrder['products'][number];
@@ -62,8 +62,6 @@ export function WorkOrder() {
 
   const [errorMessage, setErrorMessage] = useState<null | string>(null);
   const [validationErrors, setValidationErrors] = useState<null | WorkOrderValidationErrors>(null);
-
-  // TODO: Don't allow payment if its initially allowed, but then the prices change
 
   const workOrderSavedPopup = usePopup('WorkOrderSaved');
   const depositSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {

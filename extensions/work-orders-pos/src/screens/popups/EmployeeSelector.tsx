@@ -1,8 +1,8 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useScreen } from '../../hooks/use-screen';
 import { useState } from 'react';
-import { Employee, useEmployeesQuery } from '../../queries/use-employees-query';
-import { useDebouncedState } from '../../hooks/use-debounced-state';
+import { useScreen } from '../../hooks/use-screen.js';
+import { Employee, useEmployeesQuery } from '../../queries/use-employees-query.js';
+import { useDebouncedState } from '../../hooks/use-debounced-state.js';
 
 export function EmployeeSelector() {
   const { Screen, closePopup } = useScreen('EmployeeSelector', ({ selectedEmployeeIds }) => {

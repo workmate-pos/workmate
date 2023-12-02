@@ -2,7 +2,7 @@
   "compileOnSave": false,
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ESNext",
+    "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["dom", "dom.iterable", "esnext"],
     "outDir": "dist",
@@ -17,7 +17,9 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "composite": true,
+    "declaration": true,
   },
   "exclude": ["node_modules", "frontend", "dist"]
 }

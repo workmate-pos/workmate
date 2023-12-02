@@ -2,7 +2,6 @@ import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-or
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { getWorkOrder, upsertWorkOrder } from '../../services/work-order.js';
 import { Session } from '@shopify/shopify-api';
-import { db } from '../../services/db/db.js';
 import {
   Authenticated,
   BodySchema,
@@ -10,25 +9,30 @@ import {
   Post,
   QuerySchema,
 } from '@teifi-digital/shopify-app-express/decorators/default';
+import { Request, Response } from 'express-serve-static-core';
+import { db } from '../../services/db/db.js';
 
 @Authenticated()
 export default class WorkOrderController {
   @Post('/')
   @BodySchema('create-work-order')
-  async createWorkOrder(req: any, res: any) {
+  async createWorkOrder(req: Request<unknown, unknown, CreateWorkOrder>, res: Response<CreateWorkOrderResponse>) {
     const session: Session = res.locals.shopify.session;
-    const createWorkOrder: CreateWorkOrder = req.body;
+    const createWorkOrder = req.body;
 
-    const workOrder = await upsertWorkOrder(session.shop, createWorkOrder);
+    const { name } = await upsertWorkOrder(session.shop, createWorkOrder);
 
-    return res.json({ workOrder });
+    return res.json({ workOrder: { name } });
   }
 
   @Get('/')
   @QuerySchema('work-order-pagination-options')
-  async fetchWorkOrderInfoPage(req: any, res: any) {
+  async fetchWorkOrderInfoPage(
+    req: Request<unknown, unknown, unknown, WorkOrderPaginationOptions>,
+    res: Response<FetchWorkOrderInfoPageResponse>,
+  ) {
     const { shop }: Session = res.locals.shopify.session;
-    const paginationOptions: WorkOrderPaginationOptions = req.query;
+    const paginationOptions = req.query;
 
     if (paginationOptions.query) {
       paginationOptions.query = paginationOptions.query.replace(/%/g, '').replace(/_/g, '');
@@ -47,7 +51,7 @@ export default class WorkOrderController {
   }
 
   @Get('/:name')
-  async fetchWorkOrder(req: any, res: any) {
+  async fetchWorkOrder(req: Request<{ name: string }>, res: Response) {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
@@ -60,3 +64,13 @@ export default class WorkOrderController {
     return res.json(result);
   }
 }
+
+export type CreateWorkOrderResponse = {
+  workOrder: { name: string };
+};
+
+export type FetchWorkOrderInfoPageResponse = {
+  infoPage: Awaited<ReturnType<typeof db.workOrder.infoPage>>;
+};
+
+export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;

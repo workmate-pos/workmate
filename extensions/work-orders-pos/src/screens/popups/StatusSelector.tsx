@@ -1,6 +1,6 @@
-import { useScreen } from '../../hooks/use-screen';
-import { useSettingsQuery } from '../../queries/use-settings-query';
 import { Button, Stack } from '@shopify/retail-ui-extensions-react';
+import { useScreen } from '../../hooks/use-screen.js';
+import { useSettingsQuery } from '../../queries/use-settings-query.js';
 
 export function StatusSelector() {
   const { Screen, closePopup } = useScreen('StatusSelector');

@@ -1,6 +1,6 @@
-import { useScreen } from '../../hooks/use-screen';
 import { Button, Stack } from '@shopify/retail-ui-extensions-react';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
+import { useScreen } from '../../hooks/use-screen.js';
+import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 
 export function ShippingConfig() {
   const { Screen, closePopup } = useScreen('ShippingConfig');

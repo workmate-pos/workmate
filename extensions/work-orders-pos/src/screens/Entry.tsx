@@ -1,4 +1,3 @@
-import { NavigateFn, useScreen } from '../hooks/use-screen';
 import {
   BadgeVariant,
   Button,
@@ -9,10 +8,11 @@ import {
   Stack,
   Text,
 } from '@shopify/retail-ui-extensions-react';
-import { useWorkOrderInfoQuery, WorkOrderInfo } from '../queries/use-work-order-info-query';
-import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
 import { useQueryClient } from 'react-query';
-import { useDebouncedState } from '../hooks/use-debounced-state';
+import { NavigateFn, useScreen } from '../hooks/use-screen.js';
+import { useWorkOrderInfoQuery, WorkOrderInfo } from '../queries/use-work-order-info-query.js';
+import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
+import { useDebouncedState } from '../hooks/use-debounced-state.js';
 
 export function Entry() {
   const queryClient = useQueryClient();

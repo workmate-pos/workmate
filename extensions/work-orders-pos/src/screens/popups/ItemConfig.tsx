@@ -1,8 +1,8 @@
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { useScreen } from '../../hooks/use-screen';
-import type { WorkOrderItem } from '../WorkOrder';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
+import { useScreen } from '../../hooks/use-screen.js';
+import type { WorkOrderItem } from '../WorkOrder.js';
+import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 
 export function ItemConfig() {
   const [item, setItem] = useState<WorkOrderItem | null>(null);

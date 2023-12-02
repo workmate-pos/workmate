@@ -1,6 +1,6 @@
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { titleCase } from '../util/casing';
 import { useState } from 'react';
+import { titleCase } from '../util/casing';
 
 // NOTE: Do NOT change these keys - they are used to detect deposits in the backend. They are also shown to the user
 const WORK_ORDER_NAME_KEY = 'Work Order';

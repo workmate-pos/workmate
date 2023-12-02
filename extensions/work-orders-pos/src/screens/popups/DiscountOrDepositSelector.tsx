@@ -1,8 +1,8 @@
-import { useScreen } from '../../hooks/use-screen';
-import { useSettingsQuery } from '../../queries/use-settings-query';
 import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
+import { useScreen } from '../../hooks/use-screen.js';
+import { useSettingsQuery } from '../../queries/use-settings-query.js';
+import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 
 export function DiscountOrDepositSelector() {
   const [selectType, setSelectType] = useState<'discount' | 'deposit' | null>(null);

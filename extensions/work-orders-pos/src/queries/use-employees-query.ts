@@ -1,16 +1,13 @@
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import { useInfiniteQuery } from 'react-query';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import type { FetchEmployeesResponse } from '@web/controllers/api/employee';
 
 export const useEmployeesQuery = ({ query = '' }: { query?: string } = {}) => {
   const fetch = useAuthenticatedFetch();
 
-  return useInfiniteQuery<
-    { employees: Employee[]; pageInfo: { hasNextPage: boolean; endCursor?: string | null } },
-    unknown,
-    Employee
-  >({
+  return useInfiniteQuery({
     queryKey: ['employees', query],
-    queryFn: async ({ pageParam: after }) => {
+    queryFn: async ({ pageParam: after }): Promise<FetchEmployeesResponse> => {
       const searchParams = new URLSearchParams();
 
       if (query) searchParams.set('query', query);

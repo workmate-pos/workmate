@@ -6,9 +6,9 @@ const PAGE_SIZE = 10;
 
 export const useProductsQuery = ({ query = '' }: { query?: string }) => {
   const api = useExtensionApi<'pos.home.modal.render'>();
-  return useInfiniteQuery<PaginatedResult<Product>, unknown, Product>({
+  return useInfiniteQuery({
     queryKey: ['products', query],
-    queryFn: async ({ pageParam: afterCursor = undefined }) => {
+    queryFn: async ({ pageParam: afterCursor = undefined }): Promise<PaginatedResult<Product>> => {
       const page = await api.productSearch.searchProducts({
         first: PAGE_SIZE,
         sortType: 'ALPHABETICAL_A_TO_Z',

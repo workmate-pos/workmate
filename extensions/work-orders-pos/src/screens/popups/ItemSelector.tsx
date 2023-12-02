@@ -1,10 +1,10 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { ClosePopupFn, useScreen } from '../../hooks/use-screen';
-import { useDynamicRef } from '../../hooks/use-dynamic-ref';
-import { useDebouncedState } from '../../hooks/use-debounced-state';
-import { useProductsQuery } from '../../queries/use-products-query';
-import { Product } from '@shopify/retail-ui-extensions/src/extension-api/types';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter';
+import { Product } from '@shopify/retail-ui-extensions/src/extension-api/types/index.js';
+import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
+import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
+import { useDebouncedState } from '../../hooks/use-debounced-state.js';
+import { useProductsQuery } from '../../queries/use-products-query.js';
+import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 
 export function ItemSelector() {
   const { Screen, closePopup } = useScreen('ItemSelector');

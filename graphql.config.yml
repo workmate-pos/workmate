@@ -6,9 +6,12 @@ documents: "**/queries/*.graphql"
 extensions:
   genql:
     schemaOutput: "./services/gql/queries/generated/schema.ts"
+    schemaInput: "./services/gql/queries/generated/schema.js"
     documentsOutput: "./services/gql/queries/generated/queries.ts"
     scalarTypes:
       FormattedString: "string"
     documentHeader:
       - "import type { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';"
     queryTransformation: "(graphql: Graphql, variables: Variables & Record<string, any>) => graphql.query<Result>(query, variables)"
+    brandedScalars:
+      - "ID"

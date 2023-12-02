@@ -1,7 +1,7 @@
-import { ClosePopupFn, useScreen } from '../../hooks/use-screen';
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { Customer, useCustomersQuery } from '../../queries/use-customers-query';
-import { useDebouncedState } from '../../hooks/use-debounced-state';
+import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
+import { Customer, useCustomersQuery } from '../../queries/use-customers-query.js';
+import { useDebouncedState } from '../../hooks/use-debounced-state.js';
 
 export function CustomerSelector() {
   const { Screen, closePopup } = useScreen('CustomerSelector');

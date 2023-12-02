@@ -6,6 +6,8 @@ import { unit } from './db/unit-of-work.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from './gql/gql.js';
+import type { ID } from './gql/queries/generated/schema.js';
+import { StaffMemberFragmentResult } from './gql/queries/generated/queries.js';
 
 export async function upsertWorkOrder(shop: string, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
@@ -53,20 +55,28 @@ export async function getWorkOrder(session: Session, name: string) {
   const getEmployees = async () => {
     const assignedEmployees = await db.workOrderEmployeeAssignment.get({ workOrderId: workOrder.id });
     const responses = await Promise.all(
-      assignedEmployees.map(({ employeeId }) => gql.staffMember.getStaffMember(graphql, { id: employeeId })),
+      assignedEmployees.map(({ employeeId }) => gql.staffMember.getStaffMember(graphql, { id: employeeId as ID })),
     );
-    return responses.map(response => response.staffMember).filter(staffMember => staffMember?.active);
+    return responses
+      .map(response => response.staffMember)
+      .filter(
+        (staffMember): staffMember is StaffMemberFragmentResult & { active: true } => staffMember?.active ?? false,
+      );
   };
 
   const [products, payments, customer, employees] = await Promise.all([
     db.workOrderProduct.get({ workOrderId: workOrder.id }),
     db.workOrderPayment.get({ workOrderId: workOrder.id }),
-    gql.customer.getCustomer(graphql, { id: workOrder.customerId }).then(response => response.customer),
+    gql.customer
+      .getCustomer(graphql, {
+        id: workOrder.customerId as ID,
+      })
+      .then(response => response.customer),
     getEmployees(),
   ]);
 
   return {
-    workOrder,
+    workOrder: { ...workOrder, dueDate: workOrder.dueDate.toISOString() },
     payments,
     customer,
     employees,

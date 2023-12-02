@@ -1,25 +1,23 @@
+import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
 import type { WorkOrder } from '../screens/WorkOrder';
-import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
+import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order';
 import { toCents } from '../util/money-utils';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import type { CreateWorkOrderResponse } from '@web/controllers/api/work-order';
 
 export type WorkOrderValidationErrors = {
   [key in keyof WorkOrder]?: string;
 };
 
 export const useSaveWorkOrderMutation = (
-  options: Omit<
-    UseMutationOptions<SaveWorkOrderMutationResult, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>,
-    'mutationFn' | 'mutationKey'
-  >,
+  options: UseMutationOptions<CreateWorkOrderResponse, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>,
 ) => {
   const fetch = useAuthenticatedFetch();
   const queryClient = useQueryClient();
   const api = useExtensionApi<'pos.home.modal.render'>();
 
-  return useMutation<SaveWorkOrderMutationResult, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>({
+  return useMutation<CreateWorkOrderResponse, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>({
     ...options,
     mutationFn: async workOrder => {
       validateWorkOrder(workOrder);
@@ -72,12 +70,6 @@ export const useSaveWorkOrderMutation = (
       options.onMutate?.(...args);
     },
   });
-};
-
-type SaveWorkOrderMutationResult = {
-  workOrder: {
-    name: string;
-  };
 };
 
 function validateWorkOrder(workOrder: Partial<WorkOrder>): asserts workOrder is WorkOrder {

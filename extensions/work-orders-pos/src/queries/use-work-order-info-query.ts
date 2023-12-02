@@ -1,14 +1,15 @@
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import { useInfiniteQuery } from 'react-query';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order';
 
 const PAGE_SIZE = 10;
 
 export const useWorkOrderInfoQuery = ({ query = '' }: { query?: string }) => {
   const fetch = useAuthenticatedFetch();
 
-  return useInfiniteQuery<{ infoPage: WorkOrderInfo[] }, unknown, WorkOrderInfo>({
+  return useInfiniteQuery({
     queryKey: ['work-order-info', query],
-    queryFn: async ({ pageParam: offset = 0 }) => {
+    queryFn: async ({ pageParam: offset = 0 }): Promise<FetchWorkOrderInfoPageResponse> => {
       const searchParams = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(offset),
@@ -36,14 +37,4 @@ export const useWorkOrderInfoQuery = ({ query = '' }: { query?: string }) => {
   });
 };
 
-export type WorkOrderInfo = {
-  name: string;
-  status: string;
-  taxAmount: number;
-  discountAmount: number;
-  shippingAmount: number;
-  productAmount: number;
-  paidAmount: number;
-  dueDate: string;
-  hasDeposit: boolean;
-};
+export type WorkOrderInfo = FetchWorkOrderInfoPageResponse['infoPage'][number];

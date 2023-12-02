@@ -2,8 +2,20 @@
   "compilerOptions": {
     "target": "ES2020",
     "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "rootDir": "./src",
+    "skipLibCheck": true,
     "noEmit": true,
     "jsx": "react-native",
-    "strict": true
-  }
+    "strict": true,
+    "paths": {
+      "@web/*": ["../../web/*"]
+    }
+  },
+  "references": [
+    {
+      "path": "../../web/tsconfig.json"
+    }
+  ]
 }

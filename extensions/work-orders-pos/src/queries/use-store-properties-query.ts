@@ -1,11 +1,15 @@
 import { useQuery, UseQueryOptions } from 'react-query';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import type { FetchStorePropertiesResponse } from '@web/controllers/api/store-properties';
 
-export const useStorePropertiesQuery = (options?: UseQueryOptions<StorePropertiesQueryResponse>) => {
+export const useStorePropertiesQuery = (
+  options?: UseQueryOptions<FetchStorePropertiesResponse, unknown, FetchStorePropertiesResponse, string[]>,
+) => {
   const fetch = useAuthenticatedFetch();
-  return useQuery<StorePropertiesQueryResponse>(
-    ['store-properties'],
-    async () => {
+  return useQuery({
+    ...options,
+    queryKey: ['store-properties'],
+    queryFn: async (): Promise<FetchStorePropertiesResponse> => {
       const response = await fetch('/api/store-properties');
 
       if (!response.ok) {
@@ -14,16 +18,5 @@ export const useStorePropertiesQuery = (options?: UseQueryOptions<StorePropertie
 
       return await response.json();
     },
-    options,
-  );
-};
-
-export type StoreProperties = {
-  name: string;
-  currencyCode: string;
-  currencyFormat: string;
-};
-
-type StorePropertiesQueryResponse = {
-  storeProperties: StoreProperties;
+  });
 };

@@ -24,3 +24,7 @@ export default class SettingsController {
     return res.json({ success: true });
   }
 }
+
+export type FetchSettingsResponse = {
+  settings: Awaited<ReturnType<typeof getSettingsByShop>>;
+};

@@ -1,16 +1,13 @@
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import { useInfiniteQuery } from 'react-query';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import type { FetchCustomersResponse } from '@web/controllers/api/customer';
 
 export const useCustomersQuery = ({ query = '' }: { query?: string } = {}) => {
   const fetch = useAuthenticatedFetch();
 
-  return useInfiniteQuery<
-    { customers: Customer[]; pageInfo: { hasNextPage: boolean; endCursor?: string | null } },
-    unknown,
-    Customer
-  >({
+  return useInfiniteQuery({
     queryKey: ['customers', query],
-    queryFn: async ({ pageParam: after }) => {
+    queryFn: async ({ pageParam: after }): Promise<FetchCustomersResponse> => {
       const searchParams = new URLSearchParams();
 
       if (query) searchParams.set('query', query);
@@ -36,9 +33,4 @@ export const useCustomersQuery = ({ query = '' }: { query?: string } = {}) => {
   });
 };
 
-export type Customer = {
-  id: string;
-  displayName: string;
-  phone?: string | null;
-  email?: string | null;
-};
+export type Customer = FetchCustomersResponse['customers'][number];

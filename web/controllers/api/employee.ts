@@ -4,12 +4,16 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import type { Request, Response } from 'express-serve-static-core';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
+import { StaffMemberFragmentResult } from '../../services/gql/queries/generated/queries.js';
 
 @Authenticated()
 export default class EmployeeController {
   @Get('/')
   @QuerySchema('pagination-options')
-  async fetchEmployees(req: Request<unknown, unknown, unknown, PaginationOptions>, res: Response) {
+  async fetchEmployees(
+    req: Request<unknown, unknown, unknown, PaginationOptions>,
+    res: Response<FetchEmployeesResponse>,
+  ) {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
@@ -22,3 +26,8 @@ export default class EmployeeController {
     return res.json({ employees, pageInfo });
   }
 }
+
+export type FetchEmployeesResponse = {
+  employees: StaffMemberFragmentResult[];
+  pageInfo: { hasNextPage: boolean; endCursor?: string | null };
+};

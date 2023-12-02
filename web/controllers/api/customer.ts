@@ -4,12 +4,16 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import type { Request, Response } from 'express-serve-static-core';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
+import { CustomerFragmentResult } from '../../services/gql/queries/generated/queries.js';
 
 @Authenticated()
 export default class CustomerController {
   @Get('/')
   @QuerySchema('pagination-options')
-  async fetchCustomers(req: Request<unknown, unknown, unknown, PaginationOptions>, res: Response) {
+  async fetchCustomers(
+    req: Request<unknown, unknown, unknown, PaginationOptions>,
+    res: Response<FetchCustomersResponse>,
+  ) {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
@@ -22,3 +26,8 @@ export default class CustomerController {
     return res.json({ customers, pageInfo });
   }
 }
+
+export type FetchCustomersResponse = {
+  customers: CustomerFragmentResult[];
+  pageInfo: { hasNextPage: boolean; endCursor?: string | null };
+};

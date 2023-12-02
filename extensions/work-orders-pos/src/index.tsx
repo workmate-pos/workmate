@@ -1,17 +1,16 @@
 import { Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { WorkOrder } from './screens/WorkOrder';
-import { ItemConfig } from './screens/popups/ItemConfig';
-import { EmployeeSelector } from './screens/popups/EmployeeSelector';
-import { ItemSelector } from './screens/popups/ItemSelector';
-import { Error } from './screens/Error';
-import { ReactQueryProvider } from './providers/ReactQueryProvider';
-import { StatusSelector } from './screens/popups/StatusSelector';
-import { CustomerSelector } from './screens/popups/CustomerSelector';
-import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSelector';
-import { ShippingConfig } from './screens/popups/ShippingConfig';
-import { Entry } from './screens/Entry';
-import { WorkOrderOverview } from './screens/popups/WorkOrderOverview';
-import { WorkOrderSaved } from './screens/popups/WorkOrderSaved';
+import { WorkOrder } from './screens/WorkOrder.js';
+import { ItemConfig } from './screens/popups/ItemConfig.js';
+import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
+import { ItemSelector } from './screens/popups/ItemSelector.js';
+import { Error } from './screens/Error.js';
+import { ReactQueryProvider } from './providers/ReactQueryProvider.js';
+import { StatusSelector } from './screens/popups/StatusSelector.js';
+import { CustomerSelector } from './screens/popups/CustomerSelector.js';
+import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSelector.js';
+import { ShippingConfig } from './screens/popups/ShippingConfig.js';
+import { Entry } from './screens/Entry.js';
+import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -42,7 +41,6 @@ function SmartGridModal() {
         <ItemSelector />
         <ShippingConfig />
         <StatusSelector />
-        <WorkOrderOverview />
         <WorkOrderSaved />
       </Navigator>
     </ReactQueryProvider>
