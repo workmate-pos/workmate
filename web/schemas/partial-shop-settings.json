@@ -52,6 +52,43 @@
         { "$ref": "#/definitions/deposit-rule-only-allow-shortcuts" },
         { "$ref": "#/definitions/deposit-rule-do-not-allow-shortcuts" }
       ]
+    },
+    "workOrderRequests": {
+      "title": "work-order-requests",
+      "description": "Settings related to work order requests, where customers can create a work order themselves.",
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "const": false
+            },
+            "allowedStatuses": {
+              "type": "null"
+            }
+          },
+          "required": ["enabled", "allowedStatuses"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "const": true
+            },
+            "allowedStatuses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["enabled", "allowedStatuses"],
+          "additionalProperties": false
+        }
+      ]
     }
   },
   "additionalProperties": false,

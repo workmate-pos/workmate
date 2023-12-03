@@ -1,5 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$ref": "partial-shop-settings.json",
-  "required": ["idFormat", "statuses", "discountShortcuts", "depositShortcuts", "discountRules", "depositRules"]
+  "required": [
+    "idFormat",
+    "statuses",
+    "discountShortcuts",
+    "depositShortcuts",
+    "discountRules",
+    "depositRules",
+    "workOrderRequests"
+  ]
 }

@@ -1,7 +1,7 @@
 import { getDefaultShopSetting, getShopSettingKeys } from './settings/default-settings.js';
 import { ShopSettings } from '../schemas/generated/shop-settings.js';
-import { db } from './db/db.js';
 import { PartialShopSettings } from '../schemas/generated/partial-shop-settings.js';
+import { db } from './db/db.js';
 import { unit } from './db/unit-of-work.js';
 
 function serialize(value: ShopSettings[keyof ShopSettings]) {

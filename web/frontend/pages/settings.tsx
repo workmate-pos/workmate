@@ -13,6 +13,11 @@ import {
   Select,
   Button,
   InlineGrid,
+  Checkbox,
+  Combobox,
+  Listbox,
+  Autocomplete,
+  Icon,
 } from '@shopify/polaris';
 import { Loading, TitleBar } from '@shopify/app-bridge-react';
 import type { ShopSettings } from '../../schemas/generated/shop-settings';
@@ -21,16 +26,13 @@ import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider';
 import invariant from 'tiny-invariant';
 import { useSettingsQuery } from '../hooks/use-settings-query';
 import { useSettingsMutation } from '../hooks/use-settings-mutation';
-import { useStorePropertiesQuery } from '../hooks/use-store-properties-query';
 import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
+import { CirclePlusMinor } from '@shopify/polaris-icons';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
 const ONLY_HIGHEST_SHORTCUT = 'ONLY_HIGHEST_SHORTCUT';
 const CURRENCY_RANGE = 'CURRENCY_RANGE';
 const PERCENTAGE_RANGE = 'PERCENTAGE_RANGE';
-
-type DiscountShortcutUnit = ShopSettings['discountShortcuts'][number]['unit'];
-type DepositShortcutUnit = ShopSettings['depositShortcuts'][number]['unit'];
 
 export default function Settings() {
   const [toast, setToastAction] = useToast();
@@ -38,10 +40,7 @@ export default function Settings() {
   const [init, setInit] = useState(false);
 
   const [discountShortcutValue, setDiscountShortcutValue] = useState('');
-  const [discountShortcutUnit, setDiscountShortcutUnit] = useState<DiscountShortcutUnit>('currency');
-
   const [depositShortcutValue, setDepositShortcutValue] = useState('');
-  const [depositShortcutUnit, setDepositShortcutUnit] = useState<DepositShortcutUnit>('currency');
 
   const [statusValue, setStatusValue] = useState('');
 
@@ -77,8 +76,6 @@ export default function Settings() {
     },
   });
 
-  const storePropertiesQuery = useStorePropertiesQuery();
-  const currencyCode = storePropertiesQuery.data?.storeProperties.currencyCode;
   const currencyFormatter = useCurrencyFormatter();
 
   if (!init || !settings) {
@@ -124,48 +121,23 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                <InlineStack blockAlign="end" gap="200">
-                  <TextField
-                    type="number"
-                    label="Discount Shortcuts"
-                    autoComplete="off"
-                    value={discountShortcutValue}
-                    onChange={setDiscountShortcutValue}
-                    connectedRight={
-                      <InlineStack blockAlign="center" gap="100">
-                        <Select
-                          label="Discount unit"
-                          labelHidden
-                          options={[
-                            { label: '%', value: 'percentage' },
-                            ...(currencyCode ? [{ label: currencyCode, value: 'currency' }] : []),
-                          ]}
-                          value={discountShortcutUnit}
-                          onChange={(value: DiscountShortcutUnit) => setDiscountShortcutUnit(value)}
-                        />
-
-                        <Button
-                          disabled={discountShortcutValue === ''}
-                          onClick={() => {
-                            setSettings({
-                              ...settings,
-                              discountShortcuts: [
-                                ...settings.discountShortcuts,
-                                {
-                                  value: Number(discountShortcutValue),
-                                  unit: discountShortcutUnit,
-                                },
-                              ],
-                            });
-                            setDiscountShortcutValue('');
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </InlineStack>
-                    }
-                  />
-                </InlineStack>
+                <CurrencyOrPercentageInput
+                  value={discountShortcutValue}
+                  setValue={setDiscountShortcutValue}
+                  onSelect={unit => {
+                    setSettings({
+                      ...settings,
+                      discountShortcuts: [
+                        ...settings.discountShortcuts,
+                        {
+                          value: Number(discountShortcutValue),
+                          unit,
+                        },
+                      ],
+                    });
+                    setDiscountShortcutValue('');
+                  }}
+                />
                 <InlineStack gap="200">
                   {settings.discountShortcuts.map((shortcut, i) => (
                     <Tag
@@ -194,47 +166,23 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                <InlineStack blockAlign="end" gap="200">
-                  <TextField
-                    type="number"
-                    label="Deposit Shortcuts"
-                    autoComplete="off"
-                    value={depositShortcutValue}
-                    onChange={setDepositShortcutValue}
-                    connectedRight={
-                      <InlineStack blockAlign="center" gap="100">
-                        <Select
-                          label="Deposit unit"
-                          labelHidden
-                          options={[
-                            { label: '%', value: 'percentage' },
-                            ...(currencyCode ? [{ label: currencyCode, value: 'currency' }] : []),
-                          ]}
-                          value={depositShortcutUnit}
-                          onChange={(value: DepositShortcutUnit) => setDepositShortcutUnit(value)}
-                        />
-                        <Button
-                          disabled={depositShortcutValue === ''}
-                          onClick={() => {
-                            setSettings({
-                              ...settings,
-                              depositShortcuts: [
-                                ...settings.depositShortcuts,
-                                {
-                                  value: Number(depositShortcutValue),
-                                  unit: depositShortcutUnit,
-                                },
-                              ],
-                            });
-                            setDepositShortcutValue('');
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </InlineStack>
-                    }
-                  />
-                </InlineStack>
+                <CurrencyOrPercentageInput
+                  value={depositShortcutValue}
+                  setValue={setDepositShortcutValue}
+                  onSelect={unit => {
+                    setSettings({
+                      ...settings,
+                      depositShortcuts: [
+                        ...settings.depositShortcuts,
+                        {
+                          value: Number(depositShortcutValue),
+                          unit,
+                        },
+                      ],
+                    });
+                    setDepositShortcutValue('');
+                  }}
+                />
                 <InlineStack gap="200">
                   {settings.depositShortcuts.map((shortcut, i) => (
                     <Tag
@@ -263,34 +211,61 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                <InlineStack blockAlign="end" gap="200">
-                  <TextField
-                    label="Statuses"
-                    autoComplete="off"
-                    value={statusValue}
-                    onChange={setStatusValue}
-                    connectedRight={
-                      <Button
-                        onClick={() => {
-                          setSettings({
-                            ...settings,
-                            statuses: [
-                              ...settings.statuses,
-                              {
-                                name: statusValue,
-                                bgHex: '#000000',
-                                textHex: '#ffffff',
-                              },
-                            ],
-                          });
-                          setStatusValue('');
-                        }}
-                      >
-                        Add
-                      </Button>
-                    }
-                  />
-                </InlineStack>
+                {/* <Combobox
+      activator={
+        <Combobox.TextField
+          type="number"
+          label="Discount Shortcuts"
+          autoComplete="off"
+          value={value}
+          onChange={setValue}
+        />
+      }
+    >
+      {value.length > 0 ? (
+        <Listbox onSelect={onSelect}>
+          <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
+          <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
+        </Listbox>
+      ) : null}
+    </Combobox>*/}
+
+                <Autocomplete
+                  options={[]}
+                  selected={[]}
+                  textField={
+                    <Autocomplete.TextField
+                      label="Statuses"
+                      autoComplete="off"
+                      value={statusValue}
+                      onChange={setStatusValue}
+                    />
+                  }
+                  onSelect={() => {}}
+                  actionBefore={
+                    statusValue.length > 0
+                      ? {
+                          content: `Create status "${statusValue}"`,
+                          prefix: <Icon source={CirclePlusMinor} />,
+                          onAction: () => {
+                            setSettings({
+                              ...settings,
+                              statuses: [
+                                ...settings.statuses,
+                                {
+                                  name: statusValue,
+                                  bgHex: '#000000',
+                                  textHex: '#ffffff',
+                                },
+                              ],
+                            });
+                            setStatusValue('');
+                          },
+                        }
+                      : undefined
+                  }
+                />
+
                 <InlineStack gap="200">
                   {settings.statuses.map((status, i) => (
                     <Tag
@@ -328,7 +303,47 @@ export default function Settings() {
                   }
                 />
               </BlockStack>
-            </Card>{' '}
+            </Card>
+            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+              <BlockStack gap="400">
+                <Text as="h3" variant="headingMd">
+                  Work Order Requests
+                </Text>
+              </BlockStack>
+            </Box>
+            <Card roundedAbove="sm">
+              <BlockStack gap="400">
+                <Checkbox
+                  label={'Enable work order requests'}
+                  checked={settings.workOrderRequests.enabled}
+                  onChange={enabled =>
+                    setSettings({
+                      ...settings,
+                      workOrderRequests: enabled
+                        ? { enabled, allowedStatuses: [] }
+                        : { enabled, allowedStatuses: null },
+                    })
+                  }
+                />
+                <Select
+                  label={'Request Status'}
+                  helpText={'The status that work order requests will be set to when created'}
+                  disabled={!settings.workOrderRequests.enabled}
+                  options={settings.statuses.map(status => status.name)}
+                  placeholder={'Select a status'}
+                  value={settings.workOrderRequests.allowedStatuses?.[0]}
+                  onChange={statusName =>
+                    setSettings({
+                      ...settings,
+                      workOrderRequests: {
+                        enabled: true,
+                        allowedStatuses: [statusName],
+                      },
+                    })
+                  }
+                />
+              </BlockStack>
+            </Card>
           </InlineGrid>
         </BlockStack>
       </Page>
@@ -667,4 +682,37 @@ function getActiveDiscountRules(settings: ShopSettings) {
   }
 
   return activeRules;
+}
+
+function CurrencyOrPercentageInput({
+  value,
+  setValue,
+  onSelect,
+}: {
+  value: string;
+  setValue: (value: string) => void;
+  onSelect: (unit: 'percentage' | 'currency') => void;
+}) {
+  const currencyFormatter = useCurrencyFormatter();
+
+  return (
+    <Combobox
+      activator={
+        <Combobox.TextField
+          type="number"
+          label="Discount Shortcuts"
+          autoComplete="off"
+          value={value}
+          onChange={setValue}
+        />
+      }
+    >
+      {value.length > 0 ? (
+        <Listbox onSelect={onSelect}>
+          <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
+          <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
+        </Listbox>
+      ) : null}
+    </Combobox>
+  );
 }

@@ -26,6 +26,10 @@ const defaultShopSettings: ShopSettings = {
     allowedCurrencyRange: null,
     allowedPercentageRange: null,
   },
+  workOrderRequests: {
+    enabled: false,
+    allowedStatuses: null,
+  },
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {
