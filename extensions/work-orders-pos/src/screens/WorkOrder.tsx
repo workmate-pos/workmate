@@ -379,7 +379,10 @@ const WorkOrderItems = ({
 
   return (
     <Stack direction="vertical" flex={1} paddingVertical={'ExtraSmall'}>
-      <Button title="Add Product" type="primary" onPress={() => itemSelectorPopup.navigate()} />
+      <Stack direction={'horizontal'} flexChildren>
+        <Button title="Add Product" type="primary" onPress={() => itemSelectorPopup.navigate({ type: 'product' })} />
+        <Button title="Add Labour" type="primary" onPress={() => itemSelectorPopup.navigate({ type: 'labour' })} />
+      </Stack>
       <SearchBar placeholder="Search products" initialValue={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
         <List data={rows}></List>

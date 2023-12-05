@@ -89,6 +89,17 @@
           "additionalProperties": false
         }
       ]
+    },
+    "labourCollectionId": {
+      "description": "A collection name that is used to identify labour items within Shopify",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   },
   "additionalProperties": false,

@@ -42,7 +42,7 @@ export default class WorkOrderController {
       return res.status(403).json({ error: 'Work order requests are disabled' });
     }
 
-    if (!settings.workOrderRequests.statuses.includes(createWorkOrderRequest.status)) {
+    if (!settings.workOrderRequests.allowedStatuses.includes(createWorkOrderRequest.status)) {
       return res.status(403).json({ error: 'Invalid status' });
     }
 

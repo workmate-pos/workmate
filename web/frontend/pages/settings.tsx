@@ -11,7 +11,6 @@ import {
   InlineStack,
   Tag,
   Select,
-  Button,
   InlineGrid,
   Checkbox,
   Combobox,
@@ -27,7 +26,8 @@ import invariant from 'tiny-invariant';
 import { useSettingsQuery } from '../hooks/use-settings-query';
 import { useSettingsMutation } from '../hooks/use-settings-mutation';
 import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
-import { CirclePlusMinor } from '@shopify/polaris-icons';
+import { CirclePlusMinor, SearchMinor } from '@shopify/polaris-icons';
+import { useCollectionsQuery } from '../hooks/use-collections-query';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
 const ONLY_HIGHEST_SHORTCUT = 'ONLY_HIGHEST_SHORTCUT';
@@ -75,6 +75,10 @@ export default function Settings() {
       });
     },
   });
+
+  const [labourCollectionValue, setLabourCollectionValue] = useState('');
+  const [selectedLabourCollectionName, setSelectedLabourCollectionName] = useState<string | null>(null);
+  const collectionsQuery = useCollectionsQuery({ query: labourCollectionValue });
 
   const currencyFormatter = useCurrencyFormatter();
 
@@ -211,25 +215,6 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                {/* <Combobox
-      activator={
-        <Combobox.TextField
-          type="number"
-          label="Discount Shortcuts"
-          autoComplete="off"
-          value={value}
-          onChange={setValue}
-        />
-      }
-    >
-      {value.length > 0 ? (
-        <Listbox onSelect={onSelect}>
-          <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
-          <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
-        </Listbox>
-      ) : null}
-    </Combobox>*/}
-
                 <Autocomplete
                   options={[]}
                   selected={[]}
@@ -307,6 +292,51 @@ export default function Settings() {
             <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
               <BlockStack gap="400">
                 <Text as="h3" variant="headingMd">
+                  Labour
+                </Text>
+              </BlockStack>
+            </Box>
+            <Card roundedAbove="sm">
+              <BlockStack gap="400">
+                <Autocomplete
+                  options={
+                    collectionsQuery.data?.pages.map(page => ({
+                      label: page.title,
+                      value: page.id,
+                    })) ?? []
+                  }
+                  allowMultiple={false}
+                  loading={collectionsQuery.isLoading}
+                  willLoadMoreResults={collectionsQuery.hasNextPage}
+                  onLoadMoreResults={collectionsQuery.fetchNextPage}
+                  selected={settings.labourCollectionId ? [settings.labourCollectionId] : []}
+                  emptyState={
+                    <BlockStack inlineAlign={'center'}>
+                      <Icon source={SearchMinor} />
+                      Could not find any collections
+                    </BlockStack>
+                  }
+                  textField={
+                    <Autocomplete.TextField
+                      label="Labour Collection"
+                      autoComplete="off"
+                      value={labourCollectionValue}
+                      onChange={setLabourCollectionValue}
+                      onBlur={() => setLabourCollectionValue(selectedLabourCollectionName ?? '')}
+                    />
+                  }
+                  onSelect={([id]) => {
+                    const name = collectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
+                    setSelectedLabourCollectionName(name);
+                    setLabourCollectionValue(name);
+                    setSettings({ ...settings, labourCollectionId: id });
+                  }}
+                />
+              </BlockStack>
+            </Card>
+            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+              <BlockStack gap="400">
+                <Text as="h3" variant="headingMd">
                   Work Order Requests
                 </Text>
               </BlockStack>
@@ -320,7 +350,7 @@ export default function Settings() {
                     setSettings({
                       ...settings,
                       workOrderRequests: enabled
-                        ? { enabled, allowedStatuses: [] }
+                        ? { enabled, allowedStatuses: [settings.statuses[0].name] }
                         : { enabled, allowedStatuses: null },
                     })
                   }

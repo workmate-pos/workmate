@@ -1,6 +1,6 @@
 import { useQuery } from 'react-query';
 import { useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
-import { FetchStorePropertiesResponse } from '../../controllers/api/store-properties';
+import type { FetchStorePropertiesResponse } from '../../controllers/api/store-properties';
 
 export const useStorePropertiesQuery = () => {
   const fetch = useAuthenticatedFetch();

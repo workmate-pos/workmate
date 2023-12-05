@@ -30,6 +30,7 @@ const defaultShopSettings: ShopSettings = {
     enabled: false,
     allowedStatuses: null,
   },
+  labourCollectionId: null,
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

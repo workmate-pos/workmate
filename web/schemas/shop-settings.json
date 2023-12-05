@@ -8,6 +8,7 @@
     "depositShortcuts",
     "discountRules",
     "depositRules",
-    "workOrderRequests"
+    "workOrderRequests",
+    "labourCollectionId"
   ]
 }

@@ -1,1 +1,1 @@
-export const HOST = 'https://philip-front-tied-carbon.trycloudflare.com';
+export const HOST = 'https://springfield-journalism-cable-edges.trycloudflare.com';

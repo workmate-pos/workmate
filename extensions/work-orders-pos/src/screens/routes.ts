@@ -7,7 +7,7 @@ import type { WorkOrder, WorkOrderCustomer, WorkOrderEmployee, WorkOrderItem, Wo
 export type ScreenInputOutput = {
   Entry: [{ forceReload?: boolean } | undefined, undefined];
   WorkOrder: [{ type: 'load-work-order'; name: string } | { type: 'new-work-order' }, undefined];
-  ItemSelector: [undefined, WorkOrderItem];
+  ItemSelector: [{ type: 'product' | 'labour' }, WorkOrderItem];
   ItemConfig: [WorkOrderItem, { type: 'update' | 'remove'; item: WorkOrderItem }];
   StatusSelector: [undefined, WorkOrderStatus];
   CustomerSelector: [undefined, WorkOrderCustomer];

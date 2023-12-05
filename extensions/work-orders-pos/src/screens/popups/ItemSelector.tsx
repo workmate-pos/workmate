@@ -1,47 +1,94 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { Product } from '@shopify/retail-ui-extensions/src/extension-api/types/index.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
 import { useDebouncedState } from '../../hooks/use-debounced-state.js';
-import { useProductsQuery } from '../../queries/use-products-query.js';
+import { ProductVariant, useProductVariantsQuery } from '../../queries/use-product-variants-query';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
+import { useState } from 'react';
+import { useSettingsQuery } from '../../queries/use-settings-query';
 
 export function ItemSelector() {
-  const { Screen, closePopup } = useScreen('ItemSelector');
+  const [type, setType] = useState<'product' | 'labour' | null>(null);
+  const { Screen, closePopup } = useScreen('ItemSelector', ({ type }) => setType(type));
 
   const [query, setQuery] = useDebouncedState('');
-  const productsQuery = useProductsQuery({ query });
-  const products = productsQuery.data?.pages ?? [];
+  const productVariantsQuery = useProductVariantsQuery({ query });
+  const productVariants = productVariantsQuery.data?.pages ?? [];
   const currencyFormatter = useCurrencyFormatter();
+  const settingsQuery = useSettingsQuery();
+
+  const { includedCollectionId, excludedCollectionId } = {
+    none: {
+      includedCollectionId: null,
+      excludedCollectionId: null,
+    },
+    product: {
+      includedCollectionId: null,
+      excludedCollectionId: settingsQuery.data?.settings.labourCollectionId,
+    },
+    labour: {
+      includedCollectionId: settingsQuery.data?.settings.labourCollectionId,
+      excludedCollectionId: null,
+    },
+  }[type ?? 'none'];
+
+  const filteredProductVariants = productVariants.filter(
+    variant =>
+      (includedCollectionId === null ||
+        variant.product.collections.nodes.some(collection => collection.id === includedCollectionId)) &&
+      (excludedCollectionId === null ||
+        variant.product.collections.nodes.every(collection => collection.id !== excludedCollectionId)),
+  );
 
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
-  const rows = getProductRows(products, closeRef, currencyFormatter);
+  const rows = getProductVariantRows(filteredProductVariants, closeRef, currencyFormatter);
+
+  const title = {
+    product: 'Select product',
+    labour: 'Select labour',
+    none: 'Select item',
+  }[type ?? 'none'];
+
+  const searchBarText = {
+    product: 'Search products',
+    labour: 'Search labour',
+    none: 'Search items',
+  }[type ?? 'none'];
 
   return (
-    <Screen title="Select product" presentation={{ sheet: true }} onNavigate={() => setQuery('', true)}>
+    <Screen
+      title={title}
+      isLoading={settingsQuery.isLoading}
+      presentation={{ sheet: true }}
+      onNavigate={() => setQuery('', true)}
+    >
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
-            {productsQuery.isRefetching ? 'Reloading...' : ' '}
+            {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar onTextChange={query => setQuery(query, !query)} onSearch={() => {}} placeholder="Search products" />
-        <List data={rows} onEndReached={() => productsQuery.fetchNextPage()} isLoadingMore={productsQuery.isLoading} />
-        {productsQuery.isLoading && (
+        <SearchBar onTextChange={query => setQuery(query, !query)} onSearch={() => {}} placeholder={searchBarText} />
+        <List
+          data={rows}
+          onEndReached={() => productVariantsQuery.fetchNextPage()}
+          isLoadingMore={productVariantsQuery.isLoading}
+        />
+        {productVariantsQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
               Loading products...
             </Text>
           </Stack>
         )}
-        {productsQuery.isSuccess && rows.length === 0 && (
+        {productVariantsQuery.isSuccess && rows.length === 0 && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
               No products found
             </Text>
           </Stack>
         )}
-        {productsQuery.isError && (
+        {productVariantsQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
               Error loading products
@@ -53,33 +100,41 @@ export function ItemSelector() {
   );
 }
 
-function getProductRows(
-  products: Product[],
+function getProductVariantRows(
+  productVariants: ProductVariant[],
   closePopupRef: { current: ClosePopupFn<'ItemSelector'> },
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
-  return products.flatMap(product =>
-    product.variants.map(variant => ({
-      id: String(variant.id),
+  return productVariants.map(variant => {
+    let displayName = variant.product.title;
+
+    if (!variant.product.hasOnlyDefaultVariant) {
+      displayName = `${displayName} - ${variant.title}`;
+    }
+
+    const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
+
+    return {
+      id: variant.id,
       onPress: () => {
         closePopupRef.current({
           productVariantId: String(variant.id),
-          name: variant.displayName,
+          name: displayName,
           sku: variant.sku ?? '',
           quantity: 1,
           unitPrice: Number(variant.price),
-          imageUrl: variant.image ?? product.featuredImage,
+          imageUrl,
         });
       },
       leftSide: {
-        label: variant.displayName,
-        subtitle: [product.description],
-        image: { source: variant.image ?? product.featuredImage },
+        label: displayName,
+        subtitle: [variant.product.description],
+        image: { source: imageUrl ?? 'not found' },
       },
       rightSide: {
         showChevron: true,
         label: currencyFormatter(Number(variant.price)),
       },
-    })),
-  );
+    };
+  });
 }
