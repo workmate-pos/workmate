@@ -12,7 +12,7 @@ import type {
  * Used by useScreen to make navigation type-safe.
  */
 export type ScreenInputOutput = {
-  Entry: [{ forceReload?: boolean } | undefined, undefined];
+  Entry: [undefined, undefined];
   WorkOrder: [{ type: 'load-work-order'; name: string } | { type: 'new-work-order' }, undefined];
   ProductSelector: [undefined, WorkOrderProduct];
   ProductConfig: [WorkOrderProduct, { type: 'update' | 'remove'; product: WorkOrderProduct }];

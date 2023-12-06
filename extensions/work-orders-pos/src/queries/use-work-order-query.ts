@@ -76,7 +76,7 @@ export const useWorkOrderQuery = (
           return {
             uuid: uuid(),
             productVariantId,
-            basePrice,
+            basePrice: toDollars(basePrice),
             name: displayName,
             sku: productVariant?.sku ?? '',
             employeeAssignments: employeeAssignments.map(({ name, id, hours, employeeRate }) => ({

@@ -117,7 +117,7 @@ export interface IInfoPageQuery {
   result: IInfoPageResult;
 }
 
-const infoPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":153,"b":158}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":199,"b":205}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":288,"b":293},{"a":351,"b":356},{"a":421,"b":426}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":485,"b":491}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":500,"b":506}]}],"statement":"WITH wo AS (SELECT id, name, status, \"taxAmount\", \"discountAmount\", \"shippingAmount\", \"dueDate\"\n            FROM \"WorkOrder\" wo\n            WHERE shop = :shop!\n              AND wo.status = COALESCE(:status, wo.status)\n              AND (\n                        wo.status ILIKE COALESCE(:query, '%') OR\n                        wo.name ILIKE COALESCE(:query, '%') OR\n                        wo.description ILIKE COALESCE(:query, '%'))\n            ORDER BY wo.id DESC\n            LIMIT :limit! OFFSET :offset),\n     prod AS (SELECT \"workOrderId\", COALESCE(SUM(quantity * \"unitPrice\"), 0) :: INTEGER AS \"productAmount!\"\n              FROM \"WorkOrderProduct\"\n              GROUP BY \"workOrderId\"),\n     serv AS (SELECT wos.\"workOrderId\", COALESCE(SUM(wosea.hours * wosea.\"employeeRate\"), 0) :: INTEGER AS \"serviceAmount!\"\n              FROM \"WorkOrderService\" wos\n              INNER JOIN \"WorkOrderServiceEmployeeAssignment\" wosea ON wosea.\"workOrderServiceId\" = wos.id\n              GROUP BY \"workOrderId\"),\n     pay AS (SELECT \"workOrderId\",\n                    COALESCE(SUM(amount), 0) :: INTEGER        AS \"paidAmount!\",\n                    COALESCE(BOOL_OR(type = 'DEPOSIT'), FALSE) AS \"hasDeposit!\"\n             FROM \"WorkOrderPayment\"\n             GROUP BY \"workOrderId\")\nSELECT wo.name,\n       wo.status,\n       wo.\"taxAmount\",\n       wo.\"discountAmount\",\n       wo.\"shippingAmount\",\n       wo.\"dueDate\",\n       prod.\"productAmount!\",\n       pay.\"paidAmount!\",\n       pay.\"hasDeposit!\",\n       serv.\"serviceAmount!\"\nFROM wo\nLEFT JOIN prod ON wo.id = prod.\"workOrderId\"\nLEFT JOIN pay ON wo.id = pay.\"workOrderId\"\nLEFT JOIN serv ON wo.id = serv.\"workOrderId\"\nORDER BY wo.id DESC"};
+const infoPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":153,"b":158}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":199,"b":205}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":288,"b":293},{"a":351,"b":356},{"a":421,"b":426}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":485,"b":491}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":500,"b":506}]}],"statement":"WITH wo AS (SELECT id, name, status, \"taxAmount\", \"discountAmount\", \"shippingAmount\", \"dueDate\"\n            FROM \"WorkOrder\" wo\n            WHERE shop = :shop!\n              AND wo.status = COALESCE(:status, wo.status)\n              AND (\n                        wo.status ILIKE COALESCE(:query, '%') OR\n                        wo.name ILIKE COALESCE(:query, '%') OR\n                        wo.description ILIKE COALESCE(:query, '%'))\n            ORDER BY wo.id DESC\n            LIMIT :limit! OFFSET :offset),\n     prod AS (SELECT \"workOrderId\", COALESCE(SUM(quantity * \"unitPrice\"), 0) :: INTEGER AS \"productAmount!\"\n              FROM \"WorkOrderProduct\"\n              GROUP BY \"workOrderId\"),\n     wosea AS (SELECT wos.\"workOrderId\", COALESCE(SUM(wosea.hours * wosea.\"employeeRate\"), 0) :: INTEGER AS \"serviceEmployeeAmount!\"\n              FROM \"WorkOrderService\" wos\n              INNER JOIN \"WorkOrderServiceEmployeeAssignment\" wosea ON wosea.\"workOrderServiceId\" = wos.id\n              GROUP BY wos.\"workOrderId\"),\n    wos AS (SELECT \"workOrderId\", COALESCE(SUM(\"basePrice\"), 0) :: INTEGER AS \"serviceBaseAmount!\"\n            FROM \"WorkOrderService\"\n            GROUP BY \"workOrderId\"),\n     pay AS (SELECT \"workOrderId\",\n                    COALESCE(SUM(amount), 0) :: INTEGER        AS \"paidAmount!\",\n                    COALESCE(BOOL_OR(type = 'DEPOSIT'), FALSE) AS \"hasDeposit!\"\n             FROM \"WorkOrderPayment\"\n             GROUP BY \"workOrderId\")\nSELECT wo.name,\n       wo.status,\n       wo.\"taxAmount\",\n       wo.\"discountAmount\",\n       wo.\"shippingAmount\",\n       wo.\"dueDate\",\n       prod.\"productAmount!\",\n       pay.\"paidAmount!\",\n       pay.\"hasDeposit!\",\n       (wos.\"serviceBaseAmount!\" + wosea.\"serviceEmployeeAmount!\") AS \"serviceAmount!\"\nFROM wo\nLEFT JOIN prod ON wo.id = prod.\"workOrderId\"\nLEFT JOIN pay ON wo.id = pay.\"workOrderId\"\nLEFT JOIN wosea ON wo.id = wosea.\"workOrderId\"\nLEFT JOIN wos ON wo.id = wos.\"workOrderId\"\nORDER BY wo.id DESC"};
 
 /**
  * Query generated from SQL:
@@ -135,10 +135,13 @@ const infoPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,
  *      prod AS (SELECT "workOrderId", COALESCE(SUM(quantity * "unitPrice"), 0) :: INTEGER AS "productAmount!"
  *               FROM "WorkOrderProduct"
  *               GROUP BY "workOrderId"),
- *      serv AS (SELECT wos."workOrderId", COALESCE(SUM(wosea.hours * wosea."employeeRate"), 0) :: INTEGER AS "serviceAmount!"
+ *      wosea AS (SELECT wos."workOrderId", COALESCE(SUM(wosea.hours * wosea."employeeRate"), 0) :: INTEGER AS "serviceEmployeeAmount!"
  *               FROM "WorkOrderService" wos
  *               INNER JOIN "WorkOrderServiceEmployeeAssignment" wosea ON wosea."workOrderServiceId" = wos.id
- *               GROUP BY "workOrderId"),
+ *               GROUP BY wos."workOrderId"),
+ *     wos AS (SELECT "workOrderId", COALESCE(SUM("basePrice"), 0) :: INTEGER AS "serviceBaseAmount!"
+ *             FROM "WorkOrderService"
+ *             GROUP BY "workOrderId"),
  *      pay AS (SELECT "workOrderId",
  *                     COALESCE(SUM(amount), 0) :: INTEGER        AS "paidAmount!",
  *                     COALESCE(BOOL_OR(type = 'DEPOSIT'), FALSE) AS "hasDeposit!"
@@ -153,11 +156,12 @@ const infoPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,
  *        prod."productAmount!",
  *        pay."paidAmount!",
  *        pay."hasDeposit!",
- *        serv."serviceAmount!"
+ *        (wos."serviceBaseAmount!" + wosea."serviceEmployeeAmount!") AS "serviceAmount!"
  * FROM wo
  * LEFT JOIN prod ON wo.id = prod."workOrderId"
  * LEFT JOIN pay ON wo.id = pay."workOrderId"
- * LEFT JOIN serv ON wo.id = serv."workOrderId"
+ * LEFT JOIN wosea ON wo.id = wosea."workOrderId"
+ * LEFT JOIN wos ON wo.id = wos."workOrderId"
  * ORDER BY wo.id DESC
  * ```
  */

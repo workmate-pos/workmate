@@ -7,6 +7,13 @@ import type { WorkOrderService, WorkOrderServiceEmployeeAssignment } from '../..
 export function ServiceConfig() {
   const [service, setService] = useState<WorkOrderService | null>(null);
   const [query, setQuery] = useState('');
+  // TODO
+  // <SearchBar
+  //   placeholder={'Search employees'}
+  //   initialValue={query}
+  //   onTextChange={setQuery}
+  //   onSearch={() => {}}
+  // />
 
   const { Screen, closePopup, usePopup } = useScreen('ServiceConfig', item => {
     // TODO: make sure every pop up resets like this
@@ -19,9 +26,8 @@ export function ServiceConfig() {
 
     const newEmployeeAssignments: WorkOrderServiceEmployeeAssignment[] = [];
     for (const { employeeId, name, employeeRate } of result) {
-      const alreadyAssigned = service.employeeAssignments.some(e => e.employeeId === employeeId);
-      if (alreadyAssigned) continue;
-      newEmployeeAssignments.push({ employeeId, name, employeeRate, hours: 0 });
+      const assignment = service.employeeAssignments.find(e => e.employeeId === employeeId);
+      newEmployeeAssignments.push(assignment ?? { employeeId, name, employeeRate, hours: 0 });
     }
 
     setService({
@@ -69,12 +75,6 @@ export function ServiceConfig() {
                   selectedEmployeeIds: service.employeeAssignments.map(e => e.employeeId),
                 })
               }
-            />
-            <SearchBar
-              placeholder={'Search employees'}
-              initialValue={query}
-              onTextChange={setQuery}
-              onSearch={() => {}}
             />
             <List
               data={service.employeeAssignments.map(e => ({

@@ -43,7 +43,11 @@ export function WorkOrderPage() {
       dispatchWorkOrder({ type: 'reset-work-order' });
     } else if (action.type === 'load-work-order') {
       setTitle(`Edit Work Order ${action.name}`);
-      setWorkOrderName(action.name);
+      if (workOrderName === action.name) {
+        workOrderQuery.refetch();
+      } else {
+        setWorkOrderName(action.name);
+      }
     }
   });
 
@@ -248,10 +252,10 @@ const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction
       };
 
     case 'remove-service': {
-      const productVariantId = action.item.productVariantId;
+      const removeItem = action.item;
       return {
         ...workOrder,
-        services: (workOrder.services ?? []).filter(item => item.productVariantId !== productVariantId),
+        services: (workOrder.services ?? []).filter(item => item.uuid !== removeItem.uuid),
       };
     }
 
