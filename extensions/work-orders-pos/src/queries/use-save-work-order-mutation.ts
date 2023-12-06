@@ -1,6 +1,6 @@
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
-import type { WorkOrder } from '../screens/WorkOrder';
+import type { WorkOrder } from '../types/work-order';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order';
 import { toCents } from '../util/money-utils';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
@@ -34,15 +34,22 @@ export const useSaveWorkOrderMutation = (
           shipping: toCents(workOrder.price.shipping),
         },
         dueDate: workOrder.dueDate,
-        products: workOrder.products.map(item => ({
-          productVariantId: item.productVariantId,
-          quantity: item.quantity,
-          unitPrice: toCents(item.unitPrice),
+        products: workOrder.products.map(({ productVariantId, quantity, unitPrice }) => ({
+          productVariantId,
+          quantity,
+          unitPrice: toCents(unitPrice),
         })),
-        employeeAssignments: workOrder.employeeAssignments.map(employee => ({
-          employeeId: employee.employeeId,
-        })),
+        employeeAssignments: workOrder.employeeAssignments.map(({ employeeId }) => ({ employeeId })),
         description: workOrder.description,
+        services: workOrder.services.map(({ productVariantId, employeeAssignments, basePrice }) => ({
+          productVariantId,
+          employeeAssignments: employeeAssignments.map(({ employeeId, employeeRate, hours }) => ({
+            employeeId,
+            hours,
+            employeeRate: toCents(employeeRate),
+          })),
+          basePrice: toCents(basePrice),
+        })),
       };
 
       const response = await fetch('/api/work-order', {

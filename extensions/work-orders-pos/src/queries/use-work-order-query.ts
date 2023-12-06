@@ -1,16 +1,18 @@
-import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useQuery, UseQueryOptions } from 'react-query';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import type { WorkOrder } from '../screens/WorkOrder';
+import type { WorkOrder } from '../types/work-order';
 import type { FetchWorkOrderResponse } from '@web/controllers/api/work-order';
 import { toDollars } from '../util/money-utils';
+import { uuid } from '../util/uuid';
+import { useProductVariantFetcher } from '../hooks/use-product-variant-fetcher';
+import { parseGid } from '../util/gid';
 
 export const useWorkOrderQuery = (
   name: string | null,
   options?: UseQueryOptions<Partial<WorkOrder> | null, unknown, Partial<WorkOrder> | null, (string | null)[]>,
 ) => {
   const fetch = useAuthenticatedFetch();
-  const api = useExtensionApi<'pos.home.modal.render'>();
+  const fetchProductVariants = useProductVariantFetcher();
 
   return useQuery({
     ...options,
@@ -24,19 +26,11 @@ export const useWorkOrderQuery = (
         throw new Error(`useWorkOrderQuery HTTP Status ${response.status}`);
       }
 
-      const { workOrder, payments, employees, customer, products } = (await response.json()) as FetchWorkOrderResponse;
+      const { workOrder, payments, services, employees, customer, products }: FetchWorkOrderResponse =
+        await response.json();
 
-      const productVariantIds = products.map(p => Number(p.productVariantId));
-
-      const productVariantBatchSize = 50;
-      const productVariants = await Promise.all(
-        Array.from({ length: Math.ceil(productVariantIds.length / productVariantBatchSize) }, (_, i) => {
-          const batch = productVariantIds.slice(productVariantBatchSize * i, productVariantBatchSize * (i + 1));
-          return api.productSearch.fetchProductVariantsWithIds(batch).then(result => result.fetchedResources);
-        }),
-      ).then(array => array.flat());
-
-      const productVariantMap = Object.fromEntries(productVariants.map(p => [p.id, p]));
+      const productVariantIds = [...products, ...services].map(s => Number(parseGid(s.productVariantId).id));
+      const productVariantRecord = await fetchProductVariants(productVariantIds);
 
       const result: Partial<WorkOrder> = {
         name: workOrder.name,
@@ -48,24 +42,51 @@ export const useWorkOrderQuery = (
         },
         dueDate: workOrder.dueDate,
         description: workOrder.description,
-        employeeAssignments: employees.map(({ id, name }) => ({
-          name,
-          employeeId: id,
-        })),
-        customer: customer ? { id: customer.id, name: customer.displayName } : undefined,
-        products: products.map(({ productVariantId, unitPrice, quantity }) => ({
-          productVariantId: productVariantId,
-          unitPrice: toDollars(unitPrice),
-          quantity: quantity,
-          name: productVariantMap[productVariantId]?.displayName ?? 'Unknown product',
-          sku: productVariantMap[productVariantId]?.sku ?? '',
-          imageUrl:
-            productVariantMap[productVariantId]?.image ?? productVariantMap[productVariantId]?.product?.featuredImage,
-        })),
+        employeeAssignments: employees.map(({ id: employeeId, name }) => ({ name, employeeId })),
+        customer: { id: customer.id, name: customer.displayName },
+        products: products.map(({ productVariantId, unitPrice, quantity }) => {
+          const productVariant = productVariantRecord[parseGid(productVariantId).id];
+          const displayName = productVariant
+            ? productVariant?.product?.hasOnlyDefaultVariant
+              ? productVariant?.product?.title
+              : `${productVariant?.product?.title} - ${productVariant?.title}`
+            : 'Unknown product';
+
+          return {
+            productVariantId: productVariantId,
+            unitPrice: toDollars(unitPrice),
+            quantity: quantity,
+            name: displayName,
+            sku: productVariant?.sku ?? '',
+            imageUrl: productVariant?.image ?? productVariant?.product?.featuredImage,
+          };
+        }),
         payments: payments.map(({ type, amount }) => ({
           type,
           amount: toDollars(amount),
         })),
+        services: services.map(({ productVariantId, employeeAssignments, basePrice }) => {
+          const productVariant = productVariantRecord[parseGid(productVariantId).id];
+          const displayName = productVariant
+            ? productVariant?.product?.hasOnlyDefaultVariant
+              ? productVariant?.product?.title
+              : `${productVariant?.product?.title} - ${productVariant?.title}`
+            : 'Unknown service';
+
+          return {
+            uuid: uuid(),
+            productVariantId,
+            basePrice,
+            name: displayName,
+            sku: productVariant?.sku ?? '',
+            employeeAssignments: employeeAssignments.map(({ name, id, hours, employeeRate }) => ({
+              name,
+              hours,
+              employeeId: id,
+              employeeRate: toDollars(employeeRate),
+            })),
+          };
+        }),
       };
 
       return result;

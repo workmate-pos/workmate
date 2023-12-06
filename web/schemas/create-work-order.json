@@ -20,6 +20,7 @@
       "additionalProperties": false
     },
     "price": {
+      "title": "price-definition",
       "type": "object",
       "properties": {
         "tax": {
@@ -44,6 +45,7 @@
     "products": {
       "type": "array",
       "items": {
+        "title": "product-definition",
         "type": "object",
         "properties": {
           "productVariantId": {
@@ -62,9 +64,50 @@
         "additionalProperties": false
       }
     },
+    "services": {
+      "type": "array",
+      "items": {
+        "title": "service-definition",
+        "type": "object",
+        "properties": {
+          "productVariantId": {
+            "type": "string"
+          },
+          "basePrice": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "employeeAssignments": {
+            "type": "array",
+            "items": {
+              "title": "service-employee-assignment",
+              "type": "object",
+              "properties": {
+                "employeeId": {
+                  "type": "string"
+                },
+                "employeeRate": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "hours": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": ["employeeId", "employeeRate", "hours"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["productVariantId", "basePrice", "employeeAssignments"],
+        "additionalProperties": false
+      }
+    },
     "employeeAssignments": {
       "type": "array",
       "items": {
+        "title": "employee-assignment",
         "type": "object",
         "properties": {
           "employeeId": {
@@ -79,6 +122,6 @@
       "type": "string"
     }
   },
-  "required": ["status", "customer", "price", "dueDate", "products", "employeeAssignments", "description"],
+  "required": ["status", "customer", "price", "dueDate", "products", "services", "employeeAssignments", "description"],
   "additionalProperties": false
 }

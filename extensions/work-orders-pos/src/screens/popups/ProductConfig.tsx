@@ -1,20 +1,20 @@
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import type { WorkOrderItem } from '../WorkOrder.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
+import { WorkOrderProduct } from '../../types/work-order';
 
-export function ItemConfig() {
-  const [item, setItem] = useState<WorkOrderItem | null>(null);
-  const updateItem = <K extends keyof WorkOrderItem>(key: K, value: WorkOrderItem[K]) => {
+export function ProductConfig() {
+  const [item, setItem] = useState<WorkOrderProduct | null>(null);
+  const updateItem = <K extends keyof WorkOrderProduct>(key: K, value: WorkOrderProduct[K]) => {
     setItem(item => (item ? { ...item, [key]: value } : null));
   };
 
-  const { Screen, closePopup } = useScreen('ItemConfig', setItem);
+  const { Screen, closePopup } = useScreen('ProductConfig', setItem);
   const currencyFormatter = useCurrencyFormatter();
 
   return (
-    <Screen title={item?.name ?? 'Item'} isLoading={!item} presentation={{ sheet: true }}>
+    <Screen title={item?.name ?? 'Product'} isLoading={!item} presentation={{ sheet: true }}>
       {item && (
         <ScrollView>
           <Stack direction="vertical" spacing={5}>
@@ -43,13 +43,13 @@ export function ItemConfig() {
                 title="Remove"
                 type="destructive"
                 onPress={() => {
-                  closePopup({ type: 'remove', item });
+                  closePopup({ type: 'remove', product: item });
                 }}
               />
               <Button
                 title="Save"
                 onPress={() => {
-                  closePopup({ type: 'update', item });
+                  closePopup({ type: 'update', product: item });
                 }}
               />
             </Stack>

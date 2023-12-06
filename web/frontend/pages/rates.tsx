@@ -61,7 +61,6 @@ export default function Rates() {
             loading: employeeRatesMutation.isLoading,
             disabled: employeeRatesMutation.isLoading,
             onAction() {
-              // TODO: mutate here, update loading and disabled
               employeeRatesMutation.mutate(employeeRates);
             },
           }}

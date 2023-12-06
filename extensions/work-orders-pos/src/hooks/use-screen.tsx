@@ -16,9 +16,14 @@ export function useScreen<const ScreenName extends ScreenNames>(
 ) {
   const [params, setParams] = useState<Params | null>(null);
 
+  // if this screen is a pop up, we must track the id s.t. we can return the result with the correct id
+  const [id, setId] = useState<string | undefined>(undefined);
+
   useEffect(() => {
     if (!params) return;
+    if (params.isPopupClose) return;
     onInput?.(params.input);
+    setId(params.id);
   }, [params]);
 
   /**
@@ -27,11 +32,12 @@ export function useScreen<const ScreenName extends ScreenNames>(
   const usePopup: UsePopupFn = (destinationScreenName, onResult) => {
     const api = useExtensionApi<'pos.home.modal.render'>();
 
-    // using an id ensures we can use the same pop-up screen for multiple purposes
+    // using an id ensures we can use the same pop-up screen for multiple purposes. it identifies a specific instance of a pop up
     const id = `${destinationScreenName}:${useId()}`;
 
     useEffect(() => {
       if (params?.id !== id) return;
+      if (!params?.isPopupClose) return;
       onResult?.(params.result);
     }, [params]);
 
@@ -40,6 +46,7 @@ export function useScreen<const ScreenName extends ScreenNames>(
         returnTo: [...(params?.returnTo ?? []), screenName],
         id,
         input,
+        isPopupClose: false,
       } satisfies Params);
     };
 
@@ -67,9 +74,10 @@ export function useScreen<const ScreenName extends ScreenNames>(
     }
 
     api.navigation.navigate(params.returnTo!.at(-1)!, {
-      id: params.id,
+      id,
       result,
       returnTo: params.returnTo!.slice(0, -1),
+      isPopupClose: true,
     } satisfies Params);
   };
 
@@ -80,10 +88,9 @@ export function useScreen<const ScreenName extends ScreenNames>(
    * Can only be used if the destination screen does not require any input.
    */
   const navigate: NavigateFn = (destinationScreenName, input = undefined) => {
-    api.navigation.navigate(destinationScreenName, { input } satisfies Params);
+    api.navigation.navigate(destinationScreenName, { input, isPopupClose: false } satisfies Params);
   };
 
-  // TODO: context that provides usePopup and Navigate? No more passing usePopup and navigate to children anymore this way
   const WrappedScreen = useCallback(
     (props: Omit<ScreenProps, 'name' | 'onReceiveParams'>) => (
       <Screen {...props} name={screenName} onReceiveParams={setParams} />
@@ -105,13 +112,17 @@ type Params = {
   id?: string;
   input?: any;
   result?: any;
+  /**
+   * Used to determine whether to update input or result.
+   */
+  isPopupClose: boolean;
 };
 
 type ScreenNames = keyof ScreenInputOutput;
 type PopupScreenNames = { [K in ScreenNames]: ScreenInputOutput[K][1] extends undefined ? never : K }[ScreenNames];
 type NormalScreenNames = { [K in ScreenNames]: ScreenInputOutput[K][1] extends undefined ? K : never }[ScreenNames];
 
-type PopupNavigateFn<DestinationScreenName extends ScreenNames> = (
+export type PopupNavigateFn<DestinationScreenName extends ScreenNames> = (
   ...args: ScreenInputOutput[DestinationScreenName][0] extends undefined
     ? []
     : [input: ScreenInputOutput[DestinationScreenName][0]]

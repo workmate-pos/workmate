@@ -1,8 +1,8 @@
 import { Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { WorkOrder } from './screens/WorkOrder.js';
-import { ItemConfig } from './screens/popups/ItemConfig.js';
+import { WorkOrderPage } from './screens/WorkOrder.js';
+import { ProductConfig } from './screens/popups/ProductConfig';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
-import { ItemSelector } from './screens/popups/ItemSelector.js';
+import { ProductSelector } from './screens/popups/ProductSelector';
 import { Error } from './screens/Error.js';
 import { ReactQueryProvider } from './providers/ReactQueryProvider.js';
 import { StatusSelector } from './screens/popups/StatusSelector.js';
@@ -11,6 +11,9 @@ import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSel
 import { ShippingConfig } from './screens/popups/ShippingConfig.js';
 import { Entry } from './screens/Entry.js';
 import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
+import { ServiceSelector } from './screens/popups/ServiceSelector';
+import { ServiceConfig } from './screens/popups/ServiceConfig';
+import { ServiceEmployeeAssignmentConfig } from './screens/popups/ServiceEmployeeAssignmentConfig';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -32,13 +35,16 @@ function SmartGridModal() {
       <Navigator>
         <Entry />
         <Error />
-        <WorkOrder />
+        <WorkOrderPage />
 
         <CustomerSelector />
         <DiscountOrDepositSelector />
         <EmployeeSelector />
-        <ItemConfig />
-        <ItemSelector />
+        <ProductConfig />
+        <ProductSelector />
+        <ServiceConfig />
+        <ServiceEmployeeAssignmentConfig />
+        <ServiceSelector />
         <ShippingConfig />
         <StatusSelector />
         <WorkOrderSaved />

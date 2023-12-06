@@ -43,6 +43,7 @@ model WorkOrder {
   createdAt           DateTime             @default(now())
   employeeAssignments EmployeeAssignment[]
   products            WorkOrderProduct[]
+  services            WorkOrderService[]
   customerId          String
   payments            WorkOrderPayment[]
 
@@ -55,22 +56,51 @@ enum PaymentType {
 }
 
 model WorkOrderPayment {
-  id          Int         @id @default(autoincrement())
-  workOrder   WorkOrder   @relation(fields: [workOrderId], references: [id])
+  id Int @id @default(autoincrement())
+
+  orderId String
+  type    PaymentType
+  amount  Int
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
-  orderId     String
-  type        PaymentType
-  amount      Int
 }
 
 model WorkOrderProduct {
-  id               Int    @id @default(autoincrement())
+  id Int @id @default(autoincrement())
+
   productVariantId String
   unitPrice        Int
   quantity         Int
 
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
+}
+
+/// Services are represented as products within Shopify in a configured service collection.
+/// The product's price is the base price of the service.
+/// The service's assigned employees and their hourly rates determine the remaining price.
+model WorkOrderService {
+  id Int @id @default(autoincrement())
+
+  productVariantId String
+  basePrice        Int
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+
+  employeeAssignments WorkOrderServiceEmployeeAssignment[]
+}
+
+model WorkOrderServiceEmployeeAssignment {
+  id Int @id @default(autoincrement())
+
+  employeeId   String
+  employeeRate Int
+  hours        Int
+
+  workOrderService   WorkOrderService @relation(fields: [workOrderServiceId], references: [id])
+  workOrderServiceId Int
 }
 
 model EmployeeAssignment {
@@ -85,7 +115,8 @@ model EmployeeAssignment {
 model EmployeeRate {
   employeeId String
   shop       String
-  rate       Int
+
+  rate Int
 
   @@id([employeeId, shop])
 }

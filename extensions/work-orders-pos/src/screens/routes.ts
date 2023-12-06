@@ -1,4 +1,11 @@
-import type { WorkOrder, WorkOrderCustomer, WorkOrderEmployee, WorkOrderItem, WorkOrderStatus } from './WorkOrder';
+import type {
+  WorkOrder,
+  WorkOrderCustomer,
+  WorkOrderEmployeeAssignment,
+  WorkOrderProduct,
+  WorkOrderService,
+  WorkOrderServiceEmployeeAssignment,
+} from '../types/work-order';
 
 /**
  * Screen input/output types.
@@ -7,12 +14,18 @@ import type { WorkOrder, WorkOrderCustomer, WorkOrderEmployee, WorkOrderItem, Wo
 export type ScreenInputOutput = {
   Entry: [{ forceReload?: boolean } | undefined, undefined];
   WorkOrder: [{ type: 'load-work-order'; name: string } | { type: 'new-work-order' }, undefined];
-  ItemSelector: [{ type: 'product' | 'service' }, WorkOrderItem];
-  ItemConfig: [WorkOrderItem, { type: 'update' | 'remove'; item: WorkOrderItem }];
-  StatusSelector: [undefined, WorkOrderStatus];
+  ProductSelector: [undefined, WorkOrderProduct];
+  ProductConfig: [WorkOrderProduct, { type: 'update' | 'remove'; product: WorkOrderProduct }];
+  ServiceSelector: [undefined, WorkOrderService];
+  ServiceConfig: [WorkOrderService, { type: 'update' | 'remove'; service: WorkOrderService }];
+  StatusSelector: [undefined, string];
+  ServiceEmployeeAssignmentConfig: [
+    WorkOrderServiceEmployeeAssignment,
+    { type: 'update' | 'remove'; assignment: WorkOrderServiceEmployeeAssignment },
+  ];
   CustomerSelector: [undefined, WorkOrderCustomer];
   ShippingConfig: [undefined, number];
-  EmployeeSelector: [{ selectedEmployeeIds: string[] }, WorkOrderEmployee[]];
+  EmployeeSelector: [{ selectedEmployeeIds: string[] }, (WorkOrderEmployeeAssignment & { employeeRate: number })[]];
   DiscountOrDepositSelector: [
     { select: 'discount' | 'deposit'; subTotal: number },
     (

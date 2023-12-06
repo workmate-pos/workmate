@@ -13,28 +13,15 @@ import {
   TextField,
 } from '@shopify/retail-ui-extensions-react';
 import { Dispatch, useEffect, useReducer, useState } from 'react';
-import { UsePopupFn, useScreen } from '../hooks/use-screen.js';
-import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
+import { PopupNavigateFn, UsePopupFn, useScreen } from '../hooks/use-screen.js';
 import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation.js';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
-import { PaymentType, useWorkOrderQuery } from '../queries/use-work-order-query.js';
+import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
+import { useWorkOrderQuery } from '../queries/use-work-order-query.js';
 import { usePaymentHandler } from '../hooks/use-payment-handler.js';
 import { getPriceDetails } from '../util/work-order.js';
+import { WorkOrder, WorkOrderEmployeeAssignment, WorkOrderProduct, WorkOrderService } from '../types/work-order';
 
-export type WorkOrder = Omit<CreateWorkOrder, 'products' | 'employeeAssignments' | 'dueDate' | 'customer'> & {
-  products: ({ name: string; sku: string; imageUrl?: string } & CreateWorkOrder['products'][number])[];
-  employeeAssignments: ({ name: string } & NonNullable<CreateWorkOrder['employeeAssignments']>[number])[];
-  dueDate: string;
-  customer: { name: string } & CreateWorkOrder['customer'];
-  payments: { type: PaymentType; amount: number }[];
-};
-
-export type WorkOrderItem = WorkOrder['products'][number];
-export type WorkOrderEmployee = WorkOrder['employeeAssignments'][number];
-export type WorkOrderCustomer = WorkOrder['customer'];
-export type WorkOrderStatus = WorkOrder['status'];
-
-export function WorkOrder() {
+export function WorkOrderPage() {
   const [title, setTitle] = useState('');
   const [workOrderName, setWorkOrderName] = useState<string | null>(null);
   const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
@@ -190,8 +177,12 @@ type WorkOrderAction =
       workOrder: Partial<WorkOrder>;
     }
   | {
-      type: 'add-item' | 'remove-item' | 'update-item';
-      item: WorkOrder['products'][number];
+      type: 'add-product' | 'remove-product' | 'update-product';
+      item: WorkOrderProduct;
+    }
+  | {
+      type: 'add-service' | 'remove-service' | 'update-service';
+      item: WorkOrderService;
     }
   | NonNullable<
       {
@@ -204,16 +195,16 @@ type WorkOrderAction =
     >
   | {
       type: 'set-assigned-employees';
-      employees: NonNullable<WorkOrder['employeeAssignments']>;
+      employees: NonNullable<WorkOrderEmployeeAssignment[]>;
     };
 
 const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction): Partial<WorkOrder> => {
-  if (action.type === 'add-item') {
+  if (action.type === 'add-product') {
     const productVariantId = action.item.productVariantId;
     const existingItem = workOrder.products?.find(item => item.productVariantId === productVariantId);
     if (existingItem) {
       action = {
-        type: 'update-item',
+        type: 'update-product',
         item: { ...existingItem, quantity: existingItem.quantity + action.item.quantity },
       };
     }
@@ -226,13 +217,13 @@ const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction
     case 'set-work-order':
       return action.workOrder;
 
-    case 'add-item':
+    case 'add-product':
       return {
         ...workOrder,
         products: [...(workOrder.products ?? []), action.item],
       };
 
-    case 'remove-item': {
+    case 'remove-product': {
       const productVariantId = action.item.productVariantId;
       return {
         ...workOrder,
@@ -240,13 +231,42 @@ const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction
       };
     }
 
-    case 'update-item': {
+    case 'update-product': {
       const updateItem = action.item;
       return {
         ...workOrder,
         products: (workOrder.products ?? []).map(item =>
           item.productVariantId === updateItem.productVariantId ? updateItem : item,
         ),
+      };
+    }
+
+    case 'add-service':
+      return {
+        ...workOrder,
+        services: [...(workOrder.services ?? []), action.item],
+      };
+
+    case 'remove-service': {
+      const productVariantId = action.item.productVariantId;
+      return {
+        ...workOrder,
+        services: (workOrder.services ?? []).filter(item => item.productVariantId !== productVariantId),
+      };
+    }
+
+    case 'update-service': {
+      const updateItem = action.item;
+
+      return {
+        ...workOrder,
+        services: (workOrder.services ?? []).map(item => (item.uuid === updateItem.uuid ? updateItem : item)),
+        employeeAssignments: [
+          ...(workOrder.employeeAssignments ?? []).filter(
+            e => !updateItem.employeeAssignments.some(a => a.employeeId === e.employeeId),
+          ),
+          ...updateItem.employeeAssignments,
+        ],
       };
     }
 
@@ -275,6 +295,7 @@ const defaultWorkOrder: Partial<WorkOrder> = {
   employeeAssignments: [],
   name: undefined,
   products: [],
+  services: [],
   price: {
     tax: 0,
     discount: 0,
@@ -335,33 +356,115 @@ const WorkOrderItems = ({
   dispatchWorkOrder: Dispatch<WorkOrderAction>;
   usePopup: UsePopupFn;
 }) => {
-  const itemSelectorPopup = usePopup('ItemSelector', result => {
-    dispatchWorkOrder({ type: 'add-item', item: result });
+  const productSelectorPopup = usePopup('ProductSelector', result => {
+    dispatchWorkOrder({ type: 'add-product', item: result });
   });
 
-  const itemConfigPopup = usePopup('ItemConfig', result => {
+  const serviceSelectorPopup = usePopup('ServiceSelector', result => {
+    dispatchWorkOrder({ type: 'add-service', item: result });
+    serviceConfigPopup.navigate(result);
+  });
+
+  const productConfigPopup = usePopup('ProductConfig', result => {
     if (result.type === 'remove') {
-      dispatchWorkOrder({ type: 'remove-item', item: result.item });
+      dispatchWorkOrder({ type: 'remove-product', item: result.product });
     } else if (result.type === 'update') {
-      dispatchWorkOrder({ type: 'update-item', item: result.item });
+      dispatchWorkOrder({ type: 'update-product', item: result.product });
+    } else {
+      return result.type satisfies never;
+    }
+  });
+
+  const serviceConfigPopup = usePopup('ServiceConfig', result => {
+    if (result.type === 'remove') {
+      dispatchWorkOrder({ type: 'remove-service', item: result.service });
+    } else if (result.type === 'update') {
+      dispatchWorkOrder({ type: 'update-service', item: result.service });
+    } else {
+      return result.type satisfies never;
     }
   });
 
   const [query, setQuery] = useState('');
   const currencyFormatter = useCurrencyFormatter();
 
-  const rows: ListRow[] =
-    workOrder.products
-      ?.filter(
-        item =>
-          !query ||
-          item.name.toLowerCase().includes(query.toLowerCase()) ||
-          item.sku.toLowerCase().includes(query.toLowerCase()),
-      )
-      .map<ListRow>(item => ({
+  const rows = getItemRows(
+    workOrder,
+    query,
+    currencyFormatter,
+    productConfigPopup.navigate,
+    serviceConfigPopup.navigate,
+  );
+
+  return (
+    <Stack direction="vertical" flex={1} paddingVertical={'ExtraSmall'}>
+      <Stack direction={'horizontal'} flexChildren>
+        <Button title="Add Product" type="primary" onPress={() => productSelectorPopup.navigate()} />
+        <Button title="Add Service" type="primary" onPress={() => serviceSelectorPopup.navigate()} />
+      </Stack>
+      <SearchBar placeholder="Search items" initialValue={query} onTextChange={setQuery} onSearch={() => {}} />
+      {rows.length ? (
+        <List data={rows}></List>
+      ) : (
+        <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
+          <Text variant="body" color="TextSubdued">
+            No products or services added to work order
+          </Text>
+        </Stack>
+      )}
+    </Stack>
+  );
+};
+
+function getItemRows(
+  workOrder: Partial<WorkOrder>,
+  query: string,
+  currencyFormatter: CurrencyFormatter,
+  openProductConfig: PopupNavigateFn<'ProductConfig'>,
+  openServiceConfig: PopupNavigateFn<'ServiceConfig'>,
+): ListRow[] {
+  const rows: ListRow[] = [];
+
+  const queryFilter = (item: WorkOrderProduct | WorkOrderService) =>
+    !query ||
+    item.name.toLowerCase().includes(query.toLowerCase()) ||
+    item.sku.toLowerCase().includes(query.toLowerCase());
+
+  if (workOrder.services) {
+    rows.push(
+      ...workOrder.services.filter(queryFilter).map<ListRow>(item => {
+        const assignedEmployeePrice = item.employeeAssignments.reduce(
+          (total, employee) => total + employee.hours * employee.employeeRate,
+          0,
+        );
+
+        return {
+          id: item.productVariantId,
+          onPress: () => {
+            openServiceConfig(item);
+          },
+          leftSide: {
+            label: item.name,
+            subtitle: item.sku ? [item.sku] : undefined,
+            image: {
+              source: item.imageUrl ?? 'not found',
+            },
+          },
+          rightSide: {
+            label: currencyFormatter(item.basePrice + assignedEmployeePrice),
+            showChevron: true,
+          },
+        };
+      }),
+    );
+  }
+
+  if (workOrder.products) {
+    rows.push(
+      ...workOrder.products.filter(queryFilter).map<ListRow>(item => ({
         id: item.productVariantId,
         onPress: () => {
-          itemConfigPopup.navigate(item);
+          openProductConfig(item);
         },
         leftSide: {
           label: item.name,
@@ -375,27 +478,12 @@ const WorkOrderItems = ({
           label: currencyFormatter(item.unitPrice * item.quantity),
           showChevron: true,
         },
-      })) ?? [];
+      })),
+    );
+  }
 
-  return (
-    <Stack direction="vertical" flex={1} paddingVertical={'ExtraSmall'}>
-      <Stack direction={'horizontal'} flexChildren>
-        <Button title="Add Product" type="primary" onPress={() => itemSelectorPopup.navigate({ type: 'product' })} />
-        <Button title="Add Service" type="primary" onPress={() => itemSelectorPopup.navigate({ type: 'service' })} />
-      </Stack>
-      <SearchBar placeholder="Search products" initialValue={query} onTextChange={setQuery} onSearch={() => {}} />
-      {rows.length ? (
-        <List data={rows}></List>
-      ) : (
-        <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
-          <Text variant="body" color="TextSubdued">
-            No products added to work order
-          </Text>
-        </Stack>
-      )}
-    </Stack>
-  );
-};
+  return rows;
+}
 
 const WorkOrderMoney = ({
   workOrder,

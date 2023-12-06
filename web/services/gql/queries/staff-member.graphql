@@ -18,6 +18,13 @@ query getStaffMember($id: ID!) {
   }
 }
 
+query getStaffMembersById($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...staffMemberFragment
+  }
+}
+
 fragment staffMemberFragment on StaffMember {
   id
   name

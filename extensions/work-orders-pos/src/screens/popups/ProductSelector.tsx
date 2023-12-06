@@ -4,12 +4,10 @@ import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
 import { useDebouncedState } from '../../hooks/use-debounced-state.js';
 import { ProductVariant, useProductVariantsQuery } from '../../queries/use-product-variants-query';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { useState } from 'react';
 import { useSettingsQuery } from '../../queries/use-settings-query';
 
-export function ItemSelector() {
-  const [type, setType] = useState<'product' | 'service' | null>(null);
-  const { Screen, closePopup } = useScreen('ItemSelector', ({ type }) => setType(type));
+export function ProductSelector() {
+  const { Screen, closePopup } = useScreen('ProductSelector');
 
   const [query, setQuery] = useDebouncedState('');
   const productVariantsQuery = useProductVariantsQuery({ query });
@@ -17,47 +15,16 @@ export function ItemSelector() {
   const currencyFormatter = useCurrencyFormatter();
   const settingsQuery = useSettingsQuery();
 
-  const { includedCollectionId, excludedCollectionId } = {
-    none: {
-      includedCollectionId: null,
-      excludedCollectionId: null,
-    },
-    product: {
-      includedCollectionId: null,
-      excludedCollectionId: settingsQuery.data?.settings.serviceCollectionId,
-    },
-    service: {
-      includedCollectionId: settingsQuery.data?.settings.serviceCollectionId,
-      excludedCollectionId: null,
-    },
-  }[type ?? 'none'];
-
-  const filteredProductVariants = productVariants.filter(
-    variant =>
-      (includedCollectionId === null ||
-        variant.product.collections.nodes.some(collection => collection.id === includedCollectionId)) &&
-      (excludedCollectionId === null ||
-        variant.product.collections.nodes.every(collection => collection.id !== excludedCollectionId)),
+  const filteredProductVariants = productVariants.filter(variant =>
+    variant.product.collections.nodes.every(c => c.id !== settingsQuery.data?.settings.serviceCollectionId),
   );
 
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
   const rows = getProductVariantRows(filteredProductVariants, closeRef, currencyFormatter);
 
-  const title = {
-    product: 'Select product',
-    service: 'Select service',
-    none: 'Select item',
-  }[type ?? 'none'];
-
-  const searchBarText = {
-    product: 'Search products',
-    service: 'Search service',
-    none: 'Search items',
-  }[type ?? 'none'];
-
   return (
     <Screen
-      title={title}
+      title={'Select product'}
       isLoading={settingsQuery.isLoading}
       presentation={{ sheet: true }}
       onNavigate={() => setQuery('', true)}
@@ -68,7 +35,11 @@ export function ItemSelector() {
             {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar onTextChange={query => setQuery(query, !query)} onSearch={() => {}} placeholder={searchBarText} />
+        <SearchBar
+          onTextChange={query => setQuery(query, !query)}
+          onSearch={() => {}}
+          placeholder={'Search products'}
+        />
         <List
           data={rows}
           onEndReached={() => productVariantsQuery.fetchNextPage()}
@@ -102,7 +73,7 @@ export function ItemSelector() {
 
 function getProductVariantRows(
   productVariants: ProductVariant[],
-  closePopupRef: { current: ClosePopupFn<'ItemSelector'> },
+  closePopupRef: { current: ClosePopupFn<'ProductSelector'> },
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
   return productVariants.map(variant => {
@@ -128,7 +99,7 @@ function getProductVariantRows(
       },
       leftSide: {
         label: displayName,
-        subtitle: [variant.product.description],
+        subtitle: variant.product.description ? [variant.product.description] : undefined,
         image: { source: imageUrl ?? 'not found' },
       },
       rightSide: {

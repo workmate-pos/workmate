@@ -29,6 +29,10 @@ WITH wo AS (SELECT id, name, status, "taxAmount", "discountAmount", "shippingAmo
      prod AS (SELECT "workOrderId", COALESCE(SUM(quantity * "unitPrice"), 0) :: INTEGER AS "productAmount!"
               FROM "WorkOrderProduct"
               GROUP BY "workOrderId"),
+     serv AS (SELECT wos."workOrderId", COALESCE(SUM(wosea.hours * wosea."employeeRate"), 0) :: INTEGER AS "serviceAmount!"
+              FROM "WorkOrderService" wos
+              INNER JOIN "WorkOrderServiceEmployeeAssignment" wosea ON wosea."workOrderServiceId" = wos.id
+              GROUP BY "workOrderId"),
      pay AS (SELECT "workOrderId",
                     COALESCE(SUM(amount), 0) :: INTEGER        AS "paidAmount!",
                     COALESCE(BOOL_OR(type = 'DEPOSIT'), FALSE) AS "hasDeposit!"
@@ -42,10 +46,12 @@ SELECT wo.name,
        wo."dueDate",
        prod."productAmount!",
        pay."paidAmount!",
-       pay."hasDeposit!"
+       pay."hasDeposit!",
+       serv."serviceAmount!"
 FROM wo
 LEFT JOIN prod ON wo.id = prod."workOrderId"
 LEFT JOIN pay ON wo.id = pay."workOrderId"
+LEFT JOIN serv ON wo.id = serv."workOrderId"
 ORDER BY wo.id DESC;
 
 /* @name get */

@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from 'react-query';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import type { FetchEmployeesResponse } from '@web/controllers/api/employee';
+import { toDollars } from '../util/money-utils';
 
 export const useEmployeesQuery = ({ query = '' }: { query?: string } = {}) => {
   const fetch = useAuthenticatedFetch();
@@ -26,7 +27,12 @@ export const useEmployeesQuery = ({ query = '' }: { query?: string } = {}) => {
       return lastPage.pageInfo.endCursor;
     },
     select: ({ pages, pageParams }) => ({
-      pages: pages.flatMap(page => page.employees),
+      pages: pages.flatMap(page =>
+        page.employees.map(({ rate, ...employee }) => ({
+          ...employee,
+          rate: rate ? toDollars(rate) : rate,
+        })),
+      ),
       pageParams,
     }),
     keepPreviousData: true,
@@ -36,4 +42,5 @@ export const useEmployeesQuery = ({ query = '' }: { query?: string } = {}) => {
 export type Employee = {
   id: string;
   name: string;
+  rate: number | null;
 };

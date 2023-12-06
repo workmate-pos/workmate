@@ -1,10 +1,10 @@
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import type { WorkOrder } from '../WorkOrder.js';
 import { getPriceDetails } from '../../util/work-order.js';
 import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
+import { WorkOrder } from '../../types/work-order';
 
 export function WorkOrderSaved() {
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);

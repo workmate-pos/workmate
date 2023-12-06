@@ -31,7 +31,7 @@ export default class WorkOrderController {
   @BodySchema('create-work-order-request')
   async createWorkOrderRequest(
     req: Request<unknown, unknown, CreateWorkOrderRequest>,
-    res: Response<CreateWorkOrderRequestResponse>,
+    res: Response<CreateWorkOrderRequestResponse | { error: string }>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
     const createWorkOrderRequest = req.body;
@@ -51,6 +51,7 @@ export default class WorkOrderController {
       price: { tax: 0, shipping: 0, discount: 0 },
       products: [],
       employeeAssignments: [],
+      services: [],
     });
 
     return res.json({ workOrder: { name } });
@@ -82,7 +83,7 @@ export default class WorkOrderController {
   }
 
   @Get('/:name')
-  async fetchWorkOrder(req: Request<{ name: string }>, res: Response) {
+  async fetchWorkOrder(req: Request<{ name: string }>, res: Response<FetchWorkOrderResponse | { error: string }>) {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
@@ -100,13 +101,9 @@ export type CreateWorkOrderResponse = {
   workOrder: { name: string };
 };
 
-export type CreateWorkOrderRequestResponse =
-  | {
-      workOrder: { name: string };
-    }
-  | {
-      error: string;
-    };
+export type CreateWorkOrderRequestResponse = {
+  workOrder: { name: string };
+};
 
 export type FetchWorkOrderInfoPageResponse = {
   infoPage: Awaited<ReturnType<typeof db.workOrder.infoPage>>;

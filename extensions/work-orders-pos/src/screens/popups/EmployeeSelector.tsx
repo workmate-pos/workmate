@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
 import { Employee, useEmployeesQuery } from '../../queries/use-employees-query.js';
 import { useDebouncedState } from '../../hooks/use-debounced-state.js';
+import { useSettingsQuery } from '../../queries/use-settings-query';
 
 export function EmployeeSelector() {
   const { Screen, closePopup } = useScreen('EmployeeSelector', ({ selectedEmployeeIds }) => {
@@ -11,15 +12,22 @@ export function EmployeeSelector() {
 
   const [query, setQuery] = useDebouncedState('');
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const settingsQuery = useSettingsQuery();
   const employeesQuery = useEmployeesQuery({ query });
   const employees = employeesQuery.data?.pages ?? [];
 
   const rows = getEmployeeRows(employees, selectedEmployeeIds, setSelectedEmployeeIds);
 
   const close = () => {
+    if (!settingsQuery.data) return;
+
     const selected = employees
       .filter(e => selectedEmployeeIds.includes(e.id))
-      .map(e => ({ employeeId: e.id, name: e.name }));
+      .map(e => ({
+        employeeId: e.id,
+        name: e.name,
+        employeeRate: e.rate ?? settingsQuery.data.settings.defaultRate,
+      }));
 
     closePopup(selected);
   };
@@ -28,6 +36,7 @@ export function EmployeeSelector() {
     <Screen
       title="Select employee"
       presentation={{ sheet: true }}
+      isLoading={settingsQuery.isLoading}
       onNavigateBack={close}
       onNavigate={() => setQuery('', true)}
     >

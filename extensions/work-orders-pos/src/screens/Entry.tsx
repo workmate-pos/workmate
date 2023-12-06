@@ -91,8 +91,19 @@ function getWorkOrderRows(
   currencyFormatter: CurrencyFormatter,
 ): ListRow[] {
   return workOrders.map<ListRow>(
-    ({ name, productAmount, discountAmount, taxAmount, status, dueDate, paidAmount, shippingAmount, hasDeposit }) => {
-      const total = productAmount + taxAmount + shippingAmount - discountAmount;
+    ({
+      name,
+      productAmount,
+      discountAmount,
+      taxAmount,
+      status,
+      dueDate,
+      paidAmount,
+      shippingAmount,
+      hasDeposit,
+      serviceAmount,
+    }) => {
+      const total = serviceAmount + productAmount + taxAmount + shippingAmount - discountAmount;
       const dueDateString = new Date(dueDate).toLocaleDateString();
 
       const paymentStatus = paidAmount >= total ? 'Paid' : hasDeposit ? 'Deposit' : 'Unpaid';
