@@ -9,6 +9,7 @@
     "discountRules",
     "depositRules",
     "workOrderRequests",
-    "labourCollectionId"
+    "serviceCollectionId",
+    "defaultRate"
   ]
 }

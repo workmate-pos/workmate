@@ -3,6 +3,7 @@ import * as workOrder from './queries/generated/work-order.sql.js';
 import * as workOrderProduct from './queries/generated/work-order-product.sql.js';
 import * as workOrderPayment from './queries/generated/work-order-payment.sql.js';
 import * as workOrderEmployeeAssignment from './queries/generated/work-order-employee-assignment.sql.js';
+import * as employeeRate from './queries/generated/employee-rate.sql.js';
 import * as settings from './queries/generated/settings.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
@@ -16,6 +17,7 @@ export const db = {
   workOrderProduct: wrapPreparedQueries(workOrderProduct),
   workOrderPayment: wrapPreparedQueries(workOrderPayment),
   workOrderEmployeeAssignment: wrapPreparedQueries(workOrderEmployeeAssignment),
+  employeeRate: wrapPreparedQueries(employeeRate),
   settings: wrapPreparedQueries(settings),
 };
 

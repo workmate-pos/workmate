@@ -13,7 +13,9 @@
     "typeRoots": ["node_modules/@types"],
     "skipLibCheck": true,
     "strictNullChecks": true,
-    "noImplicitAny": true
+    "noImplicitAny": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true
   },
   "exclude": ["node_modules"]
 }

@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useSettingsQuery } from '../../queries/use-settings-query';
 
 export function ItemSelector() {
-  const [type, setType] = useState<'product' | 'labour' | null>(null);
+  const [type, setType] = useState<'product' | 'service' | null>(null);
   const { Screen, closePopup } = useScreen('ItemSelector', ({ type }) => setType(type));
 
   const [query, setQuery] = useDebouncedState('');
@@ -24,10 +24,10 @@ export function ItemSelector() {
     },
     product: {
       includedCollectionId: null,
-      excludedCollectionId: settingsQuery.data?.settings.labourCollectionId,
+      excludedCollectionId: settingsQuery.data?.settings.serviceCollectionId,
     },
-    labour: {
-      includedCollectionId: settingsQuery.data?.settings.labourCollectionId,
+    service: {
+      includedCollectionId: settingsQuery.data?.settings.serviceCollectionId,
       excludedCollectionId: null,
     },
   }[type ?? 'none'];
@@ -45,13 +45,13 @@ export function ItemSelector() {
 
   const title = {
     product: 'Select product',
-    labour: 'Select labour',
+    service: 'Select service',
     none: 'Select item',
   }[type ?? 'none'];
 
   const searchBarText = {
     product: 'Search products',
-    labour: 'Search labour',
+    service: 'Search service',
     none: 'Search items',
   }[type ?? 'none'];
 

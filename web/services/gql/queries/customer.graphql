@@ -22,11 +22,3 @@ fragment customerFragment on Customer {
   phone
   email
 }
-
-query test {
-  collections(query:kekw) {
-    nodes {
-      id
-    }
-  }
-}

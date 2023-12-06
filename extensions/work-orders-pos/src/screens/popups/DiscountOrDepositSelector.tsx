@@ -72,7 +72,11 @@ export function DiscountOrDepositSelector() {
   const currencyFormatter = useCurrencyFormatter();
 
   return (
-    <Screen title={title} isLoading={settingsQuery.isLoading || subTotal === null || selectType === null}>
+    <Screen
+      title={title}
+      isLoading={settingsQuery.isLoading || subTotal === null || selectType === null}
+      presentation={{ sheet: true }}
+    >
       <ScrollView>
         <Stack direction="vertical" spacing={8}>
           <Stack direction="vertical" spacing={2} paddingVertical={'Medium'}>

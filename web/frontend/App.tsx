@@ -5,8 +5,6 @@ import { AppBridgeProvider, QueryProvider, PolarisProvider } from '@teifi-digita
 
 export default function App() {
   // Any .tsx files in /pages will become a route
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
   const pages = import.meta.globEager('./pages/**/!(*.test.[jt]sx)*.([jt]sx)');
   return (
     <PolarisProvider>
@@ -15,6 +13,10 @@ export default function App() {
           <QueryProvider>
             <NavigationMenu
               navigationLinks={[
+                {
+                  label: 'Rates',
+                  destination: '/rates',
+                },
                 {
                   label: 'Settings',
                   destination: '/settings',

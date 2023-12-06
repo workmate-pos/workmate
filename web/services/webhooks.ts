@@ -1,5 +1,6 @@
 import { WebhookHandlers } from '@teifi-digital/shopify-app-express/services/webhooks.js';
 import { insertWorkOrderPayment } from './work-order-payment.js';
+import { toCents } from '../util/money.js';
 
 export default {
   'orders/paid': {
@@ -20,7 +21,7 @@ export default {
         return;
       }
 
-      const amount = Number(order.current_total_price) * 100; // TODO: only count the deposit line item
+      const amount = toCents(Number(order.current_total_price));
       const workOrderName = attributes[WORK_ORDER_NAME_KEY];
       const paymentType = attributes[PAYMENT_TYPE_KEY];
 

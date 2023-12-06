@@ -1,9 +1,10 @@
+import { useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
 import { useQuery, UseQueryOptions } from 'react-query';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import type { FetchSettingsResponse } from '@web/controllers/api/settings';
-import { toDollars } from '../util/money-utils';
-import type { CurrencyRange, Unit } from '@web/schemas/generated/shop-settings';
+import type { FetchSettingsResponse } from '../../controllers/api/settings';
+import type { CurrencyRange, Unit } from '../../schemas/generated/shop-settings';
+import { toDollars } from '../util/money';
 
+// TODO: Shared `queries` project to be shared between frontend and pos
 export const useSettingsQuery = (
   options?: UseQueryOptions<FetchSettingsResponse, unknown, FetchSettingsResponse, string[]>,
 ) => {

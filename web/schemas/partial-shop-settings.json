@@ -3,7 +3,8 @@
   "type": "object",
   "properties": {
     "idFormat": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1
     },
     "statuses": {
       "type": "array",
@@ -90,16 +91,22 @@
         }
       ]
     },
-    "labourCollectionId": {
-      "description": "A collection name that is used to identify labour items within Shopify",
+    "serviceCollectionId": {
+      "description": "A collection name that is used to identify service products within Shopify",
       "oneOf": [
         {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         {
           "type": "null"
         }
       ]
+    },
+    "defaultRate": {
+      "description": "The default rate used for employees when no rate is specified",
+      "type": "integer",
+      "minimum": 0
     }
   },
   "additionalProperties": false,

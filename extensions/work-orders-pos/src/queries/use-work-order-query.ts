@@ -3,6 +3,7 @@ import { useQuery, UseQueryOptions } from 'react-query';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import type { WorkOrder } from '../screens/WorkOrder';
 import type { FetchWorkOrderResponse } from '@web/controllers/api/work-order';
+import { toDollars } from '../util/money-utils';
 
 export const useWorkOrderQuery = (
   name: string | null,
@@ -41,9 +42,9 @@ export const useWorkOrderQuery = (
         name: workOrder.name,
         status: workOrder.status,
         price: {
-          discount: workOrder.discountAmount / 100,
-          tax: workOrder.taxAmount / 100,
-          shipping: workOrder.shippingAmount / 100,
+          discount: toDollars(workOrder.discountAmount),
+          tax: toDollars(workOrder.taxAmount),
+          shipping: toDollars(workOrder.shippingAmount),
         },
         dueDate: workOrder.dueDate,
         description: workOrder.description,
@@ -54,7 +55,7 @@ export const useWorkOrderQuery = (
         customer: customer ? { id: customer.id, name: customer.displayName } : undefined,
         products: products.map(({ productVariantId, unitPrice, quantity }) => ({
           productVariantId: productVariantId,
-          unitPrice: unitPrice / 100,
+          unitPrice: toDollars(unitPrice),
           quantity: quantity,
           name: productVariantMap[productVariantId]?.displayName ?? 'Unknown product',
           sku: productVariantMap[productVariantId]?.sku ?? '',
@@ -63,7 +64,7 @@ export const useWorkOrderQuery = (
         })),
         payments: payments.map(({ type, amount }) => ({
           type,
-          amount: amount / 100,
+          amount: toDollars(amount),
         })),
       };
 

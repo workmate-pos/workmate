@@ -13,7 +13,7 @@ export function ShippingConfig() {
   ];
 
   return (
-    <Screen title="Shipping">
+    <Screen title="Shipping" presentation={{ sheet: true }}>
       <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
         <Button title="No Shipping" onPress={() => closePopup(0)} />
         {options.map(([description, currencyAmount]) => (

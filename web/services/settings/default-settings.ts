@@ -9,7 +9,7 @@ const defaultShopSettings: ShopSettings = {
   idFormat: 'WO-#{{id}}',
   discountShortcuts: [
     { value: 10, unit: 'percentage' },
-    { value: 100, unit: 'currency' },
+    { value: 10000, unit: 'currency' },
   ],
   discountRules: {
     onlyAllowShortcuts: true,
@@ -18,7 +18,7 @@ const defaultShopSettings: ShopSettings = {
   },
   depositShortcuts: [
     { value: 40, unit: 'percentage' },
-    { value: 100, unit: 'currency' },
+    { value: 10000, unit: 'currency' },
   ],
   depositRules: {
     onlyAllowShortcuts: true,
@@ -30,7 +30,8 @@ const defaultShopSettings: ShopSettings = {
     enabled: false,
     allowedStatuses: null,
   },
-  labourCollectionId: null,
+  serviceCollectionId: null,
+  defaultRate: 1000,
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {
