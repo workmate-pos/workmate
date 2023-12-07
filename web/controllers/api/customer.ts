@@ -1,4 +1,4 @@
-import { Get, Authenticated, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default';
+import { Get, Authenticated, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import { Session } from '@shopify/shopify-api';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';

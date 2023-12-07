@@ -1,1 +1,1 @@
-export const HOST = process.env.HOST || 'https://auditor-easily-jeremy-shipped.trycloudflare.com';
+export const HOST = process.env.HOST || 'https://work-orders-staging.teifi.dev';

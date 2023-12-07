@@ -2,7 +2,7 @@ import type { Session } from '@shopify/shopify-api';
 import type { Request, Response } from 'express-serve-static-core';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { GetCollectionsOperationResult } from '../../services/gql/queries/generated/queries.js';
-import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default';
+import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
 
