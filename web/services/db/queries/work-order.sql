@@ -3,16 +3,17 @@ SELECT NEXTVAL(FORMAT('%I', :shopSequenceName! :: TEXT)) :: INTEGER AS "id!";
 
 /* @name upsert */
 INSERT INTO "WorkOrder" (shop, name, status, "taxAmount", "discountAmount", "shippingAmount",
-                         description, "dueDate", "customerId")
+                         description, "dueDate", "customerId", "derivedFromOrderId")
 VALUES (:shop!, :name!, :status!, :taxAmount!, :discountAmount!, :shippingAmount!, :description!,
-        :dueDate!, :customerId!)
+        :dueDate!, :customerId!, :derivedFromOrderId)
 ON CONFLICT ("shop", "name") DO UPDATE SET status           = EXCLUDED.status,
                                            "taxAmount"      = EXCLUDED."taxAmount",
                                            "discountAmount" = EXCLUDED."discountAmount",
                                            "shippingAmount" = EXCLUDED."shippingAmount",
                                            description      = EXCLUDED.description,
                                            "dueDate"        = EXCLUDED."dueDate",
-                                           "customerId"     = EXCLUDED."customerId"
+                                           "customerId"     = EXCLUDED."customerId",
+                                           "derivedFromOrderId" = EXCLUDED."derivedFromOrderId"
 RETURNING *;
 
 /* @name infoPage */

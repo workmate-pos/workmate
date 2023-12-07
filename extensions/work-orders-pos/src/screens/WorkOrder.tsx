@@ -35,14 +35,22 @@ export function WorkOrderPage() {
       dispatchWorkOrder({ type: 'set-work-order', workOrder });
       setSavedPriceDetails(getPriceDetails(workOrder));
     },
+    onError() {
+      api.toast.show('Error loading work order');
+      navigate('Entry');
+    },
   });
 
-  const { Screen, usePopup } = useScreen('WorkOrder', async action => {
+  const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
     removeVisualHints();
 
     if (action.type === 'new-work-order') {
       setTitle('New Work Order');
-      dispatchWorkOrder({ type: 'reset-work-order' });
+      if (action.initial) {
+        dispatchWorkOrder({ type: 'set-work-order', workOrder: { ...defaultWorkOrder, ...action.initial } });
+      } else {
+        dispatchWorkOrder({ type: 'reset-work-order' });
+      }
     } else if (action.type === 'load-work-order') {
       setTitle(`Edit Work Order ${action.name}`);
       if (workOrderName === action.name) {
@@ -101,6 +109,7 @@ export function WorkOrderPage() {
     <Screen
       title={title}
       isLoading={workOrderQuery.isFetching || saveWorkOrderMutation.isLoading || paymentHandler.isLoading}
+      overrideNavigateBack={() => navigate('Entry')}
     >
       <ScrollView>
         {errorMessage && <Banner title={errorMessage} variant="error" visible />}
@@ -138,53 +147,60 @@ export function WorkOrderPage() {
         </Stack>
 
         <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
-          <>
+          {workOrder.derivedFromOrder?.workOrderName && (
             <Button
-              title="Pay Balance"
+              title={`Previous (${workOrder.derivedFromOrder.workOrderName})`}
               onPress={() => {
-                if (!workOrder.name) {
-                  api.toast.show('You must save the work order before paying', { duration: 1000 });
-                  return;
-                }
-
-                if (savedPriceDetails.balanceDue <= 0) {
-                  api.toast.show('There is no due balance', { duration: 1000 });
-                  return;
-                }
-
-                return paymentHandler.handlePayment({
-                  workOrderName: workOrder.name!,
-                  type: 'balance',
-                  amount: savedPriceDetails.total,
-                  previouslyDeposited: savedPriceDetails.deposited,
-                });
+                if (!workOrder.derivedFromOrder?.workOrderName) return;
+                navigate('WorkOrder', { type: 'load-work-order', name: workOrder.derivedFromOrder.workOrderName });
               }}
             />
-            <Button
-              title="Pay Deposit"
-              onPress={() => {
-                if (!workOrder.name) {
-                  api.toast.show('You must save the work order before paying', { duration: 1000 });
-                  return;
-                }
+          )}
+          <Button
+            title="Pay Balance"
+            onPress={() => {
+              if (!workOrder.name) {
+                api.toast.show('You must save the work order before paying', { duration: 1000 });
+                return;
+              }
 
-                if (savedPriceDetails.balanceDue <= 0) {
-                  api.toast.show('There is no due balance', { duration: 1000 });
-                  return;
-                }
+              if (savedPriceDetails.balanceDue <= 0) {
+                api.toast.show('There is no due balance', { duration: 1000 });
+                return;
+              }
 
-                if (savedPriceDetails.deposited > 0) {
-                  api.toast.show('A deposit has already been paid', { duration: 1000 });
-                  return;
-                }
+              return paymentHandler.handlePayment({
+                workOrderName: workOrder.name!,
+                type: 'balance',
+                amount: savedPriceDetails.total,
+                previouslyDeposited: savedPriceDetails.deposited,
+              });
+            }}
+          />
+          <Button
+            title="Pay Deposit"
+            onPress={() => {
+              if (!workOrder.name) {
+                api.toast.show('You must save the work order before paying', { duration: 1000 });
+                return;
+              }
 
-                depositSelectorPopup.navigate({
-                  select: 'deposit',
-                  subTotal: savedPriceDetails.subTotal,
-                });
-              }}
-            />
-          </>
+              if (savedPriceDetails.balanceDue <= 0) {
+                api.toast.show('There is no due balance', { duration: 1000 });
+                return;
+              }
+
+              if (savedPriceDetails.deposited > 0) {
+                api.toast.show('A deposit has already been paid', { duration: 1000 });
+                return;
+              }
+
+              depositSelectorPopup.navigate({
+                select: 'deposit',
+                subTotal: savedPriceDetails.subTotal,
+              });
+            }}
+          />
           <Button
             title={workOrder.name ? 'Update Order' : 'Create Order'}
             type="primary"
@@ -330,6 +346,8 @@ const defaultWorkOrder: Partial<WorkOrder> = {
   },
   description: '',
   status: undefined,
+  derivedFromOrder: undefined,
+  payments: [],
 };
 
 const WorkOrderProperties = ({

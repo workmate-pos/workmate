@@ -1,13 +1,15 @@
+import { Session } from '@shopify/shopify-api';
+import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import type { CreateWorkOrder } from '../schemas/generated/create-work-order.js';
 import { getFormattedId } from './id-formatting.js';
 import { db } from './db/db.js';
 import { never } from '../util/never.js';
 import { unit } from './db/unit-of-work.js';
-import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from './gql/gql.js';
 import type { ID } from './gql/queries/generated/schema.js';
 import { GetStaffMembersByIdOperationResult } from './gql/queries/generated/queries.js';
+import { awaitNested } from '../util/promise.js';
+import { PAYMENT_ADDITIONAL_DETAIL_KEYS } from './webhooks.js';
 
 export async function upsertWorkOrder(shop: string, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
@@ -23,6 +25,7 @@ export async function upsertWorkOrder(shop: string, createWorkOrder: CreateWorkO
       shippingAmount: createWorkOrder.price.shipping,
       dueDate: new Date(createWorkOrder.dueDate),
       description: createWorkOrder.description,
+      derivedFromOrderId: createWorkOrder.derivedFromOrderId,
     });
 
     const { id: workOrderId } = workOrder;
@@ -44,11 +47,12 @@ export async function upsertWorkOrder(shop: string, createWorkOrder: CreateWorkO
     }
 
     for (const { productVariantId, employeeAssignments, basePrice } of createWorkOrder.services) {
-      const [{ id: workOrderServiceId } = never()] = await db.workOrderService.insert({
-        workOrderId,
-        basePrice,
-        productVariantId,
-      });
+      const [{ id: workOrderServiceId } = never('Insert should always return a row')] =
+        await db.workOrderService.insert({
+          workOrderId,
+          basePrice,
+          productVariantId,
+        });
 
       for (const { employeeId, employeeRate, hours } of employeeAssignments) {
         await db.workOrderServiceEmployeeAssignment.insert({ employeeId, employeeRate, hours, workOrderServiceId });
@@ -61,6 +65,13 @@ export async function upsertWorkOrder(shop: string, createWorkOrder: CreateWorkO
 
 export async function getWorkOrder(session: Session, name: string) {
   const { shop } = session;
+
+  const [workOrder] = await db.workOrder.get({ shop, name });
+
+  if (!workOrder) {
+    return null;
+  }
+
   const graphql = new Graphql(session);
 
   type Node = GetStaffMembersByIdOperationResult['nodes'][number];
@@ -69,82 +80,44 @@ export async function getWorkOrder(session: Session, name: string) {
     node?.__typename === 'StaffMember' && node.active;
 
   const getStaffMembers = (ids: ID[]) =>
-    querySelect({
-      query: () => gql.staffMember.getStaffMembersById(graphql, { ids }),
-      select: ({ nodes }) => nodes.filter(isActiveStaffMember),
-    });
+    gql.staffMember.getStaffMembersById(graphql, { ids }).then(({ nodes }) => nodes.filter(isActiveStaffMember));
 
-  // TODO: some better abstraction than this to easily fetch deeply nested structures
-  return await querySelect({
-    query: () => db.workOrder.get({ shop, name }),
-    select: ([workOrder = never()]) => ({
-      workOrder: { ...workOrder, dueDate: workOrder.dueDate.toISOString() },
-      payments: querySelect({ query: () => db.workOrderPayment.get({ workOrderId: workOrder.id }) }),
-      products: querySelect({ query: () => db.workOrderProduct.get({ workOrderId: workOrder.id }) }),
-      customer: querySelect({
-        query: () => gql.customer.getCustomer(graphql, { id: workOrder.customerId as ID }),
-        select: ({ customer }) => customer ?? never(),
-      }),
-      employees: querySelect({
-        query: () => db.workOrderEmployeeAssignment.get({ workOrderId: workOrder.id }),
-        select: employees => getStaffMembers(employees.map(e => e.employeeId as ID)),
-      }),
-      services: querySelect({
-        query: () => db.workOrderService.get({ workOrderId: workOrder.id }),
-        select: services =>
-          services.map(async service => ({
-            ...service,
-            employeeAssignments: await querySelect({
-              query: () => db.workOrderServiceEmployeeAssignment.get({ workOrderServiceId: service.id }),
-              select: employees =>
-                querySelect({
-                  query: () => getStaffMembers(employees.map(employee => employee.employeeId as ID)),
-                  select: staffMembers =>
-                    staffMembers.map(staffMember => {
-                      const { employeeRate, hours } = employees.find(e => e.employeeId === staffMember.id) ?? never();
-                      return {
-                        ...staffMember,
-                        employeeRate,
-                        hours,
-                      };
-                    }),
-                }),
-            }),
-          })),
-      }),
-    }),
+  const workOrderId = workOrder.id;
+
+  return await awaitNested({
+    workOrder: { ...workOrder, dueDate: workOrder.dueDate.toISOString() },
+    payments: db.workOrderPayment.get({ workOrderId }),
+    products: db.workOrderProduct.get({ workOrderId }),
+    customer: gql.customer
+      .getCustomer(graphql, { id: workOrder.customerId as ID })
+      .then(({ customer }) => customer ?? never()),
+    employees: db.workOrderEmployeeAssignment
+      .get({ workOrderId })
+      .then(employees => getStaffMembers(employees.map(e => e.employeeId as ID))),
+    services: db.workOrderService.get({ workOrderId }).then(services =>
+      services.map(service => ({
+        ...service,
+        employeeAssignments: db.workOrderServiceEmployeeAssignment
+          .get({ workOrderServiceId: service.id })
+          .then(async employees => {
+            const staffMembers = await getStaffMembers(employees.map(e => e.employeeId as ID));
+            return staffMembers.map(staffMember => {
+              const { employeeRate, hours } = employees.find(e => e.employeeId === staffMember.id) ?? never();
+              return { ...staffMember, employeeRate, hours };
+            });
+          }),
+      })),
+    ),
+    derivedFromOrder: workOrder.derivedFromOrderId
+      ? gql.order
+          .getOrder(graphql, { id: workOrder.derivedFromOrderId as ID })
+          .then(({ order }) => order ?? never())
+          .then(order => ({
+            id: order.id,
+            workOrderName:
+              order.customAttributes.find(({ key }) => key == PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME)?.value ??
+              undefined,
+          }))
+      : undefined,
   });
-}
-
-// TODO: Move
-// TODO: Support arbitrary amounts of nesting (create helper for it, w recursive type)
-type QuerySelectArgs<R, S> = { query: () => Promise<R>; select?: (response: R) => S };
-
-async function querySelect<R, S extends undefined>(args: QuerySelectArgs<R, S>): Promise<R>;
-
-async function querySelect<R, S extends unknown[]>(
-  args: QuerySelectArgs<R, S>,
-): Promise<S extends (infer T)[] ? Awaited<T>[] : never>;
-
-async function querySelect<R, S extends Record<string, unknown>>(
-  args: QuerySelectArgs<R, S>,
-): Promise<{ [K in keyof S]: Awaited<S[K]> }>;
-
-async function querySelect<R, S>(args: QuerySelectArgs<R, S>): Promise<Awaited<S>>;
-
-async function querySelect<R, S>({ query, select }: QuerySelectArgs<R, S>) {
-  const response = await query();
-  const selected = select ? await select(response) : response;
-
-  if (Array.isArray(selected)) {
-    const awaitedElements = await Promise.all(selected);
-    return awaitedElements;
-  }
-
-  if (selected !== null && typeof selected === 'object') {
-    const awaitedEntries = await Promise.all(Object.entries(selected).map(async ([key, value]) => [key, await value]));
-    return Object.fromEntries(awaitedEntries);
-  }
-
-  return selected;
 }

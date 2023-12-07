@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { titleCase } from '../util/casing';
 
 // NOTE: Do NOT change these keys - they are used to detect deposits in the backend. They are also shown to the user
-const WORK_ORDER_NAME_KEY = 'Work Order';
-const PAYMENT_TYPE_KEY = 'Type';
+export const PAYMENT_ADDITIONAL_DETAIL_KEYS = {
+  WORK_ORDER_NAME: 'Work Order',
+  PAYMENT_TYPE: 'Type',
+};
 
 export const usePaymentHandler = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
@@ -36,8 +38,8 @@ export const usePaymentHandler = () => {
     }
 
     await api.cart.addCartProperties({
-      [WORK_ORDER_NAME_KEY]: options.workOrderName,
-      [PAYMENT_TYPE_KEY]: titleCase(options.type), // case insensitive,
+      [PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME]: options.workOrderName,
+      [PAYMENT_ADDITIONAL_DETAIL_KEYS.PAYMENT_TYPE]: titleCase(options.type), // case insensitive,
     });
 
     api.navigation.dismiss();

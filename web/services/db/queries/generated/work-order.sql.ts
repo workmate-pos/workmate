@@ -35,6 +35,7 @@ export const getNextIdForShop = new PreparedQuery<IGetNextIdForShopParams,IGetNe
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
   customerId: string;
+  derivedFromOrderId?: string | null | void;
   description: string;
   discountAmount: number;
   dueDate: DateOrString;
@@ -49,6 +50,7 @@ export interface IUpsertParams {
 export interface IUpsertResult {
   createdAt: Date;
   customerId: string;
+  derivedFromOrderId: string | null;
   description: string;
   discountAmount: number;
   dueDate: Date;
@@ -66,22 +68,23 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"taxAmount":true,"discountAmount":true,"shippingAmount":true,"description":true,"dueDate":true,"customerId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":165,"b":170}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":173,"b":178}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":181,"b":188}]},{"name":"taxAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":191,"b":201}]},{"name":"discountAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":204,"b":219}]},{"name":"shippingAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":222,"b":237}]},{"name":"description","required":true,"transform":{"type":"scalar"},"locs":[{"a":240,"b":252}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":263,"b":271}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":274,"b":285}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"taxAmount\", \"discountAmount\", \"shippingAmount\",\n                         description, \"dueDate\", \"customerId\")\nVALUES (:shop!, :name!, :status!, :taxAmount!, :discountAmount!, :shippingAmount!, :description!,\n        :dueDate!, :customerId!)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status           = EXCLUDED.status,\n                                           \"taxAmount\"      = EXCLUDED.\"taxAmount\",\n                                           \"discountAmount\" = EXCLUDED.\"discountAmount\",\n                                           \"shippingAmount\" = EXCLUDED.\"shippingAmount\",\n                                           description      = EXCLUDED.description,\n                                           \"dueDate\"        = EXCLUDED.\"dueDate\",\n                                           \"customerId\"     = EXCLUDED.\"customerId\"\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"taxAmount":true,"discountAmount":true,"shippingAmount":true,"description":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":187,"b":192}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":195,"b":200}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":203,"b":210}]},{"name":"taxAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":213,"b":223}]},{"name":"discountAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":226,"b":241}]},{"name":"shippingAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":244,"b":259}]},{"name":"description","required":true,"transform":{"type":"scalar"},"locs":[{"a":262,"b":274}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":285,"b":293}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":296,"b":307}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":310,"b":328}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"taxAmount\", \"discountAmount\", \"shippingAmount\",\n                         description, \"dueDate\", \"customerId\", \"derivedFromOrderId\")\nVALUES (:shop!, :name!, :status!, :taxAmount!, :discountAmount!, :shippingAmount!, :description!,\n        :dueDate!, :customerId!, :derivedFromOrderId)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status           = EXCLUDED.status,\n                                           \"taxAmount\"      = EXCLUDED.\"taxAmount\",\n                                           \"discountAmount\" = EXCLUDED.\"discountAmount\",\n                                           \"shippingAmount\" = EXCLUDED.\"shippingAmount\",\n                                           description      = EXCLUDED.description,\n                                           \"dueDate\"        = EXCLUDED.\"dueDate\",\n                                           \"customerId\"     = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrder" (shop, name, status, "taxAmount", "discountAmount", "shippingAmount",
- *                          description, "dueDate", "customerId")
+ *                          description, "dueDate", "customerId", "derivedFromOrderId")
  * VALUES (:shop!, :name!, :status!, :taxAmount!, :discountAmount!, :shippingAmount!, :description!,
- *         :dueDate!, :customerId!)
+ *         :dueDate!, :customerId!, :derivedFromOrderId)
  * ON CONFLICT ("shop", "name") DO UPDATE SET status           = EXCLUDED.status,
  *                                            "taxAmount"      = EXCLUDED."taxAmount",
  *                                            "discountAmount" = EXCLUDED."discountAmount",
  *                                            "shippingAmount" = EXCLUDED."shippingAmount",
  *                                            description      = EXCLUDED.description,
  *                                            "dueDate"        = EXCLUDED."dueDate",
- *                                            "customerId"     = EXCLUDED."customerId"
+ *                                            "customerId"     = EXCLUDED."customerId",
+ *                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId"
  * RETURNING *
  * ```
  */
@@ -179,6 +182,7 @@ export interface IGetParams {
 export interface IGetResult {
   createdAt: Date;
   customerId: string;
+  derivedFromOrderId: string | null;
   description: string;
   discountAmount: number;
   dueDate: Date;

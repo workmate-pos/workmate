@@ -29,11 +29,14 @@ export function Entry() {
         <Stack direction="vertical">
           <Stack direction="horizontal" alignment="space-between">
             <Text variant="headingLarge">Work Orders</Text>
-            <Button
-              title="New Work Order"
-              type="primary"
-              onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
-            />
+            <Stack direction={'horizontal'} spacing={2}>
+              <Button title="Import Work Order" type={'plain'} onPress={() => navigate('ImportOrderSelector')} />
+              <Button
+                title="New Work Order"
+                type="primary"
+                onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
+              />
+            </Stack>
           </Stack>
           <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
             <Text variant="body" color="TextSubdued">

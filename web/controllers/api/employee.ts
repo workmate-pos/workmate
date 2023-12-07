@@ -6,7 +6,6 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js'
 import { gql } from '../../services/gql/gql.js';
 import { StaffMemberFragmentResult } from '../../services/gql/queries/generated/queries.js';
 import { db } from '../../services/db/db.js';
-import employee from '../../dist/controllers/api/employee.js';
 
 @Authenticated()
 export default class EmployeeController {

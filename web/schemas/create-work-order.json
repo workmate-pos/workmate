@@ -120,6 +120,11 @@
     },
     "description": {
       "type": "string"
+    },
+    "derivedFromOrderId": {
+      "description": "A Shopify Order ID from which this work order was derived",
+      "type": "string",
+      "minLength": 1
     }
   },
   "required": ["status", "customer", "price", "dueDate", "products", "services", "employeeAssignments", "description"],

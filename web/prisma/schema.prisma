@@ -39,6 +39,7 @@ model WorkOrder {
   discountAmount      Int
   shippingAmount      Int
   description         String
+  derivedFromOrderId  String?
   dueDate             DateTime
   createdAt           DateTime             @default(now())
   employeeAssignments EmployeeAssignment[]

@@ -13,7 +13,20 @@ import type {
  */
 export type ScreenInputOutput = {
   Entry: [undefined, undefined];
-  WorkOrder: [{ type: 'load-work-order'; name: string } | { type: 'new-work-order' }, undefined];
+  ImportOrderSelector: [undefined, undefined];
+  WorkOrder: [
+    (
+      | {
+          type: 'load-work-order';
+          name: string;
+        }
+      | {
+          type: 'new-work-order';
+          initial?: Partial<WorkOrder>;
+        }
+    ),
+    undefined,
+  ];
   ProductSelector: [undefined, WorkOrderProduct];
   ProductConfig: [WorkOrderProduct, { type: 'update' | 'remove'; product: WorkOrderProduct }];
   ServiceSelector: [undefined, WorkOrderService];

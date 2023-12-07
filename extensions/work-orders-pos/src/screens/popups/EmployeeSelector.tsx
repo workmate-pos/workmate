@@ -53,7 +53,11 @@ export function EmployeeSelector() {
           onSearch={() => {}}
           placeholder="Search employees"
         />
-        <List data={rows} isLoadingMore={employeesQuery.isLoading} />
+        <List
+          data={rows}
+          isLoadingMore={employeesQuery.isLoading}
+          onEndReached={() => employeesQuery.fetchNextPage()}
+        />
         {employeesQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">

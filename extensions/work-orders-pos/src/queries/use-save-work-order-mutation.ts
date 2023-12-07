@@ -50,6 +50,7 @@ export const useSaveWorkOrderMutation = (
           })),
           basePrice: toCents(basePrice),
         })),
+        derivedFromOrderId: workOrder.derivedFromOrder?.id,
       };
 
       const response = await fetch('/api/work-order', {

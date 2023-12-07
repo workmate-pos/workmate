@@ -26,7 +26,7 @@ export const useWorkOrderQuery = (
         throw new Error(`useWorkOrderQuery HTTP Status ${response.status}`);
       }
 
-      const { workOrder, payments, services, employees, customer, products }: FetchWorkOrderResponse =
+      const { workOrder, payments, services, employees, customer, products, derivedFromOrder }: FetchWorkOrderResponse =
         await response.json();
 
       const productVariantIds = [...products, ...services].map(s => Number(parseGid(s.productVariantId).id));
@@ -87,6 +87,7 @@ export const useWorkOrderQuery = (
             })),
           };
         }),
+        derivedFromOrder,
       };
 
       return result;

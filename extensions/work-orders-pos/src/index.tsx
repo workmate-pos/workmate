@@ -14,6 +14,7 @@ import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
 import { ServiceSelector } from './screens/popups/ServiceSelector';
 import { ServiceConfig } from './screens/popups/ServiceConfig';
 import { ServiceEmployeeAssignmentConfig } from './screens/popups/ServiceEmployeeAssignmentConfig';
+import { ImportOrderSelector } from './screens/ImportOrderSelector';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -34,6 +35,7 @@ function SmartGridModal() {
     <ReactQueryProvider>
       <Navigator>
         <Entry />
+        <ImportOrderSelector />
         <Error />
         <WorkOrderPage />
 
