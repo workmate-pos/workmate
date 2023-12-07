@@ -69,6 +69,7 @@ function getOrderRows(orders: Order[], navigate: NavigateFn) {
               derivedFromOrder: {
                 id,
                 workOrderName,
+                name,
               },
             },
           });
