@@ -11,7 +11,7 @@ jobs:
   teifi-shopify-app:
     uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@master
     with:
-      name: "Teifi Shopify App Template"
+      name: "Work Orders"
       shopify_api_key: ${{ vars.SHOPIFY_API_KEY }}
       sentry_org: ${{ vars.SENTRY_ORG }}
       sentry_project: ${{ vars.SENTRY_PROJECT }}
