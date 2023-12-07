@@ -32,60 +32,92 @@ model Settings {
 model WorkOrder {
   id                  Int                  @id @default(autoincrement())
   shop                String
-  /// Used as ID within this shop
+  /// Used as work order id within this shop
   name                String
   status              String
-  depositAmount       Int
   taxAmount           Int
   discountAmount      Int
   shippingAmount      Int
   description         String
+  derivedFromOrderId  String?
   dueDate             DateTime
   createdAt           DateTime             @default(now())
   employeeAssignments EmployeeAssignment[]
   products            WorkOrderProduct[]
-
-  customer   Customer @relation(fields: [customerId], references: [id])
-  customerId String
+  services            WorkOrderService[]
+  customerId          String
+  payments            WorkOrderPayment[]
 
   @@unique([shop, name])
 }
 
-model WorkOrderProduct {
-  id        Int    @id @default(autoincrement())
-  productId String
-  unitPrice Int
-  quantity  Int
+enum PaymentType {
+  DEPOSIT
+  BALANCE
+}
+
+model WorkOrderPayment {
+  id Int @id @default(autoincrement())
+
+  orderId String
+  type    PaymentType
+  amount  Int
 
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
 }
 
-model EmployeeAssignment {
-  id   Int    @id @default(autoincrement())
-  shop String
+model WorkOrderProduct {
+  id Int @id @default(autoincrement())
 
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  productVariantId String
+  unitPrice        Int
+  quantity         Int
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+}
+
+/// Services are represented as products within Shopify in a configured service collection.
+/// The product's price is the base price of the service.
+/// The service's assigned employees and their hourly rates determine the remaining price.
+model WorkOrderService {
+  id Int @id @default(autoincrement())
+
+  productVariantId String
+  basePrice        Int
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+
+  employeeAssignments WorkOrderServiceEmployeeAssignment[]
+}
+
+model WorkOrderServiceEmployeeAssignment {
+  id Int @id @default(autoincrement())
+
+  employeeId   String
+  employeeRate Int
+  hours        Int
+
+  workOrderService   WorkOrderService @relation(fields: [workOrderServiceId], references: [id])
+  workOrderServiceId Int
+}
+
+model EmployeeAssignment {
+  id Int @id @default(autoincrement())
+
   employeeId String
 
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
 }
 
-model Employee {
-  id          String               @id
-  shop        String
-  assignments EmployeeAssignment[]
-  name        String
-
-  @@unique([id, shop])
-}
-
-model Customer {
-  id         String      @id
+model EmployeeRate {
+  employeeId String
   shop       String
-  workOrders WorkOrder[]
-  name       String
 
-  @@unique([id, shop])
+  rate Int
+
+  @@id([employeeId, shop])
 }

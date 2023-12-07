@@ -1,8 +1,8 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
+    "target": "ES2022",
+    "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["dom", "dom.iterable", "esnext"],
     "outDir": "dist",
@@ -14,7 +14,12 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "sourceRoot": "/",
-    "strict": true
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "composite": true,
+    "declaration": true,
   },
-  "exclude": ["node_modules", "frontend"]
+  "exclude": ["node_modules", "frontend", "dist"]
 }

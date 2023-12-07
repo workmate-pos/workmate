@@ -1,0 +1,36 @@
+query getOrders($first: Int = 10, $after: String, $query: String) {
+    orders(first: $first, after: $after, query: $query, sortKey: CREATED_AT, reverse: true) {
+        nodes {
+            ...orderFragment
+        }
+        pageInfo {
+            hasNextPage
+            endCursor
+        }
+    }
+}
+
+query getOrderAttributes($id: ID!) {
+    order(id: $id) {
+        customAttributes {
+            key
+            value
+        }
+    }
+}
+
+# TODO: Use customerFragment (currently broken with genql)
+fragment orderFragment on Order {
+    id
+    displayFinancialStatus
+    displayFulfillmentStatus
+    customAttributes {
+        key
+        value
+    }
+    customer {
+        id
+        displayName
+    }
+    name
+}

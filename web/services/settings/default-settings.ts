@@ -6,10 +6,10 @@ const defaultShopSettings: ShopSettings = {
     { name: 'In Progress', bgHex: '#3ace3a', textHex: '#ffffff' },
     { name: 'Done', bgHex: '#7e98ac', textHex: '#ffffff' },
   ],
-  idFormat: 'WO-#{id}',
+  idFormat: 'WO-#{{id}}',
   discountShortcuts: [
     { value: 10, unit: 'percentage' },
-    { value: 100, unit: 'currency' },
+    { value: 10000, unit: 'currency' },
   ],
   discountRules: {
     onlyAllowShortcuts: true,
@@ -18,7 +18,7 @@ const defaultShopSettings: ShopSettings = {
   },
   depositShortcuts: [
     { value: 40, unit: 'percentage' },
-    { value: 100, unit: 'currency' },
+    { value: 10000, unit: 'currency' },
   ],
   depositRules: {
     onlyAllowShortcuts: true,
@@ -26,6 +26,12 @@ const defaultShopSettings: ShopSettings = {
     allowedCurrencyRange: null,
     allowedPercentageRange: null,
   },
+  workOrderRequests: {
+    enabled: false,
+    allowedStatuses: null,
+  },
+  serviceCollectionId: null,
+  defaultRate: 1500,
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

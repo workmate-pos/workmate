@@ -20,12 +20,9 @@
       "additionalProperties": false
     },
     "price": {
+      "title": "price-definition",
       "type": "object",
       "properties": {
-        "deposit": {
-          "type": "integer",
-          "minimum": 0
-        },
         "tax": {
           "type": "integer",
           "minimum": 0
@@ -39,7 +36,7 @@
           "minimum": 0
         }
       },
-      "required": ["deposit", "tax", "discount", "shipping"],
+      "required": ["tax", "discount", "shipping"],
       "additionalProperties": false
     },
     "dueDate": {
@@ -48,9 +45,10 @@
     "products": {
       "type": "array",
       "items": {
+        "title": "product-definition",
         "type": "object",
         "properties": {
-          "productId": {
+          "productVariantId": {
             "type": "string"
           },
           "quantity": {
@@ -62,13 +60,54 @@
             "minimum": 0
           }
         },
-        "required": ["productId", "quantity", "unitPrice"],
+        "required": ["productVariantId", "quantity", "unitPrice"],
+        "additionalProperties": false
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "title": "service-definition",
+        "type": "object",
+        "properties": {
+          "productVariantId": {
+            "type": "string"
+          },
+          "basePrice": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "employeeAssignments": {
+            "type": "array",
+            "items": {
+              "title": "service-employee-assignment",
+              "type": "object",
+              "properties": {
+                "employeeId": {
+                  "type": "string"
+                },
+                "employeeRate": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "hours": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": ["employeeId", "employeeRate", "hours"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["productVariantId", "basePrice", "employeeAssignments"],
         "additionalProperties": false
       }
     },
     "employeeAssignments": {
       "type": "array",
       "items": {
+        "title": "employee-assignment",
         "type": "object",
         "properties": {
           "employeeId": {
@@ -81,8 +120,13 @@
     },
     "description": {
       "type": "string"
+    },
+    "derivedFromOrderId": {
+      "description": "A Shopify Order ID from which this work order was derived",
+      "type": "string",
+      "minLength": 1
     }
   },
-  "required": ["status", "customer", "price", "dueDate", "products", "employeeAssignments", "description"],
+  "required": ["status", "customer", "price", "dueDate", "products", "services", "employeeAssignments", "description"],
   "additionalProperties": false
 }

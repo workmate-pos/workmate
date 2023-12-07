@@ -1,0 +1,34 @@
+query getProductVariants($first: Int = 10, $after: String, $query: String) {
+  productVariants(first: $first, after: $after, query: $query, sortKey: POPULAR) {
+    nodes {
+      ...productVariantFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+fragment productVariantFragment on ProductVariant {
+  id
+  title
+  sku
+  price
+  image {
+    url
+  }
+  product {
+    title
+    hasOnlyDefaultVariant
+    featuredImage {
+      url
+    }
+    description
+    collections(first: 10) {
+      nodes {
+        id
+      }
+    }
+  }
+}

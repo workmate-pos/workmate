@@ -1,0 +1,32 @@
+query getStaffMembers($first: Int = 10, $after: String) {
+  shop {
+    staffMembers(first: $first, after: $after) {
+      nodes {
+        ...staffMemberFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+query getStaffMember($id: ID!) {
+  staffMember(id: $id) {
+    ...staffMemberFragment
+  }
+}
+
+query getStaffMembersById($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...staffMemberFragment
+  }
+}
+
+fragment staffMemberFragment on StaffMember {
+  id
+  name
+  active
+}

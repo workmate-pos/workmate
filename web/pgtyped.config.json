@@ -1,0 +1,15 @@
+{
+  "transforms": [
+    {
+      "mode": "sql",
+      "include": "**/*.sql",
+      "emitTemplate": "{{dir}}/generated/{{name}}.sql.ts"
+    },
+    {
+      "mode": "ts",
+      "include": "**/*.ts",
+      "emitTemplate": "{{dir}}/generated/{{name}}.types.ts"
+    }
+  ],
+  "srcDir": "./services"
+}

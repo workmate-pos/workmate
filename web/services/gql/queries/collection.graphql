@@ -1,0 +1,12 @@
+query getCollections($first: Int = 10, $after: String, $query: String) {
+  collections(first: $first, after: $after, query: $query) {
+    nodes {
+      id
+      title
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

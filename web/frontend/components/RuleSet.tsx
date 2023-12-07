@@ -121,7 +121,7 @@ export function RuleSet({
 
   if (ruleValidationError) {
     return (
-      <Text as="p" color="critical">
+      <Text as="p" tone="critical">
         Detected an infinite feedback loop in the rules: {ruleValidationError}
       </Text>
     );

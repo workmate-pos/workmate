@@ -1,5 +1,5 @@
-import { useAuthenticatedFetch, useToast } from '@teifi-digital/shopify-app-react';
-import { useState } from 'react';
+import { useToast } from '@teifi-digital/shopify-app-react';
+import { useEffect, useState } from 'react';
 import {
   Card,
   Frame,
@@ -11,86 +11,95 @@ import {
   InlineStack,
   Tag,
   Select,
-  Button,
   InlineGrid,
+  Checkbox,
+  Combobox,
+  Listbox,
+  Autocomplete,
+  Icon,
 } from '@shopify/polaris';
+import { NumberField } from '../components/NumberField';
 import { Loading, TitleBar } from '@shopify/app-bridge-react';
 import type { ShopSettings } from '../../schemas/generated/shop-settings';
-import { useMutation, useQuery } from 'react-query';
 import { Rule, RuleSet } from '../components/RuleSet';
 import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider';
 import invariant from 'tiny-invariant';
+import { useSettingsQuery } from '../queries/use-settings-query';
+import { useSettingsMutation } from '../queries/use-settings-mutation';
+import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
+import { CirclePlusMinor, SearchMinor } from '@shopify/polaris-icons';
+import { useCollectionsQuery } from '../queries/use-collections-query';
+import { useDebouncedState } from '../hooks/use-debounced-state';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
 const ONLY_HIGHEST_SHORTCUT = 'ONLY_HIGHEST_SHORTCUT';
 const CURRENCY_RANGE = 'CURRENCY_RANGE';
 const PERCENTAGE_RANGE = 'PERCENTAGE_RANGE';
 
-const CURRENCY = 'CA$';
-
-type DiscountShortcutUnit = ShopSettings['discountShortcuts'][number]['unit'];
-type DepositShortcutUnit = ShopSettings['depositShortcuts'][number]['unit'];
-
 export default function Settings() {
   const [toast, setToastAction] = useToast();
-  const fetch = useAuthenticatedFetch();
-  const [settings, setSettings] = useState<ShopSettings>(null!);
-  const [init, setInit] = useState(false);
+  const [settings, setSettings] = useState<ShopSettings | null>(null);
 
   const [discountShortcutValue, setDiscountShortcutValue] = useState('');
-  const [discountShortcutUnit, setDiscountShortcutUnit] = useState<DiscountShortcutUnit>('currency');
-
   const [depositShortcutValue, setDepositShortcutValue] = useState('');
-  const [depositShortcutUnit, setDepositShortcutUnit] = useState<DepositShortcutUnit>('currency');
 
   const [statusValue, setStatusValue] = useState('');
 
-  const getSettingsQuery = useQuery(
-    ['settings'],
-    () => fetch('/api/settings').then<{ settings: ShopSettings }>(res => res.json()),
-    {
-      refetchOnWindowFocus: false,
-      onSuccess({ settings }) {
-        setSettings(settings);
-        setInit(true);
-      },
-      onError() {
-        setToastAction({
-          content: 'Could not load settings',
-          action: {
-            content: 'Retry',
-            onAction() {
-              getSettingsQuery.refetch();
-            },
+  const getSettingsQuery = useSettingsQuery({
+    refetchOnWindowFocus: false,
+    onSuccess({ settings }) {
+      setSettings(settings);
+    },
+    onError() {
+      setToastAction({
+        content: 'Could not load settings',
+        action: {
+          content: 'Retry',
+          onAction() {
+            getSettingsQuery.refetch();
           },
-        });
-      },
+        },
+      });
     },
-  );
+  });
 
-  const saveSettingsQuery = useMutation(
-    ['settings'],
-    (settings: ShopSettings) =>
-      fetch('/api/settings', {
-        method: 'POST',
-        body: JSON.stringify(settings),
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    {
-      onError() {
-        setToastAction({
-          content: 'Could not save settings',
-        });
-      },
-      onSuccess() {
-        setToastAction({
-          content: 'Saved settings',
-        });
-      },
+  const saveSettingsMutation = useSettingsMutation({
+    onError() {
+      setToastAction({
+        content: 'An error occurred while saving settings',
+      });
     },
-  );
+    onSuccess() {
+      setToastAction({
+        content: 'Saved settings',
+      });
+    },
+  });
 
-  if (!init || !settings) {
+  const [serviceCollectionValue, setServiceCollectionValue] = useState<string | undefined>(undefined);
+  const [selectedServiceCollectionName, setSelectedServiceCollectionName] = useState<string | null>(null);
+  const collectionsQuery = useCollectionsQuery({ query: serviceCollectionValue });
+
+  // set the service collection name when the settings & collections are both loaded
+  useEffect(() => {
+    if (serviceCollectionValue !== undefined) return;
+
+    const collections = collectionsQuery.data?.pages;
+    const collectionId = getSettingsQuery.data?.settings.serviceCollectionId;
+
+    if (!collections || !collectionId) return;
+
+    const selectedCollection = collections.find(collection => collection.id === collectionId);
+    setSelectedServiceCollectionName(selectedCollection?.title ?? null);
+    setServiceCollectionValue(selectedCollection?.title ?? '');
+  }, [collectionsQuery.data?.pages, getSettingsQuery.data?.settings.serviceCollectionId]);
+
+  const currencyFormatter = useCurrencyFormatter();
+
+  const discountRules = useDiscountRules(settings, setSettings, currencyFormatter);
+  const depositRules = useDepositRules(settings, setSettings, currencyFormatter);
+
+  if (!settings) {
     return (
       <Frame>
         <Page>
@@ -100,28 +109,25 @@ export default function Settings() {
     );
   }
 
-  const discountRules = getDiscountRules(settings, setSettings);
-  const depositRules = getDepositRules(settings, setSettings);
-
   const activeDiscountRules = getActiveDiscountRules(settings);
   const activeDepositRules = getActiveDepositRules(settings);
 
   return (
     <Frame>
-      <Page narrowWidth>
-        <TitleBar
-          title="Settings"
-          primaryAction={{
-            content: 'Save',
-            target: 'APP',
-            loading: saveSettingsQuery.isLoading,
-            disabled: getSettingsQuery.isLoading,
-            onAction() {
-              saveSettingsQuery.mutate(settings);
-            },
-          }}
-        />
+      <TitleBar
+        title="Settings"
+        primaryAction={{
+          content: 'Save',
+          target: 'APP',
+          loading: saveSettingsMutation.isLoading,
+          disabled: getSettingsQuery.isLoading,
+          onAction() {
+            saveSettingsMutation.mutate(settings);
+          },
+        }}
+      />
 
+      <Page narrowWidth>
         <BlockStack gap={{ xs: '800', sm: '400' }}>
           <InlineGrid columns={{ xs: '1fr', md: '2fr 5fr' }} gap="400">
             <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
@@ -133,48 +139,23 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                <InlineStack blockAlign="end" gap="200">
-                  <TextField
-                    type="number"
-                    label="Discount Shortcuts"
-                    autoComplete="off"
-                    value={discountShortcutValue}
-                    onChange={setDiscountShortcutValue}
-                    connectedRight={
-                      <InlineStack blockAlign="center" gap="100">
-                        <Select
-                          label="Discount unit"
-                          labelHidden
-                          options={[
-                            { label: '%', value: 'percentage' },
-                            { label: CURRENCY, value: 'currency' },
-                          ]}
-                          value={discountShortcutUnit}
-                          onChange={(value: DiscountShortcutUnit) => setDiscountShortcutUnit(value)}
-                        />
-
-                        <Button
-                          disabled={discountShortcutValue === ''}
-                          onClick={() => {
-                            setSettings({
-                              ...settings,
-                              discountShortcuts: [
-                                ...settings.discountShortcuts,
-                                {
-                                  value: Number(discountShortcutValue),
-                                  unit: discountShortcutUnit,
-                                },
-                              ],
-                            });
-                            setDiscountShortcutValue('');
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </InlineStack>
-                    }
-                  />
-                </InlineStack>
+                <CurrencyOrPercentageInput
+                  value={discountShortcutValue}
+                  setValue={setDiscountShortcutValue}
+                  onSelect={unit => {
+                    setSettings({
+                      ...settings,
+                      discountShortcuts: [
+                        ...settings.discountShortcuts,
+                        {
+                          value: Number(discountShortcutValue),
+                          unit,
+                        },
+                      ],
+                    });
+                    setDiscountShortcutValue('');
+                  }}
+                />
                 <InlineStack gap="200">
                   {settings.discountShortcuts.map((shortcut, i) => (
                     <Tag
@@ -186,7 +167,8 @@ export default function Settings() {
                         })
                       }
                     >
-                      {String(shortcut.value)} {{ percentage: '%', currency: CURRENCY }[shortcut.unit]}
+                      {shortcut.unit === 'currency' && currencyFormatter(shortcut.value)}
+                      {shortcut.unit === 'percentage' && `${shortcut.value}%`}
                     </Tag>
                   ))}
                 </InlineStack>
@@ -202,47 +184,23 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                <InlineStack blockAlign="end" gap="200">
-                  <TextField
-                    type="number"
-                    label="Deposit Shortcuts"
-                    autoComplete="off"
-                    value={depositShortcutValue}
-                    onChange={setDepositShortcutValue}
-                    connectedRight={
-                      <InlineStack blockAlign="center" gap="100">
-                        <Select
-                          label="Deposit unit"
-                          labelHidden
-                          options={[
-                            { label: '%', value: 'percentage' },
-                            { label: CURRENCY, value: 'currency' },
-                          ]}
-                          value={depositShortcutUnit}
-                          onChange={(value: DepositShortcutUnit) => setDepositShortcutUnit(value)}
-                        />
-                        <Button
-                          disabled={depositShortcutValue === ''}
-                          onClick={() => {
-                            setSettings({
-                              ...settings,
-                              depositShortcuts: [
-                                ...settings.depositShortcuts,
-                                {
-                                  value: Number(depositShortcutValue),
-                                  unit: depositShortcutUnit,
-                                },
-                              ],
-                            });
-                            setDepositShortcutValue('');
-                          }}
-                        >
-                          Add
-                        </Button>
-                      </InlineStack>
-                    }
-                  />
-                </InlineStack>
+                <CurrencyOrPercentageInput
+                  value={depositShortcutValue}
+                  setValue={setDepositShortcutValue}
+                  onSelect={unit => {
+                    setSettings({
+                      ...settings,
+                      depositShortcuts: [
+                        ...settings.depositShortcuts,
+                        {
+                          value: Number(depositShortcutValue),
+                          unit,
+                        },
+                      ],
+                    });
+                    setDepositShortcutValue('');
+                  }}
+                />
                 <InlineStack gap="200">
                   {settings.depositShortcuts.map((shortcut, i) => (
                     <Tag
@@ -254,7 +212,8 @@ export default function Settings() {
                         })
                       }
                     >
-                      {String(shortcut.value)} {{ percentage: '%', currency: CURRENCY }[shortcut.unit]}
+                      {shortcut.unit === 'currency' && currencyFormatter(shortcut.value)}
+                      {shortcut.unit === 'percentage' && `${shortcut.value}%`}
                     </Tag>
                   ))}
                 </InlineStack>
@@ -270,34 +229,42 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                <InlineStack blockAlign="end" gap="200">
-                  <TextField
-                    label="Statuses"
-                    autoComplete="off"
-                    value={statusValue}
-                    onChange={setStatusValue}
-                    connectedRight={
-                      <Button
-                        onClick={() => {
-                          setSettings({
-                            ...settings,
-                            statuses: [
-                              ...settings.statuses,
-                              {
-                                name: statusValue,
-                                bgHex: '#000000',
-                                textHex: '#ffffff',
-                              },
-                            ],
-                          });
-                          setStatusValue('');
-                        }}
-                      >
-                        Add
-                      </Button>
-                    }
-                  />
-                </InlineStack>
+                <Autocomplete
+                  options={[]}
+                  selected={[]}
+                  textField={
+                    <Autocomplete.TextField
+                      label="Statuses"
+                      autoComplete="off"
+                      value={statusValue}
+                      onChange={setStatusValue}
+                    />
+                  }
+                  onSelect={() => {}}
+                  actionBefore={
+                    statusValue.length > 0
+                      ? {
+                          content: `Create status "${statusValue}"`,
+                          prefix: <Icon source={CirclePlusMinor} />,
+                          onAction: () => {
+                            setSettings({
+                              ...settings,
+                              statuses: [
+                                ...settings.statuses,
+                                {
+                                  name: statusValue,
+                                  bgHex: '#000000',
+                                  textHex: '#ffffff',
+                                },
+                              ],
+                            });
+                            setStatusValue('');
+                          },
+                        }
+                      : undefined
+                  }
+                />
+
                 <InlineStack gap="200">
                   {settings.statuses.map((status, i) => (
                     <Tag
@@ -316,13 +283,14 @@ export default function Settings() {
                 <TextField
                   label="ID Format"
                   autoComplete="off"
+                  requiredIndicator={true}
                   helpText={
                     <>
                       You can use variables by surrounding them in curly braces.
                       <br />
                       Available variables:{' '}
                       <Text as="p" fontWeight="semibold">
-                        {'{id}, {year}, {month}, {day}, {hour}, {minute}'}
+                        {'{{id}}, {{year}}, {{month}}, {{day}}, {{hour}}, {{minute}}'}
                       </Text>
                     </>
                   }
@@ -336,6 +304,125 @@ export default function Settings() {
                 />
               </BlockStack>
             </Card>
+            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+              <BlockStack gap="400">
+                <Text as="h3" variant="headingMd">
+                  Service
+                </Text>
+              </BlockStack>
+            </Box>
+            <Card roundedAbove="sm">
+              <BlockStack gap="400">
+                <Autocomplete
+                  options={
+                    collectionsQuery.data?.pages.map(page => ({
+                      label: page.title,
+                      value: page.id,
+                    })) ?? []
+                  }
+                  allowMultiple={false}
+                  loading={collectionsQuery.isLoading}
+                  willLoadMoreResults={collectionsQuery.hasNextPage}
+                  onLoadMoreResults={collectionsQuery.fetchNextPage}
+                  selected={settings.serviceCollectionId ? [settings.serviceCollectionId] : []}
+                  emptyState={
+                    <BlockStack inlineAlign={'center'}>
+                      <Icon source={SearchMinor} />
+                      Could not find any collections
+                    </BlockStack>
+                  }
+                  textField={
+                    <Autocomplete.TextField
+                      label="Service Collection"
+                      autoComplete="off"
+                      value={serviceCollectionValue}
+                      onChange={setServiceCollectionValue}
+                      onBlur={() => setServiceCollectionValue(selectedServiceCollectionName ?? '')}
+                    />
+                  }
+                  onSelect={([id]) => {
+                    let name: string | null = null;
+                    let serviceCollectionId: string | null = null;
+
+                    if (id !== undefined && id !== settings?.serviceCollectionId) {
+                      name = collectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
+                      serviceCollectionId = id;
+                    }
+
+                    setSelectedServiceCollectionName(name);
+                    setServiceCollectionValue(name ?? '');
+                    setSettings({ ...settings, serviceCollectionId });
+                  }}
+                />
+              </BlockStack>
+            </Card>
+            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+              <BlockStack gap="400">
+                <Text as="h3" variant="headingMd">
+                  Rates
+                </Text>
+              </BlockStack>
+            </Box>
+            <Card roundedAbove="sm">
+              <BlockStack gap="400">
+                <NumberField
+                  decimals={2}
+                  type={'number'}
+                  label={'Default hourly rate'}
+                  value={String(settings.defaultRate)}
+                  prefix={currencyFormatter.prefix}
+                  suffix={currencyFormatter.suffix}
+                  step={0.01}
+                  largeStep={1}
+                  min={0}
+                  inputMode={'decimal'}
+                  requiredIndicator={true}
+                  onChange={value => setSettings({ ...settings, defaultRate: Number(value) })}
+                  autoComplete={'off'}
+                  helpText={'Used for employees without a set hourly rate'}
+                />
+              </BlockStack>
+            </Card>
+            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+              <BlockStack gap="400">
+                <Text as="h3" variant="headingMd">
+                  Work Order Requests
+                </Text>
+              </BlockStack>
+            </Box>
+            <Card roundedAbove="sm">
+              <BlockStack gap="400">
+                <Checkbox
+                  label={'Enable work order requests'}
+                  checked={settings.workOrderRequests.enabled}
+                  onChange={enabled =>
+                    setSettings({
+                      ...settings,
+                      workOrderRequests: enabled
+                        ? { enabled, allowedStatuses: [settings.statuses[0]!.name] }
+                        : { enabled, allowedStatuses: null },
+                    })
+                  }
+                />
+                <Select
+                  label={'Request Status'}
+                  helpText={'The status that work order requests will be set to when created'}
+                  disabled={!settings.workOrderRequests.enabled}
+                  options={settings.statuses.map(status => status.name)}
+                  placeholder={'Select a status'}
+                  value={settings.workOrderRequests.allowedStatuses?.[0]}
+                  onChange={statusName =>
+                    setSettings({
+                      ...settings,
+                      workOrderRequests: {
+                        enabled: true,
+                        allowedStatuses: [statusName],
+                      },
+                    })
+                  }
+                />
+              </BlockStack>
+            </Card>
           </InlineGrid>
         </BlockStack>
       </Page>
@@ -344,7 +431,35 @@ export default function Settings() {
   );
 }
 
-function getDiscountRules(settings: ShopSettings, setSettings: (settings: ShopSettings) => void): Rule[] {
+const useCurrencyRangeBounds = (initialCurrencyRangeBounds: [number, number] = [100, 100]) => {
+  const CURRENCY_RANGE_MAX_GROWTH_RATE = 1.25;
+
+  const [min, initialMax] = initialCurrencyRangeBounds;
+
+  const getMaxBound = (currentUpperBound: number) =>
+    Math.round(Math.max(currentUpperBound * CURRENCY_RANGE_MAX_GROWTH_RATE, initialMax));
+
+  const [max, setMax] = useDebouncedState(getMaxBound(initialMax));
+
+  const update = ([, upper]: [number, number]) => {
+    setMax(getMaxBound(upper));
+  };
+
+  return { min, max, update };
+};
+
+function useDiscountRules(
+  settings: ShopSettings | null,
+  setSettings: (settings: ShopSettings) => void,
+  currencyFormatter: CurrencyFormatter,
+): Rule[] {
+  const initialCurrencyRangeBounds = [0, 100] as [number, number];
+  const currencyRangeBounds = useCurrencyRangeBounds(initialCurrencyRangeBounds);
+
+  if (!settings) {
+    return [];
+  }
+
   return [
     {
       value: ONLY_SHORTCUTS,
@@ -381,7 +496,7 @@ function getDiscountRules(settings: ShopSettings, setSettings: (settings: ShopSe
           discountRules: {
             ...settings.discountRules,
             onlyAllowShortcuts: false,
-            allowedCurrencyRange: [0, 100],
+            allowedCurrencyRange: initialCurrencyRangeBounds,
           },
         });
       },
@@ -401,21 +516,23 @@ function getDiscountRules(settings: ShopSettings, setSettings: (settings: ShopSe
           <AnnotatedRangeSlider
             label="Allowed discount range"
             labelHidden
-            min={0}
-            max={123}
+            min={currencyRangeBounds.min}
+            max={currencyRangeBounds.max}
             step={1}
-            formatter={num => `${CURRENCY} ${num}`}
+            formatter={currencyFormatter}
             value={settings.discountRules.allowedCurrencyRange}
-            onChange={(value: [number, number]) =>
+            onChange={(allowedCurrencyRange: [number, number]) => {
               setSettings({
                 ...settings,
                 discountRules: {
                   ...settings.discountRules,
                   onlyAllowShortcuts: false,
-                  allowedCurrencyRange: value,
+                  allowedCurrencyRange,
                 },
-              })
-            }
+              });
+
+              currencyRangeBounds.update(allowedCurrencyRange);
+            }}
           />
         );
       },
@@ -455,13 +572,13 @@ function getDiscountRules(settings: ShopSettings, setSettings: (settings: ShopSe
             step={1}
             formatter={num => `${num}%`}
             value={settings.discountRules.allowedPercentageRange}
-            onChange={(value: [number, number]) =>
+            onChange={(allowedPercentageRange: [number, number]) =>
               setSettings({
                 ...settings,
                 discountRules: {
                   ...settings.discountRules,
                   onlyAllowShortcuts: false,
-                  allowedPercentageRange: value,
+                  allowedPercentageRange,
                 },
               })
             }
@@ -472,7 +589,18 @@ function getDiscountRules(settings: ShopSettings, setSettings: (settings: ShopSe
   ];
 }
 
-function getDepositRules(settings: ShopSettings, setSettings: (settings: ShopSettings) => void): Rule[] {
+function useDepositRules(
+  settings: ShopSettings | null,
+  setSettings: (settings: ShopSettings) => void,
+  currencyFormatter: CurrencyFormatter,
+): Rule[] {
+  const initialCurrencyRangeBounds = [0, 100] as [number, number];
+  const currencyRangeBounds = useCurrencyRangeBounds(initialCurrencyRangeBounds);
+
+  if (!settings) {
+    return [];
+  }
+
   return [
     {
       value: ONLY_SHORTCUTS,
@@ -536,7 +664,7 @@ function getDepositRules(settings: ShopSettings, setSettings: (settings: ShopSet
             ...settings.depositRules,
             onlyAllowShortcuts: false,
             onlyAllowHighestAbsoluteShortcut: false,
-            allowedCurrencyRange: [0, 100],
+            allowedCurrencyRange: initialCurrencyRangeBounds,
           },
         });
       },
@@ -556,22 +684,24 @@ function getDepositRules(settings: ShopSettings, setSettings: (settings: ShopSet
           <AnnotatedRangeSlider
             label="Allowed deposit range"
             labelHidden
-            min={0}
-            max={123}
+            min={currencyRangeBounds.min}
+            max={currencyRangeBounds.max}
             step={1}
-            formatter={num => `${CURRENCY} ${num}`}
+            formatter={currencyFormatter}
             value={settings.depositRules.allowedCurrencyRange}
-            onChange={(value: [number, number]) =>
+            onChange={(allowedCurrencyRange: [number, number]) => {
               setSettings({
                 ...settings,
                 depositRules: {
                   ...settings.depositRules,
                   onlyAllowShortcuts: false,
                   onlyAllowHighestAbsoluteShortcut: false,
-                  allowedCurrencyRange: value,
+                  allowedCurrencyRange,
                 },
-              })
-            }
+              });
+
+              currencyRangeBounds.update(allowedCurrencyRange);
+            }}
           />
         );
       },
@@ -587,7 +717,6 @@ function getDepositRules(settings: ShopSettings, setSettings: (settings: ShopSet
             ...settings.depositRules,
             onlyAllowShortcuts: false,
             onlyAllowHighestAbsoluteShortcut: false,
-            // TODO: cache this
             allowedPercentageRange: [0, 100],
           },
         });
@@ -613,14 +742,14 @@ function getDepositRules(settings: ShopSettings, setSettings: (settings: ShopSet
             step={1}
             formatter={num => `${num}%`}
             value={settings.depositRules.allowedPercentageRange}
-            onChange={(value: [number, number]) =>
+            onChange={(allowedPercentageRange: [number, number]) =>
               setSettings({
                 ...settings,
                 depositRules: {
                   ...settings.depositRules,
                   onlyAllowShortcuts: false,
                   onlyAllowHighestAbsoluteShortcut: false,
-                  allowedPercentageRange: value,
+                  allowedPercentageRange,
                 },
               })
             }
@@ -666,4 +795,37 @@ function getActiveDiscountRules(settings: ShopSettings) {
   }
 
   return activeRules;
+}
+
+function CurrencyOrPercentageInput({
+  value,
+  setValue,
+  onSelect,
+}: {
+  value: string;
+  setValue: (value: string) => void;
+  onSelect: (unit: 'percentage' | 'currency') => void;
+}) {
+  const currencyFormatter = useCurrencyFormatter();
+
+  return (
+    <Combobox
+      activator={
+        <Combobox.TextField
+          type="number"
+          label="Discount Shortcuts"
+          autoComplete="off"
+          value={value}
+          onChange={setValue}
+        />
+      }
+    >
+      {value.length > 0 ? (
+        <Listbox onSelect={onSelect}>
+          <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
+          <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
+        </Listbox>
+      ) : null}
+    </Combobox>
+  );
 }

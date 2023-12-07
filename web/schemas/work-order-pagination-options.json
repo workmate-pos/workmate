@@ -2,8 +2,9 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "fromName": {
-      "type": "string"
+    "offset": {
+      "type": "integer",
+      "minimum": 0
     },
     "status": {
       "type": "string"
@@ -12,7 +13,11 @@
       "type": "integer",
       "minimum": 1,
       "maximum": 25
+    },
+    "query": {
+      "type": "string"
     }
   },
+  "required": ["limit", "offset"],
   "additionalProperties": false
 }

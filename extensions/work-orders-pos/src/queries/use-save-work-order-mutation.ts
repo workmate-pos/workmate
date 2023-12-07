@@ -1,18 +1,25 @@
-import { useMutation } from 'react-query';
-import type { WorkOrder } from '../screens/WorkOrder';
-import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
+import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import type { WorkOrder } from '../types/work-order';
+import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order';
 import { toCents } from '../util/money-utils';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import type { CreateWorkOrderResponse } from '@web/controllers/api/work-order';
 
 export type WorkOrderValidationErrors = {
   [key in keyof WorkOrder]?: string;
 };
 
-export const useSaveWorkOrderMutation = () => {
+export const useSaveWorkOrderMutation = (
+  options: UseMutationOptions<CreateWorkOrderResponse, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>,
+) => {
   const fetch = useAuthenticatedFetch();
+  const queryClient = useQueryClient();
+  const api = useExtensionApi<'pos.home.modal.render'>();
 
-  const query = useMutation<{ success: boolean }, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>(
-    async workOrder => {
+  return useMutation<CreateWorkOrderResponse, string | Error | WorkOrderValidationErrors, Partial<WorkOrder>>({
+    ...options,
+    mutationFn: async workOrder => {
       validateWorkOrder(workOrder);
 
       const createWorkOrder: CreateWorkOrder = {
@@ -22,21 +29,28 @@ export const useSaveWorkOrderMutation = () => {
           id: workOrder.customer.id,
         },
         price: {
-          deposit: toCents(workOrder.price.deposit),
           tax: toCents(workOrder.price.tax),
           discount: toCents(workOrder.price.discount),
           shipping: toCents(workOrder.price.shipping),
         },
-        dueDate: workOrder.dueDate.toISOString(),
-        products: workOrder.products.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          unitPrice: toCents(item.unitPrice),
+        dueDate: workOrder.dueDate,
+        products: workOrder.products.map(({ productVariantId, quantity, unitPrice }) => ({
+          productVariantId,
+          quantity,
+          unitPrice: toCents(unitPrice),
         })),
-        employeeAssignments: workOrder.employeeAssignments.map(employee => ({
-          employeeId: employee.employeeId,
-        })),
+        employeeAssignments: workOrder.employeeAssignments.map(({ employeeId }) => ({ employeeId })),
         description: workOrder.description,
+        services: workOrder.services.map(({ productVariantId, employeeAssignments, basePrice }) => ({
+          productVariantId,
+          employeeAssignments: employeeAssignments.map(({ employeeId, employeeRate, hours }) => ({
+            employeeId,
+            hours,
+            employeeRate: toCents(employeeRate),
+          })),
+          basePrice: toCents(basePrice),
+        })),
+        derivedFromOrderId: workOrder.derivedFromOrder?.id,
       };
 
       const response = await fetch('/api/work-order', {
@@ -47,11 +61,25 @@ export const useSaveWorkOrderMutation = () => {
         throw 'Something went wrong while saving this work order';
       }
 
-      return response.json();
+      return await response.json();
     },
-  );
+    async onSuccess(...args) {
+      const [{ workOrder }] = args;
 
-  return query;
+      if (workOrder.name) {
+        queryClient.invalidateQueries(['work-order', workOrder.name]);
+      }
+
+      queryClient.invalidateQueries(['work-order-info']);
+
+      options.onSuccess?.(...args);
+    },
+    onMutate(...args) {
+      api.toast.show('Saving work order');
+
+      options.onMutate?.(...args);
+    },
+  });
 };
 
 function validateWorkOrder(workOrder: Partial<WorkOrder>): asserts workOrder is WorkOrder {

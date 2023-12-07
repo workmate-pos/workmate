@@ -1,7 +1,9 @@
-import { useScreen } from '../../hooks/use-screen';
-import { useSettings } from '../../hooks/use-settings';
 import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
+import { useScreen } from '../../hooks/use-screen.js';
+import { useSettingsQuery } from '../../queries/use-settings-query.js';
+import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
+import { Grid } from '../../components/Grid';
 
 export function DiscountOrDepositSelector() {
   const [selectType, setSelectType] = useState<'discount' | 'deposit' | null>(null);
@@ -10,7 +12,8 @@ export function DiscountOrDepositSelector() {
     setSelectType(select);
     setSubTotal(subTotal);
   });
-  const settings = useSettings();
+  const settingsQuery = useSettingsQuery();
+  const settings = settingsQuery.data?.settings;
 
   const shortcuts = {
     none: undefined,
@@ -26,8 +29,8 @@ export function DiscountOrDepositSelector() {
 
   const title = {
     none: '',
-    discount: 'Discount',
-    deposit: 'Deposit',
+    discount: 'Select Discount',
+    deposit: 'Select Deposit',
   }[selectType ?? 'none'];
 
   const onlyAllowHighestDiscount =
@@ -65,20 +68,31 @@ export function DiscountOrDepositSelector() {
   const [currencyValue, setCurrencyValue] = useState<number>(allowedCurrencyRange?.[0] ?? 0);
   const [percentageValue, setPercentageValue] = useState<number>(allowedPercentageRange?.[0] ?? 0);
 
+  const percentageValueCurrencyAmount = Math.ceil((subTotal ?? 0) * (percentageValue / 100));
+
+  const currencyFormatter = useCurrencyFormatter();
+
   return (
-    <Screen title={`Select ${title}`} isLoading={!settings || subTotal === null || selectType === null}>
+    <Screen
+      title={title}
+      isLoading={settingsQuery.isLoading || subTotal === null || selectType === null}
+      presentation={{ sheet: true }}
+    >
       <ScrollView>
         <Stack direction="vertical" spacing={8}>
-          <Stack direction="vertical" spacing={2}>
-            <Text variant="headingLarge">Shortcuts</Text>
-            <Stack alignment="center" direction="horizontal" flex={1} flexChildren paddingHorizontal="ExtraExtraLarge">
+          <Stack direction="vertical" spacing={2} paddingVertical={'Medium'}>
+            <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+              <Text variant="headingLarge">Shortcuts</Text>
+            </Stack>
+
+            <Grid columns={3}>
               {shortcutButtons?.map(obj => {
                 let title = '';
 
                 if (obj.type === 'percentage') {
-                  title = `${obj.percentage}% (CA$ ${obj.currencyAmount.toFixed(2)})`;
+                  title = `${obj.percentage}% (${currencyFormatter(obj.currencyAmount)})`;
                 } else if (obj.type === 'currency') {
-                  title = `CA$ ${obj.currencyAmount.toFixed(2)}`;
+                  title = currencyFormatter(obj.currencyAmount);
                 }
 
                 return (
@@ -89,12 +103,14 @@ export function DiscountOrDepositSelector() {
                   />
                 );
               })}
-            </Stack>
+            </Grid>
           </Stack>
 
           {customInputAllowed && (
-            <Stack direction="vertical" spacing={2}>
-              <Text variant="headingLarge">Custom CA$</Text>
+            <Stack direction="vertical" spacing={2} paddingVertical={'Medium'}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text variant="headingLarge">Custom Amount</Text>
+              </Stack>
 
               <Stack direction="horizontal" alignment="center" flexChildren paddingHorizontal="ExtraExtraLarge">
                 <Stepper
@@ -105,7 +121,7 @@ export function DiscountOrDepositSelector() {
                   onValueChanged={setCurrencyValue}
                 />
                 <Button
-                  title={`CA$ ${currencyValue}`}
+                  title={currencyFormatter(currencyValue)}
                   onPress={() => closePopup({ select: selectType!, type: 'currency', currencyAmount: currencyValue })}
                 />
               </Stack>
@@ -113,8 +129,11 @@ export function DiscountOrDepositSelector() {
           )}
 
           {customInputAllowed && (
-            <Stack direction="vertical" spacing={2}>
-              <Text variant="headingLarge">Custom %</Text>
+            <Stack direction="vertical" spacing={2} paddingVertical={'Medium'}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text variant="headingLarge">Custom %</Text>
+              </Stack>
+
               <Stack direction="horizontal" alignment="center" flexChildren paddingHorizontal="ExtraExtraLarge">
                 <Stepper
                   minimumValue={allowedPercentageRange?.[0] ?? 0}
@@ -124,13 +143,13 @@ export function DiscountOrDepositSelector() {
                   onValueChanged={setPercentageValue}
                 />
                 <Button
-                  title={`${percentageValue}% (CA$ ${((subTotal ?? 0) * (percentageValue / 100)).toFixed(2)})`}
+                  title={`${percentageValue}% (${currencyFormatter(percentageValueCurrencyAmount)})`}
                   onPress={() =>
                     closePopup({
                       select: selectType!,
                       type: 'percentage',
                       percentage: percentageValue,
-                      currencyAmount: Math.ceil((subTotal ?? 0) * (percentageValue / 100)),
+                      currencyAmount: percentageValueCurrencyAmount,
                     })
                   }
                 />

@@ -1,17 +1,20 @@
-import { Banner, Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { WorkOrder } from './screens/WorkOrder';
-import { ItemConfig } from './screens/popups/ItemConfig';
-import { EmployeeSelector } from './screens/popups/EmployeeSelector';
-import { ItemSelector } from './screens/popups/ItemSelector';
-import { Error } from './screens/Error';
-import { WorkOrderSelector } from './screens/popups/WorkOrderSelector';
-import { ReactQueryProvider } from './providers/ReactQueryProvider';
-import { SettingsProvider } from './providers/SettingsProvider';
-import { StatusSelector } from './screens/popups/StatusSelector';
-import { CustomerSelector } from './screens/popups/CustomerSelector';
-import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSelector';
-import { ShippingConfig } from './screens/popups/ShippingConfig';
-import { NewEntry } from './screens/NewEntry';
+import { Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { WorkOrderPage } from './screens/WorkOrder.js';
+import { ProductConfig } from './screens/popups/ProductConfig';
+import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
+import { ProductSelector } from './screens/popups/ProductSelector';
+import { Error } from './screens/Error.js';
+import { ReactQueryProvider } from './providers/ReactQueryProvider.js';
+import { StatusSelector } from './screens/popups/StatusSelector.js';
+import { CustomerSelector } from './screens/popups/CustomerSelector.js';
+import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSelector.js';
+import { ShippingConfig } from './screens/popups/ShippingConfig.js';
+import { Entry } from './screens/Entry.js';
+import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
+import { ServiceSelector } from './screens/popups/ServiceSelector';
+import { ServiceConfig } from './screens/popups/ServiceConfig';
+import { ServiceEmployeeAssignmentConfig } from './screens/popups/ServiceEmployeeAssignmentConfig';
+import { ImportOrderSelector } from './screens/ImportOrderSelector';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -30,22 +33,24 @@ function SmartGridTile() {
 function SmartGridModal() {
   return (
     <ReactQueryProvider>
-      <SettingsProvider>
-        <Navigator>
-          <NewEntry />
-          <Error />
-          <WorkOrder />
+      <Navigator>
+        <Entry />
+        <ImportOrderSelector />
+        <Error />
+        <WorkOrderPage />
 
-          <CustomerSelector />
-          <DiscountOrDepositSelector />
-          <EmployeeSelector />
-          <ItemConfig />
-          <ItemSelector />
-          <ShippingConfig />
-          <StatusSelector />
-          <WorkOrderSelector />
-        </Navigator>
-      </SettingsProvider>
+        <CustomerSelector />
+        <DiscountOrDepositSelector />
+        <EmployeeSelector />
+        <ProductConfig />
+        <ProductSelector />
+        <ServiceConfig />
+        <ServiceEmployeeAssignmentConfig />
+        <ServiceSelector />
+        <ShippingConfig />
+        <StatusSelector />
+        <WorkOrderSaved />
+      </Navigator>
     </ReactQueryProvider>
   );
 }

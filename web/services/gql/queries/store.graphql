@@ -1,0 +1,9 @@
+query getStoreProperties {
+    shop {
+        name
+        currencyCode
+        currencyFormats {
+            moneyFormat
+        }
+    }
+}

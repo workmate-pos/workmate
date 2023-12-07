@@ -1,195 +1,123 @@
-import { CreateWorkOrder } from '../schemas/generated/create-work-order.js';
-import { prisma } from './prisma.js';
-import { Prisma } from '@prisma/client';
-import { getSettingsByShop } from './settings.js';
-import type { WorkOrderPaginationOptions } from '../schemas/generated/work-order-pagination-options.js';
-import { getFormattedId } from './id-format.js';
+import { Session } from '@shopify/shopify-api';
+import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import type { CreateWorkOrder } from '../schemas/generated/create-work-order.js';
+import { getFormattedId } from './id-formatting.js';
+import { db } from './db/db.js';
+import { never } from '../util/never.js';
+import { unit } from './db/unit-of-work.js';
+import { gql } from './gql/gql.js';
+import type { ID } from './gql/queries/generated/schema.js';
+import { GetStaffMembersByIdOperationResult } from './gql/queries/generated/queries.js';
+import { awaitNested } from '../util/promise.js';
+import { PAYMENT_ADDITIONAL_DETAIL_KEYS } from './webhooks.js';
 
-export async function upsertWorkOrder(shop: string, createWorkOrder: ValidatedCreateWorkOrder) {
-  const data = {
-    shop,
-    name: createWorkOrder.name ?? (await getFormattedId(shop)),
-    status: createWorkOrder.status,
-    customer: {
-      // connect: {
-      //   id_shop: {
-      //     id: createWorkOrder.customer.id,
-      //     shop,
-      //   },
-      // },
-      // TODO: Remove this once customers are set up
-      connectOrCreate: {
-        create: {
-          id: '0',
-          name: 'Test Customer',
-          shop,
-        },
-        where: {
-          id: '0',
-        },
-      },
-    },
-    depositAmount: createWorkOrder.price.deposit,
-    taxAmount: createWorkOrder.price.tax,
-    discountAmount: createWorkOrder.price.discount,
-    shippingAmount: createWorkOrder.price.shipping,
-    dueDate: new Date(createWorkOrder.dueDate),
-    description: createWorkOrder.description,
-    products: {
-      createMany: {
-        data: createWorkOrder.products.map(product => ({
-          productId: product.productId,
-          quantity: product.quantity,
-          unitPrice: product.unitPrice,
-        })),
-      },
-    },
-    employeeAssignments: {
-      // createMany: {
-      // data: createWorkOrder.employeeAssignments.map(assignment => ({
-      //   employeeId: assignment.employeeId,
-      //   employeeShop: shop,
-      // })),
-      // },
-      // TODO: Remove this once employees are set up
-      create: {
-        shop,
-        employee: {
-          connectOrCreate: {
-            create: {
-              id: '0',
-              shop,
-              name: 'Test Employee',
-            },
-            where: {
-              id: '0',
-            },
-          },
-        },
-      },
-    },
-  } satisfies Prisma.WorkOrderCreateInput;
+export async function upsertWorkOrder(shop: string, createWorkOrder: CreateWorkOrder) {
+  return await unit(async () => {
+    const isUpdate = createWorkOrder.name !== undefined;
 
-  if (createWorkOrder.name) {
-    return prisma.$transaction(async prisma => {
-      // clean up old products as the update will re-create them
-      await prisma.workOrderProduct.deleteMany({
-        where: {
-          workOrder: {
-            name: createWorkOrder.name,
-            shop,
-          },
-        },
-      });
-
-      return prisma.workOrder.update({
-        where: { shop_name: { shop, name: data.name } },
-        data,
-      });
+    const [workOrder = never('XD')] = await db.workOrder.upsert({
+      shop,
+      name: createWorkOrder.name ?? (await getFormattedId(shop)),
+      status: createWorkOrder.status,
+      customerId: createWorkOrder.customer.id,
+      taxAmount: createWorkOrder.price.tax,
+      discountAmount: createWorkOrder.price.discount,
+      shippingAmount: createWorkOrder.price.shipping,
+      dueDate: new Date(createWorkOrder.dueDate),
+      description: createWorkOrder.description,
+      derivedFromOrderId: createWorkOrder.derivedFromOrderId,
     });
-  }
 
-  return prisma.workOrder.create({ data });
-}
+    const { id: workOrderId } = workOrder;
 
-export function getWorkOrder(shop: string, name: string) {
-  return prisma.workOrder.findUnique({
-    where: { shop_name: { shop, name } },
-    select: {
-      name: true,
-      status: true,
-      discountAmount: true,
-      shippingAmount: true,
-      depositAmount: true,
-      taxAmount: true,
-      dueDate: true,
-      description: true,
-      employeeAssignments: {
-        include: {
-          employee: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      customer: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      products: {
-        select: {
-          productId: true,
-          unitPrice: true,
-          quantity: true,
-        },
-      },
-    },
+    if (isUpdate) {
+      // updating = removing all previous data and inserting the new data
+      await db.workOrderEmployeeAssignment.remove({ workOrderId });
+      await db.workOrderProduct.remove({ workOrderId });
+      await db.workOrderServiceEmployeeAssignment.removeByWorkOrder({ workOrderId });
+      await db.workOrderService.remove({ workOrderId });
+    }
+
+    for (const { employeeId } of createWorkOrder.employeeAssignments) {
+      await db.workOrderEmployeeAssignment.insert({ workOrderId, employeeId });
+    }
+
+    for (const { productVariantId, quantity, unitPrice } of createWorkOrder.products) {
+      await db.workOrderProduct.insert({ productVariantId, unitPrice, quantity, workOrderId });
+    }
+
+    for (const { productVariantId, employeeAssignments, basePrice } of createWorkOrder.services) {
+      const [{ id: workOrderServiceId } = never('Insert should always return a row')] =
+        await db.workOrderService.insert({
+          workOrderId,
+          basePrice,
+          productVariantId,
+        });
+
+      for (const { employeeId, employeeRate, hours } of employeeAssignments) {
+        await db.workOrderServiceEmployeeAssignment.insert({ employeeId, employeeRate, hours, workOrderServiceId });
+      }
+    }
+
+    return workOrder;
   });
 }
 
-export function getPaginatedWorkOrders(shop: string, { fromName, status, limit }: WorkOrderPaginationOptions) {
-  const cursor = fromName ? { shop_name: { shop, name: fromName } } : undefined;
+export async function getWorkOrder(session: Session, name: string) {
+  const { shop } = session;
 
-  return prisma.workOrder.findMany({
-    where: { shop, status },
-    orderBy: { createdAt: 'desc' },
-    cursor,
-    skip: cursor ? 1 : undefined,
-    take: limit,
-    select: {
-      name: true,
-      status: true,
-      dueDate: true,
-      discountAmount: true,
-      depositAmount: true,
-      taxAmount: true,
-      products: {
-        select: {
-          unitPrice: true,
-          quantity: true,
-        },
-      },
-    },
+  const [workOrder] = await db.workOrder.get({ shop, name });
+
+  if (!workOrder) {
+    return null;
+  }
+
+  const graphql = new Graphql(session);
+
+  type Node = GetStaffMembersByIdOperationResult['nodes'][number];
+  type ActiveStaffMember = Node & { __typename: 'StaffMember'; active: true };
+  const isActiveStaffMember = (node: Node): node is ActiveStaffMember =>
+    node?.__typename === 'StaffMember' && node.active;
+
+  const getStaffMembers = (ids: ID[]) =>
+    gql.staffMember.getStaffMembersById(graphql, { ids }).then(({ nodes }) => nodes.filter(isActiveStaffMember));
+
+  const workOrderId = workOrder.id;
+
+  return await awaitNested({
+    workOrder: { ...workOrder, dueDate: workOrder.dueDate.toISOString() },
+    payments: db.workOrderPayment.get({ workOrderId }),
+    products: db.workOrderProduct.get({ workOrderId }),
+    customer: gql.customer
+      .getCustomer(graphql, { id: workOrder.customerId as ID })
+      .then(({ customer }) => customer ?? never()),
+    employees: db.workOrderEmployeeAssignment
+      .get({ workOrderId })
+      .then(employees => getStaffMembers(employees.map(e => e.employeeId as ID))),
+    services: db.workOrderService.get({ workOrderId }).then(services =>
+      services.map(service => ({
+        ...service,
+        employeeAssignments: db.workOrderServiceEmployeeAssignment
+          .get({ workOrderServiceId: service.id })
+          .then(async employees => {
+            const staffMembers = await getStaffMembers(employees.map(e => e.employeeId as ID));
+            return staffMembers.map(staffMember => {
+              const { employeeRate, hours } = employees.find(e => e.employeeId === staffMember.id) ?? never();
+              return { ...staffMember, employeeRate, hours };
+            });
+          }),
+      })),
+    ),
+    derivedFromOrder: workOrder.derivedFromOrderId
+      ? gql.order
+          .getOrder(graphql, { id: workOrder.derivedFromOrderId as ID })
+          .then(({ order }) => order ?? never())
+          .then(order => ({
+            ...order,
+            workOrderName:
+              order.customAttributes.find(({ key }) => key == PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME)?.value ??
+              undefined,
+          }))
+      : undefined,
   });
-}
-
-type ValidatedCreateWorkOrder = CreateWorkOrder & { _brand: readonly ['validated'] };
-type CreateWorkOrderErrors = { [field in keyof CreateWorkOrder]?: string[] };
-
-export async function validateCreateWorkOrder(
-  shop: string,
-  workOrder: CreateWorkOrder,
-): Promise<
-  { type: 'error'; errors: CreateWorkOrderErrors } | { type: 'validated'; validated: ValidatedCreateWorkOrder }
-> {
-  const settings = await getSettingsByShop(shop);
-
-  const errors: CreateWorkOrderErrors = {};
-
-  if (!settings.statuses.some(status => workOrder.status === status.name)) {
-    errors.status = [`Invalid status: ${workOrder.status}`];
-  }
-
-  const dueDate = new Date(workOrder.dueDate);
-  if (dueDate.toString() === 'Invalid Date') {
-    errors.dueDate = ['Invalid due date'];
-  }
-
-  for (const product of workOrder.products) {
-    // TODO: check that this product exists in the database/shopify api
-  }
-
-  // TODO: Look these up in the database/shopify api
-  workOrder.employeeAssignments;
-  workOrder.customer;
-
-  if (Object.keys(errors).length > 0) {
-    return { type: 'error', errors };
-  }
-
-  return { type: 'validated', validated: workOrder as ValidatedCreateWorkOrder };
 }
