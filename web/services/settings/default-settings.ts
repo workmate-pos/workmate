@@ -31,7 +31,7 @@ const defaultShopSettings: ShopSettings = {
     allowedStatuses: null,
   },
   serviceCollectionId: null,
-  defaultRate: 1000,
+  defaultRate: 1500,
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

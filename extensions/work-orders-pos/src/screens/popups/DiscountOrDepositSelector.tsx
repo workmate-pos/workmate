@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useSettingsQuery } from '../../queries/use-settings-query.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
+import { Grid } from '../../components/Grid';
 
 export function DiscountOrDepositSelector() {
   const [selectType, setSelectType] = useState<'discount' | 'deposit' | null>(null);
@@ -84,7 +85,7 @@ export function DiscountOrDepositSelector() {
               <Text variant="headingLarge">Shortcuts</Text>
             </Stack>
 
-            <Stack alignment="center" direction="horizontal" flex={1} flexChildren paddingHorizontal="ExtraExtraLarge">
+            <Grid columns={3}>
               {shortcutButtons?.map(obj => {
                 let title = '';
 
@@ -102,7 +103,7 @@ export function DiscountOrDepositSelector() {
                   />
                 );
               })}
-            </Stack>
+            </Grid>
           </Stack>
 
           {customInputAllowed && (

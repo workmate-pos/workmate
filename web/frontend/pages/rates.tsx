@@ -13,18 +13,21 @@ export default function Rates() {
   const [toast, setToastAction] = useToast();
 
   const [employeeRates, setEmployeeRates] = useState<Record<string, number | null>>({});
+  console.log('rates', employeeRates);
 
   const employeesQuery = useEmployeesQuery({});
   const employeeIds = employeesQuery.data?.pages.map(employee => employee.id) ?? [];
   const employeeRateQueries = useEmployeeRateQueries(employeeIds, {
     refetchOnWindowFocus: false,
     onSuccess(data) {
+      // TODO: Fix this not applying when navigating back to this page
       setEmployeeRates(prev => ({
         ...prev,
         [data.id]: data.rate,
       }));
     },
   });
+  console.log('queries', employeeRateQueries);
   const employeeRatesMutation = useEmployeeRatesMutation({
     onSuccess() {
       setToastAction({
@@ -91,7 +94,7 @@ export default function Rates() {
                       inputMode={'decimal'}
                       label={'Rate'}
                       labelHidden={true}
-                      value={employeeRates[employee.id]?.toFixed(2)}
+                      value={employeeRates[employee.id] ? String(employeeRates[employee.id]) : undefined}
                       onChange={value =>
                         setEmployeeRates({ ...employeeRates, [employee.id]: value ? Number(value) : null })
                       }

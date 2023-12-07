@@ -79,7 +79,6 @@ export default function Settings() {
   const [serviceCollectionValue, setServiceCollectionValue] = useState<string | undefined>(undefined);
   const [selectedServiceCollectionName, setSelectedServiceCollectionName] = useState<string | null>(null);
   const collectionsQuery = useCollectionsQuery({ query: serviceCollectionValue });
-  console.log(collectionsQuery.data?.pages);
 
   // set the service collection name when the settings & collections are both loaded
   useEffect(() => {

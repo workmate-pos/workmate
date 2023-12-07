@@ -11,6 +11,7 @@ import {
   Text,
   TextArea,
   TextField,
+  useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { Dispatch, useEffect, useReducer, useState } from 'react';
 import { PopupNavigateFn, UsePopupFn, useScreen } from '../hooks/use-screen.js';
@@ -26,6 +27,7 @@ export function WorkOrderPage() {
   const [workOrderName, setWorkOrderName] = useState<string | null>(null);
   const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
   const [savedPriceDetails, setSavedPriceDetails] = useState(getPriceDetails(workOrder));
+  const api = useExtensionApi<'pos.home.modal.render'>();
 
   const workOrderQuery = useWorkOrderQuery(workOrderName, {
     onSuccess(workOrder) {
@@ -132,42 +134,63 @@ export function WorkOrderPage() {
             {(errorMessage || validationErrors) && (
               <Banner title="An error occurred. Make sure that all fields are valid" variant="error" visible />
             )}
-
-            <Stack direction="horizontal" flexChildren>
-              {workOrder.name && savedPriceDetails.balanceDue > 0 && (
-                <>
-                  <Button
-                    title="Pay Balance"
-                    onPress={() =>
-                      paymentHandler.handlePayment({
-                        workOrderName: workOrder.name!,
-                        type: 'balance',
-                        amount: savedPriceDetails.total,
-                        previouslyDeposited: savedPriceDetails.deposited,
-                      })
-                    }
-                  />
-                  {savedPriceDetails.deposited === 0 && (
-                    <Button
-                      title="Pay Deposit"
-                      onPress={() =>
-                        depositSelectorPopup.navigate({
-                          select: 'deposit',
-                          subTotal: savedPriceDetails.subTotal,
-                        })
-                      }
-                    />
-                  )}
-                </>
-              )}
-              <Button
-                title={workOrder.name ? 'Update Order' : 'Create Order'}
-                type="primary"
-                onPress={() => saveWorkOrderMutation.mutate(workOrder)}
-                isDisabled={saveWorkOrderMutation.isLoading}
-              />
-            </Stack>
           </Stack>
+        </Stack>
+
+        <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
+          <>
+            <Button
+              title="Pay Balance"
+              onPress={() => {
+                if (!workOrder.name) {
+                  api.toast.show('You must save the work order before paying', { duration: 1000 });
+                  return;
+                }
+
+                if (savedPriceDetails.balanceDue <= 0) {
+                  api.toast.show('There is no due balance', { duration: 1000 });
+                  return;
+                }
+
+                return paymentHandler.handlePayment({
+                  workOrderName: workOrder.name!,
+                  type: 'balance',
+                  amount: savedPriceDetails.total,
+                  previouslyDeposited: savedPriceDetails.deposited,
+                });
+              }}
+            />
+            <Button
+              title="Pay Deposit"
+              onPress={() => {
+                if (!workOrder.name) {
+                  api.toast.show('You must save the work order before paying', { duration: 1000 });
+                  return;
+                }
+
+                if (savedPriceDetails.balanceDue <= 0) {
+                  api.toast.show('There is no due balance', { duration: 1000 });
+                  return;
+                }
+
+                if (savedPriceDetails.deposited > 0) {
+                  api.toast.show('A deposit has already been paid', { duration: 1000 });
+                  return;
+                }
+
+                depositSelectorPopup.navigate({
+                  select: 'deposit',
+                  subTotal: savedPriceDetails.subTotal,
+                });
+              }}
+            />
+          </>
+          <Button
+            title={workOrder.name ? 'Update Order' : 'Create Order'}
+            type="primary"
+            onPress={() => saveWorkOrderMutation.mutate(workOrder)}
+            isDisabled={saveWorkOrderMutation.isLoading}
+          />
         </Stack>
       </ScrollView>
     </Screen>
