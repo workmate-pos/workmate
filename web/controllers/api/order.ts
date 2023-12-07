@@ -5,6 +5,7 @@ import { PaginationOptions } from '../../schemas/generated/pagination-options.js
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
 import { OrderFragmentResult } from '../../services/gql/queries/generated/queries.js';
+import { PAYMENT_ADDITIONAL_DETAIL_KEYS } from '../../services/webhooks.js';
 
 @Authenticated()
 export default class OrderController {
@@ -17,7 +18,12 @@ export default class OrderController {
     const graphql = new Graphql(session);
     const response = await gql.order.getOrders(graphql, paginationOptions);
 
-    const orders = response.orders.nodes;
+    const orders = response.orders.nodes.map(order => ({
+      ...order,
+      workOrderName:
+        order.customAttributes.find(({ key }) => key == PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME)?.value ??
+        undefined,
+    }));
     const pageInfo = response.orders.pageInfo;
 
     return res.json({ orders, pageInfo });
@@ -25,6 +31,6 @@ export default class OrderController {
 }
 
 export type FetchOrdersResponse = {
-  orders: OrderFragmentResult[];
+  orders: (OrderFragmentResult & { workOrderName?: string })[];
   pageInfo: { hasNextPage: boolean; endCursor?: string | null };
 };

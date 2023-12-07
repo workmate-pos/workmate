@@ -3,13 +3,11 @@ import { Order, useOrdersQuery } from '../queries/use-orders-query';
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useDebouncedState } from '../hooks/use-debounced-state';
 import { titleCase } from '../util/casing';
-import { PAYMENT_ADDITIONAL_DETAIL_KEYS } from '../hooks/use-payment-handler';
 
 export function ImportOrderSelector() {
   const { Screen, navigate } = useScreen('ImportOrderSelector');
   const [query, setQuery] = useDebouncedState('');
 
-  // TODO: Fetch work order info in backend
   const ordersQuery = useOrdersQuery({ query });
 
   const rows = getOrderRows(ordersQuery.data?.pages ?? [], navigate);
@@ -58,10 +56,7 @@ export function ImportOrderSelector() {
 
 function getOrderRows(orders: Order[], navigate: NavigateFn) {
   return orders.map<ListRow>(
-    ({ id, name, customer, displayFinancialStatus, displayFulfillmentStatus, customAttributes }) => {
-      const workOrderName =
-        customAttributes.find(({ key }) => key === PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME)?.value ?? undefined;
-
+    ({ id, name, customer, displayFinancialStatus, displayFulfillmentStatus, workOrderName }) => {
       const label = workOrderName ? `${name} (${workOrderName})` : name;
 
       return {

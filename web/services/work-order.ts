@@ -113,7 +113,7 @@ export async function getWorkOrder(session: Session, name: string) {
           .getOrder(graphql, { id: workOrder.derivedFromOrderId as ID })
           .then(({ order }) => order ?? never())
           .then(order => ({
-            id: order.id,
+            ...order,
             workOrderName:
               order.customAttributes.find(({ key }) => key == PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME)?.value ??
               undefined,

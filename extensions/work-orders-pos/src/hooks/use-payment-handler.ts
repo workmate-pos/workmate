@@ -1,6 +1,7 @@
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { titleCase } from '../util/casing';
+import { parseGid } from '../util/gid';
 
 // NOTE: Do NOT change these keys - they are used to detect deposits in the backend. They are also shown to the user
 export const PAYMENT_ADDITIONAL_DETAIL_KEYS = {
@@ -13,14 +14,14 @@ export const usePaymentHandler = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handlePayment = async (
-    options: { workOrderName: string; amount: number } & (
+    options: { workOrderName: string; amount: number; customerId: string } & (
       | { type: 'balance'; previouslyDeposited?: number }
       | { type: 'deposit' }
     ),
   ) => {
     setIsLoading(true);
 
-    api.toast.show(`Preparing ${options.type} payment`);
+    api.toast.show(`Preparing ${options.type} payment`, { duration: 1000 });
 
     await api.cart.clearCart();
 
@@ -36,6 +37,8 @@ export const usePaymentHandler = () => {
     if (options.type === 'balance' && options.previouslyDeposited) {
       await api.cart.applyCartDiscount('FixedAmount', 'Deposit', options.previouslyDeposited.toFixed(2));
     }
+
+    await api.cart.setCustomer({ id: Number(parseGid(options.customerId).id) });
 
     await api.cart.addCartProperties({
       [PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME]: options.workOrderName,

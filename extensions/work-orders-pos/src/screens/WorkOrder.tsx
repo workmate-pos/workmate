@@ -68,6 +68,7 @@ export function WorkOrderPage() {
   const depositSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {
     if (result.select === 'deposit') {
       paymentHandler.handlePayment({
+        customerId: workOrder!.customer!.id,
         workOrderName: workOrder!.name!,
         type: 'deposit',
         amount: result.currencyAmount,
@@ -170,6 +171,7 @@ export function WorkOrderPage() {
               }
 
               return paymentHandler.handlePayment({
+                customerId: workOrder!.customer!.id,
                 workOrderName: workOrder.name!,
                 type: 'balance',
                 amount: savedPriceDetails.total,

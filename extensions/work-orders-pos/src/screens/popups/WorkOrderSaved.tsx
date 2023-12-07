@@ -15,6 +15,7 @@ export function WorkOrderSaved() {
   const depositPopup = usePopup('DiscountOrDepositSelector', result => {
     if (result.select === 'deposit') {
       paymentHandler.handlePayment({
+        customerId: workOrder!.customer!.id,
         workOrderName: workOrder!.name!,
         type: 'deposit',
         amount: result.currencyAmount,
@@ -55,6 +56,7 @@ export function WorkOrderSaved() {
                     title={`Pay due balance (${currencyFormatter(priceDetails.balanceDue)})`}
                     onPress={() =>
                       paymentHandler.handlePayment({
+                        customerId: workOrder!.customer!.id,
                         workOrderName: workOrder.name!,
                         type: 'balance',
                         amount: priceDetails.balanceDue,
