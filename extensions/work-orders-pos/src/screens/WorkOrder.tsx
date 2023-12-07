@@ -346,7 +346,7 @@ const WorkOrderProperties = ({
             <TextField label="Previous Work Order" disabled value={workOrder.derivedFromOrder.workOrderName} />
           )}
           {!workOrder.derivedFromOrder.workOrderName && (
-            <TextField label="Previous Work" disabled value={workOrder.derivedFromOrder.name} />
+            <TextField label="Previous Order" disabled value={workOrder.derivedFromOrder.name} />
           )}
         </>
       )}
