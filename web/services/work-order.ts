@@ -110,7 +110,7 @@ export async function getWorkOrder(session: Session, name: string) {
     ),
     derivedFromOrder: workOrder.derivedFromOrderId
       ? gql.order
-          .getOrder(graphql, { id: workOrder.derivedFromOrderId as ID })
+          .getOrderAttributes(graphql, { id: workOrder.derivedFromOrderId as ID })
           .then(({ order }) => order ?? never())
           .then(order => ({
             ...order,
