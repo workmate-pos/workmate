@@ -12,16 +12,19 @@ query getOrders($first: Int = 10, $after: String, $query: String) {
 
 query getOrderAttributes($id: ID!) {
     order(id: $id) {
-        customAttributes {
-            key
-            value
-        }
+      id
+      name
+      customAttributes {
+        key
+        value
+      }
     }
 }
 
 # TODO: Use customerFragment (currently broken with genql)
 fragment orderFragment on Order {
     id
+    name
     displayFinancialStatus
     displayFulfillmentStatus
     customAttributes {

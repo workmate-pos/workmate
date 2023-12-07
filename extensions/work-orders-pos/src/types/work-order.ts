@@ -11,9 +11,9 @@ export type WorkOrder = {
   employeeAssignments: WorkOrderEmployeeAssignment[];
   description: string;
   payments: WorkOrderPayment[];
-  // TODO: Load the work order name or something as well
   derivedFromOrder?: {
     id: string;
+    name: string;
     workOrderName?: string;
   };
 };
