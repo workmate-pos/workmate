@@ -5,7 +5,7 @@ import {
   Get,
   Post,
   QuerySchema,
-} from '@teifi-digital/shopify-app-express/decorators/default';
+} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import { Request, Response } from 'express-serve-static-core';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';

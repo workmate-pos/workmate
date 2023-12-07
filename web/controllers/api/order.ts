@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express-serve-static-core';
 import type { Session } from '@shopify/shopify-api';
-import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default';
+import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';

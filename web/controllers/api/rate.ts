@@ -4,7 +4,7 @@ import {
   Get,
   Post,
   QuerySchema,
-} from '@teifi-digital/shopify-app-express/decorators/default';
+} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import type { Request, Response } from 'express-serve-static-core';
 import type { Session } from '@shopify/shopify-api';
 import type { FetchRatesOptions } from '../../schemas/generated/fetch-rates-options.js';
