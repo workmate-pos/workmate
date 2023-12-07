@@ -1,6 +1,6 @@
 {
-  "name": "teifi-shopify-app-template-backend",
-  "displayName": "Teifi Shopify App Template",
+  "name": "work-orders-backend",
+  "displayName": "Work Orders",
   "version": "1.0.0",
   "license": "UNLICENSED",
   "exports": "./dist/index.js",

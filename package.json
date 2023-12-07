@@ -1,5 +1,5 @@
 {
-  "name": "teifi-shopify-pos-work-orders",
+  "name": "work-orders",
   "version": "1.0.0",
   "exports": "./dist/index.js",
   "license": "UNLICENSED",
