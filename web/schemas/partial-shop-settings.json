@@ -3,7 +3,8 @@
   "type": "object",
   "properties": {
     "idFormat": {
-      "type": "string"
+      "type": "string",
+      "minLength": 1
     },
     "statuses": {
       "type": "array",
@@ -52,6 +53,60 @@
         { "$ref": "#/definitions/deposit-rule-only-allow-shortcuts" },
         { "$ref": "#/definitions/deposit-rule-do-not-allow-shortcuts" }
       ]
+    },
+    "workOrderRequests": {
+      "title": "work-order-requests",
+      "description": "Settings related to work order requests, where customers can create a work order themselves.",
+      "type": "object",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "const": false
+            },
+            "allowedStatuses": {
+              "type": "null"
+            }
+          },
+          "required": ["enabled", "allowedStatuses"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "const": true
+            },
+            "allowedStatuses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          },
+          "required": ["enabled", "allowedStatuses"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "serviceCollectionId": {
+      "description": "A collection name that is used to identify service products within Shopify",
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "defaultRate": {
+      "description": "The default rate used for employees when no rate is specified",
+      "type": "integer",
+      "minimum": 0
     }
   },
   "additionalProperties": false,

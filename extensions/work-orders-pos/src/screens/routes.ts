@@ -1,22 +1,31 @@
-import type { WorkOrderCustomer, WorkOrderEmployee, WorkOrderItem, WorkOrderStatus } from './WorkOrder';
-import type { WorkOrderSelectorParams } from './popups/WorkOrderSelector';
+import type {
+  WorkOrder,
+  WorkOrderCustomer,
+  WorkOrderEmployeeAssignment,
+  WorkOrderProduct,
+  WorkOrderService,
+  WorkOrderServiceEmployeeAssignment,
+} from '../types/work-order';
 
 /**
  * Screen input/output types.
  * Used by useScreen to make navigation type-safe.
  */
 export type ScreenInputOutput = {
-  Entry: [{ forceReload?: boolean } | undefined, undefined];
+  Entry: [undefined, undefined];
   WorkOrder: [{ type: 'load-work-order'; name: string } | { type: 'new-work-order' }, undefined];
-  WorkOrderSelector: [WorkOrderSelectorParams, undefined];
-  ItemSelector: [undefined, WorkOrderItem];
-  ItemConfig: [WorkOrderItem, { type: 'update' | 'remove'; item: WorkOrderItem }];
-  StatusSelector: [undefined, WorkOrderStatus];
+  ProductSelector: [undefined, WorkOrderProduct];
+  ProductConfig: [WorkOrderProduct, { type: 'update' | 'remove'; product: WorkOrderProduct }];
+  ServiceSelector: [undefined, WorkOrderService];
+  ServiceConfig: [WorkOrderService, { type: 'update' | 'remove'; service: WorkOrderService }];
+  StatusSelector: [undefined, string];
+  ServiceEmployeeAssignmentConfig: [
+    WorkOrderServiceEmployeeAssignment,
+    { type: 'update' | 'remove'; assignment: WorkOrderServiceEmployeeAssignment },
+  ];
   CustomerSelector: [undefined, WorkOrderCustomer];
   ShippingConfig: [undefined, number];
-  EmployeeSelector: [undefined, WorkOrderEmployee[]];
-
-  // TODO: Allow custom amounts instead of shortcuts (if settings allow it)
+  EmployeeSelector: [{ selectedEmployeeIds: string[] }, (WorkOrderEmployeeAssignment & { employeeRate: number })[]];
   DiscountOrDepositSelector: [
     { select: 'discount' | 'deposit'; subTotal: number },
     (
@@ -24,4 +33,6 @@ export type ScreenInputOutput = {
       | { select: 'discount' | 'deposit'; type: 'percentage'; percentage: number; currencyAmount: number }
     ),
   ];
+  WorkOrderOverview: [{ name: string }, { saved: true; name: string } | { saved: false }];
+  WorkOrderSaved: [WorkOrder, undefined];
 };

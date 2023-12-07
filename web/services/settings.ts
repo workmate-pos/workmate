@@ -1,34 +1,53 @@
-import { prisma } from './prisma.js';
 import { getDefaultShopSetting, getShopSettingKeys } from './settings/default-settings.js';
 import { ShopSettings } from '../schemas/generated/shop-settings.js';
+import { PartialShopSettings } from '../schemas/generated/partial-shop-settings.js';
+import { db } from './db/db.js';
+import { unit } from './db/unit-of-work.js';
+
+function serialize(value: ShopSettings[keyof ShopSettings]) {
+  return JSON.stringify(value);
+}
+
+function deserialize(value: string): ShopSettings[keyof ShopSettings] {
+  return JSON.parse(value);
+}
 
 export async function getSettingsByShop(shop: string) {
-  const rows = await prisma.settings.findMany({
-    where: { shop },
-  });
-
-  const shopSettings: Partial<ShopSettings> = {};
-
-  for (const { key, value } of rows) {
-    shopSettings[key as keyof ShopSettings] = JSON.parse(value);
-  }
-
-  const missingSettingKeys = getShopSettingKeys().filter(key => !(key in shopSettings));
-  const newRows = await prisma.$transaction(
-    missingSettingKeys.map(key => upsertSetting(shop, key, getDefaultShopSetting(key))),
-  );
-
-  for (const { key, value } of newRows) {
-    shopSettings[key as keyof ShopSettings] = JSON.parse(value);
-  }
-
-  return shopSettings as ShopSettings;
+  await insertDefaultSettingsIfNotExists(shop);
+  const rows = await db.settings.get({ shop });
+  return Object.fromEntries(rows.map(({ key, value }) => [key, deserialize(value)])) as unknown as ShopSettings;
 }
 
 export function upsertSetting<const K extends keyof ShopSettings>(shop: string, key: K, value: ShopSettings[K]) {
-  return prisma.settings.upsert({
-    where: { shop_key: { shop, key } },
-    update: { value: JSON.stringify(value) },
-    create: { shop, key, value: JSON.stringify(value) },
+  return db.settings.upsertSetting({ shop, key, value: serialize(value) });
+}
+
+export async function updateSettings(shop: string, partialShopSettings: PartialShopSettings) {
+  return await unit(async () => {
+    const entries = Object.entries(partialShopSettings) as [
+      keyof PartialShopSettings,
+      PartialShopSettings[keyof PartialShopSettings],
+    ][];
+
+    return await Promise.all(entries.map(([key, value]) => upsertSetting(shop, key, value!)));
+  });
+}
+
+export async function insertDefaultSettingsIfNotExists(shop: string) {
+  await unit(async () => {
+    const entries = getShopSettingKeys().map(key => [key, getDefaultShopSetting(key)]) as [
+      keyof ShopSettings,
+      ShopSettings[keyof ShopSettings],
+    ][];
+
+    return await Promise.all(
+      entries.map(([key, value]) =>
+        db.settings.insertSettingIfNotExists({
+          shop,
+          key,
+          value: serialize(value),
+        }),
+      ),
+    );
   });
 }

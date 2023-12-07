@@ -6,4 +6,8 @@ import { ShopifySessionStorage } from './services/shopify-sessions.js';
 
 const sessionStorage = new ShopifySessionStorage();
 
-createServer(resolve('.'), { sessionStorage }, webhookHandlers);
+createServer({
+  baseDir: resolve('.'),
+  appConfig: { sessionStorage },
+  webhookHandlers,
+});

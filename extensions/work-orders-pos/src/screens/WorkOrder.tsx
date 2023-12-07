@@ -11,105 +11,104 @@ import {
   Text,
   TextArea,
   TextField,
+  useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { Dispatch, useEffect, useReducer, useState } from 'react';
-import { NavigateFn, UsePopupFn, useScreen } from '../hooks/use-screen';
-import { useSettings } from '../hooks/use-settings';
-import type { CreateWorkOrder } from '../schemas/generated/create-work-order';
-import { useWorkOrderFetcher } from '../queries/use-work-order-fetcher';
-import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation';
+import { PopupNavigateFn, UsePopupFn, useScreen } from '../hooks/use-screen.js';
+import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation.js';
+import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
+import { useWorkOrderQuery } from '../queries/use-work-order-query.js';
+import { usePaymentHandler } from '../hooks/use-payment-handler.js';
+import { getPriceDetails } from '../util/work-order.js';
+import { WorkOrder, WorkOrderEmployeeAssignment, WorkOrderProduct, WorkOrderService } from '../types/work-order';
 
-export type WorkOrder = Omit<CreateWorkOrder, 'products' | 'employeeAssignments' | 'dueDate' | 'customer'> & {
-  products: ({ name: string; sku: string } & CreateWorkOrder['products'][number])[];
-  employeeAssignments: ({ name: string } & NonNullable<CreateWorkOrder['employeeAssignments']>[number])[];
-  dueDate: Date;
-  customer: { name: string } & CreateWorkOrder['customer'];
-};
-
-export type WorkOrderItem = WorkOrder['products'][number];
-export type WorkOrderEmployee = WorkOrder['employeeAssignments'][number];
-export type WorkOrderCustomer = WorkOrder['customer'];
-export type WorkOrderStatus = WorkOrder['status'];
-
-export function WorkOrder() {
-  const fetchWorkOrder = useWorkOrderFetcher();
-  const [loadingWorkOrder, setLoadingWorkOrder] = useState(true);
+export function WorkOrderPage() {
   const [title, setTitle] = useState('');
+  const [workOrderName, setWorkOrderName] = useState<string | null>(null);
+  const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
+  const [savedPriceDetails, setSavedPriceDetails] = useState(getPriceDetails(workOrder));
+  const api = useExtensionApi<'pos.home.modal.render'>();
 
-  const { Screen, usePopup, navigate, dismiss } = useScreen('WorkOrder', async action => {
-    setLoadingWorkOrder(true);
+  const workOrderQuery = useWorkOrderQuery(workOrderName, {
+    onSuccess(workOrder) {
+      if (!workOrder) return;
+      dispatchWorkOrder({ type: 'set-work-order', workOrder });
+      setSavedPriceDetails(getPriceDetails(workOrder));
+    },
+  });
+
+  const { Screen, usePopup } = useScreen('WorkOrder', async action => {
     removeVisualHints();
 
-    try {
-      if (action.type === 'new-work-order') {
-        setTitle('New Work Order');
-        dispatchWorkOrder({ type: 'reset-work-order' });
-      } else if (action.type === 'load-work-order') {
-        setTitle(`Edit Work Order ${action.name}`);
-        const workOrder = await fetchWorkOrder(action.name);
-        if (workOrder) {
-          dispatchWorkOrder({ type: 'set-work-order', workOrder });
-        }
+    if (action.type === 'new-work-order') {
+      setTitle('New Work Order');
+      dispatchWorkOrder({ type: 'reset-work-order' });
+    } else if (action.type === 'load-work-order') {
+      setTitle(`Edit Work Order ${action.name}`);
+      if (workOrderName === action.name) {
+        workOrderQuery.refetch();
+      } else {
+        setWorkOrderName(action.name);
       }
-    } finally {
-      setLoadingWorkOrder(false);
     }
   });
 
-  const settings = useSettings();
-  const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
   const [errorMessage, setErrorMessage] = useState<null | string>(null);
   const [validationErrors, setValidationErrors] = useState<null | WorkOrderValidationErrors>(null);
-  const [showWorkOrderSavedBanner, setShowWorkOrderSavedBanner] = useState(false);
 
-  const saveWorkOrderMutation = useSaveWorkOrderMutation();
+  const workOrderSavedPopup = usePopup('WorkOrderSaved');
+  const depositSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {
+    if (result.select === 'deposit') {
+      paymentHandler.handlePayment({
+        workOrderName: workOrder!.name!,
+        type: 'deposit',
+        amount: result.currencyAmount,
+      });
+    }
+  });
 
-  useEffect(() => {
-    const { error } = saveWorkOrderMutation;
-    if (!error) {
+  const saveWorkOrderMutation = useSaveWorkOrderMutation({
+    onMutate() {
       setErrorMessage(null);
       setValidationErrors(null);
-      return;
-    }
+    },
+    onSuccess(result) {
+      setWorkOrderName(result.workOrder.name);
+      workOrderSavedPopup.navigate({ ...workOrder, name: result.workOrder.name } as WorkOrder);
+    },
+    onError(error) {
+      if (typeof error === 'string') {
+        setErrorMessage(error);
+        setValidationErrors(null);
+      } else if (error instanceof Error) {
+        setErrorMessage(`Unexpected error (${error.message})`);
+        setValidationErrors(null);
+      } else {
+        setErrorMessage(null);
+        setValidationErrors(error);
+      }
+    },
+  });
 
-    if (typeof error === 'string') {
-      setErrorMessage(error);
-      setValidationErrors(null);
-    } else if (error instanceof Error) {
-      setErrorMessage(`Unexpected error (${error.message})`);
-      setValidationErrors(null);
-    } else {
-      setErrorMessage(null);
-      setValidationErrors(error);
-    }
-  }, [saveWorkOrderMutation.error]);
-
-  useEffect(() => {
-    const { data } = saveWorkOrderMutation;
-    if (!data) return;
-
-    if (data.success) {
-      setShowWorkOrderSavedBanner(true);
-    }
-  }, [saveWorkOrderMutation.data]);
-
-  useEffect(removeVisualHints, [workOrder]);
+  const paymentHandler = usePaymentHandler();
 
   function removeVisualHints() {
     setErrorMessage(null);
     setValidationErrors(null);
-    setShowWorkOrderSavedBanner(false);
   }
 
   return (
-    <Screen title={title} isLoading={!settings || loadingWorkOrder}>
+    <Screen
+      title={title}
+      isLoading={workOrderQuery.isFetching || saveWorkOrderMutation.isLoading || paymentHandler.isLoading}
+    >
       <ScrollView>
         {errorMessage && <Banner title={errorMessage} variant="error" visible />}
+
         <WorkOrderProperties
           workOrder={workOrder}
           dispatchWorkOrder={dispatchWorkOrder}
           usePopup={usePopup}
-          navigate={navigate}
           validationErrors={validationErrors}
         />
 
@@ -117,7 +116,6 @@ export function WorkOrder() {
           <WorkOrderItems usePopup={usePopup} workOrder={workOrder} dispatchWorkOrder={dispatchWorkOrder} />
 
           <Stack direction="vertical" flex={1} alignment="flex-start">
-            <WorkOrderActions />
             <TextArea
               rows={3}
               label="Description"
@@ -136,33 +134,63 @@ export function WorkOrder() {
             {(errorMessage || validationErrors) && (
               <Banner title="An error occurred. Make sure that all fields are valid" variant="error" visible />
             )}
-
-            {showWorkOrderSavedBanner && (
-              <Banner
-                title="Work order saved successfully"
-                variant="confirmation"
-                visible
-                action="Back to work orders"
-                onPress={() => navigate('Entry', { forceReload: true })}
-              />
-            )}
-
-            <Stack direction="horizontal" flexChildren>
-              <Button
-                title="Cancel"
-                type="destructive"
-                onPress={() => dismiss()}
-                isDisabled={saveWorkOrderMutation.isLoading}
-              />
-              <Button title="Print" isDisabled={saveWorkOrderMutation.isLoading} />
-              <Button
-                title="Save & Print"
-                type="primary"
-                onPress={() => saveWorkOrderMutation.mutate(workOrder)}
-                isDisabled={saveWorkOrderMutation.isLoading}
-              />
-            </Stack>
           </Stack>
+        </Stack>
+
+        <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
+          <>
+            <Button
+              title="Pay Balance"
+              onPress={() => {
+                if (!workOrder.name) {
+                  api.toast.show('You must save the work order before paying', { duration: 1000 });
+                  return;
+                }
+
+                if (savedPriceDetails.balanceDue <= 0) {
+                  api.toast.show('There is no due balance', { duration: 1000 });
+                  return;
+                }
+
+                return paymentHandler.handlePayment({
+                  workOrderName: workOrder.name!,
+                  type: 'balance',
+                  amount: savedPriceDetails.total,
+                  previouslyDeposited: savedPriceDetails.deposited,
+                });
+              }}
+            />
+            <Button
+              title="Pay Deposit"
+              onPress={() => {
+                if (!workOrder.name) {
+                  api.toast.show('You must save the work order before paying', { duration: 1000 });
+                  return;
+                }
+
+                if (savedPriceDetails.balanceDue <= 0) {
+                  api.toast.show('There is no due balance', { duration: 1000 });
+                  return;
+                }
+
+                if (savedPriceDetails.deposited > 0) {
+                  api.toast.show('A deposit has already been paid', { duration: 1000 });
+                  return;
+                }
+
+                depositSelectorPopup.navigate({
+                  select: 'deposit',
+                  subTotal: savedPriceDetails.subTotal,
+                });
+              }}
+            />
+          </>
+          <Button
+            title={workOrder.name ? 'Update Order' : 'Create Order'}
+            type="primary"
+            onPress={() => saveWorkOrderMutation.mutate(workOrder)}
+            isDisabled={saveWorkOrderMutation.isLoading}
+          />
         </Stack>
       </ScrollView>
     </Screen>
@@ -176,8 +204,12 @@ type WorkOrderAction =
       workOrder: Partial<WorkOrder>;
     }
   | {
-      type: 'add-item' | 'remove-item' | 'update-item';
-      item: WorkOrder['products'][number];
+      type: 'add-product' | 'remove-product' | 'update-product';
+      item: WorkOrderProduct;
+    }
+  | {
+      type: 'add-service' | 'remove-service' | 'update-service';
+      item: WorkOrderService;
     }
   | NonNullable<
       {
@@ -190,16 +222,16 @@ type WorkOrderAction =
     >
   | {
       type: 'set-assigned-employees';
-      employees: NonNullable<WorkOrder['employeeAssignments']>;
+      employees: NonNullable<WorkOrderEmployeeAssignment[]>;
     };
 
 const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction): Partial<WorkOrder> => {
-  if (action.type === 'add-item') {
-    const productId = action.item.productId;
-    const existingItem = workOrder.products?.find(item => item.productId === productId);
+  if (action.type === 'add-product') {
+    const productVariantId = action.item.productVariantId;
+    const existingItem = workOrder.products?.find(item => item.productVariantId === productVariantId);
     if (existingItem) {
       action = {
-        type: 'update-item',
+        type: 'update-product',
         item: { ...existingItem, quantity: existingItem.quantity + action.item.quantity },
       };
     }
@@ -212,25 +244,56 @@ const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction
     case 'set-work-order':
       return action.workOrder;
 
-    case 'add-item':
+    case 'add-product':
       return {
         ...workOrder,
         products: [...(workOrder.products ?? []), action.item],
       };
 
-    case 'remove-item': {
-      const productId = action.item.productId;
+    case 'remove-product': {
+      const productVariantId = action.item.productVariantId;
       return {
         ...workOrder,
-        products: (workOrder.products ?? []).filter(item => item.productId !== productId),
+        products: (workOrder.products ?? []).filter(item => item.productVariantId !== productVariantId),
       };
     }
 
-    case 'update-item': {
+    case 'update-product': {
       const updateItem = action.item;
       return {
         ...workOrder,
-        products: (workOrder.products ?? []).map(item => (item.productId === updateItem.productId ? updateItem : item)),
+        products: (workOrder.products ?? []).map(item =>
+          item.productVariantId === updateItem.productVariantId ? updateItem : item,
+        ),
+      };
+    }
+
+    case 'add-service':
+      return {
+        ...workOrder,
+        services: [...(workOrder.services ?? []), action.item],
+      };
+
+    case 'remove-service': {
+      const removeItem = action.item;
+      return {
+        ...workOrder,
+        services: (workOrder.services ?? []).filter(item => item.uuid !== removeItem.uuid),
+      };
+    }
+
+    case 'update-service': {
+      const updateItem = action.item;
+
+      return {
+        ...workOrder,
+        services: (workOrder.services ?? []).map(item => (item.uuid === updateItem.uuid ? updateItem : item)),
+        employeeAssignments: [
+          ...(workOrder.employeeAssignments ?? []).filter(
+            e => !updateItem.employeeAssignments.some(a => a.employeeId === e.employeeId),
+          ),
+          ...updateItem.employeeAssignments,
+        ],
       };
     }
 
@@ -252,13 +315,15 @@ const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction
 };
 
 const defaultWorkOrder: Partial<WorkOrder> = {
-  dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+  dueDate: new Date(
+    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + 1000 * 60 * 60 * 24 * 7,
+  ).toISOString(),
   customer: undefined,
   employeeAssignments: [],
   name: undefined,
   products: [],
+  services: [],
   price: {
-    deposit: 0,
     tax: 0,
     discount: 0,
     shipping: 0,
@@ -271,13 +336,11 @@ const WorkOrderProperties = ({
   workOrder,
   dispatchWorkOrder,
   usePopup,
-  navigate,
   validationErrors,
 }: {
   workOrder: Partial<WorkOrder>;
   dispatchWorkOrder: Dispatch<WorkOrderAction>;
   usePopup: UsePopupFn;
-  navigate: NavigateFn;
   validationErrors: WorkOrderValidationErrors | null;
 }) => {
   const statusSelectorPopup = usePopup('StatusSelector', result => {
@@ -288,22 +351,9 @@ const WorkOrderProperties = ({
     dispatchWorkOrder({ type: 'set-field', field: 'customer', value: result });
   });
 
-  // <TextField
-  //   label="Address"
-  //   required
-  //   placeholder="Address"
-  //   onChange={value => dispatchWorkOrder({ type: 'set-field', field: 'address', value })}
-  //   value={workOrder.address}
-  // />
-
   return (
     <Stack direction="horizontal" flexChildren>
-      <TextField
-        label="Work Order ID"
-        disabled
-        onFocus={() => navigate('WorkOrderSelector', {})}
-        value={workOrder.name ?? ''}
-      />
+      <TextField label="Work Order ID" disabled value={workOrder.name ?? ''} />
       <TextField
         label="Status"
         required
@@ -333,59 +383,134 @@ const WorkOrderItems = ({
   dispatchWorkOrder: Dispatch<WorkOrderAction>;
   usePopup: UsePopupFn;
 }) => {
-  const itemSelectorPopup = usePopup('ItemSelector', result => {
-    dispatchWorkOrder({ type: 'add-item', item: result });
+  const productSelectorPopup = usePopup('ProductSelector', result => {
+    dispatchWorkOrder({ type: 'add-product', item: result });
   });
 
-  const itemConfigPopup = usePopup('ItemConfig', result => {
+  const serviceSelectorPopup = usePopup('ServiceSelector', result => {
+    dispatchWorkOrder({ type: 'add-service', item: result });
+    serviceConfigPopup.navigate(result);
+  });
+
+  const productConfigPopup = usePopup('ProductConfig', result => {
     if (result.type === 'remove') {
-      dispatchWorkOrder({ type: 'remove-item', item: result.item });
+      dispatchWorkOrder({ type: 'remove-product', item: result.product });
     } else if (result.type === 'update') {
-      dispatchWorkOrder({ type: 'update-item', item: result.item });
+      dispatchWorkOrder({ type: 'update-product', item: result.product });
+    } else {
+      return result.type satisfies never;
+    }
+  });
+
+  const serviceConfigPopup = usePopup('ServiceConfig', result => {
+    if (result.type === 'remove') {
+      dispatchWorkOrder({ type: 'remove-service', item: result.service });
+    } else if (result.type === 'update') {
+      dispatchWorkOrder({ type: 'update-service', item: result.service });
+    } else {
+      return result.type satisfies never;
     }
   });
 
   const [query, setQuery] = useState('');
+  const currencyFormatter = useCurrencyFormatter();
 
-  const rows: ListRow[] =
-    workOrder.products
-      ?.filter(
-        item =>
-          !query ||
-          item.name.toLowerCase().includes(query.toLowerCase()) ||
-          item.sku.toLowerCase().includes(query.toLowerCase()),
-      )
-      .map<ListRow>(item => ({
-        id: item.productId,
-        onPress: () => {
-          itemConfigPopup.navigate(item);
-        },
-        leftSide: {
-          label: item.name,
-          subtitle: [item.sku, `QTY: ${item.quantity}`],
-        },
-        rightSide: {
-          label: `CA$ ${(item.unitPrice * item.quantity).toFixed(2)}`,
-          showChevron: true,
-        },
-      })) ?? [];
+  const rows = getItemRows(
+    workOrder,
+    query,
+    currencyFormatter,
+    productConfigPopup.navigate,
+    serviceConfigPopup.navigate,
+  );
 
   return (
-    <Stack direction="vertical" flex={1}>
-      <Button title="Add Product" type="primary" onPress={() => itemSelectorPopup.navigate()} />
-      <SearchBar placeholder="Search products" initialValue={query} onTextChange={setQuery} onSearch={() => {}} />
+    <Stack direction="vertical" flex={1} paddingVertical={'ExtraSmall'}>
+      <Stack direction={'horizontal'} flexChildren>
+        <Button title="Add Product" type="primary" onPress={() => productSelectorPopup.navigate()} />
+        <Button title="Add Service" type="primary" onPress={() => serviceSelectorPopup.navigate()} />
+      </Stack>
+      <SearchBar placeholder="Search items" initialValue={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
         <List data={rows}></List>
       ) : (
         <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
           <Text variant="body" color="TextSubdued">
-            No products added to work order
+            No products or services added to work order
           </Text>
         </Stack>
       )}
     </Stack>
   );
 };
+
+function getItemRows(
+  workOrder: Partial<WorkOrder>,
+  query: string,
+  currencyFormatter: CurrencyFormatter,
+  openProductConfig: PopupNavigateFn<'ProductConfig'>,
+  openServiceConfig: PopupNavigateFn<'ServiceConfig'>,
+): ListRow[] {
+  const rows: ListRow[] = [];
+
+  const queryFilter = (item: WorkOrderProduct | WorkOrderService) =>
+    !query ||
+    item.name.toLowerCase().includes(query.toLowerCase()) ||
+    item.sku.toLowerCase().includes(query.toLowerCase());
+
+  if (workOrder.services) {
+    rows.push(
+      ...workOrder.services.filter(queryFilter).map<ListRow>(item => {
+        const assignedEmployeePrice = item.employeeAssignments.reduce(
+          (total, employee) => total + employee.hours * employee.employeeRate,
+          0,
+        );
+
+        return {
+          id: item.productVariantId,
+          onPress: () => {
+            openServiceConfig(item);
+          },
+          leftSide: {
+            label: item.name,
+            subtitle: item.sku ? [item.sku] : undefined,
+            image: {
+              source: item.imageUrl ?? 'not found',
+            },
+          },
+          rightSide: {
+            label: currencyFormatter(item.basePrice + assignedEmployeePrice),
+            showChevron: true,
+          },
+        };
+      }),
+    );
+  }
+
+  if (workOrder.products) {
+    rows.push(
+      ...workOrder.products.filter(queryFilter).map<ListRow>(item => ({
+        id: item.productVariantId,
+        onPress: () => {
+          openProductConfig(item);
+        },
+        leftSide: {
+          label: item.name,
+          subtitle: item.sku ? [item.sku] : undefined,
+          image: {
+            source: item.imageUrl ?? 'not found',
+            badge: item.quantity > 1 ? item.quantity : undefined,
+          },
+        },
+        rightSide: {
+          label: currencyFormatter(item.unitPrice * item.quantity),
+          showChevron: true,
+        },
+      })),
+    );
+  }
+
+  return rows;
+}
 
 const WorkOrderMoney = ({
   workOrder,
@@ -396,11 +521,7 @@ const WorkOrderMoney = ({
   dispatchWorkOrder: Dispatch<WorkOrderAction>;
   usePopup: UsePopupFn;
 }) => {
-  const price = { tax: 0, deposit: 0, discount: 0, shipping: 0, ...workOrder.price };
-
-  // TODO: dedup
-  const [depositPercentage, setDepositPercentage] = useState<null | number>(null);
-  const depositLabel = 'Deposit' + (depositPercentage !== null ? ` (${depositPercentage}%)` : '');
+  const price = workOrder.price ?? { tax: 0, discount: 0, shipping: 0 };
 
   const [discountPercentage, setDiscountPercentage] = useState<null | number>(null);
   const discountLabel = 'Discount' + (discountPercentage !== null ? ` (${discountPercentage}%)` : '');
@@ -409,22 +530,20 @@ const WorkOrderMoney = ({
   const taxPercentage = 13;
   const taxLabel = `Tax (${taxPercentage}%)`;
 
-  const discountOrDepositSelectorPopup = usePopup('DiscountOrDepositSelector', result => {
-    const setPercentage = result.select === 'discount' ? setDiscountPercentage : setDepositPercentage;
-    if (result.type === 'percentage') {
-      setPercentage(result.percentage);
-    } else {
-      setPercentage(null);
-    }
+  const discountSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {
+    if (result.select === 'discount') {
+      if (result.type === 'percentage') {
+        setDiscountPercentage(result.percentage);
+      } else {
+        setDiscountPercentage(null);
+      }
 
-    dispatchWorkOrder({
-      type: 'set-field',
-      field: 'price',
-      value: {
-        ...price,
-        ...(result.select === 'discount' ? { discount: result.currencyAmount } : { deposit: result.currencyAmount }),
-      },
-    });
+      dispatchWorkOrder({
+        type: 'set-field',
+        field: 'price',
+        value: { ...price, discount: result.currencyAmount },
+      });
+    }
   });
 
   const shippingConfigPopup = usePopup('ShippingConfig', result => {
@@ -435,9 +554,7 @@ const WorkOrderMoney = ({
     });
   });
 
-  const subTotal = workOrder.products?.map(item => item.unitPrice * item.quantity).reduce((a, b) => a + b, 0) ?? 0;
-  const total = subTotal + price.shipping + price.tax - price.discount;
-  const due = total - price.deposit;
+  const { balanceDue, total, paid, subTotal, deposited } = getPriceDetails(workOrder);
 
   useEffect(() => {
     dispatchWorkOrder({
@@ -447,45 +564,44 @@ const WorkOrderMoney = ({
     });
   }, [subTotal]);
 
+  const currencyFormatter = useCurrencyFormatter();
+
   return (
-    <Stack direction="vertical">
-      <Stack direction="horizontal" flexChildren flex={1}>
-        <Stack direction="vertical" flex={1}>
-          <NumberField label="Subtotal" disabled value={'CA$ ' + subTotal.toFixed(2)} />
-          <NumberField
-            label={depositLabel}
-            value={'CA$ ' + price.deposit.toFixed(2)}
-            onFocus={() => discountOrDepositSelectorPopup.navigate({ select: 'deposit', subTotal })}
-          />
+    <Stack direction="vertical" flex={1}>
+      <Stack direction="vertical" flex={1}>
+        <Stack direction={'horizontal'} flexChildren flex={1}>
+          <NumberField label="Subtotal" disabled value={currencyFormatter(subTotal)} />
           <NumberField
             label={discountLabel}
-            value={'CA$ ' + price.discount.toFixed(2)}
-            onFocus={() => discountOrDepositSelectorPopup.navigate({ select: 'discount', subTotal })}
+            value={currencyFormatter(price.discount)}
+            onFocus={() => discountSelectorPopup.navigate({ select: 'discount', subTotal })}
           />
+        </Stack>
+        <Stack direction={'horizontal'} flexChildren flex={1}>
+          <NumberField label={taxLabel} disabled value={currencyFormatter(price.tax)} />
           <NumberField
             label="Shipping"
-            value={'CA$ ' + price.shipping}
+            value={currencyFormatter(price.shipping)}
             onFocus={() => shippingConfigPopup.navigate()}
           />
-          <NumberField label={taxLabel} disabled value={'CA$ ' + price.tax.toFixed(2)} />
         </Stack>
       </Stack>
 
-      <Stack direction="horizontal" flexChildren>
-        <NumberField label="Total" disabled value={'CA$ ' + total.toFixed(2)} />
-        <NumberField label="Balance Due" disabled value={'CA$ ' + due.toFixed(2)} />
+      <Stack direction="vertical" flexChildren flex={1}>
+        <NumberField label="Total" disabled value={currencyFormatter(total)} />
+
+        <Stack direction={'vertical'}>
+          <Stack direction={'horizontal'} flexChildren flex={1}>
+            <NumberField label={'Deposited'} disabled={true} value={currencyFormatter(deposited)} />
+            <NumberField label={'Paid'} disabled={true} value={currencyFormatter(paid - deposited)} />
+          </Stack>
+        </Stack>
+
+        <NumberField label="Balance Due" disabled value={currencyFormatter(balanceDue)} />
       </Stack>
     </Stack>
   );
 };
-
-const WorkOrderActions = () => (
-  <Stack direction="horizontal" flexChildren>
-    <Button title="Deposit" />
-    <Button title="Overview" />
-    <Button title="Settings" />
-  </Stack>
-);
 
 const WorkOrderAssignment = ({
   workOrder,
@@ -502,20 +618,26 @@ const WorkOrderAssignment = ({
     dispatchWorkOrder({ type: 'set-assigned-employees', employees: result });
   });
 
-  const employeeNames = workOrder.employeeAssignments?.map(employee => employee.name).join(', ') || 'None';
+  const selectedEmployeeNames = workOrder.employeeAssignments?.map(employee => employee.name).join('\n');
+  const selectedEmployeeIds = workOrder.employeeAssignments?.map(employee => employee.employeeId) ?? [];
 
-  const setDueDate = (dateStr: string) => {
-    const localDate = new Date(dateStr);
-    const date = new Date(localDate.getTime() - localDate.getTimezoneOffset()*1000*60);
-    dispatchWorkOrder({ type: 'set-field', field: 'dueDate', value: date });
+  const setDueDate = (date: string) => {
+    const dueDate = new Date(date);
+    const dueDateUtc = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60 * 1000);
+    dispatchWorkOrder({ type: 'set-field', field: 'dueDate', value: dueDateUtc.toISOString() });
   };
 
   return (
-    <Stack direction="horizontal" flexChildren>
-      <TextField label="Assigned Employees" onFocus={() => employeeSelectorPopup.navigate()} value={employeeNames} />
+    <Stack direction="vertical" flex={1} flexChildren>
+      <TextArea
+        rows={Math.max(1, selectedEmployeeIds.length) - 1}
+        label="Assigned Employees"
+        onFocus={() => employeeSelectorPopup.navigate({ selectedEmployeeIds })}
+        value={selectedEmployeeNames}
+      />
       <DateField
         label="Due date"
-        value={workOrder.dueDate?.toISOString()}
+        value={workOrder?.dueDate}
         onChange={setDueDate}
         error={validationErrors?.dueDate ?? ''}
       />
