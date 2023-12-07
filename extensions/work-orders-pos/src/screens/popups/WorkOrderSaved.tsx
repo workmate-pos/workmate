@@ -41,17 +41,6 @@ export function WorkOrderSaved() {
 
               {priceDetails && priceDetails.balanceDue > 0 && (
                 <>
-                  {priceDetails.deposited === 0 && (
-                    <Button
-                      title={'Make Deposit'}
-                      onPress={() =>
-                        depositPopup.navigate({
-                          select: 'deposit',
-                          subTotal: priceDetails.subTotal,
-                        })
-                      }
-                    />
-                  )}
                   <Button
                     title={`Pay due balance (${currencyFormatter(priceDetails.balanceDue)})`}
                     onPress={() =>

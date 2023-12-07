@@ -65,16 +65,6 @@ export function WorkOrderPage() {
   const [validationErrors, setValidationErrors] = useState<null | WorkOrderValidationErrors>(null);
 
   const workOrderSavedPopup = usePopup('WorkOrderSaved');
-  const depositSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {
-    if (result.select === 'deposit') {
-      paymentHandler.handlePayment({
-        customerId: workOrder!.customer!.id,
-        workOrderName: workOrder!.name!,
-        type: 'deposit',
-        amount: result.currencyAmount,
-      });
-    }
-  });
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation({
     onMutate() {
@@ -176,30 +166,6 @@ export function WorkOrderPage() {
                 type: 'balance',
                 amount: savedPriceDetails.total,
                 previouslyDeposited: savedPriceDetails.deposited,
-              });
-            }}
-          />
-          <Button
-            title="Pay Deposit"
-            onPress={() => {
-              if (!workOrder.name) {
-                api.toast.show('You must save the work order before paying', { duration: 1000 });
-                return;
-              }
-
-              if (savedPriceDetails.balanceDue <= 0) {
-                api.toast.show('There is no due balance', { duration: 1000 });
-                return;
-              }
-
-              if (savedPriceDetails.deposited > 0) {
-                api.toast.show('A deposit has already been paid', { duration: 1000 });
-                return;
-              }
-
-              depositSelectorPopup.navigate({
-                select: 'deposit',
-                subTotal: savedPriceDetails.subTotal,
               });
             }}
           />
@@ -612,12 +578,10 @@ const WorkOrderMoney = ({
 
         <Stack direction={'vertical'}>
           <Stack direction={'horizontal'} flexChildren flex={1}>
-            <NumberField label={'Deposited'} disabled={true} value={currencyFormatter(deposited)} />
             <NumberField label={'Paid'} disabled={true} value={currencyFormatter(paid - deposited)} />
+            <NumberField label="Balance Due" disabled value={currencyFormatter(balanceDue)} />
           </Stack>
         </Stack>
-
-        <NumberField label="Balance Due" disabled value={currencyFormatter(balanceDue)} />
       </Stack>
     </Stack>
   );

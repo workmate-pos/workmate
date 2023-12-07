@@ -1,1 +1,1 @@
-export const HOST = process.env.HOST || 'https://receptors-transcripts-ng-seeing.trycloudflare.com';
+export const HOST = process.env.HOST || 'https://trails-paid-then-aim.trycloudflare.com';
