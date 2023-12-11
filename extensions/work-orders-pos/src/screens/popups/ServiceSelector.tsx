@@ -1,26 +1,31 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
-import { useDebouncedState } from '../../hooks/use-debounced-state.js';
-import { ProductVariant, useProductVariantsQuery } from '../../queries/use-product-variants-query';
+import { ProductVariant } from '../../queries/use-product-variants-query';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { useSettingsQuery } from '../../queries/use-settings-query';
 import { uuid } from '../../util/uuid';
+import { useServiceProductVariants } from '../../queries/use-service-product-variants-query';
+import { useState } from 'react';
 
 // TODO: DRY with ProductSelector
 
 export function ServiceSelector() {
   const { Screen, closePopup } = useScreen('ServiceSelector');
 
-  const [query, setQuery] = useDebouncedState('');
-  const productVariantsQuery = useProductVariantsQuery({ query });
-  const productVariants = productVariantsQuery.data?.pages ?? [];
+  const [query, setQuery] = useState('');
+  const productVariantsQuery = useServiceProductVariants();
   const currencyFormatter = useCurrencyFormatter();
   const settingsQuery = useSettingsQuery();
 
-  const filteredProductVariants = productVariants.filter(variant =>
-    variant.product.collections.nodes.some(c => c.id === settingsQuery.data?.settings.serviceCollectionId),
-  );
+  const filteredProductVariants =
+    productVariantsQuery.data?.pages?.filter(
+      variant =>
+        (!query ||
+          variant.title.toLowerCase().includes(query.toLowerCase()) ||
+          variant.product.title.toLowerCase().includes(query.toLowerCase())) &&
+        variant.product.collections.nodes.some(c => c.id === settingsQuery.data?.settings.serviceCollectionId),
+    ) ?? [];
 
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
   const rows = getProductVariantRows(filteredProductVariants, closeRef, currencyFormatter);
@@ -30,7 +35,7 @@ export function ServiceSelector() {
       title={'Select service'}
       isLoading={settingsQuery.isLoading}
       presentation={{ sheet: true }}
-      onNavigate={() => setQuery('', true)}
+      onNavigate={() => setQuery('')}
     >
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
@@ -38,16 +43,8 @@ export function ServiceSelector() {
             {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar
-          onTextChange={query => setQuery(query, !query)}
-          onSearch={() => {}}
-          placeholder={'Search services'}
-        />
-        <List
-          data={rows}
-          onEndReached={() => productVariantsQuery.fetchNextPage()}
-          isLoadingMore={productVariantsQuery.isLoading}
-        />
+        <SearchBar onTextChange={query => setQuery(query)} onSearch={() => {}} placeholder={'Search services'} />
+        <List data={rows} />
         {productVariantsQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
