@@ -12,7 +12,7 @@ export function ProductSelector() {
 
   const fetch = useAuthenticatedFetch();
   const [query, setQuery] = useDebouncedState('');
-  const productVariantsQuery = useProductVariantsQuery({ fetch, query });
+  const productVariantsQuery = useProductVariantsQuery({ fetch, params: { query } });
   const productVariants = productVariantsQuery.data?.pages ?? [];
   const currencyFormatter = useCurrencyFormatter();
   const settingsQuery = useSettingsQuery({ fetch });

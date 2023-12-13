@@ -10,7 +10,7 @@ export function ImportOrderSelector() {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
-  const ordersQuery = useOrdersQuery({ fetch, query });
+  const ordersQuery = useOrdersQuery({ fetch, params: { query } });
 
   const rows = getOrderRows(ordersQuery.data?.pages ?? [], navigate);
 

@@ -1,6 +1,6 @@
 import { Frame, IndexTable, Page, SkeletonBodyText, Text } from '@shopify/polaris';
 import { Loading, TitleBar } from '@shopify/app-bridge-react';
-import { useEmployeesQuery } from '../queries/use-employees-query';
+import { useEmployeesQuery } from '@common/queries/use-employees-query';
 import { useEmployeeRateQueries } from '../queries/use-employee-rate-queries';
 import { useCurrencyFormatter } from '@common/hooks/use-currency-formatter';
 import { useSettingsQuery } from '@common/queries/use-settings-query';

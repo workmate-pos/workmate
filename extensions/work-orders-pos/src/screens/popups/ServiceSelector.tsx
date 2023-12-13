@@ -16,7 +16,18 @@ export function ServiceSelector() {
 
   const [query, setQuery] = useState('');
   const fetch = useAuthenticatedFetch();
-  const productVariantsQuery = useServiceProductVariants({ fetch });
+  const productVariantsQuery = useServiceProductVariants({
+    fetch,
+    params: {},
+    options: {
+      onSuccess() {
+        // collection product variants does not support `query`, so we need to fetch everything to make query work
+        if (productVariantsQuery.hasNextPage) {
+          productVariantsQuery.fetchNextPage();
+        }
+      },
+    },
+  });
   const settingsQuery = useSettingsQuery({ fetch });
   const currencyFormatter = useCurrencyFormatter();
 

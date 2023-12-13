@@ -15,7 +15,7 @@ export function EmployeeSelector() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
   const fetch = useAuthenticatedFetch();
   const settingsQuery = useSettingsQuery({ fetch });
-  const employeesQuery = useEmployeesQuery({ fetch, query });
+  const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
   const employees = employeesQuery.data?.pages ?? [];
 
   const rows = getEmployeeRows(employees, selectedEmployeeIds, setSelectedEmployeeIds);

@@ -9,7 +9,7 @@ export function CustomerSelector() {
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
-  const customersQuery = useCustomersQuery({ fetch, query });
+  const customersQuery = useCustomersQuery({ fetch, params: { query } });
   const customers = customersQuery.data?.pages ?? [];
 
   const rows = getCustomerRows(customers, closePopup);
