@@ -102,7 +102,6 @@ export default function Settings() {
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
   const discountRules = useDiscountRules(settings, setSettings, currencyFormatter);
-  const depositRules = useDepositRules(settings, setSettings, currencyFormatter);
 
   if (!settings) {
     return (
@@ -115,7 +114,6 @@ export default function Settings() {
   }
 
   const activeDiscountRules = getActiveDiscountRules(settings);
-  const activeDepositRules = getActiveDepositRules(settings);
 
   return (
     <Frame>
@@ -178,51 +176,6 @@ export default function Settings() {
                   ))}
                 </InlineStack>
                 <RuleSet title="Discount Rules" rules={discountRules} activeRules={activeDiscountRules} />
-              </BlockStack>
-            </Card>
-            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
-              <BlockStack gap="400">
-                <Text as="h3" variant="headingMd">
-                  Deposits
-                </Text>
-              </BlockStack>
-            </Box>
-            <Card roundedAbove="sm">
-              <BlockStack gap="400">
-                <CurrencyOrPercentageInput
-                  value={depositShortcutValue}
-                  setValue={setDepositShortcutValue}
-                  onSelect={unit => {
-                    setSettings({
-                      ...settings,
-                      depositShortcuts: [
-                        ...settings.depositShortcuts,
-                        {
-                          value: Number(depositShortcutValue),
-                          unit,
-                        },
-                      ],
-                    });
-                    setDepositShortcutValue('');
-                  }}
-                />
-                <InlineStack gap="200">
-                  {settings.depositShortcuts.map((shortcut, i) => (
-                    <Tag
-                      key={i}
-                      onRemove={() =>
-                        setSettings({
-                          ...settings,
-                          depositShortcuts: settings.depositShortcuts.filter((_, j) => i !== j),
-                        })
-                      }
-                    >
-                      {shortcut.unit === 'currency' && currencyFormatter(shortcut.value)}
-                      {shortcut.unit === 'percentage' && `${shortcut.value}%`}
-                    </Tag>
-                  ))}
-                </InlineStack>
-                <RuleSet title="Deposit Rules" rules={depositRules} activeRules={activeDepositRules} />
               </BlockStack>
             </Card>
             <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
@@ -592,197 +545,6 @@ function useDiscountRules(
       },
     },
   ];
-}
-
-function useDepositRules(
-  settings: ShopSettings | null,
-  setSettings: (settings: ShopSettings) => void,
-  currencyFormatter: CurrencyFormatter,
-): Rule[] {
-  const initialCurrencyRangeBounds = [0, 100] as [number, number];
-  const currencyRangeBounds = useCurrencyRangeBounds(initialCurrencyRangeBounds);
-
-  if (!settings) {
-    return [];
-  }
-
-  return [
-    {
-      value: ONLY_SHORTCUTS,
-      title: 'Only allow deposit shortcuts',
-      conflictingRules: [CURRENCY_RANGE, PERCENTAGE_RANGE],
-      onSelect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowShortcuts: true,
-            allowedCurrencyRange: null,
-            allowedPercentageRange: null,
-          },
-        });
-      },
-      onDeselect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowShortcuts: false,
-            onlyAllowHighestAbsoluteShortcut: false,
-          },
-        });
-      },
-    },
-    {
-      value: ONLY_HIGHEST_SHORTCUT,
-      title: 'Only allow the highest absolute deposit shortcut',
-      requiredRules: [ONLY_SHORTCUTS],
-      onSelect() {
-        invariant(settings.depositRules.onlyAllowShortcuts, 'Only allow shortcuts must be selected');
-
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowHighestAbsoluteShortcut: true,
-          },
-        });
-      },
-      onDeselect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowHighestAbsoluteShortcut: false,
-          },
-        });
-      },
-    },
-    {
-      value: CURRENCY_RANGE,
-      title: 'Allow deposits within a range',
-      conflictingRules: [ONLY_SHORTCUTS],
-      onSelect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowShortcuts: false,
-            onlyAllowHighestAbsoluteShortcut: false,
-            allowedCurrencyRange: initialCurrencyRangeBounds,
-          },
-        });
-      },
-      onDeselect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            allowedCurrencyRange: null,
-          },
-        });
-      },
-      renderChildren() {
-        invariant(settings.depositRules.allowedCurrencyRange, 'No currency range set');
-
-        return (
-          <AnnotatedRangeSlider
-            label="Allowed deposit range"
-            labelHidden
-            min={currencyRangeBounds.min}
-            max={currencyRangeBounds.max}
-            step={1}
-            formatter={currencyFormatter}
-            value={settings.depositRules.allowedCurrencyRange}
-            onChange={(allowedCurrencyRange: [number, number]) => {
-              setSettings({
-                ...settings,
-                depositRules: {
-                  ...settings.depositRules,
-                  onlyAllowShortcuts: false,
-                  onlyAllowHighestAbsoluteShortcut: false,
-                  allowedCurrencyRange,
-                },
-              });
-
-              currencyRangeBounds.update(allowedCurrencyRange);
-            }}
-          />
-        );
-      },
-    },
-    {
-      value: PERCENTAGE_RANGE,
-      title: 'Allow deposits within a percentage range',
-      conflictingRules: [ONLY_SHORTCUTS],
-      onSelect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowShortcuts: false,
-            onlyAllowHighestAbsoluteShortcut: false,
-            allowedPercentageRange: [0, 100],
-          },
-        });
-      },
-      onDeselect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            allowedPercentageRange: null,
-          },
-        });
-      },
-      renderChildren() {
-        invariant(settings.depositRules.allowedPercentageRange, 'No percentage range set');
-
-        return (
-          <AnnotatedRangeSlider
-            label="Allowed deposit percentage range"
-            labelHidden
-            min={0}
-            max={100}
-            step={1}
-            formatter={num => `${num}%`}
-            value={settings.depositRules.allowedPercentageRange}
-            onChange={(allowedPercentageRange: [number, number]) =>
-              setSettings({
-                ...settings,
-                depositRules: {
-                  ...settings.depositRules,
-                  onlyAllowShortcuts: false,
-                  onlyAllowHighestAbsoluteShortcut: false,
-                  allowedPercentageRange,
-                },
-              })
-            }
-          />
-        );
-      },
-    },
-  ];
-}
-
-function getActiveDepositRules(settings: ShopSettings) {
-  const activeRules: string[] = [];
-
-  if (settings.depositRules.onlyAllowShortcuts) {
-    activeRules.push(ONLY_SHORTCUTS);
-    if (settings.depositRules.onlyAllowHighestAbsoluteShortcut) {
-      activeRules.push(ONLY_HIGHEST_SHORTCUT);
-    }
-  } else {
-    if (settings.depositRules.allowedCurrencyRange) {
-      activeRules.push(CURRENCY_RANGE);
-    }
-    if (settings.depositRules.allowedPercentageRange) {
-      activeRules.push(PERCENTAGE_RANGE);
-    }
-  }
-
-  return activeRules;
 }
 
 function getActiveDiscountRules(settings: ShopSettings) {
