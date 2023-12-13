@@ -15,7 +15,15 @@
     "strictNullChecks": true,
     "noImplicitAny": true,
     "strict": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@common/*": ["../../common/src/*"]
+    }
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
+  "references": [
+    {
+      "path": "../../common/tsconfig.json"
+    }
+  ]
 }

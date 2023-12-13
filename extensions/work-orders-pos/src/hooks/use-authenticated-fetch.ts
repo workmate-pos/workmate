@@ -1,12 +1,11 @@
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { HOST } from '../config';
 
 export const useAuthenticatedFetch = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
 
   return async (input: RequestInfo | URL, init: RequestInit = {}) => {
     if (typeof input === 'string') {
-      input = new URL(input, HOST);
+      input = new URL(input, process.env.APP_URL);
     }
 
     init.headers = new Headers(init.headers ?? {});

@@ -1,9 +1,8 @@
 import { useInfiniteQuery } from 'react-query';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import type { FetchProductsResponse } from '@web/controllers/api/product-variant';
+import type { FetchProductsResponse } from '@web/controllers/api/product-variant.js';
+import { Fetch } from './fetch.js';
 
-export const useProductVariantsQuery = ({ query = '' }: { query?: string }) => {
-  const fetch = useAuthenticatedFetch();
+export const useProductVariantsQuery = ({ fetch, query = '' }: { fetch: Fetch; query?: string }) => {
   return useInfiniteQuery({
     queryKey: ['products', query],
     queryFn: async ({ pageParam: after }): Promise<FetchProductsResponse> => {

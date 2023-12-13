@@ -52,3 +52,19 @@ fragment productVariantFragment2 on ProductVariant {
     }
   }
 }
+
+query {
+  orders(first:1) {
+    nodes {
+      lineItems(first: 5) {
+        nodes {
+          id
+          name
+          staffMember {
+
+          }
+        }
+      }
+    }
+  }
+}

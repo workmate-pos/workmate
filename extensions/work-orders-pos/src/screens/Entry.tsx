@@ -11,7 +11,7 @@ import {
 import { NavigateFn, useScreen } from '../hooks/use-screen.js';
 import { useWorkOrderInfoQuery, WorkOrderInfo } from '../queries/use-work-order-info-query.js';
 import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
-import { useDebouncedState } from '../hooks/use-debounced-state.js';
+import { useDebouncedState } from '@common/hooks/use-debounced-state.js';
 
 export function Entry() {
   const { Screen, navigate } = useScreen('Entry');

@@ -1,11 +1,11 @@
 import { useQuery, UseQueryOptions } from 'react-query';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import type { FetchStorePropertiesResponse } from '@web/controllers/api/store-properties';
+import type { FetchStorePropertiesResponse } from '@web/controllers/api/store-properties.js';
+import { Fetch } from './fetch.js';
 
 export const useStorePropertiesQuery = (
+  { fetch }: { fetch: Fetch },
   options?: UseQueryOptions<FetchStorePropertiesResponse, unknown, FetchStorePropertiesResponse, string[]>,
 ) => {
-  const fetch = useAuthenticatedFetch();
   return useQuery({
     ...options,
     queryKey: ['store-properties'],

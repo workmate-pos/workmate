@@ -8,20 +8,10 @@ import { WorkOrder } from '../../types/work-order';
 
 export function WorkOrderSaved() {
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
-  const { Screen, usePopup, closePopup } = useScreen('WorkOrderSaved', setWorkOrder);
+  const { Screen, closePopup } = useScreen('WorkOrderSaved', setWorkOrder);
 
   const currencyFormatter = useCurrencyFormatter();
   const paymentHandler = usePaymentHandler();
-  const depositPopup = usePopup('DiscountOrDepositSelector', result => {
-    if (result.select === 'deposit') {
-      paymentHandler.handlePayment({
-        customerId: workOrder!.customer!.id,
-        workOrderName: workOrder!.name!,
-        type: 'deposit',
-        amount: result.currencyAmount,
-      });
-    }
-  });
 
   const title = workOrder ? `Work order ${workOrder.name} saved` : 'Work order saved';
   const priceDetails = workOrder ? getPriceDetails(workOrder) : null;

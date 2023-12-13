@@ -1,8 +1,9 @@
-import { useStorePropertiesQuery } from '../queries/use-store-properties-query';
+import { useStorePropertiesQuery } from '../queries/use-store-properties-query.js';
 import { useMemo } from 'react';
+import { Fetch } from '../queries/fetch.js';
 
-export const useCurrencyFormatter = () => {
-  const { data } = useStorePropertiesQuery();
+export const useCurrencyFormatter = ({ fetch }: { fetch: Fetch }) => {
+  const { data } = useStorePropertiesQuery({ fetch });
   const formatParts = data?.storeProperties.currencyFormat.split(/{{.*}}/);
 
   return useMemo(

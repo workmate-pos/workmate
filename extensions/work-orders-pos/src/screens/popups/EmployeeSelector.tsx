@@ -1,9 +1,10 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { Employee, useEmployeesQuery } from '../../queries/use-employees-query.js';
-import { useDebouncedState } from '../../hooks/use-debounced-state.js';
-import { useSettingsQuery } from '../../queries/use-settings-query';
+import { Employee, useEmployeesQuery } from '@common/queries/use-employees-query';
+import { useDebouncedState } from '@common/hooks/use-debounced-state';
+import { useSettingsQuery } from '@common/queries/use-settings-query';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch';
 
 export function EmployeeSelector() {
   const { Screen, closePopup } = useScreen('EmployeeSelector', ({ selectedEmployeeIds }) => {
@@ -12,8 +13,9 @@ export function EmployeeSelector() {
 
   const [query, setQuery] = useDebouncedState('');
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
-  const settingsQuery = useSettingsQuery();
-  const employeesQuery = useEmployeesQuery({ query });
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
+  const employeesQuery = useEmployeesQuery({ fetch, query });
   const employees = employeesQuery.data?.pages ?? [];
 
   const rows = getEmployeeRows(employees, selectedEmployeeIds, setSelectedEmployeeIds);

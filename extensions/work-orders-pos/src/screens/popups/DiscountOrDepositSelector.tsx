@@ -1,9 +1,10 @@
 import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useSettingsQuery } from '../../queries/use-settings-query.js';
+import { useSettingsQuery } from '@common/queries/use-settings-query';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { Grid } from '../../components/Grid';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch';
 
 export function DiscountOrDepositSelector() {
   const [selectType, setSelectType] = useState<'discount' | 'deposit' | null>(null);
@@ -12,7 +13,8 @@ export function DiscountOrDepositSelector() {
     setSelectType(select);
     setSubTotal(subTotal);
   });
-  const settingsQuery = useSettingsQuery();
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
   const settings = settingsQuery.data?.settings;
 
   const shortcuts = {

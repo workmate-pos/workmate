@@ -340,15 +340,11 @@ const WorkOrderProperties = ({
   return (
     <Stack direction="horizontal" flexChildren>
       <TextField label="Work Order ID" disabled value={workOrder.name ?? ''} />
-      {workOrder.derivedFromOrder && (
-        <>
-          {workOrder.derivedFromOrder.workOrderName && (
-            <TextField label="Previous Work Order" disabled value={workOrder.derivedFromOrder.workOrderName} />
-          )}
-          {!workOrder.derivedFromOrder.workOrderName && (
-            <TextField label="Previous Order" disabled value={workOrder.derivedFromOrder.name} />
-          )}
-        </>
+      {workOrder.derivedFromOrder && workOrder.derivedFromOrder.workOrderName && (
+        <TextField label="Previous Work Order" disabled value={workOrder.derivedFromOrder.workOrderName} />
+      )}
+      {workOrder.derivedFromOrder && !workOrder.derivedFromOrder.workOrderName && (
+        <TextField label="Previous Order" disabled value={workOrder.derivedFromOrder.name} />
       )}
       <TextField
         label="Status"

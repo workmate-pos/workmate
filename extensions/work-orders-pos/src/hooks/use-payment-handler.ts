@@ -1,7 +1,7 @@
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { titleCase } from '../util/casing';
-import { parseGid } from '../util/gid';
+import { titleCase } from '@common/util/casing';
+import { parseGid } from '@common/util/gid';
 
 // NOTE: Do NOT change these keys - they are used to detect deposits in the backend. They are also shown to the user
 export const PAYMENT_ADDITIONAL_DETAIL_KEYS = {

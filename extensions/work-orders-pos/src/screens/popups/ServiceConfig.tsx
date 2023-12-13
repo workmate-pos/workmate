@@ -1,4 +1,4 @@
-import { Button, List, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';

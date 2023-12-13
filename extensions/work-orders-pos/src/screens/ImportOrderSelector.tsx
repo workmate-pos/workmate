@@ -1,14 +1,16 @@
 import { NavigateFn, useScreen } from '../hooks/use-screen';
-import { Order, useOrdersQuery } from '../queries/use-orders-query';
+import { Order, useOrdersQuery } from '@common/queries/use-orders-query';
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useDebouncedState } from '../hooks/use-debounced-state';
-import { titleCase } from '../util/casing';
+import { useDebouncedState } from '@common/hooks/use-debounced-state';
+import { titleCase } from '@common/util/casing';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 
 export function ImportOrderSelector() {
   const { Screen, navigate } = useScreen('ImportOrderSelector');
   const [query, setQuery] = useDebouncedState('');
 
-  const ordersQuery = useOrdersQuery({ query });
+  const fetch = useAuthenticatedFetch();
+  const ordersQuery = useOrdersQuery({ fetch, query });
 
   const rows = getOrderRows(ordersQuery.data?.pages ?? [], navigate);
 

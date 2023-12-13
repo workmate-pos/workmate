@@ -1,7 +1,7 @@
 import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
 import { useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
 import type { ShopSettings, Unit } from '../../schemas/generated/shop-settings';
-import { toCents } from '../util/money';
+import { toCents } from '@common/util/money';
 
 export const useSettingsMutation = (options: UseMutationOptions<void, unknown, ShopSettings, string[]>) => {
   const fetch = useAuthenticatedFetch();

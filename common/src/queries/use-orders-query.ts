@@ -1,10 +1,8 @@
 import { useInfiniteQuery } from 'react-query';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import type { FetchOrdersResponse } from '@web/controllers/api/order';
+import type { FetchOrdersResponse } from '@web/controllers/api/order.js';
+import { Fetch } from './fetch.js';
 
-export const useOrdersQuery = ({ query = '' }: { query?: string } = {}) => {
-  const fetch = useAuthenticatedFetch();
-
+export const useOrdersQuery = ({ fetch, query = '' }: { fetch: Fetch; query?: string }) => {
   return useInfiniteQuery({
     queryKey: ['orders', query],
     queryFn: async ({ pageParam: after }): Promise<FetchOrdersResponse> => {

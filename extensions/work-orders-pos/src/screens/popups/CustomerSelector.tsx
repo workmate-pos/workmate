@@ -1,13 +1,15 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
-import { Customer, useCustomersQuery } from '../../queries/use-customers-query.js';
-import { useDebouncedState } from '../../hooks/use-debounced-state.js';
+import { useDebouncedState } from '@common/hooks/use-debounced-state';
+import { useCustomersQuery, Customer } from '@common/queries/use-customers-query';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch';
 
 export function CustomerSelector() {
   const { Screen, closePopup } = useScreen('CustomerSelector');
 
   const [query, setQuery] = useDebouncedState('');
-  const customersQuery = useCustomersQuery({ query });
+  const fetch = useAuthenticatedFetch();
+  const customersQuery = useCustomersQuery({ fetch, query });
   const customers = customersQuery.data?.pages ?? [];
 
   const rows = getCustomerRows(customers, closePopup);

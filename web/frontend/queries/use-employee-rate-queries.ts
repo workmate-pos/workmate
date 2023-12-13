@@ -1,7 +1,7 @@
 import { useQueries, UseQueryOptions } from 'react-query';
 import { useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
 import { FetchRatesResponse } from '../../controllers/api/rate';
-import { toDollars } from '../util/money';
+import { toDollars } from '@common/util/money';
 import { useBatcher } from '../hooks/use-batcher';
 
 const useEmployeeRateBatcher = () => {

@@ -1,11 +1,9 @@
 import { useInfiniteQuery } from 'react-query';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
-import type { FetchEmployeesResponse } from '@web/controllers/api/employee';
-import { toDollars } from '../util/money-utils';
+import type { FetchEmployeesResponse } from '@web/controllers/api/employee.js';
+import { toDollars } from '../util/money.js';
+import { Fetch } from './fetch.js';
 
-export const useEmployeesQuery = ({ query = '' }: { query?: string } = {}) => {
-  const fetch = useAuthenticatedFetch();
-
+export const useEmployeesQuery = ({ fetch, query = '' }: { fetch: Fetch; query?: string }) => {
   return useInfiniteQuery({
     queryKey: ['employees', query],
     queryFn: async ({ pageParam: after }): Promise<FetchEmployeesResponse> => {

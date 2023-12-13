@@ -1,9 +1,6 @@
 import { useMemo } from 'react';
+import { uuid } from '../util/uuid';
 
 export const useId = () => {
-  return useMemo(generateId, []);
+  return useMemo(uuid, []);
 };
-
-function generateId() {
-  return Math.random().toString(36).slice(2, 9);
-}

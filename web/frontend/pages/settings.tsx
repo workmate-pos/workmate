@@ -24,12 +24,13 @@ import type { ShopSettings } from '../../schemas/generated/shop-settings';
 import { Rule, RuleSet } from '../components/RuleSet';
 import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider';
 import invariant from 'tiny-invariant';
-import { useSettingsQuery } from '../queries/use-settings-query';
+import { useSettingsQuery } from '@common/queries/use-settings-query';
 import { useSettingsMutation } from '../queries/use-settings-mutation';
-import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
+import { CurrencyFormatter, useCurrencyFormatter } from '@common/hooks/use-currency-formatter';
 import { CirclePlusMinor, SearchMinor } from '@shopify/polaris-icons';
 import { useCollectionsQuery } from '../queries/use-collections-query';
-import { useDebouncedState } from '../hooks/use-debounced-state';
+import { useDebouncedState } from '@common/hooks/use-debounced-state';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
 const ONLY_HIGHEST_SHORTCUT = 'ONLY_HIGHEST_SHORTCUT';
@@ -45,23 +46,27 @@ export default function Settings() {
 
   const [statusValue, setStatusValue] = useState('');
 
-  const getSettingsQuery = useSettingsQuery({
-    refetchOnWindowFocus: false,
-    onSuccess({ settings }) {
-      setSettings(settings);
-    },
-    onError() {
-      setToastAction({
-        content: 'Could not load settings',
-        action: {
-          content: 'Retry',
-          onAction() {
-            getSettingsQuery.refetch();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const getSettingsQuery = useSettingsQuery(
+    { fetch },
+    {
+      refetchOnWindowFocus: false,
+      onSuccess({ settings }) {
+        setSettings(settings);
+      },
+      onError() {
+        setToastAction({
+          content: 'Could not load settings',
+          action: {
+            content: 'Retry',
+            onAction() {
+              getSettingsQuery.refetch();
+            },
           },
-        },
-      });
+        });
+      },
     },
-  });
+  );
 
   const saveSettingsMutation = useSettingsMutation({
     onError() {
@@ -78,7 +83,7 @@ export default function Settings() {
 
   const [serviceCollectionValue, setServiceCollectionValue] = useState<string | undefined>(undefined);
   const [selectedServiceCollectionName, setSelectedServiceCollectionName] = useState<string | null>(null);
-  const collectionsQuery = useCollectionsQuery({ query: serviceCollectionValue });
+  const collectionsQuery = useCollectionsQuery({ fetch, params: { query: serviceCollectionValue } });
 
   // set the service collection name when the settings & collections are both loaded
   useEffect(() => {
@@ -94,7 +99,7 @@ export default function Settings() {
     setServiceCollectionValue(selectedCollection?.title ?? '');
   }, [collectionsQuery.data?.pages, getSettingsQuery.data?.settings.serviceCollectionId]);
 
-  const currencyFormatter = useCurrencyFormatter();
+  const currencyFormatter = useCurrencyFormatter({ fetch });
 
   const discountRules = useDiscountRules(settings, setSettings, currencyFormatter);
   const depositRules = useDepositRules(settings, setSettings, currencyFormatter);
@@ -806,26 +811,31 @@ function CurrencyOrPercentageInput({
   setValue: (value: string) => void;
   onSelect: (unit: 'percentage' | 'currency') => void;
 }) {
-  const currencyFormatter = useCurrencyFormatter();
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const currencyFormatter = useCurrencyFormatter({ fetch });
 
   return (
-    <Combobox
-      activator={
-        <Combobox.TextField
-          type="number"
-          label="Discount Shortcuts"
-          autoComplete="off"
-          value={value}
-          onChange={setValue}
-        />
-      }
-    >
-      {value.length > 0 ? (
-        <Listbox onSelect={onSelect}>
-          <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
-          <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
-        </Listbox>
-      ) : null}
-    </Combobox>
+    <>
+      <Combobox
+        activator={
+          <Combobox.TextField
+            type="number"
+            label="Discount Shortcuts"
+            autoComplete="off"
+            value={value}
+            onChange={setValue}
+          />
+        }
+      >
+        {value.length > 0 ? (
+          <Listbox onSelect={onSelect}>
+            <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
+            <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
+          </Listbox>
+        ) : null}
+      </Combobox>
+      {toast}
+    </>
   );
 }

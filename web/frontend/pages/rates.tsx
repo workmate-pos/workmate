@@ -2,32 +2,31 @@ import { Frame, IndexTable, Page, SkeletonBodyText, Text } from '@shopify/polari
 import { Loading, TitleBar } from '@shopify/app-bridge-react';
 import { useEmployeesQuery } from '../queries/use-employees-query';
 import { useEmployeeRateQueries } from '../queries/use-employee-rate-queries';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter';
-import { useSettingsQuery } from '../queries/use-settings-query';
+import { useCurrencyFormatter } from '@common/hooks/use-currency-formatter';
+import { useSettingsQuery } from '@common/queries/use-settings-query';
 import { NumberField } from '../components/NumberField';
 import { useState } from 'react';
 import { useEmployeeRatesMutation } from '../queries/use-employee-rates-mutation';
 import { useToast } from '@teifi-digital/shopify-app-react';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 
 export default function Rates() {
   const [toast, setToastAction] = useToast();
 
   const [employeeRates, setEmployeeRates] = useState<Record<string, number | null>>({});
-  console.log('rates', employeeRates);
 
-  const employeesQuery = useEmployeesQuery({});
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const employeesQuery = useEmployeesQuery({ fetch, params: {} });
   const employeeIds = employeesQuery.data?.pages.map(employee => employee.id) ?? [];
   const employeeRateQueries = useEmployeeRateQueries(employeeIds, {
     refetchOnWindowFocus: false,
     onSuccess(data) {
-      // TODO: Fix this not applying when navigating back to this page
       setEmployeeRates(prev => ({
         ...prev,
         [data.id]: data.rate,
       }));
     },
   });
-  console.log('queries', employeeRateQueries);
   const employeeRatesMutation = useEmployeeRatesMutation({
     onSuccess() {
       setToastAction({
@@ -40,8 +39,8 @@ export default function Rates() {
       });
     },
   });
-  const settingsQuery = useSettingsQuery();
-  const currencyFormatter = useCurrencyFormatter();
+  const settingsQuery = useSettingsQuery({ fetch });
+  const currencyFormatter = useCurrencyFormatter({ fetch });
 
   if (!employeesQuery.data) {
     return (

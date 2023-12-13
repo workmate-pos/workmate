@@ -2,7 +2,7 @@ import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
 import type { WorkOrder } from '../types/work-order';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order';
-import { toCents } from '../util/money-utils';
+import { toCents } from '@common/util/money';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import type { CreateWorkOrderResponse } from '@web/controllers/api/work-order';
 

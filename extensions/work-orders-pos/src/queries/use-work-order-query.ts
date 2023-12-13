@@ -2,10 +2,10 @@ import { useQuery, UseQueryOptions } from 'react-query';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
 import type { WorkOrder } from '../types/work-order';
 import type { FetchWorkOrderResponse } from '@web/controllers/api/work-order';
-import { toDollars } from '../util/money-utils';
+import { toDollars } from '@common/util/money';
 import { uuid } from '../util/uuid';
 import { useProductVariantFetcher } from '../hooks/use-product-variant-fetcher';
-import { parseGid } from '../util/gid';
+import { parseGid } from '@common/util/gid';
 
 export const useWorkOrderQuery = (
   name: string | null,

@@ -1,12 +1,13 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
-import { ProductVariant } from '../../queries/use-product-variants-query';
+import { ProductVariant } from '@common/queries/use-product-variants-query';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { useSettingsQuery } from '../../queries/use-settings-query';
+import { useSettingsQuery } from '@common/queries/use-settings-query';
 import { uuid } from '../../util/uuid';
-import { useServiceProductVariants } from '../../queries/use-service-product-variants-query';
+import { useServiceProductVariants } from '@common/queries/use-service-product-variants-query';
 import { useState } from 'react';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch';
 
 // TODO: DRY with ProductSelector
 
@@ -14,9 +15,10 @@ export function ServiceSelector() {
   const { Screen, closePopup } = useScreen('ServiceSelector');
 
   const [query, setQuery] = useState('');
-  const productVariantsQuery = useServiceProductVariants();
+  const fetch = useAuthenticatedFetch();
+  const productVariantsQuery = useServiceProductVariants({ fetch });
+  const settingsQuery = useSettingsQuery({ fetch });
   const currencyFormatter = useCurrencyFormatter();
-  const settingsQuery = useSettingsQuery();
 
   const filteredProductVariants =
     productVariantsQuery.data?.pages?.filter(

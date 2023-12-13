@@ -1,7 +1,8 @@
 import { BrowserRouter } from 'react-router-dom';
 import { NavigationMenu } from '@shopify/app-bridge-react';
 import Routes from './Routes.jsx';
-import { AppBridgeProvider, QueryProvider, PolarisProvider } from '@teifi-digital/shopify-app-react';
+import { AppBridgeProvider, PolarisProvider } from '@teifi-digital/shopify-app-react';
+import { ReactQueryProvider } from './providers/CommonQueryProvider';
 
 export default function App() {
   // Any .tsx files in /pages will become a route
@@ -10,7 +11,7 @@ export default function App() {
     <PolarisProvider>
       <BrowserRouter>
         <AppBridgeProvider>
-          <QueryProvider>
+          <ReactQueryProvider>
             <NavigationMenu
               navigationLinks={[
                 {
@@ -24,7 +25,7 @@ export default function App() {
               ]}
             />
             <Routes pages={pages} />
-          </QueryProvider>
+          </ReactQueryProvider>
         </AppBridgeProvider>
       </BrowserRouter>
     </PolarisProvider>

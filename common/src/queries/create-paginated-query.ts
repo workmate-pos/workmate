@@ -1,39 +1,35 @@
 import { QueryKey, useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
-import { useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
+import { Fetch } from './fetch.js';
 
 export type PageInfo = {
   hasNextPage: boolean;
   endCursor?: string | null;
 };
 
-type ArrayPropertyKey<T> = {
-  [K in keyof T]: T[K] extends Array<any> ? K : never;
-}[keyof T];
-
-type ArrayElementType<T> = T extends readonly (infer InnerArr)[] ? InnerArr : never;
-
-// TODO: use this everywhere possible
-export const createPaginatedQuery = <Params extends {}, Response extends { pageInfo: PageInfo }>({
+export const createPaginatedQuery = <Params extends {}, Response extends { pageInfo: PageInfo }, PageElement>({
   endpoint,
   queryKeyFn,
-  pagePropertyName,
+  extractPage,
   cursorParamName,
 }: {
   endpoint: string;
   queryKeyFn: (params: Params) => QueryKey;
-  pagePropertyName: ArrayPropertyKey<Response>;
+  extractPage: (response: Response) => PageElement[];
   cursorParamName: keyof Params & string;
 }) => {
-  return (
-    params: Params,
+  return ({
+    fetch,
+    params,
+    options,
+  }: {
+    fetch: Fetch;
+    params: Params;
     options?: Omit<
-      UseInfiniteQueryOptions<Response, unknown, ArrayElementType<Response[ArrayPropertyKey<Response>]>>,
+      UseInfiniteQueryOptions<Response, unknown, PageElement>,
       'queryKey' | 'queryFn' | 'select' | 'getNextPageParam'
-    >,
-  ) => {
-    const fetch = useAuthenticatedFetch();
-
-    return useInfiniteQuery<Response, unknown, ArrayElementType<Response[ArrayPropertyKey<Response>]>>({
+    >;
+  }) => {
+    return useInfiniteQuery<Response, unknown, PageElement>({
       ...options,
       queryKey: queryKeyFn(params),
       queryFn: async ({ pageParam }): Promise<Response> => {
@@ -51,9 +47,7 @@ export const createPaginatedQuery = <Params extends {}, Response extends { pageI
         return await response.json();
       },
       select: ({ pages, pageParams }) => ({
-        pages: pages.flatMap(page => page[pagePropertyName]) as ArrayElementType<
-          Response[ArrayPropertyKey<Response>]
-        >[],
+        pages: pages.flatMap(page => extractPage(page)),
         pageParams,
       }),
       getNextPageParam: lastPage => {

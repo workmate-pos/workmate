@@ -10,12 +10,16 @@
     "jsx": "react-native",
     "strict": true,
     "paths": {
-      "@web/*": ["../../web/*"]
+      "@web/*": ["../../web/*"],
+      "@common/*": ["../../common/src/*"]
     }
   },
   "references": [
     {
       "path": "../../web/tsconfig.json"
+    },
+    {
+      "path": "../../common/tsconfig.json"
     }
   ]
 }

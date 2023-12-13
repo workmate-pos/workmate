@@ -1,10 +1,12 @@
 import { Button, Stack } from '@shopify/retail-ui-extensions-react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useSettingsQuery } from '../../queries/use-settings-query.js';
+import { useSettingsQuery } from '@common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch';
 
 export function StatusSelector() {
   const { Screen, closePopup } = useScreen('StatusSelector');
-  const settingsQuery = useSettingsQuery();
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
   const settings = settingsQuery.data?.settings;
 
   return (
