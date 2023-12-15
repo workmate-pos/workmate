@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "ids": {
+      "description": "A list of Shopify IDs",
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/ID"
+      },
+      "minItems": 1,
+      "maxItems": 50
+    }
+  },
+  "additionalProperties": false,
+  "required": ["ids"]
+}

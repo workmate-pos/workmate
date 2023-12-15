@@ -4,7 +4,8 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import type { Request, Response } from 'express-serve-static-core';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
-import { CustomerFragmentResult } from '../../services/gql/queries/generated/queries.js';
+import { ID } from '../../services/gql/queries/generated/schema.js';
+import { Ids } from '../../schemas/generated/ids.js';
 
 @Authenticated()
 export default class CustomerController {
@@ -18,16 +19,52 @@ export default class CustomerController {
     const paginationOptions = req.query;
 
     const graphql = new Graphql(session);
-    const response = await gql.customer.getCustomers(graphql, paginationOptions);
+    const response = await gql.customer.getPage.run(graphql, paginationOptions);
 
     const customers = response.customers.nodes;
     const pageInfo = response.customers.pageInfo;
 
     return res.json({ customers, pageInfo });
   }
+
+  @Get('/by-ids')
+  @QuerySchema('ids')
+  async fetchCustomersById(req: Request<unknown, unknown, unknown, Ids>, res: Response<FetchCustomersByIdResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { ids } = req.query;
+
+    const graphql = new Graphql(session);
+    const { nodes } = await gql.customer.getMany.run(graphql, { ids });
+
+    const customers = nodes.filter(
+      (node): node is null | (gql.customer.get.Result['customer'] & { __typename: 'Customer' }) =>
+        node === null || node.__typename === 'Customer',
+    );
+
+    return res.json({ customers });
+  }
+
+  @Get('/id/:id')
+  async fetchCustomer(req: Request<{ id: ID }>, res: Response<FetchCustomerResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { id } = req.params;
+
+    const graphql = new Graphql(session);
+    const { customer } = await gql.customer.get.run(graphql, { id });
+
+    return res.json({ customer });
+  }
 }
 
 export type FetchCustomersResponse = {
-  customers: CustomerFragmentResult[];
+  customers: gql.customer.CustomerFragment.Result[];
   pageInfo: { hasNextPage: boolean; endCursor?: string | null };
+};
+
+export type FetchCustomerResponse = {
+  customer: gql.customer.CustomerFragment.Result | null;
+};
+
+export type FetchCustomersByIdResponse = {
+  customers: (gql.customer.CustomerFragment.Result | null)[];
 };

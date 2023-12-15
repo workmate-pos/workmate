@@ -13,413 +13,418 @@ import {
   TextField,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { Dispatch, useEffect, useReducer, useState } from 'react';
-import { PopupNavigateFn, UsePopupFn, useScreen } from '../hooks/use-screen.js';
-import { useSaveWorkOrderMutation, WorkOrderValidationErrors } from '../queries/use-save-work-order-mutation.js';
-import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
-import { useWorkOrderQuery } from '../queries/use-work-order-query.js';
-import { usePaymentHandler } from '../hooks/use-payment-handler.js';
-import { getPriceDetails } from '../util/work-order.js';
-import { WorkOrder, WorkOrderEmployeeAssignment, WorkOrderProduct, WorkOrderService } from '../types/work-order';
+import { useState } from 'react';
+import { useScreen } from '../hooks/use-screen.js';
+import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
+import type { DateTime } from '@web/schemas/generated/create-work-order.js';
+import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
+import { defaultCreateWorkOrder } from '../create-work-order/default.js';
+import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
+import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
+import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
+import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
+import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
+import { useCreateWorkOrderReducer } from '../create-work-order/reducer.js';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { Cents, Dollars, parseMoney, toDollars } from '@work-orders/common/util/money.js';
+import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { unique } from '@work-orders/common/util/array.js';
+import { PayButton } from '../components/PayButton.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { CreateWorkOrderLineItem } from './routes.js';
+import { Money } from '@web/schemas/generated/shop-settings.js';
 
-export function WorkOrderPage() {
+/**
+ * Stuff to pass around between components
+ */
+type WorkOrderContext = ReturnType<typeof useWorkOrderContext>;
+
+const useWorkOrderContext = () => {
   const [title, setTitle] = useState('');
-  const [workOrderName, setWorkOrderName] = useState<string | null>(null);
-  const [workOrder, dispatchWorkOrder] = useReducer(workOrderReducer, {});
-  const [savedPriceDetails, setSavedPriceDetails] = useState(getPriceDetails(workOrder));
+  const [createWorkOrder, dispatchCreateWorkOrder] = useCreateWorkOrderReducer();
+  const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
 
-  const workOrderQuery = useWorkOrderQuery(workOrderName, {
-    onSuccess(workOrder) {
-      if (!workOrder) return;
-      dispatchWorkOrder({ type: 'set-work-order', workOrder });
-      setSavedPriceDetails(getPriceDetails(workOrder));
-    },
-    onError() {
-      api.toast.show('Error loading work order');
-      navigate('Entry');
-    },
-  });
-
   const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
-    removeVisualHints();
+    switch (action.type) {
+      case 'new-work-order': {
+        setTitle('New Work Order');
 
-    if (action.type === 'new-work-order') {
-      setTitle('New Work Order');
-      if (action.initial) {
-        dispatchWorkOrder({ type: 'set-work-order', workOrder: { ...defaultWorkOrder, ...action.initial } });
-      } else {
-        dispatchWorkOrder({ type: 'reset-work-order' });
+        if (action.initial) {
+          dispatchCreateWorkOrder({
+            type: 'set-work-order',
+            workOrder: {
+              ...defaultCreateWorkOrder,
+              ...action.initial,
+            },
+          });
+        } else {
+          dispatchCreateWorkOrder({ type: 'reset-work-order' });
+        }
+
+        break;
       }
-    } else if (action.type === 'load-work-order') {
-      setTitle(`Edit Work Order ${action.name}`);
-      if (workOrderName === action.name) {
-        workOrderQuery.refetch();
-      } else {
-        setWorkOrderName(action.name);
+
+      case 'load-work-order': {
+        setTitle(`Edit Work Order ${action.name}`);
+
+        dispatchCreateWorkOrder({
+          type: 'set-work-order',
+          workOrder: {
+            ...defaultCreateWorkOrder,
+            name: action.name,
+          },
+        });
+
+        break;
+      }
+
+      default: {
+        return action satisfies never;
       }
     }
   });
 
-  const [errorMessage, setErrorMessage] = useState<null | string>(null);
-  const [validationErrors, setValidationErrors] = useState<null | WorkOrderValidationErrors>(null);
+  const workOrderQuery = useWorkOrderQuery(
+    { fetch, name: createWorkOrder.name },
+    {
+      onSuccess({ workOrder }) {
+        if (!workOrder) return;
+        dispatchCreateWorkOrder({
+          type: 'set-work-order',
+          workOrder: workOrderToCreateWorkOrder(workOrder),
+        });
+      },
+      onError() {
+        api.toast.show('Error loading work order');
+        navigate('Entry');
+      },
+    },
+  );
+
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
+    fetch,
+    lineItems: createWorkOrder.lineItems ?? [],
+    employeeAssignments: createWorkOrder.employeeAssignments ?? [],
+    customerId: createWorkOrder.customerId,
+    discount: createWorkOrder.discount,
+  });
 
   const workOrderSavedPopup = usePopup('WorkOrderSaved');
 
-  const saveWorkOrderMutation = useSaveWorkOrderMutation({
-    onMutate() {
-      setErrorMessage(null);
-      setValidationErrors(null);
+  const saveWorkOrderMutation = useSaveWorkOrderMutation(
+    { fetch },
+    {
+      onMutate() {
+        api.toast.show('Saving work order', { duration: 1000 });
+      },
+      onError() {
+        api.toast.show('Error saving work order');
+      },
+      async onSuccess(result) {
+        api.toast.show('Work order saved', { duration: 1000 });
+        const name = result.name;
+        if (!name) return;
+        const { data } = await workOrderQuery.refetch();
+        if (!data?.workOrder) return;
+        workOrderSavedPopup.navigate(data.workOrder);
+      },
     },
-    onSuccess(result) {
-      setWorkOrderName(result.workOrder.name);
-      workOrderSavedPopup.navigate({ ...workOrder, name: result.workOrder.name } as WorkOrder);
-    },
-    onError(error) {
-      if (typeof error === 'string') {
-        setErrorMessage(error);
-        setValidationErrors(null);
-      } else if (error instanceof Error) {
-        setErrorMessage(`Unexpected error (${error.message})`);
-        setValidationErrors(null);
-      } else {
-        setErrorMessage(null);
-        setValidationErrors(error);
-      }
-    },
-  });
+  );
 
-  const paymentHandler = usePaymentHandler();
+  return {
+    createWorkOrder,
+    dispatchCreateWorkOrder,
+    Screen,
+    title,
+    usePopup,
+    navigate,
+    calculatedDraftOrderQuery,
+    saveWorkOrderMutation,
+    workOrderQuery,
+    hasOrder: workOrderQuery.data?.workOrder?.order.type === 'order',
+  };
+};
 
-  function removeVisualHints() {
-    setErrorMessage(null);
-    setValidationErrors(null);
-  }
+export function WorkOrderPage() {
+  const context = useWorkOrderContext();
+  const { Screen } = context;
+
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   return (
     <Screen
-      title={title}
-      isLoading={workOrderQuery.isFetching || saveWorkOrderMutation.isLoading || paymentHandler.isLoading}
-      overrideNavigateBack={() => navigate('Entry')}
+      title={context.title}
+      isLoading={context.workOrderQuery.isFetching || context.saveWorkOrderMutation.isLoading || paymentLoading}
+      overrideNavigateBack={() => {
+        context.dispatchCreateWorkOrder({ type: 'reset-work-order' });
+        context.navigate('Entry');
+      }}
     >
       <ScrollView>
-        {errorMessage && <Banner title={errorMessage} variant="error" visible />}
+        {context.hasOrder && (
+          <Banner
+            title={`This order has been (partially) paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}. You can no longer change the products and services within this order`}
+            variant={'information'}
+            visible
+          />
+        )}
 
-        <WorkOrderProperties
-          workOrder={workOrder}
-          dispatchWorkOrder={dispatchWorkOrder}
-          usePopup={usePopup}
-          validationErrors={validationErrors}
-        />
+        <WorkOrderProperties context={context} />
 
         <Stack direction="horizontal" flexChildren>
-          <WorkOrderItems usePopup={usePopup} workOrder={workOrder} dispatchWorkOrder={dispatchWorkOrder} />
+          <WorkOrderItems context={context} />
 
           <Stack direction="vertical" flex={1} alignment="flex-start">
-            <TextArea
-              rows={3}
-              label="Description"
-              value={workOrder.description}
-              onChange={value => dispatchWorkOrder({ type: 'set-field', field: 'description', value: value })}
-              error={validationErrors?.description ?? ''}
-            />
-            <WorkOrderAssignment
-              workOrder={workOrder}
-              dispatchWorkOrder={dispatchWorkOrder}
-              usePopup={usePopup}
-              validationErrors={validationErrors}
-            />
-            <WorkOrderMoney workOrder={workOrder} dispatchWorkOrder={dispatchWorkOrder} usePopup={usePopup} />
-
-            {(errorMessage || validationErrors) && (
-              <Banner title="An error occurred. Make sure that all fields are valid" variant="error" visible />
-            )}
+            <WorkOrderDescription context={context} />
+            <WorkOrderAssignment context={context} />
+            <WorkOrderMoney context={context} />
           </Stack>
         </Stack>
 
         <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
-          {workOrder.derivedFromOrder?.workOrderName && (
-            <Button
-              title={`Previous (${workOrder.derivedFromOrder.workOrderName})`}
-              onPress={() => {
-                if (!workOrder.derivedFromOrder?.workOrderName) return;
-                navigate('WorkOrder', { type: 'load-work-order', name: workOrder.derivedFromOrder.workOrderName });
-              }}
-            />
+          <ShowDerivedFromOrderPreviewButton context={context} />
+          {!context.hasOrder && (
+            <PayButton createWorkOrder={context.createWorkOrder} workOrderName={null} setLoading={setPaymentLoading} />
           )}
-          <Button
-            title="Pay Balance"
-            onPress={() => {
-              if (!workOrder.name) {
-                api.toast.show('You must save the work order before paying', { duration: 1000 });
-                return;
-              }
-
-              if (savedPriceDetails.balanceDue <= 0) {
-                api.toast.show('There is no due balance', { duration: 1000 });
-                return;
-              }
-
-              return paymentHandler.handlePayment({
-                customerId: workOrder!.customer!.id,
-                workOrderName: workOrder.name!,
-                type: 'balance',
-                amount: savedPriceDetails.total,
-                previouslyDeposited: savedPriceDetails.deposited,
-              });
-            }}
-          />
-          <Button
-            title={workOrder.name ? 'Update Order' : 'Create Order'}
-            type="primary"
-            onPress={() => saveWorkOrderMutation.mutate(workOrder)}
-            isDisabled={saveWorkOrderMutation.isLoading}
-          />
+          <SaveWorkOrderButton context={context} />
         </Stack>
       </ScrollView>
     </Screen>
   );
 }
 
-type WorkOrderAction =
-  | { type: 'reset-work-order' }
-  | {
-      type: 'set-work-order';
-      workOrder: Partial<WorkOrder>;
-    }
-  | {
-      type: 'add-product' | 'remove-product' | 'update-product';
-      item: WorkOrderProduct;
-    }
-  | {
-      type: 'add-service' | 'remove-service' | 'update-service';
-      item: WorkOrderService;
-    }
-  | NonNullable<
-      {
-        [key in keyof WorkOrder]: {
-          type: 'set-field';
-          field: key;
-          value: WorkOrder[key];
-        };
-      }[keyof WorkOrder]
-    >
-  | {
-      type: 'set-assigned-employees';
-      employees: NonNullable<WorkOrderEmployeeAssignment[]>;
-    };
+function WorkOrderDescription({ context }: { context: WorkOrderContext }) {
+  return (
+    <TextArea
+      rows={3}
+      label="Description"
+      value={context.createWorkOrder.description}
+      onChange={(value: string) => context.dispatchCreateWorkOrder({ type: 'set-field', field: 'description', value })}
+      error={context.saveWorkOrderMutation.data?.errors?.description ?? ''}
+    />
+  );
+}
 
-const workOrderReducer = (workOrder: Partial<WorkOrder>, action: WorkOrderAction): Partial<WorkOrder> => {
-  if (action.type === 'add-product') {
-    const productVariantId = action.item.productVariantId;
-    const existingItem = workOrder.products?.find(item => item.productVariantId === productVariantId);
-    if (existingItem) {
-      action = {
-        type: 'update-product',
-        item: { ...existingItem, quantity: existingItem.quantity + action.item.quantity },
-      };
-    }
+function ShowDerivedFromOrderPreviewButton({ context }: { context: WorkOrderContext }) {
+  if (!context.workOrderQuery.data?.workOrder?.derivedFromOrder) {
+    return null;
   }
 
-  switch (action.type) {
-    case 'reset-work-order':
-      return defaultWorkOrder;
+  const { derivedFromOrder } = context.workOrderQuery.data.workOrder;
 
-    case 'set-work-order':
-      return action.workOrder;
+  const title = `Previous (${`${derivedFromOrder.name} ${
+    derivedFromOrder.workOrderName ? `(${derivedFromOrder.workOrderName})` : ''
+  }`.trim()})`;
 
-    case 'add-product':
-      return {
-        ...workOrder,
-        products: [...(workOrder.products ?? []), action.item],
-      };
+  return (
+    <Button
+      title={title}
+      onPress={() => {
+        context.navigate('OrderPreview', {
+          orderId: derivedFromOrder.id,
+          unsavedChanges: true,
+          showImportButton: false,
+        });
+      }}
+    />
+  );
+}
 
-    case 'remove-product': {
-      const productVariantId = action.item.productVariantId;
-      return {
-        ...workOrder,
-        products: (workOrder.products ?? []).filter(item => item.productVariantId !== productVariantId),
-      };
-    }
+function SaveWorkOrderButton({ context }: { context: WorkOrderContext }) {
+  const title = context.createWorkOrder.name ? 'Update Work Order' : 'Create Work Order';
 
-    case 'update-product': {
-      const updateItem = action.item;
-      return {
-        ...workOrder,
-        products: (workOrder.products ?? []).map(item =>
-          item.productVariantId === updateItem.productVariantId ? updateItem : item,
-        ),
-      };
-    }
+  return (
+    <Button
+      title={title}
+      type="primary"
+      onPress={() => context.saveWorkOrderMutation.mutate(context.createWorkOrder)}
+      isDisabled={context.saveWorkOrderMutation.isLoading}
+    />
+  );
+}
 
-    case 'add-service':
-      return {
-        ...workOrder,
-        services: [...(workOrder.services ?? []), action.item],
-      };
+const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
+  const statusSelectorPopup = context.usePopup('StatusSelector', result =>
+    context.dispatchCreateWorkOrder({
+      type: 'set-field',
+      field: 'status',
+      value: result,
+    }),
+  );
 
-    case 'remove-service': {
-      const removeItem = action.item;
-      return {
-        ...workOrder,
-        services: (workOrder.services ?? []).filter(item => item.uuid !== removeItem.uuid),
-      };
-    }
+  const customerSelectorPopup = context.usePopup('CustomerSelector', result =>
+    context.dispatchCreateWorkOrder({
+      type: 'set-field',
+      field: 'customerId',
+      value: result,
+    }),
+  );
 
-    case 'update-service': {
-      const updateItem = action.item;
-
-      return {
-        ...workOrder,
-        services: (workOrder.services ?? []).map(item => (item.uuid === updateItem.uuid ? updateItem : item)),
-        employeeAssignments: [
-          ...(workOrder.employeeAssignments ?? []).filter(
-            e => !updateItem.employeeAssignments.some(a => a.employeeId === e.employeeId),
-          ),
-          ...updateItem.employeeAssignments,
-        ],
-      };
-    }
-
-    case 'set-assigned-employees':
-      return {
-        ...workOrder,
-        employeeAssignments: action.employees,
-      };
-
-    case 'set-field':
-      return {
-        ...workOrder,
-        [action.field]: action.value,
-      };
-
-    default:
-      return action satisfies never;
-  }
-};
-
-const defaultWorkOrder: Partial<WorkOrder> = {
-  dueDate: new Date(
-    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + 1000 * 60 * 60 * 24 * 7,
-  ).toISOString(),
-  customer: undefined,
-  employeeAssignments: [],
-  name: undefined,
-  products: [],
-  services: [],
-  price: {
-    tax: 0,
-    discount: 0,
-    shipping: 0,
-  },
-  description: '',
-  status: undefined,
-  derivedFromOrder: undefined,
-  payments: [],
-};
-
-const WorkOrderProperties = ({
-  workOrder,
-  dispatchWorkOrder,
-  usePopup,
-  validationErrors,
-}: {
-  workOrder: Partial<WorkOrder>;
-  dispatchWorkOrder: Dispatch<WorkOrderAction>;
-  usePopup: UsePopupFn;
-  validationErrors: WorkOrderValidationErrors | null;
-}) => {
-  const statusSelectorPopup = usePopup('StatusSelector', result => {
-    dispatchWorkOrder({ type: 'set-field', field: 'status', value: result });
-  });
-
-  const customerSelectorPopup = usePopup('CustomerSelector', result => {
-    dispatchWorkOrder({ type: 'set-field', field: 'customer', value: result });
-  });
+  const fetch = useAuthenticatedFetch();
+  const customerQuery = useCustomerQuery({ fetch, id: context.createWorkOrder.customerId });
+  const customerValue = context.createWorkOrder.customerId
+    ? customerQuery.isLoading
+      ? 'Loading...'
+      : customerQuery.data?.displayName ?? 'Unknown'
+    : null;
 
   return (
     <Stack direction="horizontal" flexChildren>
-      <TextField label="Work Order ID" disabled value={workOrder.name ?? ''} />
-      {workOrder.derivedFromOrder && workOrder.derivedFromOrder.workOrderName && (
-        <TextField label="Previous Work Order" disabled value={workOrder.derivedFromOrder.workOrderName} />
+      {context.workOrderQuery?.data?.workOrder?.name && (
+        <TextField label="Work Order ID" disabled value={context.workOrderQuery?.data?.workOrder?.name} />
       )}
-      {workOrder.derivedFromOrder && !workOrder.derivedFromOrder.workOrderName && (
-        <TextField label="Previous Order" disabled value={workOrder.derivedFromOrder.name} />
-      )}
+      {context.workOrderQuery?.data?.workOrder?.derivedFromOrder &&
+        (context.workOrderQuery.data.workOrder.derivedFromOrder.workOrderName ? (
+          <TextField
+            label="Previous Work Order"
+            disabled
+            value={context.workOrderQuery.data.workOrder.derivedFromOrder.workOrderName}
+          />
+        ) : (
+          <TextField
+            label="Previous Order"
+            disabled
+            value={context.workOrderQuery.data.workOrder.derivedFromOrder.name}
+          />
+        ))}
       <TextField
         label="Status"
         required
         placeholder="Status"
         onFocus={() => statusSelectorPopup.navigate()}
-        value={workOrder.status ?? ''}
-        error={validationErrors?.status ?? ''}
+        value={context.createWorkOrder.status ?? ''}
+        error={context.saveWorkOrderMutation.data?.errors?.status ?? ''}
       />
       <TextField
         label="Customer"
         required
         placeholder="Customer"
+        disabled={context.hasOrder}
         onFocus={() => customerSelectorPopup.navigate()}
-        value={workOrder.customer?.name ?? ''}
-        error={validationErrors?.customer ?? ''}
+        value={customerValue}
+        error={context.saveWorkOrderMutation.data?.errors?.customerId ?? ''}
       />
     </Stack>
   );
 };
 
-const WorkOrderItems = ({
-  workOrder,
-  usePopup,
-  dispatchWorkOrder,
-}: {
-  workOrder: Partial<WorkOrder>;
-  dispatchWorkOrder: Dispatch<WorkOrderAction>;
-  usePopup: UsePopupFn;
-}) => {
-  const productSelectorPopup = usePopup('ProductSelector', result => {
-    dispatchWorkOrder({ type: 'add-product', item: result });
-  });
-
-  const serviceSelectorPopup = usePopup('ServiceSelector', result => {
-    dispatchWorkOrder({ type: 'add-service', item: result });
-    serviceConfigPopup.navigate(result);
-  });
-
-  const productConfigPopup = usePopup('ProductConfig', result => {
-    if (result.type === 'remove') {
-      dispatchWorkOrder({ type: 'remove-product', item: result.product });
-    } else if (result.type === 'update') {
-      dispatchWorkOrder({ type: 'update-product', item: result.product });
-    } else {
-      return result.type satisfies never;
-    }
-  });
-
-  const serviceConfigPopup = usePopup('ServiceConfig', result => {
-    if (result.type === 'remove') {
-      dispatchWorkOrder({ type: 'remove-service', item: result.service });
-    } else if (result.type === 'update') {
-      dispatchWorkOrder({ type: 'update-service', item: result.service });
-    } else {
-      return result.type satisfies never;
-    }
-  });
-
+const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const [query, setQuery] = useState('');
-  const currencyFormatter = useCurrencyFormatter();
 
-  const rows = getItemRows(
-    workOrder,
-    query,
-    currencyFormatter,
-    productConfigPopup.navigate,
-    serviceConfigPopup.navigate,
-  );
+  const productSelectorPopup = context.usePopup('ProductSelector', lineItem => {
+    context.dispatchCreateWorkOrder({ type: 'add-line-item', lineItem, allowMerge: true });
+  });
+
+  const serviceSelectorPopup = context.usePopup('ServiceSelector', lineItem => {
+    context.dispatchCreateWorkOrder({ type: 'add-line-item', lineItem, allowMerge: false });
+    serviceConfigPopup.navigate({
+      readonly: context.hasOrder,
+      lineItem,
+      employeeAssignments:
+        context.createWorkOrder.employeeAssignments?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+    });
+  });
+
+  const serviceConfigPopup = context.usePopup('ServiceLineItemConfig', result => {
+    switch (result.type) {
+      case 'remove': {
+        context.dispatchCreateWorkOrder({
+          type: 'remove-line-item',
+          lineItem: result.lineItem,
+        });
+        break;
+      }
+
+      case 'update': {
+        context.dispatchCreateWorkOrder({
+          type: 'update-line-item',
+          lineItem: result.lineItem,
+        });
+
+        const lineItemUuid = result.lineItem.uuid;
+
+        context.dispatchCreateWorkOrder({
+          type: 'set-assigned-employees',
+          employees: [
+            ...(context.createWorkOrder.employeeAssignments?.filter(
+              assignment => assignment.lineItemUuid !== lineItemUuid,
+            ) ?? []),
+            ...result.employeeAssignments.map(assignment => ({ ...assignment, lineItemUuid })),
+          ],
+        });
+        break;
+      }
+
+      default:
+        return result.type satisfies never;
+    }
+  });
+
+  const productConfigPopup = context.usePopup('ProductLineItemConfig', result => {
+    switch (result.type) {
+      case 'remove': {
+        context.dispatchCreateWorkOrder({
+          type: 'remove-line-item',
+          lineItem: result.lineItem,
+        });
+        break;
+      }
+
+      case 'update': {
+        context.dispatchCreateWorkOrder({
+          type: 'update-line-item',
+          lineItem: result.lineItem,
+        });
+        break;
+      }
+
+      default:
+        return result.type satisfies never;
+    }
+  });
+
+  const rows = useItemRows(context, query, (type, lineItem) => {
+    switch (type) {
+      case 'product':
+        productConfigPopup.navigate({
+          readonly: context.hasOrder,
+          lineItem,
+        });
+        break;
+
+      case 'service':
+        serviceConfigPopup.navigate({
+          readonly: context.hasOrder,
+          lineItem,
+          employeeAssignments:
+            context.createWorkOrder.employeeAssignments?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+        });
+        break;
+
+      default: {
+        return type satisfies never;
+      }
+    }
+  });
 
   return (
     <Stack direction="vertical" flex={1} paddingVertical={'ExtraSmall'}>
       <Stack direction={'horizontal'} flexChildren>
-        <Button title="Add Product" type="primary" onPress={() => productSelectorPopup.navigate()} />
-        <Button title="Add Service" type="primary" onPress={() => serviceSelectorPopup.navigate()} />
+        <Button
+          title="Add Product"
+          type="primary"
+          onPress={() => productSelectorPopup.navigate()}
+          isDisabled={context.hasOrder}
+        />
+        <Button
+          title="Add Service"
+          type="primary"
+          onPress={() => serviceSelectorPopup.navigate()}
+          isDisabled={context.hasOrder}
+        />
       </Stack>
       <SearchBar placeholder="Search items" initialValue={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
@@ -435,202 +440,218 @@ const WorkOrderItems = ({
   );
 };
 
-function getItemRows(
-  workOrder: Partial<WorkOrder>,
-  query: string,
-  currencyFormatter: CurrencyFormatter,
-  openProductConfig: PopupNavigateFn<'ProductConfig'>,
-  openServiceConfig: PopupNavigateFn<'ServiceConfig'>,
-): ListRow[] {
-  const rows: ListRow[] = [];
+const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
+  const api = useExtensionApi<'pos.home.modal.render'>();
 
-  const queryFilter = (item: WorkOrderProduct | WorkOrderService) =>
-    !query ||
-    item.name.toLowerCase().includes(query.toLowerCase()) ||
-    item.sku.toLowerCase().includes(query.toLowerCase());
+  const discountSelectorPopup = context.usePopup('DiscountSelector', result => {
+    context.dispatchCreateWorkOrder({
+      type: 'set-field',
+      field: 'discount',
+      value: result,
+    });
 
-  if (workOrder.services) {
-    rows.push(
-      ...workOrder.services.filter(queryFilter).map<ListRow>(item => {
-        const assignedEmployeePrice = item.employeeAssignments.reduce(
-          (total, employee) => total + employee.hours * employee.employeeRate,
-          0,
-        );
-
-        return {
-          id: item.productVariantId,
-          onPress: () => {
-            openServiceConfig(item);
-          },
-          leftSide: {
-            label: item.name,
-            subtitle: item.sku ? [item.sku] : undefined,
-            image: {
-              source: item.imageUrl ?? 'not found',
-            },
-          },
-          rightSide: {
-            label: currencyFormatter(item.basePrice + assignedEmployeePrice),
-            showChevron: true,
-          },
-        };
-      }),
-    );
-  }
-
-  if (workOrder.products) {
-    rows.push(
-      ...workOrder.products.filter(queryFilter).map<ListRow>(item => ({
-        id: item.productVariantId,
-        onPress: () => {
-          openProductConfig(item);
-        },
-        leftSide: {
-          label: item.name,
-          subtitle: item.sku ? [item.sku] : undefined,
-          image: {
-            source: item.imageUrl ?? 'not found',
-            badge: item.quantity > 1 ? item.quantity : undefined,
-          },
-        },
-        rightSide: {
-          label: currencyFormatter(item.unitPrice * item.quantity),
-          showChevron: true,
-        },
-      })),
-    );
-  }
-
-  return rows;
-}
-
-const WorkOrderMoney = ({
-  workOrder,
-  dispatchWorkOrder,
-  usePopup,
-}: {
-  workOrder: Partial<WorkOrder>;
-  dispatchWorkOrder: Dispatch<WorkOrderAction>;
-  usePopup: UsePopupFn;
-}) => {
-  const price = workOrder.price ?? { tax: 0, discount: 0, shipping: 0 };
-
-  const [discountPercentage, setDiscountPercentage] = useState<null | number>(null);
-  const discountLabel = 'Discount' + (discountPercentage !== null ? ` (${discountPercentage}%)` : '');
-
-  // TODO: make this work/configurable
-  const taxPercentage = 13;
-  const taxLabel = `Tax (${taxPercentage}%)`;
-
-  const discountSelectorPopup = usePopup('DiscountOrDepositSelector', async result => {
-    if (result.select === 'discount') {
-      if (result.type === 'percentage') {
-        setDiscountPercentage(result.percentage);
-      } else {
-        setDiscountPercentage(null);
-      }
-
-      dispatchWorkOrder({
-        type: 'set-field',
-        field: 'price',
-        value: { ...price, discount: result.currencyAmount },
-      });
-    }
+    api.toast.show('Applying discount', { duration: 1000 });
   });
 
-  const shippingConfigPopup = usePopup('ShippingConfig', result => {
-    dispatchWorkOrder({
-      type: 'set-field',
-      field: 'price',
-      value: { ...price, shipping: result },
-    });
-  });
-
-  const { balanceDue, total, paid, subTotal, deposited } = getPriceDetails(workOrder);
-
-  useEffect(() => {
-    dispatchWorkOrder({
-      type: 'set-field',
-      field: 'price',
-      value: { ...price, tax: Math.ceil(100 * subTotal * (taxPercentage / 100)) / 100 },
-    });
-  }, [subTotal]);
+  // TODO: Re-add this
+  // const shippingConfigPopup = context.usePopup('ShippingConfig', result => {
+  //   context.dispatchCreateWorkOrder({
+  //     type: 'set-field',
+  //     field: 'price',
+  //     value: { ...price, shipping: result },
+  //   });
+  // });
 
   const currencyFormatter = useCurrencyFormatter();
+
+  const { calculateDraftOrderResponse } = context.calculatedDraftOrderQuery.data ?? {};
+  const isLoading = context.calculatedDraftOrderQuery.isLoading;
+
+  const getFormattedCalculatedMoney = (
+    key: {
+      [K in keyof CalculateDraftOrderResponse]: CalculateDraftOrderResponse[K] extends Money ? K : never;
+    }[keyof CalculateDraftOrderResponse],
+  ) =>
+    isLoading
+      ? 'Loading...'
+      : calculateDraftOrderResponse?.[key]
+        ? currencyFormatter(calculateDraftOrderResponse[key])
+        : '-';
+
+  // TODO: Clear messages if a payment has already been made
+  const outstanding = context.workOrderQuery?.data?.workOrder?.order?.outstanding
+    ? currencyFormatter(context.workOrderQuery.data.workOrder.order?.outstanding)
+    : getFormattedCalculatedMoney('totalPrice');
+
+  const received = currencyFormatter(context.workOrderQuery.data?.workOrder?.order?.received ?? 0);
+  const discountValue = calculateDraftOrderResponse?.appliedDiscount
+    ? {
+        FIXED_AMOUNT: currencyFormatter(calculateDraftOrderResponse.appliedDiscount.value),
+        PERCENTAGE: `${calculateDraftOrderResponse.appliedDiscount.value}% (${currencyFormatter(
+          calculateDraftOrderResponse.appliedDiscount.amount,
+        )})`,
+      }[calculateDraftOrderResponse.appliedDiscount.valueType]
+    : '-';
 
   return (
     <Stack direction="vertical" flex={1}>
       <Stack direction="vertical" flex={1}>
         <Stack direction={'horizontal'} flexChildren flex={1}>
-          <NumberField label="Subtotal" disabled value={currencyFormatter(subTotal)} />
+          <NumberField label="Subtotal" disabled value={getFormattedCalculatedMoney('subtotalPrice')} />
           <NumberField
-            label={discountLabel}
-            value={currencyFormatter(price.discount)}
-            onFocus={() => discountSelectorPopup.navigate({ select: 'discount', subTotal })}
+            label={'Discount'}
+            value={discountValue}
+            disabled={!calculateDraftOrderResponse || context.hasOrder}
+            onFocus={() => {
+              const subTotal = calculateDraftOrderResponse ? parseMoney(calculateDraftOrderResponse.subtotalPrice) : 0;
+              discountSelectorPopup.navigate({ subTotal });
+            }}
           />
         </Stack>
         <Stack direction={'horizontal'} flexChildren flex={1}>
-          <NumberField label={taxLabel} disabled value={currencyFormatter(price.tax)} />
           <NumberField
             label="Shipping"
-            value={currencyFormatter(price.shipping)}
-            onFocus={() => shippingConfigPopup.navigate()}
+            value={getFormattedCalculatedMoney('totalShippingPrice')}
+            disabled={context.hasOrder}
           />
+          <NumberField label="Tax" disabled value={getFormattedCalculatedMoney('totalTax')} />
         </Stack>
       </Stack>
 
       <Stack direction="vertical" flexChildren flex={1}>
-        <NumberField label="Total" disabled value={currencyFormatter(total)} />
+        <NumberField label="Total" disabled value={getFormattedCalculatedMoney('totalPrice')} />
 
         <Stack direction={'vertical'}>
           <Stack direction={'horizontal'} flexChildren flex={1}>
-            <NumberField label={'Paid'} disabled={true} value={currencyFormatter(paid - deposited)} />
-            <NumberField label="Balance Due" disabled value={currencyFormatter(balanceDue)} />
+            <NumberField label={'Paid'} disabled={true} value={received} />
+            <NumberField label="Balance Due" disabled value={outstanding} />
           </Stack>
+          {context.hasOrder && Number(context.workOrderQuery.data?.workOrder?.order?.outstanding ?? 0) !== 0 && (
+            <Banner
+              title={`This order has been partially paid (${received} / ${outstanding}). The remaining balance can be paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}`}
+              variant={'information'}
+              visible
+            />
+          )}
         </Stack>
       </Stack>
     </Stack>
   );
 };
 
-const WorkOrderAssignment = ({
-  workOrder,
-  dispatchWorkOrder,
-  usePopup,
-  validationErrors,
-}: {
-  workOrder: Partial<WorkOrder>;
-  dispatchWorkOrder: Dispatch<WorkOrderAction>;
-  usePopup: UsePopupFn;
-  validationErrors: WorkOrderValidationErrors | null;
-}) => {
-  const employeeSelectorPopup = usePopup('EmployeeSelector', result => {
-    dispatchWorkOrder({ type: 'set-assigned-employees', employees: result });
+const WorkOrderAssignment = ({ context }: { context: WorkOrderContext }) => {
+  const employeeSelectorPopup = context.usePopup('EmployeeSelector', result => {
+    context.dispatchCreateWorkOrder({
+      type: 'set-assigned-employees',
+      employees: context.createWorkOrder.employeeAssignments?.filter(ea => result.includes(ea.employeeId)) ?? [],
+    });
   });
 
-  const selectedEmployeeNames = workOrder.employeeAssignments?.map(employee => employee.name).join('\n');
-  const selectedEmployeeIds = workOrder.employeeAssignments?.map(employee => employee.employeeId) ?? [];
+  const selectedEmployeeIds = unique(
+    context.createWorkOrder.employeeAssignments?.map(employee => employee.employeeId) ?? [],
+  );
+
+  const fetch = useAuthenticatedFetch();
+  const employeeQueries = useEmployeeQueries({ fetch, ids: selectedEmployeeIds });
+  const selectedEmployeeNames = selectedEmployeeIds
+    .map(employeeId => employeeQueries[employeeId]?.data?.name ?? 'Unknown Employee')
+    .join('\n');
 
   const setDueDate = (date: string) => {
     const dueDate = new Date(date);
     const dueDateUtc = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60 * 1000);
-    dispatchWorkOrder({ type: 'set-field', field: 'dueDate', value: dueDateUtc.toISOString() });
+    context.dispatchCreateWorkOrder({
+      type: 'set-field',
+      field: 'dueDate',
+      value: dueDateUtc.toISOString() as DateTime,
+    });
   };
 
+  // TODO: Make assigned employees show both work order and line item assignments. On click, show a popup with all the assigned employees, and clicking them shows where they are assigned, + whether they are assigned globally
+  // TODO       Also has an "Add employee button"
   return (
     <Stack direction="vertical" flex={1} flexChildren>
       <TextArea
         rows={Math.max(1, selectedEmployeeIds.length) - 1}
+        disabled
         label="Assigned Employees"
-        onFocus={() => employeeSelectorPopup.navigate({ selectedEmployeeIds })}
+        onFocus={() => employeeSelectorPopup.navigate(selectedEmployeeIds)}
         value={selectedEmployeeNames}
+        error={context.saveWorkOrderMutation.data?.errors?.description ?? ''}
       />
       <DateField
         label="Due date"
-        value={workOrder?.dueDate}
+        value={context.createWorkOrder.dueDate}
         onChange={setDueDate}
-        error={validationErrors?.dueDate ?? ''}
+        error={context.saveWorkOrderMutation.data?.errors?.dueDate ?? ''}
       />
     </Stack>
   );
 };
+
+function useItemRows(
+  context: WorkOrderContext,
+  query: string,
+  openPopup: (type: 'product' | 'service', lineItem: CreateWorkOrderLineItem) => void,
+): ListRow[] {
+  const fetch = useAuthenticatedFetch();
+  const currencyFormatter = useCurrencyFormatter();
+
+  const settingsQuery = useSettingsQuery({ fetch });
+  const productVariantQueries = useProductVariantQueries({
+    fetch,
+    ids: context.createWorkOrder.lineItems?.map(li => li.productVariantId) ?? [],
+  });
+  const employeeQueries = useEmployeeQueries({
+    fetch,
+    ids: context.createWorkOrder.employeeAssignments?.map(ea => ea.employeeId) ?? [],
+  });
+
+  return (
+    context.createWorkOrder.lineItems
+      ?.map(lineItem => ({ lineItem, productVariant: productVariantQueries[lineItem.productVariantId]?.data ?? null }))
+      ?.filter(
+        ({ productVariant }) =>
+          !query || getProductVariantName(productVariant)?.toLowerCase().includes(query.toLowerCase()),
+      )
+      ?.map<ListRow>(({ lineItem, productVariant }) => {
+        const productVariantPrice = productVariant ? parseMoney(productVariant.price) : (0 as Dollars);
+        const employeeAssignmentsPrice = context.createWorkOrder.employeeAssignments
+          ?.filter(assignment => assignment.lineItemUuid === lineItem.uuid)
+          .reduce(
+            (total, { employeeId, hours }) =>
+              total + hours * toDollars(employeeQueries[employeeId]?.data?.rate ?? (0 as Cents)),
+            0,
+          ) as Dollars;
+
+        return {
+          id: lineItem.uuid,
+          onPress() {
+            if (!productVariant || !settingsQuery.data || !lineItem) return;
+
+            const { serviceCollectionId } = settingsQuery.data.settings;
+
+            const popupType = productVariant.product.collections.nodes.some(
+              collection => collection.id === serviceCollectionId,
+            )
+              ? 'service'
+              : 'product';
+
+            openPopup(popupType, lineItem);
+          },
+          leftSide: {
+            label: getProductVariantName(productVariant) ?? 'Unknown item',
+            subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
+            image: {
+              source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? 'not found',
+              badge: lineItem.quantity > 1 ? lineItem.quantity : undefined,
+            },
+          },
+          rightSide: {
+            label: currencyFormatter((productVariantPrice + employeeAssignmentsPrice) * lineItem.quantity),
+            showChevron: true,
+          },
+        };
+      }) ?? []
+  );
+}

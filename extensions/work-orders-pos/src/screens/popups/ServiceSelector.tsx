@@ -1,34 +1,30 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { parseGid } from '@work-orders/common/util/gid.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
-import { ProductVariant } from '@common/queries/use-product-variants-query';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { useSettingsQuery } from '@common/queries/use-settings-query';
-import { uuid } from '../../util/uuid';
-import { useServiceProductVariants } from '@common/queries/use-service-product-variants-query';
-import { useState } from 'react';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch';
+import { uuid } from '../../util/uuid.js';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { Int } from '@web/schemas/generated/create-work-order.js';
 
 // TODO: DRY with ProductSelector
 
 export function ServiceSelector() {
   const { Screen, closePopup } = useScreen('ServiceSelector');
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
-  const productVariantsQuery = useServiceProductVariants({
-    fetch,
-    params: {},
-    options: {
-      onSuccess() {
-        // collection product variants does not support `query`, so we need to fetch everything to make query work
-        if (productVariantsQuery.hasNextPage) {
-          productVariantsQuery.fetchNextPage();
-        }
-      },
-    },
-  });
   const settingsQuery = useSettingsQuery({ fetch });
+  const serviceCollectionId = settingsQuery.data?.settings.serviceCollectionId
+    ? parseGid(settingsQuery.data?.settings.serviceCollectionId).id
+    : null;
+  const productVariantsQuery = useProductVariantsQuery({
+    fetch,
+    params: { query: `${query} collection:${serviceCollectionId}` },
+  });
   const currencyFormatter = useCurrencyFormatter();
 
   const filteredProductVariants =
@@ -56,7 +52,11 @@ export function ServiceSelector() {
             {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar onTextChange={query => setQuery(query)} onSearch={() => {}} placeholder={'Search services'} />
+        <SearchBar
+          onTextChange={(query: string) => setQuery(query)}
+          onSearch={() => {}}
+          placeholder={'Search services'}
+        />
         <List data={rows} />
         {productVariantsQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
@@ -102,14 +102,9 @@ function getProductVariantRows(
       id: variant.id,
       onPress: () => {
         closePopupRef.current({
-          // TODO: allow setting this right when selecting the service instead of only through the edit menu (immediately redirect after popup close)
-          employeeAssignments: [],
-          productVariantId: String(variant.id),
-          name: displayName,
-          sku: variant.sku ?? '',
-          basePrice: Number(variant.price),
-          imageUrl,
           uuid: uuid(),
+          productVariantId: variant.id,
+          quantity: 1 as Int,
         });
       },
       leftSide: {

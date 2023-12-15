@@ -3,118 +3,37 @@
   "type": "object",
   "properties": {
     "name": {
+      "description": "The name of the work order to update (if applicable). If not provided, a new work order will be created. Unique within a store.",
+      "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+    },
+    "status": {
       "type": "string",
       "minLength": 1
     },
-    "status": {
-      "type": "string"
-    },
-    "customer": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        }
-      },
-      "required": ["id"],
-      "additionalProperties": false
-    },
-    "price": {
-      "title": "price-definition",
-      "type": "object",
-      "properties": {
-        "tax": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "discount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "shipping": {
-          "type": "integer",
-          "minimum": 0
-        }
-      },
-      "required": ["tax", "discount", "shipping"],
-      "additionalProperties": false
+    "customerId": {
+      "$ref": "scalars.json#/definitions/ID"
     },
     "dueDate": {
-      "type": "string"
-    },
-    "products": {
-      "type": "array",
-      "items": {
-        "title": "product-definition",
-        "type": "object",
-        "properties": {
-          "productVariantId": {
-            "type": "string"
-          },
-          "quantity": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "unitPrice": {
-            "type": "integer",
-            "minimum": 0
-          }
-        },
-        "required": ["productVariantId", "quantity", "unitPrice"],
-        "additionalProperties": false
-      }
-    },
-    "services": {
-      "type": "array",
-      "items": {
-        "title": "service-definition",
-        "type": "object",
-        "properties": {
-          "productVariantId": {
-            "type": "string"
-          },
-          "basePrice": {
-            "type": "integer",
-            "minimum": 0
-          },
-          "employeeAssignments": {
-            "type": "array",
-            "items": {
-              "title": "service-employee-assignment",
-              "type": "object",
-              "properties": {
-                "employeeId": {
-                  "type": "string"
-                },
-                "employeeRate": {
-                  "type": "integer",
-                  "minimum": 0
-                },
-                "hours": {
-                  "type": "integer",
-                  "minimum": 0
-                }
-              },
-              "required": ["employeeId", "employeeRate", "hours"],
-              "additionalProperties": false
-            }
-          }
-        },
-        "required": ["productVariantId", "basePrice", "employeeAssignments"],
-        "additionalProperties": false
-      }
+      "$ref": "scalars.json#/definitions/DateTime"
     },
     "employeeAssignments": {
       "type": "array",
       "items": {
-        "title": "employee-assignment",
         "type": "object",
+        "title": "employee-assignment",
+        "description": "An employee assignment that is associated with a specific line item",
         "properties": {
           "employeeId": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "hours": {
+            "$ref": "scalars.json#/definitions/Int"
+          },
+          "lineItemUuid": {
+            "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
           }
         },
-        "required": ["employeeId"],
+        "required": ["employeeId", "hours", "lineItemUuid"],
         "additionalProperties": false
       }
     },
@@ -123,10 +42,64 @@
     },
     "derivedFromOrderId": {
       "description": "A Shopify Order ID from which this work order was derived",
-      "type": "string",
-      "minLength": 1
+      "oneOf": [{ "$ref": "scalars.json#/definitions/ID" }, { "type": "null" }]
+    },
+    "lineItems": {
+      "description": "All line items for this work order, including products and services",
+      "type": "array",
+      "items": {
+        "title": "line-item",
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "description": "A unique identifier for this line item",
+            "type": "string",
+            "minLength": 1
+          },
+          "productVariantId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "quantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          }
+        },
+        "required": ["uuid", "productVariantId", "quantity"],
+        "additionalProperties": false
+      }
+    },
+    "discount": {
+      "title": "discount",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "description": "Either the dollar amount or the percentage",
+              "type": "number"
+            },
+            "valueType": {
+              "enum": ["FIXED_AMOUNT", "PERCENTAGE"]
+            }
+          },
+          "required": ["value", "valueType"],
+          "additionalProperties": false
+        }
+      ]
     }
   },
-  "required": ["status", "customer", "price", "dueDate", "products", "services", "employeeAssignments", "description"],
+  "required": [
+    "name",
+    "status",
+    "customerId",
+    "dueDate",
+    "employeeAssignments",
+    "description",
+    "derivedFromOrderId",
+    "lineItems",
+    "discount"
+  ],
   "additionalProperties": false
 }

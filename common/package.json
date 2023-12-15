@@ -2,6 +2,40 @@
   "name": "@work-orders/common",
   "version": "1.0.0",
   "type": "module",
+  "exports": {
+    "./hooks/*": {
+      "default": "./dist/hooks/*",
+      "types": "./src/hooks/*"
+    },
+    "./queries/*": {
+      "default": "./dist/queries/*",
+      "types": "./src/queries/*"
+    },
+    "./util/*": {
+      "default": "./dist/util/*",
+      "types": "./src/util/*"
+    },
+    "./batcher/*": {
+      "default": "./dist/batcher/*",
+      "types": "./src/batcher/*"
+    },
+    "./types/*": {
+      "default": "./dist/types/*",
+      "types": "./src/types/*"
+    },
+    "./custom-attributes/*": {
+      "default": "./dist/custom-attributes/*",
+      "types": "./src/custom-attributes/*"
+    },
+    "./custom-attributes/attributes/*": {
+      "default": "./dist/custom-attributes/attributes/*",
+      "types": "./src/custom-attributes/attributes/*"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc -w"
+  },
   "author": "Tim van Dam",
   "peerDependencies": {
     "react": "^18.2.0",

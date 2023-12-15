@@ -10,21 +10,36 @@ import { Request, Response } from 'express-serve-static-core';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import type { CreateWorkOrderRequest } from '../../schemas/generated/create-work-order-request.js';
-import { getWorkOrder, upsertWorkOrder } from '../../services/work-order.js';
-import { db } from '../../services/db/db.js';
-import { getSettingsByShop } from '../../services/settings.js';
+import { getWorkOrder, getWorkOrderInfoPage } from '../../services/work-orders/get.js';
+import { getShopSettings } from '../../services/settings.js';
+import { calculateDraftOrder, upsertWorkOrder } from '../../services/work-orders/upsert.js';
+import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 
 @Authenticated()
 export default class WorkOrderController {
+  @Post('/calculate-draft-order')
+  @BodySchema('calculate-work-order')
+  async getDraftDetails(
+    req: Request<unknown, unknown, CalculateWorkOrder>,
+    res: Response<CalculateDraftOrderResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const calculateWorkOrder = req.body;
+
+    const calculatedDraft = await calculateDraftOrder(session, calculateWorkOrder);
+
+    return res.json(calculatedDraft);
+  }
+
   @Post('/')
   @BodySchema('create-work-order')
   async createWorkOrder(req: Request<unknown, unknown, CreateWorkOrder>, res: Response<CreateWorkOrderResponse>) {
-    const { shop }: Session = res.locals.shopify.session;
+    const session: Session = res.locals.shopify.session;
     const createWorkOrder = req.body;
 
-    const { name } = await upsertWorkOrder(shop, createWorkOrder);
+    const { name } = await upsertWorkOrder(session, createWorkOrder);
 
-    return res.json({ workOrder: { name } });
+    return res.json({ name });
   }
 
   @Post('/request')
@@ -33,10 +48,10 @@ export default class WorkOrderController {
     req: Request<unknown, unknown, CreateWorkOrderRequest>,
     res: Response<CreateWorkOrderRequestResponse | { error: string }>,
   ) {
-    const { shop }: Session = res.locals.shopify.session;
+    const session: Session = res.locals.shopify.session;
     const createWorkOrderRequest = req.body;
 
-    const settings = await getSettingsByShop(shop);
+    const settings = await getShopSettings(session.shop);
 
     if (!settings.workOrderRequests.enabled) {
       return res.status(403).json({ error: 'Work order requests are disabled' });
@@ -46,15 +61,19 @@ export default class WorkOrderController {
       return res.status(403).json({ error: 'Invalid status' });
     }
 
-    const { name } = await upsertWorkOrder(shop, {
-      ...createWorkOrderRequest,
-      price: { tax: 0, shipping: 0, discount: 0 },
-      products: [],
+    const { name } = await upsertWorkOrder(session, {
+      status: createWorkOrderRequest.status,
+      dueDate: createWorkOrderRequest.dueDate,
+      customerId: createWorkOrderRequest.customerId,
+      description: createWorkOrderRequest.description,
       employeeAssignments: [],
-      services: [],
+      lineItems: [],
+      derivedFromOrderId: null,
+      name: null,
+      discount: null,
     });
 
-    return res.json({ workOrder: { name } });
+    return res.json({ name });
   }
 
   @Get('/')
@@ -63,23 +82,12 @@ export default class WorkOrderController {
     req: Request<unknown, unknown, unknown, WorkOrderPaginationOptions>,
     res: Response<FetchWorkOrderInfoPageResponse>,
   ) {
-    const { shop }: Session = res.locals.shopify.session;
+    const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    if (paginationOptions.query) {
-      paginationOptions.query = paginationOptions.query.replace(/%/g, '').replace(/_/g, '');
-      paginationOptions.query = `%${paginationOptions.query}%`;
-    }
+    const workOrders = await getWorkOrderInfoPage(session, paginationOptions);
 
-    const infoPage = await db.workOrder.infoPage({
-      shop,
-      status: paginationOptions.status,
-      offset: paginationOptions.offset,
-      limit: paginationOptions.limit,
-      query: paginationOptions.query,
-    });
-
-    return res.json({ infoPage });
+    return res.json(workOrders);
   }
 
   @Get('/:name')
@@ -97,16 +105,12 @@ export default class WorkOrderController {
   }
 }
 
-export type CreateWorkOrderResponse = {
-  workOrder: { name: string };
-};
+export type CalculateDraftOrderResponse = Awaited<ReturnType<typeof calculateDraftOrder>>;
 
-export type CreateWorkOrderRequestResponse = {
-  workOrder: { name: string };
-};
+export type CreateWorkOrderResponse = { name: string };
 
-export type FetchWorkOrderInfoPageResponse = {
-  infoPage: Awaited<ReturnType<typeof db.workOrder.infoPage>>;
-};
+export type CreateWorkOrderRequestResponse = { name: string };
+
+export type FetchWorkOrderInfoPageResponse = Awaited<ReturnType<typeof getWorkOrderInfoPage>>;
 
 export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;

@@ -1,8 +1,8 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
-import { useDebouncedState } from '@common/hooks/use-debounced-state';
-import { useCustomersQuery, Customer } from '@common/queries/use-customers-query';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 
 export function CustomerSelector() {
   const { Screen, closePopup } = useScreen('CustomerSelector');
@@ -23,7 +23,7 @@ export function CustomerSelector() {
           </Text>
         </Stack>
         <SearchBar
-          onTextChange={query => setQuery(query, query === '')}
+          onTextChange={(query: string) => setQuery(query, query === '')}
           onSearch={() => {}}
           placeholder="Search customers"
         />
@@ -59,15 +59,14 @@ export function CustomerSelector() {
 }
 
 function getCustomerRows(customers: Customer[], closePopup: ClosePopupFn<'CustomerSelector'>): ListRow[] {
-  return customers.map<ListRow>(({ id, displayName: name }) => ({
+  return customers.map<ListRow>(({ id, displayName, email, phone, defaultAddress }) => ({
     id,
     onPress: () => {
-      closePopup({ id, name });
+      closePopup(id);
     },
     leftSide: {
-      label: name,
-      // TODO
-      // subtitle: ['info here'],
+      label: displayName,
+      subtitle: [email ?? 'No email', phone ?? 'No phone', defaultAddress?.formatted?.[0] ?? 'No address'],
     },
     rightSide: {
       showChevron: true,

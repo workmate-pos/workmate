@@ -1,9 +1,9 @@
-import { NavigateFn, useScreen } from '../hooks/use-screen';
-import { Order, useOrdersQuery } from '@common/queries/use-orders-query';
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useDebouncedState } from '@common/hooks/use-debounced-state';
-import { titleCase } from '@common/util/casing';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { titleCase } from '@work-orders/common/util/casing.js';
+import { NavigateFn, useScreen } from '../hooks/use-screen.js';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 
 export function ImportOrderSelector() {
   const { Screen, navigate } = useScreen('ImportOrderSelector');
@@ -23,7 +23,7 @@ export function ImportOrderSelector() {
           </Text>
         </Stack>
         <SearchBar
-          onTextChange={query => {
+          onTextChange={(query: string) => {
             setQuery(query, query === '');
           }}
           onSearch={() => {}}
@@ -58,7 +58,7 @@ export function ImportOrderSelector() {
 
 function getOrderRows(orders: Order[], navigate: NavigateFn) {
   return orders.map<ListRow>(
-    ({ id, name, customer, displayFinancialStatus, displayFulfillmentStatus, workOrderName }) => {
+    ({ id, name, workOrderName, displayFulfillmentStatus, displayFinancialStatus, customer }) => {
       const label = workOrderName ? `${name} (${workOrderName})` : name;
 
       return {
@@ -67,12 +67,8 @@ function getOrderRows(orders: Order[], navigate: NavigateFn) {
           navigate('WorkOrder', {
             type: 'new-work-order',
             initial: {
-              customer: customer ? { id: customer.id, name: customer.displayName } : undefined,
-              derivedFromOrder: {
-                id,
-                workOrderName,
-                name,
-              },
+              customerId: customer?.id ?? null,
+              derivedFromOrderId: id,
             },
           });
         },

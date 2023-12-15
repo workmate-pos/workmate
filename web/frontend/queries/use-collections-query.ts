@@ -1,6 +1,6 @@
-import type { FetchCollectionsResponse } from '../../controllers/api/collection';
-import type { PaginationOptions } from '../../schemas/generated/pagination-options';
-import { createPaginatedQuery } from '@common/queries/create-paginated-query';
+import type { FetchCollectionsResponse } from '../../controllers/api/collection.js';
+import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
+import { createPaginatedQuery } from '@work-orders/common/queries/create-paginated-query.js';
 
 export const useCollectionsQuery = createPaginatedQuery({
   endpoint: '/api/collection',

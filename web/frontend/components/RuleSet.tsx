@@ -1,6 +1,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { ChoiceList, ChoiceListProps, Text } from '@shopify/polaris';
 import { FeedbackLoopAdjacencyList, findInfiniteFeedbackLoop } from '../util/infinite-feedback-loop-detector';
+import { never } from '@teifi-digital/shopify-app-express/utils/never';
 
 export type Rule = {
   /**
@@ -141,12 +142,12 @@ function validateRules(rules: Rule[]): string | null {
     adjacencyList[rule.value] ??= { positive: new Set(), negative: new Set() };
 
     for (const requiredRuleValue of rule.requiredRules ?? []) {
-      adjacencyList[rule.value].positive.add(requiredRuleValue);
+      adjacencyList[rule.value]!.positive.add(requiredRuleValue);
     }
 
     for (const conflictingRuleValue of rule.conflictingRules ?? []) {
       adjacencyList[conflictingRuleValue] ??= { positive: new Set(), negative: new Set() };
-      adjacencyList[conflictingRuleValue].negative.add(rule.value);
+      adjacencyList[conflictingRuleValue]!.negative.add(rule.value);
     }
   }
 
@@ -159,7 +160,7 @@ function validateRules(rules: Rule[]): string | null {
   let errorMessage = '';
 
   for (let i = 0; i < infiniteFeedbackLoop.length - 1; i++) {
-    const [[rule, feedback], [nextRule, nextFeedback]] = infiniteFeedbackLoop.slice(i, i + 2);
+    const [[rule, feedback] = never(), [nextRule, nextFeedback] = never()] = infiniteFeedbackLoop.slice(i, i + 2);
 
     const relation = nextFeedback === feedback ? 'requires' : 'conflicts with';
 

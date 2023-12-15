@@ -1,4 +1,6 @@
-export function parseGid(gid: string) {
+import type { ID } from '@web/schemas/generated/shop-settings.js';
+
+export function parseGid(gid: ID) {
   const prefix = 'gid://shopify/';
 
   if (!gid.startsWith(prefix)) {
@@ -7,13 +9,13 @@ export function parseGid(gid: string) {
 
   const [objectName, id] = gid.slice(prefix.length).split('/');
 
-  if (!objectName || !id) {
+  if (!objectName || !id || Number.isNaN(Number(id))) {
     throw new Error(`GID must be in format ${prefix}objectName/id`);
   }
 
-  return { objectName, id };
+  return { objectName, id: Number(id) };
 }
 
-export function createGid(objectName: string, id: string) {
-  return `gid://shopify/${objectName}/${id}`;
+export function createGid(objectName: string, id: string): ID {
+  return `gid://shopify/${objectName}/${id}` as ID;
 }

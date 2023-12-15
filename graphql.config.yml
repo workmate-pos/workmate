@@ -11,9 +11,19 @@ extensions:
     scalarTypes:
       FormattedString: "string"
       URL: "string"
-      Money: "`${ number}.${ number}`"
+      Money: "`${ number}`"
+      Decimal: "`${ number}`"
+      DateTime: "string"
+    requiredTypes:
+      - "MoneyV2"
+      - "Attribute"
     documentHeader:
+      - "/* eslint-disable */"
       - "import type { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';"
     queryTransformation: "(graphql: Graphql, variables: Variables & Record<string, any>) => graphql.query<Result>(query, variables)"
     brandedScalars:
       - "ID"
+      - "Money"
+      - "Int"
+      - "DateTime"
+      - "Decimal"

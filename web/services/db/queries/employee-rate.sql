@@ -9,7 +9,7 @@ AND "employeeId" IN :employeeIds!;
 
 /*
     @name upsertMany
-    @param rates -> ((employeeId, rate)...)
+    @param rates -> ((employeeId!, rate!)...)
 */
 WITH Input AS (
     SELECT "employeeId", :shop! AS shop, rate

@@ -1,4 +1,4 @@
-query getStoreProperties {
+query getProperties {
     shop {
         name
         currencyCode

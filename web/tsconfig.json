@@ -19,7 +19,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "composite": true,
-    "declaration": true,
+    "declaration": true
   },
   "exclude": ["node_modules", "frontend", "dist"]
 }

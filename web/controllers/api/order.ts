@@ -2,10 +2,8 @@ import type { Request, Response } from 'express-serve-static-core';
 import type { Session } from '@shopify/shopify-api';
 import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
-import { gql } from '../../services/gql/gql.js';
-import { OrderFragmentResult } from '../../services/gql/queries/generated/queries.js';
-import { PAYMENT_ADDITIONAL_DETAIL_KEYS } from '../../services/webhooks.js';
+import { getOrder, getOrderInfos } from '../../services/orders/get.js';
+import { ID } from '../../schemas/generated/ids.js';
 
 @Authenticated()
 export default class OrderController {
@@ -15,22 +13,20 @@ export default class OrderController {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    const graphql = new Graphql(session);
-    const response = await gql.order.getOrders(graphql, paginationOptions);
+    const orderInfos = await getOrderInfos(session, paginationOptions);
 
-    const orders = response.orders.nodes.map(order => ({
-      ...order,
-      workOrderName:
-        order.customAttributes.find(({ key }) => key == PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME)?.value ??
-        undefined,
-    }));
-    const pageInfo = response.orders.pageInfo;
+    return res.json(orderInfos);
+  }
 
-    return res.json({ orders, pageInfo });
+  @Get('/:id')
+  async fetchOrder(req: Request<{ id: ID }>, res: Response<FetchOrderResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const order = await getOrder(session, req.params.id);
+
+    return res.json(order);
   }
 }
 
-export type FetchOrdersResponse = {
-  orders: (OrderFragmentResult & { workOrderName?: string })[];
-  pageInfo: { hasNextPage: boolean; endCursor?: string | null };
-};
+export type FetchOrdersResponse = Awaited<ReturnType<typeof getOrderInfos>>;
+
+export type FetchOrderResponse = Awaited<ReturnType<typeof getOrder>>;

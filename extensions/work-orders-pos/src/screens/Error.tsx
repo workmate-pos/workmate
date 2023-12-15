@@ -8,7 +8,7 @@ export function Error() {
     <Screen
       name="Error"
       title="Error"
-      onReceiveParams={params => {
+      onReceiveParams={(params: any) => {
         setError(params.error);
       }}
     >

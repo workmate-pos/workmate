@@ -1,14 +1,14 @@
 import { Frame, IndexTable, Page, SkeletonBodyText, Text } from '@shopify/polaris';
 import { Loading, TitleBar } from '@shopify/app-bridge-react';
-import { useEmployeesQuery } from '@common/queries/use-employees-query';
-import { useEmployeeRateQueries } from '../queries/use-employee-rate-queries';
-import { useCurrencyFormatter } from '@common/hooks/use-currency-formatter';
-import { useSettingsQuery } from '@common/queries/use-settings-query';
-import { NumberField } from '../components/NumberField';
-import { useState } from 'react';
-import { useEmployeeRatesMutation } from '../queries/use-employee-rates-mutation';
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import { useState } from 'react';
+import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
+import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useEmployeeRateQueries } from '../queries/use-employee-rate-queries.js';
+import { NumberField } from '../components/NumberField.js';
+import { useEmployeeRatesMutation } from '../queries/use-employee-rates-mutation.js';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 
 export default function Rates() {
   const [toast, setToastAction] = useToast();
@@ -17,6 +17,7 @@ export default function Rates() {
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const employeesQuery = useEmployeesQuery({ fetch, params: {} });
+  // TODO: Use rates directly from here instead of with another query
   const employeeIds = employeesQuery.data?.pages.map(employee => employee.id) ?? [];
   const employeeRateQueries = useEmployeeRateQueries(employeeIds, {
     refetchOnWindowFocus: false,
@@ -100,7 +101,7 @@ export default function Rates() {
                       prefix={currencyFormatter.prefix}
                       suffix={currencyFormatter.suffix}
                       autoComplete={'off'}
-                      placeholder={settingsQuery.data?.settings.defaultRate?.toFixed(2)}
+                      placeholder={settingsQuery.data?.settings.defaultRate}
                     />
                   )}
                   {query?.isError && (

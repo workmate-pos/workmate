@@ -36,14 +36,12 @@ export const getNextIdForShop = new PreparedQuery<IGetNextIdForShopParams,IGetNe
 export interface IUpsertParams {
   customerId: string;
   derivedFromOrderId?: string | null | void;
-  description: string;
-  discountAmount: number;
+  draftOrderId?: string | null | void;
   dueDate: DateOrString;
   name: string;
-  shippingAmount: number;
+  orderId?: string | null | void;
   shop: string;
   status: string;
-  taxAmount: number;
 }
 
 /** 'Upsert' return type */
@@ -51,15 +49,13 @@ export interface IUpsertResult {
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
-  description: string;
-  discountAmount: number;
+  draftOrderId: string | null;
   dueDate: Date;
   id: number;
   name: string;
-  shippingAmount: number;
+  orderId: string | null;
   shop: string;
   status: string;
-  taxAmount: number;
 }
 
 /** 'Upsert' query type */
@@ -68,31 +64,59 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"taxAmount":true,"discountAmount":true,"shippingAmount":true,"description":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":187,"b":192}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":195,"b":200}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":203,"b":210}]},{"name":"taxAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":213,"b":223}]},{"name":"discountAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":226,"b":241}]},{"name":"shippingAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":244,"b":259}]},{"name":"description","required":true,"transform":{"type":"scalar"},"locs":[{"a":262,"b":274}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":285,"b":293}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":296,"b":307}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":310,"b":328}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"taxAmount\", \"discountAmount\", \"shippingAmount\",\n                         description, \"dueDate\", \"customerId\", \"derivedFromOrderId\")\nVALUES (:shop!, :name!, :status!, :taxAmount!, :discountAmount!, :shippingAmount!, :description!,\n        :dueDate!, :customerId!, :derivedFromOrderId)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status           = EXCLUDED.status,\n                                           \"taxAmount\"      = EXCLUDED.\"taxAmount\",\n                                           \"discountAmount\" = EXCLUDED.\"discountAmount\",\n                                           \"shippingAmount\" = EXCLUDED.\"shippingAmount\",\n                                           description      = EXCLUDED.description,\n                                           \"dueDate\"        = EXCLUDED.\"dueDate\",\n                                           \"customerId\"     = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\"\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"orderId":true,"draftOrderId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":152,"b":157}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":160,"b":165}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":168,"b":175}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":178,"b":186}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":189,"b":200}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":203,"b":221}]},{"name":"orderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":224,"b":231}]},{"name":"draftOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":242,"b":254}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", \"orderId\",\n                         \"draftOrderId\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :orderId,\n        :draftOrderId)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           \"orderId\"            = EXCLUDED.\"orderId\",\n                                           \"draftOrderId\"       = EXCLUDED.\"draftOrderId\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "WorkOrder" (shop, name, status, "taxAmount", "discountAmount", "shippingAmount",
- *                          description, "dueDate", "customerId", "derivedFromOrderId")
- * VALUES (:shop!, :name!, :status!, :taxAmount!, :discountAmount!, :shippingAmount!, :description!,
- *         :dueDate!, :customerId!, :derivedFromOrderId)
- * ON CONFLICT ("shop", "name") DO UPDATE SET status           = EXCLUDED.status,
- *                                            "taxAmount"      = EXCLUDED."taxAmount",
- *                                            "discountAmount" = EXCLUDED."discountAmount",
- *                                            "shippingAmount" = EXCLUDED."shippingAmount",
- *                                            description      = EXCLUDED.description,
- *                                            "dueDate"        = EXCLUDED."dueDate",
- *                                            "customerId"     = EXCLUDED."customerId",
- *                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId"
+ * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", "orderId",
+ *                          "draftOrderId")
+ * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :orderId,
+ *         :draftOrderId)
+ * ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
+ *                                            "dueDate"            = EXCLUDED."dueDate",
+ *                                            "customerId"         = EXCLUDED."customerId",
+ *                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
+ *                                            "orderId"            = EXCLUDED."orderId",
+ *                                            "draftOrderId"       = EXCLUDED."draftOrderId"
  * RETURNING *
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
 
 
-/** 'InfoPage' parameters type */
-export interface IInfoPageParams {
+/** 'UpdateOrderIds' parameters type */
+export interface IUpdateOrderIdsParams {
+  draftOrderId?: string | null | void;
+  id: number;
+  orderId?: string | null | void;
+}
+
+/** 'UpdateOrderIds' return type */
+export type IUpdateOrderIdsResult = void;
+
+/** 'UpdateOrderIds' query type */
+export interface IUpdateOrderIdsQuery {
+  params: IUpdateOrderIdsParams;
+  result: IUpdateOrderIdsResult;
+}
+
+const updateOrderIdsIR: any = {"usedParamSet":{"orderId":true,"draftOrderId":true,"id":true},"params":[{"name":"orderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":49,"b":56}]},{"name":"draftOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":101,"b":113}]},{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":143,"b":146}]}],"statement":"UPDATE \"WorkOrder\"\nSET \"orderId\"      = COALESCE(:orderId, \"orderId\"),\n    \"draftOrderId\" = COALESCE(:draftOrderId, \"draftOrderId\")\nWHERE id = :id!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * UPDATE "WorkOrder"
+ * SET "orderId"      = COALESCE(:orderId, "orderId"),
+ *     "draftOrderId" = COALESCE(:draftOrderId, "draftOrderId")
+ * WHERE id = :id!
+ * ```
+ */
+export const updateOrderIds = new PreparedQuery<IUpdateOrderIdsParams,IUpdateOrderIdsResult>(updateOrderIdsIR);
+
+
+/** 'GetPage' parameters type */
+export interface IGetPageParams {
   limit: NumberOrString;
   offset?: NumberOrString | null | void;
   query?: string | null | void;
@@ -100,75 +124,44 @@ export interface IInfoPageParams {
   status?: string | null | void;
 }
 
-/** 'InfoPage' return type */
-export interface IInfoPageResult {
-  discountAmount: number;
+/** 'GetPage' return type */
+export interface IGetPageResult {
+  createdAt: Date;
+  customerId: string;
+  derivedFromOrderId: string | null;
+  draftOrderId: string | null;
   dueDate: Date;
-  hasDeposit: boolean;
+  id: number;
   name: string;
-  paidAmount: number;
-  productAmount: number;
-  serviceAmount: number;
-  shippingAmount: number;
+  orderId: string | null;
+  shop: string;
   status: string;
-  taxAmount: number;
 }
 
-/** 'InfoPage' query type */
-export interface IInfoPageQuery {
-  params: IInfoPageParams;
-  result: IInfoPageResult;
+/** 'GetPage' query type */
+export interface IGetPageQuery {
+  params: IGetPageParams;
+  result: IGetPageResult;
 }
 
-const infoPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":153,"b":158}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":199,"b":205}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":288,"b":293},{"a":351,"b":356},{"a":421,"b":426}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":485,"b":491}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":500,"b":506}]}],"statement":"WITH wo AS (SELECT id, name, status, \"taxAmount\", \"discountAmount\", \"shippingAmount\", \"dueDate\"\n            FROM \"WorkOrder\" wo\n            WHERE shop = :shop!\n              AND wo.status = COALESCE(:status, wo.status)\n              AND (\n                        wo.status ILIKE COALESCE(:query, '%') OR\n                        wo.name ILIKE COALESCE(:query, '%') OR\n                        wo.description ILIKE COALESCE(:query, '%'))\n            ORDER BY wo.id DESC\n            LIMIT :limit! OFFSET :offset),\n     prod AS (SELECT \"workOrderId\", COALESCE(SUM(quantity * \"unitPrice\"), 0) :: INTEGER AS \"productAmount!\"\n              FROM \"WorkOrderProduct\"\n              GROUP BY \"workOrderId\"),\n     wosea AS (SELECT wos.\"workOrderId\", COALESCE(SUM(wosea.hours * wosea.\"employeeRate\"), 0) :: INTEGER AS \"serviceEmployeeAmount!\"\n              FROM \"WorkOrderService\" wos\n              INNER JOIN \"WorkOrderServiceEmployeeAssignment\" wosea ON wosea.\"workOrderServiceId\" = wos.id\n              GROUP BY wos.\"workOrderId\"),\n    wos AS (SELECT \"workOrderId\", COALESCE(SUM(\"basePrice\"), 0) :: INTEGER AS \"serviceBaseAmount!\"\n            FROM \"WorkOrderService\"\n            GROUP BY \"workOrderId\"),\n     pay AS (SELECT \"workOrderId\",\n                    COALESCE(SUM(amount), 0) :: INTEGER        AS \"paidAmount!\",\n                    COALESCE(BOOL_OR(type = 'DEPOSIT'), FALSE) AS \"hasDeposit!\"\n             FROM \"WorkOrderPayment\"\n             GROUP BY \"workOrderId\")\nSELECT wo.name,\n       wo.status,\n       wo.\"taxAmount\",\n       wo.\"discountAmount\",\n       wo.\"shippingAmount\",\n       wo.\"dueDate\",\n       prod.\"productAmount!\",\n       pay.\"paidAmount!\",\n       pay.\"hasDeposit!\",\n       (wos.\"serviceBaseAmount!\" + wosea.\"serviceEmployeeAmount!\") AS \"serviceAmount!\"\nFROM wo\nLEFT JOIN prod ON wo.id = prod.\"workOrderId\"\nLEFT JOIN pay ON wo.id = pay.\"workOrderId\"\nLEFT JOIN wosea ON wo.id = wosea.\"workOrderId\"\nLEFT JOIN wos ON wo.id = wos.\"workOrderId\"\nORDER BY wo.id DESC"};
+const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":76,"b":82}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":131,"b":136},{"a":172,"b":177}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":215,"b":221}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":230,"b":236}]}],"statement":"SELECT *\nFROM \"WorkOrder\" wo\nWHERE shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%') OR\n  wo.name ILIKE COALESCE(:query, '%')\n  )\nORDER BY wo.id DESC\nLIMIT :limit! OFFSET :offset"};
 
 /**
  * Query generated from SQL:
  * ```
- * WITH wo AS (SELECT id, name, status, "taxAmount", "discountAmount", "shippingAmount", "dueDate"
- *             FROM "WorkOrder" wo
- *             WHERE shop = :shop!
- *               AND wo.status = COALESCE(:status, wo.status)
- *               AND (
- *                         wo.status ILIKE COALESCE(:query, '%') OR
- *                         wo.name ILIKE COALESCE(:query, '%') OR
- *                         wo.description ILIKE COALESCE(:query, '%'))
- *             ORDER BY wo.id DESC
- *             LIMIT :limit! OFFSET :offset),
- *      prod AS (SELECT "workOrderId", COALESCE(SUM(quantity * "unitPrice"), 0) :: INTEGER AS "productAmount!"
- *               FROM "WorkOrderProduct"
- *               GROUP BY "workOrderId"),
- *      wosea AS (SELECT wos."workOrderId", COALESCE(SUM(wosea.hours * wosea."employeeRate"), 0) :: INTEGER AS "serviceEmployeeAmount!"
- *               FROM "WorkOrderService" wos
- *               INNER JOIN "WorkOrderServiceEmployeeAssignment" wosea ON wosea."workOrderServiceId" = wos.id
- *               GROUP BY wos."workOrderId"),
- *     wos AS (SELECT "workOrderId", COALESCE(SUM("basePrice"), 0) :: INTEGER AS "serviceBaseAmount!"
- *             FROM "WorkOrderService"
- *             GROUP BY "workOrderId"),
- *      pay AS (SELECT "workOrderId",
- *                     COALESCE(SUM(amount), 0) :: INTEGER        AS "paidAmount!",
- *                     COALESCE(BOOL_OR(type = 'DEPOSIT'), FALSE) AS "hasDeposit!"
- *              FROM "WorkOrderPayment"
- *              GROUP BY "workOrderId")
- * SELECT wo.name,
- *        wo.status,
- *        wo."taxAmount",
- *        wo."discountAmount",
- *        wo."shippingAmount",
- *        wo."dueDate",
- *        prod."productAmount!",
- *        pay."paidAmount!",
- *        pay."hasDeposit!",
- *        (wos."serviceBaseAmount!" + wosea."serviceEmployeeAmount!") AS "serviceAmount!"
- * FROM wo
- * LEFT JOIN prod ON wo.id = prod."workOrderId"
- * LEFT JOIN pay ON wo.id = pay."workOrderId"
- * LEFT JOIN wosea ON wo.id = wosea."workOrderId"
- * LEFT JOIN wos ON wo.id = wos."workOrderId"
+ * SELECT *
+ * FROM "WorkOrder" wo
+ * WHERE shop = :shop!
+ *   AND wo.status = COALESCE(:status, wo.status)
+ *   AND (
+ *   wo.status ILIKE COALESCE(:query, '%') OR
+ *   wo.name ILIKE COALESCE(:query, '%')
+ *   )
  * ORDER BY wo.id DESC
+ * LIMIT :limit! OFFSET :offset
  * ```
  */
-export const infoPage = new PreparedQuery<IInfoPageParams,IInfoPageResult>(infoPageIR);
+export const getPage = new PreparedQuery<IGetPageParams,IGetPageResult>(getPageIR);
 
 
 /** 'Get' parameters type */
@@ -183,15 +176,13 @@ export interface IGetResult {
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
-  description: string;
-  discountAmount: number;
+  draftOrderId: string | null;
   dueDate: Date;
   id: number;
   name: string;
-  shippingAmount: number;
+  orderId: string | null;
   shop: string;
   status: string;
-  taxAmount: number;
 }
 
 /** 'Get' query type */
@@ -213,5 +204,44 @@ const getIR: any = {"usedParamSet":{"id":true,"shop":true,"name":true},"params":
  * ```
  */
 export const get = new PreparedQuery<IGetParams,IGetResult>(getIR);
+
+
+/** 'GetByDraftOrderIdOrOrderId' parameters type */
+export interface IGetByDraftOrderIdOrOrderIdParams {
+  id: string;
+}
+
+/** 'GetByDraftOrderIdOrOrderId' return type */
+export interface IGetByDraftOrderIdOrOrderIdResult {
+  createdAt: Date;
+  customerId: string;
+  derivedFromOrderId: string | null;
+  draftOrderId: string | null;
+  dueDate: Date;
+  id: number;
+  name: string;
+  orderId: string | null;
+  shop: string;
+  status: string;
+}
+
+/** 'GetByDraftOrderIdOrOrderId' query type */
+export interface IGetByDraftOrderIdOrOrderIdQuery {
+  params: IGetByDraftOrderIdOrOrderIdParams;
+  result: IGetByDraftOrderIdOrOrderIdResult;
+}
+
+const getByDraftOrderIdOrOrderIdIR: any = {"usedParamSet":{"id":true},"params":[{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":44,"b":47},{"a":69,"b":72}]}],"statement":"SELECT *\nFROM \"WorkOrder\"\nWHERE \"orderId\" = :id!\nOR \"draftOrderId\" = :id!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "WorkOrder"
+ * WHERE "orderId" = :id!
+ * OR "draftOrderId" = :id!
+ * ```
+ */
+export const getByDraftOrderIdOrOrderId = new PreparedQuery<IGetByDraftOrderIdOrOrderIdParams,IGetByDraftOrderIdOrOrderIdResult>(getByDraftOrderIdOrOrderIdIR);
 
 

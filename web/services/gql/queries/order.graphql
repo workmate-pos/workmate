@@ -1,39 +1,137 @@
-query getOrders($first: Int = 10, $after: String, $query: String) {
-    orders(first: $first, after: $after, query: $query, sortKey: CREATED_AT, reverse: true) {
-        nodes {
-            ...orderFragment
-        }
-        pageInfo {
-            hasNextPage
-            endCursor
-        }
+query get($id: ID!) {
+  order(id: $id) {
+    __typename
+    name
+    note
+    totalPrice
+    totalShippingPrice
+    totalTax
+    totalReceived
+    subtotalPrice
+    totalDiscounts
+    totalOutstandingSet {
+      ...ShopMoneyAmountFragment
     }
+    customAttributes {
+      key
+      value
+    }
+  }
 }
 
-query getOrderAttributes($id: ID!) {
-    order(id: $id) {
-      id
-      name
-      customAttributes {
-        key
-        value
+fragment ShopMoneyAmountFragment on MoneyBag {
+  shopMoney {
+    amount
+  }
+}
+
+query getLineItems($id: ID!, $after: String, $serviceCollectionId: ID = "gid://shopify/Collection/null") {
+  order(id: $id) {
+    lineItems(first: 10, after: $after) {
+      nodes {
+        ... on LineItem {
+          id
+          title
+          taxable
+          variant {
+            id
+            image {
+              url
+            }
+            title
+            product {
+              id
+              title
+              isServiceItem: inCollection(id: $serviceCollectionId)
+            }
+          }
+          quantity
+          originalUnitPrice
+          sku
+          customAttributes {
+            key
+            value
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
       }
     }
+  }
 }
 
-# TODO: Use customerFragment (currently broken with genql)
-fragment orderFragment on Order {
+query getPage($first: Int = 10, $after: String, $query: String) {
+  orders(first: $first, after: $after, query: $query, sortKey: CREATED_AT, reverse: true) {
+    nodes {
+      ...OrderInfoFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+query getInfo($id: ID!) {
+  order(id: $id) {
+    ...OrderInfoFragment
+  }
+}
+
+fragment OrderInfoFragment on Order {
+  id
+  name
+  totalReceived
+  totalPrice
+  totalOutstandingSet {
+    ...ShopMoneyAmountFragment
+  }
+  customer {
     id
-    name
-    displayFinancialStatus
-    displayFulfillmentStatus
-    customAttributes {
-        key
-        value
+    displayName
+  }
+  displayFulfillmentStatus
+  displayFinancialStatus
+  customAttributes {
+    key
+    value
+  }
+}
+
+mutation update($input: OrderInput!) {
+  orderUpdate(input: $input) {
+    order {
+      id
     }
-    customer {
-        id
-        displayName
+    userErrors {
+      ...UserErrorFragment
     }
-    name
+  }
+}
+
+fragment UserErrorFragment on UserError {
+  field
+  message
+}
+
+query getManyOrderInfoDraftOrderInfo($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ... on Order {
+      name
+      totalPrice
+      totalOutstandingSet {
+        ...ShopMoneyAmountFragment
+      }
+      displayFinancialStatus
+      # TODO
+      # displayFulfillmentStatus
+    }
+    ... on DraftOrder {
+      name
+      totalPrice
+    }
+  }
 }

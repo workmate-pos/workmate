@@ -1,7 +1,6 @@
 import type { Session } from '@shopify/shopify-api';
 import type { Request, Response } from 'express-serve-static-core';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
-import type { GetCollectionsOperationResult } from '../../services/gql/queries/generated/queries.js';
 import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
@@ -18,7 +17,7 @@ export default class CollectionController {
     const paginationOptions = req.query;
 
     const graphql = new Graphql(session);
-    const response = await gql.collection.getCollections(graphql, paginationOptions);
+    const response = await gql.collection.getPage.run(graphql, paginationOptions);
 
     const collections = response.collections.nodes;
     const pageInfo = response.collections.pageInfo;
@@ -28,6 +27,6 @@ export default class CollectionController {
 }
 
 export type FetchCollectionsResponse = {
-  collections: GetCollectionsOperationResult['collections']['nodes'];
-  pageInfo: GetCollectionsOperationResult['collections']['pageInfo'];
+  collections: gql.collection.getPage.Result['collections']['nodes'];
+  pageInfo: gql.collection.getPage.Result['collections']['pageInfo'];
 };

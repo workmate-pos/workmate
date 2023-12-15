@@ -1,15 +1,16 @@
 import { useQueries, UseQueryOptions } from 'react-query';
 import { useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
-import { FetchRatesResponse } from '../../controllers/api/rate';
-import { toDollars } from '@common/util/money';
-import { useBatcher } from '../hooks/use-batcher';
+import { toDollars } from '@work-orders/common/util/money.js';
+import { useBatcher } from '@work-orders/common/batcher/use-batcher.js';
+import type { FetchRatesResponse } from '../../controllers/api/rate.js';
+import type { ID } from '../../services/gql/queries/generated/schema.js';
 
 const useEmployeeRateBatcher = () => {
   const fetch = useAuthenticatedFetch();
 
-  const batcher = useBatcher<string, BatchResult>({
+  const batcher = useBatcher({
     name: 'employee-rates',
-    handler: async (ids: string[]) => {
+    handler: async (ids: ID[]): Promise<BatchResult[]> => {
       if (ids.length === 0) {
         return [];
       }
@@ -39,8 +40,8 @@ const useEmployeeRateBatcher = () => {
 type BatchResult = { id: string; rate: number | null };
 
 export const useEmployeeRateQueries = (
-  ids: string[],
-  options?: UseQueryOptions<BatchResult, unknown, BatchResult, ['employee-rate', string]>,
+  ids: ID[],
+  options?: UseQueryOptions<BatchResult, unknown, BatchResult, ['employee-rate', ID]>,
 ) => {
   const batcher = useEmployeeRateBatcher();
 
@@ -53,7 +54,7 @@ export const useEmployeeRateQueries = (
           queryFn: async () => {
             return await batcher.fetch(id);
           },
-        }) satisfies UseQueryOptions<BatchResult, unknown, BatchResult, ['employee-rate', string]>,
+        }) satisfies UseQueryOptions<BatchResult, unknown, BatchResult, ['employee-rate', ID]>,
     ),
   );
 

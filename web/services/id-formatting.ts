@@ -1,8 +1,8 @@
 import { ShopSettings } from '../schemas/generated/shop-settings.js';
-import { getSettingsByShop } from './settings.js';
+import { getShopSettings } from './settings.js';
 import { db } from './db/db.js';
 import { useClient } from './db/client.js';
-import { never } from '../util/never.js';
+import { never } from '@work-orders/common/util/never.js';
 
 const formatters: Record<
   string,
@@ -18,7 +18,7 @@ const formatters: Record<
 };
 
 export async function getFormattedId(shop: string) {
-  const settings = await getSettingsByShop(shop);
+  const settings = await getShopSettings(shop);
 
   let formattedId = settings.idFormat;
 

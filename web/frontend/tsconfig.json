@@ -1,9 +1,8 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
-    "target": "ESNext",
-    "module": "ESNext",
-    "moduleResolution": "node",
+    "target": "ES2022",
+    "module": "NodeNext",
     "lib": ["dom", "dom.iterable", "esnext"],
     "outDir": "dist",
     "allowJs": true,
@@ -15,15 +14,7 @@
     "strictNullChecks": true,
     "noImplicitAny": true,
     "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "paths": {
-      "@common/*": ["../../common/src/*"]
-    }
+    "noUncheckedIndexedAccess": true
   },
-  "exclude": ["node_modules"],
-  "references": [
-    {
-      "path": "../../common/tsconfig.json"
-    }
-  ]
+  "exclude": ["node_modules"]
 }

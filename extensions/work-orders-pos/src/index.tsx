@@ -1,20 +1,20 @@
 import { Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { WorkOrderPage } from './screens/WorkOrder.js';
-import { ProductConfig } from './screens/popups/ProductConfig';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
-import { ProductSelector } from './screens/popups/ProductSelector';
 import { Error } from './screens/Error.js';
 import { ReactQueryProvider } from './providers/ReactQueryProvider.js';
 import { StatusSelector } from './screens/popups/StatusSelector.js';
 import { CustomerSelector } from './screens/popups/CustomerSelector.js';
-import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSelector.js';
 import { ShippingConfig } from './screens/popups/ShippingConfig.js';
 import { Entry } from './screens/Entry.js';
 import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
-import { ServiceSelector } from './screens/popups/ServiceSelector';
-import { ServiceConfig } from './screens/popups/ServiceConfig';
-import { ServiceEmployeeAssignmentConfig } from './screens/popups/ServiceEmployeeAssignmentConfig';
-import { ImportOrderSelector } from './screens/ImportOrderSelector';
+import { ProductLineItemConfig } from './screens/popups/ProductLineItemConfig.js';
+import { ProductSelector } from './screens/popups/ProductSelector.js';
+import { DiscountSelector } from './screens/popups/DiscountSelector.js';
+import { ServiceSelector } from './screens/popups/ServiceSelector.js';
+import { EmployeeAssignmentConfig } from './screens/popups/EmployeeAssignmentConfig.js';
+import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
+import { ServiceLineItemConfig } from './screens/popups/ServiceLineItemConfig.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -35,17 +35,17 @@ function SmartGridModal() {
     <ReactQueryProvider>
       <Navigator>
         <Entry />
-        <ImportOrderSelector />
         <Error />
+        <ImportOrderSelector />
         <WorkOrderPage />
 
         <CustomerSelector />
-        <DiscountOrDepositSelector />
+        <DiscountSelector />
+        <EmployeeAssignmentConfig />
         <EmployeeSelector />
-        <ProductConfig />
+        <ProductLineItemConfig />
         <ProductSelector />
-        <ServiceConfig />
-        <ServiceEmployeeAssignmentConfig />
+        <ServiceLineItemConfig />
         <ServiceSelector />
         <ShippingConfig />
         <StatusSelector />

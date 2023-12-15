@@ -18,22 +18,21 @@ import {
   Autocomplete,
   Icon,
 } from '@shopify/polaris';
-import { NumberField } from '../components/NumberField';
-import { Loading, TitleBar } from '@shopify/app-bridge-react';
-import type { ShopSettings } from '../../schemas/generated/shop-settings';
-import { Rule, RuleSet } from '../components/RuleSet';
-import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider';
-import invariant from 'tiny-invariant';
-import { useSettingsQuery } from '@common/queries/use-settings-query';
-import { useSettingsMutation } from '../queries/use-settings-mutation';
-import { CurrencyFormatter, useCurrencyFormatter } from '@common/hooks/use-currency-formatter';
 import { CirclePlusMinor, SearchMinor } from '@shopify/polaris-icons';
-import { useCollectionsQuery } from '../queries/use-collections-query';
-import { useDebouncedState } from '@common/hooks/use-debounced-state';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch';
+import { Loading, TitleBar } from '@shopify/app-bridge-react';
+import invariant from 'tiny-invariant';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { CurrencyFormatter, useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { NumberField } from '../components/NumberField.js';
+import type { ID, Money, ShopSettings } from '../../schemas/generated/shop-settings.js';
+import { Rule, RuleSet } from '../components/RuleSet.js';
+import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider.js';
+import { useSettingsMutation } from '../queries/use-settings-mutation.js';
+import { useCollectionsQuery } from '../queries/use-collections-query.js';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
-const ONLY_HIGHEST_SHORTCUT = 'ONLY_HIGHEST_SHORTCUT';
 const CURRENCY_RANGE = 'CURRENCY_RANGE';
 const PERCENTAGE_RANGE = 'PERCENTAGE_RANGE';
 
@@ -42,7 +41,6 @@ export default function Settings() {
   const [settings, setSettings] = useState<ShopSettings | null>(null);
 
   const [discountShortcutValue, setDiscountShortcutValue] = useState('');
-  const [depositShortcutValue, setDepositShortcutValue] = useState('');
 
   const [statusValue, setStatusValue] = useState('');
 
@@ -151,9 +149,9 @@ export default function Settings() {
                       discountShortcuts: [
                         ...settings.discountShortcuts,
                         {
-                          value: Number(discountShortcutValue),
-                          unit,
-                        },
+                          currency: { unit: 'currency', money: discountShortcutValue as Money } as const,
+                          percentage: { unit: 'percentage', percentage: Number(discountShortcutValue) } as const,
+                        }[unit],
                       ],
                     });
                     setDiscountShortcutValue('');
@@ -170,8 +168,8 @@ export default function Settings() {
                         })
                       }
                     >
-                      {shortcut.unit === 'currency' && currencyFormatter(shortcut.value)}
-                      {shortcut.unit === 'percentage' && `${shortcut.value}%`}
+                      {shortcut.unit === 'currency' && currencyFormatter(shortcut.money)}
+                      {shortcut.unit === 'percentage' && `${shortcut.percentage}%`}
                     </Tag>
                   ))}
                 </InlineStack>
@@ -207,14 +205,7 @@ export default function Settings() {
                           onAction: () => {
                             setSettings({
                               ...settings,
-                              statuses: [
-                                ...settings.statuses,
-                                {
-                                  name: statusValue,
-                                  bgHex: '#000000',
-                                  textHex: '#ffffff',
-                                },
-                              ],
+                              statuses: [...settings.statuses, statusValue],
                             });
                             setStatusValue('');
                           },
@@ -234,7 +225,7 @@ export default function Settings() {
                         })
                       }
                     >
-                      {status.name}
+                      {status}
                     </Tag>
                   ))}
                 </InlineStack>
@@ -265,7 +256,7 @@ export default function Settings() {
             <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
               <BlockStack gap="400">
                 <Text as="h3" variant="headingMd">
-                  Service
+                  Labour
                 </Text>
               </BlockStack>
             </Box>
@@ -292,15 +283,16 @@ export default function Settings() {
                   textField={
                     <Autocomplete.TextField
                       label="Service Collection"
+                      helpText={'All products within this collection will be shown in the "Add Service" menu'}
                       autoComplete="off"
                       value={serviceCollectionValue}
                       onChange={setServiceCollectionValue}
                       onBlur={() => setServiceCollectionValue(selectedServiceCollectionName ?? '')}
                     />
                   }
-                  onSelect={([id]) => {
+                  onSelect={([id]: ID[]) => {
                     let name: string | null = null;
-                    let serviceCollectionId: string | null = null;
+                    let serviceCollectionId: ID | null = null;
 
                     if (id !== undefined && id !== settings?.serviceCollectionId) {
                       name = collectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
@@ -311,6 +303,18 @@ export default function Settings() {
                     setServiceCollectionValue(name ?? '');
                     setSettings({ ...settings, serviceCollectionId });
                   }}
+                />
+                <TextField
+                  label={'Labour Line Item Name'}
+                  autoComplete={'off'}
+                  value={settings.labourLineItemName}
+                  onChange={value => setSettings({ ...settings, labourLineItemName: value })}
+                />
+                <TextField
+                  label={'Labour Line Item SKU'}
+                  autoComplete={'off'}
+                  value={settings.labourLineItemSKU}
+                  onChange={value => setSettings({ ...settings, labourLineItemSKU: value })}
                 />
               </BlockStack>
             </Card>
@@ -335,7 +339,7 @@ export default function Settings() {
                   min={0}
                   inputMode={'decimal'}
                   requiredIndicator={true}
-                  onChange={value => setSettings({ ...settings, defaultRate: Number(value) })}
+                  onChange={(value: Money) => setSettings({ ...settings, defaultRate: value })}
                   autoComplete={'off'}
                   helpText={'Used for employees without a set hourly rate'}
                 />
@@ -357,7 +361,7 @@ export default function Settings() {
                     setSettings({
                       ...settings,
                       workOrderRequests: enabled
-                        ? { enabled, allowedStatuses: [settings.statuses[0]!.name] }
+                        ? { enabled, allowedStatuses: [settings.statuses[0]!] }
                         : { enabled, allowedStatuses: null },
                     })
                   }
@@ -366,7 +370,7 @@ export default function Settings() {
                   label={'Request Status'}
                   helpText={'The status that work order requests will be set to when created'}
                   disabled={!settings.workOrderRequests.enabled}
-                  options={settings.statuses.map(status => status.name)}
+                  options={settings.statuses}
                   placeholder={'Select a status'}
                   value={settings.workOrderRequests.allowedStatuses?.[0]}
                   onChange={statusName =>
@@ -454,7 +458,10 @@ function useDiscountRules(
           discountRules: {
             ...settings.discountRules,
             onlyAllowShortcuts: false,
-            allowedCurrencyRange: initialCurrencyRangeBounds,
+            allowedCurrencyRange: [
+              initialCurrencyRangeBounds[0].toFixed(2) as Money,
+              initialCurrencyRangeBounds[1].toFixed(2) as Money,
+            ],
           },
         });
       },
@@ -478,14 +485,22 @@ function useDiscountRules(
             max={currencyRangeBounds.max}
             step={1}
             formatter={currencyFormatter}
-            value={settings.discountRules.allowedCurrencyRange}
+            value={
+              [
+                Number(settings.discountRules.allowedCurrencyRange[0]),
+                Number(settings.discountRules.allowedCurrencyRange[1]),
+              ] as [number, number]
+            }
             onChange={(allowedCurrencyRange: [number, number]) => {
               setSettings({
                 ...settings,
                 discountRules: {
                   ...settings.discountRules,
                   onlyAllowShortcuts: false,
-                  allowedCurrencyRange,
+                  allowedCurrencyRange: [
+                    allowedCurrencyRange[0].toFixed(2) as Money,
+                    allowedCurrencyRange[1].toFixed(2) as Money,
+                  ],
                 },
               });
 

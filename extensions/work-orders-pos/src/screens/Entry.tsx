@@ -1,27 +1,22 @@
-import {
-  BadgeVariant,
-  Button,
-  List,
-  ListRow,
-  ScrollView,
-  SearchBar,
-  Stack,
-  Text,
-} from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { NavigateFn, useScreen } from '../hooks/use-screen.js';
-import { useWorkOrderInfoQuery, WorkOrderInfo } from '../queries/use-work-order-info-query.js';
-import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
-import { useDebouncedState } from '@common/hooks/use-debounced-state.js';
+import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
+import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
+import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
+import { titleCase } from '@work-orders/common/util/casing.js';
 
 export function Entry() {
   const { Screen, navigate } = useScreen('Entry');
 
   const [query, setQuery] = useDebouncedState('');
-  const workOrderInfoQuery = useWorkOrderInfoQuery({ query });
+  const fetch = useAuthenticatedFetch();
+  const workOrderInfoQuery = useWorkOrderInfoQuery({ fetch, query });
   const workOrderInfo = workOrderInfoQuery.data?.pages ?? [];
 
-  const currencyFormatter = useCurrencyFormatter();
-  const rows = getWorkOrderRows(workOrderInfo, navigate, currencyFormatter);
+  const rows = useWorkOrderRows(workOrderInfo, navigate);
 
   return (
     <Screen title="Work Orders">
@@ -44,9 +39,7 @@ export function Entry() {
             </Text>
           </Stack>
           <SearchBar
-            onTextChange={query => {
-              setQuery(query, query === '');
-            }}
+            onTextChange={(query: string) => setQuery(query, query === '')}
             onSearch={() => {}}
             placeholder="Search work orders"
           />
@@ -82,57 +75,49 @@ export function Entry() {
   );
 }
 
-function getWorkOrderRows(
-  workOrders: WorkOrderInfo[],
-  navigate: NavigateFn,
-  currencyFormatter: CurrencyFormatter,
-): ListRow[] {
-  return workOrders.map<ListRow>(
-    ({
-      name,
-      productAmount,
-      discountAmount,
-      taxAmount,
-      status,
-      dueDate,
-      paidAmount,
-      shippingAmount,
-      hasDeposit,
-      serviceAmount,
-    }) => {
-      const total = serviceAmount + productAmount + taxAmount + shippingAmount - discountAmount;
-      const dueDateString = new Date(dueDate).toLocaleDateString();
+function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number][], navigate: NavigateFn): ListRow[] {
+  const currencyFormatter = useCurrencyFormatter();
+  const fetch = useAuthenticatedFetch();
+  const customerQueries = useCustomerQueries({ fetch, ids: workOrderInfos.map(({ customerId }) => customerId) });
 
-      const paymentStatus = paidAmount >= total ? 'Paid' : hasDeposit ? 'Deposit' : 'Unpaid';
-      const paymentBadgeVariant: BadgeVariant = paidAmount >= total ? 'success' : hasDeposit ? 'highlight' : 'critical';
+  return workOrderInfos.map<ListRow>(({ name, status, dueDate, order, customerId }) => {
+    const dueDateString = new Date(dueDate).toLocaleDateString();
+    const customer = customerQueries[customerId]?.data;
 
-      return {
-        id: name,
-        onPress: () => {
-          navigate('WorkOrder', { type: 'load-work-order', name });
-        },
-        leftSide: {
-          label: name,
-          subtitle: [currencyFormatter(total / 100)],
-          badges: [
-            {
-              variant: 'highlight',
-              text: status,
-            },
-            {
-              variant: 'warning',
-              text: `Due ${dueDateString}`,
-            },
-            {
-              variant: paymentBadgeVariant,
-              text: paymentStatus,
-            },
-          ],
-        },
-        rightSide: {
-          showChevron: true,
-        },
-      };
-    },
-  );
+    return {
+      id: name,
+      onPress: () => {
+        navigate('WorkOrder', { type: 'load-work-order', name });
+      },
+      leftSide: {
+        label: name,
+        subtitle: [[currencyFormatter(order.outstanding), currencyFormatter(order.total)].join(' • ')],
+        badges: [
+          {
+            variant: 'neutral',
+            text: customer?.displayName ?? 'Unknown Customer',
+          },
+          {
+            variant: 'highlight',
+            text: status,
+          },
+          {
+            variant: 'warning',
+            text: `Due ${dueDateString}`,
+          },
+          ...(order.financialStatus
+            ? [
+                {
+                  variant: 'highlight',
+                  text: titleCase(order.financialStatus.replace('_', ' ')),
+                } as const,
+              ]
+            : []),
+        ],
+      },
+      rightSide: {
+        showChevron: true,
+      },
+    };
+  });
 }

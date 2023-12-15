@@ -1,6 +1,6 @@
 import type { FetchOrdersResponse } from '@web/controllers/api/order.js';
+import type { PaginationOptions } from '@web/schemas/generated/pagination-options.js';
 import { createPaginatedQuery } from './create-paginated-query.js';
-import { PaginationOptions } from '@web/schemas/generated/pagination-options.js';
 
 export const useOrdersQuery = createPaginatedQuery({
   endpoint: '/api/order',

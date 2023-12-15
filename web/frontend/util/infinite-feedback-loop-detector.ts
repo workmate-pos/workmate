@@ -49,7 +49,7 @@ function findInfiniteFeedbackLoopFromNode(
   path.push([node, feedback]);
 
   for (const edgeFeedback of ['positive', 'negative'] as const) {
-    const neighbors = adjacencyList[node][edgeFeedback];
+    const neighbors = adjacencyList[node]![edgeFeedback]!;
     const nextFeedback = edgeFeedback === 'positive' ? feedback : toggleFeedback(feedback);
 
     for (const nextNode of neighbors) {

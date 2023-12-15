@@ -9,12 +9,13 @@
         "type": "object",
         "properties": {
           "employeeId": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/ID"
           },
           "rate": {
             "oneOf": [
               {
                 "type": "integer",
+                "tsType": "number & { __brand: 'Cents' }",
                 "minimum": 1
               },
               {

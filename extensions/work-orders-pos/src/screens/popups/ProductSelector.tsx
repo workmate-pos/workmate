@@ -1,28 +1,33 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
-import { useDebouncedState } from '@common/hooks/use-debounced-state';
-import { ProductVariant, useProductVariantsQuery } from '@common/queries/use-product-variants-query';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { useSettingsQuery } from '@common/queries/use-settings-query';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { uuid } from '../../util/uuid.js';
+import { Int } from '@web/schemas/generated/create-work-order.js';
+import { parseGid } from '@work-orders/common/util/gid.js';
 
 export function ProductSelector() {
   const { Screen, closePopup } = useScreen('ProductSelector');
 
   const fetch = useAuthenticatedFetch();
   const [query, setQuery] = useDebouncedState('');
-  const productVariantsQuery = useProductVariantsQuery({ fetch, params: { query } });
+  const settingsQuery = useSettingsQuery({ fetch });
+  const serviceCollectionId = settingsQuery.data?.settings.serviceCollectionId
+    ? parseGid(settingsQuery.data?.settings.serviceCollectionId).id
+    : null;
+  const productVariantsQuery = useProductVariantsQuery({
+    fetch,
+    params: { query: `${query} NOT collection:${serviceCollectionId}` },
+  });
   const productVariants = productVariantsQuery.data?.pages ?? [];
   const currencyFormatter = useCurrencyFormatter();
-  const settingsQuery = useSettingsQuery({ fetch });
-
-  const filteredProductVariants = productVariants.filter(variant =>
-    variant.product.collections.nodes.every(c => c.id !== settingsQuery.data?.settings.serviceCollectionId),
-  );
 
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
-  const rows = getProductVariantRows(filteredProductVariants, closeRef, currencyFormatter);
+  const rows = getProductVariantRows(productVariants, closeRef, currencyFormatter);
 
   return (
     <Screen
@@ -38,7 +43,7 @@ export function ProductSelector() {
           </Text>
         </Stack>
         <SearchBar
-          onTextChange={query => setQuery(query, !query)}
+          onTextChange={(query: string) => setQuery(query, !query)}
           onSearch={() => {}}
           placeholder={'Search products'}
         />
@@ -91,12 +96,9 @@ function getProductVariantRows(
       id: variant.id,
       onPress: () => {
         closePopupRef.current({
-          productVariantId: String(variant.id),
-          name: displayName,
-          sku: variant.sku ?? '',
-          quantity: 1,
-          unitPrice: Number(variant.price),
-          imageUrl,
+          uuid: uuid(),
+          productVariantId: variant.id,
+          quantity: 1 as Int,
         });
       },
       leftSide: {

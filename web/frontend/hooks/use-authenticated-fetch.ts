@@ -2,8 +2,8 @@ import {
   ToastActionCallable,
   useAuthenticatedFetch as useAuthenticatedFetchTeifi,
 } from '@teifi-digital/shopify-app-react';
-import { ReauthOptions } from '@teifi-digital/shopify-app-react/hooks/useAuthenticatedFetch';
-import { Fetch } from '@common/queries/fetch';
+import { ReauthOptions } from '@teifi-digital/shopify-app-react/hooks/useAuthenticatedFetch.js';
+import { Fetch } from '@work-orders/common/queries/fetch.js';
 
 export const useAuthenticatedFetch = ({
   setToastAction,

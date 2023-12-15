@@ -1,6 +1,7 @@
 import { useStorePropertiesQuery } from '../queries/use-store-properties-query.js';
 import { useMemo } from 'react';
 import { Fetch } from '../queries/fetch.js';
+import type { Money } from '@web/services/gql/queries/generated/schema.js';
 
 export const useCurrencyFormatter = ({ fetch }: { fetch: Fetch }) => {
   const { data } = useStorePropertiesQuery({ fetch });
@@ -9,7 +10,9 @@ export const useCurrencyFormatter = ({ fetch }: { fetch: Fetch }) => {
   return useMemo(
     () =>
       Object.assign(
-        (amount: number) => {
+        (_amount: number | Money) => {
+          const amount = typeof _amount === 'number' ? _amount : Number(_amount);
+
           if (!data) return `$${amount.toFixed(2)}`;
 
           const { currencyFormat } = data.storeProperties;

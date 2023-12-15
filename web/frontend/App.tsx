@@ -2,7 +2,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { NavigationMenu } from '@shopify/app-bridge-react';
 import Routes from './Routes.jsx';
 import { AppBridgeProvider, PolarisProvider } from '@teifi-digital/shopify-app-react';
-import { ReactQueryProvider } from './providers/ReactQueryProvider';
+import { ReactQueryProvider } from './providers/ReactQueryProvider.jsx';
 
 export default function App() {
   // Any .tsx files in /pages will become a route

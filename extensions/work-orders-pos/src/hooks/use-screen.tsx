@@ -81,6 +81,17 @@ export function useScreen<const ScreenName extends ScreenNames>(
     } satisfies Params);
   };
 
+  /**
+   * Navigates back to the screen that opened this screen, without providing a result.
+   * @TODO: Check if this works
+   */
+  const cancelPopup: CancelPopupFn = () =>
+    api.navigation.navigate(params!.returnTo!.at(-1)!, {
+      id,
+      returnTo: params!.returnTo!.slice(0, -1),
+      isPopupClose: false,
+    } satisfies Params);
+
   const dismiss = () => api.navigation.dismiss();
 
   /**
@@ -101,6 +112,7 @@ export function useScreen<const ScreenName extends ScreenNames>(
   return {
     usePopup,
     closePopup,
+    cancelPopup,
     navigate,
     dismiss,
     Screen: WrappedScreen,
@@ -142,3 +154,4 @@ export type UsePopupFn = <const DestinationScreenName extends ScreenNames>(
 };
 
 export type ClosePopupFn<ScreenName extends ScreenNames> = (result: ScreenInputOutput[ScreenName][1]) => void;
+export type CancelPopupFn = () => void;

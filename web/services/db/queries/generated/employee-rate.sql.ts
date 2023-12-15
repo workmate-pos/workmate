@@ -37,8 +37,8 @@ export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyI
 /** 'UpsertMany' parameters type */
 export interface IUpsertManyParams {
   rates: readonly ({
-    employeeId: string | null | void,
-    rate: number | null | void
+    employeeId: string,
+    rate: number
   })[];
   shop: string;
 }
@@ -52,7 +52,7 @@ export interface IUpsertManyQuery {
   result: IUpsertManyResult;
 }
 
-const upsertManyIR: any = {"usedParamSet":{"shop":true,"rates":true},"params":[{"name":"rates","required":true,"transform":{"type":"pick_array_spread","keys":[{"name":"employeeId","required":false},{"name":"rate","required":false}]},"locs":[{"a":88,"b":94}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":41,"b":46}]}],"statement":"WITH Input AS (\n    SELECT \"employeeId\", :shop! AS shop, rate\n    FROM (VALUES ('', 0), :rates! OFFSET 1) AS t (\"employeeId\", rate)\n)\nINSERT INTO \"EmployeeRate\" (\"employeeId\", \"shop\", \"rate\")\nSELECT \"employeeId\", shop, rate\nFROM Input\nON CONFLICT (\"employeeId\", \"shop\")\nDO UPDATE SET \"rate\" = EXCLUDED.\"rate\""};
+const upsertManyIR: any = {"usedParamSet":{"shop":true,"rates":true},"params":[{"name":"rates","required":true,"transform":{"type":"pick_array_spread","keys":[{"name":"employeeId","required":true},{"name":"rate","required":true}]},"locs":[{"a":88,"b":94}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":41,"b":46}]}],"statement":"WITH Input AS (\n    SELECT \"employeeId\", :shop! AS shop, rate\n    FROM (VALUES ('', 0), :rates! OFFSET 1) AS t (\"employeeId\", rate)\n)\nINSERT INTO \"EmployeeRate\" (\"employeeId\", \"shop\", \"rate\")\nSELECT \"employeeId\", shop, rate\nFROM Input\nON CONFLICT (\"employeeId\", \"shop\")\nDO UPDATE SET \"rate\" = EXCLUDED.\"rate\""};
 
 /**
  * Query generated from SQL:
