@@ -31,7 +31,6 @@ export const useCalculatedDraftOrderQuery = (
     ...options,
     queryKey: ['calculated-draft-order', lineItems, customerId, employeeAssignments, discount],
     queryFn: async () => {
-      // TODO: Do not do the whole createWorkOrder as payload for this req, onlythe required stuffs
       const response = await fetch('/api/work-order/calculate-draft-order', {
         method: 'POST',
         body: JSON.stringify({

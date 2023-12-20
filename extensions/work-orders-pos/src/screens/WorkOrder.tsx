@@ -478,7 +478,6 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
         ? currencyFormatter(calculateDraftOrderResponse[key])
         : '-';
 
-  // TODO: Clear messages if a payment has already been made
   const outstanding = context.workOrderQuery?.data?.workOrder?.order?.outstanding
     ? currencyFormatter(context.workOrderQuery.data.workOrder.order?.outstanding)
     : getFormattedCalculatedMoney('totalPrice');

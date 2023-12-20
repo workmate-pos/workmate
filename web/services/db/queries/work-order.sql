@@ -20,7 +20,9 @@ SET "orderId"      = COALESCE(:orderId, "orderId"),
     "draftOrderId" = COALESCE(:draftOrderId, "draftOrderId")
 WHERE id = :id!;
 
-/* @name getPage */
+/*
+  @name getPage
+*/
 SELECT *
 FROM "WorkOrder" wo
 WHERE shop = :shop!
@@ -29,8 +31,15 @@ WHERE shop = :shop!
   wo.status ILIKE COALESCE(:query, '%') OR
   wo.name ILIKE COALESCE(:query, '%')
   )
+AND (EXISTS(
+  SELECT *
+  FROM "EmployeeAssignment" ea
+  WHERE "workOrderId" = wo.id
+  AND "employeeId" = ANY(:employeeIds)
+) OR :employeeIds IS NULL)
 ORDER BY wo.id DESC
-LIMIT :limit! OFFSET :offset;
+LIMIT :limit!
+OFFSET :offset;
 
 /* @name get */
 SELECT *

@@ -7,14 +7,21 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
 import { titleCase } from '@work-orders/common/util/casing.js';
+import { useState } from 'react';
+import { ID } from '@web/schemas/generated/ids.js';
+import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 
 export function Entry() {
-  const { Screen, navigate } = useScreen('Entry');
+  const { Screen, navigate, usePopup } = useScreen('Entry');
+
+  const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
+  const employeeSelectorPopup = usePopup('EmployeeSelector', setEmployeeIds);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
-  const workOrderInfoQuery = useWorkOrderInfoQuery({ fetch, query });
+  const workOrderInfoQuery = useWorkOrderInfoQuery({ fetch, query, employeeIds });
   const workOrderInfo = workOrderInfoQuery.data?.pages ?? [];
+  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
 
   const rows = useWorkOrderRows(workOrderInfo, navigate);
 
@@ -37,6 +44,20 @@ export function Entry() {
             <Text variant="body" color="TextSubdued">
               {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
             </Text>
+          </Stack>
+          <Stack direction={'horizontal'} alignment={'space-between'} flex={1}>
+            <Stack direction={'horizontal'}>
+              <Button
+                title={'Filter by employee'}
+                type={'plain'}
+                onPress={() => employeeSelectorPopup.navigate(employeeIds)}
+              />
+            </Stack>
+            <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+              {employeeIds.map(id => (
+                <Text key={id}>{employeeQueries[id]?.data?.name ?? 'Unknown employee'}</Text>
+              ))}
+            </Stack>
           </Stack>
           <SearchBar
             onTextChange={(query: string) => setQuery(query, query === '')}

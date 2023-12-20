@@ -137,6 +137,7 @@ export async function getWorkOrderInfoPage(
     offset: paginationOptions.offset,
     limit: paginationOptions.limit,
     query: paginationOptions.query,
+    employeeIds: paginationOptions.employeeIds,
   });
 
   const graphql = new Graphql(session);

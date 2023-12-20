@@ -5,6 +5,8 @@ export type DateOrString = Date | string;
 
 export type NumberOrString = number | string;
 
+export type stringArray = (string)[];
+
 /** 'GetNextIdForShop' parameters type */
 export interface IGetNextIdForShopParams {
   shopSequenceName: string;
@@ -117,6 +119,7 @@ export const updateOrderIds = new PreparedQuery<IUpdateOrderIdsParams,IUpdateOrd
 
 /** 'GetPage' parameters type */
 export interface IGetPageParams {
+  employeeIds?: stringArray | null | void;
   limit: NumberOrString;
   offset?: NumberOrString | null | void;
   query?: string | null | void;
@@ -144,7 +147,7 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":76,"b":82}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":131,"b":136},{"a":172,"b":177}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":215,"b":221}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":230,"b":236}]}],"statement":"SELECT *\nFROM \"WorkOrder\" wo\nWHERE shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%') OR\n  wo.name ILIKE COALESCE(:query, '%')\n  )\nORDER BY wo.id DESC\nLIMIT :limit! OFFSET :offset"};
+const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"employeeIds":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":76,"b":82}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":131,"b":136},{"a":172,"b":177}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":299,"b":310},{"a":318,"b":329}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":366,"b":372}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":381,"b":387}]}],"statement":"SELECT *\nFROM \"WorkOrder\" wo\nWHERE shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%') OR\n  wo.name ILIKE COALESCE(:query, '%')\n  )\nAND (EXISTS(\n  SELECT *\n  FROM \"EmployeeAssignment\" ea\n  WHERE \"workOrderId\" = wo.id\n  AND \"employeeId\" = ANY(:employeeIds)\n) OR :employeeIds IS NULL)\nORDER BY wo.id DESC\nLIMIT :limit!\nOFFSET :offset"};
 
 /**
  * Query generated from SQL:
@@ -157,8 +160,15 @@ const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"
  *   wo.status ILIKE COALESCE(:query, '%') OR
  *   wo.name ILIKE COALESCE(:query, '%')
  *   )
+ * AND (EXISTS(
+ *   SELECT *
+ *   FROM "EmployeeAssignment" ea
+ *   WHERE "workOrderId" = wo.id
+ *   AND "employeeId" = ANY(:employeeIds)
+ * ) OR :employeeIds IS NULL)
  * ORDER BY wo.id DESC
- * LIMIT :limit! OFFSET :offset
+ * LIMIT :limit!
+ * OFFSET :offset
  * ```
  */
 export const getPage = new PreparedQuery<IGetPageParams,IGetPageResult>(getPageIR);

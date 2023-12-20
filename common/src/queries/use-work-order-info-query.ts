@@ -7,10 +7,11 @@ export const useWorkOrderInfoQuery = ({
   fetch,
   query,
   status,
+  employeeIds,
   limit = 10,
 }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset'> & { limit?: number; fetch: Fetch }) =>
   useInfiniteQuery({
-    queryKey: ['work-order-info', { query, status, limit }],
+    queryKey: ['work-order-info', { query, status, limit, employeeIds }],
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams({
         limit: String(limit),
@@ -19,6 +20,10 @@ export const useWorkOrderInfoQuery = ({
 
       if (query) searchParams.set('query', query);
       if (status) searchParams.set('status', status);
+
+      for (const employeeId of employeeIds ?? []) {
+        searchParams.append('employeeIds', employeeId);
+      }
 
       const response = await fetch(`/api/work-order?${searchParams}`);
 
