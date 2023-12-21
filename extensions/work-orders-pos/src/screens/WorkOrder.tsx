@@ -35,6 +35,7 @@ import { PayButton } from '../components/PayButton.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { CreateWorkOrderLineItem } from './routes.js';
 import { Money } from '@web/schemas/generated/shop-settings.js';
+import { useUnsavedChangesDialog } from '../providers/UnsavedChangesDialogProvider.js';
 
 /**
  * Stuff to pass around between components
@@ -42,6 +43,7 @@ import { Money } from '@web/schemas/generated/shop-settings.js';
 type WorkOrderContext = ReturnType<typeof useWorkOrderContext>;
 
 const useWorkOrderContext = () => {
+  const [unsavedChanges, setUnsavedChanges] = useState(false);
   const [title, setTitle] = useState('');
   const [createWorkOrder, dispatchCreateWorkOrder] = useCreateWorkOrderReducer();
   const fetch = useAuthenticatedFetch();
@@ -140,7 +142,12 @@ const useWorkOrderContext = () => {
 
   return {
     createWorkOrder,
-    dispatchCreateWorkOrder,
+    dispatchCreateWorkOrder: (...[action]: Parameters<typeof dispatchCreateWorkOrder>) => {
+      setUnsavedChanges(action.type !== 'reset-work-order');
+      api.toast.show(`Action ${action.type}`);
+      dispatchCreateWorkOrder(action);
+    },
+    unsavedChanges,
     Screen,
     title,
     usePopup,
@@ -157,14 +164,22 @@ export function WorkOrderPage() {
   const { Screen } = context;
 
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const unsavedChangesDialog = useUnsavedChangesDialog();
+  const navigateBack = () => {
+    context.dispatchCreateWorkOrder({ type: 'reset-work-order' });
+    context.navigate('Entry');
+  };
 
   return (
     <Screen
       title={context.title}
       isLoading={context.workOrderQuery.isFetching || context.saveWorkOrderMutation.isLoading || paymentLoading}
       overrideNavigateBack={() => {
-        context.dispatchCreateWorkOrder({ type: 'reset-work-order' });
-        context.navigate('Entry');
+        if (context.unsavedChanges) {
+          unsavedChangesDialog.show({ onAction: navigateBack });
+        } else {
+          navigateBack();
+        }
       }}
     >
       <ScrollView>
@@ -632,13 +647,7 @@ function useItemRows(
           onPress() {
             if (!productVariant || !settingsQuery.data || !lineItem) return;
 
-            const { serviceCollectionId } = settingsQuery.data.settings;
-
-            const popupType = productVariant.product.collections.nodes.some(
-              collection => collection.id === serviceCollectionId,
-            )
-              ? 'service'
-              : 'product';
+            const popupType = productVariant.product.isServiceItem ? 'service' : 'product';
 
             openPopup(popupType, lineItem);
           },

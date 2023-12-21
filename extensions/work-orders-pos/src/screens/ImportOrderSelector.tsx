@@ -15,7 +15,7 @@ export function ImportOrderSelector() {
   const rows = getOrderRows(ordersQuery.data?.pages ?? [], navigate);
 
   return (
-    <Screen title={'Import Order'} onNavigate={() => setQuery('', true)}>
+    <Screen title={'Import Order'}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -23,6 +23,7 @@ export function ImportOrderSelector() {
           </Text>
         </Stack>
         <SearchBar
+          initialValue={query}
           onTextChange={(query: string) => {
             setQuery(query, query === '');
           }}

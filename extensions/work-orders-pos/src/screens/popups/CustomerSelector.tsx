@@ -1,13 +1,23 @@
-import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import {
+  List,
+  ListRow,
+  ScrollView,
+  SearchBar,
+  Stack,
+  Text,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 
 export function CustomerSelector() {
-  const { Screen, closePopup } = useScreen('CustomerSelector');
-
   const [query, setQuery] = useDebouncedState('');
+  const { Screen, closePopup } = useScreen('CustomerSelector', () => {
+    setQuery('', true);
+  });
+
   const fetch = useAuthenticatedFetch();
   const customersQuery = useCustomersQuery({ fetch, params: { query } });
   const customers = customersQuery.data?.pages ?? [];
@@ -15,7 +25,7 @@ export function CustomerSelector() {
   const rows = getCustomerRows(customers, closePopup);
 
   return (
-    <Screen title="Select Customer" presentation={{ sheet: true }} onNavigate={() => setQuery('', true)}>
+    <Screen title="Select Customer" presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -23,6 +33,7 @@ export function CustomerSelector() {
           </Text>
         </Stack>
         <SearchBar
+          initialValue={query}
           onTextChange={(query: string) => setQuery(query, query === '')}
           onSearch={() => {}}
           placeholder="Search customers"

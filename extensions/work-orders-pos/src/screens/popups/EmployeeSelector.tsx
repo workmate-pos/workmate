@@ -9,10 +9,13 @@ import { ID } from '@web/schemas/generated/ids.js';
 
 export function EmployeeSelector() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<ID[]>([]);
-
-  const { Screen, closePopup } = useScreen('EmployeeSelector', setSelectedEmployeeIds);
-
   const [query, setQuery] = useDebouncedState('');
+
+  const { Screen, closePopup } = useScreen('EmployeeSelector', selectedEmployeeIds => {
+    setSelectedEmployeeIds(selectedEmployeeIds);
+    setQuery('', true);
+  });
+
   const fetch = useAuthenticatedFetch();
   const settingsQuery = useSettingsQuery({ fetch });
   const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
@@ -33,8 +36,7 @@ export function EmployeeSelector() {
       title="Select employee"
       presentation={{ sheet: true }}
       isLoading={settingsQuery.isLoading}
-      onNavigateBack={close}
-      onNavigate={() => setQuery('', true)}
+      overrideNavigateBack={close}
     >
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
@@ -43,6 +45,7 @@ export function EmployeeSelector() {
           </Text>
         </Stack>
         <SearchBar
+          initialValue={query}
           onTextChange={(query: string) => {
             setQuery(query, query === '');
           }}

@@ -1,7 +1,6 @@
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
 import { PayButton } from '../../components/PayButton.js';
 

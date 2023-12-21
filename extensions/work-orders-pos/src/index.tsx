@@ -1,4 +1,4 @@
-import { Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { render, Tile, useExtensionApi, Navigator } from '@shopify/retail-ui-extensions-react';
 import { WorkOrderPage } from './screens/WorkOrder.js';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
 import { Error } from './screens/Error.js';
@@ -15,6 +15,7 @@ import { ServiceSelector } from './screens/popups/ServiceSelector.js';
 import { EmployeeAssignmentConfig } from './screens/popups/EmployeeAssignmentConfig.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { ServiceLineItemConfig } from './screens/popups/ServiceLineItemConfig.js';
+import { UnsavedChangesDialogProvider } from './providers/UnsavedChangesDialogProvider.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -33,24 +34,26 @@ function SmartGridTile() {
 function SmartGridModal() {
   return (
     <ReactQueryProvider>
-      <Navigator>
-        <Entry />
-        <Error />
-        <ImportOrderSelector />
-        <WorkOrderPage />
+      <UnsavedChangesDialogProvider>
+        <Navigator>
+          <Entry />
+          <Error />
+          <ImportOrderSelector />
+          <WorkOrderPage />
 
-        <CustomerSelector />
-        <DiscountSelector />
-        <EmployeeAssignmentConfig />
-        <EmployeeSelector />
-        <ProductLineItemConfig />
-        <ProductSelector />
-        <ServiceLineItemConfig />
-        <ServiceSelector />
-        <ShippingConfig />
-        <StatusSelector />
-        <WorkOrderSaved />
-      </Navigator>
+          <CustomerSelector />
+          <DiscountSelector />
+          <EmployeeAssignmentConfig />
+          <EmployeeSelector />
+          <ProductLineItemConfig />
+          <ProductSelector />
+          <ServiceLineItemConfig />
+          <ServiceSelector />
+          <ShippingConfig />
+          <StatusSelector />
+          <WorkOrderSaved />
+        </Navigator>
+      </UnsavedChangesDialogProvider>
     </ReactQueryProvider>
   );
 }

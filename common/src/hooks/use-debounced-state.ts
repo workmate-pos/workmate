@@ -22,10 +22,11 @@ export const useDebouncedState = <T>(initialValue: T, debounceMs: number = 250) 
   }, [externalState]);
 
   const setState = (value: SetStateAction<T>, immediately: boolean = false) => {
-    setExternalState(value);
     if (immediately) {
       setInternalState(value);
     }
+
+    setExternalState(value);
   };
 
   return [internalState, setState] as const;

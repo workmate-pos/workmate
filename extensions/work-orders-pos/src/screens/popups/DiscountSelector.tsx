@@ -10,6 +10,7 @@ import { parseMoney } from '@work-orders/common/util/money.js';
 export function DiscountSelector() {
   const [subTotal, setSubTotal] = useState<number | null>(null);
   const { Screen, closePopup } = useScreen('DiscountSelector', ({ subTotal }) => setSubTotal(subTotal));
+
   const fetch = useAuthenticatedFetch();
   const settingsQuery = useSettingsQuery({ fetch });
   const settings = settingsQuery.data?.settings;

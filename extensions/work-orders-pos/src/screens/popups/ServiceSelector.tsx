@@ -13,9 +13,11 @@ import { Int } from '@web/schemas/generated/create-work-order.js';
 // TODO: DRY with ProductSelector
 
 export function ServiceSelector() {
-  const { Screen, closePopup } = useScreen('ServiceSelector');
-
   const [query, setQuery] = useDebouncedState('');
+  const { Screen, closePopup } = useScreen('ServiceSelector', () => {
+    setQuery('', true);
+  });
+
   const fetch = useAuthenticatedFetch();
   const settingsQuery = useSettingsQuery({ fetch });
   const serviceCollectionId = settingsQuery.data?.settings.serviceCollectionId
@@ -27,25 +29,11 @@ export function ServiceSelector() {
   });
   const currencyFormatter = useCurrencyFormatter();
 
-  const filteredProductVariants =
-    productVariantsQuery.data?.pages?.filter(
-      variant =>
-        (!query ||
-          variant.title.toLowerCase().includes(query.toLowerCase()) ||
-          variant.product.title.toLowerCase().includes(query.toLowerCase())) &&
-        variant.product.collections.nodes.some(c => c.id === settingsQuery.data?.settings.serviceCollectionId),
-    ) ?? [];
-
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
-  const rows = getProductVariantRows(filteredProductVariants, closeRef, currencyFormatter);
+  const rows = getProductVariantRows(productVariantsQuery?.data?.pages ?? [], closeRef, currencyFormatter);
 
   return (
-    <Screen
-      title={'Select service'}
-      isLoading={settingsQuery.isLoading}
-      presentation={{ sheet: true }}
-      onNavigate={() => setQuery('')}
-    >
+    <Screen title={'Select service'} isLoading={settingsQuery.isLoading} presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -53,6 +41,7 @@ export function ServiceSelector() {
           </Text>
         </Stack>
         <SearchBar
+          initialValue={query}
           onTextChange={(query: string) => setQuery(query)}
           onSearch={() => {}}
           placeholder={'Search services'}

@@ -5,6 +5,7 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js'
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { gql } from '../../services/gql/gql.js';
 import type { Ids } from '../../schemas/generated/ids.js';
+import { getShopSettings } from '../../services/settings.js';
 
 @Authenticated()
 export default class ProductVariantController {
@@ -17,8 +18,10 @@ export default class ProductVariantController {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
+    const { serviceCollectionId } = await getShopSettings(session.shop);
+
     const graphql = new Graphql(session);
-    const response = await gql.products.getPage.run(graphql, paginationOptions);
+    const response = await gql.products.getPage.run(graphql, { ...paginationOptions, serviceCollectionId });
 
     const { nodes: productVariants, pageInfo } = response.productVariants;
 
@@ -34,8 +37,10 @@ export default class ProductVariantController {
     const session: Session = res.locals.shopify.session;
     const { ids } = req.query;
 
+    const { serviceCollectionId } = await getShopSettings(session.shop);
+
     const graphql = new Graphql(session);
-    const { nodes } = await gql.products.getMany.run(graphql, { ids });
+    const { nodes } = await gql.products.getMany.run(graphql, { ids, serviceCollectionId });
 
     const productVariants = nodes.filter(
       (node): node is null | (gql.products.ProductVariantFragment.Result & { __typename: 'ProductVariant' }) =>

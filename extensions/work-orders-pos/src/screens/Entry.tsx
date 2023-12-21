@@ -65,15 +65,25 @@ export function Entry() {
             </Stack>
           </Stack>
           <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-            {customerId && <Text>Customer: {customerQuery?.data?.displayName ?? 'Unknown customer'}</Text>}
+            {customerId && (
+              <>
+                <Text variant={'sectionHeader'}>Customer:</Text>
+                <Text variant={'captionRegular'} color={'TextSubdued'}>
+                  {customerQuery.data?.displayName ?? 'Unknown customer'}
+                </Text>
+              </>
+            )}
           </Stack>
           <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-            {employeeIds.length > 0 && <Text>Employees:</Text>}
+            {employeeIds.length > 0 && <Text variant={'sectionHeader'}>Employees:</Text>}
             {employeeIds.map(id => (
-              <Text key={id}>{employeeQueries[id]?.data?.name ?? 'Unknown employee'}</Text>
+              <Text key={id} variant={'captionRegular'} color={'TextSubdued'}>
+                {employeeQueries[id]?.data?.name ?? 'Unknown employee'}
+              </Text>
             ))}
           </Stack>
           <SearchBar
+            initialValue={query}
             onTextChange={(query: string) => setQuery(query, query === '')}
             onSearch={() => {}}
             placeholder="Search work orders"

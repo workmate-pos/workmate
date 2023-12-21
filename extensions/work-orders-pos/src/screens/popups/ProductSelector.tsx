@@ -11,10 +11,12 @@ import { Int } from '@web/schemas/generated/create-work-order.js';
 import { parseGid } from '@work-orders/common/util/gid.js';
 
 export function ProductSelector() {
-  const { Screen, closePopup } = useScreen('ProductSelector');
+  const [query, setQuery] = useDebouncedState('');
+  const { Screen, closePopup } = useScreen('ProductSelector', () => {
+    setQuery('', true);
+  });
 
   const fetch = useAuthenticatedFetch();
-  const [query, setQuery] = useDebouncedState('');
   const settingsQuery = useSettingsQuery({ fetch });
   const serviceCollectionId = settingsQuery.data?.settings.serviceCollectionId
     ? parseGid(settingsQuery.data?.settings.serviceCollectionId).id
@@ -30,12 +32,7 @@ export function ProductSelector() {
   const rows = getProductVariantRows(productVariants, closeRef, currencyFormatter);
 
   return (
-    <Screen
-      title={'Select product'}
-      isLoading={settingsQuery.isLoading}
-      presentation={{ sheet: true }}
-      onNavigate={() => setQuery('', true)}
-    >
+    <Screen title={'Select product'} isLoading={settingsQuery.isLoading} presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -43,6 +40,7 @@ export function ProductSelector() {
           </Text>
         </Stack>
         <SearchBar
+          initialValue={query}
           onTextChange={(query: string) => setQuery(query, !query)}
           onSearch={() => {}}
           placeholder={'Search products'}

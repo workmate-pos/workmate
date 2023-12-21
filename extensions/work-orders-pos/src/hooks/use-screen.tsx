@@ -1,7 +1,8 @@
 import { Screen, ScreenProps, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useId } from './use-id.js';
 import type { ScreenInputOutput } from '../screens/routes.js';
+import { useDynamicRef } from './use-dynamic-ref.js';
 
 /**
  * Hook that provides:
@@ -14,99 +15,121 @@ export function useScreen<const ScreenName extends ScreenNames>(
   screenName: ScreenName,
   onInput?: (input: ScreenInputOutput[ScreenName][0]) => void,
 ) {
-  const [params, setParams] = useState<Params | null>(null);
+  const [popupId, setPopupId] = useState<string | null>(null);
+  const [returnTo, setReturnTo] = useState<string | null>(null);
 
-  // if this screen is a pop up, we must track the id s.t. we can return the result with the correct id
-  const [id, setId] = useState<string | undefined>(undefined);
-
-  useEffect(() => {
-    if (!params) return;
-    if (params.isPopupClose) return;
-    onInput?.(params.input);
-    setId(params.id);
-  }, [params]);
+  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
+  const popupResultEventTarget = useMemo(() => new EventTarget(), []);
 
   /**
    * A managed navigation function and event handler that returns the popup result.
    */
-  const usePopup: UsePopupFn = (destinationScreenName, onResult) => {
-    const api = useExtensionApi<'pos.home.modal.render'>();
+  const usePopup: UsePopupFn = useCallback(
+    (destinationScreenName, onResult) => {
+      const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
-    // using an id ensures we can use the same pop-up screen for multiple purposes. it identifies a specific instance of a pop up
-    const id = `${destinationScreenName}:${useId()}`;
+      // using an id ensures we can use the same pop-up screen for multiple purposes. it identifies a specific instance of a pop up
+      const id = `${destinationScreenName}:${useId()}`;
 
-    useEffect(() => {
-      if (params?.id !== id) return;
-      if (!params?.isPopupClose) return;
-      onResult?.(params.result);
-    }, [params]);
+      useEffect(() => {
+        const eventHandler = (event: Event) => {
+          if (event instanceof CustomEvent) {
+            const params: ClosePopupParams = event.detail;
+            onResult?.(params.output);
+          }
+        };
 
-    const navigate: PopupNavigateFn<typeof destinationScreenName> = (input = undefined) => {
-      api.navigation.navigate(destinationScreenName, {
-        returnTo: [...(params?.returnTo ?? []), screenName],
-        id,
-        input,
-        isPopupClose: false,
-      } satisfies Params);
-    };
+        popupResultEventTarget.addEventListener(id, eventHandler);
 
-    return { navigate };
-  };
+        return () => popupResultEventTarget.removeEventListener(id, eventHandler);
+      }, []);
 
-  const api = useExtensionApi<'pos.home.modal.render'>();
+      const navigate: PopupNavigateFn<typeof destinationScreenName> = (input = undefined) => {
+        const params: OpenPopupParams = {
+          type: 'open-popup',
+          returnTo: screenName,
+          popupId: id,
+          input,
+        };
+
+        navigation.navigate(destinationScreenName, params);
+      };
+
+      return { navigate };
+    },
+    [popupResultEventTarget],
+  );
 
   /**
    * Navigates back to the screen that opened this screen, and provides it with a result.
    */
   const closePopup: ClosePopupFn<ScreenName> = (result: ScreenInputOutput[ScreenName][1]) => {
-    if (!params) {
-      api.navigation.navigate('Error', {
-        error: `No params received ${JSON.stringify({ params, result })}`,
-      });
+    if (!returnTo) {
+      navigate('Error', 'No returnTo');
       return;
     }
 
-    if (!params.returnTo!.length) {
-      api.navigation.navigate('Error', {
-        error: 'No returnTo',
-      });
+    if (!popupId) {
+      navigate('Error', 'No popupId');
       return;
     }
 
-    api.navigation.navigate(params.returnTo!.at(-1)!, {
-      id,
-      result,
-      returnTo: params.returnTo!.slice(0, -1),
-      isPopupClose: true,
-    } satisfies Params);
+    const params: ClosePopupParams = {
+      type: 'close-popup',
+      popupId,
+      output: result,
+    };
+
+    navigation.navigate(returnTo, params);
   };
 
   /**
    * Navigates back to the screen that opened this screen, without providing a result.
-   * @TODO: Check if this works
    */
-  const cancelPopup: CancelPopupFn = () =>
-    api.navigation.navigate(params!.returnTo!.at(-1)!, {
-      id,
-      returnTo: params!.returnTo!.slice(0, -1),
-      isPopupClose: false,
-    } satisfies Params);
+  const cancelPopup: CancelPopupFn = () => navigation.pop();
 
-  const dismiss = () => api.navigation.dismiss();
+  const dismiss = () => navigation.dismiss();
 
   /**
    * Anonymous navigation function.
    * Can only be used if the destination screen does not require any input.
    */
   const navigate: NavigateFn = (destinationScreenName, input = undefined) => {
-    api.navigation.navigate(destinationScreenName, { input, isPopupClose: false } satisfies Params);
+    const params: OpenPopupParams = {
+      type: 'open-popup',
+      returnTo: screenName,
+      popupId: destinationScreenName,
+      input,
+    };
+
+    navigation.navigate(destinationScreenName, params);
   };
+
+  const onReceiveParamsRef = useDynamicRef(
+    () => (params: Params) => {
+      switch (params.type) {
+        case 'open-popup':
+          setPopupId(params.popupId);
+          setReturnTo(params.returnTo);
+          onInput?.(params.input);
+          break;
+
+        case 'close-popup':
+          popupResultEventTarget.dispatchEvent(new CustomEvent(params.popupId, { detail: params }));
+          break;
+
+        default:
+          return params satisfies never;
+      }
+    },
+    [setPopupId, onInput, popupResultEventTarget],
+  );
 
   const WrappedScreen = useCallback(
     (props: Omit<ScreenProps, 'name' | 'onReceiveParams'>) => (
-      <Screen {...props} name={screenName} onReceiveParams={setParams} />
+      <Screen {...props} name={screenName} onReceiveParams={onReceiveParamsRef.current} />
     ),
-    [screenName, setParams],
+    [screenName],
   );
 
   return {
@@ -119,15 +142,21 @@ export function useScreen<const ScreenName extends ScreenNames>(
   };
 }
 
-type Params = {
-  returnTo?: string[];
-  id?: string;
-  input?: any;
-  result?: any;
-  /**
-   * Used to determine whether to update input or result.
-   */
-  isPopupClose: boolean;
+type Params<I = ScreenInputOutput[keyof ScreenInputOutput][0], O = ScreenInputOutput[keyof ScreenInputOutput][1]> =
+  | OpenPopupParams<I>
+  | ClosePopupParams<O>;
+
+type OpenPopupParams<I = ScreenInputOutput[keyof ScreenInputOutput][0]> = {
+  type: 'open-popup';
+  returnTo: keyof ScreenInputOutput;
+  popupId: string;
+  input: I;
+};
+
+type ClosePopupParams<O = ScreenInputOutput[keyof ScreenInputOutput][1]> = {
+  type: 'close-popup';
+  popupId: string;
+  output: O;
 };
 
 type ScreenNames = keyof ScreenInputOutput;

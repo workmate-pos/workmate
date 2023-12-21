@@ -12,6 +12,7 @@ export type CreateWorkOrderEmployeeAssignment = CreateWorkOrder['employeeAssignm
  */
 export type ScreenInputOutput = {
   Entry: [undefined, undefined];
+  Error: [string, undefined];
   ImportOrderSelector: [undefined, undefined];
   // TODO: Create this
   OrderPreview: [
