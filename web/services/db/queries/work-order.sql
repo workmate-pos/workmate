@@ -37,6 +37,7 @@ AND (EXISTS(
   WHERE "workOrderId" = wo.id
   AND "employeeId" = ANY(:employeeIds)
 ) OR :employeeIds IS NULL)
+AND "customerId" = COALESCE(:customerId, "customerId")
 ORDER BY wo.id DESC
 LIMIT :limit!
 OFFSET :offset;

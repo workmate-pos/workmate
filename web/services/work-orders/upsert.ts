@@ -50,20 +50,23 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
     const employeeRates = await getEmployeeRates(session.shop, createWorkOrder);
 
     await db.employeeAssignment.remove({ shop: session.shop, name: workOrderName });
-    await db.employeeAssignment.upsertMany({
-      shop: session.shop,
-      name: workOrderName,
-      assignments: createWorkOrder.employeeAssignments.map(({ employeeId, hours, lineItemUuid }) => ({
-        employeeId,
-        hours,
-        productVariantId: lineItemUuid
-          ? createWorkOrder.lineItems.find(lineItem => lineItem.uuid === lineItemUuid)?.productVariantId ??
-            never('Invalid lineItemUuid in employeeAssignment')
-          : null,
-        lineItemUuid,
-        rate: employeeRates[employeeId] ?? never('getEmployeeRates should return rates for all assigned employees'),
-      })),
-    });
+
+    if (createWorkOrder.employeeAssignments.length) {
+      await db.employeeAssignment.upsertMany({
+        shop: session.shop,
+        name: workOrderName,
+        assignments: createWorkOrder.employeeAssignments.map(({ employeeId, hours, lineItemUuid }) => ({
+          employeeId,
+          hours,
+          productVariantId: lineItemUuid
+            ? createWorkOrder.lineItems.find(lineItem => lineItem.uuid === lineItemUuid)?.productVariantId ??
+              never('Invalid lineItemUuid in employeeAssignment')
+            : null,
+          lineItemUuid,
+          rate: employeeRates[employeeId] ?? never('getEmployeeRates should return rates for all assigned employees'),
+        })),
+      });
+    }
 
     let draftOrderId: ID | null = null;
     let orderId: ID | null = null;

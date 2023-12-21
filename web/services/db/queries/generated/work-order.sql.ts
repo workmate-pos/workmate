@@ -119,6 +119,7 @@ export const updateOrderIds = new PreparedQuery<IUpdateOrderIdsParams,IUpdateOrd
 
 /** 'GetPage' parameters type */
 export interface IGetPageParams {
+  customerId?: string | null | void;
   employeeIds?: stringArray | null | void;
   limit: NumberOrString;
   offset?: NumberOrString | null | void;
@@ -147,7 +148,7 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"employeeIds":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":76,"b":82}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":131,"b":136},{"a":172,"b":177}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":299,"b":310},{"a":318,"b":329}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":366,"b":372}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":381,"b":387}]}],"statement":"SELECT *\nFROM \"WorkOrder\" wo\nWHERE shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%') OR\n  wo.name ILIKE COALESCE(:query, '%')\n  )\nAND (EXISTS(\n  SELECT *\n  FROM \"EmployeeAssignment\" ea\n  WHERE \"workOrderId\" = wo.id\n  AND \"employeeId\" = ANY(:employeeIds)\n) OR :employeeIds IS NULL)\nORDER BY wo.id DESC\nLIMIT :limit!\nOFFSET :offset"};
+const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"employeeIds":true,"customerId":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":76,"b":82}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":131,"b":136},{"a":172,"b":177}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":299,"b":310},{"a":318,"b":329}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":368,"b":378}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":421,"b":427}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":436,"b":442}]}],"statement":"SELECT *\nFROM \"WorkOrder\" wo\nWHERE shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%') OR\n  wo.name ILIKE COALESCE(:query, '%')\n  )\nAND (EXISTS(\n  SELECT *\n  FROM \"EmployeeAssignment\" ea\n  WHERE \"workOrderId\" = wo.id\n  AND \"employeeId\" = ANY(:employeeIds)\n) OR :employeeIds IS NULL)\nAND \"customerId\" = COALESCE(:customerId, \"customerId\")\nORDER BY wo.id DESC\nLIMIT :limit!\nOFFSET :offset"};
 
 /**
  * Query generated from SQL:
@@ -166,6 +167,7 @@ const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"
  *   WHERE "workOrderId" = wo.id
  *   AND "employeeId" = ANY(:employeeIds)
  * ) OR :employeeIds IS NULL)
+ * AND "customerId" = COALESCE(:customerId, "customerId")
  * ORDER BY wo.id DESC
  * LIMIT :limit!
  * OFFSET :offset

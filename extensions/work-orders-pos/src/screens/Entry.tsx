@@ -5,7 +5,7 @@ import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
-import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
+import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { titleCase } from '@work-orders/common/util/casing.js';
 import { useState } from 'react';
 import { ID } from '@web/schemas/generated/ids.js';
@@ -15,13 +15,16 @@ export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');
 
   const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
+  const [customerId, setCustomerId] = useState<ID | null>(null);
   const employeeSelectorPopup = usePopup('EmployeeSelector', setEmployeeIds);
+  const customerSelectorPopup = usePopup('CustomerSelector', setCustomerId);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
-  const workOrderInfoQuery = useWorkOrderInfoQuery({ fetch, query, employeeIds });
+  const workOrderInfoQuery = useWorkOrderInfoQuery({ fetch, query, employeeIds, customerId: customerId ?? undefined });
   const workOrderInfo = workOrderInfoQuery.data?.pages ?? [];
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
+  const customerQuery = useCustomerQuery({ fetch, id: customerId });
 
   const rows = useWorkOrderRows(workOrderInfo, navigate);
 
@@ -45,19 +48,30 @@ export function Entry() {
               {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
             </Text>
           </Stack>
-          <Stack direction={'horizontal'} alignment={'space-between'} flex={1}>
+          <Stack direction={'horizontal'} alignment={'space-between'}>
             <Stack direction={'horizontal'}>
+              <Button title={'Filter customer'} type={'plain'} onPress={() => customerSelectorPopup.navigate()} />
               <Button
-                title={'Filter by employee'}
+                title={'Filter employees'}
                 type={'plain'}
                 onPress={() => employeeSelectorPopup.navigate(employeeIds)}
               />
             </Stack>
-            <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-              {employeeIds.map(id => (
-                <Text key={id}>{employeeQueries[id]?.data?.name ?? 'Unknown employee'}</Text>
-              ))}
+            <Stack direction={'horizontal'}>
+              {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
+              {employeeIds.length > 0 && (
+                <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
+              )}
             </Stack>
+          </Stack>
+          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+            {customerId && <Text>Customer: {customerQuery?.data?.displayName ?? 'Unknown customer'}</Text>}
+          </Stack>
+          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+            {employeeIds.length > 0 && <Text>Employees:</Text>}
+            {employeeIds.map(id => (
+              <Text key={id}>{employeeQueries[id]?.data?.name ?? 'Unknown employee'}</Text>
+            ))}
           </Stack>
           <SearchBar
             onTextChange={(query: string) => setQuery(query, query === '')}

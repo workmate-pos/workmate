@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useEmployeeRateQueries } from '../queries/use-employee-rate-queries.js';
 import { NumberField } from '../components/NumberField.js';
 import { useEmployeeRatesMutation } from '../queries/use-employee-rates-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
@@ -16,16 +15,13 @@ export default function Rates() {
   const [employeeRates, setEmployeeRates] = useState<Record<string, number | null>>({});
 
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const employeesQuery = useEmployeesQuery({ fetch, params: {} });
-  // TODO: Use rates directly from here instead of with another query
-  const employeeIds = employeesQuery.data?.pages.map(employee => employee.id) ?? [];
-  const employeeRateQueries = useEmployeeRateQueries(employeeIds, {
-    refetchOnWindowFocus: false,
-    onSuccess(data) {
-      setEmployeeRates(prev => ({
-        ...prev,
-        [data.id]: data.rate,
-      }));
+  const employeesQuery = useEmployeesQuery({
+    fetch,
+    params: {},
+    options: {
+      onSuccess(data) {
+        setEmployeeRates(Object.fromEntries(data.pages.map(employee => [employee.id, employee.rate])));
+      },
     },
   });
   const employeeRatesMutation = useEmployeeRatesMutation({
@@ -76,39 +72,29 @@ export default function Rates() {
           selectable={false}
         >
           {employeesQuery.data?.pages.map((employee, i) => {
-            const query = employeeRateQueries[employee.id];
-
             return (
               <IndexTable.Row key={employee.id} id={employee.id} selected={false} position={i}>
                 <IndexTable.Cell>{employee.name}</IndexTable.Cell>
                 <IndexTable.Cell flush={true}>
-                  {(query?.isLoading ?? true) && <SkeletonBodyText lines={1} />}
-                  {query?.isSuccess && (
-                    <NumberField
-                      variant={'borderless'}
-                      type={'number'}
-                      decimals={2}
-                      min={0.01}
-                      step={0.01}
-                      largeStep={1}
-                      inputMode={'decimal'}
-                      label={'Rate'}
-                      labelHidden={true}
-                      value={employeeRates[employee.id] ? String(employeeRates[employee.id]) : undefined}
-                      onChange={value =>
-                        setEmployeeRates({ ...employeeRates, [employee.id]: value ? Number(value) : null })
-                      }
-                      prefix={currencyFormatter.prefix}
-                      suffix={currencyFormatter.suffix}
-                      autoComplete={'off'}
-                      placeholder={settingsQuery.data?.settings.defaultRate}
-                    />
-                  )}
-                  {query?.isError && (
-                    <Text as={'p'} tone={'critical'}>
-                      Something went wrong
-                    </Text>
-                  )}
+                  <NumberField
+                    variant={'borderless'}
+                    type={'number'}
+                    decimals={2}
+                    min={0.01}
+                    step={0.01}
+                    largeStep={1}
+                    inputMode={'decimal'}
+                    label={'Rate'}
+                    labelHidden={true}
+                    value={employeeRates[employee.id] ? String(employeeRates[employee.id]) : undefined}
+                    onChange={value =>
+                      setEmployeeRates({ ...employeeRates, [employee.id]: value ? Number(value) : null })
+                    }
+                    prefix={currencyFormatter.prefix}
+                    suffix={currencyFormatter.suffix}
+                    autoComplete={'off'}
+                    placeholder={settingsQuery.data?.settings.defaultRate}
+                  />
                 </IndexTable.Cell>
               </IndexTable.Row>
             );

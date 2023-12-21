@@ -7,7 +7,7 @@ import { Fetch } from '@work-orders/common/queries/fetch.js';
 
 export const useAuthenticatedFetch = ({
   setToastAction,
-  reauthOptions,
+  reauthOptions = { redirect: false },
 }: {
   setToastAction: ToastActionCallable;
   reauthOptions?: ReauthOptions;

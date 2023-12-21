@@ -87,6 +87,8 @@ const useWorkOrderContext = () => {
     }
   });
 
+  const [shouldOpenSavedPopup, setShouldOpenSavedPopup] = useState(false);
+
   const workOrderQuery = useWorkOrderQuery(
     { fetch, name: createWorkOrder.name },
     {
@@ -96,6 +98,11 @@ const useWorkOrderContext = () => {
           type: 'set-work-order',
           workOrder: workOrderToCreateWorkOrder(workOrder),
         });
+
+        if (shouldOpenSavedPopup) {
+          workOrderSavedPopup.navigate(workOrder);
+          setShouldOpenSavedPopup(false);
+        }
       },
       onError() {
         api.toast.show('Error loading work order');
@@ -123,13 +130,10 @@ const useWorkOrderContext = () => {
       onError() {
         api.toast.show('Error saving work order');
       },
-      async onSuccess(result) {
-        api.toast.show('Work order saved', { duration: 1000 });
-        const name = result.name;
-        if (!name) return;
-        const { data } = await workOrderQuery.refetch();
-        if (!data?.workOrder) return;
-        workOrderSavedPopup.navigate(data.workOrder);
+      onSuccess(workOrder) {
+        if (!workOrder.name) return;
+        setShouldOpenSavedPopup(true);
+        dispatchCreateWorkOrder({ type: 'set-work-order', workOrder: { ...createWorkOrder, name: workOrder.name } });
       },
     },
   );

@@ -8,10 +8,11 @@ export const useWorkOrderInfoQuery = ({
   query,
   status,
   employeeIds,
+  customerId,
   limit = 10,
 }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset'> & { limit?: number; fetch: Fetch }) =>
   useInfiniteQuery({
-    queryKey: ['work-order-info', { query, status, limit, employeeIds }],
+    queryKey: ['work-order-info', { query, status, limit, employeeIds, customerId }],
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams({
         limit: String(limit),
@@ -20,6 +21,7 @@ export const useWorkOrderInfoQuery = ({
 
       if (query) searchParams.set('query', query);
       if (status) searchParams.set('status', status);
+      if (customerId) searchParams.set('customerId', customerId);
 
       for (const employeeId of employeeIds ?? []) {
         searchParams.append('employeeIds', employeeId);

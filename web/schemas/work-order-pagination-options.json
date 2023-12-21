@@ -22,6 +22,9 @@
       "items": {
         "$ref": "scalars.json#/definitions/ID"
       }
+    },
+    "customerId": {
+      "$ref": "scalars.json#/definitions/ID"
     }
   },
   "required": ["limit", "offset"],

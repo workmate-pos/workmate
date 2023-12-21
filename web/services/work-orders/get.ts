@@ -138,6 +138,7 @@ export async function getWorkOrderInfoPage(
     limit: paginationOptions.limit,
     query: paginationOptions.query,
     employeeIds: paginationOptions.employeeIds,
+    customerId: paginationOptions.customerId,
   });
 
   const graphql = new Graphql(session);
