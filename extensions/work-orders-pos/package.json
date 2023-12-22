@@ -13,7 +13,9 @@
     "react-query": "^3.39.3"
   },
   "scripts": {
-    "postinstall": "cd ../../common && npm install && npm run build"
+    "build:web": "cd ../../web && npm install && npm run build",
+    "build:common": "cd ../../common && npm install && npm run build",
+    "postinstall": "npm run build:web && npm run build:common"
   },
   "overrides": {
     "@types/react": "17.0.30"

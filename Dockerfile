@@ -13,7 +13,7 @@ COPY .npmrc-ci web/.npmrc
 COPY .npmrc-ci web/frontend/.npmrc
 COPY graphql.config.yml web
 
-# Install common dependencies
+# Install deps for common
 WORKDIR ./common
 RUN npm install
 
