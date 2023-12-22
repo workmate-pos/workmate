@@ -6,13 +6,15 @@ ENV SHOPIFY_API_KEY=$SHOPIFY_API_KEY
 ENV SHOPIFY_SHOP=$SHOPIFY_SHOP
 EXPOSE 8081
 WORKDIR /app
-COPY web .
-COPY meta.json .
-COPY .npmrc-ci .npmrc
-COPY .npmrc-ci frontend/.npmrc
-COPY graphql.config.yml .
+COPY web web
+COPY common common
+COPY meta.json web
+COPY .npmrc-ci web/.npmrc
+COPY .npmrc-ci web/frontend/.npmrc
+COPY graphql.config.yml web
 
 # Build backend
+WORKDIR ./web
 RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
   NPM_GITHUB_TOKEN=$(cat /run/secrets/NPM_GITHUB_TOKEN) \
   npm install
@@ -20,8 +22,13 @@ RUN --mount=type=secret,id=SHOPIFY_ACCESS_TOKEN \
   SHOPIFY_ACCESS_TOKEN=$(cat /run/secrets/SHOPIFY_ACCESS_TOKEN) \
   npm run build
 
+# Build common
+WORKDIR ../common
+RUN npm install
+RUN npm run build
+
 # Build frontend
-WORKDIR ./frontend
+WORKDIR ../web/frontend
 RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
   NPM_GITHUB_TOKEN=$(cat /run/secrets/NPM_GITHUB_TOKEN) \
   npm install

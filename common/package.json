@@ -26,10 +26,6 @@
     "./custom-attributes/*": {
       "default": "./dist/custom-attributes/*",
       "types": "./src/custom-attributes/*"
-    },
-    "./custom-attributes/attributes/*": {
-      "default": "./dist/custom-attributes/attributes/*",
-      "types": "./src/custom-attributes/attributes/*"
     }
   },
   "scripts": {
@@ -43,6 +39,10 @@
     "react-query": "^3.39.3"
   },
   "devDependencies": {
-    "@types/react": "^17.0.73"
+    "@types/react": "^17.0.73",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "zod": "^3.22.4"
   }
 }

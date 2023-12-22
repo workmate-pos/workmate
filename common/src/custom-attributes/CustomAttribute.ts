@@ -1,8 +1,7 @@
 import { z } from 'zod';
-import type { Attribute } from '@web/services/gql/queries/generated/schema.js';
 
 export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
-export type CustomAttributes = Attribute[];
+export type CustomAttributes = { key: string; value: string | null }[];
 
 export type CustomAttributeValue<T extends CustomAttribute<any, any, any>> = T extends CustomAttribute<
   any,
