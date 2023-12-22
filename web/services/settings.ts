@@ -12,7 +12,7 @@ function deserialize(value: string): ShopSettings[keyof ShopSettings] {
   return JSON.parse(value);
 }
 
-export async function getSettingsByShop(shop: string) {
+export async function getShopSettings(shop: string) {
   await insertDefaultSettingsIfNotExists(shop);
   const rows = await db.settings.get({ shop });
   return Object.fromEntries(rows.map(({ key, value }) => [key, deserialize(value)])) as unknown as ShopSettings;

@@ -1,26 +1,6 @@
-import { useStorePropertiesQuery } from '../queries/use-store-properties-query';
+import { useCurrencyFormatter as useCurrencyFormatterCommon } from '@work-orders/common/hooks/use-currency-formatter.js';
+import { useAuthenticatedFetch } from './use-authenticated-fetch.js';
 
-export const useCurrencyFormatter = () => {
-  const storePropertiesQuery = useStorePropertiesQuery();
+export const useCurrencyFormatter = () => useCurrencyFormatterCommon({ fetch: useAuthenticatedFetch() });
 
-  return (amount: number) => {
-    const { data } = storePropertiesQuery;
-    if (!data) return `$${amount.toFixed(2)}`;
-
-    const { currencyFormat } = data.storeProperties;
-    const variables = {
-      amount: amount.toFixed(2),
-      amount_no_decimals: amount.toFixed(0),
-    };
-
-    let formattedString = currencyFormat;
-
-    for (const [key, value] of Object.entries(variables)) {
-      formattedString = formattedString.replace(`{{${key}}}`, value);
-    }
-
-    return formattedString;
-  };
-};
-
-export type CurrencyFormatter = ReturnType<typeof useCurrencyFormatter>;
+export { CurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';

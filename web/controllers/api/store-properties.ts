@@ -12,7 +12,7 @@ export default class StorePropertiesController {
     const session: Session = res.locals.shopify.session;
 
     const graphql = new Graphql(session);
-    const response = await gql.store.getStoreProperties(graphql, {});
+    const response = await gql.store.getProperties.run(graphql, {});
 
     const storeProperties = {
       name: response.shop.name,

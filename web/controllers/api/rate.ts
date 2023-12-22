@@ -7,22 +7,29 @@ import {
 } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import type { Request, Response } from 'express-serve-static-core';
 import type { Session } from '@shopify/shopify-api';
-import type { FetchRatesOptions } from '../../schemas/generated/fetch-rates-options.js';
+import type { Ids } from '../../schemas/generated/ids.js';
 import type { SetRates } from '../../schemas/generated/set-rates.js';
 import { db } from '../../services/db/db.js';
 import { transaction } from '../../services/db/transaction.js';
+import { Cents } from '@work-orders/common/util/money.js';
+import type { ID } from '../../schemas/generated/shop-settings.js';
 
 @Authenticated()
 export default class RateController {
   @Get('/')
-  @QuerySchema('fetch-rates-options')
-  async fetchRates(req: Request<unknown, unknown, unknown, FetchRatesOptions>, res: Response<FetchRatesResponse>) {
+  @QuerySchema('ids')
+  async fetchRates(req: Request<unknown, unknown, unknown, Ids>, res: Response<FetchRatesResponse>) {
     const { shop }: Session = res.locals.shopify.session;
     const { ids } = req.query;
 
     const rates = await db.employeeRate.getMany({ shop, employeeIds: ids });
 
-    return res.json({ rates });
+    return res.json({
+      rates: rates.map(({ employeeId, rate }) => ({
+        employeeId: employeeId as ID,
+        rate: rate as Cents,
+      })),
+    });
   }
 
   @Post('/')
@@ -32,10 +39,15 @@ export default class RateController {
     const { rates } = req.body;
 
     await transaction(async () => {
-      const ratesToUpsert = rates.filter(r => r.rate !== null);
+      const ratesToUpsert = rates.filter(
+        (r): r is typeof r & { rate: NonNullable<(typeof r)['rate']> } => r.rate !== null,
+      );
 
       if (ratesToUpsert.length > 0) {
-        await db.employeeRate.upsertMany({ shop, rates: rates.filter(r => r.rate !== null) });
+        await db.employeeRate.upsertMany({
+          shop,
+          rates: ratesToUpsert,
+        });
       }
 
       const employeeIdsToDelete = rates.filter(r => r.rate === null);
@@ -54,8 +66,8 @@ export default class RateController {
 
 export type FetchRatesResponse = {
   rates: {
-    employeeId: string;
-    rate: number;
+    employeeId: ID;
+    rate: Cents;
   }[];
 };
 

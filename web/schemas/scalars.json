@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "scalars.json",
+  "definitions": {
+    "ID": {
+      "title": "ID",
+      "type": "string",
+      "pattern": "gid://shopify/\\w+/\\d+",
+      "tsType": "string & { __brand: 'ID' }"
+    },
+    "Money": {
+      "title": "Money",
+      "type": "string",
+      "pattern": "^\\d+\\.\\d{2}$",
+      "tsType": "`${number}` & { __brand: 'Money' }"
+    },
+    "Int": {
+      "title": "Int",
+      "type": "integer",
+      "tsType": "number & { __brand: 'Int' }"
+    },
+    "DateTime": {
+      "description": "ISO 8601 formatted string",
+      "title": "DateTime",
+      "type": "string",
+      "format": "date-time",
+      "tsType": "string & { __brand: 'DateTime' }"
+    }
+  }
+}

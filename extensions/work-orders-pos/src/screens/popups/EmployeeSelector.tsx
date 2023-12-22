@@ -1,19 +1,24 @@
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
+import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '../../hooks/use-screen.js';
-import { Employee, useEmployeesQuery } from '../../queries/use-employees-query.js';
-import { useDebouncedState } from '../../hooks/use-debounced-state.js';
-import { useSettingsQuery } from '../../queries/use-settings-query';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { ID } from '@web/schemas/generated/ids.js';
 
 export function EmployeeSelector() {
-  const { Screen, closePopup } = useScreen('EmployeeSelector', ({ selectedEmployeeIds }) => {
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<ID[]>([]);
+  const [query, setQuery] = useDebouncedState('');
+
+  const { Screen, closePopup } = useScreen('EmployeeSelector', selectedEmployeeIds => {
     setSelectedEmployeeIds(selectedEmployeeIds);
+    setQuery('', true);
   });
 
-  const [query, setQuery] = useDebouncedState('');
-  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
-  const settingsQuery = useSettingsQuery();
-  const employeesQuery = useEmployeesQuery({ query });
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
+  const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
   const employees = employeesQuery.data?.pages ?? [];
 
   const rows = getEmployeeRows(employees, selectedEmployeeIds, setSelectedEmployeeIds);
@@ -21,13 +26,7 @@ export function EmployeeSelector() {
   const close = () => {
     if (!settingsQuery.data) return;
 
-    const selected = employees
-      .filter(e => selectedEmployeeIds.includes(e.id))
-      .map(e => ({
-        employeeId: e.id,
-        name: e.name,
-        employeeRate: e.rate ?? settingsQuery.data.settings.defaultRate,
-      }));
+    const selected = employees.filter(e => selectedEmployeeIds.includes(e.id)).map(e => e.id);
 
     closePopup(selected);
   };
@@ -37,8 +36,7 @@ export function EmployeeSelector() {
       title="Select employee"
       presentation={{ sheet: true }}
       isLoading={settingsQuery.isLoading}
-      onNavigateBack={close}
-      onNavigate={() => setQuery('', true)}
+      overrideNavigateBack={close}
     >
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
@@ -47,7 +45,8 @@ export function EmployeeSelector() {
           </Text>
         </Stack>
         <SearchBar
-          onTextChange={query => {
+          initialValue={query}
+          onTextChange={(query: string) => {
             setQuery(query, query === '');
           }}
           onSearch={() => {}}
@@ -84,11 +83,7 @@ export function EmployeeSelector() {
   );
 }
 
-function getEmployeeRows(
-  employees: Employee[],
-  selectedEmployeeIds: string[],
-  setSelectedEmployees: (ids: string[]) => void,
-) {
+function getEmployeeRows(employees: Employee[], selectedEmployeeIds: ID[], setSelectedEmployees: (ids: ID[]) => void) {
   return employees.map<ListRow>(({ id, name }) => ({
     id,
     onPress: () => {

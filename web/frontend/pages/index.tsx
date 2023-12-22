@@ -1,8 +1,8 @@
 import { Card, Page, Layout, InlineStack, Text, Spinner, BlockStack, Frame } from '@shopify/polaris';
 import { TitleBar } from '@shopify/app-bridge-react';
 import React, { useEffect, useState } from 'react';
-import { AppInfo } from '../../controllers/api/app-info';
 import { useAuthenticatedFetch, useToast } from '@teifi-digital/shopify-app-react';
+import { AppInfo } from '../../controllers/api/app-info.js';
 
 export default function HomePage() {
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);

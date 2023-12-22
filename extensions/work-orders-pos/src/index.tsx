@@ -1,20 +1,21 @@
-import { Navigator, render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { render, Tile, useExtensionApi, Navigator } from '@shopify/retail-ui-extensions-react';
 import { WorkOrderPage } from './screens/WorkOrder.js';
-import { ProductConfig } from './screens/popups/ProductConfig';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
-import { ProductSelector } from './screens/popups/ProductSelector';
 import { Error } from './screens/Error.js';
 import { ReactQueryProvider } from './providers/ReactQueryProvider.js';
 import { StatusSelector } from './screens/popups/StatusSelector.js';
 import { CustomerSelector } from './screens/popups/CustomerSelector.js';
-import { DiscountOrDepositSelector } from './screens/popups/DiscountOrDepositSelector.js';
 import { ShippingConfig } from './screens/popups/ShippingConfig.js';
 import { Entry } from './screens/Entry.js';
 import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
-import { ServiceSelector } from './screens/popups/ServiceSelector';
-import { ServiceConfig } from './screens/popups/ServiceConfig';
-import { ServiceEmployeeAssignmentConfig } from './screens/popups/ServiceEmployeeAssignmentConfig';
-import { ImportOrderSelector } from './screens/ImportOrderSelector';
+import { ProductLineItemConfig } from './screens/popups/ProductLineItemConfig.js';
+import { ProductSelector } from './screens/popups/ProductSelector.js';
+import { DiscountSelector } from './screens/popups/DiscountSelector.js';
+import { ServiceSelector } from './screens/popups/ServiceSelector.js';
+import { EmployeeAssignmentConfig } from './screens/popups/EmployeeAssignmentConfig.js';
+import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
+import { ServiceLineItemConfig } from './screens/popups/ServiceLineItemConfig.js';
+import { UnsavedChangesDialogProvider } from './providers/UnsavedChangesDialogProvider.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -33,24 +34,26 @@ function SmartGridTile() {
 function SmartGridModal() {
   return (
     <ReactQueryProvider>
-      <Navigator>
-        <Entry />
-        <ImportOrderSelector />
-        <Error />
-        <WorkOrderPage />
+      <UnsavedChangesDialogProvider>
+        <Navigator>
+          <Entry />
+          <Error />
+          <ImportOrderSelector />
+          <WorkOrderPage />
 
-        <CustomerSelector />
-        <DiscountOrDepositSelector />
-        <EmployeeSelector />
-        <ProductConfig />
-        <ProductSelector />
-        <ServiceConfig />
-        <ServiceEmployeeAssignmentConfig />
-        <ServiceSelector />
-        <ShippingConfig />
-        <StatusSelector />
-        <WorkOrderSaved />
-      </Navigator>
+          <CustomerSelector />
+          <DiscountSelector />
+          <EmployeeAssignmentConfig />
+          <EmployeeSelector />
+          <ProductLineItemConfig />
+          <ProductSelector />
+          <ServiceLineItemConfig />
+          <ServiceSelector />
+          <ShippingConfig />
+          <StatusSelector />
+          <WorkOrderSaved />
+        </Navigator>
+      </UnsavedChangesDialogProvider>
     </ReactQueryProvider>
   );
 }

@@ -1,4 +1,4 @@
-query getCollections($first: Int = 10, $after: String, $query: String) {
+query getPage($first: Int = 10, $after: String, $query: String) {
   collections(first: $first, after: $after, query: $query) {
     nodes {
       id
@@ -7,48 +7,6 @@ query getCollections($first: Int = 10, $after: String, $query: String) {
     pageInfo {
       hasNextPage
       endCursor
-    }
-  }
-}
-
-query getCollectionProductVariants($id: ID!, $first: Int = 5, $after: String) {
-  collection(id: $id) {
-    products(first: $first, after: $after) {
-      nodes {
-        variants(first: 5) {
-          nodes {
-            ...productVariantFragment2
-          }
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }
-}
-
-#TODO: Fix genql fragment sharing
-fragment productVariantFragment2 on ProductVariant {
-  id
-  title
-  sku
-  price
-  image {
-    url
-  }
-  product {
-    title
-    hasOnlyDefaultVariant
-    featuredImage {
-      url
-    }
-    description
-    collections(first: 10) {
-      nodes {
-        id
-      }
     }
   }
 }

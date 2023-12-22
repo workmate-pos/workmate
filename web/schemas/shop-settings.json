@@ -5,11 +5,11 @@
     "idFormat",
     "statuses",
     "discountShortcuts",
-    "depositShortcuts",
     "discountRules",
-    "depositRules",
     "workOrderRequests",
     "serviceCollectionId",
-    "defaultRate"
+    "defaultRate",
+    "labourLineItemName",
+    "labourLineItemSKU"
   ]
 }

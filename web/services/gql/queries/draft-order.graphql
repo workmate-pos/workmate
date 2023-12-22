@@ -1,0 +1,150 @@
+mutation calculate($input: DraftOrderInput!) {
+  draftOrderCalculate(input: $input) {
+    calculatedDraftOrder {
+      ...CalculatedDraftOrderFragment
+    }
+    userErrors {
+      ...UserErrorFragment
+    }
+  }
+}
+
+fragment CalculatedDraftOrderFragment on CalculatedDraftOrder {
+  totalTax
+  totalPrice
+  totalShippingPrice
+  subtotalPrice
+  appliedDiscount {
+    value
+    valueType
+    amount
+  }
+}
+
+mutation create($input: DraftOrderInput!) {
+  result: draftOrderCreate(input: $input) {
+    draftOrder {
+      ...DraftOrderFragment
+    }
+    userErrors {
+      ...UserErrorFragment
+    }
+  }
+}
+
+mutation update($id: ID!, $input: DraftOrderInput!) {
+  result: draftOrderUpdate(id: $id, input: $input) {
+    draftOrder {
+      ...DraftOrderFragment
+    }
+    userErrors {
+      ...UserErrorFragment
+    }
+  }
+}
+
+mutation remove($id: ID!) {
+  draftOrderDelete(input: { id: $id }) {
+    userErrors {
+      ...UserErrorFragment
+    }
+  }
+}
+
+fragment DraftOrderFragment on DraftOrder {
+  id
+  totalTax
+  totalPrice
+  totalShippingPrice
+}
+
+fragment UserErrorFragment on UserError {
+  field
+  message
+}
+
+query getAttributes($id: ID!) {
+  order(id: $id) {
+    id
+    name
+    customAttributes {
+      key
+      value
+    }
+  }
+}
+
+query get($id: ID!) {
+  order: draftOrder(id: $id) {
+    __typename
+    name
+    note: note2
+    totalPrice
+    totalShippingPrice
+    totalTax
+    subtotalPrice
+    appliedDiscount {
+      value
+      valueType
+    }
+    customAttributes {
+      key
+      value
+    }
+  }
+}
+
+fragment ShopMoneyAmountFragment on MoneyBag {
+  shopMoney {
+    amount
+  }
+}
+
+query getLineItems($id: ID!, $after: String, $serviceCollectionId: ID = "gid://shopify/Collection/null") {
+  order: draftOrder(id: $id) {
+    lineItems(first: 10, after: $after) {
+      nodes {
+        ... on DraftOrderLineItem {
+          id
+          title
+          taxable
+          variant {
+            id
+            image {
+              url
+            }
+            title
+            product {
+              id
+              title
+              isServiceItem: inCollection(id: $serviceCollectionId)
+            }
+          }
+          quantity
+          originalUnitPrice
+          sku
+          customAttributes {
+            key
+            value
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+fragment DraftOrderInfoFragment on DraftOrder {
+  id
+  name
+  draftTotalTax: totalTax
+  totalPrice
+  totalShippingPrice
+  customAttributes {
+    key
+    value
+  }
+}

@@ -1,35 +1,33 @@
-import { WebhookHandlers } from '@teifi-digital/shopify-app-express/services/webhooks.js';
-import { insertWorkOrderPayment } from './work-order-payment.js';
-import { toCents } from '../util/money.js';
-
-// NOTE: Do NOT change these keys - they are used in the front end too when creating payments
-export const PAYMENT_ADDITIONAL_DETAIL_KEYS = {
-  WORK_ORDER_NAME: 'Work Order',
-  PAYMENT_TYPE: 'Type',
-};
+import { WebhookHandler, WebhookHandlers } from '@teifi-digital/shopify-app-express/services/webhooks.js';
+import { db } from './db/db.js';
+import { WorkOrderAttribute } from '@work-orders/common/custom-attributes/attributes/WorkOrderAttribute.js';
+import { never } from '@work-orders/common/util/never.js';
 
 export default {
-  'orders/paid': {
-    async handler(session, topic, shop, body) {
-      const order = body as {
-        id: number;
+  'orders/create': {
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: string;
         note_attributes: { name: string; value: string }[];
-        current_total_price: string;
-      };
+      },
+    ) {
+      const rawWorkOrderName = body.note_attributes.find(({ name }) => name === WorkOrderAttribute.key)?.value;
 
-      const attributes = Object.fromEntries(order.note_attributes.map(a => [a.name, a.value]));
-
-      const workOrderName = attributes[PAYMENT_ADDITIONAL_DETAIL_KEYS.WORK_ORDER_NAME];
-      const paymentType = attributes[PAYMENT_ADDITIONAL_DETAIL_KEYS.PAYMENT_TYPE];
-
-      if (workOrderName === undefined || paymentType === undefined) {
-        // not a work order payment
+      if (!rawWorkOrderName) {
         return;
       }
 
-      const amount = toCents(Number(order.current_total_price));
+      const workOrderName = WorkOrderAttribute.deserialize({ key: WorkOrderAttribute.key, value: rawWorkOrderName });
 
-      await insertWorkOrderPayment(shop, order.id, amount, workOrderName, paymentType);
+      const [workOrder = never()] = await db.workOrder.get({ shop, name: workOrderName });
+
+      await db.workOrder.updateOrderIds({
+        id: workOrder.id,
+        orderId: body.admin_graphql_api_id,
+      });
     },
   },
-} satisfies WebhookHandlers;
+} as WebhookHandlers;

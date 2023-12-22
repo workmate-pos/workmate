@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
+import tsconfigPaths from 'vite-tsconfig-paths';
 
 if (process.env.npm_lifecycle_event === 'build' && !process.env.CI && !process.env.SHOPIFY_API_KEY) {
   console.warn(
@@ -37,7 +38,7 @@ if (host === 'localhost') {
 
 export default defineConfig({
   root: dirname(fileURLToPath(import.meta.url)),
-  plugins: [react()],
+  plugins: [react(), tsconfigPaths()],
   define: {
     'process.env.SHOPIFY_API_KEY': JSON.stringify(process.env.SHOPIFY_API_KEY),
   },

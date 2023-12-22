@@ -1,7 +1,7 @@
-query getCustomers($first: Int = 10, $after: String, $query: String) {
-  customers (first: $first, after: $after, query: $query, sortKey: NAME) {
+query getPage($first: Int = 10, $after: String, $query: String) {
+  customers(first: $first, after: $after, query: $query, sortKey: NAME) {
     nodes {
-      ...customerFragment
+      ...CustomerFragment
     }
     pageInfo {
       hasNextPage
@@ -10,15 +10,27 @@ query getCustomers($first: Int = 10, $after: String, $query: String) {
   }
 }
 
-query getCustomer($id: ID!) {
+query get($id: ID!) {
   customer(id: $id) {
-    ...customerFragment
+    ...CustomerFragment
   }
 }
 
-fragment customerFragment on Customer {
+query getMany($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ... on Customer {
+      ...CustomerFragment
+    }
+  }
+}
+
+fragment CustomerFragment on Customer {
   id
   displayName
-  phone
   email
+  phone
+  defaultAddress {
+    formatted
+  }
 }

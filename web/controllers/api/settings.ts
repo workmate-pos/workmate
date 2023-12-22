@@ -1,5 +1,5 @@
 import type { PartialShopSettings } from '../../schemas/generated/partial-shop-settings.js';
-import { getSettingsByShop, updateSettings } from '../../services/settings.js';
+import { getShopSettings, updateSettings } from '../../services/settings.js';
 import { Session } from '@shopify/shopify-api';
 import { Authenticated, BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import type { Request, Response } from 'express-serve-static-core';
@@ -9,7 +9,7 @@ export default class SettingsController {
   @Get('/')
   async fetchSettings(req: Request, res: Response) {
     const session: Session = res.locals.shopify.session;
-    const settings = await getSettingsByShop(session.shop);
+    const settings = await getShopSettings(session.shop);
     return res.json({ settings });
   }
 
@@ -26,5 +26,5 @@ export default class SettingsController {
 }
 
 export type FetchSettingsResponse = {
-  settings: Awaited<ReturnType<typeof getSettingsByShop>>;
+  settings: Awaited<ReturnType<typeof getShopSettings>>;
 };

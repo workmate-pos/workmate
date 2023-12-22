@@ -4,8 +4,12 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import type { Request, Response } from 'express-serve-static-core';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
-import { StaffMemberFragmentResult } from '../../services/gql/queries/generated/queries.js';
 import { db } from '../../services/db/db.js';
+import { Ids } from '../../schemas/generated/ids.js';
+import { isNotNull } from '../../util/filters.js';
+import { never } from '@work-orders/common/util/never.js';
+import { Cents, parseMoney, toCents } from '@work-orders/common/util/money.js';
+import { getShopSettings } from '../../services/settings.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -17,24 +21,56 @@ export default class EmployeeController {
   ) {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
-    const { shop } = session;
 
     const graphql = new Graphql(session);
-    const response = await gql.staffMember.getStaffMembers(graphql, paginationOptions);
+    const response = await gql.staffMember.getPage.run(graphql, paginationOptions);
 
     const employees = response.shop.staffMembers.nodes;
     const pageInfo = response.shop.staffMembers.pageInfo;
 
-    const rates = await db.employeeRate.getMany({ shop, employeeIds: employees.map(e => e.id) });
-    const ratesRecord = Object.fromEntries(rates.map(r => [r.employeeId, r.rate]));
+    return res.json({
+      employees: (await getEmployeesWithRate(session.shop, employees)).map(e => e ?? never()),
+      pageInfo,
+    });
+  }
 
-    const employeesWithRates = employees.map(e => ({ ...e, rate: ratesRecord[e.id] ?? null }));
+  @Get('/by-ids')
+  @QuerySchema('ids')
+  async fetchEmployeesById(req: Request<unknown, unknown, unknown, Ids>, res: Response<FetchEmployeesByIdResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { shop } = session;
+    const { ids } = req.query;
 
-    return res.json({ employees: employeesWithRates, pageInfo });
+    const graphql = new Graphql(session);
+    const { nodes } = await gql.staffMember.getMany.run(graphql, { ids });
+
+    const staffMembers = nodes.filter(
+      (node): node is null | (gql.staffMember.StaffMemberFragment.Result & { __typename: 'StaffMember' }) =>
+        node === null || node.__typename === 'StaffMember',
+    );
+
+    const employeesWithRates = (await getEmployeesWithRate(shop, staffMembers)).filter(isNotNull);
+
+    return res.json({ employees: employeesWithRates });
   }
 }
 
+async function getEmployeesWithRate(shop: string, employees: (gql.staffMember.StaffMemberFragment.Result | null)[]) {
+  const rates = await db.employeeRate.getMany({ shop, employeeIds: employees.filter(isNotNull).map(e => e.id) });
+  const ratesRecord = Object.fromEntries(rates.map(r => [r.employeeId, r.rate as Cents]));
+  const { defaultRate } = await getShopSettings(shop);
+  const defaultRateCents = toCents(parseMoney(defaultRate));
+
+  return employees.map(e => (e ? { ...e, rate: ratesRecord[e.id] ?? defaultRateCents } : null));
+}
+
+export type EmployeeWithRate = gql.staffMember.StaffMemberFragment.Result & { rate: Cents };
+
 export type FetchEmployeesResponse = {
-  employees: (StaffMemberFragmentResult & { rate: number | null })[];
+  employees: EmployeeWithRate[];
   pageInfo: { hasNextPage: boolean; endCursor?: string | null };
+};
+
+export type FetchEmployeesByIdResponse = {
+  employees: (EmployeeWithRate | null)[];
 };

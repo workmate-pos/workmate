@@ -1,10 +1,10 @@
-import type { FetchCollectionsResponse } from '../../controllers/api/collection';
-import type { PaginationOptions } from '../../schemas/generated/pagination-options';
-import { createPaginatedQuery } from './create-paginated-query';
+import type { FetchCollectionsResponse } from '../../controllers/api/collection.js';
+import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
+import { createPaginatedQuery } from '@work-orders/common/queries/create-paginated-query.js';
 
-export const useCollectionsQuery = createPaginatedQuery<PaginationOptions, FetchCollectionsResponse>({
+export const useCollectionsQuery = createPaginatedQuery({
   endpoint: '/api/collection',
-  pagePropertyName: 'collections',
-  queryKeyFn: ({ query = '', first }) => ['collections', query, first],
+  queryKeyFn: ({ query = '', first }: PaginationOptions) => ['collections', query, first],
+  extractPage: (response: FetchCollectionsResponse) => response.collections,
   cursorParamName: 'after',
 });

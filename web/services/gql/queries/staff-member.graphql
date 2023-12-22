@@ -1,8 +1,8 @@
-query getStaffMembers($first: Int = 10, $after: String) {
+query getPage($first: Int = 10, $after: String) {
   shop {
     staffMembers(first: $first, after: $after) {
       nodes {
-        ...staffMemberFragment
+        ...StaffMemberFragment
       }
       pageInfo {
         hasNextPage
@@ -12,20 +12,14 @@ query getStaffMembers($first: Int = 10, $after: String) {
   }
 }
 
-query getStaffMember($id: ID!) {
-  staffMember(id: $id) {
-    ...staffMemberFragment
-  }
-}
-
-query getStaffMembersById($ids: [ID!]!) {
+query getMany($ids: [ID!]!) {
   nodes(ids: $ids) {
     __typename
-    ...staffMemberFragment
+    ...StaffMemberFragment
   }
 }
 
-fragment staffMemberFragment on StaffMember {
+fragment StaffMemberFragment on StaffMember {
   id
   name
   active

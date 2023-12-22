@@ -1,37 +1,25 @@
-import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
+import type { Money, ShopSettings } from '../../schemas/generated/shop-settings.js';
 
 const defaultShopSettings: ShopSettings = {
-  statuses: [
-    { name: 'Draft', bgHex: '#568ef4', textHex: '#ffffff' },
-    { name: 'In Progress', bgHex: '#3ace3a', textHex: '#ffffff' },
-    { name: 'Done', bgHex: '#7e98ac', textHex: '#ffffff' },
-  ],
+  statuses: ['Draft', 'In Progress', 'Done'],
   idFormat: 'WO-#{{id}}',
   discountShortcuts: [
-    { value: 10, unit: 'percentage' },
-    { value: 10000, unit: 'currency' },
+    { percentage: 10, unit: 'percentage' },
+    { money: '10.00' as Money, unit: 'currency' },
   ],
   discountRules: {
     onlyAllowShortcuts: true,
     allowedPercentageRange: null,
     allowedCurrencyRange: null,
   },
-  depositShortcuts: [
-    { value: 40, unit: 'percentage' },
-    { value: 10000, unit: 'currency' },
-  ],
-  depositRules: {
-    onlyAllowShortcuts: true,
-    onlyAllowHighestAbsoluteShortcut: true,
-    allowedCurrencyRange: null,
-    allowedPercentageRange: null,
-  },
   workOrderRequests: {
     enabled: false,
     allowedStatuses: null,
   },
   serviceCollectionId: null,
-  defaultRate: 1500,
+  defaultRate: '15.00' as Money,
+  labourLineItemName: 'Labour',
+  labourLineItemSKU: '',
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

@@ -1,19 +1,21 @@
-import { NavigateFn, useScreen } from '../hooks/use-screen';
-import { Order, useOrdersQuery } from '../queries/use-orders-query';
 import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useDebouncedState } from '../hooks/use-debounced-state';
-import { titleCase } from '../util/casing';
+import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { titleCase } from '@work-orders/common/util/casing.js';
+import { NavigateFn, useScreen } from '../hooks/use-screen.js';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 
 export function ImportOrderSelector() {
   const { Screen, navigate } = useScreen('ImportOrderSelector');
   const [query, setQuery] = useDebouncedState('');
 
-  const ordersQuery = useOrdersQuery({ query });
+  const fetch = useAuthenticatedFetch();
+  const ordersQuery = useOrdersQuery({ fetch, params: { query } });
 
   const rows = getOrderRows(ordersQuery.data?.pages ?? [], navigate);
 
   return (
-    <Screen title={'Import Order'} onNavigate={() => setQuery('', true)}>
+    <Screen title={'Import Order'}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -21,13 +23,14 @@ export function ImportOrderSelector() {
           </Text>
         </Stack>
         <SearchBar
-          onTextChange={query => {
+          initialValue={query}
+          onTextChange={(query: string) => {
             setQuery(query, query === '');
           }}
           onSearch={() => {}}
           placeholder="Search orders"
         />
-        <List data={rows} isLoadingMore={ordersQuery.isLoading} onEndReached={() => ordersQuery.fetchNextPage} />
+        <List data={rows} isLoadingMore={ordersQuery.isLoading} onEndReached={() => ordersQuery.fetchNextPage()} />
         {ordersQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
@@ -56,7 +59,7 @@ export function ImportOrderSelector() {
 
 function getOrderRows(orders: Order[], navigate: NavigateFn) {
   return orders.map<ListRow>(
-    ({ id, name, customer, displayFinancialStatus, displayFulfillmentStatus, workOrderName }) => {
+    ({ id, name, workOrderName, displayFulfillmentStatus, displayFinancialStatus, customer }) => {
       const label = workOrderName ? `${name} (${workOrderName})` : name;
 
       return {
@@ -65,12 +68,8 @@ function getOrderRows(orders: Order[], navigate: NavigateFn) {
           navigate('WorkOrder', {
             type: 'new-work-order',
             initial: {
-              customer: customer ? { id: customer.id, name: customer.displayName } : undefined,
-              derivedFromOrder: {
-                id,
-                workOrderName,
-                name,
-              },
+              customerId: customer?.id ?? null,
+              derivedFromOrderId: id,
             },
           });
         },

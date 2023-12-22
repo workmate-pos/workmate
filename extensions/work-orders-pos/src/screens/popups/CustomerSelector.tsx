@@ -1,19 +1,31 @@
-import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import {
+  List,
+  ListRow,
+  ScrollView,
+  SearchBar,
+  Stack,
+  Text,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
-import { Customer, useCustomersQuery } from '../../queries/use-customers-query.js';
-import { useDebouncedState } from '../../hooks/use-debounced-state.js';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 
 export function CustomerSelector() {
-  const { Screen, closePopup } = useScreen('CustomerSelector');
-
   const [query, setQuery] = useDebouncedState('');
-  const customersQuery = useCustomersQuery({ query });
+  const { Screen, closePopup } = useScreen('CustomerSelector', () => {
+    setQuery('', true);
+  });
+
+  const fetch = useAuthenticatedFetch();
+  const customersQuery = useCustomersQuery({ fetch, params: { query } });
   const customers = customersQuery.data?.pages ?? [];
 
   const rows = getCustomerRows(customers, closePopup);
 
   return (
-    <Screen title="Select Customer" presentation={{ sheet: true }} onNavigate={() => setQuery('', true)}>
+    <Screen title="Select Customer" presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -21,7 +33,8 @@ export function CustomerSelector() {
           </Text>
         </Stack>
         <SearchBar
-          onTextChange={query => setQuery(query, query === '')}
+          initialValue={query}
+          onTextChange={(query: string) => setQuery(query, query === '')}
           onSearch={() => {}}
           placeholder="Search customers"
         />
@@ -57,15 +70,14 @@ export function CustomerSelector() {
 }
 
 function getCustomerRows(customers: Customer[], closePopup: ClosePopupFn<'CustomerSelector'>): ListRow[] {
-  return customers.map<ListRow>(({ id, displayName: name }) => ({
+  return customers.map<ListRow>(({ id, displayName, email, phone, defaultAddress }) => ({
     id,
     onPress: () => {
-      closePopup({ id, name });
+      closePopup(id);
     },
     leftSide: {
-      label: name,
-      // TODO
-      // subtitle: ['info here'],
+      label: displayName,
+      subtitle: [email ?? 'No email', phone ?? 'No phone', defaultAddress?.formatted?.[0] ?? 'No address'],
     },
     rightSide: {
       showChevron: true,

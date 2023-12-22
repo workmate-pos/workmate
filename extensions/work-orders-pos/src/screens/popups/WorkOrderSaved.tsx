@@ -1,33 +1,20 @@
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { getPriceDetails } from '../../util/work-order.js';
-import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { WorkOrder } from '../../types/work-order';
+import { WorkOrder } from '@web/services/work-orders/types.js';
+import { PayButton } from '../../components/PayButton.js';
 
 export function WorkOrderSaved() {
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
-  const { Screen, usePopup, closePopup } = useScreen('WorkOrderSaved', setWorkOrder);
+  const { Screen, closePopup } = useScreen('WorkOrderSaved', setWorkOrder);
 
-  const currencyFormatter = useCurrencyFormatter();
-  const paymentHandler = usePaymentHandler();
-  const depositPopup = usePopup('DiscountOrDepositSelector', result => {
-    if (result.select === 'deposit') {
-      paymentHandler.handlePayment({
-        customerId: workOrder!.customer!.id,
-        workOrderName: workOrder!.name!,
-        type: 'deposit',
-        amount: result.currencyAmount,
-      });
-    }
-  });
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   const title = workOrder ? `Work order ${workOrder.name} saved` : 'Work order saved';
-  const priceDetails = workOrder ? getPriceDetails(workOrder) : null;
+  const hasOrder = workOrder?.order?.type === 'order';
 
   return (
-    <Screen title={title} isLoading={!workOrder || paymentHandler.isLoading} presentation={{ sheet: true }}>
+    <Screen title={title} isLoading={!workOrder || paymentLoading} presentation={{ sheet: true }}>
       {workOrder && (
         <ScrollView>
           <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
@@ -39,21 +26,8 @@ export function WorkOrderSaved() {
             <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'} flexChildren>
               <Button title={'Back to work order'} onPress={() => closePopup(undefined)} />
 
-              {priceDetails && priceDetails.balanceDue > 0 && (
-                <>
-                  <Button
-                    title={`Pay due balance (${currencyFormatter(priceDetails.balanceDue)})`}
-                    onPress={() =>
-                      paymentHandler.handlePayment({
-                        customerId: workOrder!.customer!.id,
-                        workOrderName: workOrder.name!,
-                        type: 'balance',
-                        amount: priceDetails.balanceDue,
-                        previouslyDeposited: priceDetails.deposited,
-                      })
-                    }
-                  />
-                </>
+              {!hasOrder && (
+                <PayButton workOrderName={workOrder.name} createWorkOrder={null} setLoading={setPaymentLoading} />
               )}
             </Stack>
           </Stack>

@@ -5,23 +5,16 @@
     "status": {
       "type": "string"
     },
-    "customer": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        }
-      },
-      "required": ["id"],
-      "additionalProperties": false
+    "customerId": {
+      "$ref": "scalars.json#/definitions/ID"
     },
     "dueDate": {
-      "type": "string"
+      "$ref": "scalars.json#/definitions/DateTime"
     },
     "description": {
       "type": "string"
     }
   },
-  "required": ["status", "customer", "dueDate", "description"],
+  "required": ["status", "customerId", "dueDate", "description"],
   "additionalProperties": false
 }

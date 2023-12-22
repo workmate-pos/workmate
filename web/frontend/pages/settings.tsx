@@ -18,21 +18,21 @@ import {
   Autocomplete,
   Icon,
 } from '@shopify/polaris';
-import { NumberField } from '../components/NumberField';
-import { Loading, TitleBar } from '@shopify/app-bridge-react';
-import type { ShopSettings } from '../../schemas/generated/shop-settings';
-import { Rule, RuleSet } from '../components/RuleSet';
-import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider';
-import invariant from 'tiny-invariant';
-import { useSettingsQuery } from '../queries/use-settings-query';
-import { useSettingsMutation } from '../queries/use-settings-mutation';
-import { CurrencyFormatter, useCurrencyFormatter } from '../hooks/use-currency-formatter';
 import { CirclePlusMinor, SearchMinor } from '@shopify/polaris-icons';
-import { useCollectionsQuery } from '../queries/use-collections-query';
-import { useDebouncedState } from '../hooks/use-debounced-state';
+import { Loading, TitleBar } from '@shopify/app-bridge-react';
+import invariant from 'tiny-invariant';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { CurrencyFormatter, useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
+import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { NumberField } from '../components/NumberField.js';
+import type { ID, Money, ShopSettings } from '../../schemas/generated/shop-settings.js';
+import { Rule, RuleSet } from '../components/RuleSet.js';
+import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider.js';
+import { useSettingsMutation } from '../queries/use-settings-mutation.js';
+import { useCollectionsQuery } from '../queries/use-collections-query.js';
+import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
-const ONLY_HIGHEST_SHORTCUT = 'ONLY_HIGHEST_SHORTCUT';
 const CURRENCY_RANGE = 'CURRENCY_RANGE';
 const PERCENTAGE_RANGE = 'PERCENTAGE_RANGE';
 
@@ -41,27 +41,30 @@ export default function Settings() {
   const [settings, setSettings] = useState<ShopSettings | null>(null);
 
   const [discountShortcutValue, setDiscountShortcutValue] = useState('');
-  const [depositShortcutValue, setDepositShortcutValue] = useState('');
 
   const [statusValue, setStatusValue] = useState('');
 
-  const getSettingsQuery = useSettingsQuery({
-    refetchOnWindowFocus: false,
-    onSuccess({ settings }) {
-      setSettings(settings);
-    },
-    onError() {
-      setToastAction({
-        content: 'Could not load settings',
-        action: {
-          content: 'Retry',
-          onAction() {
-            getSettingsQuery.refetch();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const getSettingsQuery = useSettingsQuery(
+    { fetch },
+    {
+      refetchOnWindowFocus: false,
+      onSuccess({ settings }) {
+        setSettings(settings);
+      },
+      onError() {
+        setToastAction({
+          content: 'Could not load settings',
+          action: {
+            content: 'Retry',
+            onAction() {
+              getSettingsQuery.refetch();
+            },
           },
-        },
-      });
+        });
+      },
     },
-  });
+  );
 
   const saveSettingsMutation = useSettingsMutation({
     onError() {
@@ -78,7 +81,7 @@ export default function Settings() {
 
   const [serviceCollectionValue, setServiceCollectionValue] = useState<string | undefined>(undefined);
   const [selectedServiceCollectionName, setSelectedServiceCollectionName] = useState<string | null>(null);
-  const collectionsQuery = useCollectionsQuery({ query: serviceCollectionValue });
+  const collectionsQuery = useCollectionsQuery({ fetch, params: { query: serviceCollectionValue } });
 
   // set the service collection name when the settings & collections are both loaded
   useEffect(() => {
@@ -94,10 +97,9 @@ export default function Settings() {
     setServiceCollectionValue(selectedCollection?.title ?? '');
   }, [collectionsQuery.data?.pages, getSettingsQuery.data?.settings.serviceCollectionId]);
 
-  const currencyFormatter = useCurrencyFormatter();
+  const currencyFormatter = useCurrencyFormatter({ fetch });
 
   const discountRules = useDiscountRules(settings, setSettings, currencyFormatter);
-  const depositRules = useDepositRules(settings, setSettings, currencyFormatter);
 
   if (!settings) {
     return (
@@ -110,7 +112,6 @@ export default function Settings() {
   }
 
   const activeDiscountRules = getActiveDiscountRules(settings);
-  const activeDepositRules = getActiveDepositRules(settings);
 
   return (
     <Frame>
@@ -148,9 +149,9 @@ export default function Settings() {
                       discountShortcuts: [
                         ...settings.discountShortcuts,
                         {
-                          value: Number(discountShortcutValue),
-                          unit,
-                        },
+                          currency: { unit: 'currency', money: discountShortcutValue as Money } as const,
+                          percentage: { unit: 'percentage', percentage: Number(discountShortcutValue) } as const,
+                        }[unit],
                       ],
                     });
                     setDiscountShortcutValue('');
@@ -167,57 +168,12 @@ export default function Settings() {
                         })
                       }
                     >
-                      {shortcut.unit === 'currency' && currencyFormatter(shortcut.value)}
-                      {shortcut.unit === 'percentage' && `${shortcut.value}%`}
+                      {shortcut.unit === 'currency' && currencyFormatter(shortcut.money)}
+                      {shortcut.unit === 'percentage' && `${shortcut.percentage}%`}
                     </Tag>
                   ))}
                 </InlineStack>
                 <RuleSet title="Discount Rules" rules={discountRules} activeRules={activeDiscountRules} />
-              </BlockStack>
-            </Card>
-            <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
-              <BlockStack gap="400">
-                <Text as="h3" variant="headingMd">
-                  Deposits
-                </Text>
-              </BlockStack>
-            </Box>
-            <Card roundedAbove="sm">
-              <BlockStack gap="400">
-                <CurrencyOrPercentageInput
-                  value={depositShortcutValue}
-                  setValue={setDepositShortcutValue}
-                  onSelect={unit => {
-                    setSettings({
-                      ...settings,
-                      depositShortcuts: [
-                        ...settings.depositShortcuts,
-                        {
-                          value: Number(depositShortcutValue),
-                          unit,
-                        },
-                      ],
-                    });
-                    setDepositShortcutValue('');
-                  }}
-                />
-                <InlineStack gap="200">
-                  {settings.depositShortcuts.map((shortcut, i) => (
-                    <Tag
-                      key={i}
-                      onRemove={() =>
-                        setSettings({
-                          ...settings,
-                          depositShortcuts: settings.depositShortcuts.filter((_, j) => i !== j),
-                        })
-                      }
-                    >
-                      {shortcut.unit === 'currency' && currencyFormatter(shortcut.value)}
-                      {shortcut.unit === 'percentage' && `${shortcut.value}%`}
-                    </Tag>
-                  ))}
-                </InlineStack>
-                <RuleSet title="Deposit Rules" rules={depositRules} activeRules={activeDepositRules} />
               </BlockStack>
             </Card>
             <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
@@ -249,14 +205,7 @@ export default function Settings() {
                           onAction: () => {
                             setSettings({
                               ...settings,
-                              statuses: [
-                                ...settings.statuses,
-                                {
-                                  name: statusValue,
-                                  bgHex: '#000000',
-                                  textHex: '#ffffff',
-                                },
-                              ],
+                              statuses: [...settings.statuses, statusValue],
                             });
                             setStatusValue('');
                           },
@@ -276,7 +225,7 @@ export default function Settings() {
                         })
                       }
                     >
-                      {status.name}
+                      {status}
                     </Tag>
                   ))}
                 </InlineStack>
@@ -307,7 +256,7 @@ export default function Settings() {
             <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
               <BlockStack gap="400">
                 <Text as="h3" variant="headingMd">
-                  Service
+                  Labour
                 </Text>
               </BlockStack>
             </Box>
@@ -334,15 +283,16 @@ export default function Settings() {
                   textField={
                     <Autocomplete.TextField
                       label="Service Collection"
+                      helpText={'All products within this collection will be shown in the "Add Service" menu'}
                       autoComplete="off"
                       value={serviceCollectionValue}
                       onChange={setServiceCollectionValue}
                       onBlur={() => setServiceCollectionValue(selectedServiceCollectionName ?? '')}
                     />
                   }
-                  onSelect={([id]) => {
+                  onSelect={([id]: ID[]) => {
                     let name: string | null = null;
-                    let serviceCollectionId: string | null = null;
+                    let serviceCollectionId: ID | null = null;
 
                     if (id !== undefined && id !== settings?.serviceCollectionId) {
                       name = collectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
@@ -353,6 +303,18 @@ export default function Settings() {
                     setServiceCollectionValue(name ?? '');
                     setSettings({ ...settings, serviceCollectionId });
                   }}
+                />
+                <TextField
+                  label={'Labour Line Item Name'}
+                  autoComplete={'off'}
+                  value={settings.labourLineItemName}
+                  onChange={value => setSettings({ ...settings, labourLineItemName: value })}
+                />
+                <TextField
+                  label={'Labour Line Item SKU'}
+                  autoComplete={'off'}
+                  value={settings.labourLineItemSKU}
+                  onChange={value => setSettings({ ...settings, labourLineItemSKU: value })}
                 />
               </BlockStack>
             </Card>
@@ -377,7 +339,7 @@ export default function Settings() {
                   min={0}
                   inputMode={'decimal'}
                   requiredIndicator={true}
-                  onChange={value => setSettings({ ...settings, defaultRate: Number(value) })}
+                  onChange={(value: Money) => setSettings({ ...settings, defaultRate: value })}
                   autoComplete={'off'}
                   helpText={'Used for employees without a set hourly rate'}
                 />
@@ -399,7 +361,7 @@ export default function Settings() {
                     setSettings({
                       ...settings,
                       workOrderRequests: enabled
-                        ? { enabled, allowedStatuses: [settings.statuses[0]!.name] }
+                        ? { enabled, allowedStatuses: [settings.statuses[0]!] }
                         : { enabled, allowedStatuses: null },
                     })
                   }
@@ -408,7 +370,7 @@ export default function Settings() {
                   label={'Request Status'}
                   helpText={'The status that work order requests will be set to when created'}
                   disabled={!settings.workOrderRequests.enabled}
-                  options={settings.statuses.map(status => status.name)}
+                  options={settings.statuses}
                   placeholder={'Select a status'}
                   value={settings.workOrderRequests.allowedStatuses?.[0]}
                   onChange={statusName =>
@@ -496,7 +458,10 @@ function useDiscountRules(
           discountRules: {
             ...settings.discountRules,
             onlyAllowShortcuts: false,
-            allowedCurrencyRange: initialCurrencyRangeBounds,
+            allowedCurrencyRange: [
+              initialCurrencyRangeBounds[0].toFixed(2) as Money,
+              initialCurrencyRangeBounds[1].toFixed(2) as Money,
+            ],
           },
         });
       },
@@ -520,14 +485,22 @@ function useDiscountRules(
             max={currencyRangeBounds.max}
             step={1}
             formatter={currencyFormatter}
-            value={settings.discountRules.allowedCurrencyRange}
+            value={
+              [
+                Number(settings.discountRules.allowedCurrencyRange[0]),
+                Number(settings.discountRules.allowedCurrencyRange[1]),
+              ] as [number, number]
+            }
             onChange={(allowedCurrencyRange: [number, number]) => {
               setSettings({
                 ...settings,
                 discountRules: {
                   ...settings.discountRules,
                   onlyAllowShortcuts: false,
-                  allowedCurrencyRange,
+                  allowedCurrencyRange: [
+                    allowedCurrencyRange[0].toFixed(2) as Money,
+                    allowedCurrencyRange[1].toFixed(2) as Money,
+                  ],
                 },
               });
 
@@ -589,197 +562,6 @@ function useDiscountRules(
   ];
 }
 
-function useDepositRules(
-  settings: ShopSettings | null,
-  setSettings: (settings: ShopSettings) => void,
-  currencyFormatter: CurrencyFormatter,
-): Rule[] {
-  const initialCurrencyRangeBounds = [0, 100] as [number, number];
-  const currencyRangeBounds = useCurrencyRangeBounds(initialCurrencyRangeBounds);
-
-  if (!settings) {
-    return [];
-  }
-
-  return [
-    {
-      value: ONLY_SHORTCUTS,
-      title: 'Only allow deposit shortcuts',
-      conflictingRules: [CURRENCY_RANGE, PERCENTAGE_RANGE],
-      onSelect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowShortcuts: true,
-            allowedCurrencyRange: null,
-            allowedPercentageRange: null,
-          },
-        });
-      },
-      onDeselect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowShortcuts: false,
-            onlyAllowHighestAbsoluteShortcut: false,
-          },
-        });
-      },
-    },
-    {
-      value: ONLY_HIGHEST_SHORTCUT,
-      title: 'Only allow the highest absolute deposit shortcut',
-      requiredRules: [ONLY_SHORTCUTS],
-      onSelect() {
-        invariant(settings.depositRules.onlyAllowShortcuts, 'Only allow shortcuts must be selected');
-
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowHighestAbsoluteShortcut: true,
-          },
-        });
-      },
-      onDeselect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowHighestAbsoluteShortcut: false,
-          },
-        });
-      },
-    },
-    {
-      value: CURRENCY_RANGE,
-      title: 'Allow deposits within a range',
-      conflictingRules: [ONLY_SHORTCUTS],
-      onSelect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowShortcuts: false,
-            onlyAllowHighestAbsoluteShortcut: false,
-            allowedCurrencyRange: initialCurrencyRangeBounds,
-          },
-        });
-      },
-      onDeselect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            allowedCurrencyRange: null,
-          },
-        });
-      },
-      renderChildren() {
-        invariant(settings.depositRules.allowedCurrencyRange, 'No currency range set');
-
-        return (
-          <AnnotatedRangeSlider
-            label="Allowed deposit range"
-            labelHidden
-            min={currencyRangeBounds.min}
-            max={currencyRangeBounds.max}
-            step={1}
-            formatter={currencyFormatter}
-            value={settings.depositRules.allowedCurrencyRange}
-            onChange={(allowedCurrencyRange: [number, number]) => {
-              setSettings({
-                ...settings,
-                depositRules: {
-                  ...settings.depositRules,
-                  onlyAllowShortcuts: false,
-                  onlyAllowHighestAbsoluteShortcut: false,
-                  allowedCurrencyRange,
-                },
-              });
-
-              currencyRangeBounds.update(allowedCurrencyRange);
-            }}
-          />
-        );
-      },
-    },
-    {
-      value: PERCENTAGE_RANGE,
-      title: 'Allow deposits within a percentage range',
-      conflictingRules: [ONLY_SHORTCUTS],
-      onSelect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            onlyAllowShortcuts: false,
-            onlyAllowHighestAbsoluteShortcut: false,
-            allowedPercentageRange: [0, 100],
-          },
-        });
-      },
-      onDeselect() {
-        setSettings({
-          ...settings,
-          depositRules: {
-            ...settings.depositRules,
-            allowedPercentageRange: null,
-          },
-        });
-      },
-      renderChildren() {
-        invariant(settings.depositRules.allowedPercentageRange, 'No percentage range set');
-
-        return (
-          <AnnotatedRangeSlider
-            label="Allowed deposit percentage range"
-            labelHidden
-            min={0}
-            max={100}
-            step={1}
-            formatter={num => `${num}%`}
-            value={settings.depositRules.allowedPercentageRange}
-            onChange={(allowedPercentageRange: [number, number]) =>
-              setSettings({
-                ...settings,
-                depositRules: {
-                  ...settings.depositRules,
-                  onlyAllowShortcuts: false,
-                  onlyAllowHighestAbsoluteShortcut: false,
-                  allowedPercentageRange,
-                },
-              })
-            }
-          />
-        );
-      },
-    },
-  ];
-}
-
-function getActiveDepositRules(settings: ShopSettings) {
-  const activeRules: string[] = [];
-
-  if (settings.depositRules.onlyAllowShortcuts) {
-    activeRules.push(ONLY_SHORTCUTS);
-    if (settings.depositRules.onlyAllowHighestAbsoluteShortcut) {
-      activeRules.push(ONLY_HIGHEST_SHORTCUT);
-    }
-  } else {
-    if (settings.depositRules.allowedCurrencyRange) {
-      activeRules.push(CURRENCY_RANGE);
-    }
-    if (settings.depositRules.allowedPercentageRange) {
-      activeRules.push(PERCENTAGE_RANGE);
-    }
-  }
-
-  return activeRules;
-}
-
 function getActiveDiscountRules(settings: ShopSettings) {
   const activeRules: string[] = [];
 
@@ -806,26 +588,31 @@ function CurrencyOrPercentageInput({
   setValue: (value: string) => void;
   onSelect: (unit: 'percentage' | 'currency') => void;
 }) {
-  const currencyFormatter = useCurrencyFormatter();
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const currencyFormatter = useCurrencyFormatter({ fetch });
 
   return (
-    <Combobox
-      activator={
-        <Combobox.TextField
-          type="number"
-          label="Discount Shortcuts"
-          autoComplete="off"
-          value={value}
-          onChange={setValue}
-        />
-      }
-    >
-      {value.length > 0 ? (
-        <Listbox onSelect={onSelect}>
-          <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
-          <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
-        </Listbox>
-      ) : null}
-    </Combobox>
+    <>
+      <Combobox
+        activator={
+          <Combobox.TextField
+            type="number"
+            label="Discount Shortcuts"
+            autoComplete="off"
+            value={value}
+            onChange={setValue}
+          />
+        }
+      >
+        {value.length > 0 ? (
+          <Listbox onSelect={onSelect}>
+            <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
+            <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
+          </Listbox>
+        ) : null}
+      </Combobox>
+      {toast}
+    </>
   );
 }
