@@ -19,7 +19,7 @@ export function attributesToProperties<T extends Record<string, Json>>(
     Object.entries(attributes)
       .filter(([, lineItemAttributeValue]) => lineItemAttributeValue !== null)
       .map(([lineItemAttributeKey, lineItemAttributeValue]) => {
-        const Attribute = mapping[lineItemAttributeKey as keyof typeof mapping];
+        const Attribute = mapping[lineItemAttributeKey as keyof typeof mapping]!;
         const { key, value } = Attribute.serialize(lineItemAttributeValue as any);
         return [key, value];
       }),
@@ -36,7 +36,7 @@ export function attributesToArray<T extends Record<string, Json>>(
   return Object.entries(attributes)
     .filter(([, lineItemAttributeValue]) => lineItemAttributeValue !== null)
     .map(([lineItemAttributeKey, lineItemAttributeValue]) => {
-      const Attribute = mapping[lineItemAttributeKey as keyof typeof mapping];
+      const Attribute = mapping[lineItemAttributeKey as keyof typeof mapping]!;
       const { key, value } = Attribute.serialize(lineItemAttributeValue as any);
       return { key, value };
     });

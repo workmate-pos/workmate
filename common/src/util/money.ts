@@ -1,4 +1,6 @@
-import type { Money, MoneyV2 } from '@web/services/gql/queries/generated/schema.js';
+type Money = `${number}` & { __brand: 'Money' };
+type Decimal = `${number}` & { __brand: 'Decimal' };
+type MoneyV2 = { amount: Decimal; currencyCode: string };
 
 export type Cents = number & { __brand: 'Cents' };
 export type Dollars = number & { __brand: 'Dollars' };

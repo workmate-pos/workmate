@@ -26,10 +26,6 @@
     "./custom-attributes/*": {
       "default": "./dist/custom-attributes/*",
       "types": "./src/custom-attributes/*"
-    },
-    "./custom-attributes/attributes/*": {
-      "default": "./dist/custom-attributes/attributes/*",
-      "types": "./src/custom-attributes/attributes/*"
     }
   },
   "scripts": {

@@ -7,6 +7,7 @@ ENV SHOPIFY_SHOP=$SHOPIFY_SHOP
 EXPOSE 8081
 WORKDIR /app
 COPY web .
+COPY common common
 COPY meta.json .
 COPY .npmrc-ci .npmrc
 COPY .npmrc-ci frontend/.npmrc
@@ -19,6 +20,11 @@ RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
 RUN --mount=type=secret,id=SHOPIFY_ACCESS_TOKEN \
   SHOPIFY_ACCESS_TOKEN=$(cat /run/secrets/SHOPIFY_ACCESS_TOKEN) \
   npm run build
+
+# Build common
+WORKDIR ./common
+RUN npm install
+RUN npm run build
 
 # Build frontend
 WORKDIR ./frontend
