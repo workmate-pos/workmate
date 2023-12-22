@@ -16,6 +16,7 @@ jobs:
       shopify_shop: ${{ vars.SHOPIFY_SHOP }}
       sentry_org: ${{ vars.SENTRY_ORG }}
       sentry_project: ${{ vars.SENTRY_PROJECT }}
+      deploy_extensions: true
     secrets: inherit
 #  deploy:
 #    uses: teifi-digital/shopify-app-deployments/.github/workflows/pulumi-up.yml@master
