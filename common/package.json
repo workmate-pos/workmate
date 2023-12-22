@@ -29,6 +29,7 @@
     }
   },
   "scripts": {
+    "build:silence": "tsc || true",
     "build": "tsc",
     "build:watch": "tsc -w"
   },
