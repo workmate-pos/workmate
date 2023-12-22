@@ -8,6 +8,8 @@ if (process.env.npm_lifecycle_event === 'build' && !process.env.CI && !process.e
   console.warn(
     '\nBuilding the frontend app without an API key. The frontend build will not run without an API key. Set the SHOPIFY_API_KEY environment variable when running the build command.\n',
   );
+} else {
+  console.log(`Building the frontend app with API key ${process.env.SHOPIFY_API_KEY}`);
 }
 
 const proxyOptions = {

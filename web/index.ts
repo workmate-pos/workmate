@@ -8,6 +8,6 @@ const sessionStorage = new ShopifySessionStorage();
 
 createServer({
   baseDir: resolve('.'),
-  appConfig: { sessionStorage, useOnlineTokens: true },
+  appConfig: { sessionStorage },
   webhookHandlers,
 });
