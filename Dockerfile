@@ -13,8 +13,12 @@ COPY .npmrc-ci web/.npmrc
 COPY .npmrc-ci web/frontend/.npmrc
 COPY graphql.config.yml web
 
+# Install common dependencies
+WORKDIR ./common
+RUN npm install
+
 # Build backend
-WORKDIR ./web
+WORKDIR ../web
 RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
   NPM_GITHUB_TOKEN=$(cat /run/secrets/NPM_GITHUB_TOKEN) \
   npm install
@@ -24,7 +28,6 @@ RUN --mount=type=secret,id=SHOPIFY_ACCESS_TOKEN \
 
 # Build common
 WORKDIR ../common
-RUN npm install
 RUN npm run build
 
 # Build frontend
