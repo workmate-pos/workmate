@@ -1,6 +1,6 @@
 # compiled output
 .vscode
-/node_modules
+**/node_modules
 
 # code formatter
 .eslintrc
