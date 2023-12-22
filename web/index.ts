@@ -6,9 +6,6 @@ import { ShopifySessionStorage } from './services/shopify-sessions.js';
 
 const sessionStorage = new ShopifySessionStorage();
 
-// XD
-console.debug = console.log;
-
 createServer({
   baseDir: resolve('.'),
   appConfig: { sessionStorage },
