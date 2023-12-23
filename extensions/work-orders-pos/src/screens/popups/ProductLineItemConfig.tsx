@@ -1,4 +1,4 @@
-import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Stepper, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
@@ -7,14 +7,17 @@ import { useProductVariantQuery } from '@work-orders/common/queries/use-product-
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
+import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
 
 export function ProductLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
   const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem | null>(null);
+  const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   const { Screen, closePopup, cancelPopup } = useScreen('ProductLineItemConfig', ({ readonly, lineItem }) => {
     setReadonly(readonly);
     setLineItem(lineItem);
+    setUnsavedChanges(false);
   });
 
   const currencyFormatter = useCurrencyFormatter();
@@ -23,8 +26,22 @@ export function ProductLineItemConfig() {
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
+  const unsavedChangesDialog = useUnsavedChangesDialog();
+  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
+
   return (
-    <Screen title={name ?? 'Product'} isLoading={productVariantQuery.isLoading} presentation={{ sheet: true }}>
+    <Screen
+      title={name ?? 'Product'}
+      overrideNavigateBack={() => {
+        if (unsavedChanges) {
+          unsavedChangesDialog.show({ onAction: navigation.pop });
+        } else {
+          navigation.pop();
+        }
+      }}
+      isLoading={productVariantQuery.isLoading}
+      presentation={{ sheet: true }}
+    >
       <ScrollView>
         {lineItem && productVariant && (
           <Stack direction="vertical" spacing={5}>
@@ -45,7 +62,10 @@ export function ProductLineItemConfig() {
                 disabled={readonly}
                 minimumValue={1}
                 initialValue={lineItem.quantity}
-                onValueChanged={(value: Int) => setLineItem({ ...lineItem, quantity: value })}
+                onValueChanged={(value: Int) => {
+                  setLineItem({ ...lineItem, quantity: value });
+                  setUnsavedChanges(true);
+                }}
                 value={lineItem.quantity}
               />
             </Stack>

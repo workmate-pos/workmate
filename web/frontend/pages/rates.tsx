@@ -1,4 +1,4 @@
-import { Frame, IndexTable, Page, SkeletonBodyText, Text } from '@shopify/polaris';
+import { Frame, IndexTable, Page } from '@shopify/polaris';
 import { Loading, TitleBar } from '@shopify/app-bridge-react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState } from 'react';
@@ -8,11 +8,12 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { NumberField } from '../components/NumberField.js';
 import { useEmployeeRatesMutation } from '../queries/use-employee-rates-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
+import { Dollars, toDollars } from '@work-orders/common/util/money.js';
 
 export default function Rates() {
   const [toast, setToastAction] = useToast();
 
-  const [employeeRates, setEmployeeRates] = useState<Record<string, number | null>>({});
+  const [employeeRates, setEmployeeRates] = useState<Record<string, Dollars | null>>({});
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const employeesQuery = useEmployeesQuery({
@@ -20,7 +21,7 @@ export default function Rates() {
     params: {},
     options: {
       onSuccess(data) {
-        setEmployeeRates(Object.fromEntries(data.pages.map(employee => [employee.id, employee.rate])));
+        setEmployeeRates(Object.fromEntries(data.pages.map(employee => [employee.id, toDollars(employee.rate)])));
       },
     },
   });
@@ -86,9 +87,9 @@ export default function Rates() {
                     inputMode={'decimal'}
                     label={'Rate'}
                     labelHidden={true}
-                    value={employeeRates[employee.id] ? String(employeeRates[employee.id]) : undefined}
+                    value={employeeRates[employee.id] ? String(employeeRates[employee.id]!) : undefined}
                     onChange={value =>
-                      setEmployeeRates({ ...employeeRates, [employee.id]: value ? Number(value) : null })
+                      setEmployeeRates({ ...employeeRates, [employee.id]: value ? (Number(value) as Dollars) : null })
                     }
                     prefix={currencyFormatter.prefix}
                     suffix={currencyFormatter.suffix}
