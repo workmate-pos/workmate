@@ -1,5 +1,5 @@
 import { useScreen } from '../../hooks/use-screen.js';
-import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { CreateWorkOrderEmployeeAssignment, CreateWorkOrderLineItem } from '../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -10,6 +10,7 @@ import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { EmployeeAssignmentList } from '../../components/EmployeeAssignmentsList.js';
 import { Cents, parseMoney, toDollars } from '@work-orders/common/util/money.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
 
 export function ServiceLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
@@ -17,6 +18,7 @@ export function ServiceLineItemConfig() {
   const [employeeAssignments, setEmployeeAssignments] = useState<
     Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[]
   >([]);
+  const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   const { Screen, usePopup, closePopup, cancelPopup } = useScreen(
     'ServiceLineItemConfig',
@@ -24,10 +26,13 @@ export function ServiceLineItemConfig() {
       setReadonly(readonly);
       setLineItem(lineItem);
       setEmployeeAssignments(employeeAssignments);
+      setUnsavedChanges(false);
     },
   );
 
   const employeeSelectorPopup = usePopup('EmployeeSelector', result => {
+    setUnsavedChanges(true);
+
     setEmployeeAssignments(employeeAssignments =>
       result.map(employeeId => {
         const existingAssignment = employeeAssignments.find(e => e.employeeId === employeeId);
@@ -37,6 +42,8 @@ export function ServiceLineItemConfig() {
   });
 
   const employeeConfigPopup = usePopup('EmployeeAssignmentConfig', result => {
+    setUnsavedChanges(true);
+
     if (result.type === 'remove') {
       setEmployeeAssignments(employeeAssignments.filter(e => e.employeeId !== result.employeeAssignment.employeeId));
     } else if (result.type === 'update') {
@@ -66,9 +73,23 @@ export function ServiceLineItemConfig() {
   const productVariantPrice = productVariant ? parseMoney(productVariant.price) : 0;
   const totalPrice = productVariantPrice + labourPrice;
 
+  const unsavedChangesDialog = useUnsavedChangesDialog();
+  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
+
   // TODO: Make employee selector be for selecting just one employee???
   return (
-    <Screen title={name ?? 'Service'} isLoading={productVariantQuery.isLoading} presentation={{ sheet: true }}>
+    <Screen
+      title={name ?? 'Service'}
+      overrideNavigateBack={() => {
+        if (unsavedChanges) {
+          unsavedChangesDialog.show({ onAction: navigation.pop });
+        } else {
+          navigation.pop();
+        }
+      }}
+      isLoading={productVariantQuery.isLoading}
+      presentation={{ sheet: true }}
+    >
       <ScrollView>
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <Button
