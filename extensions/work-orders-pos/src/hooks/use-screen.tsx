@@ -31,11 +31,13 @@ export function useScreen<const ScreenName extends ScreenNames>(
       // using an id ensures we can use the same pop-up screen for multiple purposes. it identifies a specific instance of a pop up
       const id = `${destinationScreenName}:${useId()}`;
 
+      const onResultRef = useDynamicRef(() => onResult, [onResult]);
+
       useEffect(() => {
         const eventHandler = (event: Event) => {
           if (event instanceof CustomEvent) {
             const params: ClosePopupParams = event.detail;
-            onResult?.(params.output);
+            onResultRef.current?.(params.output);
           }
         };
 
@@ -57,7 +59,7 @@ export function useScreen<const ScreenName extends ScreenNames>(
 
       return { navigate };
     },
-    [popupResultEventTarget],
+    [popupResultEventTarget, screenName],
   );
 
   /**

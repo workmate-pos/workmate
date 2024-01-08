@@ -121,7 +121,9 @@ const useWorkOrderContext = () => {
     discount: createWorkOrder.discount,
   });
 
-  const workOrderSavedPopup = usePopup('WorkOrderSaved');
+  const workOrderSavedPopup = usePopup('WorkOrderSaved', () => {
+    setUnsavedChanges(false);
+  });
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation(
     { fetch },
@@ -144,7 +146,6 @@ const useWorkOrderContext = () => {
     createWorkOrder,
     dispatchCreateWorkOrder: (...[action]: Parameters<typeof dispatchCreateWorkOrder>) => {
       setUnsavedChanges(action.type !== 'reset-work-order');
-      api.toast.show(`Action ${action.type}`);
       dispatchCreateWorkOrder(action);
     },
     unsavedChanges,
