@@ -45,13 +45,10 @@ export function PayButton(
     );
   }
 
-  const api = useExtensionApi();
   return (
     <Button
       title="Pay Balance"
       onPress={async () => {
-        if (props.createWorkOrder) {
-        }
         const name = props.createWorkOrder
           ? await saveWorkOrderMutation.mutateAsync(props.createWorkOrder).then(result => result.name)
           : props.workOrderName;

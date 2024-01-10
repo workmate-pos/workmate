@@ -15,7 +15,8 @@
   "scripts": {
     "build:web": "cd ../../web && npm install && npm run build",
     "build:common": "cd ../../common && npm install && npm run build",
-    "postinstall": "npm run build:web && npm run build:common"
+    "postinstall": "npm run set-app-url && npm run build:web && npm run build:common",
+    "set-app-url": "node ./set-app-url.js"
   },
   "overrides": {
     "@types/react": "17.0.30"

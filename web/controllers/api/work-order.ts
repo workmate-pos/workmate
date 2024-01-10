@@ -53,6 +53,7 @@ export default class WorkOrderController {
   ) {
     const createWorkOrderRequest = req.body;
 
+    // provided by app proxy (https://shopify.dev/docs/apps/online-store/app-proxies)
     const { logged_in_customer_id: customerId, shop } = req.query;
 
     if (typeof customerId !== 'string') {
@@ -69,7 +70,6 @@ export default class WorkOrderController {
       return res.status(403).json({ error: 'Work order requests are disabled' });
     }
 
-    // TODO: Other way?
     const session = await sessionStorage.fetchOfflineSessionByShop(shop);
 
     if (!session) {
