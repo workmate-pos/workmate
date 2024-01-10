@@ -14,7 +14,7 @@ const defaultShopSettings: ShopSettings = {
   },
   workOrderRequests: {
     enabled: false,
-    allowedStatuses: null,
+    status: null,
   },
   serviceCollectionId: null,
   defaultRate: '15.00' as Money,

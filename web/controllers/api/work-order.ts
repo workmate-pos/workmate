@@ -14,11 +14,13 @@ import { getWorkOrder, getWorkOrderInfoPage } from '../../services/work-orders/g
 import { getShopSettings } from '../../services/settings.js';
 import { calculateDraftOrder, upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
+import { ID } from '../../schemas/generated/ids.js';
+import { sessionStorage } from '../../index.js';
 
-@Authenticated()
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
   @BodySchema('calculate-work-order')
+  @Authenticated()
   async getDraftDetails(
     req: Request<unknown, unknown, CalculateWorkOrder>,
     res: Response<CalculateDraftOrderResponse>,
@@ -33,6 +35,7 @@ export default class WorkOrderController {
 
   @Post('/')
   @BodySchema('create-work-order')
+  @Authenticated()
   async createWorkOrder(req: Request<unknown, unknown, CreateWorkOrder>, res: Response<CreateWorkOrderResponse>) {
     const session: Session = res.locals.shopify.session;
     const createWorkOrder = req.body;
@@ -48,23 +51,35 @@ export default class WorkOrderController {
     req: Request<unknown, unknown, CreateWorkOrderRequest>,
     res: Response<CreateWorkOrderRequestResponse | { error: string }>,
   ) {
-    const session: Session = res.locals.shopify.session;
     const createWorkOrderRequest = req.body;
 
-    const settings = await getShopSettings(session.shop);
+    const { logged_in_customer_id: customerId, shop } = req.query;
+
+    if (typeof customerId !== 'string') {
+      return res.status(400).json({ error: 'Customer ID is required' });
+    }
+
+    if (typeof shop !== 'string') {
+      return res.status(400).json({ error: 'Shop is required' });
+    }
+
+    const settings = await getShopSettings(shop);
 
     if (!settings.workOrderRequests.enabled) {
       return res.status(403).json({ error: 'Work order requests are disabled' });
     }
 
-    if (!settings.workOrderRequests.allowedStatuses.includes(createWorkOrderRequest.status)) {
-      return res.status(403).json({ error: 'Invalid status' });
+    // TODO: Other way?
+    const session = await sessionStorage.fetchOfflineSessionByShop(shop);
+
+    if (!session) {
+      return res.status(400).json({ error: 'Shop is not installed' });
     }
 
     const { name } = await upsertWorkOrder(session, {
-      status: createWorkOrderRequest.status,
+      status: settings.workOrderRequests.status,
       dueDate: createWorkOrderRequest.dueDate,
-      customerId: createWorkOrderRequest.customerId,
+      customerId: `gid://shopify/Customer/${customerId}` as ID,
       description: createWorkOrderRequest.description,
       employeeAssignments: [],
       lineItems: [],
@@ -78,6 +93,7 @@ export default class WorkOrderController {
 
   @Get('/')
   @QuerySchema('work-order-pagination-options')
+  @Authenticated()
   async fetchWorkOrderInfoPage(
     req: Request<unknown, unknown, unknown, WorkOrderPaginationOptions>,
     res: Response<FetchWorkOrderInfoPageResponse>,
@@ -91,6 +107,7 @@ export default class WorkOrderController {
   }
 
   @Get('/:name')
+  @Authenticated()
   async fetchWorkOrder(req: Request<{ name: string }>, res: Response<FetchWorkOrderResponse | { error: string }>) {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;

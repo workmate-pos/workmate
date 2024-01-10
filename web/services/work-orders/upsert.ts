@@ -29,6 +29,12 @@ import { Nullable } from '@work-orders/common/types/Nullable.js';
 
 export async function upsertWorkOrder(session: Session, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
+    const settings = await getShopSettings(session.shop);
+
+    if (!settings.statuses.includes(createWorkOrder.status)) {
+      throw new Error(`Invalid status: ${createWorkOrder.status}`);
+    }
+
     const isNew = createWorkOrder.name === null;
     const [currentWorkOrder] = isNew ? [] : await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
 

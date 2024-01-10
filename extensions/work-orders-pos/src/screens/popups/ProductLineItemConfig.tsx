@@ -32,13 +32,7 @@ export function ProductLineItemConfig() {
   return (
     <Screen
       title={name ?? 'Product'}
-      overrideNavigateBack={() => {
-        if (unsavedChanges) {
-          unsavedChangesDialog.show({ onAction: navigation.pop });
-        } else {
-          navigation.pop();
-        }
-      }}
+      overrideNavigateBack={() => unsavedChangesDialog.show({ onAction: navigation.pop, skipDialog: !unsavedChanges })}
       isLoading={productVariantQuery.isLoading}
       presentation={{ sheet: true }}
     >

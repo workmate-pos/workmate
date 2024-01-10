@@ -20,7 +20,7 @@ extensions:
     documentHeader:
       - "/* eslint-disable */"
       - "import type { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';"
-    queryTransformation: "(graphql: Graphql, variables: Variables & Record<string, any>) => graphql.query<Result>(query, variables)"
+    queryTransformation: "(graphql: Graphql, variables: Variables & Record<string, any>) => graphql.query<Result>(query, Object.fromEntries(Object.entries(variables).filter(([k, v]) => v !== undefined && v !== null)))"
     brandedScalars:
       - "ID"
       - "Money"

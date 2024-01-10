@@ -1,5 +1,5 @@
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
-import type { ID } from '@web/schemas/generated/create-work-order-request.js';
+import type { ID } from '@web/schemas/generated/ids.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
 
@@ -14,7 +14,6 @@ export type ScreenInputOutput = {
   Entry: [undefined, undefined];
   Error: [string, undefined];
   ImportOrderSelector: [undefined, undefined];
-  // TODO: Create this
   OrderPreview: [
     {
       orderId: ID;
