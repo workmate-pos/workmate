@@ -14,7 +14,12 @@ export function WorkOrderSaved() {
   const hasOrder = workOrder?.order?.type === 'order';
 
   return (
-    <Screen title={title} isLoading={!workOrder || paymentLoading} presentation={{ sheet: true }}>
+    <Screen
+      title={title}
+      isLoading={!workOrder || paymentLoading}
+      presentation={{ sheet: true }}
+      overrideNavigateBack={() => closePopup(undefined)}
+    >
       {workOrder && (
         <ScrollView>
           <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>

@@ -9,6 +9,13 @@ type ShowDialogOptions = {
    * I.e. exiting the screen without saving changes.
    */
   onAction: () => void;
+  /**
+   * Optional boolean to make it easy to conditionally show the dialog.
+   * If undefined, the dialog will always be shown.
+   * If set to false, the action will immediately be invoked.
+   * Handy for when there are no unsaved changes.
+   */
+  skipDialog?: boolean;
 };
 
 type UnsavedChangesDialogContextValue = {
@@ -22,9 +29,14 @@ export function UnsavedChangesDialogProvider({ children }: { children: ReactNode
   const [visible, setVisible] = useState(false);
   const [onAction, setOnAction] = useState<() => void>(() => {});
 
-  const show = ({ onAction }: ShowDialogOptions) => {
+  const show = ({ onAction, skipDialog }: ShowDialogOptions) => {
     setOnAction(() => onAction);
-    setVisible(true);
+    const visible = skipDialog !== true;
+    setVisible(visible);
+
+    if (!visible) {
+      onAction();
+    }
   };
 
   return (

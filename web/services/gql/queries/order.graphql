@@ -1,21 +1,10 @@
 query get($id: ID!) {
   order(id: $id) {
     __typename
-    name
     note
-    totalPrice
-    totalShippingPrice
-    totalTax
-    totalReceived
-    subtotalPrice
     totalDiscounts
-    totalOutstandingSet {
-      ...ShopMoneyAmountFragment
-    }
-    customAttributes {
-      key
-      value
-    }
+    totalTax
+    ...OrderInfoFragment
   }
 }
 
@@ -43,6 +32,9 @@ query getLineItems($id: ID!, $after: String, $serviceCollectionId: ID = "gid://s
               id
               title
               isServiceItem: inCollection(id: $serviceCollectionId)
+              featuredImage {
+                url
+              }
             }
           }
           quantity

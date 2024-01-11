@@ -8,15 +8,21 @@ import type {
 export type Order = {
   id: ID;
   name: string;
-  workOrderName: string | null;
   note: string | null;
-  tax: Money;
-  shipping: Money;
   total: Money;
-  subtotal: Money;
-  discount: Money;
+  displayFulfillmentStatus: OrderDisplayFulfillmentStatus;
+  displayFinancialStatus: OrderDisplayFinancialStatus | null;
   outstanding: Money;
   received: Money;
+  discount: Money;
+  tax: Money;
+  customer: {
+    id: ID;
+    displayName: string;
+  } | null;
+  workOrder: {
+    name: string;
+  } | null;
 };
 
 /**
@@ -29,10 +35,10 @@ export type OrderInfo = {
   total: Money;
   displayFulfillmentStatus: OrderDisplayFulfillmentStatus;
   displayFinancialStatus: OrderDisplayFinancialStatus | null;
+  outstanding: Money;
+  received: Money;
   customer: {
     id: ID;
     displayName: string;
   } | null;
-  outstanding: Money;
-  received: Money;
 };

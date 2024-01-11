@@ -1,5 +1,5 @@
 import type { Money } from '@web/schemas/generated/shop-settings.js';
-import { Button, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
@@ -22,8 +22,8 @@ export function PayButton(
   const paymentHandler = usePaymentHandler();
 
   useEffect(() => {
-    props.setLoading?.(saveWorkOrderMutation.isLoading || workOrderQuery.isLoading || paymentHandler.isLoading);
-  }, [saveWorkOrderMutation.isLoading, workOrderQuery.isLoading, paymentHandler.isLoading]);
+    props.setLoading?.(saveWorkOrderMutation.isLoading || workOrderQuery.isFetching || paymentHandler.isLoading);
+  }, [saveWorkOrderMutation.isLoading, workOrderQuery.isFetching, paymentHandler.isLoading]);
 
   if (workOrderQuery.data?.workOrder?.order?.type === 'order') {
     // If there is an actual order then any payments should go through there

@@ -37,11 +37,11 @@
             "enabled": {
               "const": false
             },
-            "allowedStatuses": {
+            "status": {
               "type": "null"
             }
           },
-          "required": ["enabled", "allowedStatuses"],
+          "required": ["enabled", "status"],
           "additionalProperties": false
         },
         {
@@ -50,15 +50,11 @@
             "enabled": {
               "const": true
             },
-            "allowedStatuses": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "minItems": 1
+            "status": {
+              "type": "string"
             }
           },
-          "required": ["enabled", "allowedStatuses"],
+          "required": ["enabled", "status"],
           "additionalProperties": false
         }
       ]

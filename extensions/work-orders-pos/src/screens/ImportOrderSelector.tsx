@@ -2,17 +2,30 @@ import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/reta
 import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { titleCase } from '@work-orders/common/util/casing.js';
-import { NavigateFn, useScreen } from '../hooks/use-screen.js';
+import type { ID } from '@web/schemas/generated/ids.js';
+import { useScreen } from '../hooks/use-screen.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
+import {
+  getFinancialStatusBadgeStatus,
+  getFinancialStatusBadgeVariant,
+  getFulfillmentStatusBadgeStatus,
+  getFulfillmentStatusBadgeVariant,
+  getStatusText,
+} from '../util/badges.js';
 
 export function ImportOrderSelector() {
-  const { Screen, navigate } = useScreen('ImportOrderSelector');
+  const { Screen, usePopup } = useScreen('ImportOrderSelector');
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
   const ordersQuery = useOrdersQuery({ fetch, params: { query } });
 
-  const rows = getOrderRows(ordersQuery.data?.pages ?? [], navigate);
+  const orderPreviewPopup = usePopup('OrderPreview');
+
+  const showOrderPreview = (orderId: ID) =>
+    orderPreviewPopup.navigate({ orderId, unsavedChanges: false, showImportButton: true });
+
+  const rows = getOrderRows(ordersQuery.data?.pages ?? [], showOrderPreview);
 
   return (
     <Screen title={'Import Order'}>
@@ -57,7 +70,7 @@ export function ImportOrderSelector() {
   );
 }
 
-function getOrderRows(orders: Order[], navigate: NavigateFn) {
+function getOrderRows(orders: Order[], showOrderPreview: (orderId: ID) => void) {
   return orders.map<ListRow>(
     ({ id, name, workOrderName, displayFulfillmentStatus, displayFinancialStatus, customer }) => {
       const label = workOrderName ? `${name} (${workOrderName})` : name;
@@ -65,73 +78,21 @@ function getOrderRows(orders: Order[], navigate: NavigateFn) {
       return {
         id,
         onPress: () => {
-          navigate('WorkOrder', {
-            type: 'new-work-order',
-            initial: {
-              customerId: customer?.id ?? null,
-              derivedFromOrderId: id,
-            },
-          });
+          showOrderPreview(id);
         },
         leftSide: {
           label,
           badges: displayFinancialStatus
             ? [
                 {
-                  text: titleCase(displayFinancialStatus.replace('_', ' ')),
-                  variant: (
-                    {
-                      PENDING: 'neutral',
-                      AUTHORIZED: 'neutral',
-                      EXPIRED: 'neutral',
-                      PAID: 'neutral',
-                      PARTIALLY_PAID: 'warning',
-                      PARTIALLY_REFUNDED: 'neutral',
-                      REFUNDED: 'neutral',
-                      VOIDED: 'neutral',
-                    } as const
-                  )[displayFinancialStatus],
-                  status: (
-                    {
-                      PENDING: 'empty',
-                      AUTHORIZED: 'empty',
-                      EXPIRED: 'empty',
-                      PAID: 'complete',
-                      PARTIALLY_PAID: 'partial',
-                      PARTIALLY_REFUNDED: 'complete',
-                      REFUNDED: 'complete',
-                      VOIDED: 'complete',
-                    } as const
-                  )[displayFinancialStatus],
+                  text: getStatusText(displayFinancialStatus),
+                  variant: getFinancialStatusBadgeVariant(displayFinancialStatus),
+                  status: getFinancialStatusBadgeStatus(displayFinancialStatus),
                 },
                 {
-                  text: titleCase(displayFulfillmentStatus.replace('_', ' ')),
-                  variant: (
-                    {
-                      UNFULFILLED: 'neutral',
-                      PARTIALLY_FULFILLED: 'neutral',
-                      FULFILLED: 'neutral',
-                      RESTOCKED: 'neutral',
-                      PENDING_FULFILLMENT: 'neutral',
-                      OPEN: 'neutral',
-                      IN_PROGRESS: 'neutral',
-                      ON_HOLD: 'neutral',
-                      SCHEDULED: 'neutral',
-                    } as const
-                  )[displayFulfillmentStatus],
-                  status: (
-                    {
-                      UNFULFILLED: 'empty',
-                      PARTIALLY_FULFILLED: 'partial',
-                      FULFILLED: 'complete',
-                      RESTOCKED: 'empty',
-                      PENDING_FULFILLMENT: 'empty',
-                      OPEN: 'empty',
-                      IN_PROGRESS: 'empty',
-                      ON_HOLD: 'empty',
-                      SCHEDULED: 'empty',
-                    } as const
-                  )[displayFulfillmentStatus],
+                  text: getStatusText(displayFulfillmentStatus),
+                  variant: getFulfillmentStatusBadgeVariant(displayFulfillmentStatus),
+                  status: getFulfillmentStatusBadgeStatus(displayFulfillmentStatus),
                 },
               ]
             : undefined,

@@ -16,6 +16,7 @@ import { EmployeeAssignmentConfig } from './screens/popups/EmployeeAssignmentCon
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { ServiceLineItemConfig } from './screens/popups/ServiceLineItemConfig.js';
 import { UnsavedChangesDialogProvider } from './providers/UnsavedChangesDialogProvider.js';
+import { OrderPreview } from './screens/popups/OrderPreview.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -45,6 +46,7 @@ function SmartGridModal() {
           <DiscountSelector />
           <EmployeeAssignmentConfig />
           <EmployeeSelector />
+          <OrderPreview />
           <ProductLineItemConfig />
           <ProductSelector />
           <ServiceLineItemConfig />

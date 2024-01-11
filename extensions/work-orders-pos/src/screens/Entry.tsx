@@ -14,14 +14,23 @@ import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-que
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');
 
-  const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
+  const [status, setStatus] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<ID | null>(null);
-  const employeeSelectorPopup = usePopup('EmployeeSelector', setEmployeeIds);
+  const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
+
+  const statusSelectorPopup = usePopup('StatusSelector', setStatus);
   const customerSelectorPopup = usePopup('CustomerSelector', setCustomerId);
+  const employeeSelectorPopup = usePopup('EmployeeSelector', setEmployeeIds);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
-  const workOrderInfoQuery = useWorkOrderInfoQuery({ fetch, query, employeeIds, customerId: customerId ?? undefined });
+  const workOrderInfoQuery = useWorkOrderInfoQuery({
+    fetch,
+    query,
+    employeeIds,
+    status: status ?? undefined,
+    customerId: customerId ?? undefined,
+  });
   const workOrderInfo = workOrderInfoQuery.data?.pages ?? [];
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
   const customerQuery = useCustomerQuery({ fetch, id: customerId });
@@ -50,6 +59,7 @@ export function Entry() {
           </Stack>
           <Stack direction={'horizontal'} alignment={'space-between'}>
             <Stack direction={'horizontal'}>
+              <Button title={'Filter status'} type={'plain'} onPress={() => statusSelectorPopup.navigate()} />
               <Button title={'Filter customer'} type={'plain'} onPress={() => customerSelectorPopup.navigate()} />
               <Button
                 title={'Filter employees'}
@@ -58,11 +68,22 @@ export function Entry() {
               />
             </Stack>
             <Stack direction={'horizontal'}>
+              {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
               {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
               {employeeIds.length > 0 && (
                 <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
               )}
             </Stack>
+          </Stack>
+          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+            {status && (
+              <>
+                <Text variant={'sectionHeader'}>Status:</Text>
+                <Text variant={'captionRegular'} color={'TextSubdued'}>
+                  {status}
+                </Text>
+              </>
+            )}
           </Stack>
           <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
             {customerId && (

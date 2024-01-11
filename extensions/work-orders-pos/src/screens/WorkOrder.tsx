@@ -121,7 +121,9 @@ const useWorkOrderContext = () => {
     discount: createWorkOrder.discount,
   });
 
-  const workOrderSavedPopup = usePopup('WorkOrderSaved');
+  const workOrderSavedPopup = usePopup('WorkOrderSaved', () => {
+    setUnsavedChanges(false);
+  });
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation(
     { fetch },
@@ -144,7 +146,6 @@ const useWorkOrderContext = () => {
     createWorkOrder,
     dispatchCreateWorkOrder: (...[action]: Parameters<typeof dispatchCreateWorkOrder>) => {
       setUnsavedChanges(action.type !== 'reset-work-order');
-      api.toast.show(`Action ${action.type}`);
       dispatchCreateWorkOrder(action);
     },
     unsavedChanges,
@@ -234,20 +235,22 @@ function ShowDerivedFromOrderPreviewButton({ context }: { context: WorkOrderCont
 
   const { derivedFromOrder } = context.workOrderQuery.data.workOrder;
 
-  const title = `Previous (${`${derivedFromOrder.name} ${
-    derivedFromOrder.workOrderName ? `(${derivedFromOrder.workOrderName})` : ''
-  }`.trim()})`;
+  const title = `View Previous (${[derivedFromOrder.name, derivedFromOrder.workOrderName]
+    .filter(Boolean)
+    .join(' - ')})`;
+
+  // TODO: If derived from a work order, perhaps navigate to the work order instead of the order preview? Or just a work order preview
 
   return (
     <Button
       title={title}
-      onPress={() => {
+      onPress={() =>
         context.navigate('OrderPreview', {
           orderId: derivedFromOrder.id,
-          unsavedChanges: true,
+          unsavedChanges: context.unsavedChanges,
           showImportButton: false,
-        });
-      }}
+        })
+      }
     />
   );
 }

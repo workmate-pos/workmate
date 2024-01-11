@@ -23,7 +23,7 @@ export function ProductSelector() {
     : null;
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
-    params: { query: `${query} NOT collection:${serviceCollectionId}` },
+    params: { query: serviceCollectionId ? `${query} NOT collection:${serviceCollectionId}` : query },
   });
   const productVariants = productVariantsQuery.data?.pages ?? [];
   const currencyFormatter = useCurrencyFormatter();

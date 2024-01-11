@@ -2,12 +2,6 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
-    "status": {
-      "type": "string"
-    },
-    "customerId": {
-      "$ref": "scalars.json#/definitions/ID"
-    },
     "dueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
@@ -15,6 +9,6 @@
       "type": "string"
     }
   },
-  "required": ["status", "customerId", "dueDate", "description"],
+  "required": ["dueDate", "description"],
   "additionalProperties": false
 }

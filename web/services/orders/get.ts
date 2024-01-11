@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { moneyV2ToMoney } from '@work-orders/common/util/money.js';
 import type { Order, OrderInfo } from './types.js';
-import type { Money, ID } from '../gql/queries/generated/schema.js';
+import type { ID, Money } from '../gql/queries/generated/schema.js';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { gql } from '../gql/gql.js';
 import { db } from '../db/db.js';
@@ -18,21 +18,25 @@ export async function getOrder(session: Session, id: ID): Promise<Order | null> 
     return null;
   }
 
-  // TODO: Is this wise??? (same thing in work-orders/get)
-  const NoMuney = '0.00' as Money;
+  const NoMoney = '0.00' as Money;
 
   return {
     id,
     name: order.name,
-    workOrderName: workOrder?.name ?? null,
     note: order.note,
-    shipping: order.totalShippingPrice,
     total: order.totalPrice,
-    tax: order.totalTax ?? NoMuney,
-    subtotal: order.subtotalPrice ?? NoMuney,
-    discount: order.totalDiscounts ?? NoMuney,
+    displayFulfillmentStatus: order.displayFulfillmentStatus,
+    displayFinancialStatus: order.displayFinancialStatus,
     outstanding: moneyV2ToMoney(order.totalOutstandingSet.shopMoney),
     received: order.totalReceived,
+    discount: order.totalDiscounts ?? NoMoney,
+    tax: order.totalTax ?? NoMoney,
+    customer: order.customer,
+    workOrder: workOrder
+      ? {
+          name: workOrder.name,
+        }
+      : null,
   };
 }
 
@@ -66,6 +70,20 @@ export async function getOrderInfo(session: Session, id: ID) {
   }
 
   return getOrderInfoFromFragment(order);
+}
+
+export async function getOrderLineItems(session: Session, id: ID, paginationOptions: PaginationOptions) {
+  const graphql = new Graphql(session);
+  const { order } = await gql.order.getLineItems.run(graphql, { id, ...paginationOptions });
+
+  if (!order) {
+    return null;
+  }
+
+  return {
+    pageInfo: order.lineItems.pageInfo,
+    lineItems: order.lineItems.nodes,
+  };
 }
 
 async function getOrderInfoFromFragment(orderInfoFragment: gql.order.OrderInfoFragment.Result): Promise<OrderInfo> {

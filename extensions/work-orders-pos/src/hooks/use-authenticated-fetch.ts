@@ -28,7 +28,7 @@ export const useAuthenticatedFetch = () => {
 
     const response = await fetch(requestUrl, init);
 
-    if (!response.ok) {
+    if (!response.ok && process.env.NODE_ENV === 'development') {
       api.toast.show(`${response.status} - ${input.toString()} - ${await response.clone().text()}`, { duration: 2000 });
     }
 

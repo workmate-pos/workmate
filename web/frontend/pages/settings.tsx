@@ -361,8 +361,8 @@ export default function Settings() {
                     setSettings({
                       ...settings,
                       workOrderRequests: enabled
-                        ? { enabled, allowedStatuses: [settings.statuses[0]!] }
-                        : { enabled, allowedStatuses: null },
+                        ? { enabled, status: settings.statuses[0]! }
+                        : { enabled, status: null },
                     })
                   }
                 />
@@ -372,13 +372,13 @@ export default function Settings() {
                   disabled={!settings.workOrderRequests.enabled}
                   options={settings.statuses}
                   placeholder={'Select a status'}
-                  value={settings.workOrderRequests.allowedStatuses?.[0]}
-                  onChange={statusName =>
+                  value={settings.workOrderRequests?.status ?? undefined}
+                  onChange={status =>
                     setSettings({
                       ...settings,
                       workOrderRequests: {
                         enabled: true,
-                        allowedStatuses: [statusName],
+                        status,
                       },
                     })
                   }

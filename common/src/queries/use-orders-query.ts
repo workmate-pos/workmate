@@ -4,7 +4,7 @@ import { createPaginatedQuery } from './create-paginated-query.js';
 
 export const useOrdersQuery = createPaginatedQuery({
   endpoint: '/api/order',
-  queryKeyFn: ({ query }: PaginationOptions) => ['orders', query],
+  queryKeyFn: (options: PaginationOptions) => ['orders', options],
   extractPage: (response: FetchOrdersResponse) => response.orders,
   cursorParamName: 'after',
 });

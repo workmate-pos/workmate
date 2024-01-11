@@ -29,6 +29,12 @@ import { Nullable } from '@work-orders/common/types/Nullable.js';
 
 export async function upsertWorkOrder(session: Session, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
+    const settings = await getShopSettings(session.shop);
+
+    if (!settings.statuses.includes(createWorkOrder.status)) {
+      throw new Error(`Invalid status: ${createWorkOrder.status}`);
+    }
+
     const isNew = createWorkOrder.name === null;
     const [currentWorkOrder] = isNew ? [] : await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
 
@@ -202,10 +208,10 @@ async function getEmployeeRates(
   const employeeRates = employeeIds.length ? await db.employeeRate.getMany({ shop, employeeIds }) : [];
 
   return Object.fromEntries(
-    employeeRates.map(({ employeeId, rate }) => [
-      employeeId as ID,
-      (rate as Cents) ?? toCents(parseMoney(defaultRate)),
-    ]),
+    employeeIds.map(employeeId => {
+      const rate = employeeRates.find(employee => employee.employeeId === employeeId)?.rate;
+      return [employeeId as ID, rate ? (rate as Cents) : toCents(parseMoney(defaultRate))];
+    }),
   );
 }
 
@@ -274,7 +280,10 @@ function getOrderLineItems(
   }
 
   const labourTotal = createWorkOrder.employeeAssignments.reduce(
-    (total, { employeeId, hours }) => total + toDollars(employeeRates[employeeId] ?? never()) * hours,
+    (total, { employeeId, hours }) =>
+      total +
+      toDollars(employeeRates[employeeId] ?? never('EmployeeRates should already be fall back to the default rate')) *
+        hours,
     0,
   ) as Dollars;
 
