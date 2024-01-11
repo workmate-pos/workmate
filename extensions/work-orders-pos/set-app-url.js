@@ -7,7 +7,7 @@ import { resolve } from 'path';
 
 if (!process.env.APP_URL) {
   console.log('No APP_URL environment variable set, skipping inlining');
-  return;
+  process.exit();
 }
 
 const BASE_PATH = './src';
