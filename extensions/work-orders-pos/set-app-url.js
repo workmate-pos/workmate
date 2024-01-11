@@ -27,7 +27,7 @@ async function dfs(basePath, dirent) {
   } else {
     const filePath = resolve(basePath, dirent.name);
     const fileContents = await readFile(filePath, 'utf8');
-    const newContents = fileContents.replace(/process\.env\.APP_URL/g, process.env.APP_URL);
+    const newContents = fileContents.replace(/process\.env\.APP_URL/g, JSON.stringify(process.env.APP_URL));
     if (fileContents !== newContents) {
       console.log(`Inlined APP_URL in ${filePath}`);
       await writeFile(filePath, newContents);
