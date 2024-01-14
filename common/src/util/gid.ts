@@ -1,4 +1,4 @@
-export type ID = string & {__brand: 'ID'};
+import type { ID } from '@web/services/gql/queries/generated/schema.js';
 
 export function parseGid(gid: ID) {
   const prefix = 'gid://shopify/';
