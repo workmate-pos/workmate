@@ -76,6 +76,7 @@ export const usePaymentHandler = () => {
         await api.cart.addLineItem(parseGid(lineItem.variant.id).id, lineItem.quantity);
       } else {
         await api.cart.addCustomSale({
+          // TODO: SKU
           title: lineItem.title,
           quantity: lineItem.quantity,
           price: lineItem.unitPrice,
