@@ -2,6 +2,7 @@ import { useQuery, UseQueryOptions } from 'react-query';
 import { Fetch } from './fetch.js';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import type { FetchOrderResponse } from '@web/controllers/api/order.js';
+import { parseGid } from '../util/gid.js';
 
 export const useOrderQuery = (
   { fetch, id }: { fetch: Fetch; id: ID | null },
@@ -20,7 +21,7 @@ export const useOrderQuery = (
         return { order: null };
       }
 
-      const response = await fetch(`/api/order/${encodeURIComponent(id)}`);
+      const response = await fetch(`/api/order/${parseGid(id).id}`);
 
       if (!response.ok) {
         throw new Error(`useOrderQuery HTTP Status ${response.status}`);

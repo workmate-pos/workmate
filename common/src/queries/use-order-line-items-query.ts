@@ -2,6 +2,7 @@ import type { FetchOrderLineItemsResponse } from '@web/controllers/api/order.js'
 import { ID } from '@web/schemas/generated/ids.js';
 import { useInfiniteQuery } from 'react-query';
 import { Fetch } from './fetch.js';
+import { parseGid } from '../util/gid.js';
 
 export const useOrderLineItemsQuery = ({ fetch, id = null }: { fetch: Fetch; id: ID | null }) => {
   return useInfiniteQuery({
@@ -14,7 +15,7 @@ export const useOrderLineItemsQuery = ({ fetch, id = null }: { fetch: Fetch; id:
       const searchParams = new URLSearchParams();
       if (pageParam) searchParams.set('after', String(pageParam));
 
-      const response = await fetch(`/api/order/${encodeURIComponent(id)}/line-items?${searchParams}`);
+      const response = await fetch(`/api/order/${parseGid(id).id}/line-items?${searchParams}`);
 
       return await response.json();
     },
