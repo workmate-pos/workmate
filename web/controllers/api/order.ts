@@ -4,6 +4,7 @@ import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-expr
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { getOrder, getOrderInfos, getOrderLineItems } from '../../services/orders/get.js';
 import { ID } from '../../schemas/generated/ids.js';
+import { createGid } from '@work-orders/common/util/gid.js';
 
 @Authenticated()
 export default class OrderController {
@@ -19,9 +20,11 @@ export default class OrderController {
   }
 
   @Get('/:id')
-  async fetchOrder(req: Request<{ id: ID }>, res: Response<FetchOrderResponse>) {
+  async fetchOrder(req: Request<{ id: string }>, res: Response<FetchOrderResponse>) {
     const session: Session = res.locals.shopify.session;
-    const order = await getOrder(session, req.params.id);
+
+    const gid = createGid('Order', req.params.id);
+    const order = await getOrder(session, gid);
 
     return res.json(order);
   }
@@ -29,13 +32,14 @@ export default class OrderController {
   @Get('/:id/line-items')
   @QuerySchema('pagination-options')
   async fetchOrderLineItems(
-    req: Request<{ id: ID }, unknown, unknown, PaginationOptions>,
+    req: Request<{ id: string }, unknown, unknown, PaginationOptions>,
     res: Response<FetchOrderLineItemsResponse | { error: string }>,
   ) {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    const lineItems = await getOrderLineItems(session, req.params.id, paginationOptions);
+    const gid = createGid('Order', req.params.id);
+    const lineItems = await getOrderLineItems(session, gid, paginationOptions);
 
     if (!lineItems) {
       return res.status(404).json({ error: 'Order not found' });
