@@ -70,9 +70,9 @@ export function OrderPreview() {
       isLoading={orderQuery.isLoading}
       presentation={{ sheet: true }}
     >
-      <Text>{orderQuery.status}</Text>
-      <Text>{orderQuery.data}</Text>
-      <Text>{orderQuery.error}</Text>
+      <Text>{JSON.stringify(orderQuery.status)}</Text>
+      <Text>{JSON.stringify(orderQuery.data)}</Text>
+      <Text>{JSON.stringify(orderQuery.error)}</Text>
       {order && (
         <ScrollView>
           <Stack direction={'vertical'} spacing={2}>
