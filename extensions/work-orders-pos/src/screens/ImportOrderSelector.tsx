@@ -13,7 +13,7 @@ import {
 } from '../util/badges.js';
 
 export function ImportOrderSelector() {
-  const { Screen, usePopup, navigate } = useScreen('ImportOrderSelector');
+  const { Screen, usePopup } = useScreen('ImportOrderSelector');
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
@@ -21,17 +21,8 @@ export function ImportOrderSelector() {
 
   const orderPreviewPopup = usePopup('OrderPreview');
 
-  // const showOrderPreview = (orderId: ID) =>
-  //   orderPreviewPopup.navigate({ orderId, unsavedChanges: false, showImportButton: true });
-
-  const showOrderPreview = (orderId: ID, customerId?: ID) =>
-    navigate('WorkOrder', {
-      type: 'new-work-order',
-      initial: {
-        customerId: customerId ?? null,
-        derivedFromOrderId: orderId,
-      },
-    });
+  const showOrderPreview = (orderId: ID) =>
+    orderPreviewPopup.navigate({ orderId, unsavedChanges: false, showImportButton: true });
 
   const rows = getOrderRows(ordersQuery.data?.pages ?? [], showOrderPreview);
 
@@ -78,7 +69,7 @@ export function ImportOrderSelector() {
   );
 }
 
-function getOrderRows(orders: Order[], showOrderPreview: (orderId: ID, customerId?: ID) => void) {
+function getOrderRows(orders: Order[], showOrderPreview: (orderId: ID) => void) {
   return orders.map<ListRow>(
     ({ id, name, workOrderName, displayFulfillmentStatus, displayFinancialStatus, customer }) => {
       const label = workOrderName ? `${name} (${workOrderName})` : name;
@@ -86,7 +77,7 @@ function getOrderRows(orders: Order[], showOrderPreview: (orderId: ID, customerI
       return {
         id,
         onPress: () => {
-          showOrderPreview(id, customer?.id);
+          showOrderPreview(id);
         },
         leftSide: {
           label,

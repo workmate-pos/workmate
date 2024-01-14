@@ -13,7 +13,6 @@ import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import type { ID } from '@web/schemas/generated/ids.js';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
 import {
   getFinancialStatusBadgeStatus,
@@ -26,6 +25,7 @@ import { Grid } from '../../components/Grid.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { OrderLineItem, useOrderLineItemsQuery } from '@work-orders/common/queries/use-order-line-items-query.js';
 import { parseMoney } from '@work-orders/common/util/money.js';
+import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 
 export function OrderPreview() {
   const [orderId, setOrderId] = useState<ID | null>(null);
