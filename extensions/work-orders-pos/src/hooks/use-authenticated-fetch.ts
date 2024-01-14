@@ -25,6 +25,7 @@ export const useAuthenticatedFetch = () => {
     const sessionToken = await api.session.getSessionToken();
 
     init.headers.set('authorization', `Bearer ${sessionToken}`);
+    init.cache = 'no-store';
 
     const response = await fetch(requestUrl, init);
 
