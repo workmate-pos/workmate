@@ -1,4 +1,4 @@
-import type { ID } from '@web/schemas/generated/shop-settings.js';
+export type ID = string & {__brand: 'ID'};
 
 export function parseGid(gid: ID) {
   const prefix = 'gid://shopify/';
