@@ -39,7 +39,8 @@ export function OrderPreview() {
   });
 
   const fetch = useAuthenticatedFetch();
-  const orderQuery = useOrderQuery({ fetch, id: orderId });
+  // TODO: Change default keepPreviousData to false & add it where needed (mostly search lists)
+  const orderQuery = useOrderQuery({ fetch, id: orderId }, { keepPreviousData: false });
   const orderLineItemsQuery = useOrderLineItemsQuery({ fetch, id: orderId });
 
   const order = orderQuery.data?.order;
@@ -63,13 +64,15 @@ export function OrderPreview() {
 
   const lineItemRows = useLineItemRows(orderLineItemsQuery.data?.pages ?? []);
 
-  // For some reason orderQuery.status is success despite the order still fetching. Its query key is not set in the query cache anywhere else so no clue why. Hence isLoading={isFetching}
   return (
     <Screen
       title={`Order ${[order?.name, order?.workOrder?.name].filter(Boolean).join(' - ')}`}
-      isLoading={orderQuery.isFetching}
+      isLoading={orderQuery.isLoading}
       presentation={{ sheet: true }}
     >
+      <Text>{orderQuery.status}</Text>
+      <Text>{orderQuery.data}</Text>
+      <Text>{orderQuery.error}</Text>
       {order && (
         <ScrollView>
           <Stack direction={'vertical'} spacing={2}>
