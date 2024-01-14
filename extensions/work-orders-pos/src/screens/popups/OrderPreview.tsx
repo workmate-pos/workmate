@@ -114,6 +114,20 @@ export function OrderPreview() {
                 </Text>
               </Stack>
             )}
+            {orderLineItemsQuery.isSuccess && lineItemRows.length === 0 && (
+              <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+                <Text variant="body" color="TextSubdued">
+                  No line items found
+                </Text>
+              </Stack>
+            )}
+            {orderLineItemsQuery.isError && (
+              <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+                <Text color="TextCritical" variant="body">
+                  Error loading line items
+                </Text>
+              </Stack>
+            )}
             {showImportButton && (
               <Stack direction="vertical" flex={1} alignment="flex-end">
                 <Button
@@ -121,7 +135,6 @@ export function OrderPreview() {
                   onPress={() =>
                     unsavedChangesDialog.show({
                       onAction: () => {
-                        if (!order.workOrder) return;
                         navigate('WorkOrder', {
                           type: 'new-work-order',
                           initial: {
