@@ -11,16 +11,11 @@ jobs:
   teifi-shopify-app:
     uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@master
     with:
-      name: "Work Orders"
+      name: "WorkMate"
       shopify_api_key: ${{ vars.SHOPIFY_API_KEY }}
       shopify_shop: ${{ vars.SHOPIFY_SHOP }}
       sentry_org: ${{ vars.SENTRY_ORG }}
       sentry_project: ${{ vars.SENTRY_PROJECT }}
+      docker_username: ${{ vars.DOCKER_USERNAME }}
       deploy_extensions: true
     secrets: inherit
-#  deploy:
-#    uses: teifi-digital/shopify-app-deployments/.github/workflows/pulumi-up.yml@master
-#    needs: teifi-shopify-app
-#    with:
-#      stack_name: ${{ vars.PRODUCTION_STACK_NAME }}
-#    secrets: inherit
