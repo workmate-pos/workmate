@@ -1,16 +1,9 @@
-import {
-  List,
-  ListRow,
-  ScrollView,
-  SearchBar,
-  Stack,
-  Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 
 export function CustomerSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -32,8 +25,8 @@ export function CustomerSelector() {
             {customersQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar
-          initialValue={query}
+        <ControlledSearchBar
+          value={query}
           onTextChange={(query: string) => setQuery(query, query === '')}
           onSearch={() => {}}
           placeholder="Search customers"

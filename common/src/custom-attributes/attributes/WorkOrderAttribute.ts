@@ -1,7 +1,5 @@
-import { CustomAttribute } from '../CustomAttribute.js';
 import { z } from 'zod';
-
-const schema = z.string();
+import { StringAttribute } from '../StringAttribute.js';
 
 /**
  * Attribute that can be added to (draft) orders to indicate that it is a work order.
@@ -9,4 +7,4 @@ const schema = z.string();
  * Since this attribute can be changed in shopify admin it should not be relied on for detecting work orders after order creation within POS.
  * Instead, query the database using order ids to find which work order belongs to some (draft) order.
  */
-export const WorkOrderAttribute = new CustomAttribute('Work Order', schema, v => v);
+export const WorkOrderAttribute = new StringAttribute('Work Order');

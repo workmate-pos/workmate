@@ -6,11 +6,11 @@ import {
   ListRow,
   NumberField,
   ScrollView,
-  SearchBar,
   Stack,
   Text,
   TextArea,
   TextField,
+  useCartSubscription,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
@@ -33,9 +33,11 @@ import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-que
 import { unique } from '@work-orders/common/util/array.js';
 import { PayButton } from '../components/PayButton.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { CreateWorkOrderLineItem } from './routes.js';
-import { Money } from '@web/schemas/generated/shop-settings.js';
+import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
 import { useUnsavedChangesDialog } from '../providers/UnsavedChangesDialogProvider.js';
+import { Money } from '@web/services/gql/queries/generated/schema.js';
+import { createGid } from '@work-orders/common/util/gid.js';
+import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
 
 /**
  * Stuff to pass around between components
@@ -48,6 +50,7 @@ const useWorkOrderContext = () => {
   const [createWorkOrder, dispatchCreateWorkOrder] = useCreateWorkOrderReducer();
   const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
+  const cart = useCartSubscription();
 
   const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
     switch (action.type) {
@@ -64,6 +67,15 @@ const useWorkOrderContext = () => {
           });
         } else {
           dispatchCreateWorkOrder({ type: 'reset-work-order' });
+
+          if (cart.customer) {
+            dispatchCreateWorkOrder({
+              type: 'set-field',
+              field: 'customerId',
+              value: createGid('Customer', String(cart.customer.id)),
+            });
+            api.toast.show('Imported customer from cart');
+          }
         }
 
         break;
@@ -336,12 +348,14 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
 const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const [query, setQuery] = useState('');
 
-  const productSelectorPopup = context.usePopup('ProductSelector', lineItem => {
-    context.dispatchCreateWorkOrder({ type: 'add-line-item', lineItem, allowMerge: true });
+  const productSelectorPopup = context.usePopup('ProductSelector', lineItems => {
+    for (const lineItem of lineItems) {
+      context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isService: false });
+    }
   });
 
   const serviceSelectorPopup = context.usePopup('ServiceSelector', lineItem => {
-    context.dispatchCreateWorkOrder({ type: 'add-line-item', lineItem, allowMerge: false });
+    context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isService: true });
     serviceConfigPopup.navigate({
       readonly: context.hasOrder,
       lineItem,
@@ -350,41 +364,47 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     });
   });
 
-  const serviceConfigPopup = context.usePopup('ServiceLineItemConfig', result => {
-    switch (result.type) {
-      case 'remove': {
-        context.dispatchCreateWorkOrder({
-          type: 'remove-line-item',
-          lineItem: result.lineItem,
-        });
-        break;
+  const createLabourConfigHandler =
+    ({ isService }: { isService: boolean }) =>
+    (result: ScreenInputOutput['LabourLineItemConfig'][1]) => {
+      switch (result.type) {
+        case 'remove': {
+          context.dispatchCreateWorkOrder({
+            type: 'remove-line-item',
+            lineItem: result.lineItem,
+          });
+          break;
+        }
+
+        case 'update': {
+          const lineItemUuid = result.lineItem.uuid;
+
+          context.dispatchCreateWorkOrder({
+            type: 'set-assigned-employees',
+            employees: [
+              ...(context.createWorkOrder.employeeAssignments?.filter(
+                assignment => assignment.lineItemUuid !== lineItemUuid,
+              ) ?? []),
+              ...result.employeeAssignments.map(assignment => ({ ...assignment, lineItemUuid })),
+            ],
+          });
+
+          context.dispatchCreateWorkOrder({
+            type: 'upsert-line-item',
+            lineItem: result.lineItem,
+            isService,
+          });
+          break;
+        }
+
+        default:
+          return result.type satisfies never;
       }
+    };
 
-      case 'update': {
-        context.dispatchCreateWorkOrder({
-          type: 'update-line-item',
-          lineItem: result.lineItem,
-        });
+  const serviceConfigPopup = context.usePopup('LabourLineItemConfig', createLabourConfigHandler({ isService: true }));
 
-        const lineItemUuid = result.lineItem.uuid;
-
-        context.dispatchCreateWorkOrder({
-          type: 'set-assigned-employees',
-          employees: [
-            ...(context.createWorkOrder.employeeAssignments?.filter(
-              assignment => assignment.lineItemUuid !== lineItemUuid,
-            ) ?? []),
-            ...result.employeeAssignments.map(assignment => ({ ...assignment, lineItemUuid })),
-          ],
-        });
-        break;
-      }
-
-      default:
-        return result.type satisfies never;
-    }
-  });
-
+  // labourless product
   const productConfigPopup = context.usePopup('ProductLineItemConfig', result => {
     switch (result.type) {
       case 'remove': {
@@ -397,8 +417,18 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
 
       case 'update': {
         context.dispatchCreateWorkOrder({
-          type: 'update-line-item',
+          type: 'upsert-line-item',
           lineItem: result.lineItem,
+          isService: false,
+        });
+        break;
+      }
+
+      case 'assign-employees': {
+        labourProductConfigPopup.navigate({
+          readonly: context.hasOrder,
+          lineItem: result.lineItem,
+          employeeAssignments: [],
         });
         break;
       }
@@ -408,14 +438,35 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     }
   });
 
+  // product with labour
+  const labourProductConfigPopup = context.usePopup(
+    'LabourLineItemConfig',
+    createLabourConfigHandler({ isService: false }),
+  );
+
   const rows = useItemRows(context, query, (type, lineItem) => {
     switch (type) {
-      case 'product':
-        productConfigPopup.navigate({
-          readonly: context.hasOrder,
-          lineItem,
-        });
+      case 'product': {
+        const hasEmployeeAssignments = context.createWorkOrder.employeeAssignments?.some(
+          ea => ea.lineItemUuid === lineItem.uuid,
+        );
+
+        if (hasEmployeeAssignments) {
+          labourProductConfigPopup.navigate({
+            readonly: context.hasOrder,
+            lineItem,
+            employeeAssignments:
+              context.createWorkOrder.employeeAssignments?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+          });
+        } else {
+          productConfigPopup.navigate({
+            readonly: context.hasOrder,
+            lineItem,
+          });
+        }
+
         break;
+      }
 
       case 'service':
         serviceConfigPopup.navigate({
@@ -448,7 +499,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
           isDisabled={context.hasOrder}
         />
       </Stack>
-      <SearchBar placeholder="Search items" initialValue={query} onTextChange={setQuery} onSearch={() => {}} />
+      <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
         <List data={rows}></List>
       ) : (
@@ -645,6 +696,10 @@ function useItemRows(
             0,
           ) as Dollars;
 
+        const hasAssignedEmployees = context.createWorkOrder.employeeAssignments?.some(
+          ea => ea.lineItemUuid === lineItem.uuid,
+        );
+
         return {
           id: lineItem.uuid,
           onPress() {
@@ -659,7 +714,7 @@ function useItemRows(
             subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
             image: {
               source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? 'not found',
-              badge: lineItem.quantity > 1 ? lineItem.quantity : undefined,
+              badge: hasAssignedEmployees ? undefined : lineItem.quantity,
             },
           },
           rightSide: {

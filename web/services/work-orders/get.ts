@@ -10,10 +10,13 @@ import { LineItem, WorkOrder, WorkOrderInfo } from './types.js';
 import { Cents, moneyV2ToMoney, parseMoney } from '@work-orders/common/util/money.js';
 import { getOrderInfo } from '../orders/get.js';
 import { awaitNested } from '../../util/promise.js';
-import { LabourLineItemAttribute } from '@work-orders/common/custom-attributes/attributes/LabourLineItemAttribute.js';
 import { PlaceholderLineItemAttribute } from '@work-orders/common/custom-attributes/attributes/PlaceholderLineItemAttribute.js';
 import { findSoleTruth } from '../../util/choice.js';
 import { getShopSettings } from '../settings.js';
+import { LabourLineItemUuidAttribute } from '@work-orders/common/custom-attributes/attributes/LabourLineItemUuidAttribute.js';
+import { SkuAttribute } from '@work-orders/common/custom-attributes/attributes/SkuAttribute.js';
+import { UuidAttribute } from '@work-orders/common/custom-attributes/attributes/UuidAttribute.js';
+import { groupBy } from '../../util/array.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [[workOrder], employeeAssignments, settings] = await Promise.all([
@@ -58,6 +61,11 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
           } as const)
         : null;
 
+  const employeeAssignmentsByProductVariantId = groupBy(
+    employeeAssignments.filter((ea): ea is typeof ea & { productVariantId: string } => !!ea.productVariantId),
+    assignment => assignment.productVariantId,
+  );
+
   return {
     name: workOrder.name,
     status: workOrder.status,
@@ -83,7 +91,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
       received: order.__typename === 'Order' ? order.totalReceived : ('0.00' as Money),
       lineItems: lineItems.flatMap(
         ({ id, title, taxable, quantity, customAttributes, sku, variant, originalUnitPrice }): LineItem[] => {
-          const lineItemObj = {
+          const lineItemObj: WorkOrder['order']['lineItems'][number] = {
             id,
             title,
             taxable,
@@ -99,20 +107,43 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
                 }
               : null,
             attributes: {
-              labourLineItem: LabourLineItemAttribute.findAttribute(customAttributes),
+              labourLineItemUuid: LabourLineItemUuidAttribute.findAttribute(customAttributes),
               placeholderLineItem: PlaceholderLineItemAttribute.findAttribute(customAttributes),
+              sku: SkuAttribute.findAttribute(customAttributes),
+              uuid: UuidAttribute.findAttribute(customAttributes),
             },
           };
 
-          const isServiceItem = variant?.product?.isServiceItem ?? false;
+          // POS automatically stacks all items, with no way not to stack >:(
+          // so we manually detect service items and items with labour assigned and unstack them here
 
-          if (isServiceItem) {
-            // POS automatically stacks service items, with no way not to stack >:(
-            // so we manually detect service items and unstack them here
+          // service items are never stacked
+          if (variant?.product?.isServiceItem) {
             return Array.from({ length: quantity }, () => ({ ...lineItemObj, quantity: 1 as Int }));
           }
 
-          return [lineItemObj];
+          // normal products are stackable only if they do not have any assigned employees
+          // so create as many line items as there are employees assigned to this product variant
+
+          const lineItems = [];
+
+          const employeeAssignments = (variant?.id ? employeeAssignmentsByProductVariantId[variant?.id] : null) ?? [];
+
+          while (employeeAssignments.length) {
+            employeeAssignments.pop();
+
+            lineItems.push({
+              ...lineItemObj,
+              quantity: 1 as Int,
+            });
+            lineItemObj.quantity--;
+          }
+
+          if (lineItemObj.quantity > 0) {
+            lineItems.push(lineItemObj);
+          }
+
+          return lineItems;
         },
       ),
     },

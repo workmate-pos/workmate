@@ -87,6 +87,12 @@ export function ProductLineItemConfig() {
                       closePopup({ type: 'update', lineItem });
                     }}
                   />
+                  <Button
+                    title="Add Labour"
+                    onPress={() => {
+                      closePopup({ type: 'assign-employees', lineItem });
+                    }}
+                  />
                 </>
               )}
             </Stack>

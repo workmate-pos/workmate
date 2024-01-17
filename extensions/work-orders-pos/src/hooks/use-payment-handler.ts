@@ -7,6 +7,9 @@ import { withResolvers } from '@work-orders/common/util/promise.js';
 import { attributesToProperties } from '@work-orders/common/custom-attributes/mapping/index.js';
 import { WorkOrderOrderAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order.js';
 import { WorkOrderOrderLineItemAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order-line-item.js';
+import { groupBy } from '@web/util/array.js';
+import { sum } from '@work-orders/common/util/array.js';
+import { never } from '@work-orders/common/util/never.js';
 
 const useCart = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
@@ -69,23 +72,31 @@ export const usePaymentHandler = () => {
 
     await api.cart.addCartProperties(getCartProperties(workOrder));
 
-    for (const lineItem of workOrder.order.lineItems) {
+    const groupedLineItems = groupBy(workOrder.order.lineItems, lineItem => lineItem.variant?.id ?? 'custom');
+
+    for (const lineItems of Object.values(groupedLineItems)) {
       const addedLineItem = newestLineItemPromiseRef.current.promise;
 
+      const [lineItem] = lineItems;
+      let lineItemUuids: string[] | undefined = undefined;
+
       if (lineItem.variant) {
-        await api.cart.addLineItem(parseGid(lineItem.variant.id).id, lineItem.quantity);
+        await api.cart.addLineItem(
+          parseGid(lineItem.variant.id).id,
+          sum(lineItems, li => li.quantity),
+        );
+        lineItemUuids = lineItems.map(li => li.attributes.uuid ?? never());
       } else {
         await api.cart.addCustomSale({
-          // TODO: SKU
           title: lineItem.title,
-          quantity: lineItem.quantity,
+          quantity: sum(lineItems, li => li.quantity),
           price: lineItem.unitPrice,
           taxable: lineItem.taxable,
         });
       }
 
       const { uuid } = await addedLineItem;
-      await api.cart.addLineItemProperties(uuid, getLineItemAttributes(lineItem));
+      await api.cart.addLineItemProperties(uuid, getLineItemAttributes(lineItem, lineItemUuids));
     }
 
     await api.cart.setCustomer({ id: parseGid(workOrder.customerId).id });
@@ -115,9 +126,11 @@ function getCartProperties(workOrder: WorkOrder) {
   });
 }
 
-function getLineItemAttributes(lineItem: WorkOrder['order']['lineItems'][number]) {
+function getLineItemAttributes(lineItem: WorkOrder['order']['lineItems'][number], uuids?: string[]) {
   return attributesToProperties(WorkOrderOrderLineItemAttributesMapping, {
-    labourLineItem: lineItem.attributes.labourLineItem,
+    labourLineItemUuid: lineItem.attributes.labourLineItemUuid,
     placeholderLineItem: lineItem.attributes.placeholderLineItem,
+    sku: lineItem.attributes.sku,
+    uuids: uuids ?? null,
   });
 }

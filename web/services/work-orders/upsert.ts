@@ -272,30 +272,29 @@ function getOrderLineItems(
 ): DraftOrderLineItemInput[] {
   const lineItems: DraftOrderLineItemInput[] = [];
 
-  for (const { productVariantId, quantity } of createWorkOrder.lineItems) {
+  for (const { productVariantId, quantity, uuid } of createWorkOrder.lineItems) {
     lineItems.push({
       variantId: productVariantId,
       quantity,
+      customAttributes: getLineItemAttributes({ uuid }),
     });
   }
 
-  const labourTotal = createWorkOrder.employeeAssignments.reduce(
-    (total, { employeeId, hours }) =>
-      total +
-      toDollars(employeeRates[employeeId] ?? never('EmployeeRates should already be fall back to the default rate')) *
-        hours,
-    0,
-  ) as Dollars;
+  for (const { employeeId, hours, lineItemUuid } of createWorkOrder.employeeAssignments) {
+    const rate = employeeRates[employeeId] ?? never('EmployeeRates should already fall back to the default rate');
+    const total = (toDollars(rate) * hours) as Dollars;
 
-  if (labourTotal > 0) {
     lineItems.push({
       title: options.labourLineItemName,
       sku: options.labourLineItemSKU,
       taxable: true,
       requiresShipping: false,
       quantity: 1 as Int,
-      originalUnitPrice: toMoney(labourTotal),
-      customAttributes: getLineItemAttributes({ isLabour: true }),
+      originalUnitPrice: toMoney(total),
+      customAttributes: getLineItemAttributes({
+        labourLineItemUuid: lineItemUuid || undefined,
+        sku: options.labourLineItemSKU || undefined,
+      }),
     });
   }
 
@@ -333,14 +332,20 @@ function getOrderAttributes(workOrderName: string): AttributeInput[] {
 }
 
 function getLineItemAttributes({
-  isLabour = false,
   isPlaceholder = false,
+  labourLineItemUuid,
+  sku,
+  uuid,
 }: {
-  isLabour?: boolean;
+  labourLineItemUuid?: string;
   isPlaceholder?: boolean;
+  sku?: string;
+  uuid?: string;
 }): AttributeInput[] {
   return attributesToArray(WorkOrderOrderLineItemAttributesMapping, {
-    labourLineItem: isLabour || null,
     placeholderLineItem: isPlaceholder || null,
+    labourLineItemUuid: labourLineItemUuid ?? null,
+    sku: sku ?? null,
+    uuid: uuid ?? null,
   });
 }

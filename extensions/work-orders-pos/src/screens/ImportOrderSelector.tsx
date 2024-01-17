@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import type { ID } from '@web/schemas/generated/ids.js';
@@ -11,6 +11,7 @@ import {
   getFulfillmentStatusBadgeVariant,
   getStatusText,
 } from '../util/badges.js';
+import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
 
 export function ImportOrderSelector() {
   const { Screen, usePopup } = useScreen('ImportOrderSelector');
@@ -34,8 +35,8 @@ export function ImportOrderSelector() {
             {ordersQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar
-          initialValue={query}
+        <ControlledSearchBar
+          value={query}
           onTextChange={(query: string) => {
             setQuery(query, query === '');
           }}
