@@ -3,81 +3,18 @@
   "type": "object",
   "properties": {
     "customerId": {
-      "oneOf": [
-        {
-          "type": "null"
-        },
-        {
-          "$ref": "scalars.json#/definitions/ID"
-        }
-      ]
+      "oneOf": [{ "type": "null" }, { "$ref": "scalars.json#/definitions/ID" }]
     },
-    "employeeAssignments": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "title": "employee-assignment",
-        "description": "An employee assignment that is associated with a specific line item",
-        "properties": {
-          "employeeId": {
-            "$ref": "scalars.json#/definitions/ID"
-          },
-          "hours": {
-            "$ref": "scalars.json#/definitions/Int"
-          },
-          "lineItemUuid": {
-            "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
-          }
-        },
-        "required": ["employeeId", "hours", "lineItemUuid"],
-        "additionalProperties": false
-      }
+    "labour": {
+      "$ref": "create-work-order.json#/properties/labour"
     },
     "lineItems": {
-      "description": "All line items for this work order, including products and services",
-      "type": "array",
-      "items": {
-        "title": "line-item",
-        "type": "object",
-        "properties": {
-          "uuid": {
-            "description": "A unique identifier for this line item",
-            "type": "string",
-            "minLength": 1
-          },
-          "productVariantId": {
-            "$ref": "scalars.json#/definitions/ID"
-          },
-          "quantity": {
-            "$ref": "scalars.json#/definitions/Int"
-          }
-        },
-        "required": ["uuid", "productVariantId", "quantity"],
-        "additionalProperties": false
-      }
+      "$ref": "create-work-order.json#/properties/lineItems"
     },
     "discount": {
-      "oneOf": [
-        {
-          "type": "null"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "value": {
-              "description": "Either the dollar amount or the percentage",
-              "type": "number"
-            },
-            "valueType": {
-              "enum": ["FIXED_AMOUNT", "PERCENTAGE"]
-            }
-          },
-          "required": ["value", "valueType"],
-          "additionalProperties": false
-        }
-      ]
+      "$ref": "create-work-order.json#/properties/discount"
     }
   },
-  "required": ["customerId", "employeeAssignments", "lineItems", "discount"],
+  "required": ["customerId", "labour", "lineItems", "discount"],
   "additionalProperties": false
 }

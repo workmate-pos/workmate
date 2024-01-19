@@ -30,13 +30,15 @@ export type WorkOrder = {
     } | null;
     lineItems: LineItem[];
   };
-  employeeAssignments: EmployeeAssignment[];
+  labour: {
+    fixedPriceLabour: FixedPriceLabour[];
+    hourlyLabour: HourlyLabour[];
+  };
 };
 
-export type EmployeeAssignment = {
-  employeeId: ID;
-  rate: Cents;
-  hours: Int;
+export type BaseLabour = {
+  name: string;
+  employeeId: ID | null;
   /**
    * A uuid that associates this employee assignment with a line item.
    * Used to differentiate between assignments to different instances of the same productVariantId
@@ -44,6 +46,10 @@ export type EmployeeAssignment = {
   lineItemUuid: string | null;
   productVariantId: ID | null;
 };
+
+export type FixedPriceLabour = BaseLabour & { amount: Cents };
+
+export type HourlyLabour = BaseLabour & { rate: Cents; hours: Int };
 
 export type LineItem = {
   id: ID;

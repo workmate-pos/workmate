@@ -1,4 +1,3 @@
-// TODO: move
 type Succ<D extends number> = [1, 2, 3, 4, ...never[]][D];
 
 export type AwaitNested<T, Depth extends number = 0> = Depth extends never

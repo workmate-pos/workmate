@@ -16,26 +16,63 @@
     "dueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
-    "employeeAssignments": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "title": "employee-assignment",
-        "description": "An employee assignment that is associated with a specific line item",
-        "properties": {
-          "employeeId": {
-            "$ref": "scalars.json#/definitions/ID"
-          },
-          "hours": {
-            "$ref": "scalars.json#/definitions/Int"
-          },
-          "lineItemUuid": {
-            "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+    "labour": {
+      "type": "object",
+      "properties": {
+        "fixedPriceLabour": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "title": "fixed-price-labour",
+            "description": "An absolute amount of money for some labour",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "employeeId": {
+                "oneOf": [{ "type": "null" }, { "$ref": "scalars.json#/definitions/ID" }]
+              },
+              "amount": {
+                "$ref": "scalars.json#/definitions/Money"
+              },
+              "lineItemUuid": {
+                "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+              }
+            },
+            "required": ["name", "employeeId", "amount", "lineItemUuid"],
+            "additionalProperties": false
           }
         },
-        "required": ["employeeId", "hours", "lineItemUuid"],
-        "additionalProperties": false
-      }
+        "hourlyLabour": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "title": "hourly-labour",
+            "description": "An amount of labour determined by some hourly rate",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "employeeId": {
+                "oneOf": [{ "type": "null" }, { "$ref": "scalars.json#/definitions/ID" }]
+              },
+              "rate": {
+                "$ref": "scalars.json#/definitions/Money"
+              },
+              "hours": {
+                "$ref": "scalars.json#/definitions/Int"
+              },
+              "lineItemUuid": {
+                "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+              }
+            },
+            "required": ["name", "employeeId", "rate", "hours", "lineItemUuid"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["fixedPriceLabour", "hourlyLabour"],
+      "additionalProperties": false
     },
     "description": {
       "type": "string"
@@ -70,9 +107,7 @@
     "discount": {
       "title": "discount",
       "oneOf": [
-        {
-          "type": "null"
-        },
+        { "type": "null" },
         {
           "type": "object",
           "properties": {
@@ -95,7 +130,7 @@
     "status",
     "customerId",
     "dueDate",
-    "employeeAssignments",
+    "labour",
     "description",
     "derivedFromOrderId",
     "lineItems",

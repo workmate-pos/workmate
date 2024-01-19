@@ -127,6 +127,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
 
           const lineItems = [];
 
+          // TODO: clean up soonTM
           const employeeAssignments = (variant?.id ? employeeAssignmentsByProductVariantId[variant?.id] : null) ?? [];
 
           while (employeeAssignments.length) {
