@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
@@ -9,8 +9,7 @@ import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { uuid } from '../../util/uuid.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
-
-// TODO: DRY with ProductSelector
+import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -40,8 +39,8 @@ export function ServiceSelector() {
             {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar
-          initialValue={query}
+        <ControlledSearchBar
+          value={query}
           onTextChange={(query: string) => setQuery(query)}
           onSearch={() => {}}
           placeholder={'Search services'}

@@ -1,4 +1,4 @@
-import { Button, List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { NavigateFn, useScreen } from '../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
@@ -8,8 +8,9 @@ import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-o
 import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { titleCase } from '@work-orders/common/util/casing.js';
 import { useState } from 'react';
-import { ID } from '@web/schemas/generated/ids.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { ID } from '@web/services/gql/queries/generated/schema.js';
+import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
 
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');
@@ -103,8 +104,8 @@ export function Entry() {
               </Text>
             ))}
           </Stack>
-          <SearchBar
-            initialValue={query}
+          <ControlledSearchBar
+            value={query}
             onTextChange={(query: string) => setQuery(query, query === '')}
             onSearch={() => {}}
             placeholder="Search work orders"

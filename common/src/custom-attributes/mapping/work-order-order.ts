@@ -1,6 +1,6 @@
-import { CustomAttributeValue } from '../CustomAttribute.js';
 import { WorkOrderAttribute } from '../attributes/WorkOrderAttribute.js';
 import { AttributeMapping } from './index.js';
+import { CustomAttributeValue } from '../CustomAttribute.js';
 
 /**
  * Attributes that should be set on a work order.

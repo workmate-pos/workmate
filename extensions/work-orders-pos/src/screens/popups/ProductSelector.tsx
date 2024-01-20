@@ -1,20 +1,26 @@
-import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
-import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
+import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { parseGid } from '@work-orders/common/util/gid.js';
+import { useState } from 'react';
+import { CreateWorkOrderLineItem } from '../routes.js';
+import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');
+  const [selectedLineItems, setSelectedLineItems] = useState<CreateWorkOrderLineItem[]>([]);
   const { Screen, closePopup } = useScreen('ProductSelector', () => {
     setQuery('', true);
+    setSelectedLineItems([]);
   });
+
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
   const settingsQuery = useSettingsQuery({ fetch });
@@ -28,19 +34,29 @@ export function ProductSelector() {
   const productVariants = productVariantsQuery.data?.pages ?? [];
   const currencyFormatter = useCurrencyFormatter();
 
-  const closeRef = useDynamicRef(() => closePopup, [closePopup]);
-  const rows = getProductVariantRows(productVariants, closeRef, currencyFormatter);
+  const selectLineItem = (lineItem: CreateWorkOrderLineItem, name: string = 'Product') => {
+    setQuery('', true);
+    setSelectedLineItems([...selectedLineItems, lineItem]);
+    toast.show(`${name} added to cart`, { duration: 1000 });
+  };
+
+  const rows = getProductVariantRows(productVariants, selectLineItem, currencyFormatter);
 
   return (
-    <Screen title={'Select product'} isLoading={settingsQuery.isLoading} presentation={{ sheet: true }}>
+    <Screen
+      title={'Select product'}
+      isLoading={settingsQuery.isLoading}
+      presentation={{ sheet: true }}
+      overrideNavigateBack={() => closePopup(selectedLineItems)}
+    >
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
             {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar
-          initialValue={query}
+        <ControlledSearchBar
+          value={query}
           onTextChange={(query: string) => setQuery(query, !query)}
           onSearch={() => {}}
           placeholder={'Search products'}
@@ -78,7 +94,7 @@ export function ProductSelector() {
 
 function getProductVariantRows(
   productVariants: ProductVariant[],
-  closePopupRef: { current: ClosePopupFn<'ProductSelector'> },
+  selectLineItem: (lineItem: CreateWorkOrderLineItem, name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
   return productVariants.map(variant => {
@@ -93,7 +109,7 @@ function getProductVariantRows(
     return {
       id: variant.id,
       onPress: () => {
-        closePopupRef.current({
+        selectLineItem({
           uuid: uuid(),
           productVariantId: variant.id,
           quantity: 1 as Int,

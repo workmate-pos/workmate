@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, SearchBar, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
@@ -6,6 +6,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { useScreen } from '../../hooks/use-screen.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/ids.js';
+import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 
 export function EmployeeSelector() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<ID[]>([]);
@@ -44,8 +45,8 @@ export function EmployeeSelector() {
             {employeesQuery.isRefetching ? 'Reloading...' : ' '}
           </Text>
         </Stack>
-        <SearchBar
-          initialValue={query}
+        <ControlledSearchBar
+          value={query}
           onTextChange={(query: string) => {
             setQuery(query, query === '');
           }}

@@ -1,9 +1,11 @@
 import type { ID, DateTime, Int, Money, OrderDisplayFinancialStatus } from '../gql/queries/generated/schema.js';
 import type { OrderInfo } from '../orders/types.js';
-import type { CustomAttributeValue } from '@work-orders/common/custom-attributes/CustomAttribute.js';
-import type { LabourLineItemAttribute } from '@work-orders/common/custom-attributes/attributes/LabourLineItemAttribute.js';
 import type { PlaceholderLineItemAttribute } from '@work-orders/common/custom-attributes/attributes/PlaceholderLineItemAttribute.js';
 import type { Cents } from '@work-orders/common/util/money.js';
+import { UuidAttribute } from '@work-orders/common/custom-attributes/attributes/UuidAttribute.js';
+import { SkuAttribute } from '@work-orders/common/custom-attributes/attributes/SkuAttribute.js';
+import { CustomAttributeValue } from '@work-orders/common/custom-attributes/CustomAttribute.js';
+import { LabourLineItemUuidAttribute } from '@work-orders/common/custom-attributes/attributes/LabourLineItemUuidAttribute.js';
 
 export type WorkOrder = {
   name: string;
@@ -62,8 +64,10 @@ export type LineItem = {
   unitPrice: Money;
   sku: string | null;
   attributes: {
-    labourLineItem: CustomAttributeValue<typeof LabourLineItemAttribute> | null;
     placeholderLineItem: CustomAttributeValue<typeof PlaceholderLineItemAttribute> | null;
+    labourLineItemUuid: CustomAttributeValue<typeof LabourLineItemUuidAttribute> | null;
+    uuid: CustomAttributeValue<typeof UuidAttribute> | null;
+    sku: CustomAttributeValue<typeof SkuAttribute> | null;
   };
 };
 

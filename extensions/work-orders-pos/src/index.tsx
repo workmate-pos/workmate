@@ -14,7 +14,7 @@ import { DiscountSelector } from './screens/popups/DiscountSelector.js';
 import { ServiceSelector } from './screens/popups/ServiceSelector.js';
 import { EmployeeAssignmentConfig } from './screens/popups/EmployeeAssignmentConfig.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
-import { ServiceLineItemConfig } from './screens/popups/ServiceLineItemConfig.js';
+import { LabourLineItemConfig } from './screens/popups/LabourLineItemConfig.js';
 import { UnsavedChangesDialogProvider } from './providers/UnsavedChangesDialogProvider.js';
 import { OrderPreview } from './screens/popups/OrderPreview.js';
 
@@ -49,7 +49,7 @@ function SmartGridModal() {
           <OrderPreview />
           <ProductLineItemConfig />
           <ProductSelector />
-          <ServiceLineItemConfig />
+          <LabourLineItemConfig />
           <ServiceSelector />
           <ShippingConfig />
           <StatusSelector />

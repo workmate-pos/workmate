@@ -1,4 +1,4 @@
-import { Button, Stepper, Stack, Text, ScrollView, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '../../hooks/use-screen.js';

@@ -12,7 +12,7 @@ import { Cents, parseMoney, toDollars } from '@work-orders/common/util/money.js'
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
 
-export function ServiceLineItemConfig() {
+export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
   const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem | null>(null);
   const [employeeAssignments, setEmployeeAssignments] = useState<
@@ -21,7 +21,7 @@ export function ServiceLineItemConfig() {
   const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   const { Screen, usePopup, closePopup, cancelPopup } = useScreen(
-    'ServiceLineItemConfig',
+    'LabourLineItemConfig',
     ({ readonly, lineItem, employeeAssignments }) => {
       setReadonly(readonly);
       setLineItem(lineItem);

@@ -3,6 +3,7 @@ import { defaultCreateWorkOrder } from './default.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
 import type { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { CreateWorkOrderEmployeeAssignment, CreateWorkOrderLineItem } from '../screens/routes.js';
+import { uuid } from '../util/uuid.js';
 
 export type CreateWorkOrderAction =
   | { type: 'reset-work-order' }
@@ -11,16 +12,17 @@ export type CreateWorkOrderAction =
       workOrder: Nullable<CreateWorkOrder>;
     }
   | {
-      type: 'remove-line-item' | 'update-line-item';
+      type: 'remove-line-item';
       lineItem: CreateWorkOrderLineItem;
     }
   | {
-      type: 'add-line-item';
+      type: 'upsert-line-item';
       lineItem: CreateWorkOrderLineItem;
       /**
-       * Whether to allow merging the line item with an existing one.
+       * Indicates whether this line item is a service item.
+       * Service items can never have a quantity greater than 1.
        */
-      allowMerge: boolean;
+      isService: boolean;
     }
   | NonNullable<
       {
@@ -49,28 +51,57 @@ const createWorkOrderReducer = (
     case 'set-work-order':
       return action.workOrder;
 
-    case 'add-line-item': {
-      if (action.allowMerge) {
-        const productVariantId = action.lineItem.productVariantId;
-        const existingProductVariantLineItem = workOrder.lineItems?.find(
-          item => item.productVariantId === productVariantId,
+    case 'upsert-line-item': {
+      const lineItemUuid = action.lineItem.uuid;
+
+      const hasEmployeeAssignments = workOrder.employeeAssignments?.find(ea => ea.lineItemUuid === lineItemUuid);
+
+      // Stack items if possible.
+      if (!action.isService && !hasEmployeeAssignments) {
+        const stackableProductVariantLineItem = workOrder.lineItems?.find(
+          item =>
+            item.productVariantId === action.lineItem.productVariantId &&
+            // We can only stack when there are no assigned employees.
+            !workOrder.employeeAssignments?.find(ea => ea.lineItemUuid === item.uuid) &&
+            // In case of update, don't merge with the item itself.
+            item.uuid !== lineItemUuid,
         );
 
-        if (existingProductVariantLineItem) {
+        if (stackableProductVariantLineItem) {
           action.lineItem = {
-            ...existingProductVariantLineItem,
-            quantity: (existingProductVariantLineItem.quantity + action.lineItem.quantity) as Int,
+            ...stackableProductVariantLineItem,
+            quantity: (stackableProductVariantLineItem.quantity + action.lineItem.quantity) as Int,
           };
         }
       }
 
-      const lineItemUuid = action.lineItem.uuid;
+      const newLineItems: CreateWorkOrderLineItem[] = [];
+
+      // Un-stack line items when adding employees.
+      if (action.lineItem.quantity > 1 && hasEmployeeAssignments) {
+        newLineItems.push(
+          {
+            productVariantId: action.lineItem.productVariantId,
+            uuid: uuid(),
+            quantity: (action.lineItem.quantity - 1) as Int,
+          },
+          {
+            productVariantId: action.lineItem.productVariantId,
+            uuid: action.lineItem.uuid,
+            quantity: 1 as Int,
+          },
+        );
+      } else {
+        newLineItems.push(action.lineItem);
+      }
 
       return {
         ...workOrder,
         lineItems: [
-          ...(workOrder.lineItems?.filter(lineItem => lineItem.uuid !== lineItemUuid) ?? []),
-          action.lineItem,
+          ...(workOrder.lineItems?.filter(
+            lineItem => ![lineItemUuid, ...newLineItems.map(li => li.uuid)].includes(lineItem.uuid),
+          ) ?? []),
+          ...newLineItems,
         ],
       };
     }
@@ -83,14 +114,6 @@ const createWorkOrderReducer = (
         employeeAssignments: (workOrder.employeeAssignments ?? []).filter(
           assignment => assignment.lineItemUuid !== itemUuid,
         ),
-      };
-    }
-
-    case 'update-line-item': {
-      const updateItem = action.lineItem;
-      return {
-        ...workOrder,
-        lineItems: (workOrder.lineItems ?? []).map(item => (item.uuid === updateItem.uuid ? updateItem : item)),
       };
     }
 
