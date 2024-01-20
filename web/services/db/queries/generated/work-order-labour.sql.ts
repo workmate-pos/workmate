@@ -116,3 +116,74 @@ const removeFixedPriceLabourIR: any = {"usedParamSet":{"workOrderId":true},"para
 export const removeFixedPriceLabour = new PreparedQuery<IRemoveFixedPriceLabourParams,IRemoveFixedPriceLabourResult>(removeFixedPriceLabourIR);
 
 
+/** 'GetHourlyLabours' parameters type */
+export interface IGetHourlyLaboursParams {
+  workOrderId: number;
+}
+
+/** 'GetHourlyLabours' return type */
+export interface IGetHourlyLaboursResult {
+  employeeId: string | null;
+  hours: number;
+  id: number;
+  lineItemUuid: string | null;
+  name: string;
+  productVariantId: string | null;
+  rate: number;
+  workOrderId: number;
+}
+
+/** 'GetHourlyLabours' query type */
+export interface IGetHourlyLaboursQuery {
+  params: IGetHourlyLaboursParams;
+  result: IGetHourlyLaboursResult;
+}
+
+const getHourlyLaboursIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":51,"b":63}]}],"statement":"SELECT *\nFROM \"HourlyLabour\"\nWHERE \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "HourlyLabour"
+ * WHERE "workOrderId" = :workOrderId!
+ * ```
+ */
+export const getHourlyLabours = new PreparedQuery<IGetHourlyLaboursParams,IGetHourlyLaboursResult>(getHourlyLaboursIR);
+
+
+/** 'GetFixedPriceLabours' parameters type */
+export interface IGetFixedPriceLaboursParams {
+  workOrderId: number;
+}
+
+/** 'GetFixedPriceLabours' return type */
+export interface IGetFixedPriceLaboursResult {
+  amount: number;
+  employeeId: string | null;
+  id: number;
+  lineItemUuid: string | null;
+  name: string;
+  productVariantId: string | null;
+  workOrderId: number;
+}
+
+/** 'GetFixedPriceLabours' query type */
+export interface IGetFixedPriceLaboursQuery {
+  params: IGetFixedPriceLaboursParams;
+  result: IGetFixedPriceLaboursResult;
+}
+
+const getFixedPriceLaboursIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":55,"b":67}]}],"statement":"SELECT *\nFROM \"FixedPriceLabour\"\nWHERE \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "FixedPriceLabour"
+ * WHERE "workOrderId" = :workOrderId!
+ * ```
+ */
+export const getFixedPriceLabours = new PreparedQuery<IGetFixedPriceLaboursParams,IGetFixedPriceLaboursResult>(getFixedPriceLaboursIR);
+
+

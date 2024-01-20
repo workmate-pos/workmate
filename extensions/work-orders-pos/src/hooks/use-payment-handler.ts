@@ -9,7 +9,11 @@ import { WorkOrderOrderAttributesMapping } from '@work-orders/common/custom-attr
 import { WorkOrderOrderLineItemAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order-line-item.js';
 import { groupBy } from '@web/util/array.js';
 import { sum } from '@work-orders/common/util/array.js';
-import { never } from '@work-orders/common/util/never.js';
+import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
+import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
+import { getLabourPrice } from '../create-work-order/labour.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from './use-authenticated-fetch.js';
 
 const useCart = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
@@ -48,14 +52,28 @@ export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
 /**
  * Creates work order payments.
- * Attributes should always be the same as the ones in web/services/work-orders/upsert.ts !!!
+ *
+ * Relies on CustomAttributes, so make sure to save the work order right before initiating the payment,
+ * otherwise the merchant may change/delete the attributes
  */
 export const usePaymentHandler = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
   const [isLoading, setIsLoading] = useState(false);
   const newestLineItemPromiseRef = useNewestLineItemPromise();
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
 
   const handlePayment = async ({ workOrder }: { workOrder: WorkOrder }) => {
+    if (settingsQuery.isLoading) {
+      api.toast.show('Please wait until the settings are loaded');
+      return;
+    }
+
+    if (!settingsQuery.data) {
+      api.toast.show('Settings could not be loaded, try reloading the app');
+      return;
+    }
+
     setIsLoading(true);
 
     if (workOrder.order.type === 'order') {
@@ -68,44 +86,74 @@ export const usePaymentHandler = () => {
 
     api.toast.show('Preparing payment', { duration: 1000 });
 
+    // just like the backend we construct the payment from a CreateWorkOrder (a bit easier with uuid mappings)
+    const createWorkOrder = workOrderToCreateWorkOrder(workOrder);
+
     await api.cart.clearCart();
 
     await api.cart.addCartProperties(getCartProperties(workOrder));
 
-    const groupedLineItems = groupBy(workOrder.order.lineItems, lineItem => lineItem.variant?.id ?? 'custom');
+    const groupedLabour = groupBy(createWorkOrder.labour, labour => labour.name);
+
+    for (const labour of Object.values(groupedLabour)) {
+      for (let i = 0; i < labour.length; i++) {
+        const addedLineItem = newestLineItemPromiseRef.current.promise;
+
+        const labourItem = labour[i]!;
+        const price = getLabourPrice([labourItem]);
+
+        let title = labourItem.name;
+
+        if (labour.length > 1) {
+          // pos orders the cart from newest to oldest, so add (1) last
+          title += ` (${labour.length - i})`;
+        }
+
+        await api.cart.addCustomSale({
+          taxable: true,
+          quantity: 1,
+          title,
+          price,
+        });
+
+        const { uuid } = await addedLineItem;
+        const attributes = getLabourLineItemAttributes(
+          labourItem,
+          settingsQuery.data.settings.labourLineItemSKU || undefined,
+        );
+        await api.cart.addLineItemProperties(uuid, attributes);
+      }
+    }
+
+    // we only care about product line items, as all custom sales will be created from labour
+    const groupedLineItems = groupBy(createWorkOrder.lineItems, lineItem => lineItem.productVariantId);
 
     for (const lineItems of Object.values(groupedLineItems)) {
       const addedLineItem = newestLineItemPromiseRef.current.promise;
 
       const [lineItem] = lineItems;
-      let lineItemUuids: string[] | undefined = undefined;
+      const quantity = sum(lineItems, li => li.quantity);
 
-      if (lineItem.variant) {
-        await api.cart.addLineItem(
-          parseGid(lineItem.variant.id).id,
-          sum(lineItems, li => li.quantity),
-        );
-        lineItemUuids = lineItems.map(li => li.attributes.uuid ?? never());
-      } else {
-        await api.cart.addCustomSale({
-          title: lineItem.title,
-          quantity: sum(lineItems, li => li.quantity),
-          price: lineItem.unitPrice,
-          taxable: lineItem.taxable,
-        });
+      if (quantity === 0 || !lineItem) {
+        continue;
       }
 
+      await api.cart.addLineItem(parseGid(lineItem.productVariantId).id, quantity);
+
+      const lineItemUuids = lineItems.map(li => li.uuid);
+
       const { uuid } = await addedLineItem;
-      await api.cart.addLineItemProperties(uuid, getLineItemAttributes(lineItem, lineItemUuids));
+      const attributes = getProductLineItemAttributes(lineItemUuids);
+      await api.cart.addLineItemProperties(uuid, attributes);
     }
 
-    await api.cart.setCustomer({ id: parseGid(workOrder.customerId).id });
+    await api.cart.setCustomer({ id: parseGid(createWorkOrder.customerId).id });
 
-    if (workOrder.order.discount) {
+    if (createWorkOrder.discount) {
       await api.cart.applyCartDiscount(
-        ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[workOrder.order.discount.valueType],
+        ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[createWorkOrder.discount.valueType],
         'Discount',
-        String(workOrder.order.discount.value),
+        String(createWorkOrder.discount.value),
       );
     }
 
@@ -126,11 +174,15 @@ function getCartProperties(workOrder: WorkOrder) {
   });
 }
 
-function getLineItemAttributes(lineItem: WorkOrder['order']['lineItems'][number], uuids?: string[]) {
+function getProductLineItemAttributes(uuids: string[]) {
   return attributesToProperties(WorkOrderOrderLineItemAttributesMapping, {
-    labourLineItemUuid: lineItem.attributes.labourLineItemUuid,
-    placeholderLineItem: lineItem.attributes.placeholderLineItem,
-    sku: lineItem.attributes.sku,
-    uuids: uuids ?? null,
+    uuids,
+  });
+}
+
+function getLabourLineItemAttributes(labour: CreateWorkOrder['labour'][number], sku?: string) {
+  return attributesToProperties(WorkOrderOrderLineItemAttributesMapping, {
+    labourLineItemUuid: labour.lineItemUuid,
+    sku: sku ?? null,
   });
 }

@@ -12,7 +12,7 @@ import { ProductLineItemConfig } from './screens/popups/ProductLineItemConfig.js
 import { ProductSelector } from './screens/popups/ProductSelector.js';
 import { DiscountSelector } from './screens/popups/DiscountSelector.js';
 import { ServiceSelector } from './screens/popups/ServiceSelector.js';
-import { EmployeeAssignmentConfig } from './screens/popups/EmployeeAssignmentConfig.js';
+import { EmployeeLabourConfig } from './screens/popups/EmployeeLabourConfig.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { LabourLineItemConfig } from './screens/popups/LabourLineItemConfig.js';
 import { UnsavedChangesDialogProvider } from './providers/UnsavedChangesDialogProvider.js';
@@ -23,7 +23,7 @@ function SmartGridTile() {
 
   return (
     <Tile
-      title="Work Orders"
+      title={'Work Orders'}
       onPress={() => {
         api.smartGrid.presentModal();
       }}
@@ -44,7 +44,7 @@ function SmartGridModal() {
 
           <CustomerSelector />
           <DiscountSelector />
-          <EmployeeAssignmentConfig />
+          <EmployeeLabourConfig />
           <EmployeeSelector />
           <OrderPreview />
           <ProductLineItemConfig />

@@ -21,7 +21,9 @@ export function Entry() {
 
   const statusSelectorPopup = usePopup('StatusSelector', setStatus);
   const customerSelectorPopup = usePopup('CustomerSelector', setCustomerId);
-  const employeeSelectorPopup = usePopup('EmployeeSelector', setEmployeeIds);
+  const employeeSelectorPopup = usePopup('EmployeeSelector', ({ employees }) =>
+    setEmployeeIds(employees.map(e => e.id)),
+  );
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
@@ -65,7 +67,7 @@ export function Entry() {
               <Button
                 title={'Filter employees'}
                 type={'plain'}
-                onPress={() => employeeSelectorPopup.navigate(employeeIds)}
+                onPress={() => employeeSelectorPopup.navigate({ ids: employeeIds })}
               />
             </Stack>
             <Stack direction={'horizontal'}>

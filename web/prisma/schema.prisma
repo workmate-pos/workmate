@@ -75,6 +75,9 @@ model FixedPriceLabour {
   amount Int
 }
 
+// TODO: Instead of hourly, make this TimedLabour with a baseDurationMinutes field, so you can have baseDuration 15 minutes and charge for e.g. 1:15, 1:30, and 1:45 hours of work
+// TODO: Then in settings have a baseDuration setting
+// TODO: Then in settings always store it per hour, but allow the user to enter it for the current term (e.g. 15 minutes) and show the converted on the right
 model HourlyLabour {
   id Int @id @default(autoincrement())
 

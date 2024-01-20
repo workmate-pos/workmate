@@ -10,18 +10,11 @@ import { LineItem, WorkOrder, WorkOrderInfo } from './types.js';
 import { Cents, moneyV2ToMoney, parseMoney } from '@work-orders/common/util/money.js';
 import { getOrderInfo } from '../orders/get.js';
 import { awaitNested } from '../../util/promise.js';
-import { PlaceholderLineItemAttribute } from '@work-orders/common/custom-attributes/attributes/PlaceholderLineItemAttribute.js';
-import { findSoleTruth } from '../../util/choice.js';
 import { getShopSettings } from '../settings.js';
-import { LabourLineItemUuidAttribute } from '@work-orders/common/custom-attributes/attributes/LabourLineItemUuidAttribute.js';
-import { SkuAttribute } from '@work-orders/common/custom-attributes/attributes/SkuAttribute.js';
-import { UuidAttribute } from '@work-orders/common/custom-attributes/attributes/UuidAttribute.js';
-import { groupBy } from '../../util/array.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
-  const [[workOrder], employeeAssignments, settings] = await Promise.all([
+  const [[workOrder], settings] = await Promise.all([
     db.workOrder.get({ shop: session.shop, name }),
-    db.employeeAssignment.getMany({ shop: session.shop, name }),
     getShopSettings(session.shop),
   ]);
 
@@ -29,19 +22,19 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     return null;
   }
 
+  const { id: workOrderId } = workOrder;
+
   const graphql = new Graphql(session);
 
-  const orderType = findSoleTruth({
-    order: workOrder.orderId !== null,
-    'draft-order': workOrder.orderId === null,
-  });
-
-  const { get, getLineItems } = orderType === 'order' ? gql.order : gql.draftOrder;
+  const orderType = workOrder.orderId === null ? 'draft-order' : 'order';
+  const { get, getLineItems } = orderType === 'draft-order' ? gql.draftOrder : gql.order;
 
   const orderId = (workOrder.orderId ?? workOrder.draftOrderId ?? never('Invalid work order state')) as ID;
-  const order = await get.run(graphql, { id: orderId }).then(r => r.order ?? never('Invalid order id'));
 
-  const { lineItems, derivedFromOrder } = await awaitNested({
+  const { hourlyLabours, fixedPriceLabours, order, lineItems, derivedFromOrder } = await awaitNested({
+    hourlyLabours: db.workOrderLabour.getHourlyLabours({ workOrderId }),
+    fixedPriceLabours: db.workOrderLabour.getFixedPriceLabours({ workOrderId }),
+    order: get.run(graphql, { id: orderId }).then(r => r.order ?? never('Invalid order id')),
     lineItems: fetchAllPages(
       graphql,
       (graphql, variables) =>
@@ -61,11 +54,6 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
           } as const)
         : null;
 
-  const employeeAssignmentsByProductVariantId = groupBy(
-    employeeAssignments.filter((ea): ea is typeof ea & { productVariantId: string } => !!ea.productVariantId),
-    assignment => assignment.productVariantId,
-  );
-
   return {
     name: workOrder.name,
     status: workOrder.status,
@@ -73,13 +61,31 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     description: order.note ?? '',
     dueDate: workOrder.dueDate.toISOString() as DateTime,
     derivedFromOrder,
-    employeeAssignments: employeeAssignments.map(assignment => ({
-      productVariantId: assignment.productVariantId as ID,
-      employeeId: assignment.employeeId as ID,
-      hours: assignment.hours as Int,
-      rate: assignment.rate as Cents,
-      lineItemUuid: assignment.lineItemUuid,
-    })),
+    labour: [
+      ...hourlyLabours.map(
+        ({ name, hours, rate, lineItemUuid, productVariantId, employeeId }) =>
+          ({
+            type: 'hourly-labour',
+            productVariantId: productVariantId as ID,
+            employeeId: employeeId as ID,
+            hours: hours as Int,
+            rate: rate as Cents,
+            lineItemUuid,
+            name,
+          }) as const,
+      ),
+      ...fixedPriceLabours.map(
+        ({ name, productVariantId, lineItemUuid, employeeId, amount }) =>
+          ({
+            type: 'fixed-price-labour',
+            productVariantId: productVariantId as ID,
+            employeeId: employeeId as ID,
+            amount: amount as Cents,
+            lineItemUuid,
+            name,
+          }) as const,
+      ),
+    ],
     order: {
       type: orderType,
       id: orderId,
@@ -89,63 +95,27 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
       outstanding:
         order.__typename === 'Order' ? moneyV2ToMoney(order.totalOutstandingSet.shopMoney) : order.totalPrice,
       received: order.__typename === 'Order' ? order.totalReceived : ('0.00' as Money),
-      lineItems: lineItems.flatMap(
-        ({ id, title, taxable, quantity, customAttributes, sku, variant, originalUnitPrice }): LineItem[] => {
-          const lineItemObj: WorkOrder['order']['lineItems'][number] = {
-            id,
-            title,
-            taxable,
-            quantity,
-            sku,
-            unitPrice: originalUnitPrice,
-            variant: variant
-              ? {
-                  id: variant.id,
-                  image: variant.image ? { url: variant.image.url } : null,
-                  product: { id: variant.product.id, title: variant.product.title },
-                  title: variant.title,
-                }
-              : null,
-            attributes: {
-              labourLineItemUuid: LabourLineItemUuidAttribute.findAttribute(customAttributes),
-              placeholderLineItem: PlaceholderLineItemAttribute.findAttribute(customAttributes),
-              sku: SkuAttribute.findAttribute(customAttributes),
-              uuid: UuidAttribute.findAttribute(customAttributes),
-            },
-          };
-
-          // POS automatically stacks all items, with no way not to stack >:(
-          // so we manually detect service items and items with labour assigned and unstack them here
-
-          // service items are never stacked
-          if (variant?.product?.isServiceItem) {
-            return Array.from({ length: quantity }, () => ({ ...lineItemObj, quantity: 1 as Int }));
-          }
-
-          // normal products are stackable only if they do not have any assigned employees
-          // so create as many line items as there are employees assigned to this product variant
-
-          const lineItems = [];
-
-          // TODO: clean up soonTM
-          const employeeAssignments = (variant?.id ? employeeAssignmentsByProductVariantId[variant?.id] : null) ?? [];
-
-          while (employeeAssignments.length) {
-            employeeAssignments.pop();
-
-            lineItems.push({
-              ...lineItemObj,
-              quantity: 1 as Int,
-            });
-            lineItemObj.quantity--;
-          }
-
-          if (lineItemObj.quantity > 0) {
-            lineItems.push(lineItemObj);
-          }
-
-          return lineItems;
-        },
+      lineItems: lineItems.map(
+        ({ id, title, taxable, quantity, sku, variant, originalUnitPrice }): LineItem => ({
+          id,
+          title,
+          taxable,
+          quantity,
+          sku,
+          unitPrice: originalUnitPrice,
+          variant: variant
+            ? {
+                id: variant.id,
+                image: variant.image ? { url: variant.image.url } : null,
+                product: {
+                  id: variant.product.id,
+                  title: variant.product.title,
+                  isServiceItem: variant.product.isServiceItem,
+                },
+                title: variant.title,
+              }
+            : null,
+        }),
       ),
     },
   };

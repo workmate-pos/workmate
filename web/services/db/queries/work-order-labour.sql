@@ -13,3 +13,13 @@ WHERE hl."workOrderId" = :workOrderId!;
 /* @name removeFixedPriceLabour */
 DELETE FROM "FixedPriceLabour" fpl
 WHERE fpl."workOrderId" = :workOrderId!;
+
+/* @name getHourlyLabours */
+SELECT *
+FROM "HourlyLabour"
+WHERE "workOrderId" = :workOrderId!;
+
+/* @name getFixedPriceLabours */
+SELECT *
+FROM "FixedPriceLabour"
+WHERE "workOrderId" = :workOrderId!;

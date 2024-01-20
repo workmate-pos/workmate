@@ -12,8 +12,8 @@ export function EmployeeSelector() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<ID[]>([]);
   const [query, setQuery] = useDebouncedState('');
 
-  const { Screen, closePopup } = useScreen('EmployeeSelector', selectedEmployeeIds => {
-    setSelectedEmployeeIds(selectedEmployeeIds);
+  const { Screen, closePopup } = useScreen('EmployeeSelector', ids => {
+    setSelectedEmployeeIds(ids);
     setQuery('', true);
   });
 

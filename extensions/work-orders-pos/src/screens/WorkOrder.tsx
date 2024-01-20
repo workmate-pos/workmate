@@ -13,7 +13,7 @@ import {
   useCartSubscription,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useScreen } from '../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import type { DateTime } from '@web/schemas/generated/create-work-order.js';
@@ -28,7 +28,7 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useCreateWorkOrderReducer } from '../create-work-order/reducer.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { Cents, Dollars, parseMoney, toDollars } from '@work-orders/common/util/money.js';
+import { Dollars, parseMoney } from '@work-orders/common/util/money.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { unique } from '@work-orders/common/util/array.js';
 import { PayButton } from '../components/PayButton.js';
@@ -38,6 +38,8 @@ import { useUnsavedChangesDialog } from '../providers/UnsavedChangesDialogProvid
 import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { createGid } from '@work-orders/common/util/gid.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
+import { isNonNullable } from '@work-orders/common/util/guards.js';
+import { getLabourPrice } from '../create-work-order/labour.js';
 
 /**
  * Stuff to pass around between components
@@ -128,7 +130,7 @@ const useWorkOrderContext = () => {
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
     fetch,
     lineItems: createWorkOrder.lineItems ?? [],
-    employeeAssignments: createWorkOrder.employeeAssignments ?? [],
+    labour: createWorkOrder.labour ?? [],
     customerId: createWorkOrder.customerId,
     discount: createWorkOrder.discount,
   });
@@ -359,8 +361,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     serviceConfigPopup.navigate({
       readonly: context.hasOrder,
       lineItem,
-      employeeAssignments:
-        context.createWorkOrder.employeeAssignments?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+      labour: context.createWorkOrder.labour?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
     });
   });
 
@@ -380,12 +381,11 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
           const lineItemUuid = result.lineItem.uuid;
 
           context.dispatchCreateWorkOrder({
-            type: 'set-assigned-employees',
-            employees: [
-              ...(context.createWorkOrder.employeeAssignments?.filter(
-                assignment => assignment.lineItemUuid !== lineItemUuid,
-              ) ?? []),
-              ...result.employeeAssignments.map(assignment => ({ ...assignment, lineItemUuid })),
+            type: 'set-field',
+            field: 'labour',
+            value: [
+              ...(context.createWorkOrder.labour?.filter(l => l.lineItemUuid !== lineItemUuid) ?? []),
+              ...result.labour.map(l => ({ ...l, lineItemUuid })),
             ],
           });
 
@@ -398,7 +398,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
         }
 
         default:
-          return result.type satisfies never;
+          return result satisfies never;
       }
     };
 
@@ -428,7 +428,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
         labourProductConfigPopup.navigate({
           readonly: context.hasOrder,
           lineItem: result.lineItem,
-          employeeAssignments: [],
+          labour: [],
         });
         break;
       }
@@ -447,16 +447,13 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const rows = useItemRows(context, query, (type, lineItem) => {
     switch (type) {
       case 'product': {
-        const hasEmployeeAssignments = context.createWorkOrder.employeeAssignments?.some(
-          ea => ea.lineItemUuid === lineItem.uuid,
-        );
+        const hasLabour = context.createWorkOrder.labour?.some(ea => ea.lineItemUuid === lineItem.uuid);
 
-        if (hasEmployeeAssignments) {
+        if (hasLabour) {
           labourProductConfigPopup.navigate({
+            labour: context.createWorkOrder.labour?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
             readonly: context.hasOrder,
             lineItem,
-            employeeAssignments:
-              context.createWorkOrder.employeeAssignments?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
           });
         } else {
           productConfigPopup.navigate({
@@ -470,10 +467,9 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
 
       case 'service':
         serviceConfigPopup.navigate({
+          labour: context.createWorkOrder.labour?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
           readonly: context.hasOrder,
           lineItem,
-          employeeAssignments:
-            context.createWorkOrder.employeeAssignments?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
         });
         break;
 
@@ -526,7 +522,7 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
     api.toast.show('Applying discount', { duration: 1000 });
   });
 
-  // TODO: Re-add this
+  // TODO: Re-add this?
   // const shippingConfigPopup = context.usePopup('ShippingConfig', result => {
   //   context.dispatchCreateWorkOrder({
   //     type: 'set-field',
@@ -612,15 +608,8 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
 };
 
 const WorkOrderAssignment = ({ context }: { context: WorkOrderContext }) => {
-  const employeeSelectorPopup = context.usePopup('EmployeeSelector', result => {
-    context.dispatchCreateWorkOrder({
-      type: 'set-assigned-employees',
-      employees: context.createWorkOrder.employeeAssignments?.filter(ea => result.includes(ea.employeeId)) ?? [],
-    });
-  });
-
   const selectedEmployeeIds = unique(
-    context.createWorkOrder.employeeAssignments?.map(employee => employee.employeeId) ?? [],
+    context.createWorkOrder.labour?.map(employee => employee.employeeId).filter(isNonNullable) ?? [],
   );
 
   const fetch = useAuthenticatedFetch();
@@ -639,15 +628,12 @@ const WorkOrderAssignment = ({ context }: { context: WorkOrderContext }) => {
     });
   };
 
-  // TODO: Make assigned employees show both work order and line item assignments. On click, show a popup with all the assigned employees, and clicking them shows where they are assigned, + whether they are assigned globally
-  // TODO       Also has an "Add employee button"
   return (
     <Stack direction="vertical" flex={1} flexChildren>
       <TextArea
         rows={Math.max(1, selectedEmployeeIds.length) - 1}
         disabled
         label="Assigned Employees"
-        onFocus={() => employeeSelectorPopup.navigate(selectedEmployeeIds)}
         value={selectedEmployeeNames}
         error={context.saveWorkOrderMutation.data?.errors?.description ?? ''}
       />
@@ -674,10 +660,6 @@ function useItemRows(
     fetch,
     ids: context.createWorkOrder.lineItems?.map(li => li.productVariantId) ?? [],
   });
-  const employeeQueries = useEmployeeQueries({
-    fetch,
-    ids: context.createWorkOrder.employeeAssignments?.map(ea => ea.employeeId) ?? [],
-  });
 
   return (
     context.createWorkOrder.lineItems
@@ -688,17 +670,12 @@ function useItemRows(
       )
       ?.map<ListRow>(({ lineItem, productVariant }) => {
         const productVariantPrice = productVariant ? parseMoney(productVariant.price) : (0 as Dollars);
-        const employeeAssignmentsPrice = context.createWorkOrder.employeeAssignments
-          ?.filter(assignment => assignment.lineItemUuid === lineItem.uuid)
-          .reduce(
-            (total, { employeeId, hours }) =>
-              total + hours * toDollars(employeeQueries[employeeId]?.data?.rate ?? (0 as Cents)),
-            0,
-          ) as Dollars;
 
-        const hasAssignedEmployees = context.createWorkOrder.employeeAssignments?.some(
-          ea => ea.lineItemUuid === lineItem.uuid,
+        const labourPrice = getLabourPrice(
+          context.createWorkOrder.labour?.filter(assignment => assignment.lineItemUuid === lineItem.uuid) ?? [],
         );
+
+        const hasLabour = context.createWorkOrder.labour?.some(ea => ea.lineItemUuid === lineItem.uuid);
 
         return {
           id: lineItem.uuid,
@@ -714,11 +691,11 @@ function useItemRows(
             subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
             image: {
               source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? 'not found',
-              badge: hasAssignedEmployees ? undefined : lineItem.quantity,
+              badge: hasLabour ? undefined : lineItem.quantity,
             },
           },
           rightSide: {
-            label: currencyFormatter((productVariantPrice + employeeAssignmentsPrice) * lineItem.quantity),
+            label: currencyFormatter((productVariantPrice + parseMoney(labourPrice)) * lineItem.quantity),
             showChevron: true,
           },
         };

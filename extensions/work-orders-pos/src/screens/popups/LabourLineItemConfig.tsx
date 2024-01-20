@@ -1,31 +1,33 @@
 import { useScreen } from '../../hooks/use-screen.js';
 import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { CreateWorkOrderEmployeeAssignment, CreateWorkOrderLineItem } from '../routes.js';
+import { CreateWorkOrderLineItem, CreateWorkOrderLabour } from '../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
-import { Int } from '@web/schemas/generated/create-work-order.js';
+import { Money } from '@web/schemas/generated/create-work-order.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { EmployeeAssignmentList } from '../../components/EmployeeAssignmentsList.js';
-import { Cents, parseMoney, toDollars } from '@work-orders/common/util/money.js';
-import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
+import { parseMoney } from '@work-orders/common/util/money.js';
 import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@work-orders/common/util/guards.js';
+import { getLabourPrice } from '../../create-work-order/labour.js';
+import { uuid } from '../../util/uuid.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
   const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem | null>(null);
-  const [employeeAssignments, setEmployeeAssignments] = useState<
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[]
-  >([]);
+  const [labour, setLabour] = useState<DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid'>[]>([]);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   const { Screen, usePopup, closePopup, cancelPopup } = useScreen(
     'LabourLineItemConfig',
-    ({ readonly, lineItem, employeeAssignments }) => {
+    ({ readonly, lineItem, labour }) => {
       setReadonly(readonly);
       setLineItem(lineItem);
-      setEmployeeAssignments(employeeAssignments);
+      setLabour(labour);
       setUnsavedChanges(false);
     },
   );
@@ -33,50 +35,60 @@ export function LabourLineItemConfig() {
   const employeeSelectorPopup = usePopup('EmployeeSelector', result => {
     setUnsavedChanges(true);
 
-    setEmployeeAssignments(employeeAssignments =>
-      result.map(employeeId => {
-        const existingAssignment = employeeAssignments.find(e => e.employeeId === employeeId);
-        return existingAssignment ?? { employeeId, hours: 0 as Int };
+    setLabour(labour => [
+      ...result.map(id => {
+        // For each selected employee, either keep the existing labour or create a new one
+        // This does not support multiple labours per employee (yet?)
+
+        return (
+          labour.find(l => l.employeeId === id) ??
+          ({
+            type: 'fixed-price-labour',
+            labourUuid: uuid(),
+            employeeId: id,
+            name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+            amount: '0.00' as Money,
+          } as const)
+        );
       }),
-    );
+      ...labour.filter(hasPropertyValue('employeeId', null)),
+    ]);
   });
 
-  const employeeConfigPopup = usePopup('EmployeeAssignmentConfig', result => {
+  const employeeConfigPopup = usePopup('EmployeeLabourConfig', result => {
     setUnsavedChanges(true);
 
     if (result.type === 'remove') {
-      setEmployeeAssignments(employeeAssignments.filter(e => e.employeeId !== result.employeeAssignment.employeeId));
+      setLabour(labour => labour.filter(l => l.labourUuid !== result.labourUuid));
     } else if (result.type === 'update') {
-      setEmployeeAssignments(
-        employeeAssignments.map(e =>
-          e.employeeId === result.employeeAssignment.employeeId ? result.employeeAssignment : e,
+      setLabour(
+        labour.map(l =>
+          l.labourUuid === result.labourUuid
+            ? { ...result.labour, employeeId: result.employeeId, labourUuid: result.labourUuid }
+            : l,
         ),
       );
     } else {
-      return result.type satisfies never;
+      return result satisfies never;
     }
   });
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
   const productVariantQuery = useProductVariantQuery({ fetch, id: lineItem?.productVariantId ?? null });
-  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeAssignments.map(e => e.employeeId) });
 
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
-  const labourPrice = employeeAssignments.reduce(
-    (total, { hours, employeeId }) =>
-      total + hours * toDollars(employeeQueries[employeeId]?.data?.rate ?? (0 as Cents)),
-    0,
-  );
+  const labourPrice = getLabourPrice(labour);
+
   const productVariantPrice = productVariant ? parseMoney(productVariant.price) : 0;
-  const totalPrice = productVariantPrice + labourPrice;
+  const totalPrice = productVariantPrice + parseMoney(labourPrice);
 
   const unsavedChangesDialog = useUnsavedChangesDialog();
   const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
-  // TODO: Make employee selector be for selecting just one employee???
   return (
     <Screen
       title={name ?? 'Service'}
@@ -94,14 +106,16 @@ export function LabourLineItemConfig() {
           <Button
             title={'Add employees'}
             type={'primary'}
-            onPress={() => employeeSelectorPopup.navigate(employeeAssignments.map(e => e.employeeId))}
+            onPress={() => employeeSelectorPopup.navigate(labour.map(e => e.employeeId).filter(isNonNullable))}
             isDisabled={readonly}
           />
         </Stack>
-        <EmployeeAssignmentList
-          employeeAssignments={employeeAssignments}
+        <EmployeeLabourList
+          labour={labour.filter(hasNonNullableProperty('employeeId'))}
           readonly={readonly}
-          onClick={employeeAssignment => employeeConfigPopup.navigate(employeeAssignment)}
+          onClick={labour =>
+            employeeConfigPopup.navigate({ employeeId: labour.employeeId, labourUuid: labour.labourUuid, labour })
+          }
         />
 
         <Stack direction={'horizontal'} alignment={'space-evenly'} flex={1} paddingVertical={'ExtraLarge'}>
@@ -127,7 +141,7 @@ export function LabourLineItemConfig() {
                 disabled={!lineItem}
                 onPress={() => {
                   if (!lineItem) return;
-                  closePopup({ type: 'remove', lineItem, employeeAssignments });
+                  closePopup({ type: 'remove', lineItem, labour });
                 }}
               />
               <Button
@@ -135,7 +149,7 @@ export function LabourLineItemConfig() {
                 disabled={!lineItem}
                 onPress={() => {
                   if (!lineItem) return;
-                  closePopup({ type: 'update', lineItem, employeeAssignments });
+                  closePopup({ type: 'update', lineItem, labour });
                 }}
               />
             </>

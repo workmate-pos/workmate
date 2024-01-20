@@ -1,11 +1,12 @@
 import type { WorkOrder } from '@web/services/work-orders/types.js';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
-import { ID } from '@web/schemas/generated/ids.js';
 import { uuid } from '../util/uuid.js';
+import { toDollars, toMoney } from '@work-orders/common/util/money.js';
+import type { ID, Int } from '@web/services/gql/queries/generated/schema.js';
+import { CreateWorkOrderLabour } from '../screens/routes.js';
 
+// TODO: Handle thrown errors
 export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrder {
-  const productVariantUuids = getProductVariantUuids(workOrder.employeeAssignments);
-
   return {
     name: workOrder.name,
     derivedFromOrderId: workOrder.derivedFromOrder?.id ?? null,
@@ -14,52 +15,117 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
     status: workOrder.status,
     customerId: workOrder.customerId,
     discount: workOrder.order.discount,
-    lineItems: lineItemsToCreateWorkOrderLineItems(workOrder.order.lineItems, productVariantUuids),
-    employeeAssignments: employeeAssignmentAttributeToEmployeeAssignments(workOrder.employeeAssignments),
+    lineItems: getCreateWorkOrderLineItems(workOrder),
+    labour: workOrder.labour.map(mapLabour),
   };
 }
 
-/**
- * Create a record mapping product variant ids to their line item uuids as used by employee assignments.
- * This record can then be used to assign line items a uuid that matches the employee assignment.
- */
-function getProductVariantUuids(employeeAssignments: WorkOrder['employeeAssignments']): Record<ID, string[]> {
-  const productVariantUuids: Record<ID, string[]> = {};
+function getProductVariantLabourUuids({ labour }: Pick<WorkOrder, 'labour'>) {
+  const productVariantUuids: Record<ID, Set<string>> = {};
 
-  for (const { productVariantId, lineItemUuid } of employeeAssignments) {
-    if (productVariantId && lineItemUuid) {
-      productVariantUuids[productVariantId] ??= [];
-      if (!productVariantUuids[productVariantId].includes(lineItemUuid)) {
-        productVariantUuids[productVariantId].push(lineItemUuid);
-      }
-    }
+  for (const { productVariantId, lineItemUuid } of labour) {
+    if (!productVariantId || !lineItemUuid) continue;
+    (productVariantUuids[productVariantId] ??= new Set()).add(lineItemUuid);
   }
 
   return productVariantUuids;
 }
 
-function lineItemsToCreateWorkOrderLineItems(
-  lineItems: WorkOrder['order']['lineItems'],
-  productVariantUuids: Record<ID, string[]>,
+export function getCreateWorkOrderLineItems(
+  workOrder: Pick<WorkOrder, 'labour' | 'order'>,
 ): CreateWorkOrder['lineItems'] {
-  return lineItems
-    .filter((li): li is typeof li & { variant: NonNullable<(typeof li)['variant']> } => li.variant !== null)
-    .filter(li => !li.attributes.labourLineItem && !li.attributes.placeholderLineItem)
-    .map(li => ({
-      quantity: li.quantity,
-      productVariantId: li.variant.id,
-      uuid: productVariantUuids[li.variant.id]?.pop() ?? uuid(),
-    }));
+  // WorkOrder -> CreateWorkOrder is a near-one-to-one mapping, but we need to do some transformations because
+  // 1) We make no assumptions about the stacking of line items
+  //  - (POS is unable to have multiple stacks, but (draft) orders can do it)
+  // 2) We receive line items without UUIDs (they are used internally by POS to identify different stacks of the same product variant id, BUT
+  //  - uuids are used internally to distinguish between different line items
+  //  - however, they are also used by labour assignments to distinguish between line items with the same product variant id
+
+  // To address these concerns we can simply create a new uuid() for all line items **after** ensuring that we create a line item
+  // for every uuid that has labour assignment(s).
+  // Afterwards we also ensure that service items are never stacked (to cover the case where service items do not have any labour assigned)
+
+  const productVariantLabourUuids = getProductVariantLabourUuids(workOrder);
+
+  const lineItems: CreateWorkOrder['lineItems'] = [];
+
+  for (const { variant, quantity } of workOrder.order.lineItems) {
+    if (!variant) {
+      // Custom sales are not supported within POS.
+      // So we can safely ignore them as they are guaranteed to be labour charges, which are stored in WorkOrder.labour.
+      continue;
+    }
+
+    const uuids = productVariantLabourUuids[variant.id];
+
+    let remainingQuantity = quantity;
+
+    if (uuids) {
+      for (const uuid of uuids) {
+        if (remainingQuantity === 0) break;
+
+        lineItems.push({
+          productVariantId: variant.id,
+          quantity: 1 as Int,
+          uuid,
+        });
+
+        uuids.delete(uuid);
+        remainingQuantity--;
+      }
+    }
+
+    if (remainingQuantity === 0) continue;
+
+    if (variant.product.isServiceItem) {
+      lineItems.push(
+        ...Array.from({ length: remainingQuantity }).map(() => ({
+          uuid: uuid(),
+          productVariantId: variant.id,
+          quantity: 1 as Int,
+        })),
+      );
+    } else {
+      lineItems.push({
+        productVariantId: variant.id,
+        uuid: uuid(),
+        quantity: remainingQuantity,
+      });
+    }
+  }
+
+  for (const [productVariantId, uuids] of Object.entries(productVariantLabourUuids)) {
+    if (uuids.size !== 0) {
+      throw new Error(`Not all labour assignments for product ${productVariantId} have a corresponding line item`);
+    }
+  }
+
+  return lineItems;
 }
 
-function employeeAssignmentAttributeToEmployeeAssignments(
-  employeeAssignments: WorkOrder['employeeAssignments'],
-): CreateWorkOrder['employeeAssignments'] {
-  return (
-    employeeAssignments?.map(ea => ({
-      employeeId: ea.employeeId,
-      hours: ea.hours,
-      lineItemUuid: ea.lineItemUuid,
-    })) ?? []
-  );
+function mapLabour(labour: WorkOrder['labour'][number]): CreateWorkOrderLabour {
+  if (labour.type === 'hourly-labour') {
+    return {
+      type: 'hourly-labour',
+      rate: toMoney(toDollars(labour.rate)),
+      lineItemUuid: labour.lineItemUuid,
+      employeeId: labour.employeeId,
+      labourUuid: uuid(),
+      hours: labour.hours,
+      name: labour.name,
+    };
+  }
+
+  if (labour.type === 'fixed-price-labour') {
+    return {
+      type: 'fixed-price-labour',
+      lineItemUuid: labour.lineItemUuid,
+      amount: toMoney(toDollars(labour.amount)),
+      employeeId: labour.employeeId,
+      labourUuid: uuid(),
+      name: labour.name,
+    };
+  }
+
+  return labour satisfies never;
 }

@@ -107,7 +107,7 @@ export function getOrderInput(
 
 /**
  * Converts the line items inside a {@link CreateWorkOrder} DTO into line items for a (Draft) Order.
- * Includes a line item for labour, if applicable
+ * Includes line items for labour, if applicable
  */
 function getOrderLineItems(
   createWorkOrder: Pick<CreateWorkOrder, 'labour' | 'lineItems'>,
@@ -123,33 +123,27 @@ function getOrderLineItems(
     });
   }
 
-  for (const { name, lineItemUuid, employeeId, rate, hours } of createWorkOrder.labour.hourlyLabour) {
-    const labourPrice = toMoney((parseMoney(rate) * hours) as Dollars);
+  for (const labour of createWorkOrder.labour) {
+    let price: Money;
+
+    if (labour.type === 'hourly-labour') {
+      price = toMoney((parseMoney(labour.rate) * labour.hours) as Dollars);
+    } else if (labour.type === 'fixed-price-labour') {
+      price = labour.amount;
+    } else {
+      return labour satisfies never;
+    }
 
     lineItems.push({
-      title: name,
       sku: options.labourLineItemSKU,
       taxable: true,
       requiresShipping: false,
       quantity: 1 as Int,
-      originalUnitPrice: labourPrice,
-      customAttributes: getLineItemAttributes({
-        labourLineItemUuid: lineItemUuid || undefined,
-        sku: options.labourLineItemSKU || undefined,
-      }),
-    });
-  }
 
-  for (const { name, lineItemUuid, employeeId, amount } of createWorkOrder.labour.fixedPriceLabour) {
-    lineItems.push({
-      title: name,
-      sku: options.labourLineItemSKU,
-      taxable: true,
-      requiresShipping: false,
-      quantity: 1 as Int,
-      originalUnitPrice: amount,
+      title: labour.name,
+      originalUnitPrice: price,
       customAttributes: getLineItemAttributes({
-        labourLineItemUuid: lineItemUuid || undefined,
+        labourLineItemUuid: labour.lineItemUuid || undefined,
         sku: options.labourLineItemSKU || undefined,
       }),
     });

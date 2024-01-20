@@ -30,10 +30,7 @@ export type WorkOrder = {
     } | null;
     lineItems: LineItem[];
   };
-  labour: {
-    fixedPriceLabour: FixedPriceLabour[];
-    hourlyLabour: HourlyLabour[];
-  };
+  labour: (FixedPriceLabour | HourlyLabour)[];
 };
 
 export type BaseLabour = {
@@ -47,9 +44,16 @@ export type BaseLabour = {
   productVariantId: ID | null;
 };
 
-export type FixedPriceLabour = BaseLabour & { amount: Cents };
+export type FixedPriceLabour = BaseLabour & {
+  type: 'fixed-price-labour';
+  amount: Cents;
+};
 
-export type HourlyLabour = BaseLabour & { rate: Cents; hours: Int };
+export type HourlyLabour = BaseLabour & {
+  type: 'hourly-labour';
+  rate: Cents;
+  hours: Int;
+};
 
 export type LineItem = {
   id: ID;
@@ -64,17 +68,12 @@ export type LineItem = {
     product: {
       id: ID;
       title: string;
+      isServiceItem: boolean;
     };
   } | null;
   quantity: Int;
   unitPrice: Money;
   sku: string | null;
-  attributes: {
-    placeholderLineItem: CustomAttributeValue<typeof PlaceholderLineItemAttribute> | null;
-    labourLineItemUuid: CustomAttributeValue<typeof LabourLineItemUuidAttribute> | null;
-    uuid: CustomAttributeValue<typeof UuidAttribute> | null;
-    sku: CustomAttributeValue<typeof SkuAttribute> | null;
-  };
 };
 
 /**

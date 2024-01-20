@@ -24,3 +24,5 @@ export function toMoney(amount: Dollars): Money {
 export function moneyV2ToMoney(moneyV2: Pick<MoneyV2, 'amount'>): Money {
   return moneyV2.amount as unknown as Money;
 }
+
+// TODO: Get rid of Cents and Dollars. Instead use @teifi-digital/shopify-app-toolbox/money for arbitrary precision money calculations.

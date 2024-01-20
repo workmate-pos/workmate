@@ -1,10 +1,11 @@
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
-import type { ID } from '@web/schemas/generated/ids.js';
+import type { ID } from '@web/schemas/generated/create-work-order.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 
 export type CreateWorkOrderLineItem = CreateWorkOrder['lineItems'][number];
-export type CreateWorkOrderEmployeeAssignment = CreateWorkOrder['employeeAssignments'][number];
+export type CreateWorkOrderLabour = CreateWorkOrder['labour'][number];
 
 /**
  * Screen input/output types.
@@ -47,14 +48,22 @@ export type ScreenInputOutput = {
   LabourLineItemConfig: [
     {
       readonly: boolean;
+      // TODO: A way to see the input in usePopup callback - then we can just directly access this lineItem instead of having to pass it around
       lineItem: CreateWorkOrderLineItem;
-      employeeAssignments: Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[];
+      labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid'>[];
     },
-    {
-      type: 'update' | 'remove';
-      lineItem: CreateWorkOrderLineItem;
-      employeeAssignments: Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[];
-    },
+    (
+      | {
+          type: 'update';
+          lineItem: CreateWorkOrderLineItem;
+          labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid'>[];
+        }
+      | {
+          type: 'remove';
+          lineItem: CreateWorkOrderLineItem;
+          labour: Pick<CreateWorkOrderLabour, 'labourUuid'>[];
+        }
+    ),
   ];
   ProductLineItemConfig: [
     {
@@ -67,13 +76,24 @@ export type ScreenInputOutput = {
   CustomerSelector: [undefined, ID];
   ShippingConfig: [undefined, number];
   EmployeeSelector: [ID[], ID[]];
-  EmployeeAssignmentsConfig: [
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[],
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[],
-  ];
-  EmployeeAssignmentConfig: [
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>,
-    { type: 'remove' | 'update'; employeeAssignment: Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'> },
+  EmployeeLabourConfig: [
+    {
+      labourUuid: string;
+      employeeId: ID;
+      labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid' | 'employeeId' | 'labourUuid'>;
+    },
+    (
+      | {
+          type: 'update';
+          labourUuid: string;
+          employeeId: ID;
+          labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid' | 'employeeId' | 'labourUuid'>;
+        }
+      | {
+          type: 'remove';
+          labourUuid: string;
+        }
+    ),
   ];
   DiscountSelector: [{ subTotal: number }, CreateWorkOrder['discount']];
   WorkOrderSaved: [WorkOrder, undefined];

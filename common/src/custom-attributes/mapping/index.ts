@@ -11,9 +11,9 @@ export type AttributeMapping<T extends Record<string, any>> = T extends { [K: st
 /**
  * Converts a record of attributes into a property record (used for cart attributes).
  */
-export function attributesToProperties<T extends Record<string, any>>(
-  mapping: AttributeMapping<T>,
-  attributes: T,
+export function attributesToProperties<T extends AttributeMapping<any>>(
+  mapping: T,
+  attributes: T extends AttributeMapping<infer U> ? U : never,
 ): Record<string, string> {
   return Object.fromEntries(
     Object.entries(attributes)

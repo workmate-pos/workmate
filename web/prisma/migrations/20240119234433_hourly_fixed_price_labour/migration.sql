@@ -4,11 +4,6 @@
   - You are about to drop the `EmployeeAssignment` table. If the table is not empty, all the data it contains will be lost.
 
 */
--- DropForeignKey
-ALTER TABLE "EmployeeAssignment" DROP CONSTRAINT "EmployeeAssignment_workOrderId_fkey";
-
--- DropTable
-DROP TABLE "EmployeeAssignment";
 
 -- CreateTable
 CREATE TABLE "FixedPriceLabour" (
@@ -42,3 +37,13 @@ ALTER TABLE "FixedPriceLabour" ADD CONSTRAINT "FixedPriceLabour_workOrderId_fkey
 
 -- AddForeignKey
 ALTER TABLE "HourlyLabour" ADD CONSTRAINT "HourlyLabour_workOrderId_fkey" FOREIGN KEY ("workOrderId") REFERENCES "WorkOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+INSERT INTO "HourlyLabour" ("workOrderId", "lineItemUuid", "productVariantId", "employeeId", name, rate, hours)
+SELECT "workOrderId", "lineItemUuid", "productVariantId", "employeeId", 'Labour', rate, hours
+FROM "EmployeeAssignment";
+
+-- DropForeignKey
+ALTER TABLE "EmployeeAssignment" DROP CONSTRAINT "EmployeeAssignment_workOrderId_fkey";
+
+-- DropTable
+DROP TABLE "EmployeeAssignment";

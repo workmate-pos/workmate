@@ -17,15 +17,17 @@
       "$ref": "scalars.json#/definitions/DateTime"
     },
     "labour": {
-      "type": "object",
-      "properties": {
-        "fixedPriceLabour": {
-          "type": "array",
-          "items": {
-            "type": "object",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "oneOf": [
+          {
             "title": "fixed-price-labour",
             "description": "An absolute amount of money for some labour",
             "properties": {
+              "type": {
+                "const": "fixed-price-labour"
+              },
               "name": {
                 "type": "string"
               },
@@ -37,19 +39,22 @@
               },
               "lineItemUuid": {
                 "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+              },
+              "labourUuid": {
+                "type": "string",
+                "minLength": 1
               }
             },
-            "required": ["name", "employeeId", "amount", "lineItemUuid"],
+            "required": ["type", "name", "employeeId", "amount", "lineItemUuid", "labourUuid"],
             "additionalProperties": false
-          }
-        },
-        "hourlyLabour": {
-          "type": "array",
-          "items": {
-            "type": "object",
+          },
+          {
             "title": "hourly-labour",
             "description": "An amount of labour determined by some hourly rate",
             "properties": {
+              "type": {
+                "const": "hourly-labour"
+              },
               "name": {
                 "type": "string"
               },
@@ -64,15 +69,17 @@
               },
               "lineItemUuid": {
                 "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+              },
+              "labourUuid": {
+                "type": "string",
+                "minLength": 1
               }
             },
-            "required": ["name", "employeeId", "rate", "hours", "lineItemUuid"],
+            "required": ["type", "name", "employeeId", "rate", "hours", "lineItemUuid", "labourUuid"],
             "additionalProperties": false
           }
-        }
-      },
-      "required": ["fixedPriceLabour", "hourlyLabour"],
-      "additionalProperties": false
+        ]
+      }
     },
     "description": {
       "type": "string"

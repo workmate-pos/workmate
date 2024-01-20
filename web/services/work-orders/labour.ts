@@ -1,6 +1,7 @@
 import { db } from '../db/db.js';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { parseMoney, toCents } from '@work-orders/common/util/money.js';
+import { hasPropertyValue } from '../../util/filters.js';
 
 export async function removeWorkOrderLabour(workOrderId: number) {
   await Promise.all([
@@ -11,7 +12,7 @@ export async function removeWorkOrderLabour(workOrderId: number) {
 
 export async function createWorkOrderLabour(
   workOrderId: number,
-  { labour: { hourlyLabour, fixedPriceLabour }, lineItems }: Pick<CreateWorkOrder, 'labour' | 'lineItems'>,
+  { labour, lineItems }: Pick<CreateWorkOrder, 'labour' | 'lineItems'>,
 ) {
   // doing these insertions in bulk is possible, but not worth the complexity (trust me i tried).
   // INSERT RETURNING is not guaranteed to return in input order, so we would need to restore the order somehow.
@@ -19,6 +20,9 @@ export async function createWorkOrderLabour(
 
   const findProductVariantId = (lineItemUuid: string | null) =>
     lineItems.find(li => li.uuid === lineItemUuid)?.productVariantId ?? null;
+
+  const hourlyLabour = labour.filter(hasPropertyValue('type', 'hourly-labour'));
+  const fixedPriceLabour = labour.filter(hasPropertyValue('type', 'fixed-price-labour'));
 
   await Promise.all([
     ...hourlyLabour.map(({ name, lineItemUuid, employeeId, rate, hours }) =>
