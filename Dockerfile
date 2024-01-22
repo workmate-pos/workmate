@@ -1,5 +1,8 @@
 FROM node:20
 
+RUN apt-get update \
+    && apt-get install -y dumb-init
+
 ARG SHOPIFY_API_KEY
 ARG SHOPIFY_SHOP
 ENV SHOPIFY_API_KEY=$SHOPIFY_API_KEY
@@ -39,4 +42,5 @@ RUN npm run build
 
 # Run
 WORKDIR ..
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["npm", "run", "serve"]
