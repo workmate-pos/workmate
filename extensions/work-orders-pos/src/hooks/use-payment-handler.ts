@@ -1,9 +1,8 @@
-import { useCartSubscription, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useRef, useState } from 'react';
-import { parseGid } from '@work-orders/common/util/gid.js';
+import { createGid, parseGid } from '@work-orders/common/util/gid.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
 import { Cart } from '@shopify/retail-ui-extensions';
-import { withResolvers } from '@work-orders/common/util/promise.js';
 import { attributesToProperties } from '@work-orders/common/custom-attributes/mapping/index.js';
 import { WorkOrderOrderAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order.js';
 import { WorkOrderOrderLineItemAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order-line-item.js';
@@ -14,54 +13,47 @@ import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { getLabourPrice } from '../create-work-order/labour.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useAuthenticatedFetch } from './use-authenticated-fetch.js';
+import { withResolvers } from '@work-orders/common/util/promise.js';
 
-const useCart = () => {
+const useCartRef = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
-  const cart = useCartSubscription();
-
-  const [previousCart, setPreviousCart] = useState<Cart>(api.cart.subscribable.initial);
-  const [currentCart, setCurrentCart] = useState<Cart>(cart);
-
-  useEffect(() => {
-    setPreviousCart(currentCart);
-    setCurrentCart(cart);
-  }, [cart]);
-
-  return { previousCart, currentCart };
-};
-
-const useNewestLineItemPromise = (): { current: { promise: Promise<Cart['lineItems'][number]> } } => {
-  const { previousCart, currentCart } = useCart();
+  const cartRef = useRef(api.cart.subscribable.initial);
   const promiseRef = useRef(withResolvers<Cart['lineItems'][number]>());
 
   useEffect(() => {
-    const newLineItem = currentCart.lineItems.find(
-      lineItem => previousCart.lineItems.find(item => item.uuid === lineItem.uuid)?.quantity !== lineItem.quantity,
-    );
+    api.cart.subscribable.subscribe(cart => {
+      const newLineItem = cart.lineItems.find(
+        lineItem =>
+          !cartRef.current.lineItems.some(item => item.uuid === lineItem.uuid && item.quantity === lineItem.quantity),
+      );
 
-    if (newLineItem) {
-      promiseRef.current.resolve(newLineItem);
-      promiseRef.current = withResolvers();
-    }
-  }, [previousCart, currentCart]);
+      if (newLineItem) {
+        promiseRef.current.resolve(newLineItem);
+        promiseRef.current = withResolvers();
+      }
 
-  return promiseRef;
+      cartRef.current = cart;
+    });
+  }, []);
+
+  return {
+    cartRef,
+    getNewLineItem: () => promiseRef.current.promise,
+  };
 };
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
 /**
  * Creates work order payments.
- *
- * Relies on CustomAttributes, so make sure to save the work order right before initiating the payment,
- * otherwise the merchant may change/delete the attributes
  */
 export const usePaymentHandler = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
   const [isLoading, setIsLoading] = useState(false);
-  const newestLineItemPromiseRef = useNewestLineItemPromise();
   const fetch = useAuthenticatedFetch();
   const settingsQuery = useSettingsQuery({ fetch });
+
+  const { cartRef, getNewLineItem } = useCartRef();
 
   const handlePayment = async ({ workOrder }: { workOrder: WorkOrder }) => {
     if (settingsQuery.isLoading) {
@@ -90,15 +82,21 @@ export const usePaymentHandler = () => {
     const createWorkOrder = workOrderToCreateWorkOrder(workOrder);
 
     await api.cart.clearCart();
-
     await api.cart.addCartProperties(getCartProperties(workOrder));
+    await api.cart.setCustomer({ id: parseGid(createWorkOrder.customerId).id });
+
+    if (createWorkOrder.discount) {
+      await api.cart.applyCartDiscount(
+        ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[createWorkOrder.discount.valueType],
+        'Discount',
+        String(createWorkOrder.discount.value),
+      );
+    }
 
     const groupedLabour = groupBy(createWorkOrder.labour, labour => labour.name);
 
     for (const labour of Object.values(groupedLabour)) {
       for (let i = 0; i < labour.length; i++) {
-        const addedLineItem = newestLineItemPromiseRef.current.promise;
-
         const labourItem = labour[i]!;
         const price = getLabourPrice([labourItem]);
 
@@ -108,6 +106,8 @@ export const usePaymentHandler = () => {
           // pos orders the cart from newest to oldest, so add (1) last
           title += ` (${labour.length - i})`;
         }
+
+        const addedLineItem = getNewLineItem();
 
         await api.cart.addCustomSale({
           taxable: true,
@@ -125,12 +125,13 @@ export const usePaymentHandler = () => {
       }
     }
 
-    // we only care about product line items, as all custom sales will be created from labour
     const groupedLineItems = groupBy(createWorkOrder.lineItems, lineItem => lineItem.productVariantId);
 
-    for (const lineItems of Object.values(groupedLineItems)) {
-      const addedLineItem = newestLineItemPromiseRef.current.promise;
+    // add product line items in parallel because `await api.cart.addLineItem(...)` takes 3 seconds !!!
+    // we cannot do labour in parallel because mapping from added line item to labour item is difficult
+    const addLineItemPromises = [];
 
+    for (const lineItems of Object.values(groupedLineItems)) {
       const [lineItem] = lineItems;
       const quantity = sum(lineItems, li => li.quantity);
 
@@ -138,23 +139,26 @@ export const usePaymentHandler = () => {
         continue;
       }
 
-      await api.cart.addLineItem(parseGid(lineItem.productVariantId).id, quantity);
-
-      const lineItemUuids = lineItems.map(li => li.uuid);
-
-      const { uuid } = await addedLineItem;
-      const attributes = getProductLineItemAttributes(lineItemUuids);
-      await api.cart.addLineItemProperties(uuid, attributes);
+      addLineItemPromises.push(api.cart.addLineItem(parseGid(lineItem.productVariantId).id, quantity));
     }
 
-    await api.cart.setCustomer({ id: parseGid(createWorkOrder.customerId).id });
+    await Promise.all(addLineItemPromises);
 
-    if (createWorkOrder.discount) {
-      await api.cart.applyCartDiscount(
-        ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[createWorkOrder.discount.valueType],
-        'Discount',
-        String(createWorkOrder.discount.value),
-      );
+    for (const lineItem of cartRef.current.lineItems) {
+      if (!lineItem.variantId) {
+        continue;
+      }
+
+      const productVariantId = createGid('ProductVariant', lineItem.variantId.toString());
+      const lineItemUuids = groupedLineItems[productVariantId]?.map(li => li.uuid);
+
+      if (!lineItemUuids) {
+        api.toast.show(`Could not find line item uuids for product variant ${productVariantId}`);
+        continue;
+      }
+
+      const attributes = getProductLineItemAttributes(lineItemUuids);
+      await api.cart.addLineItemProperties(lineItem.uuid, attributes);
     }
 
     api.navigation.dismiss();
