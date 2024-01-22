@@ -55,7 +55,7 @@ model WorkOrder {
 model EmployeeRate {
   employeeId String
   shop       String
-  rate       Int
+  rate       String
 
   @@id([shop, employeeId])
 }
@@ -72,7 +72,7 @@ model FixedPriceLabour {
 
   name String
 
-  amount Int
+  amount String
 }
 
 // TODO: Instead of hourly, make this TimedLabour with a baseDurationMinutes field, so you can have baseDuration 15 minutes and charge for e.g. 1:15, 1:30, and 1:45 hours of work
@@ -90,6 +90,6 @@ model HourlyLabour {
 
   name String
 
-  rate  Int
-  hours Int
+  rate  String
+  hours String
 }

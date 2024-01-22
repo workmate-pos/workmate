@@ -1,0 +1,9 @@
+-- AlterTable
+ALTER TABLE "EmployeeRate" ALTER COLUMN "rate" SET DATA TYPE TEXT;
+
+-- AlterTable
+ALTER TABLE "FixedPriceLabour" ALTER COLUMN "amount" SET DATA TYPE TEXT;
+
+-- AlterTable
+ALTER TABLE "HourlyLabour" ALTER COLUMN "rate" SET DATA TYPE TEXT,
+ALTER COLUMN "hours" SET DATA TYPE TEXT;

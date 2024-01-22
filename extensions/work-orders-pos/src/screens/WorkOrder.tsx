@@ -13,7 +13,7 @@ import {
   useCartSubscription,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useScreen } from '../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import type { DateTime } from '@web/schemas/generated/create-work-order.js';
@@ -28,18 +28,18 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useCreateWorkOrderReducer } from '../create-work-order/reducer.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { Dollars, parseMoney } from '@work-orders/common/util/money.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { unique } from '@work-orders/common/util/array.js';
 import { PayButton } from '../components/PayButton.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
 import { useUnsavedChangesDialog } from '../providers/UnsavedChangesDialogProvider.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
-import { createGid } from '@work-orders/common/util/gid.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
-import { isNonNullable } from '@work-orders/common/util/guards.js';
 import { getLabourPrice } from '../create-work-order/labour.js';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 /**
  * Stuff to pass around between components
@@ -571,7 +571,9 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
             value={discountValue}
             disabled={!calculateDraftOrderResponse || context.hasOrder}
             onFocus={() => {
-              const subTotal = calculateDraftOrderResponse ? parseMoney(calculateDraftOrderResponse.subtotalPrice) : 0;
+              const subTotal = calculateDraftOrderResponse
+                ? calculateDraftOrderResponse.subtotalPrice
+                : BigDecimal.ZERO.toMoney();
               discountSelectorPopup.navigate({ subTotal });
             }}
           />
@@ -669,7 +671,7 @@ function useItemRows(
           !query || getProductVariantName(productVariant)?.toLowerCase().includes(query.toLowerCase()),
       )
       ?.map<ListRow>(({ lineItem, productVariant }) => {
-        const productVariantPrice = productVariant ? parseMoney(productVariant.price) : (0 as Dollars);
+        const productVariantPrice = productVariant ? productVariant.price : BigDecimal.ZERO.toMoney();
 
         const labourPrice = getLabourPrice(
           context.createWorkOrder.labour?.filter(assignment => assignment.lineItemUuid === lineItem.uuid) ?? [],
@@ -695,7 +697,12 @@ function useItemRows(
             },
           },
           rightSide: {
-            label: currencyFormatter((productVariantPrice + parseMoney(labourPrice)) * lineItem.quantity),
+            label: currencyFormatter(
+              BigDecimal.fromMoney(productVariantPrice)
+                .add(BigDecimal.fromMoney(labourPrice))
+                .multiply(BigDecimal.fromString(lineItem.quantity.toFixed(0)))
+                .toMoney(),
+            ),
             showChevron: true,
           },
         };

@@ -1,5 +1,5 @@
 import { ReactNode, createContext } from 'react';
-import { RejectFn, ResolveFn } from '../util/promise.js';
+import { RejectFn, ResolveFn } from '@teifi-digital/shopify-app-toolbox/promise';
 
 export const BatchContext = createContext<Batches>({});
 

@@ -1,16 +1,17 @@
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { db } from '../db/db.js';
-import { never } from '@work-orders/common/util/never.js';
 import { fetchAllPages, gql } from '../gql/gql.js';
-import { DateTime, ID, Int, Money } from '../gql/queries/generated/schema.js';
+import { DateTime, ID, Money } from '../gql/queries/generated/schema.js';
 import { escapeLike } from '../db/like.js';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import { LineItem, WorkOrder, WorkOrderInfo } from './types.js';
-import { Cents, moneyV2ToMoney, parseMoney } from '@work-orders/common/util/money.js';
 import { getOrderInfo } from '../orders/get.js';
-import { awaitNested } from '../../util/promise.js';
 import { getShopSettings } from '../settings.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { decimalToMoney } from '../../util/decimal.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [[workOrder], settings] = await Promise.all([
@@ -47,10 +48,20 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
   const discount =
     order.__typename === 'DraftOrder'
       ? order.appliedDiscount
+        ? order.appliedDiscount.valueType === 'FIXED_AMOUNT'
+          ? ({
+              valueType: 'FIXED_AMOUNT',
+              value: BigDecimal.fromString(order.appliedDiscount.value.toString(2)).toMoney(),
+            } as const)
+          : ({
+              valueType: 'PERCENTAGE',
+              value: BigDecimal.fromString(order.appliedDiscount.value.toString(2)).toDecimal(),
+            } as const)
+        : null
       : order.totalDiscounts
         ? ({
-            value: parseMoney(order.totalDiscounts),
             valueType: 'FIXED_AMOUNT',
+            value: BigDecimal.fromMoney(order.totalDiscounts).toMoney(),
           } as const)
         : null;
 
@@ -66,10 +77,10 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
         ({ name, hours, rate, lineItemUuid, productVariantId, employeeId }) =>
           ({
             type: 'hourly-labour',
+            hours: BigDecimal.fromString(hours).toDecimal(),
+            rate: BigDecimal.fromString(rate).toMoney(),
             productVariantId: productVariantId as ID,
             employeeId: employeeId as ID,
-            hours: hours as Int,
-            rate: rate as Cents,
             lineItemUuid,
             name,
           }) as const,
@@ -78,9 +89,9 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
         ({ name, productVariantId, lineItemUuid, employeeId, amount }) =>
           ({
             type: 'fixed-price-labour',
+            amount: BigDecimal.fromString(amount).toMoney(),
             productVariantId: productVariantId as ID,
             employeeId: employeeId as ID,
-            amount: amount as Cents,
             lineItemUuid,
             name,
           }) as const,
@@ -93,7 +104,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
       discount,
       total: order.totalPrice,
       outstanding:
-        order.__typename === 'Order' ? moneyV2ToMoney(order.totalOutstandingSet.shopMoney) : order.totalPrice,
+        order.__typename === 'Order' ? decimalToMoney(order.totalOutstandingSet.shopMoney.amount) : order.totalPrice,
       received: order.__typename === 'Order' ? order.totalReceived : ('0.00' as Money),
       lineItems: lineItems.map(
         ({ id, title, taxable, quantity, sku, variant, originalUnitPrice }): LineItem => ({
@@ -155,7 +166,7 @@ export async function getWorkOrderInfoPage(
     }
 
     const outstanding =
-      order.__typename === 'Order' ? moneyV2ToMoney(order.totalOutstandingSet.shopMoney) : order.totalPrice;
+      order.__typename === 'Order' ? decimalToMoney(order.totalOutstandingSet.shopMoney.amount) : order.totalPrice;
 
     const financialStatus = order.__typename === 'Order' ? order.displayFinancialStatus : null;
 

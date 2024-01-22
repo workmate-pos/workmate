@@ -3,6 +3,7 @@ import type { ID } from '@web/schemas/generated/create-work-order.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type CreateWorkOrderLineItem = CreateWorkOrder['lineItems'][number];
 export type CreateWorkOrderLabour = CreateWorkOrder['labour'][number];
@@ -95,6 +96,6 @@ export type ScreenInputOutput = {
         }
     ),
   ];
-  DiscountSelector: [{ subTotal: number }, CreateWorkOrder['discount']];
+  DiscountSelector: [{ subTotal: Money }, CreateWorkOrder['discount']];
   WorkOrderSaved: [WorkOrder, undefined];
 };

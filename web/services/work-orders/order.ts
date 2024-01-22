@@ -15,11 +15,11 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js'
 import { getShopSettings } from '../settings.js';
 import { attributesToArray } from '@work-orders/common/custom-attributes/mapping/index.js';
 import { gql } from '../gql/gql.js';
-import { never } from '@work-orders/common/util/never.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
-import { Dollars, parseMoney, toMoney } from '@work-orders/common/util/money.js';
 import { WorkOrderOrderAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order.js';
 import { WorkOrderOrderLineItemAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order-line-item.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export async function upsertDraftOrder(
   session: Session,
@@ -127,7 +127,7 @@ function getOrderLineItems(
     let price: Money;
 
     if (labour.type === 'hourly-labour') {
-      price = toMoney((parseMoney(labour.rate) * labour.hours) as Dollars);
+      price = BigDecimal.fromMoney(labour.rate).multiply(BigDecimal.fromDecimal(labour.hours)).round(2n).toMoney();
     } else if (labour.type === 'fixed-price-labour') {
       price = labour.amount;
     } else {
@@ -171,7 +171,7 @@ function getOrderDiscount(createWorkOrder: Pick<CreateWorkOrder, 'discount'>): D
   }
 
   return {
-    value: createWorkOrder.discount.value,
+    value: Number(BigDecimal.fromString(createWorkOrder.discount.value).toString()),
     valueType: createWorkOrder.discount.valueType,
   };
 }

@@ -1,14 +1,13 @@
 import { Session } from '@shopify/shopify-api';
-import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { db } from '../db/db.js';
 import { ID } from '../gql/queries/generated/schema.js';
-import { never } from '@work-orders/common/util/never.js';
 import { getFormattedId } from '../id-formatting.js';
 import { getShopSettings } from '../settings.js';
-import { findSoleTruth } from '../../util/choice.js';
 import { unit } from '../db/unit-of-work.js';
 import { createWorkOrderLabour, removeWorkOrderLabour } from './labour.js';
 import { getOrderOptions, updateOrder, upsertDraftOrder } from './order.js';
+import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export async function upsertWorkOrder(session: Session, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
@@ -44,10 +43,7 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
 
     const orderIdSet = !!currentWorkOrder?.orderId;
 
-    const action = findSoleTruth({
-      upsertDraftOrder: !orderIdSet,
-      updateOrder: orderIdSet,
-    });
+    const action = orderIdSet ? 'updateOrder' : 'upsertDraftOrder';
 
     const options = await getOrderOptions(session.shop);
 

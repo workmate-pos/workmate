@@ -65,7 +65,7 @@
                 "$ref": "scalars.json#/definitions/Money"
               },
               "hours": {
-                "$ref": "scalars.json#/definitions/Int"
+                "$ref": "scalars.json#/definitions/Decimal"
               },
               "lineItemUuid": {
                 "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
@@ -117,17 +117,32 @@
         { "type": "null" },
         {
           "type": "object",
-          "properties": {
-            "value": {
-              "description": "Either the dollar amount or the percentage",
-              "type": "number"
+          "oneOf": [
+            {
+              "properties": {
+                "valueType": {
+                  "const": "FIXED_AMOUNT"
+                },
+                "value": {
+                  "$ref": "scalars.json#/definitions/Money"
+                }
+              },
+              "required": ["value", "valueType"],
+              "additionalProperties": false
             },
-            "valueType": {
-              "enum": ["FIXED_AMOUNT", "PERCENTAGE"]
+            {
+              "properties": {
+                "valueType": {
+                  "const": "PERCENTAGE"
+                },
+                "value": {
+                  "$ref": "scalars.json#/definitions/Decimal"
+                }
+              },
+              "required": ["value", "valueType"],
+              "additionalProperties": false
             }
-          },
-          "required": ["value", "valueType"],
-          "additionalProperties": false
+          ]
         }
       ]
     }

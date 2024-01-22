@@ -3,7 +3,7 @@ import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { getOrderInput, getOrderOptions } from './order.js';
 import { gql } from '../gql/gql.js';
-import { never } from '@work-orders/common/util/never.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export async function calculateDraftOrder(session: Session, calculateWorkOrder: CalculateWorkOrder) {
   const graphql = new Graphql(session);

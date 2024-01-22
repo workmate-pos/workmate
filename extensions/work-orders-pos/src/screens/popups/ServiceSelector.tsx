@@ -2,7 +2,6 @@ import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-exten
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { parseGid } from '@work-orders/common/util/gid.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
@@ -10,6 +9,7 @@ import { uuid } from '../../util/uuid.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');

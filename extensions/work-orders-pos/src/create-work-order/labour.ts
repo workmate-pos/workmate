@@ -1,25 +1,22 @@
-import { CreateWorkOrder, Money } from '@web/schemas/generated/create-work-order.js';
-import { sum } from '@work-orders/common/util/array.js';
-import { Cents, parseMoney, toCents, toDollars, toMoney } from '@work-orders/common/util/money.js';
+import { Money } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrderLabour } from '../screens/routes.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export function getLabourPrice(
   labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'employeeId' | 'lineItemUuid' | 'name' | 'labourUuid'>[],
 ): Money {
-  return toMoney(
-    toDollars(
-      sum(labour, l => {
-        if (l.type === 'hourly-labour') {
-          return (l.hours * toCents(parseMoney(l.rate))) as Cents;
-        }
+  return BigDecimal.sum(
+    ...labour.map(l => {
+      if (l.type === 'hourly-labour') {
+        return BigDecimal.fromDecimal(l.hours).multiply(BigDecimal.fromMoney(l.rate));
+      }
 
-        if (l.type === 'fixed-price-labour') {
-          return toCents(parseMoney(l.amount));
-        }
+      if (l.type === 'fixed-price-labour') {
+        return BigDecimal.fromMoney(l.amount);
+      }
 
-        return l satisfies never;
-      }) as Cents,
-    ),
-  );
+      return l satisfies never;
+    }),
+  ).toMoney();
 }

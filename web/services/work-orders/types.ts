@@ -1,11 +1,6 @@
+import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ID, DateTime, Int, Money, OrderDisplayFinancialStatus } from '../gql/queries/generated/schema.js';
 import type { OrderInfo } from '../orders/types.js';
-import type { PlaceholderLineItemAttribute } from '@work-orders/common/custom-attributes/attributes/PlaceholderLineItemAttribute.js';
-import type { Cents } from '@work-orders/common/util/money.js';
-import { UuidAttribute } from '@work-orders/common/custom-attributes/attributes/UuidAttribute.js';
-import { SkuAttribute } from '@work-orders/common/custom-attributes/attributes/SkuAttribute.js';
-import { CustomAttributeValue } from '@work-orders/common/custom-attributes/CustomAttribute.js';
-import { LabourLineItemUuidAttribute } from '@work-orders/common/custom-attributes/attributes/LabourLineItemUuidAttribute.js';
 
 export type WorkOrder = {
   name: string;
@@ -24,10 +19,7 @@ export type WorkOrder = {
     outstanding: Money;
     received: Money;
     total: Money;
-    discount: {
-      valueType: 'FIXED_AMOUNT' | 'PERCENTAGE';
-      value: number;
-    } | null;
+    discount: { valueType: 'PERCENTAGE'; value: Decimal } | { valueType: 'FIXED_AMOUNT'; value: Money } | null;
     lineItems: LineItem[];
   };
   labour: (FixedPriceLabour | HourlyLabour)[];
@@ -46,13 +38,13 @@ export type BaseLabour = {
 
 export type FixedPriceLabour = BaseLabour & {
   type: 'fixed-price-labour';
-  amount: Cents;
+  amount: Money;
 };
 
 export type HourlyLabour = BaseLabour & {
   type: 'hourly-labour';
-  rate: Cents;
-  hours: Int;
+  rate: Money;
+  hours: Decimal;
 };
 
 export type LineItem = {

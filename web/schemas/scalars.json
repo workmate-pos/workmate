@@ -11,8 +11,14 @@
     "Money": {
       "title": "Money",
       "type": "string",
-      "pattern": "^\\d+\\.\\d{2}$",
+      "pattern": "^-?\\d+(?:\\.\\d+)?$",
       "tsType": "`${number}` & { __brand: 'Money' }"
+    },
+    "Decimal": {
+      "title": "Decimal",
+      "type": "string",
+      "pattern": "^-?\\d+(?:\\.\\d+)?$",
+      "tsType": "`${number}` & { __brand: 'Decimal' }"
     },
     "Int": {
       "title": "Int",

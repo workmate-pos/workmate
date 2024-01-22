@@ -6,10 +6,10 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js'
 import { gql } from '../../services/gql/gql.js';
 import { db } from '../../services/db/db.js';
 import { Ids } from '../../schemas/generated/ids.js';
-import { isNotNull } from '../../util/filters.js';
-import { never } from '@work-orders/common/util/never.js';
-import { Cents, parseMoney, toCents } from '@work-orders/common/util/money.js';
 import { getShopSettings } from '../../services/settings.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 @Authenticated()
 export default class EmployeeController {
@@ -49,22 +49,21 @@ export default class EmployeeController {
         node === null || node.__typename === 'StaffMember',
     );
 
-    const employeesWithRates = (await getEmployeesWithRate(shop, staffMembers)).filter(isNotNull);
+    const employeesWithRates = (await getEmployeesWithRate(shop, staffMembers)).filter(isNonNullable);
 
     return res.json({ employees: employeesWithRates });
   }
 }
 
 async function getEmployeesWithRate(shop: string, employees: (gql.staffMember.StaffMemberFragment.Result | null)[]) {
-  const rates = await db.employeeRate.getMany({ shop, employeeIds: employees.filter(isNotNull).map(e => e.id) });
-  const ratesRecord = Object.fromEntries(rates.map(r => [r.employeeId, r.rate as Cents]));
+  const rates = await db.employeeRate.getMany({ shop, employeeIds: employees.filter(isNonNullable).map(e => e.id) });
+  const ratesRecord = Object.fromEntries(rates.map(r => [r.employeeId, BigDecimal.fromString(r.rate)]));
   const { defaultRate } = await getShopSettings(shop);
-  const defaultRateCents = toCents(parseMoney(defaultRate));
 
-  return employees.map(e => (e ? { ...e, rate: ratesRecord[e.id] ?? defaultRateCents } : null));
+  return employees.map(e => (e ? { ...e, rate: ratesRecord[e.id]?.toMoney() ?? defaultRate } : null));
 }
 
-export type EmployeeWithRate = gql.staffMember.StaffMemberFragment.Result & { rate: Cents };
+export type EmployeeWithRate = gql.staffMember.StaffMemberFragment.Result & { rate: Money };
 
 export type FetchEmployeesResponse = {
   employees: EmployeeWithRate[];

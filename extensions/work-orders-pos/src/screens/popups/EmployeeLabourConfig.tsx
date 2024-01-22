@@ -4,11 +4,11 @@ import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
-import { Dollars, parseMoney, toCents, toDollars, toMoney } from '@work-orders/common/util/money.js';
 import { ID, Int } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrderLabour } from '../routes.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export function EmployeeLabourConfig() {
   const [employeeId, setEmployeeId] = useState<ID | null>(null);
@@ -53,9 +53,9 @@ export function EmployeeLabourConfig() {
       hourlyLabour ??
         ({
           type: 'hourly-labour',
-          hours: 0 as Int,
-          name: settingsQuery.data.settings.labourLineItemName ?? 'Labour',
-          rate: toMoney(toDollars(employeeQuery.data.rate)),
+          hours: BigDecimal.ZERO.toDecimal(),
+          name: settingsQuery.data.settings.labourLineItemName || 'Labour',
+          rate: employeeQuery.data.rate,
         } as const),
     );
   }, [hourlyLabour, employeeQuery.data, settingsQuery.data]);
@@ -82,17 +82,27 @@ export function EmployeeLabourConfig() {
             <Text variant={'headingSmall'}>Hours</Text>
             <Stepper
               minimumValue={0}
-              onValueChanged={(hours: Int) => setHourlyLabour({ ...hourlyLabour, hours })}
+              onValueChanged={(hours: number) => {
+                if (!BigDecimal.isValid(hours.toFixed(2))) return;
+
+                setHourlyLabour({
+                  ...hourlyLabour,
+                  hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
+                });
+              }}
               initialValue={hourlyLabour.hours}
               value={hourlyLabour.hours}
             />
             <Stack direction={'horizontal'} alignment={'space-between'}>
               <Text variant={'headingSmall'}>Hourly rate</Text>
               <Selectable
-                disabled={!employeeQuery.data || toCents(parseMoney(hourlyLabour.rate)) === employeeQuery.data.rate}
+                disabled={
+                  !employeeQuery.data ||
+                  BigDecimal.fromMoney(hourlyLabour.rate).equals(BigDecimal.fromMoney(employeeQuery.data.rate))
+                }
                 onPress={() => {
                   if (!employeeQuery.data) return;
-                  setHourlyLabour({ ...hourlyLabour, rate: toMoney(toDollars(employeeQuery.data.rate)) });
+                  setHourlyLabour({ ...hourlyLabour, rate: employeeQuery.data.rate });
                 }}
               >
                 <Text color={'TextInteractive'}>Reset</Text>
@@ -102,14 +112,20 @@ export function EmployeeLabourConfig() {
               minimumValue={1}
               initialValue={Number(hourlyLabour.rate)}
               value={Number(hourlyLabour.rate)}
-              onValueChanged={(rate: number) =>
-                setHourlyLabour({ ...hourlyLabour, rate: toMoney(Math.floor(rate) as Dollars) })
-              }
+              onValueChanged={(rate: number) => {
+                if (!BigDecimal.isValid(rate.toFixed(2))) return;
+
+                setHourlyLabour({ ...hourlyLabour, rate: BigDecimal.fromString(rate.toFixed(2)).toMoney() });
+              }}
             />
             <Stack direction={'horizontal'} flex={1} alignment={'space-evenly'}>
               <Text variant={'headingSmall'} color={'TextSubdued'}>
                 {hourlyLabour.hours} hours × {currencyFormatter(hourlyLabour.rate)}/hour ={' '}
-                {currencyFormatter((hourlyLabour.hours * parseMoney(hourlyLabour.rate)) as Dollars)}
+                {currencyFormatter(
+                  BigDecimal.fromDecimal(hourlyLabour.hours)
+                    .multiply(BigDecimal.fromMoney(hourlyLabour.rate))
+                    .toMoney(),
+                )}
               </Text>
             </Stack>
             <Stack direction="vertical" flex={1} alignment="flex-end">

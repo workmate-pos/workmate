@@ -8,13 +8,13 @@ import { useProductVariantQuery } from '@work-orders/common/queries/use-product-
 import { Money } from '@web/schemas/generated/create-work-order.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
-import { parseMoney } from '@work-orders/common/util/money.js';
 import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@work-orders/common/util/guards.js';
 import { getLabourPrice } from '../../create-work-order/labour.js';
 import { uuid } from '../../util/uuid.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
@@ -83,8 +83,11 @@ export function LabourLineItemConfig() {
 
   const labourPrice = getLabourPrice(labour);
 
-  const productVariantPrice = productVariant ? parseMoney(productVariant.price) : 0;
-  const totalPrice = productVariantPrice + parseMoney(labourPrice);
+  const productVariantPrice = productVariant ? productVariant.price : BigDecimal.ZERO.toMoney();
+  const totalPrice = BigDecimal.sum(
+    BigDecimal.fromMoney(productVariantPrice),
+    BigDecimal.fromMoney(labourPrice),
+  ).toMoney();
 
   const unsavedChangesDialog = useUnsavedChangesDialog();
   const { navigation } = useExtensionApi<'pos.home.modal.render'>();

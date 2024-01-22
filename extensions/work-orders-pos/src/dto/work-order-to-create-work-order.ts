@@ -1,7 +1,6 @@
 import type { WorkOrder } from '@web/services/work-orders/types.js';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { uuid } from '../util/uuid.js';
-import { toDollars, toMoney } from '@work-orders/common/util/money.js';
 import type { ID, Int } from '@web/services/gql/queries/generated/schema.js';
 import { CreateWorkOrderLabour } from '../screens/routes.js';
 
@@ -41,7 +40,7 @@ export function getCreateWorkOrderLineItems(
   //  - uuids are used internally to distinguish between different line items
   //  - however, they are also used by labour assignments to distinguish between line items with the same product variant id
 
-  // To address these concerns we can simply create a new uuid() for all line items **after** ensuring that we create a line item
+  // To address these concerns, we can simply create a new uuid() for all line items **after** ensuring that we create a line item
   // for every uuid that has labour assignment(s).
   // Afterwards we also ensure that service items are never stacked (to cover the case where service items do not have any labour assigned)
 
@@ -107,11 +106,11 @@ function mapLabour(labour: WorkOrder['labour'][number]): CreateWorkOrderLabour {
   if (labour.type === 'hourly-labour') {
     return {
       type: 'hourly-labour',
-      rate: toMoney(toDollars(labour.rate)),
       lineItemUuid: labour.lineItemUuid,
       employeeId: labour.employeeId,
       labourUuid: uuid(),
       hours: labour.hours,
+      rate: labour.rate,
       name: labour.name,
     };
   }
@@ -120,8 +119,8 @@ function mapLabour(labour: WorkOrder['labour'][number]): CreateWorkOrderLabour {
     return {
       type: 'fixed-price-labour',
       lineItemUuid: labour.lineItemUuid,
-      amount: toMoney(toDollars(labour.amount)),
       employeeId: labour.employeeId,
+      amount: labour.amount,
       labourUuid: uuid(),
       name: labour.name,
     };

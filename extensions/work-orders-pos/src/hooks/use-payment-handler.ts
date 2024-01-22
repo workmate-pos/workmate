@@ -1,19 +1,18 @@
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useRef, useState } from 'react';
-import { createGid, parseGid } from '@work-orders/common/util/gid.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
 import { Cart } from '@shopify/retail-ui-extensions';
 import { attributesToProperties } from '@work-orders/common/custom-attributes/mapping/index.js';
 import { WorkOrderOrderAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order.js';
 import { WorkOrderOrderLineItemAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order-line-item.js';
-import { groupBy } from '@web/util/array.js';
-import { sum } from '@work-orders/common/util/array.js';
 import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
 import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { getLabourPrice } from '../create-work-order/labour.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useAuthenticatedFetch } from './use-authenticated-fetch.js';
-import { withResolvers } from '@work-orders/common/util/promise.js';
+import { withResolvers } from '@teifi-digital/shopify-app-toolbox/promise';
+import { createGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { groupBy, sumMap } from '@teifi-digital/shopify-app-toolbox/array';
 
 const useCartRef = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
@@ -133,7 +132,7 @@ export const usePaymentHandler = () => {
 
     for (const lineItems of Object.values(groupedLineItems)) {
       const [lineItem] = lineItems;
-      const quantity = sum(lineItems, li => li.quantity);
+      const quantity = sumMap(lineItems, li => li.quantity);
 
       if (quantity === 0 || !lineItem) {
         continue;

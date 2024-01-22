@@ -108,9 +108,7 @@
               "const": "percentage"
             },
             "percentage": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
+              "$ref": "scalars.json#/definitions/Decimal"
             }
           },
           "required": ["unit", "percentage"],
@@ -120,10 +118,7 @@
     },
     "percentage-range": {
       "type": "array",
-      "items": [
-        { "type": "number", "minimum": 0, "maximum": 100 },
-        { "type": "number", "minimum": 0, "maximum": 100 }
-      ],
+      "items": [{ "$ref": "scalars.json#/definitions/Decimal" }, { "$ref": "scalars.json#/definitions/Decimal" }],
       "minItems": 2,
       "maxItems": 2
     },

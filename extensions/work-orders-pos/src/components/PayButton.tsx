@@ -1,5 +1,5 @@
 import type { Money } from '@web/schemas/generated/shop-settings.js';
-import { Button, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, Text } from '@shopify/retail-ui-extensions-react';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';

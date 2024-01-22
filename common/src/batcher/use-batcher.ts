@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { Batch, BatchContext } from './BatchProvider.js';
-import { withResolvers } from '../util/promise.js';
+import { withResolvers } from '@teifi-digital/shopify-app-toolbox/promise';
 
 export type BatcherFetchResult<B extends (...args: any) => any> = ReturnType<B> extends {
   fetch: (param: infer P) => Promise<infer R>;

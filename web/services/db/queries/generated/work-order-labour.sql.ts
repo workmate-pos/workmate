@@ -4,11 +4,11 @@ import { PreparedQuery } from '@pgtyped/runtime';
 /** 'InsertHourlyLabour' parameters type */
 export interface IInsertHourlyLabourParams {
   employeeId?: string | null | void;
-  hours?: number | null | void;
+  hours?: string | null | void;
   lineItemUuid?: string | null | void;
   name: string;
   productVariantId?: string | null | void;
-  rate: number;
+  rate: string;
   workOrderId: number;
 }
 
@@ -35,7 +35,7 @@ export const insertHourlyLabour = new PreparedQuery<IInsertHourlyLabourParams,II
 
 /** 'InsertFixedPriceLabour' parameters type */
 export interface IInsertFixedPriceLabourParams {
-  amount: number;
+  amount: string;
   employeeId?: string | null | void;
   lineItemUuid?: string | null | void;
   name: string;
@@ -124,12 +124,12 @@ export interface IGetHourlyLaboursParams {
 /** 'GetHourlyLabours' return type */
 export interface IGetHourlyLaboursResult {
   employeeId: string | null;
-  hours: number;
+  hours: string;
   id: number;
   lineItemUuid: string | null;
   name: string;
   productVariantId: string | null;
-  rate: number;
+  rate: string;
   workOrderId: number;
 }
 
@@ -159,7 +159,7 @@ export interface IGetFixedPriceLaboursParams {
 
 /** 'GetFixedPriceLabours' return type */
 export interface IGetFixedPriceLaboursResult {
-  amount: number;
+  amount: string;
   employeeId: string | null;
   id: number;
   lineItemUuid: string | null;

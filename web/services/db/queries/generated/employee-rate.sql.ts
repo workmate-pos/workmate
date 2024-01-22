@@ -10,7 +10,7 @@ export interface IGetManyParams {
 /** 'GetMany' return type */
 export interface IGetManyResult {
   employeeId: string;
-  rate: number;
+  rate: string;
   shop: string;
 }
 

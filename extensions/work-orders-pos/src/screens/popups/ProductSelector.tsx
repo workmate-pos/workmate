@@ -7,10 +7,10 @@ import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
-import { parseGid } from '@work-orders/common/util/gid.js';
 import { useState } from 'react';
 import { CreateWorkOrderLineItem } from '../routes.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');

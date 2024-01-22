@@ -1,7 +1,6 @@
 import { db } from '../db/db.js';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
-import { parseMoney, toCents } from '@work-orders/common/util/money.js';
-import { hasPropertyValue } from '../../util/filters.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export async function removeWorkOrderLabour(workOrderId: number) {
   await Promise.all([
@@ -28,7 +27,7 @@ export async function createWorkOrderLabour(
     ...hourlyLabour.map(({ name, lineItemUuid, employeeId, rate, hours }) =>
       db.workOrderLabour.insertHourlyLabour({
         productVariantId: findProductVariantId(lineItemUuid),
-        rate: toCents(parseMoney(rate)),
+        rate: rate,
         lineItemUuid,
         workOrderId,
         employeeId,
@@ -39,7 +38,7 @@ export async function createWorkOrderLabour(
     ...fixedPriceLabour.map(({ name, lineItemUuid, amount, employeeId }) =>
       db.workOrderLabour.insertFixedPriceLabour({
         productVariantId: findProductVariantId(lineItemUuid),
-        amount: toCents(parseMoney(amount)),
+        amount: amount,
         workOrderId,
         employeeId,
         lineItemUuid,

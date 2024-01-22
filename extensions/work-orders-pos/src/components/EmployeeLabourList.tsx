@@ -4,9 +4,9 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { isNonNullable } from '@work-orders/common/util/guards.js';
 import { getLabourPrice } from '../create-work-order/labour.js';
 import { CreateWorkOrderLabour } from '../screens/routes.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 /**
  * A list of clickable EmployeeLabour items.

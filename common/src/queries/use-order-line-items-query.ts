@@ -2,7 +2,7 @@ import type { FetchOrderLineItemsResponse } from '@web/controllers/api/order.js'
 import { ID } from '@web/schemas/generated/ids.js';
 import { useInfiniteQuery } from 'react-query';
 import { Fetch } from './fetch.js';
-import { parseGid } from '../util/gid.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export const useOrderLineItemsQuery = ({ fetch, id = null }: { fetch: Fetch; id: ID | null }) => {
   return useInfiniteQuery({

@@ -6,11 +6,11 @@ import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-orde
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
-import { titleCase } from '@work-orders/common/util/casing.js';
 import { useState } from 'react';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/services/gql/queries/generated/schema.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');
@@ -21,9 +21,7 @@ export function Entry() {
 
   const statusSelectorPopup = usePopup('StatusSelector', setStatus);
   const customerSelectorPopup = usePopup('CustomerSelector', setCustomerId);
-  const employeeSelectorPopup = usePopup('EmployeeSelector', ({ employees }) =>
-    setEmployeeIds(employees.map(e => e.id)),
-  );
+  const employeeSelectorPopup = usePopup('EmployeeSelector', setEmployeeIds);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
@@ -67,7 +65,7 @@ export function Entry() {
               <Button
                 title={'Filter employees'}
                 type={'plain'}
-                onPress={() => employeeSelectorPopup.navigate({ ids: employeeIds })}
+                onPress={() => employeeSelectorPopup.navigate(employeeIds)}
               />
             </Stack>
             <Stack direction={'horizontal'}>
