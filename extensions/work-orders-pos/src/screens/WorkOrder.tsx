@@ -365,83 +365,76 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     });
   });
 
-  const createLabourConfigHandler =
-    ({ isService }: { isService: boolean }) =>
-    (result: ScreenInputOutput['LabourLineItemConfig'][1]) => {
-      switch (result.type) {
-        case 'remove': {
-          context.dispatchCreateWorkOrder({
-            type: 'remove-line-item',
-            lineItem: result.lineItem,
-          });
-          break;
-        }
+  const handleLineItemConfigResult = (
+    result:
+      | { type: 'product' | 'service'; hasLabour: true; result: ScreenInputOutput['LabourLineItemConfig'][1] }
+      | { type: 'product'; hasLabour: false; result: ScreenInputOutput['ProductLineItemConfig'][1] },
+  ) => {
+    if (result.result.type === 'remove') {
+      context.dispatchCreateWorkOrder({
+        type: 'remove-line-item',
+        lineItem: result.result.lineItem,
+      });
 
-        case 'update': {
-          const lineItemUuid = result.lineItem.uuid;
-
-          context.dispatchCreateWorkOrder({
-            type: 'set-field',
-            field: 'labour',
-            value: [
-              ...(context.createWorkOrder.labour?.filter(l => l.lineItemUuid !== lineItemUuid) ?? []),
-              ...result.labour.map(l => ({ ...l, lineItemUuid })),
-            ],
-          });
-
-          context.dispatchCreateWorkOrder({
-            type: 'upsert-line-item',
-            lineItem: result.lineItem,
-            isService,
-          });
-          break;
-        }
-
-        default:
-          return result satisfies never;
+      if (result.hasLabour) {
+        context.dispatchCreateWorkOrder({
+          type: 'set-field',
+          field: 'labour',
+          value: context.createWorkOrder.labour?.filter(l => l.lineItemUuid !== result.result.lineItem.uuid) ?? [],
+        });
       }
-    };
+      return;
+    }
 
-  const serviceConfigPopup = context.usePopup('LabourLineItemConfig', createLabourConfigHandler({ isService: true }));
+    if (result.result.type === 'update') {
+      const lineItemUuid = result.result.lineItem.uuid;
+
+      context.dispatchCreateWorkOrder({
+        type: 'upsert-line-item',
+        lineItem: result.result.lineItem,
+        // TODO: Replace isService with Type in "product" | "hourly-service" | "fixed-price-service"
+        isService: result.type === 'service',
+      });
+
+      if (result.hasLabour) {
+        context.dispatchCreateWorkOrder({
+          type: 'set-field',
+          field: 'labour',
+          value: [
+            ...(context.createWorkOrder.labour?.filter(l => l.lineItemUuid !== lineItemUuid) ?? []),
+            ...result.result.labour.map(l => ({ ...l, lineItemUuid })),
+          ],
+        });
+      }
+
+      return;
+    }
+
+    if (result.result.type === 'assign-employees') {
+      labourProductConfigPopup.navigate({
+        readonly: context.hasOrder,
+        lineItem: result.result.lineItem,
+        labour: [],
+      });
+
+      return;
+    }
+
+    return result.result.type satisfies never;
+  };
+
+  const serviceConfigPopup = context.usePopup('LabourLineItemConfig', result =>
+    handleLineItemConfigResult({ type: 'service', hasLabour: true, result }),
+  );
 
   // labourless product
-  const productConfigPopup = context.usePopup('ProductLineItemConfig', result => {
-    switch (result.type) {
-      case 'remove': {
-        context.dispatchCreateWorkOrder({
-          type: 'remove-line-item',
-          lineItem: result.lineItem,
-        });
-        break;
-      }
-
-      case 'update': {
-        context.dispatchCreateWorkOrder({
-          type: 'upsert-line-item',
-          lineItem: result.lineItem,
-          isService: false,
-        });
-        break;
-      }
-
-      case 'assign-employees': {
-        labourProductConfigPopup.navigate({
-          readonly: context.hasOrder,
-          lineItem: result.lineItem,
-          labour: [],
-        });
-        break;
-      }
-
-      default:
-        return result.type satisfies never;
-    }
-  });
+  const productConfigPopup = context.usePopup('ProductLineItemConfig', result =>
+    handleLineItemConfigResult({ type: 'product', hasLabour: false, result }),
+  );
 
   // product with labour
-  const labourProductConfigPopup = context.usePopup(
-    'LabourLineItemConfig',
-    createLabourConfigHandler({ isService: false }),
+  const labourProductConfigPopup = context.usePopup('LabourLineItemConfig', result =>
+    handleLineItemConfigResult({ type: 'product', hasLabour: true, result }),
   );
 
   const rows = useItemRows(context, query, (type, lineItem) => {

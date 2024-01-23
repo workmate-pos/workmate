@@ -2,7 +2,7 @@ import { useStorePropertiesQuery } from '../queries/use-store-properties-query.j
 import { useMemo } from 'react';
 import { Fetch } from '../queries/fetch.js';
 import type { Money } from '@web/services/gql/queries/generated/schema.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export const useCurrencyFormatter = ({ fetch }: { fetch: Fetch }) => {
   const { data } = useStorePropertiesQuery({ fetch });
@@ -14,12 +14,12 @@ export const useCurrencyFormatter = ({ fetch }: { fetch: Fetch }) => {
         (amount: number | Money) => {
           const decimal = BigDecimal.fromString(typeof amount === 'number' ? amount.toFixed(10) : amount);
 
-          if (!data) return `$${decimal.round(2n).toString()}`;
+          if (!data) return `$${decimal.round(2).toString()}`;
 
           const { currencyFormat } = data.storeProperties;
           const variables = {
-            amount: decimal.round(2n).toString(),
-            amount_no_decimals: decimal.setPrecision(0n).toString(),
+            amount: decimal.round(2).toString(),
+            amount_no_decimals: decimal.round(0, RoundingMode.UP).toString(),
           };
 
           let formattedString = currencyFormat;

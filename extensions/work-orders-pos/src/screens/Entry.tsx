@@ -25,6 +25,7 @@ export function Entry() {
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
+
   const workOrderInfoQuery = useWorkOrderInfoQuery({
     fetch,
     query,
@@ -32,11 +33,10 @@ export function Entry() {
     status: status ?? undefined,
     customerId: customerId ?? undefined,
   });
-  const workOrderInfo = workOrderInfoQuery.data?.pages ?? [];
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
   const customerQuery = useCustomerQuery({ fetch, id: customerId });
 
-  const rows = useWorkOrderRows(workOrderInfo, navigate);
+  const rows = useWorkOrderRows(workOrderInfoQuery.data?.pages ?? [], navigate);
 
   return (
     <Screen title="Work Orders">

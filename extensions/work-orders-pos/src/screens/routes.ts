@@ -62,7 +62,6 @@ export type ScreenInputOutput = {
       | {
           type: 'remove';
           lineItem: CreateWorkOrderLineItem;
-          labour: Pick<CreateWorkOrderLabour, 'labourUuid'>[];
         }
     ),
   ];

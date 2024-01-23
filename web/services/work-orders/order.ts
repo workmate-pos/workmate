@@ -127,7 +127,7 @@ function getOrderLineItems(
     let price: Money;
 
     if (labour.type === 'hourly-labour') {
-      price = BigDecimal.fromMoney(labour.rate).multiply(BigDecimal.fromDecimal(labour.hours)).round(2n).toMoney();
+      price = BigDecimal.fromMoney(labour.rate).multiply(BigDecimal.fromDecimal(labour.hours)).toMoney();
     } else if (labour.type === 'fixed-price-labour') {
       price = labour.amount;
     } else {

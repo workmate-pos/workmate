@@ -46,7 +46,7 @@ export function DiscountSelector() {
 
   const getPercentageCurrencyAmount = (percentage: Decimal) =>
     BigDecimal.fromDecimal(percentage)
-      .shift(-2n)
+      .divide(BigDecimal.fromString('100'), 2)
       .multiply(BigDecimal.fromString(subTotal ?? '0'))
       .toMoney();
 

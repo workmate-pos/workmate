@@ -23,7 +23,7 @@ function SmartGridTile() {
 
   return (
     <Tile
-      title={'Work Orders'}
+      title={'WorkMate'}
       onPress={() => {
         api.smartGrid.presentModal();
       }}
@@ -49,6 +49,7 @@ function SmartGridModal() {
           <OrderPreview />
           <ProductLineItemConfig />
           <ProductSelector />
+
           <LabourLineItemConfig />
           <ServiceSelector />
           <ShippingConfig />

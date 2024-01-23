@@ -1,10 +1,19 @@
-import { Button, ScrollView, Selectable, Stack, Stepper, Text, TextField } from '@shopify/retail-ui-extensions-react';
+import {
+  Button,
+  ScrollView,
+  Selectable,
+  Stack,
+  Stepper,
+  Text,
+  TextField,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { useEffect, useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
-import { ID, Int } from '@web/schemas/generated/create-work-order.js';
+import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrderLabour } from '../routes.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
@@ -21,7 +30,7 @@ export function EmployeeLabourConfig() {
     | null
   >(null);
 
-  // TODO: Support fixed price labour
+  // TODO: Support fixed price labour for individual employees (same as in LabourLineItemConfig)
   const [fixedPriceLabour, setFixedPriceLabour] = useState<
     | ({ type: 'fixed-price-labour' } & DiscriminatedUnionOmit<
         CreateWorkOrderLabour,
@@ -32,11 +41,18 @@ export function EmployeeLabourConfig() {
 
   const [labourUuid, setLabourUuid] = useState<string | null>(null);
 
+  const api = useExtensionApi();
+
   const { Screen, closePopup } = useScreen('EmployeeLabourConfig', ({ employeeId, labourUuid, labour }) => {
+    if (labour.type === 'fixed-price-labour') {
+      api.toast.show('Fixed price labour is not yet supported for individual employees');
+      closePopup({ type: 'remove', labourUuid });
+      return;
+    }
+
     setEmployeeId(employeeId);
     setLabourUuid(labourUuid);
-    setHourlyLabour(labour?.type === 'hourly-labour' ? labour : null);
-    setFixedPriceLabour(labour?.type === 'fixed-price-labour' ? labour : null);
+    setHourlyLabour(labour);
   });
 
   const currencyFormatter = useCurrencyFormatter();
@@ -49,13 +65,17 @@ export function EmployeeLabourConfig() {
     if (!employeeQuery.data) return;
     if (!settingsQuery.data) return;
 
+    const { rate } = employeeQuery.data;
+    const { labourLineItemName } = settingsQuery.data.settings;
+
     setHourlyLabour(
-      hourlyLabour ??
+      hourlyLabour =>
+        hourlyLabour ??
         ({
           type: 'hourly-labour',
           hours: BigDecimal.ZERO.toDecimal(),
-          name: settingsQuery.data.settings.labourLineItemName || 'Labour',
-          rate: employeeQuery.data.rate,
+          name: labourLineItemName || 'Labour',
+          rate,
         } as const),
     );
   }, [hourlyLabour, employeeQuery.data, settingsQuery.data]);
@@ -90,8 +110,8 @@ export function EmployeeLabourConfig() {
                   hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
                 });
               }}
-              initialValue={hourlyLabour.hours}
-              value={hourlyLabour.hours}
+              initialValue={Number(hourlyLabour.hours)}
+              value={Number(hourlyLabour.hours)}
             />
             <Stack direction={'horizontal'} alignment={'space-between'}>
               <Text variant={'headingSmall'}>Hourly rate</Text>
