@@ -12,6 +12,7 @@ WORKDIR /app
 COPY web web
 COPY common common
 COPY meta.json web
+COPY .npmrc-ci common/.npmrc
 COPY .npmrc-ci web/.npmrc
 COPY .npmrc-ci web/frontend/.npmrc
 COPY graphql.config.yml web
