@@ -6,6 +6,7 @@ import {
   Stack,
   Stepper,
   Text,
+  TextField,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
@@ -21,7 +22,7 @@ import { getLabourPrice } from '../../create-work-order/labour.js';
 import { uuid } from '../../util/uuid.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function LabourLineItemConfig() {
@@ -36,8 +37,6 @@ export function LabourLineItemConfig() {
   > | null>(null);
 
   const [unsavedChanges, setUnsavedChanges] = useState(false);
-
-  // TODO: Arbitrary amount charged for labour that is only added if non zero
 
   const { Screen, usePopup, closePopup, cancelPopup } = useScreen(
     'LabourLineItemConfig',
@@ -112,7 +111,10 @@ export function LabourLineItemConfig() {
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
-  const labour = [...employeeLabour, ...(generalLabour ? [generalLabour] : [])];
+  const labour = [
+    ...employeeLabour,
+    ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
+  ];
 
   const labourPrice = getLabourPrice(labour);
 
@@ -182,6 +184,16 @@ export function LabourLineItemConfig() {
                 }
               }}
             ></SegmentedControl>
+
+            {generalLabour && (
+              <TextField
+                title={'Labour Name'}
+                initialValue={generalLabour.name}
+                onChangeText={(name: string) => setGeneralLabour({ ...generalLabour, name })}
+                isValid={generalLabour.name.length > 0}
+                errorMessage={generalLabour.name.length === 0 ? 'Labour name is required' : undefined}
+              />
+            )}
 
             {generalLabour?.type === 'hourly-labour' && (
               <>

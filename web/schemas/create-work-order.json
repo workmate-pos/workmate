@@ -4,7 +4,7 @@
   "properties": {
     "name": {
       "description": "The name of the work order to update (if applicable). If not provided, a new work order will be created. Unique within a store.",
-      "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
     },
     "status": {
       "type": "string",
@@ -20,7 +20,7 @@
       "type": "array",
       "items": {
         "type": "object",
-        "oneOf": [
+        "anyOf": [
           {
             "title": "fixed-price-labour",
             "description": "An absolute amount of money for some labour",
@@ -32,13 +32,13 @@
                 "type": "string"
               },
               "employeeId": {
-                "oneOf": [{ "type": "null" }, { "$ref": "scalars.json#/definitions/ID" }]
+                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
               },
               "amount": {
                 "$ref": "scalars.json#/definitions/Money"
               },
               "lineItemUuid": {
-                "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+                "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
               },
               "labourUuid": {
                 "type": "string",
@@ -59,7 +59,7 @@
                 "type": "string"
               },
               "employeeId": {
-                "oneOf": [{ "type": "null" }, { "$ref": "scalars.json#/definitions/ID" }]
+                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
               },
               "rate": {
                 "$ref": "scalars.json#/definitions/Money"
@@ -68,7 +68,7 @@
                 "$ref": "scalars.json#/definitions/Decimal"
               },
               "lineItemUuid": {
-                "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+                "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
               },
               "labourUuid": {
                 "type": "string",
@@ -86,7 +86,7 @@
     },
     "derivedFromOrderId": {
       "description": "A Shopify Order ID from which this work order was derived",
-      "oneOf": [{ "$ref": "scalars.json#/definitions/ID" }, { "type": "null" }]
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
     },
     "lineItems": {
       "description": "All line items for this work order, including products and services",
@@ -113,11 +113,11 @@
     },
     "discount": {
       "title": "discount",
-      "oneOf": [
-        { "type": "null" },
+      "anyOf": [
+        { "const": null },
         {
           "type": "object",
-          "oneOf": [
+          "anyOf": [
             {
               "properties": {
                 "valueType": {

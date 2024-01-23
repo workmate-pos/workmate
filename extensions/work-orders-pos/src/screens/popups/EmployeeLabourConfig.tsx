@@ -133,109 +133,109 @@ export function EmployeeLabourConfig() {
                   }
                 }}
               ></SegmentedControl>
-            </Stack>
 
-            <TextField
-              title={'Labour Name'}
-              initialValue={labour.name}
-              onChangeText={(name: string) => setLabour({ ...labour, name })}
-              isValid={labour.name.length > 0}
-              errorMessage={labour.name.length === 0 ? 'Labour name is required' : undefined}
-            />
+              <TextField
+                title={'Labour Name'}
+                initialValue={labour.name}
+                onChangeText={(name: string) => setLabour({ ...labour, name })}
+                isValid={labour.name.length > 0}
+                errorMessage={labour.name.length === 0 ? 'Labour name is required' : undefined}
+              />
 
-            {labour.type === 'hourly-labour' && (
-              <>
-                <Stack direction={'horizontal'} alignment={'space-between'}>
-                  <Text color={'TextSubdued'} variant={'headingSmall'}>
-                    Hourly Rate
-                  </Text>
-                  <Selectable
-                    disabled={!canResetLabour}
-                    onPress={() => {
-                      if (!canResetLabour) return;
-                      if (!employeeQuery.data?.rate) return;
+              {labour.type === 'hourly-labour' && (
+                <>
+                  <Stack direction={'horizontal'} alignment={'space-between'}>
+                    <Text color={'TextSubdued'} variant={'headingSmall'}>
+                      Hourly Rate
+                    </Text>
+                    <Selectable
+                      disabled={!canResetLabour}
+                      onPress={() => {
+                        if (!canResetLabour) return;
+                        if (!employeeQuery.data?.rate) return;
 
-                      setLabour({
-                        ...labour,
-                        rate: employeeQuery.data.rate,
-                      });
-                    }}
-                  >
-                    <Text color={canResetLabour ? 'TextInteractive' : 'TextSubdued'}>Reset</Text>
-                  </Selectable>
-                </Stack>
-                <Stepper
-                  initialValue={Number(labour.rate)}
-                  value={Number(labour.rate)}
-                  minimumValue={0}
-                  onValueChanged={(rate: number) => {
-                    if (!BigDecimal.isValid(rate.toFixed(2))) return;
-
-                    setLabour({
-                      ...labour,
-                      rate: BigDecimal.fromString(rate.toFixed(2)).toMoney(),
-                    });
-                  }}
-                ></Stepper>
-
-                <Stack direction={'horizontal'}>
-                  <Text color={'TextSubdued'} variant={'headingSmall'}>
-                    Hours
-                  </Text>
-                </Stack>
-                <Stepper
-                  initialValue={Number(labour.hours)}
-                  value={Number(labour.hours)}
-                  minimumValue={0}
-                  onValueChanged={(hours: number) => {
-                    if (!BigDecimal.isValid(hours.toFixed(2))) return;
-
-                    setLabour({
-                      ...labour,
-                      hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
-                    });
-                  }}
-                ></Stepper>
-                <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                  <Text variant={'headingSmall'} color={'TextSubdued'}>
-                    {labour.hours} hours × {currencyFormatter(labour.rate)}/hour ={' '}
-                    {currencyFormatter(
-                      BigDecimal.fromDecimal(labour.hours).multiply(BigDecimal.fromMoney(labour.rate)).toMoney(),
-                    )}
-                  </Text>
-                </Stack>
-              </>
-            )}
-
-            {labour.type === 'fixed-price-labour' && (
-              <>
-                <Stack direction={'horizontal'} flexChildren>
-                  <Text color={'TextSubdued'} variant={'headingSmall'}>
-                    Price
-                  </Text>
-                </Stack>
-                <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
+                        setLabour({
+                          ...labour,
+                          rate: employeeQuery.data.rate,
+                        });
+                      }}
+                    >
+                      <Text color={canResetLabour ? 'TextInteractive' : 'TextSubdued'}>Reset</Text>
+                    </Selectable>
+                  </Stack>
                   <Stepper
-                    initialValue={Number(labour.amount)}
-                    value={Number(labour.amount)}
+                    initialValue={Number(labour.rate)}
+                    value={Number(labour.rate)}
                     minimumValue={0}
-                    onValueChanged={(amount: number) => {
-                      if (!BigDecimal.isValid(amount.toFixed(2))) return;
+                    onValueChanged={(rate: number) => {
+                      if (!BigDecimal.isValid(rate.toFixed(2))) return;
 
                       setLabour({
                         ...labour,
-                        amount: BigDecimal.fromString(amount.toFixed(2)).toMoney(),
+                        rate: BigDecimal.fromString(rate.toFixed(2)).toMoney(),
                       });
                     }}
                   ></Stepper>
-                </Stack>
-                <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                  <Text variant={'headingSmall'} color={'TextSubdued'}>
-                    {currencyFormatter(labour.amount)}
-                  </Text>
-                </Stack>
-              </>
-            )}
+
+                  <Stack direction={'horizontal'}>
+                    <Text color={'TextSubdued'} variant={'headingSmall'}>
+                      Hours
+                    </Text>
+                  </Stack>
+                  <Stepper
+                    initialValue={Number(labour.hours)}
+                    value={Number(labour.hours)}
+                    minimumValue={0}
+                    onValueChanged={(hours: number) => {
+                      if (!BigDecimal.isValid(hours.toFixed(2))) return;
+
+                      setLabour({
+                        ...labour,
+                        hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
+                      });
+                    }}
+                  ></Stepper>
+                  <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                    <Text variant={'headingSmall'} color={'TextSubdued'}>
+                      {labour.hours} hours × {currencyFormatter(labour.rate)}/hour ={' '}
+                      {currencyFormatter(
+                        BigDecimal.fromDecimal(labour.hours).multiply(BigDecimal.fromMoney(labour.rate)).toMoney(),
+                      )}
+                    </Text>
+                  </Stack>
+                </>
+              )}
+
+              {labour.type === 'fixed-price-labour' && (
+                <>
+                  <Stack direction={'horizontal'} flexChildren>
+                    <Text color={'TextSubdued'} variant={'headingSmall'}>
+                      Price
+                    </Text>
+                  </Stack>
+                  <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
+                    <Stepper
+                      initialValue={Number(labour.amount)}
+                      value={Number(labour.amount)}
+                      minimumValue={0}
+                      onValueChanged={(amount: number) => {
+                        if (!BigDecimal.isValid(amount.toFixed(2))) return;
+
+                        setLabour({
+                          ...labour,
+                          amount: BigDecimal.fromString(amount.toFixed(2)).toMoney(),
+                        });
+                      }}
+                    ></Stepper>
+                  </Stack>
+                  <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                    <Text variant={'headingSmall'} color={'TextSubdued'}>
+                      {currencyFormatter(labour.amount)}
+                    </Text>
+                  </Stack>
+                </>
+              )}
+            </Stack>
 
             <Stack direction="vertical" flex={1} alignment="flex-end">
               <Button

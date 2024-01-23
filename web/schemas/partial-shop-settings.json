@@ -21,7 +21,7 @@
     },
     "discountRules": {
       "title": "discount-rules",
-      "oneOf": [
+      "anyOf": [
         { "$ref": "#/definitions/discount-rule-only-allow-shortcuts" },
         { "$ref": "#/definitions/discount-rule-do-not-allow-shortcuts" }
       ]
@@ -30,7 +30,7 @@
       "title": "work-order-requests",
       "description": "Settings related to work order requests, where customers can create a work order themselves.",
       "type": "object",
-      "oneOf": [
+      "anyOf": [
         {
           "type": "object",
           "properties": {
@@ -38,7 +38,7 @@
               "const": false
             },
             "status": {
-              "type": "null"
+              "const": null
             }
           },
           "required": ["enabled", "status"],
@@ -61,12 +61,12 @@
     },
     "serviceCollectionId": {
       "description": "A collection name that is used to identify service products within Shopify",
-      "oneOf": [
+      "anyOf": [
         {
-          "$ref": "scalars.json#/definitions/ID"
+          "const": null
         },
         {
-          "type": "null"
+          "$ref": "scalars.json#/definitions/ID"
         }
       ]
     },
@@ -87,7 +87,7 @@
   "additionalProperties": false,
   "definitions": {
     "percentage-or-money": {
-      "oneOf": [
+      "anyOf": [
         {
           "type": "object",
           "properties": {
@@ -135,10 +135,10 @@
           "const": true
         },
         "allowedPercentageRange": {
-          "type": "null"
+          "const": null
         },
         "allowedCurrencyRange": {
-          "type": "null"
+          "const": null
         }
       },
       "required": ["onlyAllowShortcuts", "allowedPercentageRange", "allowedCurrencyRange"],
@@ -151,10 +151,10 @@
           "const": false
         },
         "allowedPercentageRange": {
-          "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/percentage-range" }]
+          "anyOf": [{ "const": null }, { "$ref": "#/definitions/percentage-range" }]
         },
         "allowedCurrencyRange": {
-          "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/currency-range" }]
+          "anyOf": [{ "const": null }, { "$ref": "#/definitions/currency-range" }]
         }
       },
       "required": ["onlyAllowShortcuts", "allowedPercentageRange", "allowedCurrencyRange"],
