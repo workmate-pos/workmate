@@ -555,9 +555,17 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
         ? currencyFormatter(calculateDraftOrderResponse[key])
         : '-';
 
-  const outstanding = context.workOrderQuery?.data?.workOrder?.order?.outstanding
-    ? currencyFormatter(context.workOrderQuery.data.workOrder.order?.outstanding)
-    : getFormattedCalculatedMoney('totalPrice');
+  const receivedBigDecimal = context.workOrderQuery?.data?.workOrder?.order?.received
+    ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.received)
+    : BigDecimal.ZERO;
+
+  const totalPriceBigDecimal = calculateDraftOrderResponse?.totalPrice
+    ? BigDecimal.fromMoney(calculateDraftOrderResponse?.totalPrice)
+    : context.workOrderQuery?.data?.workOrder?.order?.total
+      ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.total)
+      : BigDecimal.ZERO;
+
+  const outstanding = currencyFormatter(totalPriceBigDecimal.subtract(receivedBigDecimal).toMoney());
 
   const received = currencyFormatter(context.workOrderQuery.data?.workOrder?.order?.received ?? 0);
   const discountValue = calculateDraftOrderResponse?.appliedDiscount
