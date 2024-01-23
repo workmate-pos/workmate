@@ -8,12 +8,12 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { NumberField } from '../components/NumberField.js';
 import { useEmployeeRatesMutation } from '../queries/use-employee-rates-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
-import { Dollars, toDollars } from '@work-orders/common/util/money.js';
+import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export default function Rates() {
   const [toast, setToastAction] = useToast();
 
-  const [employeeRates, setEmployeeRates] = useState<Record<string, Dollars | null>>({});
+  const [employeeRates, setEmployeeRates] = useState<Record<string, Money | null>>({});
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const employeesQuery = useEmployeesQuery({
@@ -21,7 +21,11 @@ export default function Rates() {
     params: {},
     options: {
       onSuccess(data) {
-        setEmployeeRates(Object.fromEntries(data.pages.map(employee => [employee.id, toDollars(employee.rate)])));
+        setEmployeeRates(
+          Object.fromEntries(
+            data.pages.filter(employee => !employee.isDefaultRate).map(employee => [employee.id, employee.rate]),
+          ),
+        );
       },
     },
   });
@@ -88,9 +92,17 @@ export default function Rates() {
                     label={'Rate'}
                     labelHidden={true}
                     value={employeeRates[employee.id] ? String(employeeRates[employee.id]!) : undefined}
-                    onChange={value =>
-                      setEmployeeRates({ ...employeeRates, [employee.id]: value ? (Number(value) as Dollars) : null })
-                    }
+                    onChange={value => {
+                      if (value.trim().length === 0) {
+                        setEmployeeRates({ ...employeeRates, [employee.id]: null });
+                        return;
+                      }
+
+                      if (BigDecimal.isValid(value)) {
+                        setEmployeeRates({ ...employeeRates, [employee.id]: BigDecimal.fromString(value).toMoney() });
+                        return;
+                      }
+                    }}
                     prefix={currencyFormatter.prefix}
                     suffix={currencyFormatter.suffix}
                     autoComplete={'off'}

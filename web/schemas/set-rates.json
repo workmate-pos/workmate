@@ -17,9 +17,7 @@
                 "const": null
               },
               {
-                "type": "integer",
-                "tsType": "number & { __brand: 'Cents' }",
-                "minimum": 1
+                "$ref": "scalars.json#/definitions/Money"
               }
             ]
           }

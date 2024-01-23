@@ -352,23 +352,28 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
 
   const productSelectorPopup = context.usePopup('ProductSelector', lineItems => {
     for (const lineItem of lineItems) {
-      context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isService: false });
+      context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable: false });
     }
   });
 
-  const serviceSelectorPopup = context.usePopup('ServiceSelector', lineItem => {
-    context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isService: true });
-    serviceConfigPopup.navigate({
-      readonly: context.hasOrder,
-      lineItem,
-      labour: context.createWorkOrder.labour?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
-    });
+  const serviceSelectorPopup = context.usePopup('ServiceSelector', ({ type, lineItem }) => {
+    const isUnstackable = type === 'mutable-service';
+
+    context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable });
+
+    if (type === 'mutable-service') {
+      mutableServiceConfigPopup.navigate({
+        readonly: context.hasOrder,
+        lineItem,
+        labour: context.createWorkOrder.labour?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
+      });
+    }
   });
 
   const handleLineItemConfigResult = (
     result:
-      | { type: 'product' | 'service'; hasLabour: true; result: ScreenInputOutput['LabourLineItemConfig'][1] }
-      | { type: 'product'; hasLabour: false; result: ScreenInputOutput['ProductLineItemConfig'][1] },
+      | { type: 'product' | 'mutable-service'; hasLabour: true; result: ScreenInputOutput['LabourLineItemConfig'][1] }
+      | { type: 'product' | 'fixed-service'; hasLabour: false; result: ScreenInputOutput['LineItemConfig'][1] },
   ) => {
     if (result.result.type === 'remove') {
       context.dispatchCreateWorkOrder({
@@ -392,8 +397,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
       context.dispatchCreateWorkOrder({
         type: 'upsert-line-item',
         lineItem: result.result.lineItem,
-        // TODO: Replace isService with Type in "product" | "hourly-service" | "fixed-price-service"
-        isService: result.type === 'service',
+        isUnstackable: result.type === 'mutable-service',
       });
 
       if (result.hasLabour) {
@@ -411,7 +415,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     }
 
     if (result.result.type === 'assign-employees') {
-      labourProductConfigPopup.navigate({
+      labourLineItemConfigPopup.navigate({
         readonly: context.hasOrder,
         lineItem: result.result.lineItem,
         labour: [],
@@ -423,17 +427,19 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     return result.result.type satisfies never;
   };
 
-  const serviceConfigPopup = context.usePopup('LabourLineItemConfig', result =>
-    handleLineItemConfigResult({ type: 'service', hasLabour: true, result }),
+  const mutableServiceConfigPopup = context.usePopup('LabourLineItemConfig', result =>
+    handleLineItemConfigResult({ type: 'mutable-service', hasLabour: true, result }),
   );
 
-  // labourless product
-  const productConfigPopup = context.usePopup('ProductLineItemConfig', result =>
+  const fixedServiceConfigPopup = context.usePopup('LineItemConfig', result =>
+    handleLineItemConfigResult({ type: 'fixed-service', hasLabour: false, result }),
+  );
+
+  const productConfigPopup = context.usePopup('LineItemConfig', result =>
     handleLineItemConfigResult({ type: 'product', hasLabour: false, result }),
   );
 
-  // product with labour
-  const labourProductConfigPopup = context.usePopup('LabourLineItemConfig', result =>
+  const labourLineItemConfigPopup = context.usePopup('LabourLineItemConfig', result =>
     handleLineItemConfigResult({ type: 'product', hasLabour: true, result }),
   );
 
@@ -443,7 +449,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
         const hasLabour = context.createWorkOrder.labour?.some(ea => ea.lineItemUuid === lineItem.uuid);
 
         if (hasLabour) {
-          labourProductConfigPopup.navigate({
+          labourLineItemConfigPopup.navigate({
             labour: context.createWorkOrder.labour?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
             readonly: context.hasOrder,
             lineItem,
@@ -451,6 +457,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
         } else {
           productConfigPopup.navigate({
             readonly: context.hasOrder,
+            canAddLabour: true,
             lineItem,
           });
         }
@@ -458,8 +465,16 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
         break;
       }
 
-      case 'service':
-        serviceConfigPopup.navigate({
+      case 'fixed-service':
+        fixedServiceConfigPopup.navigate({
+          readonly: context.hasOrder,
+          canAddLabour: false,
+          lineItem,
+        });
+        break;
+
+      case 'mutable-service':
+        mutableServiceConfigPopup.navigate({
           labour: context.createWorkOrder.labour?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
           readonly: context.hasOrder,
           lineItem,
@@ -572,18 +587,12 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
           />
         </Stack>
         <Stack direction={'horizontal'} flexChildren flex={1}>
-          <NumberField
-            label="Shipping"
-            value={getFormattedCalculatedMoney('totalShippingPrice')}
-            disabled={context.hasOrder}
-          />
           <NumberField label="Tax" disabled value={getFormattedCalculatedMoney('totalTax')} />
+          <NumberField label="Total" disabled value={getFormattedCalculatedMoney('totalPrice')} />
         </Stack>
       </Stack>
 
       <Stack direction="vertical" flexChildren flex={1}>
-        <NumberField label="Total" disabled value={getFormattedCalculatedMoney('totalPrice')} />
-
         <Stack direction={'vertical'}>
           <Stack direction={'horizontal'} flexChildren flex={1}>
             <NumberField label={'Paid'} disabled={true} value={received} />
@@ -645,7 +654,7 @@ const WorkOrderAssignment = ({ context }: { context: WorkOrderContext }) => {
 function useItemRows(
   context: WorkOrderContext,
   query: string,
-  openPopup: (type: 'product' | 'service', lineItem: CreateWorkOrderLineItem) => void,
+  openPopup: (type: 'product' | 'mutable-service' | 'fixed-service', lineItem: CreateWorkOrderLineItem) => void,
 ): ListRow[] {
   const fetch = useAuthenticatedFetch();
   const currencyFormatter = useCurrencyFormatter();
@@ -677,7 +686,11 @@ function useItemRows(
           onPress() {
             if (!productVariant || !settingsQuery.data || !lineItem) return;
 
-            const popupType = productVariant.product.isServiceItem ? 'service' : 'product';
+            const popupType = productVariant.product.isMutableServiceItem
+              ? 'mutable-service'
+              : productVariant.product.isFixedServiceItem
+                ? 'fixed-service'
+                : 'product';
 
             openPopup(popupType, lineItem);
           },
@@ -686,7 +699,7 @@ function useItemRows(
             subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
             image: {
               source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? 'not found',
-              badge: hasLabour ? undefined : lineItem.quantity,
+              badge: productVariant?.product.isMutableServiceItem || hasLabour ? undefined : lineItem.quantity,
             },
           },
           rightSide: {

@@ -10,6 +10,8 @@ import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -19,12 +21,14 @@ export function ServiceSelector() {
 
   const fetch = useAuthenticatedFetch();
   const settingsQuery = useSettingsQuery({ fetch });
-  const serviceCollectionId = settingsQuery.data?.settings.serviceCollectionId
-    ? parseGid(settingsQuery.data?.settings.serviceCollectionId).id
-    : null;
+  const serviceCollectionIds = useServiceCollectionIds();
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
-    params: { query: `${query} collection:${serviceCollectionId}` },
+    params: {
+      query: serviceCollectionIds
+        ? `${query} AND (${serviceCollectionIds.map(id => `collection:${parseGid(id).id}`).join(' OR ')})`
+        : query,
+    },
   });
   const currencyFormatter = useCurrencyFormatter();
 
@@ -49,21 +53,21 @@ export function ServiceSelector() {
         {productVariantsQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
-              Loading products...
+              Loading services...
             </Text>
           </Stack>
         )}
         {productVariantsQuery.isSuccess && rows.length === 0 && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
-              No products found
+              No services found
             </Text>
           </Stack>
         )}
         {productVariantsQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
-              Error loading products
+              Error loading services
             </Text>
           </Stack>
         )}
@@ -77,22 +81,31 @@ function getProductVariantRows(
   closePopupRef: { current: ClosePopupFn<'ServiceSelector'> },
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
-  return productVariants.map(variant => {
-    let displayName = variant.product.title;
-
-    if (!variant.product.hasOnlyDefaultVariant) {
-      displayName = `${displayName} - ${variant.title}`;
-    }
+  return productVariants.flatMap(variant => {
+    const displayName = getProductVariantName(variant) ?? 'Unknown service';
 
     const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
+
+    const type = variant.product.isFixedServiceItem
+      ? 'fixed-service'
+      : variant.product.isMutableServiceItem
+        ? 'mutable-service'
+        : null;
+
+    if (type === null) {
+      return [];
+    }
 
     return {
       id: variant.id,
       onPress: () => {
         closePopupRef.current({
-          uuid: uuid(),
-          productVariantId: variant.id,
-          quantity: 1 as Int,
+          type,
+          lineItem: {
+            uuid: uuid(),
+            productVariantId: variant.id,
+            quantity: 1 as Int,
+          },
         });
       },
       leftSide: {

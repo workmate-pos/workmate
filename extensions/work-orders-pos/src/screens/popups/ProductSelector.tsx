@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { CreateWorkOrderLineItem } from '../routes.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -24,13 +25,16 @@ export function ProductSelector() {
 
   const fetch = useAuthenticatedFetch();
   const settingsQuery = useSettingsQuery({ fetch });
-  const serviceCollectionId = settingsQuery.data?.settings.serviceCollectionId
-    ? parseGid(settingsQuery.data?.settings.serviceCollectionId).id
-    : null;
+  const serviceCollectionIds = useServiceCollectionIds();
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
-    params: { query: serviceCollectionId ? `${query} NOT collection:${serviceCollectionId}` : query },
+    params: {
+      query: serviceCollectionIds
+        ? `${query} ${serviceCollectionIds.map(id => `NOT collection:${parseGid(id).id}`).join(' ')}`
+        : query,
+    },
   });
+
   const productVariants = productVariantsQuery.data?.pages ?? [];
   const currencyFormatter = useCurrencyFormatter();
 

@@ -22,7 +22,7 @@ export type CreateWorkOrderAction =
        * Indicates whether this line item is a service item.
        * Service items can never have a quantity greater than 1.
        */
-      isService: boolean;
+      isUnstackable: boolean;
     }
   | NonNullable<
       {
@@ -55,7 +55,7 @@ const createWorkOrderReducer = (
       const hasLabour = uuidHasLabour(lineItemUuid);
 
       // Stack items if possible.
-      if (!action.isService && !hasLabour) {
+      if (!action.isUnstackable && !hasLabour) {
         const stackableProductVariantLineItem = workOrder.lineItems?.find(
           item =>
             item.productVariantId === action.lineItem.productVariantId &&

@@ -60,7 +60,8 @@ export type LineItem = {
     product: {
       id: ID;
       title: string;
-      isServiceItem: boolean;
+      isMutableServiceItem: boolean;
+      isFixedServiceItem: boolean;
     };
   } | null;
   quantity: Int;

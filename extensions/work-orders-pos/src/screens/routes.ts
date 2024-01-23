@@ -45,7 +45,7 @@ export type ScreenInputOutput = {
     undefined,
   ];
   ProductSelector: [undefined, CreateWorkOrderLineItem[]];
-  ServiceSelector: [undefined, CreateWorkOrderLineItem];
+  ServiceSelector: [undefined, { type: 'mutable-service' | 'fixed-service'; lineItem: CreateWorkOrderLineItem }];
   LabourLineItemConfig: [
     {
       readonly: boolean;
@@ -65,9 +65,10 @@ export type ScreenInputOutput = {
         }
     ),
   ];
-  ProductLineItemConfig: [
+  LineItemConfig: [
     {
       readonly: boolean;
+      canAddLabour: boolean;
       lineItem: CreateWorkOrderLineItem;
     },
     { type: 'remove' | 'update' | 'assign-employees'; lineItem: CreateWorkOrderLineItem },

@@ -14,7 +14,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { decimalToMoney } from '../../util/decimal.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
-  const [[workOrder], settings] = await Promise.all([
+  const [[workOrder], { fixedServiceCollectionId, mutableServiceCollectionId }] = await Promise.all([
     db.workOrder.get({ shop: session.shop, name }),
     getShopSettings(session.shop),
   ]);
@@ -39,7 +39,12 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     lineItems: fetchAllPages(
       graphql,
       (graphql, variables) =>
-        getLineItems.run(graphql, { ...variables, id: orderId, serviceCollectionId: settings.serviceCollectionId }),
+        getLineItems.run(graphql, {
+          ...variables,
+          id: orderId,
+          mutableServiceCollectionId,
+          fixedServiceCollectionId,
+        }),
       result => result.order?.lineItems ?? never('Invalid order id'),
     ),
     derivedFromOrder: workOrder.derivedFromOrderId ? getOrderInfo(session, workOrder.derivedFromOrderId as ID) : null,
@@ -121,7 +126,8 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
                 product: {
                   id: variant.product.id,
                   title: variant.product.title,
-                  isServiceItem: variant.product.isServiceItem,
+                  isFixedServiceItem: variant.product.isFixedServiceItem,
+                  isMutableServiceItem: variant.product.isMutableServiceItem,
                 },
                 title: variant.title,
               }

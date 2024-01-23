@@ -143,6 +143,8 @@ export const usePaymentHandler = () => {
 
     await Promise.all(addLineItemPromises);
 
+    // TODO: Also batch the other things because they all have a different name anyway
+
     for (const lineItem of cartRef.current.lineItems) {
       if (!lineItem.variantId) {
         continue;

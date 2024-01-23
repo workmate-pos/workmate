@@ -76,7 +76,7 @@ export function getCreateWorkOrderLineItems(
 
     if (remainingQuantity === 0) continue;
 
-    if (variant.product.isServiceItem) {
+    if (variant.product.isMutableServiceItem) {
       lineItems.push(
         ...Array.from({ length: remainingQuantity }).map(() => ({
           uuid: uuid(),

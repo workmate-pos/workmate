@@ -59,8 +59,19 @@
         }
       ]
     },
-    "serviceCollectionId": {
-      "description": "A collection name that is used to identify service products within Shopify",
+    "mutableServiceCollectionId": {
+      "description": "A collection name that is used to identify mutable service products within Shopify",
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
+    "fixedServiceCollectionId": {
+      "description": "A collection name that is used to identify fixed service products within Shopify",
       "anyOf": [
         {
           "const": null

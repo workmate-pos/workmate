@@ -60,10 +60,18 @@ async function getEmployeesWithRate(shop: string, employees: (gql.staffMember.St
   const ratesRecord = Object.fromEntries(rates.map(r => [r.employeeId, BigDecimal.fromString(r.rate)]));
   const { defaultRate } = await getShopSettings(shop);
 
-  return employees.map(e => (e ? { ...e, rate: ratesRecord[e.id]?.toMoney() ?? defaultRate } : null));
+  return employees.map(e =>
+    e
+      ? {
+          ...e,
+          rate: ratesRecord[e.id]?.toMoney() ?? defaultRate,
+          isDefaultRate: !ratesRecord[e.id],
+        }
+      : null,
+  );
 }
 
-export type EmployeeWithRate = gql.staffMember.StaffMemberFragment.Result & { rate: Money };
+export type EmployeeWithRate = gql.staffMember.StaffMemberFragment.Result & { rate: Money; isDefaultRate: boolean };
 
 export type FetchEmployeesResponse = {
   employees: EmployeeWithRate[];
