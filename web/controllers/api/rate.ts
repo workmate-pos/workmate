@@ -11,8 +11,8 @@ import type { Ids } from '../../schemas/generated/ids.js';
 import type { SetRates } from '../../schemas/generated/set-rates.js';
 import { db } from '../../services/db/db.js';
 import { transaction } from '../../services/db/transaction.js';
-import { Cents } from '@work-orders/common/util/money.js';
 import type { ID } from '../../schemas/generated/shop-settings.js';
+import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 @Authenticated()
 export default class RateController {
@@ -27,7 +27,7 @@ export default class RateController {
     return res.json({
       rates: rates.map(({ employeeId, rate }) => ({
         employeeId: employeeId as ID,
-        rate: rate as Cents,
+        rate: BigDecimal.fromString(rate).toMoney(),
       })),
     });
   }
@@ -67,7 +67,7 @@ export default class RateController {
 export type FetchRatesResponse = {
   rates: {
     employeeId: ID;
-    rate: Cents;
+    rate: Money;
   }[];
 };
 

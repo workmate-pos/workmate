@@ -12,14 +12,12 @@
             "$ref": "scalars.json#/definitions/ID"
           },
           "rate": {
-            "oneOf": [
+            "anyOf": [
               {
-                "type": "integer",
-                "tsType": "number & { __brand: 'Cents' }",
-                "minimum": 1
+                "const": null
               },
               {
-                "type": "null"
+                "$ref": "scalars.json#/definitions/Money"
               }
             ]
           }

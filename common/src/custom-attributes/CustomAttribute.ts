@@ -3,6 +3,12 @@ export type CustomAttributeValue<T extends CustomAttribute<any, any>> = T extend
   ? V
   : never;
 
+/**
+ * Basic custom attribute definition to be attached to nodes.
+ * Should generally NOT be relied on, as merchants can usually change this easily.
+ *
+ * Mainly used to display information for consumption by merchants (with one exception: {@link WorkOrderAttribute}).
+ */
 export abstract class CustomAttribute<const Key extends string, const Value> {
   protected constructor(public readonly key: Key) {}
 

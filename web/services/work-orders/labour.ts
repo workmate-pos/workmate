@@ -1,0 +1,49 @@
+import { db } from '../db/db.js';
+import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+
+export async function removeWorkOrderLabour(workOrderId: number) {
+  await Promise.all([
+    db.workOrderLabour.removeHourlyLabour({ workOrderId }),
+    db.workOrderLabour.removeFixedPriceLabour({ workOrderId }),
+  ]);
+}
+
+export async function createWorkOrderLabour(
+  workOrderId: number,
+  { labour, lineItems }: Pick<CreateWorkOrder, 'labour' | 'lineItems'>,
+) {
+  // doing these insertions in bulk is possible, but not worth the complexity (trust me i tried).
+  // INSERT RETURNING is not guaranteed to return in input order, so we would need to restore the order somehow.
+  // not worth the extra complexity since the number of items per work order is small anyway.
+
+  const findProductVariantId = (lineItemUuid: string | null) =>
+    lineItems.find(li => li.uuid === lineItemUuid)?.productVariantId ?? null;
+
+  const hourlyLabour = labour.filter(hasPropertyValue('type', 'hourly-labour'));
+  const fixedPriceLabour = labour.filter(hasPropertyValue('type', 'fixed-price-labour'));
+
+  await Promise.all([
+    ...hourlyLabour.map(({ name, lineItemUuid, employeeId, rate, hours }) =>
+      db.workOrderLabour.insertHourlyLabour({
+        productVariantId: findProductVariantId(lineItemUuid),
+        rate: rate,
+        lineItemUuid,
+        workOrderId,
+        employeeId,
+        hours,
+        name,
+      }),
+    ),
+    ...fixedPriceLabour.map(({ name, lineItemUuid, amount, employeeId }) =>
+      db.workOrderLabour.insertFixedPriceLabour({
+        productVariantId: findProductVariantId(lineItemUuid),
+        amount: amount,
+        workOrderId,
+        employeeId,
+        lineItemUuid,
+        name,
+      }),
+    ),
+  ]);
+}

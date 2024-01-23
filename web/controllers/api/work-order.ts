@@ -12,10 +12,11 @@ import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.
 import type { CreateWorkOrderRequest } from '../../schemas/generated/create-work-order-request.js';
 import { getWorkOrder, getWorkOrderInfoPage } from '../../services/work-orders/get.js';
 import { getShopSettings } from '../../services/settings.js';
-import { calculateDraftOrder, upsertWorkOrder } from '../../services/work-orders/upsert.js';
+import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { ID } from '../../schemas/generated/ids.js';
 import { sessionStorage } from '../../index.js';
+import { calculateDraftOrder } from '../../services/work-orders/calculate.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -81,7 +82,7 @@ export default class WorkOrderController {
       dueDate: createWorkOrderRequest.dueDate,
       customerId: `gid://shopify/Customer/${customerId}` as ID,
       description: createWorkOrderRequest.description,
-      employeeAssignments: [],
+      labour: [],
       lineItems: [],
       derivedFromOrderId: null,
       name: null,

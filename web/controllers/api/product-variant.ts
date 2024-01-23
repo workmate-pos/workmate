@@ -18,10 +18,14 @@ export default class ProductVariantController {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    const { serviceCollectionId } = await getShopSettings(session.shop);
+    const { fixedServiceCollectionId, mutableServiceCollectionId } = await getShopSettings(session.shop);
 
     const graphql = new Graphql(session);
-    const response = await gql.products.getPage.run(graphql, { ...paginationOptions, serviceCollectionId });
+    const response = await gql.products.getPage.run(graphql, {
+      ...paginationOptions,
+      fixedServiceCollectionId,
+      mutableServiceCollectionId,
+    });
 
     const { nodes: productVariants, pageInfo } = response.productVariants;
 
@@ -37,10 +41,14 @@ export default class ProductVariantController {
     const session: Session = res.locals.shopify.session;
     const { ids } = req.query;
 
-    const { serviceCollectionId } = await getShopSettings(session.shop);
+    const { fixedServiceCollectionId, mutableServiceCollectionId } = await getShopSettings(session.shop);
 
     const graphql = new Graphql(session);
-    const { nodes } = await gql.products.getMany.run(graphql, { ids, serviceCollectionId });
+    const { nodes } = await gql.products.getMany.run(graphql, {
+      ids,
+      fixedServiceCollectionId,
+      mutableServiceCollectionId,
+    });
 
     const productVariants = nodes.filter(
       (node): node is null | (gql.products.ProductVariantFragment.Result & { __typename: 'ProductVariant' }) =>

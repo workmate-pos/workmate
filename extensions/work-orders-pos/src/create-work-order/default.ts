@@ -9,7 +9,7 @@ export const defaultCreateWorkOrder: Nullable<CreateWorkOrder> = {
   dueDate: new Date(
     Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + 1000 * 60 * 60 * 24 * 7,
   ).toISOString() as DateTime,
-  employeeAssignments: [],
+  labour: [],
   lineItems: [],
   customerId: null,
   discount: null,

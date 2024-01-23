@@ -1,4 +1,10 @@
-query getPage($first: Int = 10, $after: String, $query: String, $serviceCollectionId: ID = "gid://shopify/Collection/null") {
+query getPage(
+  $first: Int = 10,
+  $after: String,
+  $query: String,
+  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
+  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
+) {
   productVariants(first: $first, after: $after, query: $query, sortKey: POPULAR) {
     nodes {
       ...ProductVariantFragment
@@ -10,7 +16,11 @@ query getPage($first: Int = 10, $after: String, $query: String, $serviceCollecti
   }
 }
 
-query getMany($ids: [ID!]!, $serviceCollectionId: ID = "gid://shopify/Collection/null") {
+query getMany(
+  $ids: [ID!]!,
+  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
+  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
+) {
   nodes(ids: $ids) {
     __typename
     ...ProductVariantFragment
@@ -32,6 +42,7 @@ fragment ProductVariantFragment on ProductVariant {
       url
     }
     description
-    isServiceItem: inCollection(id: $serviceCollectionId)
+    isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
+    isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
   }
 }

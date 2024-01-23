@@ -3,8 +3,7 @@ import type { Session } from '@shopify/shopify-api';
 import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { getOrder, getOrderInfos, getOrderLineItems } from '../../services/orders/get.js';
-import { ID } from '../../schemas/generated/ids.js';
-import { createGid } from '@work-orders/common/util/gid.js';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 @Authenticated()
 export default class OrderController {

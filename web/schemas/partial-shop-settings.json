@@ -21,7 +21,7 @@
     },
     "discountRules": {
       "title": "discount-rules",
-      "oneOf": [
+      "anyOf": [
         { "$ref": "#/definitions/discount-rule-only-allow-shortcuts" },
         { "$ref": "#/definitions/discount-rule-do-not-allow-shortcuts" }
       ]
@@ -30,7 +30,7 @@
       "title": "work-order-requests",
       "description": "Settings related to work order requests, where customers can create a work order themselves.",
       "type": "object",
-      "oneOf": [
+      "anyOf": [
         {
           "type": "object",
           "properties": {
@@ -38,7 +38,7 @@
               "const": false
             },
             "status": {
-              "type": "null"
+              "const": null
             }
           },
           "required": ["enabled", "status"],
@@ -59,14 +59,25 @@
         }
       ]
     },
-    "serviceCollectionId": {
-      "description": "A collection name that is used to identify service products within Shopify",
-      "oneOf": [
+    "mutableServiceCollectionId": {
+      "description": "A collection name that is used to identify mutable service products within Shopify",
+      "anyOf": [
         {
-          "$ref": "scalars.json#/definitions/ID"
+          "const": null
         },
         {
-          "type": "null"
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
+    "fixedServiceCollectionId": {
+      "description": "A collection name that is used to identify fixed service products within Shopify",
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
         }
       ]
     },
@@ -87,7 +98,7 @@
   "additionalProperties": false,
   "definitions": {
     "percentage-or-money": {
-      "oneOf": [
+      "anyOf": [
         {
           "type": "object",
           "properties": {
@@ -108,9 +119,7 @@
               "const": "percentage"
             },
             "percentage": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 100
+              "$ref": "scalars.json#/definitions/Decimal"
             }
           },
           "required": ["unit", "percentage"],
@@ -120,10 +129,7 @@
     },
     "percentage-range": {
       "type": "array",
-      "items": [
-        { "type": "number", "minimum": 0, "maximum": 100 },
-        { "type": "number", "minimum": 0, "maximum": 100 }
-      ],
+      "items": [{ "$ref": "scalars.json#/definitions/Decimal" }, { "$ref": "scalars.json#/definitions/Decimal" }],
       "minItems": 2,
       "maxItems": 2
     },
@@ -140,10 +146,10 @@
           "const": true
         },
         "allowedPercentageRange": {
-          "type": "null"
+          "const": null
         },
         "allowedCurrencyRange": {
-          "type": "null"
+          "const": null
         }
       },
       "required": ["onlyAllowShortcuts", "allowedPercentageRange", "allowedCurrencyRange"],
@@ -156,10 +162,10 @@
           "const": false
         },
         "allowedPercentageRange": {
-          "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/percentage-range" }]
+          "anyOf": [{ "const": null }, { "$ref": "#/definitions/percentage-range" }]
         },
         "allowedCurrencyRange": {
-          "oneOf": [{ "type": "null" }, { "$ref": "#/definitions/currency-range" }]
+          "anyOf": [{ "const": null }, { "$ref": "#/definitions/currency-range" }]
         }
       },
       "required": ["onlyAllowShortcuts", "allowedPercentageRange", "allowedCurrencyRange"],

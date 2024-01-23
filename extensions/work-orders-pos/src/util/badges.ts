@@ -3,7 +3,7 @@ import type {
   OrderDisplayFulfillmentStatus,
 } from '@web/services/gql/queries/generated/schema.js';
 import type { BadgeVariant, BadgeStatus } from '@shopify/retail-ui-extensions/src/components/Badge/Badge.js';
-import { titleCase } from '@work-orders/common/util/casing.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function getStatusText(status: OrderDisplayFinancialStatus | OrderDisplayFulfillmentStatus): string {
   return titleCase(status.replace(/_/g, ' '));

@@ -69,7 +69,7 @@ function validateWorkOrder(createWorkOrder: Nullable<CreateWorkOrder>):
     'status',
     'customerId',
     'dueDate',
-    'employeeAssignments',
+    'labour',
     'description',
     'lineItems',
   ];

@@ -1,18 +1,18 @@
 import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
 import { useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
 import type { ID, SetRates } from '../../schemas/generated/set-rates.js';
-import { Dollars, toCents } from '@work-orders/common/util/money.js';
+import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
-export const useEmployeeRatesMutation = (options: UseMutationOptions<void, unknown, Record<string, number | null>>) => {
+export const useEmployeeRatesMutation = (options: UseMutationOptions<void, unknown, Record<string, Money | null>>) => {
   const fetch = useAuthenticatedFetch();
   const queryClient = useQueryClient();
 
   return useMutation({
     ...options,
-    mutationFn: async (ratesObj: Record<string, number | null>) => {
+    mutationFn: async (ratesObj: Record<string, Money | null>) => {
       const rates = Object.entries(ratesObj).map(([employeeId, rate]) => ({
         employeeId: employeeId as ID,
-        rate: rate === null ? null : toCents(rate as Dollars),
+        rate: rate,
       }));
 
       if (!nonEmpty(rates)) {

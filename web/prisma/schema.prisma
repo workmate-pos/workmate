@@ -30,20 +30,22 @@ model Settings {
 }
 
 model WorkOrder {
-  id                  Int                  @id @default(autoincrement())
-  shop                String
+  id                 Int      @id @default(autoincrement())
+  shop               String
   /// Used as work order id within this shop
-  name                String
-  status              String
-  dueDate             DateTime
-  customerId          String
+  name               String
+  status             String
+  dueDate            DateTime
+  customerId         String
   /// Draft Order ID - set when the order is still being created, but not paid
-  draftOrderId        String?
+  draftOrderId       String?
   /// Order ID - set when the order is paid
-  orderId             String?
-  derivedFromOrderId  String?
-  employeeAssignments EmployeeAssignment[]
-  createdAt           DateTime             @default(now())
+  orderId            String?
+  derivedFromOrderId String?
+  createdAt          DateTime @default(now())
+
+  fixedPriceLabour FixedPriceLabour[]
+  hourlyLabour     HourlyLabour[]
 
   @@unique([shop, name])
   @@index([draftOrderId])
@@ -53,23 +55,38 @@ model WorkOrder {
 model EmployeeRate {
   employeeId String
   shop       String
-  rate       Int
+  rate       String
 
   @@id([shop, employeeId])
 }
 
-model EmployeeAssignment {
+model FixedPriceLabour {
   id Int @id @default(autoincrement())
-
-  productVariantId String?
-  lineItemUuid     String?
-
-  employeeId String
-  rate       Int
-  hours      Int
 
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
 
-  @@index([workOrderId])
+  lineItemUuid     String?
+  productVariantId String?
+  employeeId       String?
+
+  name String
+
+  amount String
+}
+
+model HourlyLabour {
+  id Int @id @default(autoincrement())
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+
+  lineItemUuid     String?
+  productVariantId String?
+  employeeId       String?
+
+  name String
+
+  rate  String
+  hours String
 }

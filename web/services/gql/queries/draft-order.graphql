@@ -100,7 +100,12 @@ fragment ShopMoneyAmountFragment on MoneyBag {
   }
 }
 
-query getLineItems($id: ID!, $after: String, $serviceCollectionId: ID = "gid://shopify/Collection/null") {
+query getLineItems(
+  $id: ID!,
+  $after: String,
+  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null",
+  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
+) {
   order: draftOrder(id: $id) {
     lineItems(first: 10, after: $after) {
       nodes {
@@ -117,7 +122,8 @@ query getLineItems($id: ID!, $after: String, $serviceCollectionId: ID = "gid://s
             product {
               id
               title
-              isServiceItem: inCollection(id: $serviceCollectionId)
+              isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
+              isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
             }
           }
           quantity

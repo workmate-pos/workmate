@@ -1,10 +1,12 @@
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
-import type { ID } from '@web/schemas/generated/ids.js';
+import type { ID } from '@web/schemas/generated/create-work-order.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type CreateWorkOrderLineItem = CreateWorkOrder['lineItems'][number];
-export type CreateWorkOrderEmployeeAssignment = CreateWorkOrder['employeeAssignments'][number];
+export type CreateWorkOrderLabour = CreateWorkOrder['labour'][number];
 
 /**
  * Screen input/output types.
@@ -43,22 +45,30 @@ export type ScreenInputOutput = {
     undefined,
   ];
   ProductSelector: [undefined, CreateWorkOrderLineItem[]];
-  ServiceSelector: [undefined, CreateWorkOrderLineItem];
+  ServiceSelector: [undefined, { type: 'mutable-service' | 'fixed-service'; lineItem: CreateWorkOrderLineItem }];
   LabourLineItemConfig: [
     {
       readonly: boolean;
+      // TODO: A way to see the input in usePopup callback - then we can just directly access this lineItem instead of having to pass it around
       lineItem: CreateWorkOrderLineItem;
-      employeeAssignments: Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[];
+      labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid'>[];
     },
-    {
-      type: 'update' | 'remove';
-      lineItem: CreateWorkOrderLineItem;
-      employeeAssignments: Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[];
-    },
+    (
+      | {
+          type: 'update';
+          lineItem: CreateWorkOrderLineItem;
+          labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid'>[];
+        }
+      | {
+          type: 'remove';
+          lineItem: CreateWorkOrderLineItem;
+        }
+    ),
   ];
-  ProductLineItemConfig: [
+  LineItemConfig: [
     {
       readonly: boolean;
+      canAddLabour: boolean;
       lineItem: CreateWorkOrderLineItem;
     },
     { type: 'remove' | 'update' | 'assign-employees'; lineItem: CreateWorkOrderLineItem },
@@ -67,14 +77,25 @@ export type ScreenInputOutput = {
   CustomerSelector: [undefined, ID];
   ShippingConfig: [undefined, number];
   EmployeeSelector: [ID[], ID[]];
-  EmployeeAssignmentsConfig: [
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[],
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[],
+  EmployeeLabourConfig: [
+    {
+      labourUuid: string;
+      employeeId: ID;
+      labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid' | 'employeeId' | 'labourUuid'>;
+    },
+    (
+      | {
+          type: 'update';
+          labourUuid: string;
+          employeeId: ID;
+          labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid' | 'employeeId' | 'labourUuid'>;
+        }
+      | {
+          type: 'remove';
+          labourUuid: string;
+        }
+    ),
   ];
-  EmployeeAssignmentConfig: [
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>,
-    { type: 'remove' | 'update'; employeeAssignment: Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'> },
-  ];
-  DiscountSelector: [{ subTotal: number }, CreateWorkOrder['discount']];
+  DiscountSelector: [{ subTotal: Money }, CreateWorkOrder['discount']];
   WorkOrderSaved: [WorkOrder, undefined];
 };

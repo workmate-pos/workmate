@@ -13,7 +13,7 @@ AND "employeeId" IN :employeeIds!;
 */
 WITH Input AS (
     SELECT "employeeId", :shop! AS shop, rate
-    FROM (VALUES ('', 0), :rates! OFFSET 1) AS t ("employeeId", rate)
+    FROM (VALUES ('', ''), :rates! OFFSET 1) AS t ("employeeId", rate)
 )
 INSERT INTO "EmployeeRate" ("employeeId", "shop", "rate")
 SELECT "employeeId", shop, rate

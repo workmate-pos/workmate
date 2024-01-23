@@ -24,8 +24,8 @@ import {
 import { Grid } from '../../components/Grid.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { OrderLineItem, useOrderLineItemsQuery } from '@work-orders/common/queries/use-order-line-items-query.js';
-import { parseMoney } from '@work-orders/common/util/money.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export function OrderPreview() {
   const [orderId, setOrderId] = useState<ID | null>(null);
@@ -171,7 +171,11 @@ function useLineItemRows(lineItems: OrderLineItem[]): ListRow[] {
         },
       },
       rightSide: {
-        label: currencyFormatter(parseMoney(lineItem.originalUnitPrice) * lineItem.quantity),
+        label: currencyFormatter(
+          BigDecimal.fromMoney(lineItem.originalUnitPrice)
+            .multiply(BigDecimal.fromString(lineItem.quantity.toFixed(0)))
+            .toMoney(),
+        ),
       },
     };
   });

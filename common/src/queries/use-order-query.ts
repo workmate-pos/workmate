@@ -2,7 +2,7 @@ import { useQuery, UseQueryOptions } from 'react-query';
 import { Fetch } from './fetch.js';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import type { FetchOrderResponse } from '@web/controllers/api/order.js';
-import { parseGid } from '../util/gid.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export const useOrderQuery = (
   { fetch, id }: { fetch: Fetch; id: ID | null },

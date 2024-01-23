@@ -1,82 +1,132 @@
 import { useScreen } from '../../hooks/use-screen.js';
-import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import {
+  Button,
+  ScrollView,
+  SegmentedControl,
+  Stack,
+  Stepper,
+  Text,
+  TextField,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { CreateWorkOrderEmployeeAssignment, CreateWorkOrderLineItem } from '../routes.js';
+import { CreateWorkOrderLineItem, CreateWorkOrderLabour } from '../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
-import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { EmployeeAssignmentList } from '../../components/EmployeeAssignmentsList.js';
-import { Cents, parseMoney, toDollars } from '@work-orders/common/util/money.js';
-import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
 import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { getLabourPrice } from '../../create-work-order/labour.js';
+import { uuid } from '../../util/uuid.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
   const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem | null>(null);
-  const [employeeAssignments, setEmployeeAssignments] = useState<
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[]
+  const [employeeLabour, setEmployeeLabour] = useState<
+    DiscriminatedUnionOmit<CreateWorkOrderLabour & { employeeId: ID }, 'lineItemUuid'>[]
   >([]);
+  const [generalLabour, setGeneralLabour] = useState<DiscriminatedUnionOmit<
+    CreateWorkOrderLabour & { employeeId: null },
+    'lineItemUuid'
+  > | null>(null);
+
   const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   const { Screen, usePopup, closePopup, cancelPopup } = useScreen(
     'LabourLineItemConfig',
-    ({ readonly, lineItem, employeeAssignments }) => {
+    ({ readonly, lineItem, labour }) => {
       setReadonly(readonly);
       setLineItem(lineItem);
-      setEmployeeAssignments(employeeAssignments);
+      setEmployeeLabour(labour.filter(hasNonNullableProperty('employeeId')));
       setUnsavedChanges(false);
+
+      const generalLabours = labour.filter(hasPropertyValue('employeeId', null));
+      if (generalLabours.length === 1) {
+        setGeneralLabour(generalLabours[0]!);
+      } else if (generalLabours.length > 1) {
+        // pos only supports setting one general labour, so calculate it and use a fixed price
+        setGeneralLabour({
+          type: 'fixed-price-labour',
+          labourUuid: uuid(),
+          employeeId: null,
+          name: generalLabours[0]!.name,
+          amount: getLabourPrice(generalLabours),
+        });
+      } else {
+        setGeneralLabour(null);
+      }
     },
   );
 
   const employeeSelectorPopup = usePopup('EmployeeSelector', result => {
     setUnsavedChanges(true);
 
-    setEmployeeAssignments(employeeAssignments =>
-      result.map(employeeId => {
-        const existingAssignment = employeeAssignments.find(e => e.employeeId === employeeId);
-        return existingAssignment ?? { employeeId, hours: 0 as Int };
+    setEmployeeLabour(employeeLabour => [
+      ...result.map(id => {
+        // For each selected employee, either keep the existing labour or create a new one
+
+        return (
+          employeeLabour.find(l => l.employeeId === id) ??
+          ({
+            type: 'fixed-price-labour',
+            labourUuid: uuid(),
+            employeeId: id,
+            name: settingsQuery?.data?.settings?.labourLineItemName || 'Labour',
+            amount: BigDecimal.ZERO.toMoney(),
+          } as const)
+        );
       }),
-    );
+    ]);
   });
 
-  const employeeConfigPopup = usePopup('EmployeeAssignmentConfig', result => {
+  const employeeConfigPopup = usePopup('EmployeeLabourConfig', result => {
     setUnsavedChanges(true);
 
     if (result.type === 'remove') {
-      setEmployeeAssignments(employeeAssignments.filter(e => e.employeeId !== result.employeeAssignment.employeeId));
+      setEmployeeLabour(labour => labour.filter(l => l.labourUuid !== result.labourUuid));
     } else if (result.type === 'update') {
-      setEmployeeAssignments(
-        employeeAssignments.map(e =>
-          e.employeeId === result.employeeAssignment.employeeId ? result.employeeAssignment : e,
+      setEmployeeLabour(
+        employeeLabour.map(l =>
+          l.labourUuid === result.labourUuid
+            ? { ...result.labour, employeeId: result.employeeId, labourUuid: result.labourUuid }
+            : l,
         ),
       );
     } else {
-      return result.type satisfies never;
+      return result satisfies never;
     }
   });
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
   const productVariantQuery = useProductVariantQuery({ fetch, id: lineItem?.productVariantId ?? null });
-  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeAssignments.map(e => e.employeeId) });
 
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
-  const labourPrice = employeeAssignments.reduce(
-    (total, { hours, employeeId }) =>
-      total + hours * toDollars(employeeQueries[employeeId]?.data?.rate ?? (0 as Cents)),
-    0,
-  );
-  const productVariantPrice = productVariant ? parseMoney(productVariant.price) : 0;
-  const totalPrice = productVariantPrice + labourPrice;
+  const labour = [
+    ...employeeLabour,
+    ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
+  ];
+
+  const labourPrice = getLabourPrice(labour);
+
+  const productVariantPrice = productVariant ? productVariant.price : BigDecimal.ZERO.toMoney();
+  const totalPrice = BigDecimal.sum(
+    BigDecimal.fromMoney(productVariantPrice),
+    BigDecimal.fromMoney(labourPrice),
+  ).toMoney();
 
   const unsavedChangesDialog = useUnsavedChangesDialog();
   const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
-  // TODO: Make employee selector be for selecting just one employee???
   return (
     <Screen
       title={name ?? 'Service'}
@@ -90,24 +140,187 @@ export function LabourLineItemConfig() {
       presentation={{ sheet: true }}
     >
       <ScrollView>
-        <Stack direction={'vertical'} paddingVertical={'Small'}>
-          <Button
-            title={'Add employees'}
-            type={'primary'}
-            onPress={() => employeeSelectorPopup.navigate(employeeAssignments.map(e => e.employeeId))}
-            isDisabled={readonly}
-          />
-        </Stack>
-        <EmployeeAssignmentList
-          employeeAssignments={employeeAssignments}
-          readonly={readonly}
-          onClick={employeeAssignment => employeeConfigPopup.navigate(employeeAssignment)}
-        />
+        <Stack direction={'vertical'} paddingVertical={'Small'} spacing={5}>
+          <Text variant={'headingLarge'}>Labour Charge</Text>
+          <Stack direction={'vertical'} spacing={2}>
+            <SegmentedControl
+              segments={[
+                {
+                  id: 'none',
+                  label: 'None',
+                  disabled: readonly,
+                },
+                {
+                  id: 'hourly-labour' satisfies CreateWorkOrderLabour['type'],
+                  label: 'Hourly',
+                  disabled: readonly,
+                },
+                {
+                  id: 'fixed-price-labour' satisfies CreateWorkOrderLabour['type'],
+                  label: 'Fixed Price',
+                  disabled: readonly,
+                },
+              ]}
+              selected={generalLabour?.type ?? 'none'}
+              onSelect={(id: CreateWorkOrderLabour['type'] | 'none') => {
+                if (id === 'none') {
+                  setGeneralLabour(null);
+                  return;
+                }
 
-        <Stack direction={'horizontal'} alignment={'space-evenly'} flex={1} paddingVertical={'ExtraLarge'}>
-          <Text variant={'captionMedium'}>Base Price: {currencyFormatter(productVariantPrice)}</Text>
-          <Text variant={'captionMedium'}>Labour Price: {currencyFormatter(labourPrice)}</Text>
-          <Text variant={'captionMedium'}>Total Price: {currencyFormatter(totalPrice)}</Text>
+                if (id === 'hourly-labour') {
+                  setGeneralLabour(generalLabour => ({
+                    type: 'hourly-labour',
+                    labourUuid: uuid(),
+                    employeeId: null,
+                    name: generalLabour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
+                    rate: getLabourPrice(generalLabour ? [generalLabour] : []),
+                    hours: BigDecimal.ONE.toDecimal(),
+                  }));
+                  return;
+                }
+
+                if (id === 'fixed-price-labour') {
+                  setGeneralLabour(generalLabour => ({
+                    type: 'fixed-price-labour',
+                    labourUuid: uuid(),
+                    employeeId: null,
+                    name: generalLabour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
+                    amount: getLabourPrice(generalLabour ? [generalLabour] : []),
+                  }));
+                  return;
+                }
+              }}
+            ></SegmentedControl>
+
+            {generalLabour && (
+              <TextField
+                label={'Labour Name'}
+                value={generalLabour.name}
+                onChange={(name: string) => setGeneralLabour({ ...generalLabour, name })}
+                isValid={generalLabour.name.length > 0}
+                errorMessage={generalLabour.name.length === 0 ? 'Labour name is required' : undefined}
+                disabled={readonly}
+              />
+            )}
+
+            {generalLabour?.type === 'hourly-labour' && (
+              <>
+                <Stack direction={'horizontal'}>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Hourly Rate
+                  </Text>
+                </Stack>
+                <Stepper
+                  disabled={readonly}
+                  initialValue={Number(generalLabour.rate)}
+                  value={Number(generalLabour.rate)}
+                  minimumValue={0}
+                  onValueChanged={(rate: number) => {
+                    if (!BigDecimal.isValid(rate.toFixed(2))) return;
+
+                    setGeneralLabour({
+                      ...generalLabour,
+                      rate: BigDecimal.fromString(rate.toFixed(2)).toMoney(),
+                    });
+                  }}
+                ></Stepper>
+
+                <Stack direction={'horizontal'}>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Hours
+                  </Text>
+                </Stack>
+                <Stepper
+                  disabled={readonly}
+                  initialValue={Number(generalLabour.hours)}
+                  value={Number(generalLabour.hours)}
+                  minimumValue={0}
+                  onValueChanged={(hours: number) => {
+                    if (!BigDecimal.isValid(hours.toFixed(2))) return;
+
+                    setGeneralLabour({
+                      ...generalLabour,
+                      hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
+                    });
+                  }}
+                ></Stepper>
+                <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                  <Text variant={'headingSmall'} color={'TextSubdued'}>
+                    {generalLabour.hours} hours × {currencyFormatter(generalLabour.rate)}/hour ={' '}
+                    {currencyFormatter(
+                      BigDecimal.fromDecimal(generalLabour.hours)
+                        .multiply(BigDecimal.fromMoney(generalLabour.rate))
+                        .toMoney(),
+                    )}
+                  </Text>
+                </Stack>
+              </>
+            )}
+
+            {generalLabour?.type === 'fixed-price-labour' && (
+              <>
+                <Stack direction={'horizontal'} flexChildren>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Price
+                  </Text>
+                </Stack>
+                <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
+                  <Stepper
+                    disabled={readonly}
+                    initialValue={Number(generalLabour.amount)}
+                    value={Number(generalLabour.amount)}
+                    minimumValue={0}
+                    onValueChanged={(amount: number) => {
+                      if (!BigDecimal.isValid(amount.toFixed(2))) return;
+
+                      setGeneralLabour({
+                        ...generalLabour,
+                        amount: BigDecimal.fromString(amount.toFixed(2)).toMoney(),
+                      });
+                    }}
+                  ></Stepper>
+                </Stack>
+                <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                  <Text variant={'headingSmall'} color={'TextSubdued'}>
+                    {currencyFormatter(generalLabour.amount)}
+                  </Text>
+                </Stack>
+              </>
+            )}
+          </Stack>
+
+          <Text variant={'headingLarge'}>Employee Labour Charges</Text>
+          <Stack direction={'vertical'} spacing={2}>
+            <Button
+              title={'Add employees'}
+              type={'primary'}
+              onPress={() =>
+                employeeSelectorPopup.navigate(employeeLabour.map(e => e.employeeId).filter(isNonNullable))
+              }
+              isDisabled={readonly}
+            />
+
+            <EmployeeLabourList
+              labour={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
+              readonly={readonly}
+              onClick={labour =>
+                employeeConfigPopup.navigate({ employeeId: labour.employeeId, labourUuid: labour.labourUuid, labour })
+              }
+            />
+          </Stack>
+
+          <Stack direction={'horizontal'} alignment={'space-evenly'} flex={1} paddingVertical={'ExtraLarge'}>
+            <Text variant={'headingSmall'} color={'TextSubdued'}>
+              Base Price: {currencyFormatter(productVariantPrice)}
+            </Text>
+            <Text variant={'headingSmall'} color={'TextSubdued'}>
+              Labour Price: {currencyFormatter(labourPrice)}
+            </Text>
+            <Text variant={'headingSmall'} color={'TextSubdued'}>
+              Total Price: {currencyFormatter(totalPrice)}
+            </Text>
+          </Stack>
         </Stack>
 
         <Stack direction="vertical" flex={1} alignment="space-evenly">
@@ -127,7 +340,7 @@ export function LabourLineItemConfig() {
                 disabled={!lineItem}
                 onPress={() => {
                   if (!lineItem) return;
-                  closePopup({ type: 'remove', lineItem, employeeAssignments });
+                  closePopup({ type: 'remove', lineItem });
                 }}
               />
               <Button
@@ -135,7 +348,11 @@ export function LabourLineItemConfig() {
                 disabled={!lineItem}
                 onPress={() => {
                   if (!lineItem) return;
-                  closePopup({ type: 'update', lineItem, employeeAssignments });
+                  closePopup({
+                    type: 'update',
+                    lineItem,
+                    labour,
+                  });
                 }}
               />
             </>

@@ -4,7 +4,7 @@
   "properties": {
     "name": {
       "description": "The name of the work order to update (if applicable). If not provided, a new work order will be created. Unique within a store.",
-      "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
     },
     "status": {
       "type": "string",
@@ -16,25 +16,69 @@
     "dueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
-    "employeeAssignments": {
+    "labour": {
       "type": "array",
       "items": {
         "type": "object",
-        "title": "employee-assignment",
-        "description": "An employee assignment that is associated with a specific line item",
-        "properties": {
-          "employeeId": {
-            "$ref": "scalars.json#/definitions/ID"
+        "anyOf": [
+          {
+            "title": "fixed-price-labour",
+            "description": "An absolute amount of money for some labour",
+            "properties": {
+              "type": {
+                "const": "fixed-price-labour"
+              },
+              "name": {
+                "type": "string"
+              },
+              "employeeId": {
+                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+              },
+              "amount": {
+                "$ref": "scalars.json#/definitions/Money"
+              },
+              "lineItemUuid": {
+                "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+              },
+              "labourUuid": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["type", "name", "employeeId", "amount", "lineItemUuid", "labourUuid"],
+            "additionalProperties": false
           },
-          "hours": {
-            "$ref": "scalars.json#/definitions/Int"
-          },
-          "lineItemUuid": {
-            "oneOf": [{ "type": "string", "minLength": 1 }, { "type": "null" }]
+          {
+            "title": "hourly-labour",
+            "description": "An amount of labour determined by some hourly rate",
+            "properties": {
+              "type": {
+                "const": "hourly-labour"
+              },
+              "name": {
+                "type": "string"
+              },
+              "employeeId": {
+                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+              },
+              "rate": {
+                "$ref": "scalars.json#/definitions/Money"
+              },
+              "hours": {
+                "$ref": "scalars.json#/definitions/Decimal"
+              },
+              "lineItemUuid": {
+                "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+              },
+              "labourUuid": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["type", "name", "employeeId", "rate", "hours", "lineItemUuid", "labourUuid"],
+            "additionalProperties": false
           }
-        },
-        "required": ["employeeId", "hours", "lineItemUuid"],
-        "additionalProperties": false
+        ]
       }
     },
     "description": {
@@ -42,7 +86,7 @@
     },
     "derivedFromOrderId": {
       "description": "A Shopify Order ID from which this work order was derived",
-      "oneOf": [{ "$ref": "scalars.json#/definitions/ID" }, { "type": "null" }]
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
     },
     "lineItems": {
       "description": "All line items for this work order, including products and services",
@@ -69,23 +113,36 @@
     },
     "discount": {
       "title": "discount",
-      "oneOf": [
-        {
-          "type": "null"
-        },
+      "anyOf": [
+        { "const": null },
         {
           "type": "object",
-          "properties": {
-            "value": {
-              "description": "Either the dollar amount or the percentage",
-              "type": "number"
+          "anyOf": [
+            {
+              "properties": {
+                "valueType": {
+                  "const": "FIXED_AMOUNT"
+                },
+                "value": {
+                  "$ref": "scalars.json#/definitions/Money"
+                }
+              },
+              "required": ["value", "valueType"],
+              "additionalProperties": false
             },
-            "valueType": {
-              "enum": ["FIXED_AMOUNT", "PERCENTAGE"]
+            {
+              "properties": {
+                "valueType": {
+                  "const": "PERCENTAGE"
+                },
+                "value": {
+                  "$ref": "scalars.json#/definitions/Decimal"
+                }
+              },
+              "required": ["value", "valueType"],
+              "additionalProperties": false
             }
-          },
-          "required": ["value", "valueType"],
-          "additionalProperties": false
+          ]
         }
       ]
     }
@@ -95,7 +152,7 @@
     "status",
     "customerId",
     "dueDate",
-    "employeeAssignments",
+    "labour",
     "description",
     "derivedFromOrderId",
     "lineItems",

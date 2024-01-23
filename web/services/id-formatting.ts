@@ -2,7 +2,7 @@ import { ShopSettings } from '../schemas/generated/shop-settings.js';
 import { getShopSettings } from './settings.js';
 import { db } from './db/db.js';
 import { useClient } from './db/client.js';
-import { never } from '@work-orders/common/util/never.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 const formatters: Record<
   string,

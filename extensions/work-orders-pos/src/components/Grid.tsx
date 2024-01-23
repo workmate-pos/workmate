@@ -11,7 +11,7 @@ export function Grid({ children, columns }: { children: ReactNode; columns: numb
 
   return (
     <Stack direction={'vertical'}>
-      {rows.map((row, i) => (
+      {rows.map(row => (
         <Stack direction={'horizontal'} flexChildren>
           {row}
         </Stack>
