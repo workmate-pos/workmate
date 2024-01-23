@@ -7,7 +7,6 @@ import {
   Stepper,
   Text,
   TextField,
-  useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
@@ -31,8 +30,6 @@ export function EmployeeLabourConfig() {
   > | null>(null);
 
   const [labourUuid, setLabourUuid] = useState<string | null>(null);
-
-  const api = useExtensionApi();
 
   const { Screen, closePopup } = useScreen('EmployeeLabourConfig', ({ employeeId, labourUuid, labour }) => {
     setEmployeeId(employeeId);
@@ -112,7 +109,7 @@ export function EmployeeLabourConfig() {
                       type: 'hourly-labour',
                       labourUuid: uuid(),
                       employeeId: null,
-                      name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+                      name: labour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
                       rate: rate.toMoney(),
                       hours: BigDecimal.fromMoney(getLabourPrice(labour ? [labour] : []))
                         .divide(rate, 2)
@@ -126,7 +123,7 @@ export function EmployeeLabourConfig() {
                       type: 'fixed-price-labour',
                       labourUuid: uuid(),
                       employeeId: null,
-                      name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+                      name: labour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
                       amount: getLabourPrice(labour ? [labour] : []),
                     }));
                     return;
@@ -135,9 +132,9 @@ export function EmployeeLabourConfig() {
               ></SegmentedControl>
 
               <TextField
-                title={'Labour Name'}
-                initialValue={labour.name}
-                onChangeText={(name: string) => setLabour({ ...labour, name })}
+                label={'Labour Name'}
+                value={labour.name}
+                onChange={(name: string) => setLabour({ ...labour, name })}
                 isValid={labour.name.length > 0}
                 errorMessage={labour.name.length === 0 ? 'Labour name is required' : undefined}
               />

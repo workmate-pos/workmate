@@ -394,12 +394,6 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     if (result.result.type === 'update') {
       const lineItemUuid = result.result.lineItem.uuid;
 
-      context.dispatchCreateWorkOrder({
-        type: 'upsert-line-item',
-        lineItem: result.result.lineItem,
-        isUnstackable: result.type === 'mutable-service',
-      });
-
       if (result.hasLabour) {
         context.dispatchCreateWorkOrder({
           type: 'set-field',
@@ -410,6 +404,12 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
           ],
         });
       }
+
+      context.dispatchCreateWorkOrder({
+        type: 'upsert-line-item',
+        lineItem: result.result.lineItem,
+        isUnstackable: result.type === 'mutable-service',
+      });
 
       return;
     }
@@ -565,7 +565,10 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
       ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.total)
       : BigDecimal.ZERO;
 
-  const outstanding = currencyFormatter(totalPriceBigDecimal.subtract(receivedBigDecimal).toMoney());
+  const outstandingBigDecimal = totalPriceBigDecimal.subtract(receivedBigDecimal);
+
+  const outstanding =
+    outstandingBigDecimal.compare(BigDecimal.ZERO) < 0 ? '-' : currencyFormatter(outstandingBigDecimal.toMoney());
 
   const received = currencyFormatter(context.workOrderQuery.data?.workOrder?.order?.received ?? 0);
   const discountValue = calculateDraftOrderResponse?.appliedDiscount

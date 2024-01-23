@@ -65,6 +65,8 @@ export const usePaymentHandler = () => {
     const createWorkOrder = workOrderToCreateWorkOrder(workOrder);
 
     await api.cart.clearCart();
+
+    // these only work in sequence
     await api.cart.addCartProperties(getCartProperties(workOrder));
     await api.cart.setCustomer({ id: parseGid(createWorkOrder.customerId).id });
 
@@ -72,7 +74,7 @@ export const usePaymentHandler = () => {
       await api.cart.applyCartDiscount(
         ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[createWorkOrder.discount.valueType],
         'Discount',
-        String(createWorkOrder.discount.value),
+        createWorkOrder.discount.value,
       );
     }
 

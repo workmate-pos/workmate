@@ -55,7 +55,7 @@ export function LabourLineItemConfig() {
           type: 'fixed-price-labour',
           labourUuid: uuid(),
           employeeId: null,
-          name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+          name: generalLabours[0]!.name,
           amount: getLabourPrice(generalLabours),
         });
       } else {
@@ -77,7 +77,7 @@ export function LabourLineItemConfig() {
             type: 'fixed-price-labour',
             labourUuid: uuid(),
             employeeId: id,
-            name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+            name: settingsQuery?.data?.settings?.labourLineItemName || 'Labour',
             amount: BigDecimal.ZERO.toMoney(),
           } as const)
         );
@@ -141,12 +141,20 @@ export function LabourLineItemConfig() {
     >
       <ScrollView>
         <Stack direction={'vertical'} paddingVertical={'Small'} spacing={5}>
-          <Text variant={'headingLarge'}>General Labour</Text>
+          <Text variant={'headingLarge'}>Labour Charge</Text>
           <Stack direction={'vertical'} spacing={2}>
             <SegmentedControl
               segments={[
-                { id: 'none', label: 'None', disabled: readonly },
-                { id: 'hourly-labour' satisfies CreateWorkOrderLabour['type'], label: 'Hourly', disabled: readonly },
+                {
+                  id: 'none',
+                  label: 'None',
+                  disabled: readonly,
+                },
+                {
+                  id: 'hourly-labour' satisfies CreateWorkOrderLabour['type'],
+                  label: 'Hourly',
+                  disabled: readonly,
+                },
                 {
                   id: 'fixed-price-labour' satisfies CreateWorkOrderLabour['type'],
                   label: 'Fixed Price',
@@ -165,7 +173,7 @@ export function LabourLineItemConfig() {
                     type: 'hourly-labour',
                     labourUuid: uuid(),
                     employeeId: null,
-                    name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+                    name: generalLabour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
                     rate: getLabourPrice(generalLabour ? [generalLabour] : []),
                     hours: BigDecimal.ONE.toDecimal(),
                   }));
@@ -177,7 +185,7 @@ export function LabourLineItemConfig() {
                     type: 'fixed-price-labour',
                     labourUuid: uuid(),
                     employeeId: null,
-                    name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+                    name: generalLabour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
                     amount: getLabourPrice(generalLabour ? [generalLabour] : []),
                   }));
                   return;
@@ -187,11 +195,12 @@ export function LabourLineItemConfig() {
 
             {generalLabour && (
               <TextField
-                title={'Labour Name'}
-                initialValue={generalLabour.name}
-                onChangeText={(name: string) => setGeneralLabour({ ...generalLabour, name })}
+                label={'Labour Name'}
+                value={generalLabour.name}
+                onChange={(name: string) => setGeneralLabour({ ...generalLabour, name })}
                 isValid={generalLabour.name.length > 0}
                 errorMessage={generalLabour.name.length === 0 ? 'Labour name is required' : undefined}
+                disabled={readonly}
               />
             )}
 
@@ -281,7 +290,7 @@ export function LabourLineItemConfig() {
             )}
           </Stack>
 
-          <Text variant={'headingLarge'}>Employee Labour</Text>
+          <Text variant={'headingLarge'}>Employee Labour Charges</Text>
           <Stack direction={'vertical'} spacing={2}>
             <Button
               title={'Add employees'}

@@ -18,10 +18,6 @@ export type CreateWorkOrderAction =
   | {
       type: 'upsert-line-item';
       lineItem: CreateWorkOrderLineItem;
-      /**
-       * Indicates whether this line item is a service item.
-       * Service items can never have a quantity greater than 1.
-       */
       isUnstackable: boolean;
     }
   | NonNullable<

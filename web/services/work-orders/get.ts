@@ -56,11 +56,11 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
         ? order.appliedDiscount.valueType === 'FIXED_AMOUNT'
           ? ({
               valueType: 'FIXED_AMOUNT',
-              value: BigDecimal.fromString(order.appliedDiscount.value.toString(2)).toMoney(),
+              value: BigDecimal.fromString(order.appliedDiscount.value.toFixed(2)).toMoney(),
             } as const)
           : ({
               valueType: 'PERCENTAGE',
-              value: BigDecimal.fromString(order.appliedDiscount.value.toString(2)).toDecimal(),
+              value: BigDecimal.fromString(order.appliedDiscount.value.toFixed(2)).toDecimal(),
             } as const)
         : null
       : order.totalDiscounts
