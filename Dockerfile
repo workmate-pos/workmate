@@ -18,7 +18,9 @@ COPY graphql.config.yml web
 
 # Install deps for common
 WORKDIR ./common
-RUN npm install
+RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
+  NPM_GITHUB_TOKEN=$(cat /run/secrets/NPM_GITHUB_TOKEN) \
+  npm install
 
 # Build backend
 WORKDIR ../web
