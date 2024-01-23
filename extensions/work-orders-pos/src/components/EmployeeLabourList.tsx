@@ -50,7 +50,7 @@ export function EmployeeLabourList({
               }
             : {
                 label: query?.data?.name ?? 'Unknown Employee',
-                subtitle: [l.name],
+                subtitle: [l.name, currencyFormatter(l.amount)],
               };
 
         return {

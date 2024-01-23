@@ -1,5 +1,4 @@
-import { SearchBar } from '@shopify/retail-ui-extensions-react';
-import { SearchBarProps } from '@shopify/retail-ui-extensions/src/components/SearchBar/SearchBar.js';
+import { SearchBar, SearchBarProps } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useState } from 'react';
 
 /**

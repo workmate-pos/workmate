@@ -1,6 +1,7 @@
 import {
   Button,
   ScrollView,
+  SegmentedControl,
   Selectable,
   Stack,
   Stepper,
@@ -18,41 +19,25 @@ import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedU
 import { CreateWorkOrderLabour } from '../routes.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { uuid } from '../../util/uuid.js';
+import { getLabourPrice } from '../../create-work-order/labour.js';
 
 export function EmployeeLabourConfig() {
   const [employeeId, setEmployeeId] = useState<ID | null>(null);
 
-  const [hourlyLabour, setHourlyLabour] = useState<
-    | ({ type: 'hourly-labour' } & DiscriminatedUnionOmit<
-        CreateWorkOrderLabour,
-        'lineItemUuid' | 'employeeId' | 'labourUuid'
-      >)
-    | null
-  >(null);
-
-  // TODO: Support fixed price labour for individual employees (same as in LabourLineItemConfig)
-  const [fixedPriceLabour, setFixedPriceLabour] = useState<
-    | ({ type: 'fixed-price-labour' } & DiscriminatedUnionOmit<
-        CreateWorkOrderLabour,
-        'lineItemUuid' | 'employeeId' | 'labourUuid'
-      >)
-    | null
-  >(null);
+  const [labour, setLabour] = useState<DiscriminatedUnionOmit<
+    CreateWorkOrderLabour,
+    'lineItemUuid' | 'employeeId' | 'labourUuid'
+  > | null>(null);
 
   const [labourUuid, setLabourUuid] = useState<string | null>(null);
 
   const api = useExtensionApi();
 
   const { Screen, closePopup } = useScreen('EmployeeLabourConfig', ({ employeeId, labourUuid, labour }) => {
-    if (labour.type === 'fixed-price-labour') {
-      api.toast.show('Fixed price labour is not yet supported for individual employees');
-      closePopup({ type: 'remove', labourUuid });
-      return;
-    }
-
     setEmployeeId(employeeId);
     setLabourUuid(labourUuid);
-    setHourlyLabour(labour);
+    setLabour(labour);
   });
 
   const currencyFormatter = useCurrencyFormatter();
@@ -68,7 +53,7 @@ export function EmployeeLabourConfig() {
     const { rate } = employeeQuery.data;
     const { labourLineItemName } = settingsQuery.data.settings;
 
-    setHourlyLabour(
+    setLabour(
       hourlyLabour =>
         hourlyLabour ??
         ({
@@ -78,76 +63,157 @@ export function EmployeeLabourConfig() {
           rate,
         } as const),
     );
-  }, [hourlyLabour, employeeQuery.data, settingsQuery.data]);
+  }, [labour, employeeQuery.data, settingsQuery.data]);
 
-  // TODO: Configurable rate, with as default the employee's rate (and a reset button?)
+  // TODO: Dedup segmentedcontrol with LabourLineItemConfig
 
   return (
     <Screen
       title={employeeQuery?.data?.name ?? 'Employee'}
-      isLoading={!labourUuid || employeeQuery.isLoading}
+      isLoading={!labourUuid || !employeeId || !labour || employeeQuery.isLoading}
       presentation={{ sheet: true }}
     >
-      {labourUuid && employeeId && hourlyLabour && (
+      {labourUuid && employeeId && labour && (
         <ScrollView>
           <Stack direction={'vertical'} spacing={5}>
             <Text variant={'headingLarge'}>{employeeQuery?.data?.name ?? 'Unknown Employee'}</Text>
+
+            <Stack direction={'vertical'} spacing={2}>
+              <SegmentedControl
+                segments={[
+                  {
+                    id: 'hourly-labour' satisfies CreateWorkOrderLabour['type'],
+                    label: 'Hourly',
+                    disabled: false,
+                  },
+                  {
+                    id: 'fixed-price-labour' satisfies CreateWorkOrderLabour['type'],
+                    label: 'Fixed Price',
+                    disabled: false,
+                  },
+                ]}
+                selected={labour.type ?? 'none'}
+                onSelect={(id: CreateWorkOrderLabour['type']) => {
+                  if (id === 'hourly-labour') {
+                    let rate = BigDecimal.fromMoney(
+                      employeeQuery?.data?.rate ?? getLabourPrice(labour ? [labour] : []),
+                    );
+
+                    if (rate.equals(BigDecimal.ZERO)) {
+                      rate = BigDecimal.ONE;
+                    }
+
+                    setLabour(labour => ({
+                      type: 'hourly-labour',
+                      labourUuid: uuid(),
+                      employeeId: null,
+                      name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+                      rate: rate.toMoney(),
+                      hours: BigDecimal.fromMoney(getLabourPrice(labour ? [labour] : []))
+                        .divide(rate, 2)
+                        .toDecimal(),
+                    }));
+                    return;
+                  }
+
+                  if (id === 'fixed-price-labour') {
+                    setLabour(labour => ({
+                      type: 'fixed-price-labour',
+                      labourUuid: uuid(),
+                      employeeId: null,
+                      name: settingsQuery?.data?.settings?.labourLineItemName ?? 'Labour',
+                      amount: getLabourPrice(labour ? [labour] : []),
+                    }));
+                    return;
+                  }
+                }}
+              ></SegmentedControl>
+            </Stack>
+
             <TextField
               title={'Labour Name'}
-              initialValue={hourlyLabour.name}
-              onChangeText={(name: string) => setHourlyLabour({ ...hourlyLabour, name })}
-              isValid={hourlyLabour.name.length > 0}
-              errorMessage={hourlyLabour.name.length === 0 ? 'Labour name is required' : undefined}
+              initialValue={labour.name}
+              onChangeText={(name: string) => setLabour({ ...labour, name })}
+              isValid={labour.name.length > 0}
+              errorMessage={labour.name.length === 0 ? 'Labour name is required' : undefined}
             />
-            <Text variant={'headingSmall'}>Hours</Text>
-            <Stepper
-              minimumValue={0}
-              onValueChanged={(hours: number) => {
-                if (!BigDecimal.isValid(hours.toFixed(2))) return;
 
-                setHourlyLabour({
-                  ...hourlyLabour,
-                  hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
-                });
-              }}
-              initialValue={Number(hourlyLabour.hours)}
-              value={Number(hourlyLabour.hours)}
-            />
-            <Stack direction={'horizontal'} alignment={'space-between'}>
-              <Text variant={'headingSmall'}>Hourly rate</Text>
-              <Selectable
-                disabled={
-                  !employeeQuery.data ||
-                  BigDecimal.fromMoney(hourlyLabour.rate).equals(BigDecimal.fromMoney(employeeQuery.data.rate))
-                }
-                onPress={() => {
-                  if (!employeeQuery.data) return;
-                  setHourlyLabour({ ...hourlyLabour, rate: employeeQuery.data.rate });
-                }}
-              >
-                <Text color={'TextInteractive'}>Reset</Text>
-              </Selectable>
-            </Stack>
-            <Stepper
-              minimumValue={1}
-              initialValue={Number(hourlyLabour.rate)}
-              value={Number(hourlyLabour.rate)}
-              onValueChanged={(rate: number) => {
-                if (!BigDecimal.isValid(rate.toFixed(2))) return;
+            {labour.type === 'hourly-labour' && (
+              <>
+                <Stack direction={'horizontal'} alignment={'center'}>
+                  <Text color={'TextSubdued'}>Hourly Rate</Text>
+                </Stack>
+                <Stepper
+                  initialValue={Number(labour.rate)}
+                  value={Number(labour.rate)}
+                  minimumValue={0}
+                  onValueChanged={(rate: number) => {
+                    if (!BigDecimal.isValid(rate.toFixed(2))) return;
 
-                setHourlyLabour({ ...hourlyLabour, rate: BigDecimal.fromString(rate.toFixed(2)).toMoney() });
-              }}
-            />
-            <Stack direction={'horizontal'} flex={1} alignment={'space-evenly'}>
-              <Text variant={'headingSmall'} color={'TextSubdued'}>
-                {hourlyLabour.hours} hours × {currencyFormatter(hourlyLabour.rate)}/hour ={' '}
-                {currencyFormatter(
-                  BigDecimal.fromDecimal(hourlyLabour.hours)
-                    .multiply(BigDecimal.fromMoney(hourlyLabour.rate))
-                    .toMoney(),
-                )}
-              </Text>
-            </Stack>
+                    setLabour({
+                      ...labour,
+                      rate: BigDecimal.fromString(rate.toFixed(2)).toMoney(),
+                    });
+                  }}
+                ></Stepper>
+
+                <Stack direction={'horizontal'} alignment={'center'}>
+                  <Text color={'TextSubdued'}>Hours</Text>
+                </Stack>
+                <Stepper
+                  initialValue={Number(labour.hours)}
+                  value={Number(labour.hours)}
+                  minimumValue={0}
+                  onValueChanged={(hours: number) => {
+                    if (!BigDecimal.isValid(hours.toFixed(2))) return;
+
+                    setLabour({
+                      ...labour,
+                      hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
+                    });
+                  }}
+                ></Stepper>
+                <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                  <Text variant={'headingSmall'} color={'TextSubdued'}>
+                    {labour.hours} hours × {currencyFormatter(labour.rate)}/hour ={' '}
+                    {currencyFormatter(
+                      BigDecimal.fromDecimal(labour.hours).multiply(BigDecimal.fromMoney(labour.rate)).toMoney(),
+                    )}
+                  </Text>
+                </Stack>
+              </>
+            )}
+
+            {labour.type === 'fixed-price-labour' && (
+              <>
+                <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
+                  <Stack direction={'horizontal'} alignment={'center'}>
+                    <Text color={'TextSubdued'}>Price</Text>
+                  </Stack>
+                </Stack>
+                <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
+                  <Stepper
+                    initialValue={Number(labour.amount)}
+                    value={Number(labour.amount)}
+                    minimumValue={0}
+                    onValueChanged={(amount: number) => {
+                      if (!BigDecimal.isValid(amount.toFixed(2))) return;
+
+                      setLabour({
+                        ...labour,
+                        amount: BigDecimal.fromString(amount.toFixed(2)).toMoney(),
+                      });
+                    }}
+                  ></Stepper>
+                </Stack>
+                <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                  <Text variant={'headingSmall'} color={'TextSubdued'}>
+                    {currencyFormatter(labour.amount)}
+                  </Text>
+                </Stack>
+              </>
+            )}
+
             <Stack direction="vertical" flex={1} alignment="flex-end">
               <Button
                 title="Remove"
@@ -164,8 +230,8 @@ export function EmployeeLabourConfig() {
                     labourUuid,
                     employeeId,
                     labour: {
-                      ...hourlyLabour,
-                      name: hourlyLabour.name || 'Unnamed labour',
+                      ...labour,
+                      name: labour.name || 'Unnamed labour',
                     },
                   });
                 }}
