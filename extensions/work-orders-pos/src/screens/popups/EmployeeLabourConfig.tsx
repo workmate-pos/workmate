@@ -67,6 +67,11 @@ export function EmployeeLabourConfig() {
 
   // TODO: Dedup segmentedcontrol with LabourLineItemConfig
 
+  const canResetLabour =
+    labour?.type === 'hourly-labour' &&
+    employeeQuery.data?.rate &&
+    !BigDecimal.fromMoney(employeeQuery.data.rate).equals(BigDecimal.fromMoney(labour.rate));
+
   return (
     <Screen
       title={employeeQuery?.data?.name ?? 'Employee'}
@@ -140,8 +145,24 @@ export function EmployeeLabourConfig() {
 
             {labour.type === 'hourly-labour' && (
               <>
-                <Stack direction={'horizontal'} alignment={'center'}>
-                  <Text color={'TextSubdued'}>Hourly Rate</Text>
+                <Stack direction={'horizontal'} alignment={'space-between'}>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Hourly Rate
+                  </Text>
+                  <Selectable
+                    disabled={!canResetLabour}
+                    onPress={() => {
+                      if (!canResetLabour) return;
+                      if (!employeeQuery.data?.rate) return;
+
+                      setLabour({
+                        ...labour,
+                        rate: employeeQuery.data.rate,
+                      });
+                    }}
+                  >
+                    <Text color={canResetLabour ? 'TextInteractive' : 'TextSubdued'}>Reset</Text>
+                  </Selectable>
                 </Stack>
                 <Stepper
                   initialValue={Number(labour.rate)}
@@ -157,8 +178,10 @@ export function EmployeeLabourConfig() {
                   }}
                 ></Stepper>
 
-                <Stack direction={'horizontal'} alignment={'center'}>
-                  <Text color={'TextSubdued'}>Hours</Text>
+                <Stack direction={'horizontal'}>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Hours
+                  </Text>
                 </Stack>
                 <Stepper
                   initialValue={Number(labour.hours)}
@@ -186,10 +209,10 @@ export function EmployeeLabourConfig() {
 
             {labour.type === 'fixed-price-labour' && (
               <>
-                <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
-                  <Stack direction={'horizontal'} alignment={'center'}>
-                    <Text color={'TextSubdued'}>Price</Text>
-                  </Stack>
+                <Stack direction={'horizontal'} flexChildren>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Price
+                  </Text>
                 </Stack>
                 <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
                   <Stepper

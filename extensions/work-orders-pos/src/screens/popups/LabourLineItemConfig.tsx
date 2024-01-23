@@ -185,8 +185,10 @@ export function LabourLineItemConfig() {
 
             {generalLabour?.type === 'hourly-labour' && (
               <>
-                <Stack direction={'horizontal'} alignment={'center'}>
-                  <Text color={'TextSubdued'}>Hourly Rate</Text>
+                <Stack direction={'horizontal'}>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Hourly Rate
+                  </Text>
                 </Stack>
                 <Stepper
                   disabled={readonly}
@@ -203,8 +205,10 @@ export function LabourLineItemConfig() {
                   }}
                 ></Stepper>
 
-                <Stack direction={'horizontal'} alignment={'center'}>
-                  <Text color={'TextSubdued'}>Hours</Text>
+                <Stack direction={'horizontal'}>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Hours
+                  </Text>
                 </Stack>
                 <Stepper
                   disabled={readonly}
@@ -235,10 +239,10 @@ export function LabourLineItemConfig() {
 
             {generalLabour?.type === 'fixed-price-labour' && (
               <>
-                <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
-                  <Stack direction={'horizontal'} alignment={'center'}>
-                    <Text color={'TextSubdued'}>Price</Text>
-                  </Stack>
+                <Stack direction={'horizontal'} flexChildren>
+                  <Text color={'TextSubdued'} variant={'headingSmall'}>
+                    Price
+                  </Text>
                 </Stack>
                 <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
                   <Stepper
