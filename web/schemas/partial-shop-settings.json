@@ -9,8 +9,14 @@
     "statuses": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+        "minLength": 1
+      },
+      "minLength": 1
+    },
+    "defaultStatus": {
+      "type": "string",
+      "minLength": 1
     },
     "discountShortcuts": {
       "type": "array",

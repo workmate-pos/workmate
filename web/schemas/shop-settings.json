@@ -4,6 +4,7 @@
   "required": [
     "idFormat",
     "statuses",
+    "defaultStatus",
     "discountShortcuts",
     "discountRules",
     "workOrderRequests",

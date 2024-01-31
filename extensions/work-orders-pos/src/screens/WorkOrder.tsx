@@ -53,6 +53,7 @@ const useWorkOrderContext = () => {
   const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
   const cart = useCartSubscription();
+  const settingsQuery = useSettingsQuery({ fetch });
 
   const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
     switch (action.type) {
@@ -78,6 +79,16 @@ const useWorkOrderContext = () => {
             });
             api.toast.show('Imported customer from cart');
           }
+        }
+
+        const defaultStatus = settingsQuery?.data?.settings.defaultStatus;
+
+        if (defaultStatus) {
+          dispatchCreateWorkOrder({
+            type: 'set-field',
+            field: 'status',
+            value: defaultStatus,
+          });
         }
 
         break;

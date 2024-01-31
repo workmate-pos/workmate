@@ -39,11 +39,12 @@ const PERCENTAGE_RANGE = 'PERCENTAGE_RANGE';
 
 export default function Settings() {
   const [toast, setToastAction] = useToast();
-  const [settings, setSettings] = useState<ShopSettings | null>(null);
+  const [settings, setSettings] = useState<ShopSettings>(null!);
 
   const [discountShortcutValue, setDiscountShortcutValue] = useState('');
 
   const [statusValue, setStatusValue] = useState('');
+  const [defaultStatusValue, setDefaultStatusValue] = useState('');
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const settingsQuery = useSettingsQuery(
@@ -52,6 +53,7 @@ export default function Settings() {
       refetchOnWindowFocus: false,
       onSuccess({ settings }) {
         setSettings(settings);
+        setDefaultStatusValue(settings.defaultStatus);
       },
       onError() {
         setToastAction({
@@ -79,41 +81,6 @@ export default function Settings() {
       });
     },
   });
-
-  const [mutableServiceCollectionValue, setMutableServiceCollectionValue] = useState<string | undefined>(undefined);
-  const [fixedServiceCollectionValue, setFixedServiceCollectionValue] = useState<string | undefined>(undefined);
-  const [selectedMutableServiceCollectionName, setSelectedMutableServiceCollectionName] = useState<string | null>(null);
-  const [selectedFixedServiceCollectionName, setSelectedFixedServiceCollectionName] = useState<string | null>(null);
-
-  const mutableCollectionsQuery = useCollectionsQuery({ fetch, params: { query: mutableServiceCollectionValue } });
-  const fixedCollectionsQuery = useCollectionsQuery({ fetch, params: { query: fixedServiceCollectionValue } });
-
-  // set the collection names when the settings & collections are both loaded
-  useEffect(() => {
-    if (mutableServiceCollectionValue !== undefined) return;
-
-    const collections = mutableCollectionsQuery.data?.pages;
-    const collectionId = settingsQuery.data?.settings.mutableCollectionId;
-
-    if (!collections || !collectionId) return;
-
-    const selectedCollection = collections.find(collection => collection.id === collectionId);
-    setSelectedMutableServiceCollectionName(selectedCollection?.title ?? null);
-    setMutableServiceCollectionValue(selectedCollection?.title ?? '');
-  }, [mutableCollectionsQuery.data?.pages, settingsQuery.data?.settings.serviceCollectionId]);
-
-  useEffect(() => {
-    if (fixedServiceCollectionValue !== undefined) return;
-
-    const collections = fixedCollectionsQuery.data?.pages;
-    const collectionId = settingsQuery.data?.settings.fixedCollectionId;
-
-    if (!collections || !collectionId) return;
-
-    const selectedCollection = collections.find(collection => collection.id === collectionId);
-    setSelectedFixedServiceCollectionName(selectedCollection?.title ?? null);
-    setFixedServiceCollectionValue(selectedCollection?.title ?? '');
-  }, [fixedCollectionsQuery.data?.pages, settingsQuery.data?.settings.serviceCollectionId]);
 
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
@@ -247,6 +214,23 @@ export default function Settings() {
                     </Tag>
                   ))}
                 </InlineStack>
+                <Autocomplete
+                  options={settings.statuses.map(status => ({ id: status, label: status, value: status }))}
+                  selected={[settings.defaultStatus]}
+                  onSelect={([defaultStatus]) => {
+                    setSettings(current => ({ ...current, defaultStatus: defaultStatus ?? current.defaultStatus }));
+                    setDefaultStatusValue(defaultStatus ?? settings.defaultStatus);
+                  }}
+                  textField={
+                    <Autocomplete.TextField
+                      label="Default Status"
+                      autoComplete="off"
+                      value={defaultStatusValue}
+                      onChange={setDefaultStatusValue}
+                      onBlur={() => setDefaultStatusValue(settings.defaultStatus)}
+                    />
+                  }
+                />
                 <TextField
                   label="ID Format"
                   autoComplete="off"
@@ -280,94 +264,15 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                <Autocomplete
-                  options={
-                    mutableCollectionsQuery.data?.pages.map(page => ({
-                      label: page.title,
-                      value: page.id,
-                    })) ?? []
-                  }
-                  allowMultiple={false}
-                  loading={mutableCollectionsQuery.isLoading}
-                  willLoadMoreResults={mutableCollectionsQuery.hasNextPage}
-                  onLoadMoreResults={mutableCollectionsQuery.fetchNextPage}
-                  selected={settings.mutableServiceCollectionId ? [settings.mutableServiceCollectionId] : []}
-                  emptyState={
-                    <BlockStack inlineAlign={'center'}>
-                      <Icon source={SearchMinor} />
-                      Could not find any collections
-                    </BlockStack>
-                  }
-                  textField={
-                    <Autocomplete.TextField
-                      label="Dynamic Service Collection"
-                      helpText={
-                        'A collection containing services without a fixed price. Products are shown in the "Add Service" menu.'
-                      }
-                      autoComplete="off"
-                      value={mutableServiceCollectionValue}
-                      onChange={setMutableServiceCollectionValue}
-                      onBlur={() => setMutableServiceCollectionValue(selectedMutableServiceCollectionName ?? '')}
-                    />
-                  }
-                  onSelect={([id]: ID[]) => {
-                    let name: string | null = null;
-                    let serviceCollectionId: ID | null = null;
-
-                    if (id !== undefined && id !== settings?.mutableServiceCollectionId) {
-                      name = mutableCollectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
-                      serviceCollectionId = id;
-                    }
-
-                    setSelectedMutableServiceCollectionName(name);
-                    setMutableServiceCollectionValue(name ?? '');
-                    setSettings({ ...settings, mutableServiceCollectionId: serviceCollectionId });
-                  }}
+                <CollectionPicker
+                  label={'Fixed-Price Services Collection'}
+                  initialCollectionId={settings.fixedServiceCollectionId}
+                  onSelect={collectionId => setSettings({ ...settings, fixedServiceCollectionId: collectionId })}
                 />
-                {/*TODO: DEDUP !!!*/}
-                <Autocomplete
-                  options={
-                    fixedCollectionsQuery.data?.pages.map(page => ({
-                      label: page.title,
-                      value: page.id,
-                    })) ?? []
-                  }
-                  allowMultiple={false}
-                  loading={fixedCollectionsQuery.isLoading}
-                  willLoadMoreResults={fixedCollectionsQuery.hasNextPage}
-                  onLoadMoreResults={fixedCollectionsQuery.fetchNextPage}
-                  selected={settings.fixedServiceCollectionId ? [settings.fixedServiceCollectionId] : []}
-                  emptyState={
-                    <BlockStack inlineAlign={'center'}>
-                      <Icon source={SearchMinor} />
-                      Could not find any collections
-                    </BlockStack>
-                  }
-                  textField={
-                    <Autocomplete.TextField
-                      label="Fixed Service Collection"
-                      helpText={
-                        'A collection containing service charges with a fixes price. Products are shown in the "Add Service" menu.'
-                      }
-                      autoComplete="off"
-                      value={fixedServiceCollectionValue}
-                      onChange={setFixedServiceCollectionValue}
-                      onBlur={() => setFixedServiceCollectionValue(selectedFixedServiceCollectionName ?? '')}
-                    />
-                  }
-                  onSelect={([id]: ID[]) => {
-                    let name: string | null = null;
-                    let serviceCollectionId: ID | null = null;
-
-                    if (id !== undefined && id !== settings?.fixedServiceCollectionId) {
-                      name = fixedCollectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
-                      serviceCollectionId = id;
-                    }
-
-                    setSelectedFixedServiceCollectionName(name);
-                    setFixedServiceCollectionValue(name ?? '');
-                    setSettings({ ...settings, fixedServiceCollectionId: serviceCollectionId });
-                  }}
+                <CollectionPicker
+                  label={'Dynamically-Priced Services Collection'}
+                  initialCollectionId={settings.mutableServiceCollectionId}
+                  onSelect={collectionId => setSettings({ ...settings, mutableServiceCollectionId: collectionId })}
                 />
                 <TextField
                   label={'Default Labour Line Item Name'}
@@ -515,7 +420,7 @@ function useDiscountRules(
     },
     {
       value: CURRENCY_RANGE,
-      title: 'Allow discounts within a range',
+      title: 'Restrict discounts to a range',
       conflictingRules: [ONLY_SHORTCUTS],
       onSelect() {
         setSettings({
@@ -577,7 +482,7 @@ function useDiscountRules(
     },
     {
       value: PERCENTAGE_RANGE,
-      title: 'Allow discounts within a percentage range',
+      title: 'Restrict discounts to a percentage range',
       conflictingRules: [ONLY_SHORTCUTS],
       onSelect() {
         setSettings({
@@ -683,6 +588,87 @@ function CurrencyOrPercentageInput({
           </Listbox>
         ) : null}
       </Combobox>
+      {toast}
+    </>
+  );
+}
+
+function CollectionPicker({
+  label,
+  helpText,
+  onSelect,
+  initialCollectionId,
+}: {
+  label: string;
+  helpText?: string;
+  initialCollectionId?: ID | null;
+  onSelect: (collectionId: ID | null) => void;
+}) {
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+
+  const [query, setQuery] = useState('');
+  const collectionsQuery = useCollectionsQuery({ fetch, params: { query } });
+
+  const [selectedCollectionId, setSelectedCollectionId] = useState<ID | null>(initialCollectionId ?? null);
+  const [selectedCollectionName, setSelectedCollectionName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (query) return;
+    if (!selectedCollectionId) return;
+
+    const selectedCollection = collectionsQuery.data?.pages.find(page => page.id === selectedCollectionId);
+    if (!selectedCollection) return;
+
+    setSelectedCollectionName(selectedCollection.title);
+    setQuery(selectedCollection.title);
+  }, [collectionsQuery.data?.pages]);
+
+  return (
+    <>
+      <Autocomplete
+        options={
+          collectionsQuery.data?.pages.map(page => ({
+            label: page.title,
+            value: page.id,
+          })) ?? []
+        }
+        allowMultiple={false}
+        loading={collectionsQuery.isLoading}
+        willLoadMoreResults={collectionsQuery.hasNextPage}
+        onLoadMoreResults={collectionsQuery.fetchNextPage}
+        selected={selectedCollectionId ? [selectedCollectionId] : []}
+        emptyState={
+          <BlockStack inlineAlign={'center'}>
+            <Icon source={SearchMinor} />
+            Could not find any collections
+          </BlockStack>
+        }
+        textField={
+          <Autocomplete.TextField
+            label={label}
+            helpText={helpText}
+            autoComplete="off"
+            value={query}
+            onChange={setQuery}
+            onBlur={() => setQuery(selectedCollectionName ?? '')}
+          />
+        }
+        onSelect={([id]: ID[]) => {
+          let name: string | null = null;
+          let serviceCollectionId: ID | null = null;
+
+          if (id !== undefined && id !== selectedCollectionId) {
+            name = collectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
+            serviceCollectionId = id;
+          }
+
+          setSelectedCollectionName(name ?? '');
+          setSelectedCollectionId(serviceCollectionId ?? null);
+          setQuery(name ?? '');
+          onSelect(serviceCollectionId);
+        }}
+      />
       {toast}
     </>
   );

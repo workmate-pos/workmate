@@ -3,6 +3,7 @@ import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 
 const defaultShopSettings: ShopSettings = {
   statuses: ['Draft', 'In Progress', 'Done'],
+  defaultStatus: 'Draft',
   idFormat: 'WO-#{{id}}',
   discountShortcuts: [
     { percentage: '10.00' as Decimal, unit: 'percentage' },
