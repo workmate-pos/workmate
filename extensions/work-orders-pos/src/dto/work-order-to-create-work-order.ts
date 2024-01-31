@@ -2,7 +2,7 @@ import type { WorkOrder } from '@web/services/work-orders/types.js';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { uuid } from '../util/uuid.js';
 import type { ID, Int } from '@web/services/gql/queries/generated/schema.js';
-import { CreateWorkOrderLabour } from '../screens/routes.js';
+import { CreateWorkOrderCharge } from '../screens/routes.js';
 
 // TODO: Handle thrown errors
 export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrder {
@@ -15,14 +15,14 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
     customerId: workOrder.customerId,
     discount: workOrder.order.discount,
     lineItems: getCreateWorkOrderLineItems(workOrder),
-    labour: workOrder.labour.map(mapLabour),
+    charges: workOrder.charges.map(mapLabour),
   };
 }
 
-function getProductVariantLabourUuids({ labour }: Pick<WorkOrder, 'labour'>) {
+function getProductVariantLabourUuids({ charges }: Pick<WorkOrder, 'charges'>) {
   const productVariantUuids: Record<ID, Set<string>> = {};
 
-  for (const { productVariantId, lineItemUuid } of labour) {
+  for (const { productVariantId, lineItemUuid } of charges) {
     if (!productVariantId || !lineItemUuid) continue;
     (productVariantUuids[productVariantId] ??= new Set()).add(lineItemUuid);
   }
@@ -31,7 +31,7 @@ function getProductVariantLabourUuids({ labour }: Pick<WorkOrder, 'labour'>) {
 }
 
 export function getCreateWorkOrderLineItems(
-  workOrder: Pick<WorkOrder, 'labour' | 'order'>,
+  workOrder: Pick<WorkOrder, 'charges' | 'order'>,
 ): CreateWorkOrder['lineItems'] {
   // WorkOrder -> CreateWorkOrder is a near-one-to-one mapping, but we need to do some transformations because
   // 1) We make no assumptions about the stacking of line items
@@ -76,15 +76,8 @@ export function getCreateWorkOrderLineItems(
 
     if (remainingQuantity === 0) continue;
 
-    if (variant.product.isMutableServiceItem) {
-      lineItems.push(
-        ...Array.from({ length: remainingQuantity }).map(() => ({
-          uuid: uuid(),
-          productVariantId: variant.id,
-          quantity: 1 as Int,
-        })),
-      );
-    } else {
+    // mutable service items use quantity to set the total price - so we only need to create one line item per uuid for them
+    if (!variant.product.isMutableServiceItem) {
       lineItems.push({
         productVariantId: variant.id,
         uuid: uuid(),
@@ -102,13 +95,13 @@ export function getCreateWorkOrderLineItems(
   return lineItems;
 }
 
-function mapLabour(labour: WorkOrder['labour'][number]): CreateWorkOrderLabour {
+function mapLabour(labour: WorkOrder['charges'][number]): CreateWorkOrderCharge {
   if (labour.type === 'hourly-labour') {
     return {
       type: 'hourly-labour',
       lineItemUuid: labour.lineItemUuid,
       employeeId: labour.employeeId,
-      labourUuid: uuid(),
+      chargeUuid: uuid(),
       hours: labour.hours,
       rate: labour.rate,
       name: labour.name,
@@ -121,7 +114,7 @@ function mapLabour(labour: WorkOrder['labour'][number]): CreateWorkOrderLabour {
       lineItemUuid: labour.lineItemUuid,
       employeeId: labour.employeeId,
       amount: labour.amount,
-      labourUuid: uuid(),
+      chargeUuid: uuid(),
       name: labour.name,
     };
   }

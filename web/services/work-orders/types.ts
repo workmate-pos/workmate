@@ -22,7 +22,7 @@ export type WorkOrder = {
     discount: { valueType: 'PERCENTAGE'; value: Decimal } | { valueType: 'FIXED_AMOUNT'; value: Money } | null;
     lineItems: LineItem[];
   };
-  labour: (FixedPriceLabour | HourlyLabour)[];
+  charges: (FixedPriceLabour | HourlyLabour)[];
 };
 
 export type BaseLabour = {

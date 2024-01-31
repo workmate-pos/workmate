@@ -46,17 +46,19 @@ const createWorkOrderReducer = (
     case 'upsert-line-item': {
       const lineItemUuid = action.lineItem.uuid;
 
-      const uuidHasLabour = (uuid: string) => (workOrder.labour ?? []).find(l => l.lineItemUuid === uuid);
+      // TODO: Change stacking mechanism: allow stacking when the charges are the same? Or perhaps a stack function that either stacks, or returns multiple items
 
-      const hasLabour = uuidHasLabour(lineItemUuid);
+      const uuidHasCharge = (uuid: string) => (workOrder.charges ?? []).find(l => l.lineItemUuid === uuid);
+
+      const hasCharge = uuidHasCharge(lineItemUuid);
 
       // Stack items if possible.
-      if (!action.isUnstackable && !hasLabour) {
+      if (!action.isUnstackable && !hasCharge) {
         const stackableProductVariantLineItem = workOrder.lineItems?.find(
           item =>
             item.productVariantId === action.lineItem.productVariantId &&
-            // We can only stack when there is no assigned labour.
-            !uuidHasLabour(item.uuid) &&
+            // We can only stack when there is no assigned charge.
+            !uuidHasCharge(item.uuid) &&
             // In case of update, don't merge with the item itself.
             item.uuid !== lineItemUuid,
         );
@@ -71,8 +73,8 @@ const createWorkOrderReducer = (
 
       const newLineItems: CreateWorkOrderLineItem[] = [];
 
-      // Un-stack line items when adding labour
-      if (action.lineItem.quantity > 1 && hasLabour) {
+      // Un-stack line items when adding charges
+      if (action.lineItem.quantity > 1 && hasCharge) {
         newLineItems.push(
           {
             productVariantId: action.lineItem.productVariantId,
@@ -105,7 +107,7 @@ const createWorkOrderReducer = (
       return {
         ...workOrder,
         lineItems: (workOrder.lineItems ?? []).filter(item => item.uuid !== itemUuid),
-        labour: (workOrder.labour ?? []).filter(labour => labour.lineItemUuid !== itemUuid),
+        charges: (workOrder.charges ?? []).filter(charge => charge.lineItemUuid !== itemUuid),
       };
     }
 

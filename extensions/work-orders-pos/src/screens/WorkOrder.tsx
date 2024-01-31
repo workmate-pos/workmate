@@ -35,7 +35,7 @@ import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
 import { useUnsavedChangesDialog } from '../providers/UnsavedChangesDialogProvider.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
-import { getLabourPrice } from '../create-work-order/labour.js';
+import { getChargesPrice } from '../create-work-order/charges.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -130,7 +130,7 @@ const useWorkOrderContext = () => {
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
     fetch,
     lineItems: createWorkOrder.lineItems ?? [],
-    labour: createWorkOrder.labour ?? [],
+    charges: createWorkOrder.charges ?? [],
     customerId: createWorkOrder.customerId,
     discount: createWorkOrder.discount,
   });
@@ -364,8 +364,9 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     if (type === 'mutable-service') {
       mutableServiceConfigPopup.navigate({
         readonly: context.hasOrder,
+        hasBasePrice: false,
         lineItem,
-        labour: context.createWorkOrder.labour?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
+        labour: context.createWorkOrder.charges?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
       });
     }
   });
@@ -384,8 +385,8 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
       if (result.hasLabour) {
         context.dispatchCreateWorkOrder({
           type: 'set-field',
-          field: 'labour',
-          value: context.createWorkOrder.labour?.filter(l => l.lineItemUuid !== result.result.lineItem.uuid) ?? [],
+          field: 'charges',
+          value: context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== result.result.lineItem.uuid) ?? [],
         });
       }
       return;
@@ -397,9 +398,9 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
       if (result.hasLabour) {
         context.dispatchCreateWorkOrder({
           type: 'set-field',
-          field: 'labour',
+          field: 'charges',
           value: [
-            ...(context.createWorkOrder.labour?.filter(l => l.lineItemUuid !== lineItemUuid) ?? []),
+            ...(context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== lineItemUuid) ?? []),
             ...result.result.labour.map(l => ({ ...l, lineItemUuid })),
           ],
         });
@@ -417,6 +418,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     if (result.result.type === 'assign-employees') {
       labourLineItemConfigPopup.navigate({
         readonly: context.hasOrder,
+        hasBasePrice: result.type !== 'mutable-service',
         lineItem: result.result.lineItem,
         labour: [],
       });
@@ -446,11 +448,12 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const rows = useItemRows(context, query, (type, lineItem) => {
     switch (type) {
       case 'product': {
-        const hasLabour = context.createWorkOrder.labour?.some(ea => ea.lineItemUuid === lineItem.uuid);
+        const hasLabour = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
 
         if (hasLabour) {
           labourLineItemConfigPopup.navigate({
-            labour: context.createWorkOrder.labour?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+            labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+            hasBasePrice: true,
             readonly: context.hasOrder,
             lineItem,
           });
@@ -475,7 +478,8 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
 
       case 'mutable-service':
         mutableServiceConfigPopup.navigate({
-          labour: context.createWorkOrder.labour?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+          labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+          hasBasePrice: false,
           readonly: context.hasOrder,
           lineItem,
         });
@@ -624,7 +628,7 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
 
 const WorkOrderAssignment = ({ context }: { context: WorkOrderContext }) => {
   const selectedEmployeeIds = unique(
-    context.createWorkOrder.labour?.map(employee => employee.employeeId).filter(isNonNullable) ?? [],
+    context.createWorkOrder.charges?.map(employee => employee.employeeId).filter(isNonNullable) ?? [],
   );
 
   const fetch = useAuthenticatedFetch();
@@ -684,13 +688,15 @@ function useItemRows(
           !query || getProductVariantName(productVariant)?.toLowerCase().includes(query.toLowerCase()),
       )
       ?.map<ListRow>(({ lineItem, productVariant }) => {
-        const productVariantPrice = productVariant ? productVariant.price : BigDecimal.ZERO.toMoney();
+        const isMutableServiceItem = productVariant?.product.isMutableServiceItem ?? false;
 
-        const labourPrice = getLabourPrice(
-          context.createWorkOrder.labour?.filter(assignment => assignment.lineItemUuid === lineItem.uuid) ?? [],
+        const basePrice = productVariant && !isMutableServiceItem ? productVariant.price : BigDecimal.ZERO.toMoney();
+
+        const labourPrice = getChargesPrice(
+          context.createWorkOrder.charges?.filter(assignment => assignment.lineItemUuid === lineItem.uuid) ?? [],
         );
 
-        const hasLabour = context.createWorkOrder.labour?.some(ea => ea.lineItemUuid === lineItem.uuid);
+        const hasLabour = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
 
         return {
           id: lineItem.uuid,
@@ -715,7 +721,7 @@ function useItemRows(
           },
           rightSide: {
             label: currencyFormatter(
-              BigDecimal.fromMoney(productVariantPrice)
+              BigDecimal.fromMoney(basePrice)
                 .add(BigDecimal.fromMoney(labourPrice))
                 .multiply(BigDecimal.fromString(lineItem.quantity.toFixed(0)))
                 .toMoney(),

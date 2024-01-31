@@ -16,7 +16,7 @@
     "dueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
-    "labour": {
+    "charges": {
       "type": "array",
       "items": {
         "type": "object",
@@ -40,12 +40,12 @@
               "lineItemUuid": {
                 "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
               },
-              "labourUuid": {
+              "chargeUuid": {
                 "type": "string",
                 "minLength": 1
               }
             },
-            "required": ["type", "name", "employeeId", "amount", "lineItemUuid", "labourUuid"],
+            "required": ["type", "name", "employeeId", "amount", "lineItemUuid", "chargeUuid"],
             "additionalProperties": false
           },
           {
@@ -70,12 +70,12 @@
               "lineItemUuid": {
                 "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
               },
-              "labourUuid": {
+              "chargeUuid": {
                 "type": "string",
                 "minLength": 1
               }
             },
-            "required": ["type", "name", "employeeId", "rate", "hours", "lineItemUuid", "labourUuid"],
+            "required": ["type", "name", "employeeId", "rate", "hours", "lineItemUuid", "chargeUuid"],
             "additionalProperties": false
           }
         ]
@@ -152,7 +152,7 @@
     "status",
     "customerId",
     "dueDate",
-    "labour",
+    "charges",
     "description",
     "derivedFromOrderId",
     "lineItems",

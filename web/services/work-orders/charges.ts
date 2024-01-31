@@ -1,17 +1,18 @@
 import { db } from '../db/db.js';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
-export async function removeWorkOrderLabour(workOrderId: number) {
+export async function removeWorkOrderCharges(workOrderId: number) {
   await Promise.all([
     db.workOrderLabour.removeHourlyLabour({ workOrderId }),
     db.workOrderLabour.removeFixedPriceLabour({ workOrderId }),
   ]);
 }
 
-export async function createWorkOrderLabour(
+export async function createWorkOrderCharges(
   workOrderId: number,
-  { labour, lineItems }: Pick<CreateWorkOrder, 'labour' | 'lineItems'>,
+  { charges, lineItems }: Pick<CreateWorkOrder, 'charges' | 'lineItems'>,
 ) {
   // doing these insertions in bulk is possible, but not worth the complexity (trust me i tried).
   // INSERT RETURNING is not guaranteed to return in input order, so we would need to restore the order somehow.
@@ -20,8 +21,8 @@ export async function createWorkOrderLabour(
   const findProductVariantId = (lineItemUuid: string | null) =>
     lineItems.find(li => li.uuid === lineItemUuid)?.productVariantId ?? null;
 
-  const hourlyLabour = labour.filter(hasPropertyValue('type', 'hourly-labour'));
-  const fixedPriceLabour = labour.filter(hasPropertyValue('type', 'fixed-price-labour'));
+  const hourlyLabour = charges.filter(hasPropertyValue('type', 'hourly-labour'));
+  const fixedPriceLabour = charges.filter(hasPropertyValue('type', 'fixed-price-labour'));
 
   await Promise.all([
     ...hourlyLabour.map(({ name, lineItemUuid, employeeId, rate, hours }) =>
@@ -46,4 +47,17 @@ export async function createWorkOrderLabour(
       }),
     ),
   ]);
+}
+
+export function getChargePrice(charge: CreateWorkOrder['charges'][number]) {
+  switch (charge.type) {
+    case 'hourly-labour':
+      return BigDecimal.fromMoney(charge.rate).multiply(BigDecimal.fromDecimal(charge.hours)).toMoney();
+
+    case 'fixed-price-labour':
+      return charge.amount;
+
+    default:
+      return charge satisfies never;
+  }
 }

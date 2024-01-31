@@ -77,7 +77,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     description: order.note ?? '',
     dueDate: workOrder.dueDate.toISOString() as DateTime,
     derivedFromOrder,
-    labour: [
+    charges: [
       ...hourlyLabours.map(
         ({ name, hours, rate, lineItemUuid, productVariantId, employeeId }) =>
           ({

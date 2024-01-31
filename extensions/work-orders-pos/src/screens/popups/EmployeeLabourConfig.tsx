@@ -15,25 +15,25 @@ import { useEmployeeQuery } from '@work-orders/common/queries/use-employee-query
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { CreateWorkOrderLabour } from '../routes.js';
+import { CreateWorkOrderCharge } from '../routes.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { uuid } from '../../util/uuid.js';
-import { getLabourPrice } from '../../create-work-order/labour.js';
+import { getChargesPrice } from '../../create-work-order/charges.js';
 
 export function EmployeeLabourConfig() {
   const [employeeId, setEmployeeId] = useState<ID | null>(null);
 
   const [labour, setLabour] = useState<DiscriminatedUnionOmit<
-    CreateWorkOrderLabour,
-    'lineItemUuid' | 'employeeId' | 'labourUuid'
+    CreateWorkOrderCharge,
+    'lineItemUuid' | 'employeeId' | 'chargeUuid'
   > | null>(null);
 
-  const [labourUuid, setLabourUuid] = useState<string | null>(null);
+  const [chargeUuid, setChargeUuid] = useState<string | null>(null);
 
-  const { Screen, closePopup } = useScreen('EmployeeLabourConfig', ({ employeeId, labourUuid, labour }) => {
+  const { Screen, closePopup } = useScreen('EmployeeLabourConfig', ({ employeeId, chargeUuid, labour }) => {
     setEmployeeId(employeeId);
-    setLabourUuid(labourUuid);
+    setChargeUuid(chargeUuid);
     setLabour(labour);
   });
 
@@ -72,10 +72,10 @@ export function EmployeeLabourConfig() {
   return (
     <Screen
       title={employeeQuery?.data?.name ?? 'Employee'}
-      isLoading={!labourUuid || !employeeId || !labour || employeeQuery.isLoading}
+      isLoading={!chargeUuid || !employeeId || !labour || employeeQuery.isLoading}
       presentation={{ sheet: true }}
     >
-      {labourUuid && employeeId && labour && (
+      {chargeUuid && employeeId && labour && (
         <ScrollView>
           <Stack direction={'vertical'} spacing={5}>
             <Text variant={'headingLarge'}>{employeeQuery?.data?.name ?? 'Unknown Employee'}</Text>
@@ -84,21 +84,21 @@ export function EmployeeLabourConfig() {
               <SegmentedControl
                 segments={[
                   {
-                    id: 'hourly-labour' satisfies CreateWorkOrderLabour['type'],
+                    id: 'hourly-labour' satisfies CreateWorkOrderCharge['type'],
                     label: 'Hourly',
                     disabled: false,
                   },
                   {
-                    id: 'fixed-price-labour' satisfies CreateWorkOrderLabour['type'],
+                    id: 'fixed-price-labour' satisfies CreateWorkOrderCharge['type'],
                     label: 'Fixed Price',
                     disabled: false,
                   },
                 ]}
                 selected={labour.type ?? 'none'}
-                onSelect={(id: CreateWorkOrderLabour['type']) => {
+                onSelect={(id: CreateWorkOrderCharge['type']) => {
                   if (id === 'hourly-labour') {
                     let rate = BigDecimal.fromMoney(
-                      employeeQuery?.data?.rate ?? getLabourPrice(labour ? [labour] : []),
+                      employeeQuery?.data?.rate ?? getChargesPrice(labour ? [labour] : []),
                     );
 
                     if (rate.equals(BigDecimal.ZERO)) {
@@ -111,7 +111,7 @@ export function EmployeeLabourConfig() {
                       employeeId: null,
                       name: labour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
                       rate: rate.toMoney(),
-                      hours: BigDecimal.fromMoney(getLabourPrice(labour ? [labour] : []))
+                      hours: BigDecimal.fromMoney(getChargesPrice(labour ? [labour] : []))
                         .divide(rate, 2)
                         .toDecimal(),
                     }));
@@ -124,7 +124,7 @@ export function EmployeeLabourConfig() {
                       labourUuid: uuid(),
                       employeeId: null,
                       name: labour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
-                      amount: getLabourPrice(labour ? [labour] : []),
+                      amount: getChargesPrice(labour ? [labour] : []),
                     }));
                     return;
                   }
@@ -239,7 +239,7 @@ export function EmployeeLabourConfig() {
                 title="Remove"
                 type="destructive"
                 onPress={() => {
-                  closePopup({ type: 'remove', labourUuid });
+                  closePopup({ type: 'remove', chargeUuid });
                 }}
               />
               <Button
@@ -247,7 +247,7 @@ export function EmployeeLabourConfig() {
                 onPress={() => {
                   closePopup({
                     type: 'update',
-                    labourUuid,
+                    chargeUuid,
                     employeeId,
                     labour: {
                       ...labour,

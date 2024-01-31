@@ -6,7 +6,7 @@ import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedU
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type CreateWorkOrderLineItem = CreateWorkOrder['lineItems'][number];
-export type CreateWorkOrderLabour = CreateWorkOrder['labour'][number];
+export type CreateWorkOrderCharge = CreateWorkOrder['charges'][number];
 
 /**
  * Screen input/output types.
@@ -49,15 +49,20 @@ export type ScreenInputOutput = {
   LabourLineItemConfig: [
     {
       readonly: boolean;
+      /**
+       * Whether to include the product variant price in the shown price.
+       * This should be false for mutable services, as they have no base price.
+       */
+      hasBasePrice: boolean;
       // TODO: A way to see the input in usePopup callback - then we can just directly access this lineItem instead of having to pass it around
       lineItem: CreateWorkOrderLineItem;
-      labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid'>[];
+      labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid'>[];
     },
     (
       | {
           type: 'update';
           lineItem: CreateWorkOrderLineItem;
-          labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid'>[];
+          labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid'>[];
         }
       | {
           type: 'remove';
@@ -79,20 +84,20 @@ export type ScreenInputOutput = {
   EmployeeSelector: [ID[], ID[]];
   EmployeeLabourConfig: [
     {
-      labourUuid: string;
+      chargeUuid: string;
       employeeId: ID;
-      labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid' | 'employeeId' | 'labourUuid'>;
+      labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid' | 'employeeId' | 'chargeUuid'>;
     },
     (
       | {
           type: 'update';
-          labourUuid: string;
+          chargeUuid: string;
           employeeId: ID;
-          labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'lineItemUuid' | 'employeeId' | 'labourUuid'>;
+          labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid' | 'employeeId' | 'chargeUuid'>;
         }
       | {
           type: 'remove';
-          labourUuid: string;
+          chargeUuid: string;
         }
     ),
   ];

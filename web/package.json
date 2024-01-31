@@ -24,7 +24,7 @@
     "@prisma/client": "^5.5.2",
     "@sentry/node": "^7.74.1",
     "@teifi-digital/shopify-app-express": "^0.4.2",
-    "@teifi-digital/shopify-app-toolbox": "^0.0.14",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.19",
     "@work-orders/common": "file:../common",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",

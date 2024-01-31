@@ -82,7 +82,7 @@ export default class WorkOrderController {
       dueDate: createWorkOrderRequest.dueDate,
       customerId: `gid://shopify/Customer/${customerId}` as ID,
       description: createWorkOrderRequest.description,
-      labour: [],
+      charges: [],
       lineItems: [],
       derivedFromOrderId: null,
       name: null,

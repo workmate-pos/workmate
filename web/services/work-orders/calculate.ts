@@ -4,11 +4,13 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js'
 import { getOrderInput, getOrderOptions } from './order.js';
 import { gql } from '../gql/gql.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { getProductVariants } from './product-variants.js';
 
 export async function calculateDraftOrder(session: Session, calculateWorkOrder: CalculateWorkOrder) {
   const graphql = new Graphql(session);
   const options = await getOrderOptions(session.shop);
-  const input = getOrderInput('calculate', { ...calculateWorkOrder, description: '' }, options);
+  const productVariants = await getProductVariants(session, calculateWorkOrder);
+  const input = getOrderInput('calculate', { ...calculateWorkOrder, description: '' }, options, productVariants);
 
   const result = await gql.draftOrder.calculate.run(graphql, { input }).then(r => r.draftOrderCalculate);
 

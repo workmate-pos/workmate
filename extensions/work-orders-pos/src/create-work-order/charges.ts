@@ -1,10 +1,10 @@
 import { Money } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { CreateWorkOrderLabour } from '../screens/routes.js';
+import { CreateWorkOrderCharge } from '../screens/routes.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
-export function getLabourPrice(
-  labour: DiscriminatedUnionOmit<CreateWorkOrderLabour, 'employeeId' | 'lineItemUuid' | 'name' | 'labourUuid'>[],
+export function getChargesPrice(
+  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'employeeId' | 'lineItemUuid' | 'name' | 'chargeUuid'>[],
 ): Money {
   return BigDecimal.sum(
     ...labour.map(l => {

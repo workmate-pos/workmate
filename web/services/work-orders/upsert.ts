@@ -4,7 +4,7 @@ import { ID } from '../gql/queries/generated/schema.js';
 import { getFormattedId } from '../id-formatting.js';
 import { getShopSettings } from '../settings.js';
 import { unit } from '../db/unit-of-work.js';
-import { createWorkOrderLabour, removeWorkOrderLabour } from './labour.js';
+import { createWorkOrderCharges, removeWorkOrderCharges } from './charges.js';
 import { getOrderOptions, updateOrder, upsertDraftOrder } from './order.js';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
@@ -35,8 +35,8 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
       draftOrderId: currentWorkOrder?.draftOrderId ?? null,
     });
 
-    await removeWorkOrderLabour(id);
-    await createWorkOrderLabour(id, createWorkOrder);
+    await removeWorkOrderCharges(id);
+    await createWorkOrderCharges(id, createWorkOrder);
 
     let draftOrderId: ID | null = null;
     let orderId: ID | null = null;
