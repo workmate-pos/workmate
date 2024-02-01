@@ -33,6 +33,17 @@ export const useAuthenticatedFetch = () => {
       api.toast.show(`${response.status} - ${input.toString()} - ${await response.clone().text()}`, { duration: 2000 });
     }
 
+    if (!response.ok) {
+      try {
+        const json = await response.clone().json();
+        if ('error' in json) {
+          api.toast.show(String(json.error));
+        }
+      } catch {
+        api.toast.show('An unknown error occurred');
+      }
+    }
+
     return response;
   };
 };

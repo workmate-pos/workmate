@@ -18,6 +18,8 @@ export async function createWorkOrderCharges(
   // INSERT RETURNING is not guaranteed to return in input order, so we would need to restore the order somehow.
   // not worth the extra complexity since the number of items per work order is small anyway.
 
+  // for future reference this can be easily solved by using uuids instead of autoincrement ids
+
   const findProductVariantId = (lineItemUuid: string | null) =>
     lineItems.find(li => li.uuid === lineItemUuid)?.productVariantId ?? null;
 

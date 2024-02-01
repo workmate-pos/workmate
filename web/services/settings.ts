@@ -4,6 +4,8 @@ import { PartialShopSettings } from '../schemas/generated/partial-shop-settings.
 import { db } from './db/db.js';
 import { unit } from './db/unit-of-work.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { assertValidFormatString } from './id-formatting.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 function serialize(value: ShopSettings[keyof ShopSettings]) {
   return JSON.stringify(value);
@@ -26,31 +28,7 @@ export function upsertSetting<const K extends keyof ShopSettings>(shop: string, 
 export async function updateSettings(shop: string, partialShopSettings: PartialShopSettings) {
   const settings = await getShopSettings(shop);
 
-  if (partialShopSettings.statuses) {
-    if (!partialShopSettings.statuses.includes(partialShopSettings.defaultStatus ?? settings.defaultStatus)) {
-      partialShopSettings.defaultStatus = partialShopSettings.statuses[0];
-    }
-
-    partialShopSettings.statuses = unique(partialShopSettings.statuses.map(status => status.trim())) as [
-      string,
-      ...string[],
-    ];
-  }
-
-  if (partialShopSettings.statuses?.length === 0) {
-    throw new Error('Must have at least one status');
-  }
-
-  if (partialShopSettings.idFormat && !partialShopSettings.idFormat.includes('{{id}}')) {
-    throw new Error('Must include {{id}} in ID format');
-  }
-
-  if (
-    partialShopSettings.defaultStatus &&
-    !(partialShopSettings.statuses ?? settings.statuses).includes(partialShopSettings.defaultStatus)
-  ) {
-    throw new Error('Default status must be one of the statuses');
-  }
+  assertValidSettings({ ...settings, ...partialShopSettings });
 
   return await unit(async () => {
     const entries = Object.entries(partialShopSettings) as [
@@ -79,4 +57,20 @@ export async function insertDefaultSettingsIfNotExists(shop: string) {
       ),
     );
   });
+}
+
+function assertValidSettings(settings: ShopSettings) {
+  assertValidFormatString(settings.idFormat);
+
+  if (!settings.statuses.includes(settings.defaultStatus)) {
+    throw new HttpError('Invalid default status', 400);
+  }
+
+  if (unique(settings.statuses).length !== settings.statuses.length) {
+    throw new HttpError('Duplicate statuses are not allowed', 400);
+  }
+
+  if (settings.statuses.length === 0) {
+    throw new HttpError('Must have at least one status', 400);
+  }
 }

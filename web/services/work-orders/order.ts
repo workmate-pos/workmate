@@ -23,6 +23,8 @@ import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProductVariants } from './product-variants.js';
 import { getChargePrice } from './charges.js';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export async function upsertDraftOrder(
   session: Session,
@@ -40,14 +42,21 @@ export async function upsertDraftOrder(
     : await gql.draftOrder.create.run(graphql, { input });
 
   if (!result) {
-    throw new Error('Invalid result');
+    sentryErr('Draft order upsert failed - no result', { result });
+    throw new HttpError('Error saving draft order', 500);
   }
 
   if (result.userErrors.length) {
-    throw new Error(result.userErrors.map(e => `${e.field}: ${e.message}`).join('\n'));
+    sentryErr('Draft order upsert failed - user errors', { userErrors: result.userErrors });
+    throw new HttpError('Error saving draft order', 500);
   }
 
-  return result.draftOrder ?? never();
+  if (!result.draftOrder) {
+    sentryErr('Draft order upsert failed - no body', { result });
+    throw new HttpError('Error saving draft order', 500);
+  }
+
+  return result.draftOrder;
 }
 
 export async function updateOrder(
@@ -73,14 +82,21 @@ export async function updateOrder(
     .then(r => r.orderUpdate);
 
   if (!result) {
-    throw new Error('Invalid result');
+    sentryErr('Order update failed - no result', { result });
+    throw new HttpError('Error saving order', 500);
   }
 
   if (result.userErrors.length) {
-    throw new Error(result.userErrors.map(e => `${e.field}: ${e.message}`).join('\n'));
+    sentryErr('Order update failed - user errors', { userErrors: result.userErrors });
+    throw new HttpError('Error saving order', 500);
   }
 
-  return result.order ?? never();
+  if (!result.order) {
+    sentryErr('Order update failed - no body', { result });
+    throw new HttpError('Error saving order', 500);
+  }
+
+  return result.order;
 }
 
 type OrderOptions = {
