@@ -11,8 +11,7 @@
       "items": {
         "type": "string",
         "minLength": 1
-      },
-      "minItems": 1
+      }
     },
     "defaultStatus": {
       "type": "string",
@@ -99,6 +98,24 @@
     "labourLineItemSKU": {
       "description": "The SKU of the labour line item that is added to orders",
       "type": "string"
+    },
+    "chargeSettings": {
+      "type": "object",
+      "title": "charge-settings",
+      "description": "Configuration for charges and specific charge types",
+      "properties": {
+        "employeeAssignments": {
+          "type": "boolean"
+        },
+        "hourlyLabour": {
+          "type": "boolean"
+        },
+        "fixedPriceLabour": {
+          "type": "boolean"
+        }
+      },
+      "required": ["employeeAssignments", "hourlyLabour", "fixedPriceLabour"],
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,

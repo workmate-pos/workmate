@@ -12,6 +12,7 @@
     "fixedServiceCollectionId",
     "defaultRate",
     "labourLineItemName",
-    "labourLineItemSKU"
+    "labourLineItemSKU",
+    "chargeSettings"
   ]
 }

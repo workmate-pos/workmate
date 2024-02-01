@@ -23,6 +23,11 @@ const defaultShopSettings: ShopSettings = {
   defaultRate: '15.00' as Money,
   labourLineItemName: 'Labour',
   labourLineItemSKU: '',
+  chargeSettings: {
+    fixedPriceLabour: true,
+    hourlyLabour: true,
+    employeeAssignments: true,
+  },
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

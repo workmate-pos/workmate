@@ -1,14 +1,5 @@
 import { useScreen } from '../../hooks/use-screen.js';
-import {
-  Button,
-  ScrollView,
-  SegmentedControl,
-  Stack,
-  Stepper,
-  Text,
-  TextField,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { CreateWorkOrderLineItem, CreateWorkOrderCharge } from '../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -25,6 +16,7 @@ import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { FixedPriceLabour, HourlyLabour } from '@web/schemas/generated/create-work-order.js';
+import { SegmentedLabourControl } from '../../components/SegmentedLabourControl.js';
 
 export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
@@ -122,6 +114,9 @@ export function LabourLineItemConfig() {
     ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
   ];
 
+  const canAddEmployeeLabour = settingsQuery.data?.settings?.chargeSettings?.employeeAssignments !== false;
+  const shouldShowEmployeeLabour = canAddEmployeeLabour || employeeLabour.length > 0;
+
   const labourPrice = getChargesPrice(labour);
 
   const basePrice = productVariant && hasBasePrice ? productVariant.price : BigDecimal.ZERO.toMoney();
@@ -145,173 +140,42 @@ export function LabourLineItemConfig() {
       <ScrollView>
         <Stack direction={'vertical'} paddingVertical={'Small'} spacing={5}>
           <Text variant={'headingLarge'}>Labour Charge</Text>
-          <Stack direction={'vertical'} spacing={2}>
-            <SegmentedControl
-              segments={[
-                {
-                  id: 'none',
-                  label: 'None',
-                  disabled: readonly,
-                },
-                {
-                  id: 'hourly-labour' satisfies CreateWorkOrderCharge['type'],
-                  label: 'Hourly',
-                  disabled: readonly,
-                },
-                {
-                  id: 'fixed-price-labour' satisfies CreateWorkOrderCharge['type'],
-                  label: 'Fixed Price',
-                  disabled: readonly,
-                },
-              ]}
-              selected={generalLabour?.type ?? 'none'}
-              onSelect={(id: CreateWorkOrderCharge['type'] | 'none') => {
-                if (id === 'none') {
-                  setGeneralLabour(null);
-                  return;
-                }
+          <SegmentedLabourControl
+            types={['none', 'hourly-labour', 'fixed-price-labour']}
+            disabled={readonly}
+            charge={generalLabour}
+            onChange={charge =>
+              charge ? setGeneralLabour({ ...charge, chargeUuid: uuid(), employeeId: null }) : setGeneralLabour(charge)
+            }
+          />
 
-                if (id === 'hourly-labour') {
-                  setGeneralLabour(generalLabour => ({
-                    type: 'hourly-labour',
-                    chargeUuid: uuid(),
-                    employeeId: null,
-                    name: generalLabour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
-                    rate: getChargesPrice(generalLabour ? [generalLabour] : []),
-                    hours: BigDecimal.ONE.toDecimal(),
-                  }));
-                  return;
-                }
+          {shouldShowEmployeeLabour && (
+            <>
+              <Text variant={'headingLarge'}>Employee Labour Charges</Text>
+              <Stack direction={'vertical'} spacing={2}>
+                <Button
+                  title={'Add employees'}
+                  type={'primary'}
+                  onPress={() =>
+                    employeeSelectorPopup.navigate(employeeLabour.map(e => e.employeeId).filter(isNonNullable))
+                  }
+                  isDisabled={readonly || !canAddEmployeeLabour}
+                />
 
-                if (id === 'fixed-price-labour') {
-                  setGeneralLabour(generalLabour => ({
-                    type: 'fixed-price-labour',
-                    chargeUuid: uuid(),
-                    employeeId: null,
-                    name: generalLabour?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
-                    amount: getChargesPrice(generalLabour ? [generalLabour] : []),
-                  }));
-                  return;
-                }
-              }}
-            ></SegmentedControl>
-
-            {generalLabour && (
-              <TextField
-                label={'Labour Name'}
-                value={generalLabour.name}
-                onChange={(name: string) => setGeneralLabour({ ...generalLabour, name })}
-                isValid={generalLabour.name.length > 0}
-                errorMessage={generalLabour.name.length === 0 ? 'Labour name is required' : undefined}
-                disabled={readonly}
-              />
-            )}
-
-            {generalLabour?.type === 'hourly-labour' && (
-              <>
-                <Stack direction={'horizontal'}>
-                  <Text color={'TextSubdued'} variant={'headingSmall'}>
-                    Hourly Rate
-                  </Text>
-                </Stack>
-                <Stepper
-                  disabled={readonly}
-                  initialValue={Number(generalLabour.rate)}
-                  value={Number(generalLabour.rate)}
-                  minimumValue={0}
-                  onValueChanged={(rate: number) => {
-                    if (!BigDecimal.isValid(rate.toFixed(2))) return;
-
-                    setGeneralLabour({
-                      ...generalLabour,
-                      rate: BigDecimal.fromString(rate.toFixed(2)).toMoney(),
-                    });
-                  }}
-                ></Stepper>
-
-                <Stack direction={'horizontal'}>
-                  <Text color={'TextSubdued'} variant={'headingSmall'}>
-                    Hours
-                  </Text>
-                </Stack>
-                <Stepper
-                  disabled={readonly}
-                  initialValue={Number(generalLabour.hours)}
-                  value={Number(generalLabour.hours)}
-                  minimumValue={0}
-                  onValueChanged={(hours: number) => {
-                    if (!BigDecimal.isValid(hours.toFixed(2))) return;
-
-                    setGeneralLabour({
-                      ...generalLabour,
-                      hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
-                    });
-                  }}
-                ></Stepper>
-                <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                  <Text variant={'headingSmall'} color={'TextSubdued'}>
-                    {generalLabour.hours} hours × {currencyFormatter(generalLabour.rate)}/hour ={' '}
-                    {currencyFormatter(
-                      BigDecimal.fromDecimal(generalLabour.hours)
-                        .multiply(BigDecimal.fromMoney(generalLabour.rate))
-                        .toMoney(),
-                    )}
-                  </Text>
-                </Stack>
-              </>
-            )}
-
-            {generalLabour?.type === 'fixed-price-labour' && (
-              <>
-                <Stack direction={'horizontal'} flexChildren>
-                  <Text color={'TextSubdued'} variant={'headingSmall'}>
-                    Price
-                  </Text>
-                </Stack>
-                <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
-                  <Stepper
-                    disabled={readonly}
-                    initialValue={Number(generalLabour.amount)}
-                    value={Number(generalLabour.amount)}
-                    minimumValue={0}
-                    onValueChanged={(amount: number) => {
-                      if (!BigDecimal.isValid(amount.toFixed(2))) return;
-
-                      setGeneralLabour({
-                        ...generalLabour,
-                        amount: BigDecimal.fromString(amount.toFixed(2)).toMoney(),
-                      });
-                    }}
-                  ></Stepper>
-                </Stack>
-                <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                  <Text variant={'headingSmall'} color={'TextSubdued'}>
-                    {currencyFormatter(generalLabour.amount)}
-                  </Text>
-                </Stack>
-              </>
-            )}
-          </Stack>
-
-          <Text variant={'headingLarge'}>Employee Labour Charges</Text>
-          <Stack direction={'vertical'} spacing={2}>
-            <Button
-              title={'Add employees'}
-              type={'primary'}
-              onPress={() =>
-                employeeSelectorPopup.navigate(employeeLabour.map(e => e.employeeId).filter(isNonNullable))
-              }
-              isDisabled={readonly}
-            />
-
-            <EmployeeLabourList
-              labour={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
-              readonly={readonly}
-              onClick={labour =>
-                employeeConfigPopup.navigate({ employeeId: labour.employeeId, chargeUuid: labour.chargeUuid, labour })
-              }
-            />
-          </Stack>
+                <EmployeeLabourList
+                  labour={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
+                  readonly={readonly}
+                  onClick={labour =>
+                    employeeConfigPopup.navigate({
+                      employeeId: labour.employeeId,
+                      chargeUuid: labour.chargeUuid,
+                      labour,
+                    })
+                  }
+                />
+              </Stack>
+            </>
+          )}
 
           <Stack direction={'horizontal'} alignment={'space-evenly'} flex={1} paddingVertical={'ExtraLarge'}>
             {hasBasePrice && (

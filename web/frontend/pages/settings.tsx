@@ -69,18 +69,16 @@ export default function Settings() {
     },
   );
 
-  const saveSettingsMutation = useSettingsMutation({
-    onError() {
-      setToastAction({
-        content: 'An error occurred while saving settings',
-      });
+  const saveSettingsMutation = useSettingsMutation(
+    { fetch },
+    {
+      onSuccess() {
+        setToastAction({
+          content: 'Saved settings',
+        });
+      },
     },
-    onSuccess() {
-      setToastAction({
-        content: 'Saved settings',
-      });
-    },
-  });
+  );
 
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
@@ -286,6 +284,39 @@ export default function Settings() {
                   value={settings.labourLineItemSKU}
                   onChange={value => setSettings({ ...settings, labourLineItemSKU: value })}
                 />
+                <BlockStack>
+                  <Text as={'p'}>Enabled Labour Options</Text>
+                  <Checkbox
+                    label={'Employee Assignments'}
+                    checked={settings.chargeSettings.employeeAssignments}
+                    onChange={enabled =>
+                      setSettings({
+                        ...settings,
+                        chargeSettings: { ...settings.chargeSettings, employeeAssignments: enabled },
+                      })
+                    }
+                  />
+                  <Checkbox
+                    label={'Hourly Labour'}
+                    checked={settings.chargeSettings.hourlyLabour}
+                    onChange={enabled =>
+                      setSettings({
+                        ...settings,
+                        chargeSettings: { ...settings.chargeSettings, hourlyLabour: enabled },
+                      })
+                    }
+                  />
+                  <Checkbox
+                    label={'Fixed-Price Labour'}
+                    checked={settings.chargeSettings.fixedPriceLabour}
+                    onChange={enabled =>
+                      setSettings({
+                        ...settings,
+                        chargeSettings: { ...settings.chargeSettings, fixedPriceLabour: enabled },
+                      })
+                    }
+                  />
+                </BlockStack>
               </BlockStack>
             </Card>
             <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
