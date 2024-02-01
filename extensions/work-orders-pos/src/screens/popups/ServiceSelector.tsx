@@ -12,6 +12,8 @@ import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { CreateWorkOrderCharge } from '../routes.js';
+import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -96,16 +98,22 @@ function getProductVariantRows(
       return [];
     }
 
+    const lineItemUuid = uuid();
+    const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
+      productVariantDefaultChargeToCreateWorkOrderCharge(charge, lineItemUuid),
+    );
+
     return {
       id: variant.id,
       onPress: () => {
         closePopupRef.current({
           type,
           lineItem: {
-            uuid: uuid(),
+            uuid: lineItemUuid,
             productVariantId: variant.id,
             quantity: 1 as Int,
           },
+          charges: defaultCharges,
         });
       },
       leftSide: {

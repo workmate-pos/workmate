@@ -361,14 +361,27 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
 const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const [query, setQuery] = useState('');
 
-  const productSelectorPopup = context.usePopup('ProductSelector', lineItems => {
+  const productSelectorPopup = context.usePopup('ProductSelector', ({ lineItems, charges }) => {
+    // TODO: Charge reduce types instead of set-field everywhere
+    context.dispatchCreateWorkOrder({
+      type: 'set-field',
+      field: 'charges',
+      value: [...(context.createWorkOrder.charges ?? []), ...charges],
+    });
+
     for (const lineItem of lineItems) {
       context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable: false });
     }
   });
 
-  const serviceSelectorPopup = context.usePopup('ServiceSelector', ({ type, lineItem }) => {
+  const serviceSelectorPopup = context.usePopup('ServiceSelector', ({ type, lineItem, charges }) => {
     const isUnstackable = type === 'mutable-service';
+
+    context.dispatchCreateWorkOrder({
+      type: 'set-field',
+      field: 'charges',
+      value: [...(context.createWorkOrder.charges ?? []), ...charges],
+    });
 
     context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable });
 

@@ -8,17 +8,21 @@ import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useState } from 'react';
-import { CreateWorkOrderLineItem } from '../routes.js';
+import { CreateWorkOrderCharge, CreateWorkOrderLineItem } from '../routes.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
+import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');
   const [selectedLineItems, setSelectedLineItems] = useState<CreateWorkOrderLineItem[]>([]);
+  const [defaultCharges, setDefaultCharges] = useState<CreateWorkOrderCharge[]>([]);
+
   const { Screen, closePopup } = useScreen('ProductSelector', () => {
     setQuery('', true);
     setSelectedLineItems([]);
+    setDefaultCharges([]);
   });
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
@@ -38,9 +42,14 @@ export function ProductSelector() {
   const productVariants = productVariantsQuery.data?.pages ?? [];
   const currencyFormatter = useCurrencyFormatter();
 
-  const selectLineItem = (lineItem: CreateWorkOrderLineItem, name: string = 'Product') => {
+  const selectLineItem = (
+    lineItem: CreateWorkOrderLineItem,
+    defaultCharges: CreateWorkOrderCharge[],
+    name: string = 'Product',
+  ) => {
     setQuery('', true);
     setSelectedLineItems([...selectedLineItems, lineItem]);
+    setDefaultCharges(current => [...current, ...defaultCharges]);
     toast.show(`${name} added to cart`, { duration: 1000 });
   };
 
@@ -51,7 +60,7 @@ export function ProductSelector() {
       title={'Select product'}
       isLoading={settingsQuery.isLoading}
       presentation={{ sheet: true }}
-      overrideNavigateBack={() => closePopup(selectedLineItems)}
+      overrideNavigateBack={() => closePopup({ lineItems: selectedLineItems, charges: defaultCharges })}
     >
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
@@ -98,7 +107,7 @@ export function ProductSelector() {
 
 function getProductVariantRows(
   productVariants: ProductVariant[],
-  selectLineItem: (lineItem: CreateWorkOrderLineItem, name?: string) => void,
+  selectLineItem: (lineItem: CreateWorkOrderLineItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
   return productVariants.map(variant => {
@@ -110,14 +119,22 @@ function getProductVariantRows(
 
     const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
 
+    const lineItemUuid = uuid();
+    const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
+      productVariantDefaultChargeToCreateWorkOrderCharge(charge, lineItemUuid),
+    );
+
     return {
       id: variant.id,
       onPress: () => {
-        selectLineItem({
-          uuid: uuid(),
-          productVariantId: variant.id,
-          quantity: 1 as Int,
-        });
+        selectLineItem(
+          {
+            uuid: lineItemUuid,
+            productVariantId: variant.id,
+            quantity: 1 as Int,
+          },
+          defaultCharges,
+        );
       },
       leftSide: {
         label: displayName,

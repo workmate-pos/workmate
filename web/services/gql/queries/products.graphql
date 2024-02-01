@@ -45,4 +45,40 @@ fragment ProductVariantFragment on ProductVariant {
     isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
     isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
   }
+  defaultCharges: metafield(namespace: "$app", key: "default-charges") {
+    references(first: 10) {
+      nodes {
+        __typename
+        ...FixedPriceLabourChargeFragment
+        ...HourlyLabourChargeFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+fragment FixedPriceLabourChargeFragment on Metaobject {
+  type
+  name: field(key: "name") {
+    value
+  }
+  amount: field(key: "amount") {
+    value
+  }
+}
+
+fragment HourlyLabourChargeFragment on Metaobject {
+  type
+  name: field(key: "name") {
+    value
+  }
+  rate: field(key: "rate") {
+    value
+  }
+  hours: field(key: "hours") {
+    value
+  }
 }

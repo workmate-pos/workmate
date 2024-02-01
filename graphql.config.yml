@@ -17,6 +17,7 @@ extensions:
     requiredTypes:
       - "MoneyV2"
       - "Attribute"
+      - "Metaobject"
     documentHeader:
       - "/* eslint-disable */"
       - "import type { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';"

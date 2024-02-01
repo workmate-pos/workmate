@@ -44,8 +44,11 @@ export type ScreenInputOutput = {
     ),
     undefined,
   ];
-  ProductSelector: [undefined, CreateWorkOrderLineItem[]];
-  ServiceSelector: [undefined, { type: 'mutable-service' | 'fixed-service'; lineItem: CreateWorkOrderLineItem }];
+  ProductSelector: [undefined, { lineItems: CreateWorkOrderLineItem[]; charges: CreateWorkOrderCharge[] }];
+  ServiceSelector: [
+    undefined,
+    { type: 'mutable-service' | 'fixed-service'; lineItem: CreateWorkOrderLineItem; charges: CreateWorkOrderCharge[] },
+  ];
   LabourLineItemConfig: [
     {
       readonly: boolean;

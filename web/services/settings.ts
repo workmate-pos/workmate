@@ -27,11 +27,14 @@ export async function updateSettings(shop: string, partialShopSettings: PartialS
   const settings = await getShopSettings(shop);
 
   if (partialShopSettings.statuses) {
-    partialShopSettings.statuses = unique(partialShopSettings.statuses.map(status => status.trim()));
-
     if (!partialShopSettings.statuses.includes(partialShopSettings.defaultStatus ?? settings.defaultStatus)) {
       partialShopSettings.defaultStatus = partialShopSettings.statuses[0];
     }
+
+    partialShopSettings.statuses = unique(partialShopSettings.statuses.map(status => status.trim())) as [
+      string,
+      ...string[],
+    ];
   }
 
   if (partialShopSettings.statuses?.length === 0) {
