@@ -36,10 +36,6 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
       draftOrderId: currentWorkOrder?.draftOrderId ?? null,
     });
 
-    // TODO: Don't do this when updating a finished order
-    await removeWorkOrderCharges(id);
-    await createWorkOrderCharges(id, createWorkOrder);
-
     let draftOrderId: ID | null = null;
     let orderId: ID | null = null;
 
@@ -48,6 +44,11 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
     const action = orderIdSet ? 'updateOrder' : 'upsertDraftOrder';
 
     const options = await getOrderOptions(session.shop);
+
+    if (action === 'upsertDraftOrder') {
+      await removeWorkOrderCharges(id);
+      await createWorkOrderCharges(id, createWorkOrder);
+    }
 
     switch (action) {
       case 'upsertDraftOrder': {
