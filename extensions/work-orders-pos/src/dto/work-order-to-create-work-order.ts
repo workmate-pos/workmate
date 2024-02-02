@@ -38,11 +38,13 @@ export function getCreateWorkOrderLineItems(
   //  - (POS is unable to have multiple stacks, but (draft) orders can do it)
   // 2) We receive line items without UUIDs (they are used internally by POS to identify different stacks of the same product variant id, BUT
   //  - uuids are used internally to distinguish between different line items
-  //  - however, they are also used by labour assignments to distinguish between line items with the same product variant id
+  //  - these line item uuids are used by charges to assign them to specific line items with the same product variant id
 
   // To address these concerns, we can simply create a new uuid() for all line items **after** ensuring that we create a line item
   // for every uuid that has labour assignment(s).
-  // Afterwards we also ensure that service items are never stacked (to cover the case where service items do not have any labour assigned)
+  // Afterwards we also ensure that mutable service items are never stacked
+
+  // TODO: Fix bug with adding multiple fixed services makes them reset
 
   const productVariantChargeUuids = getProductVariantChargeUuids(workOrder);
 
@@ -96,7 +98,7 @@ export function getCreateWorkOrderLineItems(
 
   for (const [productVariantId, uuids] of Object.entries(productVariantChargeUuids)) {
     if (uuids.size !== 0) {
-      throw new Error(`Not all labour assignments for product ${productVariantId} have a corresponding line item`);
+      throw new Error(`Not all charges for product ${productVariantId} have a corresponding line item`);
     }
   }
 

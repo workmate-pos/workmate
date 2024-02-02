@@ -14,6 +14,7 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { CreateWorkOrderCharge } from '../routes.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
 import { extractErrorMessage } from '../../util/errors.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -82,48 +83,50 @@ function getProductVariantRows(
   closePopupRef: { current: ClosePopupFn<'ServiceSelector'> },
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
-  return productVariants.flatMap(variant => {
-    const displayName = getProductVariantName(variant) ?? 'Unknown service';
+  return productVariants
+    .map<ListRow | null>(variant => {
+      const displayName = getProductVariantName(variant) ?? 'Unknown service';
 
-    const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
+      const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
 
-    const type = variant.product.isFixedServiceItem
-      ? 'fixed-service'
-      : variant.product.isMutableServiceItem
-        ? 'mutable-service'
-        : null;
+      const type = variant.product.isFixedServiceItem
+        ? 'fixed-service'
+        : variant.product.isMutableServiceItem
+          ? 'mutable-service'
+          : null;
 
-    if (type === null) {
-      return [];
-    }
+      if (type === null) {
+        return null;
+      }
 
-    const lineItemUuid = uuid();
-    const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
-      productVariantDefaultChargeToCreateWorkOrderCharge(charge, lineItemUuid),
-    );
+      return {
+        id: variant.id,
+        onPress: () => {
+          const lineItemUuid = uuid();
+          const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
+            productVariantDefaultChargeToCreateWorkOrderCharge(charge, lineItemUuid),
+          );
 
-    return {
-      id: variant.id,
-      onPress: () => {
-        closePopupRef.current({
-          type,
-          lineItem: {
-            uuid: lineItemUuid,
-            productVariantId: variant.id,
-            quantity: 1 as Int,
-          },
-          charges: defaultCharges,
-        });
-      },
-      leftSide: {
-        label: displayName,
-        subtitle: variant.product.description ? [variant.product.description] : undefined,
-        image: { source: imageUrl ?? 'not found' },
-      },
-      rightSide: {
-        showChevron: true,
-        label: currencyFormatter(Number(variant.price)),
-      },
-    };
-  });
+          closePopupRef.current({
+            type,
+            lineItem: {
+              uuid: lineItemUuid,
+              productVariantId: variant.id,
+              quantity: 1 as Int,
+            },
+            charges: defaultCharges,
+          });
+        },
+        leftSide: {
+          label: displayName,
+          subtitle: variant.product.description ? [variant.product.description] : undefined,
+          image: { source: imageUrl ?? 'not found' },
+        },
+        rightSide: {
+          showChevron: true,
+          label: currencyFormatter(Number(variant.price)),
+        },
+      };
+    })
+    .filter(isNonNullable);
 }

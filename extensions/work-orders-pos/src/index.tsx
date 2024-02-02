@@ -1,4 +1,4 @@
-import { render, Tile, useExtensionApi, Navigator, Screen } from '@shopify/retail-ui-extensions-react';
+import { render, Tile, useExtensionApi, Navigator } from '@shopify/retail-ui-extensions-react';
 import { WorkOrderPage } from './screens/WorkOrder.js';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
 import { Error } from './screens/Error.js';
