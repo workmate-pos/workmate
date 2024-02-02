@@ -24,7 +24,7 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProductVariants } from './product-variants.js';
 import { getChargePrice } from './charges.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
 export async function upsertDraftOrder(
   session: Session,

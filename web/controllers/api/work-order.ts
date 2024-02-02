@@ -16,7 +16,7 @@ import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { sessionStorage } from '../../index.js';
 import { calculateDraftOrder } from '../../services/work-orders/calculate.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export default class WorkOrderController {

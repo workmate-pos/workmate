@@ -5,7 +5,7 @@ import { db } from './db/db.js';
 import { unit } from './db/unit-of-work.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { assertValidFormatString } from './id-formatting.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
 function serialize(value: ShopSettings[keyof ShopSettings]) {
   return JSON.stringify(value);

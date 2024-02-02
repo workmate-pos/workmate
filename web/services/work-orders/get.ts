@@ -12,7 +12,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { decimalToMoney } from '../../util/decimal.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [[workOrder], { fixedServiceCollectionId, mutableServiceCollectionId }] = await Promise.all([

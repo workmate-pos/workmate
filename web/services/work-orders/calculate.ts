@@ -4,7 +4,7 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js'
 import { getOrderInput, getOrderOptions } from './order.js';
 import { gql } from '../gql/gql.js';
 import { getProductVariants } from './product-variants.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
 
 export async function calculateDraftOrder(session: Session, calculateWorkOrder: CalculateWorkOrder) {

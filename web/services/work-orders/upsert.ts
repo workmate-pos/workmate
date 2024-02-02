@@ -8,7 +8,7 @@ import { createWorkOrderCharges, removeWorkOrderCharges } from './charges.js';
 import { getOrderOptions, updateOrder, upsertDraftOrder } from './order.js';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
 export async function upsertWorkOrder(session: Session, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
