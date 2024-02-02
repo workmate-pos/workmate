@@ -158,10 +158,10 @@ function getProductLineItems(createWorkOrder: CreateWorkOrder, workOrder: WorkOr
       const chargePrice = getChargesPrice(charges);
 
       quantity = parseInt(
-        BigDecimal.fromMoney(chargePrice)
-          .divide(BigDecimal.fromMoney(unitPrice), 2)
-          .round(0, RoundingMode.CEILING)
-          .toDecimal(),
+        BigDecimal.max(
+          BigDecimal.ONE,
+          BigDecimal.fromMoney(chargePrice).divide(BigDecimal.fromMoney(unitPrice), 2).round(0, RoundingMode.CEILING),
+        ).toDecimal(),
       );
     } else {
       // simply sum the quantities of all line items

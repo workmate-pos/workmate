@@ -153,10 +153,10 @@ function getOrderLineItems(
         ...charges.map(charge => BigDecimal.fromMoney(getChargePrice(charge))),
       ).toMoney();
       quantity = parseInt(
-        BigDecimal.fromMoney(totalPrice)
-          .divide(BigDecimal.fromMoney(unitPrice), 2)
-          .round(0, RoundingMode.CEILING)
-          .toString(),
+        BigDecimal.max(
+          BigDecimal.ONE,
+          BigDecimal.fromMoney(totalPrice).divide(BigDecimal.fromMoney(unitPrice), 2).round(0, RoundingMode.CEILING),
+        ).toString(),
       ) as Int;
     }
 
