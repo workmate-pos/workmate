@@ -1,4 +1,4 @@
-import { LabourLineItemUuidAttribute } from '../attributes/LabourLineItemUuidAttribute.js';
+import { ChargeLineItemUuidAttribute } from '../attributes/ChargeLineItemUuidAttribute.js';
 import { PlaceholderLineItemAttribute } from '../attributes/PlaceholderLineItemAttribute.js';
 import { AttributeMapping } from './index.js';
 import { CustomAttributeValue } from '../CustomAttribute.js';
@@ -12,7 +12,7 @@ import { UuidsAttribute } from '../attributes/UuidsAttribute.js';
  */
 export type WorkOrderOrderLineItemAttributes = {
   placeholderLineItem: CustomAttributeValue<typeof PlaceholderLineItemAttribute> | null;
-  labourLineItemUuid: CustomAttributeValue<typeof LabourLineItemUuidAttribute> | null;
+  chargeLineItemUuid: CustomAttributeValue<typeof ChargeLineItemUuidAttribute> | null;
   sku: CustomAttributeValue<typeof SkuAttribute> | null;
   uuid: CustomAttributeValue<typeof UuidAttribute> | null;
   uuids: CustomAttributeValue<typeof UuidsAttribute> | null;
@@ -20,7 +20,7 @@ export type WorkOrderOrderLineItemAttributes = {
 
 export const WorkOrderOrderLineItemAttributesMapping: AttributeMapping<WorkOrderOrderLineItemAttributes> = {
   placeholderLineItem: PlaceholderLineItemAttribute,
-  labourLineItemUuid: LabourLineItemUuidAttribute,
+  chargeLineItemUuid: ChargeLineItemUuidAttribute,
   sku: SkuAttribute,
   uuid: UuidAttribute,
   uuids: UuidsAttribute,

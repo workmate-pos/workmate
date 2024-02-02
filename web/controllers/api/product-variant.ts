@@ -6,6 +6,8 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import { gql } from '../../services/gql/gql.js';
 import type { Ids } from '../../schemas/generated/ids.js';
 import { getShopSettings } from '../../services/settings.js';
+import { parseMetaobject } from '../../services/metaobjects/index.js';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 @Authenticated()
 export default class ProductVariantController {
@@ -29,7 +31,10 @@ export default class ProductVariantController {
 
     const { nodes: productVariants, pageInfo } = response.productVariants;
 
-    return res.json({ productVariants, pageInfo });
+    return res.json({
+      productVariants: productVariants.map(parseProductVariantMetafields),
+      pageInfo,
+    });
   }
 
   @Get('/by-ids')
@@ -55,15 +60,31 @@ export default class ProductVariantController {
         node === null || node.__typename === 'ProductVariant',
     );
 
-    return res.json({ productVariants });
+    return res.json({
+      productVariants: productVariants.map(pv => (pv ? parseProductVariantMetafields(pv) : pv)),
+    });
   }
 }
 
 export type FetchProductsResponse = {
-  productVariants: gql.products.ProductVariantFragment.Result[];
+  productVariants: ProductVariantFragmentWithMetafields[];
   pageInfo: { hasNextPage: boolean; endCursor?: string | null };
 };
 
 export type FetchProductsByIdResponse = {
-  productVariants: (gql.products.ProductVariantFragment.Result | null)[];
+  productVariants: (ProductVariantFragmentWithMetafields | null)[];
 };
+
+function parseProductVariantMetafields(productVariant: gql.products.ProductVariantFragment.Result) {
+  return {
+    ...productVariant,
+    defaultCharges:
+      productVariant.defaultCharges?.references?.nodes
+        .filter(isNonNullable)
+        .filter(hasPropertyValue('__typename', 'Metaobject'))
+        .map(node => parseMetaobject(node))
+        .filter(isNonNullable) ?? [],
+  };
+}
+
+type ProductVariantFragmentWithMetafields = ReturnType<typeof parseProductVariantMetafields>;

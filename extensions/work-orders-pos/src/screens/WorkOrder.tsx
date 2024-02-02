@@ -30,16 +30,17 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { PayButton } from '../components/PayButton.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
 import { useUnsavedChangesDialog } from '../providers/UnsavedChangesDialogProvider.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
-import { getLabourPrice } from '../create-work-order/labour.js';
+import { getChargesPrice } from '../create-work-order/charges.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { extractErrorMessage } from '../util/errors.js';
+import { useSettings } from '../providers/SettingsProvider.js';
 
 /**
  * Stuff to pass around between components
@@ -53,6 +54,7 @@ const useWorkOrderContext = () => {
   const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
   const cart = useCartSubscription();
+  const settings = useSettings();
 
   const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
     switch (action.type) {
@@ -78,6 +80,16 @@ const useWorkOrderContext = () => {
             });
             api.toast.show('Imported customer from cart');
           }
+        }
+
+        const defaultStatus = settings.defaultStatus;
+
+        if (defaultStatus) {
+          dispatchCreateWorkOrder({
+            type: 'set-field',
+            field: 'status',
+            value: defaultStatus,
+          });
         }
 
         break;
@@ -130,7 +142,7 @@ const useWorkOrderContext = () => {
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
     fetch,
     lineItems: createWorkOrder.lineItems ?? [],
-    labour: createWorkOrder.labour ?? [],
+    charges: createWorkOrder.charges ?? [],
     customerId: createWorkOrder.customerId,
     discount: createWorkOrder.discount,
   });
@@ -202,6 +214,14 @@ export function WorkOrderPage() {
           <Banner
             title={`This order has been (partially) paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}. You can no longer change the products and services within this order`}
             variant={'information'}
+            visible
+          />
+        )}
+
+        {context.saveWorkOrderMutation.isError && (
+          <Banner
+            title={'Error saving work order: ' + extractErrorMessage(context.saveWorkOrderMutation.error, '')}
+            variant={'error'}
             visible
           />
         )}
@@ -350,22 +370,36 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
 const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const [query, setQuery] = useState('');
 
-  const productSelectorPopup = context.usePopup('ProductSelector', lineItems => {
+  const productSelectorPopup = context.usePopup('ProductSelector', ({ lineItems, charges }) => {
+    // TODO: Charge reduce types instead of set-field everywhere
+    context.dispatchCreateWorkOrder({
+      type: 'set-field',
+      field: 'charges',
+      value: [...(context.createWorkOrder.charges ?? []), ...charges],
+    });
+
     for (const lineItem of lineItems) {
       context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable: false });
     }
   });
 
-  const serviceSelectorPopup = context.usePopup('ServiceSelector', ({ type, lineItem }) => {
+  const serviceSelectorPopup = context.usePopup('ServiceSelector', ({ type, lineItem, charges }) => {
     const isUnstackable = type === 'mutable-service';
+
+    context.dispatchCreateWorkOrder({
+      type: 'set-field',
+      field: 'charges',
+      value: [...(context.createWorkOrder.charges ?? []), ...charges],
+    });
 
     context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable });
 
     if (type === 'mutable-service') {
       mutableServiceConfigPopup.navigate({
         readonly: context.hasOrder,
+        hasBasePrice: false,
         lineItem,
-        labour: context.createWorkOrder.labour?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
+        labour: context.createWorkOrder.charges?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
       });
     }
   });
@@ -384,8 +418,8 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
       if (result.hasLabour) {
         context.dispatchCreateWorkOrder({
           type: 'set-field',
-          field: 'labour',
-          value: context.createWorkOrder.labour?.filter(l => l.lineItemUuid !== result.result.lineItem.uuid) ?? [],
+          field: 'charges',
+          value: context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== result.result.lineItem.uuid) ?? [],
         });
       }
       return;
@@ -397,9 +431,9 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
       if (result.hasLabour) {
         context.dispatchCreateWorkOrder({
           type: 'set-field',
-          field: 'labour',
+          field: 'charges',
           value: [
-            ...(context.createWorkOrder.labour?.filter(l => l.lineItemUuid !== lineItemUuid) ?? []),
+            ...(context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== lineItemUuid) ?? []),
             ...result.result.labour.map(l => ({ ...l, lineItemUuid })),
           ],
         });
@@ -417,6 +451,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
     if (result.result.type === 'assign-employees') {
       labourLineItemConfigPopup.navigate({
         readonly: context.hasOrder,
+        hasBasePrice: result.type !== 'mutable-service',
         lineItem: result.result.lineItem,
         labour: [],
       });
@@ -446,11 +481,12 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const rows = useItemRows(context, query, (type, lineItem) => {
     switch (type) {
       case 'product': {
-        const hasLabour = context.createWorkOrder.labour?.some(ea => ea.lineItemUuid === lineItem.uuid);
+        const hasLabour = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
 
         if (hasLabour) {
           labourLineItemConfigPopup.navigate({
-            labour: context.createWorkOrder.labour?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+            labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+            hasBasePrice: true,
             readonly: context.hasOrder,
             lineItem,
           });
@@ -475,7 +511,8 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
 
       case 'mutable-service':
         mutableServiceConfigPopup.navigate({
-          labour: context.createWorkOrder.labour?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+          labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
+          hasBasePrice: false,
           readonly: context.hasOrder,
           lineItem,
         });
@@ -624,7 +661,7 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
 
 const WorkOrderAssignment = ({ context }: { context: WorkOrderContext }) => {
   const selectedEmployeeIds = unique(
-    context.createWorkOrder.labour?.map(employee => employee.employeeId).filter(isNonNullable) ?? [],
+    context.createWorkOrder.charges?.map(employee => employee.employeeId).filter(isNonNullable) ?? [],
   );
 
   const fetch = useAuthenticatedFetch();
@@ -670,7 +707,6 @@ function useItemRows(
   const fetch = useAuthenticatedFetch();
   const currencyFormatter = useCurrencyFormatter();
 
-  const settingsQuery = useSettingsQuery({ fetch });
   const productVariantQueries = useProductVariantQueries({
     fetch,
     ids: context.createWorkOrder.lineItems?.map(li => li.productVariantId) ?? [],
@@ -684,18 +720,20 @@ function useItemRows(
           !query || getProductVariantName(productVariant)?.toLowerCase().includes(query.toLowerCase()),
       )
       ?.map<ListRow>(({ lineItem, productVariant }) => {
-        const productVariantPrice = productVariant ? productVariant.price : BigDecimal.ZERO.toMoney();
+        const isMutableServiceItem = productVariant?.product.isMutableServiceItem ?? false;
 
-        const labourPrice = getLabourPrice(
-          context.createWorkOrder.labour?.filter(assignment => assignment.lineItemUuid === lineItem.uuid) ?? [],
+        const basePrice = productVariant && !isMutableServiceItem ? productVariant.price : BigDecimal.ZERO.toMoney();
+
+        const labourPrice = getChargesPrice(
+          context.createWorkOrder.charges?.filter(assignment => assignment.lineItemUuid === lineItem.uuid) ?? [],
         );
 
-        const hasLabour = context.createWorkOrder.labour?.some(ea => ea.lineItemUuid === lineItem.uuid);
+        const hasLabour = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
 
         return {
           id: lineItem.uuid,
           onPress() {
-            if (!productVariant || !settingsQuery.data || !lineItem) return;
+            if (!productVariant || !lineItem) return;
 
             const popupType = productVariant.product.isMutableServiceItem
               ? 'mutable-service'
@@ -715,7 +753,7 @@ function useItemRows(
           },
           rightSide: {
             label: currencyFormatter(
-              BigDecimal.fromMoney(productVariantPrice)
+              BigDecimal.fromMoney(basePrice)
                 .add(BigDecimal.fromMoney(labourPrice))
                 .multiply(BigDecimal.fromString(lineItem.quantity.toFixed(0)))
                 .toMoney(),

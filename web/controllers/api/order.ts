@@ -4,6 +4,7 @@ import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-expr
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { getOrder, getOrderInfos, getOrderLineItems } from '../../services/orders/get.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
 @Authenticated()
 export default class OrderController {
@@ -32,7 +33,7 @@ export default class OrderController {
   @QuerySchema('pagination-options')
   async fetchOrderLineItems(
     req: Request<{ id: string }, unknown, unknown, PaginationOptions>,
-    res: Response<FetchOrderLineItemsResponse | { error: string }>,
+    res: Response<FetchOrderLineItemsResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
@@ -41,7 +42,7 @@ export default class OrderController {
     const lineItems = await getOrderLineItems(session, gid, paginationOptions);
 
     if (!lineItems) {
-      return res.status(404).json({ error: 'Order not found' });
+      throw new HttpError('Order not found', 404);
     }
 
     return res.json(lineItems);

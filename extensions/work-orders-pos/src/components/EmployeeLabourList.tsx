@@ -4,8 +4,8 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { getLabourPrice } from '../create-work-order/labour.js';
-import { CreateWorkOrderLabour } from '../screens/routes.js';
+import { getChargesPrice } from '../create-work-order/charges.js';
+import { CreateWorkOrderCharge } from '../screens/routes.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 /**
@@ -17,8 +17,8 @@ export function EmployeeLabourList({
   readonly = false,
 }: {
   readonly?: boolean;
-  labour: DiscriminatedUnionOmit<CreateWorkOrderLabour & { employeeId: ID }, 'lineItemUuid'>[];
-  onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderLabour & { employeeId: ID }, 'lineItemUuid'>) => void;
+  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'lineItemUuid'>[];
+  onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'lineItemUuid'>) => void;
 }) {
   const currencyFormatter = useCurrencyFormatter();
 
@@ -40,7 +40,7 @@ export function EmployeeLabourList({
       data={labour.map(l => {
         const query = employeeQueries[l.employeeId];
 
-        const price = getLabourPrice([l]);
+        const price = getChargesPrice([l]);
 
         const leftSide: ListRowLeftSide =
           l.type === 'hourly-labour'

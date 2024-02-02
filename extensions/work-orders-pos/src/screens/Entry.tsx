@@ -1,4 +1,4 @@
-import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { NavigateFn, useScreen } from '../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
@@ -11,6 +11,7 @@ import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-que
 import { ID } from '@web/services/gql/queries/generated/schema.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { extractErrorMessage } from '../util/errors.js';
 
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');
@@ -38,8 +39,10 @@ export function Entry() {
 
   const rows = useWorkOrderRows(workOrderInfoQuery.data?.pages ?? [], navigate);
 
+  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
+
   return (
-    <Screen title="Work Orders">
+    <Screen title="Work Orders" overrideNavigateBack={() => navigation.dismiss()}>
       <ScrollView>
         <Stack direction="vertical">
           <Stack direction="horizontal" alignment="space-between">
@@ -132,7 +135,7 @@ export function Entry() {
           {workOrderInfoQuery.isError && (
             <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
               <Text color="TextCritical" variant="body">
-                An error occurred while loading work orders
+                {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
               </Text>
             </Stack>
           )}

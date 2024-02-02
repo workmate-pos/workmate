@@ -1,0 +1,25 @@
+mutation createDefinition($definition: MetafieldDefinitionInput!) {
+  metafieldDefinitionCreate(definition: $definition) {
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+mutation updateDefinition($definition: MetafieldDefinitionUpdateInput!) {
+  metafieldDefinitionUpdate(definition: $definition) {
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+query getDefinition($namespace: String!, $key: String, $ownerType: MetafieldOwnerType!) {
+  metafieldDefinitions(first: 1, namespace: $namespace, key: $key, ownerType: $ownerType) {
+    nodes {
+      id
+    }
+  }
+}

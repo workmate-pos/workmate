@@ -14,9 +14,10 @@ import { getWorkOrder, getWorkOrderInfoPage } from '../../services/work-orders/g
 import { getShopSettings } from '../../services/settings.js';
 import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
-import { ID } from '../../schemas/generated/ids.js';
 import { sessionStorage } from '../../index.js';
 import { calculateDraftOrder } from '../../services/work-orders/calculate.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -50,39 +51,40 @@ export default class WorkOrderController {
   @BodySchema('create-work-order-request')
   async createWorkOrderRequest(
     req: Request<unknown, unknown, CreateWorkOrderRequest>,
-    res: Response<CreateWorkOrderRequestResponse | { error: string }>,
+    res: Response<CreateWorkOrderRequestResponse>,
   ) {
     const createWorkOrderRequest = req.body;
 
     // provided by app proxy (https://shopify.dev/docs/apps/online-store/app-proxies)
+    // TODO: decorator in shopify-app-express
     const { logged_in_customer_id: customerId, shop } = req.query;
 
     if (typeof customerId !== 'string') {
-      return res.status(400).json({ error: 'Customer ID is required' });
+      throw new HttpError('Customer ID is required', 400);
     }
 
     if (typeof shop !== 'string') {
-      return res.status(400).json({ error: 'Shop is required' });
+      throw new HttpError('Shop is required', 400);
     }
 
     const settings = await getShopSettings(shop);
 
     if (!settings.workOrderRequests.enabled) {
-      return res.status(403).json({ error: 'Work order requests are disabled' });
+      throw new HttpError('Work order requests are disabled', 403);
     }
 
     const session = await sessionStorage.fetchOfflineSessionByShop(shop);
 
     if (!session) {
-      return res.status(400).json({ error: 'Shop is not installed' });
+      throw new HttpError('Shop is not installed', 400);
     }
 
     const { name } = await upsertWorkOrder(session, {
       status: settings.workOrderRequests.status,
       dueDate: createWorkOrderRequest.dueDate,
-      customerId: `gid://shopify/Customer/${customerId}` as ID,
+      customerId: createGid('Customer', customerId),
       description: createWorkOrderRequest.description,
-      labour: [],
+      charges: [],
       lineItems: [],
       derivedFromOrderId: null,
       name: null,
@@ -109,14 +111,14 @@ export default class WorkOrderController {
 
   @Get('/:name')
   @Authenticated()
-  async fetchWorkOrder(req: Request<{ name: string }>, res: Response<FetchWorkOrderResponse | { error: string }>) {
+  async fetchWorkOrder(req: Request<{ name: string }>, res: Response<FetchWorkOrderResponse>) {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
     const result = await getWorkOrder(session, name);
 
     if (!result) {
-      return res.status(404).json({ error: 'Work order not found' });
+      throw new HttpError('Work order not found', 404);
     }
 
     return res.json(result);

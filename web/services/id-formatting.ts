@@ -3,6 +3,7 @@ import { getShopSettings } from './settings.js';
 import { db } from './db/db.js';
 import { useClient } from './db/client.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 const formatters: Record<
   string,
@@ -19,6 +20,8 @@ const formatters: Record<
 
 export async function getFormattedId(shop: string) {
   const settings = await getShopSettings(shop);
+
+  assertValidFormatString(settings.idFormat);
 
   let formattedId = settings.idFormat;
 
@@ -51,4 +54,10 @@ async function createIdSequenceForShopIfNotExists(shop: string) {
 
 function getShopIdSequenceName(shop: string) {
   return `IdSeq_${shop}`;
+}
+
+export function assertValidFormatString(format: string) {
+  if (!format.includes('{{id}}')) {
+    throw new HttpError('Invalid id format string, must include {{id}}', 400);
+  }
 }

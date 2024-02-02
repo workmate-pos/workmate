@@ -12,6 +12,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { decimalToMoney } from '../../util/decimal.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [[workOrder], { fixedServiceCollectionId, mutableServiceCollectionId }] = await Promise.all([
@@ -77,7 +78,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     description: order.note ?? '',
     dueDate: workOrder.dueDate.toISOString() as DateTime,
     derivedFromOrder,
-    labour: [
+    charges: [
       ...hourlyLabours.map(
         ({ name, hours, rate, lineItemUuid, productVariantId, employeeId }) =>
           ({
@@ -165,10 +166,10 @@ export async function getWorkOrderInfoPage(
   const { nodes: orders } = await gql.order.getManyOrderInfoDraftOrderInfo.run(graphql, { ids: orderIds });
 
   return page.map((workOrder, i): WorkOrderInfo => {
-    const order = orders[i] ?? never('Incorrect order id');
+    const order = orders[i];
 
-    if (order.__typename !== 'Order' && order.__typename !== 'DraftOrder') {
-      throw new Error('Invalid order type');
+    if (!order || (order.__typename !== 'Order' && order.__typename !== 'DraftOrder')) {
+      throw new HttpError('Cannot find (draft) order for this work order', 500);
     }
 
     const outstanding =

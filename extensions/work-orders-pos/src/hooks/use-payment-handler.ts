@@ -6,11 +6,15 @@ import { WorkOrderOrderAttributesMapping } from '@work-orders/common/custom-attr
 import { WorkOrderOrderLineItemAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order-line-item.js';
 import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
 import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
-import { getLabourPrice } from '../create-work-order/labour.js';
+import { getChargesPrice } from '../create-work-order/charges.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useAuthenticatedFetch } from './use-authenticated-fetch.js';
-import { createGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { groupBy, sumMap } from '@teifi-digital/shopify-app-toolbox/array';
+import { hasNestedPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 
 const useCartRef = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
@@ -78,66 +82,38 @@ export const usePaymentHandler = () => {
       );
     }
 
-    const groupedLabour = groupBy(createWorkOrder.labour, labour => labour.name);
-    // rename labour such that every labour item has a unique name (must have a unique name to prevent line item merging)
-    const renamedLabour = Object.fromEntries(
-      Object.entries(groupedLabour).flatMap(([name, labour]) => labour.map((l, i) => [`${name} ${i + 1}`, l])),
-    );
-
-    const addCustomSalePromises = [];
-
-    for (const [title, labour] of Object.entries(renamedLabour)) {
-      const price = getLabourPrice([labour]);
-
-      addCustomSalePromises.push(
-        api.cart.addCustomSale({
-          taxable: true,
-          quantity: 1,
-          title,
-          price,
-        }),
-      );
-    }
-
-    const groupedLineItems = groupBy(createWorkOrder.lineItems, lineItem => lineItem.productVariantId);
+    const productLineItems = getProductLineItems(createWorkOrder, workOrder);
+    const chargeLineItems = getChargeLineItems(createWorkOrder);
 
     const addLineItemPromises = [];
 
-    for (const lineItems of Object.values(groupedLineItems)) {
-      const [lineItem] = lineItems;
-      const quantity = sumMap(lineItems, li => li.quantity);
-
-      if (quantity === 0 || !lineItem) {
-        continue;
-      }
-
-      addLineItemPromises.push(api.cart.addLineItem(parseGid(lineItem.productVariantId).id, quantity));
+    for (const { quantity, title, price, taxable } of chargeLineItems) {
+      addLineItemPromises.push(api.cart.addCustomSale({ quantity, title, price, taxable }));
     }
 
-    await Promise.all(addCustomSalePromises);
+    for (const { productVariantId, quantity } of productLineItems) {
+      addLineItemPromises.push(api.cart.addLineItem(productVariantId, quantity));
+    }
+
     await Promise.all(addLineItemPromises);
 
     const addAttributePromises = [];
 
     for (const lineItem of cartRef.current.lineItems) {
+      let customAttributes: Record<string, string> | undefined;
+
       if (lineItem.variantId) {
-        const productVariantId = createGid('ProductVariant', lineItem.variantId.toString());
-        const lineItemUuids = groupedLineItems[productVariantId]?.map(li => li.uuid);
-
-        if (!lineItemUuids) {
-          api.toast.show(`Could not find line item uuids for product variant ${productVariantId}`);
-          continue;
-        }
-
-        const attributes = getProductLineItemAttributes(lineItemUuids);
-        addAttributePromises.push(api.cart.addLineItemProperties(lineItem.uuid, attributes));
+        customAttributes = productLineItems.find(li => li.productVariantId === lineItem.variantId)?.customAttributes;
       } else if (lineItem.title) {
-        const labourItem = renamedLabour[lineItem.title];
-        if (!labourItem) continue; // should be impossible
-        const attributes = getLabourLineItemAttributes(labourItem, settingsQuery.data.settings.labourLineItemSKU);
-        addAttributePromises.push(api.cart.addLineItemProperties(lineItem.uuid, attributes));
+        customAttributes = chargeLineItems.find(li => li.title === lineItem.title)?.customAttributes;
+      }
+
+      if (customAttributes) {
+        addAttributePromises.push(api.cart.addLineItemProperties(lineItem.uuid, customAttributes));
       }
     }
+
+    await Promise.all(addAttributePromises);
 
     api.navigation.dismiss();
 
@@ -149,6 +125,95 @@ export const usePaymentHandler = () => {
     isLoading,
   };
 };
+
+type AddLineItemSpec = { productVariantId: number; quantity: number; customAttributes: Record<string, string> };
+type AddCustomSaleSpec = {
+  taxable: boolean;
+  quantity: number;
+  title: string;
+  price: Money;
+  customAttributes: Record<string, string>;
+};
+
+/**
+ * Get line items for products (i.e. non custom sales)
+ */
+function getProductLineItems(createWorkOrder: CreateWorkOrder, workOrder: WorkOrder): AddLineItemSpec[] {
+  const lineItemsByProductVariantId = groupBy(createWorkOrder.lineItems, lineItem => lineItem.productVariantId);
+  const result: AddLineItemSpec[] = [];
+
+  for (const [productVariantId, lineItems] of entries(lineItemsByProductVariantId)) {
+    const lineItemUuids = new Set(lineItems.map(li => li.uuid));
+
+    let quantity: number;
+
+    if (isMutableServiceLineItem(productVariantId, workOrder)) {
+      // the quantity of mutable service line items is set such that it covers the price of all related charges
+      const charges = createWorkOrder.charges.filter(
+        charge => charge.lineItemUuid && lineItemUuids.has(charge.lineItemUuid),
+      );
+
+      const unitPrice =
+        workOrder.order.lineItems.find(hasNestedPropertyValue('variant.id', productVariantId))?.unitPrice ?? never();
+      const chargePrice = getChargesPrice(charges);
+
+      quantity = parseInt(
+        BigDecimal.max(
+          BigDecimal.ONE,
+          BigDecimal.fromMoney(chargePrice).divide(BigDecimal.fromMoney(unitPrice), 2).round(0, RoundingMode.CEILING),
+        ).toDecimal(),
+      );
+    } else {
+      // simply sum the quantities of all line items
+      quantity = sumMap(lineItems, li => li.quantity);
+    }
+
+    const customAttributes = getProductLineItemAttributes([...lineItemUuids]);
+
+    result.push({
+      productVariantId: parseGid(productVariantId).id,
+      quantity,
+      customAttributes,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Get line items for additional charges, i.e. custom sales
+ */
+function getChargeLineItems(createWorkOrder: CreateWorkOrder): AddCustomSaleSpec[] {
+  const groupedCharges = groupBy(createWorkOrder.charges, charge => charge.name);
+  const result: AddCustomSaleSpec[] = [];
+
+  for (const [baseName, charges] of entries(groupedCharges)) {
+    for (const [i, charge] of charges.entries()) {
+      // ensure every charge has a unique name, otherwise line items will be merged
+      const name = charges.length === 1 ? baseName : `${baseName} ${i + 1}`;
+      const price = getChargesPrice([charge]);
+
+      const customAttributes = getChargeLineItemAttributes(charge);
+
+      result.push({
+        title: name,
+        taxable: true,
+        quantity: 1,
+        price,
+        customAttributes,
+      });
+    }
+  }
+
+  return result;
+}
+
+function isMutableServiceLineItem(productVariantId: ID, workOrder: WorkOrder) {
+  const product = workOrder.order.lineItems.find(hasNestedPropertyValue('variant.id', productVariantId));
+  if (!product) return false;
+
+  return product.variant.product.isMutableServiceItem;
+}
 
 function getCartProperties(workOrder: WorkOrder) {
   return attributesToProperties(WorkOrderOrderAttributesMapping, {
@@ -162,9 +227,9 @@ function getProductLineItemAttributes(uuids: string[]) {
   });
 }
 
-function getLabourLineItemAttributes(labour: CreateWorkOrder['labour'][number], sku?: string) {
+function getChargeLineItemAttributes(labour: CreateWorkOrder['charges'][number], sku?: string) {
   return attributesToProperties(WorkOrderOrderLineItemAttributesMapping, {
-    labourLineItemUuid: labour.lineItemUuid,
+    chargeLineItemUuid: labour.lineItemUuid,
     sku: sku ?? null,
   });
 }

@@ -5,8 +5,8 @@
     "customerId": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
     },
-    "labour": {
-      "$ref": "create-work-order.json#/properties/labour"
+    "charges": {
+      "$ref": "create-work-order.json#/properties/charges"
     },
     "lineItems": {
       "$ref": "create-work-order.json#/properties/lineItems"
@@ -15,6 +15,6 @@
       "$ref": "create-work-order.json#/properties/discount"
     }
   },
-  "required": ["customerId", "labour", "lineItems", "discount"],
+  "required": ["customerId", "charges", "lineItems", "discount"],
   "additionalProperties": false
 }
