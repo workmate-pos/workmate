@@ -1,7 +1,6 @@
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
@@ -14,6 +13,7 @@ import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { CreateWorkOrderCharge } from '../routes.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
+import { extractErrorMessage } from '../../util/errors.js';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -22,7 +22,6 @@ export function ServiceSelector() {
   });
 
   const fetch = useAuthenticatedFetch();
-  const settingsQuery = useSettingsQuery({ fetch });
   const serviceCollectionIds = useServiceCollectionIds();
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
@@ -38,7 +37,7 @@ export function ServiceSelector() {
   const rows = getProductVariantRows(productVariantsQuery?.data?.pages ?? [], closeRef, currencyFormatter);
 
   return (
-    <Screen title={'Select service'} isLoading={settingsQuery.isLoading} presentation={{ sheet: true }}>
+    <Screen title={'Select service'} presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -69,7 +68,7 @@ export function ServiceSelector() {
         {productVariantsQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
-              Error loading services
+              {extractErrorMessage(productVariantsQuery.error, 'Error loading services')}
             </Text>
           </Stack>
         )}

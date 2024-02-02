@@ -11,12 +11,12 @@ import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogPro
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { getChargesPrice } from '../../create-work-order/charges.js';
 import { uuid } from '../../util/uuid.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { FixedPriceLabour, HourlyLabour } from '@web/schemas/generated/create-work-order.js';
 import { SegmentedLabourControl } from '../../components/SegmentedLabourControl.js';
+import { useSettings } from '../../providers/SettingsProvider.js';
 
 export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
@@ -75,7 +75,7 @@ export function LabourLineItemConfig() {
             type: 'fixed-price-labour',
             chargeUuid: uuid(),
             employeeId: id,
-            name: settingsQuery?.data?.settings?.labourLineItemName || 'Labour',
+            name: settings.labourLineItemName || 'Labour',
             amount: BigDecimal.ZERO.toMoney(),
           } as const)
         );
@@ -102,8 +102,8 @@ export function LabourLineItemConfig() {
   });
 
   const currencyFormatter = useCurrencyFormatter();
+  const settings = useSettings();
   const fetch = useAuthenticatedFetch();
-  const settingsQuery = useSettingsQuery({ fetch });
   const productVariantQuery = useProductVariantQuery({ fetch, id: lineItem?.productVariantId ?? null });
 
   const productVariant = productVariantQuery?.data;
@@ -114,8 +114,8 @@ export function LabourLineItemConfig() {
     ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
   ];
 
-  const canAddEmployeeLabour = settingsQuery.data?.settings?.chargeSettings?.employeeAssignments !== false;
-  const shouldShowEmployeeLabour = canAddEmployeeLabour || employeeLabour.length > 0;
+  const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
+  const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabour.length > 0;
 
   const labourPrice = getChargesPrice(labour);
 
@@ -159,7 +159,7 @@ export function LabourLineItemConfig() {
                   onPress={() =>
                     employeeSelectorPopup.navigate(employeeLabour.map(e => e.employeeId).filter(isNonNullable))
                   }
-                  isDisabled={readonly || !canAddEmployeeLabour}
+                  isDisabled={readonly || !employeeAssignmentsEnabled}
                 />
 
                 <EmployeeLabourList

@@ -15,6 +15,7 @@ export type CreateWorkOrderCharge = CreateWorkOrder['charges'][number];
 export type ScreenInputOutput = {
   Entry: [undefined, undefined];
   Error: [string, undefined];
+  LoadingSettings: [undefined, undefined];
   ImportOrderSelector: [undefined, undefined];
   OrderPreview: [
     {

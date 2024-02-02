@@ -4,6 +4,7 @@ import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-cus
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
+import { extractErrorMessage } from '../../util/errors.js';
 
 export function CustomerSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -53,7 +54,7 @@ export function CustomerSelector() {
         {customersQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
-              Error loading customers
+              {extractErrorMessage(customersQuery.error, 'Error loading customers')}
             </Text>
           </Stack>
         )}

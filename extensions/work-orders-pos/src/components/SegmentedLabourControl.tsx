@@ -3,11 +3,10 @@ import { SegmentedControl, Stepper, Text, TextField, Stack, Selectable } from '@
 import { Segment } from '@shopify/retail-ui-extensions/src/components/SegmentedControl/SegmentedControl.js';
 import { getChargesPrice } from '../create-work-order/charges.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import { useSettings } from '../providers/SettingsProvider.js';
 
 type SegmentId = CreateWorkOrderCharge['type'] | 'none';
 
@@ -47,16 +46,14 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
   onChange: (charge: ChargeType<SegmentTypes[number]>) => void;
   defaultHourlyRate?: Money;
 }) {
-  const fetch = useAuthenticatedFetch();
-  const settingsQuery = useSettingsQuery({ fetch });
+  const settings = useSettings();
   const currencyFormatter = useCurrencyFormatter();
 
   const shouldShowSegment = (type: SegmentTypes[number]) => {
     if (type === charge?.type) return true;
-    if (!settingsQuery.data) return true;
     const toggleName = segmentToggleName[type];
     if (!toggleName) return true;
-    return settingsQuery.data.settings.chargeSettings[toggleName];
+    return settings.chargeSettings[toggleName];
   };
 
   const segments = types.map<Segment>(type => ({
@@ -82,7 +79,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       case 'fixed-price-labour': {
         const fixedPriceLabour: ChargeType<'fixed-price-labour'> = {
           type: 'fixed-price-labour',
-          name: charge?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
+          name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
           amount: getChargesPrice(charge ? [charge] : []),
         };
 
@@ -93,7 +90,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       case 'hourly-labour': {
         const hourlyLabour: ChargeType<'hourly-labour'> = {
           type: 'hourly-labour',
-          name: charge?.name ?? (settingsQuery?.data?.settings?.labourLineItemName || 'Labour'),
+          name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
           rate: getChargesPrice(charge ? [charge] : []),
           hours: BigDecimal.ONE.toDecimal(),
         };

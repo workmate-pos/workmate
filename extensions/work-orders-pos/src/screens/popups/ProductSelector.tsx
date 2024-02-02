@@ -1,7 +1,6 @@
 import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
@@ -13,6 +12,7 @@ import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
+import { extractErrorMessage } from '../../util/errors.js';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -28,7 +28,6 @@ export function ProductSelector() {
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
-  const settingsQuery = useSettingsQuery({ fetch });
   const serviceCollectionIds = useServiceCollectionIds();
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
@@ -58,7 +57,6 @@ export function ProductSelector() {
   return (
     <Screen
       title={'Select product'}
-      isLoading={settingsQuery.isLoading}
       presentation={{ sheet: true }}
       overrideNavigateBack={() => closePopup({ lineItems: selectedLineItems, charges: defaultCharges })}
     >
@@ -96,7 +94,7 @@ export function ProductSelector() {
         {productVariantsQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
-              Error loading products
+              {extractErrorMessage(productVariantsQuery.error, 'Error loading products')}
             </Text>
           </Stack>
         )}

@@ -30,7 +30,6 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { PayButton } from '../components/PayButton.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
 import { useUnsavedChangesDialog } from '../providers/UnsavedChangesDialogProvider.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
@@ -40,6 +39,8 @@ import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { extractErrorMessage } from '../util/errors.js';
+import { useSettings } from '../providers/SettingsProvider.js';
 
 /**
  * Stuff to pass around between components
@@ -53,7 +54,7 @@ const useWorkOrderContext = () => {
   const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
   const cart = useCartSubscription();
-  const settingsQuery = useSettingsQuery({ fetch });
+  const settings = useSettings();
 
   const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
     switch (action.type) {
@@ -81,7 +82,7 @@ const useWorkOrderContext = () => {
           }
         }
 
-        const defaultStatus = settingsQuery?.data?.settings.defaultStatus;
+        const defaultStatus = settings.defaultStatus;
 
         if (defaultStatus) {
           dispatchCreateWorkOrder({
@@ -213,6 +214,14 @@ export function WorkOrderPage() {
           <Banner
             title={`This order has been (partially) paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}. You can no longer change the products and services within this order`}
             variant={'information'}
+            visible
+          />
+        )}
+
+        {context.saveWorkOrderMutation.isError && (
+          <Banner
+            title={'Error saving work order: ' + extractErrorMessage(context.saveWorkOrderMutation.error, '')}
+            variant={'error'}
             visible
           />
         )}
@@ -698,7 +707,6 @@ function useItemRows(
   const fetch = useAuthenticatedFetch();
   const currencyFormatter = useCurrencyFormatter();
 
-  const settingsQuery = useSettingsQuery({ fetch });
   const productVariantQueries = useProductVariantQueries({
     fetch,
     ids: context.createWorkOrder.lineItems?.map(li => li.productVariantId) ?? [],
@@ -725,7 +733,7 @@ function useItemRows(
         return {
           id: lineItem.uuid,
           onPress() {
-            if (!productVariant || !settingsQuery.data || !lineItem) return;
+            if (!productVariant || !lineItem) return;
 
             const popupType = productVariant.product.isMutableServiceItem
               ? 'mutable-service'

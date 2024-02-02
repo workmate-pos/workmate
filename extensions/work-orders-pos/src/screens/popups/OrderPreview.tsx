@@ -26,6 +26,7 @@ import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { OrderLineItem, useOrderLineItemsQuery } from '@work-orders/common/queries/use-order-line-items-query.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { extractErrorMessage } from '../../util/errors.js';
 
 export function OrderPreview() {
   const [orderId, setOrderId] = useState<ID | null>(null);
@@ -124,7 +125,7 @@ export function OrderPreview() {
             {orderLineItemsQuery.isError && (
               <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
                 <Text color="TextCritical" variant="body">
-                  Error loading line items
+                  {extractErrorMessage(orderLineItemsQuery.error, 'Error loading line items')}
                 </Text>
               </Stack>
             )}
