@@ -11,6 +11,11 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.
 
 export type AppSubscriptionCreate = gql.appSubscriptions.appSubscriptionCreate.Result['appSubscriptionCreate'];
 
+export type AvailableAppPlans = {
+  availableAppPlans: AppPlan[];
+  message?: string;
+};
+
 @Authenticated()
 export default class AppPlans {
   @Get('/')
@@ -20,16 +25,18 @@ export default class AppPlans {
     const graphql = new Graphql(session);
 
     // If locations > 1, disallow name=STARTER
-    const locations = await gql.location.searchLocations.run(graphql, { query: '' });
-    const appPlanSubscription = await appPlans.getAppPlanSubscription(graphql);
-    const trialDaysUsed = await appPlans.getTrialDaysUsed(graphql);
-    const shopType = await getShopType(graphql);
+    const [hasOneLocation, appPlanSubscription, shopType, shopAppPlans] = await Promise.all([
+      gql.location.searchLocations.run(graphql, { query: '' }).then(locations => locations.locations.nodes.length <= 1),
+      appPlans.getAppPlanSubscription(graphql),
+      getShopType(graphql),
+      db.appPlan.get({ shop }),
+    ]);
+    const trialDaysUsed = appPlans.getTrialDaysUsed(appPlanSubscription);
 
-    const shopAppPlans = await db.appPlan.get({ shop });
     const availableAppPlans: AppPlan[] = [];
     for (const appPlan of shopAppPlans) {
-      if (appPlan.type === 'DEFAULT') {
-        if (appPlan.name === 'STARTER' && locations.locations.nodes.length > 1) continue;
+      if (appPlan.type === 'DEFAULT' && shopType !== 'PARTNER_DEVELOPMENT') {
+        if (appPlan.name === 'STARTER' && !hasOneLocation) continue;
         if (appPlan.name === 'STARTER' && shopType !== 'BASIC') continue;
         if (appPlan.name === 'BASIC' && shopType !== 'BASIC') continue;
         if (appPlan.name === 'PREMIUM' && shopType !== 'ADVANCED') continue;
@@ -41,7 +48,22 @@ export default class AppPlans {
       availableAppPlans.push(appPlan);
     }
 
-    return res.json({ availableAppPlans });
+    let message = undefined;
+    if (shopType === 'BASIC') {
+      if (!hasOneLocation) {
+        message = 'It seems you are on the Basic Shopify store plan and have more than one location — ';
+        message += 'we have selected the Basic plan for you.';
+      }
+    } else if (shopType === 'ADVANCED') {
+      message = 'It seems you are on the Advanced Shopify store plan — ';
+      message += 'we have selected the Premium plan for you.';
+    } else if (shopType === 'SHOPIFY_PLUS') {
+      message = 'It seems you are on the Shopify Plus store plan, ';
+      message += 'please reach out for an Enterprise plan.';
+    }
+
+    const payload: AvailableAppPlans = { availableAppPlans, message };
+    return res.json(payload);
   }
 
   @Get('/subscription')
@@ -68,13 +90,15 @@ export default class AppPlans {
       throw new HttpError('App plan not found', 400);
     }
 
-    const trialDaysUsed = await appPlans.getTrialDaysUsed(graphql);
+    const appPlanSubscription = await appPlans.getAppPlanSubscription(graphql);
+    const trialDaysUsed = appPlans.getTrialDaysUsed(appPlanSubscription);
+    const trialDays = Math.max(0, appPlan.trialDays - trialDaysUsed);
 
     const appSubscription = await gql.appSubscriptions.appSubscriptionCreate.run(graphql, {
       name: `${appPlan.id}-${appPlan.name}`,
       returnUrl: `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`,
       test: process.env.NODE_ENV === 'development',
-      trialDays: Math.max(0, appPlan.trialDays - trialDaysUsed) as Int,
+      trialDays: trialDays === 0 ? undefined : (trialDays as Int),
       lineItems: [
         {
           plan: {

@@ -15,7 +15,9 @@ export interface IGetSubscriptionParams {
 /** 'GetSubscription' return type */
 export interface IGetSubscriptionResult {
   appPlanId: number;
+  appPlanInterval: AppPlanInterval;
   appPlanName: AppPlanName;
+  appPlanTrialCreatedAt: Date;
   appSubscriptionShopifyId: string;
   appSubscriptionStatus: string;
   shop: string;
@@ -28,13 +30,18 @@ export interface IGetSubscriptionQuery {
   result: IGetSubscriptionResult;
 }
 
-const getSubscriptionIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":178,"b":183}]}],"statement":"SELECT aps.*, ap.name AS \"appPlanName\" FROM \"AppPlanSubscription\" aps\n                                              JOIN \"AppPlan\" ap on ap.id = aps.\"appPlanId\"\nWHERE aps.shop = :shop!"};
+const getSubscriptionIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":308,"b":313}]}],"statement":"SELECT aps.*,\n       ap.name AS \"appPlanName\",\n       ap.interval AS \"appPlanInterval\",\n       apst.\"createdAt\" AS \"appPlanTrialCreatedAt\"\nFROM \"AppPlanSubscription\" aps\n       JOIN \"AppPlan\" ap on ap.id = aps.\"appPlanId\"\n       JOIN \"AppPlanSubscriptionTrials\" apst on apst.shop = aps.shop\nWHERE aps.shop = :shop!"};
 
 /**
  * Query generated from SQL:
  * ```
- * SELECT aps.*, ap.name AS "appPlanName" FROM "AppPlanSubscription" aps
- *                                               JOIN "AppPlan" ap on ap.id = aps."appPlanId"
+ * SELECT aps.*,
+ *        ap.name AS "appPlanName",
+ *        ap.interval AS "appPlanInterval",
+ *        apst."createdAt" AS "appPlanTrialCreatedAt"
+ * FROM "AppPlanSubscription" aps
+ *        JOIN "AppPlan" ap on ap.id = aps."appPlanId"
+ *        JOIN "AppPlanSubscriptionTrials" apst on apst.shop = aps.shop
  * WHERE aps.shop = :shop!
  * ```
  */
@@ -64,11 +71,17 @@ export interface IUpsertSubscriptionQuery {
   result: IUpsertSubscriptionResult;
 }
 
-const upsertSubscriptionIR: any = {"usedParamSet":{"appSubscriptionShopifyId":true,"shop":true,"appSubscriptionStatus":true,"appPlanId":true},"params":[{"name":"appSubscriptionShopifyId","required":true,"transform":{"type":"scalar"},"locs":[{"a":115,"b":140},{"a":286,"b":311}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":143,"b":148}]},{"name":"appSubscriptionStatus","required":true,"transform":{"type":"scalar"},"locs":[{"a":151,"b":173},{"a":373,"b":395}]},{"name":"appPlanId","required":true,"transform":{"type":"scalar"},"locs":[{"a":176,"b":186},{"a":445,"b":455}]}],"statement":"INSERT INTO \"AppPlanSubscription\" (\"appSubscriptionShopifyId\", shop, \"appSubscriptionStatus\", \"appPlanId\")\nVALUES (:appSubscriptionShopifyId!, :shop!, :appSubscriptionStatus!, :appPlanId!)\nON CONFLICT (\"shop\") DO UPDATE SET\n                                 \"appSubscriptionShopifyId\" = :appSubscriptionShopifyId!,\n                                 \"appSubscriptionStatus\" = :appSubscriptionStatus!,\n                                 \"appPlanId\" = :appPlanId!\nRETURNING *"};
+const upsertSubscriptionIR: any = {"usedParamSet":{"shop":true,"appSubscriptionShopifyId":true,"appSubscriptionStatus":true,"appPlanId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":97,"b":102},{"a":300,"b":305}]},{"name":"appSubscriptionShopifyId","required":true,"transform":{"type":"scalar"},"locs":[{"a":272,"b":297},{"a":443,"b":468}]},{"name":"appSubscriptionStatus","required":true,"transform":{"type":"scalar"},"locs":[{"a":308,"b":330},{"a":530,"b":552}]},{"name":"appPlanId","required":true,"transform":{"type":"scalar"},"locs":[{"a":333,"b":343},{"a":602,"b":612}]}],"statement":"WITH insertedSubscriptionTrial AS (\n  INSERT INTO \"AppPlanSubscriptionTrials\" (shop)\n    VALUES (:shop!)\n    ON CONFLICT (shop) DO NOTHING\n    RETURNING *\n)\nINSERT INTO \"AppPlanSubscription\" (\"appSubscriptionShopifyId\", shop, \"appSubscriptionStatus\", \"appPlanId\")\nVALUES (:appSubscriptionShopifyId!, :shop!, :appSubscriptionStatus!, :appPlanId!)\nON CONFLICT (\"shop\") DO UPDATE SET\n                                 \"appSubscriptionShopifyId\" = :appSubscriptionShopifyId!,\n                                 \"appSubscriptionStatus\" = :appSubscriptionStatus!,\n                                 \"appPlanId\" = :appPlanId!\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
+ * WITH insertedSubscriptionTrial AS (
+ *   INSERT INTO "AppPlanSubscriptionTrials" (shop)
+ *     VALUES (:shop!)
+ *     ON CONFLICT (shop) DO NOTHING
+ *     RETURNING *
+ * )
  * INSERT INTO "AppPlanSubscription" ("appSubscriptionShopifyId", shop, "appSubscriptionStatus", "appPlanId")
  * VALUES (:appSubscriptionShopifyId!, :shop!, :appSubscriptionStatus!, :appPlanId!)
  * ON CONFLICT ("shop") DO UPDATE SET

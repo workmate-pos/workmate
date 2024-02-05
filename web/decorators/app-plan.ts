@@ -37,6 +37,9 @@ export const appPlanHandler: DecoratorHandler<AppPlanHandlerParam> = ([{ name, s
       return err(res, `You must have at least a ${name.toLowerCase()} subscription for this feature`, 401);
     }
 
+    if (res.locals.teifi == null) res.locals.teifi = {};
+    res.locals.teifi.appPlanSubscription = appPlanSubscription;
+
     next();
   }) as RequestHandler;
 };

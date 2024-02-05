@@ -100,6 +100,11 @@ model AppPlanSubscription {
   appPlan                  AppPlan  @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
 }
 
+model AppPlanSubscriptionTrials {
+  shop      String   @id
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
 model AppPlan {
   id                   Int                   @id @default(autoincrement())
   name                 AppPlanName
@@ -114,9 +119,11 @@ model AppPlan {
 }
 
 model AppPlanCustomAccess {
-  appPlanId Int     @id
+  appPlanId Int
   shop      String
   appPlan   AppPlan @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
+
+  @@id([appPlanId, shop])
 }
 
 enum AppPlanName {

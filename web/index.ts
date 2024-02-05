@@ -21,6 +21,7 @@ createServer({
   baseDir: resolve('.'),
   appConfig: { sessionStorage },
   webhookHandlers,
+  registerWebhooksOnStart: false,
 }).then(async app => {
   console.log(`Configured Shopify API Key: '${process.env.SHOPIFY_API_KEY}'`);
 });

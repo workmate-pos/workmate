@@ -63,19 +63,11 @@ export class AppPlans extends InstallableService {
     return appPlanSubscription;
   }
 
-  async getTrialDaysUsed(graphql: Graphql): Promise<number> {
-    const appInstallation = await gql.appSubscriptions.getCurrentAppSubscriptions.run(graphql, {});
-    const earliestActiveSubscription = appInstallation.currentAppInstallation.activeSubscriptions.reduce(
-      (earliest, activeSubscription) => {
-        const createdAt = new Date(activeSubscription.createdAt as string);
-        if (earliest == null || createdAt < earliest) return createdAt;
-        return earliest;
-      },
-      null as Date | null,
-    );
-    return earliestActiveSubscription
-      ? Math.floor((Date.now() - earliestActiveSubscription.getTime()) / (1000 * 60 * 60 * 24))
-      : 0;
+  getTrialDaysUsed(appPlanSubscription: AppPlanSubscription | null): number {
+    if (appPlanSubscription == null) return 0;
+    const trialCreatedAt = new Date(appPlanSubscription.appPlanTrialCreatedAt);
+    if (isNaN(trialCreatedAt.getTime())) return 0;
+    return Math.floor((Date.now() - trialCreatedAt.getTime()) / MILLIS_IN_DAY);
   }
 }
 

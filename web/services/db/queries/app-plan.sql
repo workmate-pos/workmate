@@ -1,9 +1,20 @@
 /* @name getSubscription */
-SELECT aps.*, ap.name AS "appPlanName" FROM "AppPlanSubscription" aps
-                                              JOIN "AppPlan" ap on ap.id = aps."appPlanId"
+SELECT aps.*,
+       ap.name AS "appPlanName",
+       ap.interval AS "appPlanInterval",
+       apst."createdAt" AS "appPlanTrialCreatedAt"
+FROM "AppPlanSubscription" aps
+       JOIN "AppPlan" ap on ap.id = aps."appPlanId"
+       JOIN "AppPlanSubscriptionTrials" apst on apst.shop = aps.shop
 WHERE aps.shop = :shop!;
 
 /* @name upsertSubscription */
+WITH insertedSubscriptionTrial AS (
+  INSERT INTO "AppPlanSubscriptionTrials" (shop)
+    VALUES (:shop!)
+    ON CONFLICT (shop) DO NOTHING
+    RETURNING *
+)
 INSERT INTO "AppPlanSubscription" ("appSubscriptionShopifyId", shop, "appSubscriptionStatus", "appPlanId")
 VALUES (:appSubscriptionShopifyId!, :shop!, :appSubscriptionStatus!, :appPlanId!)
 ON CONFLICT ("shop") DO UPDATE SET
