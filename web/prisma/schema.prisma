@@ -90,3 +90,48 @@ model HourlyLabour {
   rate  String
   hours String
 }
+
+model AppPlanSubscription {
+  appSubscriptionShopifyId String
+  shop                     String   @id
+  appSubscriptionStatus    String
+  appPlanId                Int
+  updatedAt                DateTime @default(now()) @db.Timestamptz(3)
+  appPlan                  AppPlan  @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
+}
+
+model AppPlan {
+  id                   Int                   @id @default(autoincrement())
+  name                 AppPlanName
+  type                 AppPlanType
+  price                Int
+  currencyCode         String
+  interval             AppPlanInterval
+  trialDays            Int
+  createdAt            DateTime              @default(now()) @db.Timestamptz(3)
+  appPlanSubscriptions AppPlanSubscription[]
+  appPlanCustomAccess  AppPlanCustomAccess[]
+}
+
+model AppPlanCustomAccess {
+  appPlanId Int     @id
+  shop      String
+  appPlan   AppPlan @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
+}
+
+enum AppPlanName {
+  STARTER
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum AppPlanType {
+  DEFAULT
+  CUSTOM
+}
+
+enum AppPlanInterval {
+  EVERY_30_DAYS
+  ANNUAL
+}

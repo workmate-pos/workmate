@@ -42,6 +42,32 @@ const removeIR: any = {"usedParamSet":{"ids":true},"params":[{"name":"ids","requ
 export const remove = new PreparedQuery<IRemoveParams,IRemoveResult>(removeIR);
 
 
+/** 'RemoveByShop' parameters type */
+export interface IRemoveByShopParams {
+  shop: string;
+}
+
+/** 'RemoveByShop' return type */
+export type IRemoveByShopResult = void;
+
+/** 'RemoveByShop' query type */
+export interface IRemoveByShopQuery {
+  params: IRemoveByShopParams;
+  result: IRemoveByShopResult;
+}
+
+const removeByShopIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]}],"statement":"DELETE FROM \"ShopifySession\"\nWHERE shop = :shop!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE FROM "ShopifySession"
+ * WHERE shop = :shop!
+ * ```
+ */
+export const removeByShop = new PreparedQuery<IRemoveByShopParams,IRemoveByShopResult>(removeByShopIR);
+
+
 /** 'Get' parameters type */
 export interface IGetParams {
   id?: string | null | void;
