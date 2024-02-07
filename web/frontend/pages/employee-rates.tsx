@@ -6,20 +6,31 @@ import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-que
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { NumberField } from '../components/NumberField.js';
-import { useEmployeeRatesMutation } from '../queries/use-employee-rates-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { useEmployeeMutation } from '@work-orders/common/queries/use-employee-mutation.js';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
+import { NoPermissionCard } from '@web/frontend/components/NoPermissionCard.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
-export default function Rates() {
+export default function EmployeeRates() {
   const [toast, setToastAction] = useToast();
 
-  const [employeeRates, setEmployeeRates] = useState<Record<string, Money | null>>({});
+  const [employeeRates, setEmployeeRates] = useState<Record<ID, Money | null>>({});
 
   const fetch = useAuthenticatedFetch({ setToastAction });
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+
+  const superuser = currentEmployeeQuery.data?.superuser ?? false;
+  const permissions = currentEmployeeQuery.data?.permissions ?? [];
+  const canReadEmployees = superuser || permissions.includes('read_employees');
+  const canWriteEmployees = superuser || permissions.includes('write_employees');
+
   const employeesQuery = useEmployeesQuery({
     fetch,
     params: {},
     options: {
+      enabled: canReadEmployees,
       onSuccess(data) {
         setEmployeeRates(
           Object.fromEntries(
@@ -29,20 +40,34 @@ export default function Rates() {
       },
     },
   });
-  const employeeRatesMutation = useEmployeeRatesMutation({
-    onSuccess() {
-      setToastAction({
-        content: 'Saved rates',
-      });
+  const employeeMutation = useEmployeeMutation(
+    { fetch },
+    {
+      onSuccess() {
+        setToastAction({
+          content: 'Saved rates',
+        });
+      },
+      onError() {
+        setToastAction({
+          content: 'An error occurred while saving rates',
+        });
+      },
     },
-    onError() {
-      setToastAction({
-        content: 'An error occurred while saving rates',
-      });
-    },
-  });
+  );
   const settingsQuery = useSettingsQuery({ fetch });
   const currencyFormatter = useCurrencyFormatter({ fetch });
+
+  if (currentEmployeeQuery.data && !canReadEmployees) {
+    return (
+      <Frame>
+        <Page>
+          <TitleBar title={'Employee Rates'} />
+          <NoPermissionCard />
+        </Page>
+      </Frame>
+    );
+  }
 
   if (!employeesQuery.data) {
     return (
@@ -58,17 +83,25 @@ export default function Rates() {
     <Frame>
       <Page>
         <TitleBar
-          title={'Rates'}
+          title={'Employee Rates'}
           primaryAction={{
             content: 'Save',
             target: 'APP',
-            loading: employeeRatesMutation.isLoading,
-            disabled: employeeRatesMutation.isLoading,
+            loading: employeeMutation.isLoading,
+            disabled: employeeMutation.isLoading || !canWriteEmployees,
             onAction() {
-              employeeRatesMutation.mutate(employeeRates);
+              employeeMutation.mutate({
+                employees: employeesQuery.data.pages.map(employee => ({
+                  employeeId: employee.id,
+                  permissions: employee.permissions ?? [],
+                  superuser: employee.superuser ?? false,
+                  rate: employeeRates[employee.id] ?? null,
+                })),
+              });
             },
           }}
         />
+
         <IndexTable
           headings={[{ title: 'Employee' }, { title: 'Hourly Rate' }]}
           itemCount={employeesQuery.data?.pages.length ?? 0}
@@ -106,6 +139,7 @@ export default function Rates() {
                     prefix={currencyFormatter.prefix}
                     suffix={currencyFormatter.suffix}
                     autoComplete={'off'}
+                    disabled={!canWriteEmployees}
                     placeholder={settingsQuery.data?.settings.defaultRate}
                   />
                 </IndexTable.Cell>

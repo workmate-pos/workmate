@@ -52,12 +52,26 @@ model WorkOrder {
   @@index([orderId])
 }
 
-model EmployeeRate {
+model Employee {
   employeeId String
   shop       String
-  rate       String
+
+  superuser   Boolean
+  permissions PermissionNode[]
+  rate        String?
 
   @@id([shop, employeeId])
+}
+
+enum PermissionNode {
+  read_settings
+  write_settings
+  read_employees
+  write_employees
+  read_work_orders
+  write_work_orders
+  read_app_plan
+  write_app_plan
 }
 
 model FixedPriceLabour {

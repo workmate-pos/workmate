@@ -18,8 +18,12 @@ export default function App() {
               <NavigationMenu
                 navigationLinks={[
                   {
-                    label: 'Rates',
-                    destination: '/rates',
+                    label: 'Employee Rates',
+                    destination: '/employee-rates',
+                  },
+                  {
+                    label: 'Employee Permissions',
+                    destination: '/employee-permissions',
                   },
                   {
                     label: 'Settings',

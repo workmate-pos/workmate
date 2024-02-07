@@ -8,6 +8,7 @@ import { Int } from '../../services/gql/queries/generated/schema.js';
 import { db } from '../../services/db/db.js';
 import { getShopType } from '../../services/shop.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { Permission } from '../../decorators/permission.js';
 
 export type AppSubscriptionCreate = gql.appSubscriptions.appSubscriptionCreate.Result['appSubscriptionCreate'];
 
@@ -19,6 +20,7 @@ export type AvailableAppPlans = {
 @Authenticated()
 export default class AppPlans {
   @Get('/')
+  @Permission('read_app_plan')
   async getAvailableAppPlans(req: Request, res: Response<GetAvailableAppPlansResponse>) {
     const session = res.locals.shopify.session;
     const shop = session.shop;
@@ -67,6 +69,7 @@ export default class AppPlans {
   }
 
   @Get('/subscription')
+  @Permission('read_app_plan')
   async getAppPlanSubscription(req: Request, res: Response<GetAppPlanSubscriptionResponse>) {
     const session = res.locals.shopify.session;
     const graphql = new Graphql(session);
@@ -76,6 +79,7 @@ export default class AppPlans {
 
   @Post('/subscription')
   @BodySchema('create-app-plan-subscription')
+  @Permission('write_app_plan')
   async createNewAppPlan(
     req: Request<unknown, unknown, CreateAppPlanSubscription>,
     res: Response<CreateAppPlanSubscriptionResponse>,

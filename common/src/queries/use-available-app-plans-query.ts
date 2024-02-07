@@ -1,9 +1,18 @@
-import { useQuery } from 'react-query';
+import { useQuery, UseQueryOptions } from 'react-query';
 import { Fetch } from './fetch.js';
 import type { GetAvailableAppPlansResponse } from '@web/controllers/api/app-plans.js';
 
-export const useAvailableAppPlansQuery = ({ fetch }: { fetch: Fetch }) =>
+export const useAvailableAppPlansQuery = (
+  { fetch }: { fetch: Fetch },
+  options?: UseQueryOptions<
+    GetAvailableAppPlansResponse['availableAppPlans'],
+    unknown,
+    GetAvailableAppPlansResponse['availableAppPlans'],
+    string[]
+  >,
+) =>
   useQuery({
+    ...options,
     queryKey: ['available-app-plans'],
     queryFn: async () => {
       const response = await fetch('/api/app-plans');

@@ -19,6 +19,7 @@ import { SearchMinor } from '@shopify/polaris-icons';
 import { useAppPlanSubscriptionQuery } from '@work-orders/common/queries/use-app-plan-subscription-query.js';
 import { useAvailableAppPlansQuery } from '@work-orders/common/queries/use-available-app-plans-query.js';
 import { useAppPlanSubscriptionMutation } from '@work-orders/common/queries/use-app-plan-subscription-mutation.js';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 
 export type AppPlanCardProps = {
   setToastAction: ToastActionCallable;
@@ -29,18 +30,25 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
   const fetch = useAuthenticatedFetch(setToastAction);
   const redirect = Redirect.create(app);
 
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+
+  const superuser = currentEmployeeQuery.data?.superuser ?? false;
+  const permissions = currentEmployeeQuery.data?.permissions ?? [];
+  const canReadAppPlan = superuser || permissions.includes('read_app_plan');
+  const canWriteAppPlan = superuser || permissions.includes('write_app_plan');
+
   const appPlanSubscriptionMutation = useAppPlanSubscriptionMutation(
     { fetch },
     {
       onSuccess: appSubscription => {
         setToastAction({ content: 'Redirecting you to the confirmation page!' });
-        redirect.dispatch(Redirect.Action.REMOTE, String(appSubscription.confirmationUrl));
+        redirect.dispatch(Redirect.Action.REMOTE, String(appSubscription!.confirmationUrl));
       },
     },
   );
 
-  const appPlanSubscriptionQuery = useAppPlanSubscriptionQuery({ fetch });
-  const availableAppPlansQuery = useAvailableAppPlansQuery({ fetch });
+  const appPlanSubscriptionQuery = useAppPlanSubscriptionQuery({ fetch }, { enabled: canReadAppPlan });
+  const availableAppPlansQuery = useAvailableAppPlansQuery({ fetch }, { enabled: canReadAppPlan });
   const isLoadingAppPlans = appPlanSubscriptionQuery.isLoading || availableAppPlansQuery.isLoading;
 
   const appPlanSubscription = appPlanSubscriptionQuery.data;
@@ -67,7 +75,7 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
   }, [availableAppPlans]);
 
   const isChangingPlan = appPlanSubscriptionMutation.isLoading;
-  const [chosenAppPlanId, setChosenAppPlanId] = useState<string>();
+  const [chosenAppPlanId, setChosenAppPlanId] = useState<number>();
   const [chosenAppPlanIdInputValue, setChosenAppPlanIdInputValue] = useState<string>();
   const [chosenAppPlanIdError, setChosenAppPlanIdError] = useState<string>();
 
@@ -90,6 +98,10 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
 
     setError(message);
   }, [appPlanSubscriptionMutation.error, availableAppPlansQuery.error, appPlanSubscriptionQuery.error]);
+
+  if (!canReadAppPlan) {
+    return null;
+  }
 
   if (isLoadingAppPlans) {
     return (
@@ -138,9 +150,10 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
 
           setChosenAppPlanIdError(undefined);
 
-          appPlanSubscriptionMutation.mutate({ appPlanId: chosenAppPlanId });
+          appPlanSubscriptionMutation.mutate({ appPlanId: chosenAppPlanId! });
         },
         loading: appPlanSubscriptionMutation.isLoading,
+        disabled: !canWriteAppPlan,
       }}
       sectioned
     >
@@ -154,10 +167,11 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
         {(!planActive || isChangingPlan) && (
           <Autocomplete
             options={availableAppPlanOptions}
-            selected={chosenAppPlanId == null ? [] : [chosenAppPlanId]}
+            selected={chosenAppPlanId == null ? [] : [String(chosenAppPlanId)]}
             onSelect={([chosenAppPlanId]) => {
               const appPlan = availableAppPlans?.find(plan => plan.id === Number(chosenAppPlanId));
-              setChosenAppPlanId(chosenAppPlanId);
+              if (!appPlan) return;
+              setChosenAppPlanId(Number(chosenAppPlanId));
               setChosenAppPlanIdError(undefined);
               setChosenAppPlanIdInputValue(appPlan.name);
             }}
