@@ -5,17 +5,17 @@ import { resolve } from 'path';
 import { ShopifySessionStorage } from './services/shopify-sessions.js';
 import { installableMetaobjectService } from './services/metaobjects/index.js';
 import { installableMetafieldService } from './services/metafields/index.js';
-import { appPlans } from './services/app-plans.js';
 import { registerDecorator } from '@teifi-digital/shopify-app-express/decorators/registry.js';
 import { appPlanHandler, AppPlanKey } from './decorators/app-plan.js';
 import { permissionHandler, PermissionKey } from './decorators/permission.js';
 import { registerEnumTypes } from './services/db/types.js';
+import { installableAppPlansService } from './services/app-plans/index.js';
 
 await registerEnumTypes();
 
 installableMetaobjectService.register();
 installableMetafieldService.register();
-appPlans.register();
+installableAppPlansService.register();
 
 registerDecorator(AppPlanKey, appPlanHandler);
 registerDecorator(PermissionKey, permissionHandler);

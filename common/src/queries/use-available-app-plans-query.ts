@@ -4,12 +4,7 @@ import type { GetAvailableAppPlansResponse } from '@web/controllers/api/app-plan
 
 export const useAvailableAppPlansQuery = (
   { fetch }: { fetch: Fetch },
-  options?: UseQueryOptions<
-    GetAvailableAppPlansResponse['availableAppPlans'],
-    unknown,
-    GetAvailableAppPlansResponse['availableAppPlans'],
-    string[]
-  >,
+  options?: UseQueryOptions<GetAvailableAppPlansResponse, unknown, GetAvailableAppPlansResponse, string[]>,
 ) =>
   useQuery({
     ...options,
@@ -21,7 +16,7 @@ export const useAvailableAppPlansQuery = (
         throw new Error('Failed to fetch available app plans');
       }
 
-      const { availableAppPlans }: GetAvailableAppPlansResponse = await response.json();
-      return availableAppPlans;
+      const res: GetAvailableAppPlansResponse = await response.json();
+      return res;
     },
   });

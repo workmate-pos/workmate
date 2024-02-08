@@ -3,9 +3,15 @@ import { PreparedQuery } from '@pgtyped/runtime';
 
 export type AppPlanInterval = 'ANNUAL' | 'EVERY_30_DAYS';
 
-export type AppPlanName = 'BASIC' | 'ENTERPRISE' | 'PREMIUM' | 'STARTER';
+export type AppPlanName = 'ENTERPRISE' | 'ESSENTIAL' | 'FREE';
 
 export type AppPlanType = 'CUSTOM' | 'DEFAULT';
+
+export type ShopifyPlan = 'ADVANCED' | 'BASIC' | 'PLUS' | 'SHOPIFY';
+
+export type ShopifyPlanArray = (ShopifyPlan)[];
+
+export type numberArray = (number)[];
 
 /** 'GetSubscription' parameters type */
 export interface IGetSubscriptionParams {
@@ -102,12 +108,15 @@ export interface IGetParams {
 
 /** 'Get' return type */
 export interface IGetResult {
+  allowedShopifyPlans: ShopifyPlanArray | null;
+  basePrice: number;
   createdAt: Date;
   currencyCode: string;
+  extraLocationPrices: numberArray | null;
   id: number;
   interval: AppPlanInterval;
+  maxLocations: number | null;
   name: AppPlanName;
-  price: number;
   trialDays: number;
   type: AppPlanType;
 }

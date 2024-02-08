@@ -34,6 +34,7 @@ mutation appSubscriptionCreate(
 
 query getAppSubscription($id: ID!) {
   node(id: $id) {
+    __typename
     ...AppSubscriptionFragment
   }
 }

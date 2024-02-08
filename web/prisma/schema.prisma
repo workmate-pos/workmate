@@ -120,13 +120,22 @@ model AppPlanSubscriptionTrials {
 }
 
 model AppPlan {
-  id                   Int                   @id @default(autoincrement())
-  name                 AppPlanName
-  type                 AppPlanType
-  price                Int
-  currencyCode         String
-  interval             AppPlanInterval
-  trialDays            Int
+  id Int @id @default(autoincrement())
+
+  name     AppPlanName
+  type     AppPlanType
+  interval AppPlanInterval
+
+  allowedShopifyPlans ShopifyPlan[]
+
+  basePrice    Int
+  currencyCode String
+
+  extraLocationPrices Int[]
+  maxLocations        Int?
+
+  trialDays Int
+
   createdAt            DateTime              @default(now()) @db.Timestamptz(3)
   appPlanSubscriptions AppPlanSubscription[]
   appPlanCustomAccess  AppPlanCustomAccess[]
@@ -141,10 +150,16 @@ model AppPlanCustomAccess {
 }
 
 enum AppPlanName {
-  STARTER
-  BASIC
-  PREMIUM
+  FREE
+  ESSENTIAL
   ENTERPRISE
+}
+
+enum ShopifyPlan {
+  BASIC
+  SHOPIFY
+  ADVANCED
+  PLUS
 }
 
 enum AppPlanType {

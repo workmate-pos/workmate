@@ -2,11 +2,12 @@ import { decorator, DecoratorHandler } from '@teifi-digital/shopify-app-express/
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { RequestHandler } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
-import { appPlanLevels, appPlans } from '../services/app-plans.js';
+import { appPlanLevels } from '../services/app-plans/installable-app-plans-service.js';
 import { err } from '@teifi-digital/shopify-app-express/utils/express-utils.js';
 import { never } from '@teifi-digital/shopify-app-express/utils/never.js';
 import { AppPlanName } from '../services/db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from '../services/gql/queries/generated/schema.js';
+import { getAppPlanSubscription } from '../services/app-plans/app-plans.js';
 
 export type AppPlanHandlerParam = {
   name: AppPlanName;
@@ -24,7 +25,7 @@ export const appPlanHandler: DecoratorHandler<AppPlanHandlerParam> = ([{ name, s
     const graphql = new Graphql(session);
 
     const requiredStatuses = new Set(statuses.map(s => s.toLowerCase()));
-    const appPlanSubscription = await appPlans.getAppPlanSubscription(graphql);
+    const appPlanSubscription = await getAppPlanSubscription(graphql);
     if (appPlanSubscription == null || !requiredStatuses.has(appPlanSubscription.appSubscriptionStatus.toLowerCase())) {
       const message =
         requiredStatuses.size === 1

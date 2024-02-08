@@ -52,7 +52,7 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
   const isLoadingAppPlans = appPlanSubscriptionQuery.isLoading || availableAppPlansQuery.isLoading;
 
   const appPlanSubscription = appPlanSubscriptionQuery.data;
-  const availableAppPlans = availableAppPlansQuery.data ?? [];
+  const availableAppPlans = availableAppPlansQuery.data?.availableAppPlans ?? [];
 
   const planActive = appPlanSubscription?.appSubscriptionStatus === 'ACTIVE';
   const availableAppPlanOptions = useMemo(() => {

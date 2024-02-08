@@ -1,7 +1,6 @@
 import { UseQueryOptions, useQuery } from 'react-query';
 import { Fetch } from './fetch.js';
 import type { GetAppPlanSubscriptionResponse } from '@web/controllers/api/app-plans.js';
-import { AppPlanSubscription } from '@web/services/app-plans.js';
 
 export const useAppPlanSubscriptionQuery = (
   { fetch }: { fetch: Fetch },
@@ -21,3 +20,5 @@ export const useAppPlanSubscriptionQuery = (
       return appPlanSubscription;
     },
   });
+
+type AppPlanSubscription = NonNullable<GetAppPlanSubscriptionResponse['appPlanSubscription']>;
