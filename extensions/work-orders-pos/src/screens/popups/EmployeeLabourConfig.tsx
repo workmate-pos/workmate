@@ -2,7 +2,7 @@ import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-r
 import { useEffect, useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrderCharge } from '../routes.js';

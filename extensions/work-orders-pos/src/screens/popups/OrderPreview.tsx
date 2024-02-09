@@ -13,7 +13,7 @@ import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import type { ID } from '@web/schemas/generated/ids.js';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
 import {
   getFinancialStatusBadgeStatus,
   getFinancialStatusBadgeVariant,
@@ -24,7 +24,7 @@ import {
 import { Grid } from '../../components/Grid.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { OrderLineItem, useOrderLineItemsQuery } from '@work-orders/common/queries/use-order-line-items-query.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { extractErrorMessage } from '../../util/errors.js';
 

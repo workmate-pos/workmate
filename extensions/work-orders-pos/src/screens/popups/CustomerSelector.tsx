@@ -2,7 +2,7 @@ import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-exten
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 import { extractErrorMessage } from '../../util/errors.js';
 

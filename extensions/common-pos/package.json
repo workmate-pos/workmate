@@ -1,0 +1,37 @@
+{
+  "name": "@work-orders/common-pos",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./hooks/*": {
+      "default": "./dist/hooks/*",
+      "types": "./src/hooks/*"
+    },
+    "./components/*": {
+      "default": "./dist/components/*",
+      "types": "./src/components/*"
+    },
+    "./providers/*": {
+      "default": "./dist/providers/*",
+      "types": "./src/providers/*"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc -w"
+  },
+  "author": "Tim van Dam",
+  "devDependencies": {
+    "@types/react": "^17.0.30",
+    "@types/react-dom": "^17.0.25",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@teifi-digital/shopify-app-toolbox": "^0.0.14"
+  },
+  "overrides": {
+    "@types/react": "^17.0.30",
+    "@types/react-dom": "^17.0.25"
+  }
+}

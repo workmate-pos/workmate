@@ -11,7 +11,7 @@
     "dev": "cross-env NODE_ENV=development nodemon --exec 'node --experimental-specifier-resolution=node --loader ts-node/esm' index.ts --ignore ./frontend",
     "serve": "cross-env NODE_ENV=production node dist/index.js",
     "serve:migrate": "npm run prisma:migrate:deploy && npm run serve",
-    "typegen": "rm -rf schemas/generated/ && json2ts --style.singleQuote --cwd schemas/ -i 'schemas/*.json' -o schemas/generated/",
+    "typegen": "rm -rf schemas/generated/ && node ./node_modules/.bin/json2ts --style.singleQuote --cwd schemas/ -i 'schemas/*.json' -o schemas/generated/",
     "sentry:sourcemaps": "sentry-cli sourcemaps inject ./dist && sentry-cli sourcemaps upload ./dist",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "pgtyped:compile": "node -r dotenv/config $(npm root)/.bin/pgtyped -c pgtyped.config.json",
@@ -37,6 +37,7 @@
   },
   "devDependencies": {
     "@pgtyped/cli": "^2.3.0",
+    "@shopify/shopify-api": "^9.2.0",
     "@teifi-digital/genql": "^0.0.44",
     "@types/cors": "^2.8.15",
     "@types/express": "^4.17.20",

@@ -8,13 +8,13 @@ import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-ord
 import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { getChargesPrice } from '../create-work-order/charges.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useAuthenticatedFetch } from './use-authenticated-fetch.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { groupBy, sumMap } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasNestedPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 
 const useCartRef = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();

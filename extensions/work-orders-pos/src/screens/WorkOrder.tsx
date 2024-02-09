@@ -24,14 +24,13 @@ import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-qu
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useCreateWorkOrderReducer } from '../create-work-order/reducer.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { PayButton } from '../components/PayButton.js';
 import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
-import { useUnsavedChangesDialog } from '../providers/UnsavedChangesDialogProvider.js';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
 import { getChargesPrice } from '../create-work-order/charges.js';
@@ -41,6 +40,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { extractErrorMessage } from '../util/errors.js';
 import { useSettings } from '../providers/SettingsProvider.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 
 /**
  * Stuff to pass around between components

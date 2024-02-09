@@ -1,11 +1,12 @@
 {
-  "name": "work-orders-pos",
+  "name": "purchase-orders-pos",
   "private": true,
   "type": "module",
   "version": "1.0.0",
   "license": "UNLICENSED",
+  "author": "Tim van Dam",
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.18",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.22",
     "@work-orders/common": "file:../../common",
     "@work-orders/common-pos": "file:../common-pos",
     "react": "^17.0.2",

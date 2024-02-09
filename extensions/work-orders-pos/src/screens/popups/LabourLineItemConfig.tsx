@@ -3,11 +3,11 @@ import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retai
 import { useState } from 'react';
 import { CreateWorkOrderLineItem, CreateWorkOrderCharge } from '../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
-import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { getChargesPrice } from '../../create-work-order/charges.js';
 import { uuid } from '../../util/uuid.js';

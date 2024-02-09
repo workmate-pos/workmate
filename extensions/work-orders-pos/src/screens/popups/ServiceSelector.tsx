@@ -2,10 +2,9 @@ import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-exten
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
-import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { uuid } from '../../util/uuid.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -15,6 +14,7 @@ import { CreateWorkOrderCharge } from '../routes.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
 import { extractErrorMessage } from '../../util/errors.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useDynamicRef } from '@work-orders/common-pos/hooks/use-dynamic-ref.js';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');

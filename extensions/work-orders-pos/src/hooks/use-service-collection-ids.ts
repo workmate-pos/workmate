@@ -1,7 +1,7 @@
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useAuthenticatedFetch } from './use-authenticated-fetch.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 
 export const useServiceCollectionIds = () => {
   const fetch = useAuthenticatedFetch();

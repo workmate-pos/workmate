@@ -46,6 +46,7 @@ model WorkOrder {
 
   fixedPriceLabour FixedPriceLabour[]
   hourlyLabour     HourlyLabour[]
+  PurchaseOrder    PurchaseOrder[]
 
   @@unique([shop, name])
   @@index([draftOrderId])
@@ -172,4 +173,60 @@ enum AppPlanType {
 enum AppPlanInterval {
   EVERY_30_DAYS
   ANNUAL
+}
+
+model PurchaseOrder {
+  id     Int                 @id @default(autoincrement())
+  shop   String
+  /// Shop specific name
+  name   String
+  status PurchaseOrderStatus
+
+  /// The vendor's invoice's id
+  salesOrderId String?
+
+  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id])
+  workOrderId Int?
+
+  locationId String?
+
+  customerId       String?
+  vendorCustomerId String?
+
+  products     PurchaseOrderProduct[]
+  customFields PurchaseOrderCustomField[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([shop, name])
+}
+
+model PurchaseOrderCustomField {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  key   String
+  value String
+
+  @@unique([purchaseOrderId, key])
+}
+
+model PurchaseOrderProduct {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  productVariantId String
+  quantity         Int
+  price            Int
+}
+
+enum PurchaseOrderStatus {
+  OPEN
+  RECEIVED
+  CANCELLED
+  CLOSED
 }

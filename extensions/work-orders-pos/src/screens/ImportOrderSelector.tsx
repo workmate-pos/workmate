@@ -3,7 +3,6 @@ import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-qu
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import type { ID } from '@web/schemas/generated/ids.js';
 import { useScreen } from '../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import {
   getFinancialStatusBadgeStatus,
   getFinancialStatusBadgeVariant,
@@ -13,6 +12,7 @@ import {
 } from '../util/badges.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
 import { extractErrorMessage } from '../util/errors.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 
 export function ImportOrderSelector() {
   const { Screen, usePopup } = useScreen('ImportOrderSelector');

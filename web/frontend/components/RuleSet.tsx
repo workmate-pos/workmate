@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect, useState } from 'react';
 import { ChoiceList, ChoiceListProps, Text } from '@shopify/polaris';
-import { FeedbackLoopAdjacencyList, findInfiniteFeedbackLoop } from '../util/infinite-feedback-loop-detector';
-import { never } from '@teifi-digital/shopify-app-express/utils/never';
+import { FeedbackLoopAdjacencyList, findInfiniteFeedbackLoop } from '../util/infinite-feedback-loop-detector.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export type Rule = {
   /**

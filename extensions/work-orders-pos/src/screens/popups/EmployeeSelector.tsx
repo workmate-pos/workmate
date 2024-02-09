@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/ids.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
 import { extractErrorMessage } from '../../util/errors.js';
