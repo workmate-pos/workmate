@@ -134,6 +134,8 @@ model AppPlan {
   extraLocationPrices Int[]
   maxLocations        Int?
 
+  /// Whether this app plan is only available as a trial. Useful when trial plans differ from full plans.
+  trialOnly Boolean
   trialDays Int
 
   createdAt            DateTime              @default(now()) @db.Timestamptz(3)

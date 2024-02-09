@@ -84,11 +84,10 @@ export async function getAvailableAppPlans(session: Session) {
     db.appPlan.get({ shop }),
   ]);
 
-  const storeProperties: StoreProperties = { locations: locations.nodes.length, shopType };
+  const usedTrialDays = getAppPlanTrialDaysUsed(appPlanSubscription);
+  const storeProperties: StoreProperties = { locations: locations.nodes.length, shopType, usedTrialDays };
 
   const availableAppPlans = appPlans.filter(appPlan => isAppPlanAvailable(appPlan, storeProperties));
-
-  const usedTrialDays = getAppPlanTrialDaysUsed(appPlanSubscription);
 
   return availableAppPlans.map(appPlan => ({
     ...appPlan,
@@ -97,10 +96,14 @@ export async function getAvailableAppPlans(session: Session) {
   }));
 }
 
-type StoreProperties = { locations: number; shopType: ShopType };
+type StoreProperties = {
+  locations: number;
+  shopType: ShopType;
+  usedTrialDays: number;
+};
 
 export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StoreProperties) {
-  const { allowedShopifyPlans, maxLocations } = appPlan;
+  const { allowedShopifyPlans, maxLocations, trialOnly, trialDays } = appPlan;
 
   if (maxLocations !== null && storeProperties.locations > maxLocations) {
     return false;
@@ -108,8 +111,13 @@ export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StorePr
 
   if (
     allowedShopifyPlans !== null &&
-    (storeProperties.shopType === 'PARTNER_DEVELOPMENT' || !allowedShopifyPlans.includes(storeProperties.shopType))
+    storeProperties.shopType !== 'PARTNER_DEVELOPMENT' &&
+    !allowedShopifyPlans.includes(storeProperties.shopType)
   ) {
+    return false;
+  }
+
+  if (trialOnly && storeProperties.usedTrialDays >= trialDays) {
     return false;
   }
 }

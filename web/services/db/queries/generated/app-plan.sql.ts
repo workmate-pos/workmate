@@ -118,6 +118,7 @@ export interface IGetResult {
   maxLocations: number | null;
   name: AppPlanName;
   trialDays: number;
+  trialOnly: boolean;
   type: AppPlanType;
 }
 
