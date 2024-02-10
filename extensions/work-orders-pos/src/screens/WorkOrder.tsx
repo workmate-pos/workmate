@@ -30,7 +30,7 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { PayButton } from '../components/PayButton.js';
 import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { getChargesPrice } from '../create-work-order/charges.js';
@@ -191,23 +191,19 @@ export function WorkOrderPage() {
   const { Screen } = context;
 
   const [paymentLoading, setPaymentLoading] = useState(false);
-  const unsavedChangesDialog = useUnsavedChangesDialog();
-  const navigateBack = () => {
-    context.dispatchCreateWorkOrder({ type: 'reset-work-order' });
-    context.navigate('Entry');
-  };
+  const unsavedChangesDialog = useUnsavedChangesDialog({
+    hasUnsavedChanges: context.unsavedChanges,
+    onAction: () => {
+      context.dispatchCreateWorkOrder({ type: 'reset-work-order' });
+      context.navigate('Entry');
+    },
+  });
 
   return (
     <Screen
       title={context.title}
       isLoading={context.workOrderQuery.isFetching || context.saveWorkOrderMutation.isLoading || paymentLoading}
-      overrideNavigateBack={() => {
-        if (context.unsavedChanges) {
-          unsavedChangesDialog.show({ onAction: navigateBack });
-        } else {
-          navigateBack();
-        }
-      }}
+      overrideNavigateBack={unsavedChangesDialog.show}
     >
       <ScrollView>
         {context.hasOrder && (

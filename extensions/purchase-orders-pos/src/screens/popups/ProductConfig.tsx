@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
-import { Button, ScrollView, Stack, Stepper, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
+import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
@@ -15,13 +15,11 @@ export function ProductConfig() {
   const [product, setProduct] = useState<Product | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const unsavedChangesDialog = useUnsavedChangesDialog();
+  const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   const { Screen, closePopup } = useScreen('ProductConfig', product => {
     setProduct(product);
     setHasUnsavedChanges(false);
   });
-
-  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
 
@@ -43,12 +41,7 @@ export function ProductConfig() {
       title={getProductVariantName(productVariant) ?? 'Product Config'}
       isLoading={!product || productVariantQuery.isLoading || inventoryItemQuery.isLoading}
       presentation={{ sheet: true }}
-      overrideNavigateBack={() =>
-        unsavedChangesDialog.show({
-          onAction: () => navigation.pop(),
-          skipDialog: !hasUnsavedChanges,
-        })
-      }
+      overrideNavigateBack={() => unsavedChangesDialog.show()}
     >
       <ScrollView>
         {product && productVariant && inventoryLevels && (

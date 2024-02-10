@@ -21,6 +21,8 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { useState } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
+import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
 
 export function Entry() {
   const [query, setQuery] = useState('');
@@ -40,17 +42,31 @@ export function Entry() {
   const locationSelectorPopup = usePopup('LocationSelector', location =>
     dispatch.setPartial({ locationId: location?.id ?? null }),
   );
+  const vendorSelectorPopup = usePopup('VendorSelector', vendor =>
+    dispatch.setPartial({ vendorCustomerId: vendor.customerId, products: [] }),
+  );
+
+  const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, vendorSelectorPopup.navigate);
 
   const productRows = useProductRows(createPurchaseOrder, query, productConfigPopup.navigate);
+
   const selectedLocationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
   const selectedLocation = selectedLocationQuery.data;
+
+  const vendorCustomerQuery = useCustomerQuery({ fetch, id: createPurchaseOrder.vendorCustomerId });
+  const vendorCustomer = vendorCustomerQuery.data;
 
   return (
     <Screen title={'Purchase Orders'}>
       <ScrollView>
         <ResponsiveGrid columns={2}>
           <ResponsiveGrid columns={2}>
-            <TextField label={'Vendor'} onFocus={() => toast.show('Open menu')} />
+            <TextField
+              label={'Vendor'}
+              onFocus={vendorSelectorWarningDialog.show}
+              value={vendorCustomer?.displayName ?? ''}
+              disabled={vendorSelectorWarningDialog.isVisible}
+            />
             <TextField label={'PO #'} />
           </ResponsiveGrid>
           <ResponsiveGrid columns={2}>
@@ -62,7 +78,7 @@ export function Entry() {
             <TextField label={'Date'} />
           </ResponsiveGrid>
 
-          <TextArea label={'Ship From'} rows={3} />
+          <TextArea label={'Ship From'} rows={3} value={vendorCustomer?.defaultAddress?.formatted?.join('\n') ?? ''} />
           <TextArea label={'Ship To'} rows={3} value={selectedLocation?.address?.formatted?.join('\n') ?? ''} />
 
           <ResponsiveGrid columns={2}>
@@ -178,3 +194,30 @@ function useProductRows(
     };
   });
 }
+
+const useVendorChangeWarningDialog = (
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorCustomerId' | 'products'>,
+  openVendorPopup: PopupNavigateFn<'VendorSelector'>,
+) => {
+  const dialog = useDialog();
+
+  const showDialog = createPurchaseOrder.vendorCustomerId !== null && createPurchaseOrder.products.length > 0;
+
+  return {
+    ...dialog,
+    show: () => {
+      dialog.show({
+        showDialog,
+        onAction: openVendorPopup,
+        props: {
+          title: 'Vendor Already Set',
+          type: 'alert',
+          content: 'Are you certain you want to change the vendor? This will clear the products.',
+          actionText: 'Change Vendor',
+          showSecondaryAction: true,
+          secondaryActionText: 'Cancel',
+        },
+      });
+    },
+  };
+};

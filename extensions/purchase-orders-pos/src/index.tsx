@@ -7,7 +7,8 @@ import { ProductSelector } from './screens/popups/ProductSelector.js';
 import { QueryClient, QueryClientProvider } from '@work-orders/common/queries/react-query.js';
 import { LocationSelector } from './screens/popups/LocationSelector.js';
 import { ProductConfig } from './screens/popups/ProductConfig.js';
-import { UnsavedChangesDialogProvider } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
+import { VendorSelector } from './screens/popups/VendorSelector.js';
+import { DialogProvider } from '@work-orders/common-pos/providers/DialogProvider.js';
 
 const SmartGridTile = () => {
   const { smartGrid } = useExtensionApi();
@@ -19,7 +20,7 @@ const SmartGridModal = () => {
   return (
     <ScreenSizeProvider>
       <QueryClientProvider client={queryClient}>
-        <UnsavedChangesDialogProvider>
+        <DialogProvider>
           <Navigator>
             <Entry />
 
@@ -27,8 +28,9 @@ const SmartGridModal = () => {
             <ProductConfig />
             <ProductSelector />
             <StatusSelector />
+            <VendorSelector />
           </Navigator>
-        </UnsavedChangesDialogProvider>
+        </DialogProvider>
       </QueryClientProvider>
     </ScreenSizeProvider>
   );

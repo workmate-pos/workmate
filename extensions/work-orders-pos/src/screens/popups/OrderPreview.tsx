@@ -13,7 +13,7 @@ import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import type { ID } from '@web/schemas/generated/ids.js';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import {
   getFinancialStatusBadgeStatus,
   getFinancialStatusBadgeVariant,
@@ -30,12 +30,12 @@ import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function OrderPreview() {
   const [orderId, setOrderId] = useState<ID | null>(null);
-  const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showImportButton, setShowImportButton] = useState(false);
 
   const { Screen, navigate } = useScreen('OrderPreview', ({ orderId, unsavedChanges, showImportButton }) => {
     setOrderId(orderId);
-    setUnsavedChanges(unsavedChanges);
+    setHasUnsavedChanges(unsavedChanges);
     setShowImportButton(showImportButton);
   });
 
@@ -46,7 +46,20 @@ export function OrderPreview() {
 
   const order = orderQuery.data?.order;
 
-  const unsavedChangesDialog = useUnsavedChangesDialog();
+  const importUnsavedChangesDialog = useUnsavedChangesDialog({
+    hasUnsavedChanges,
+    onAction: () => {
+      if (!order) return;
+
+      navigate('WorkOrder', {
+        type: 'new-work-order',
+        initial: {
+          customerId: order.customer?.id ?? null,
+          derivedFromOrderId: order.id,
+        },
+      });
+    },
+  });
   const currencyFormatter = useCurrencyFormatter();
 
   const orderInfo: { label: string; value: string; large?: boolean }[] = [
@@ -131,23 +144,7 @@ export function OrderPreview() {
             )}
             {showImportButton && (
               <Stack direction="vertical" flex={1} alignment="flex-end">
-                <Button
-                  title={'Import'}
-                  onPress={() =>
-                    unsavedChangesDialog.show({
-                      onAction: () => {
-                        navigate('WorkOrder', {
-                          type: 'new-work-order',
-                          initial: {
-                            customerId: order.customer?.id ?? null,
-                            derivedFromOrderId: order.id,
-                          },
-                        });
-                      },
-                      skipDialog: !unsavedChanges,
-                    })
-                  }
-                ></Button>
+                <Button title={'Import'} onPress={importUnsavedChangesDialog.show}></Button>
               </Stack>
             )}
           </Stack>

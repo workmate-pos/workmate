@@ -15,12 +15,12 @@ import { ServiceSelector } from './screens/popups/ServiceSelector.js';
 import { EmployeeLabourConfig } from './screens/popups/EmployeeLabourConfig.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { LabourLineItemConfig } from './screens/popups/LabourLineItemConfig.js';
-import { UnsavedChangesDialogProvider } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
 import { OrderPreview } from './screens/popups/OrderPreview.js';
 import { SettingsProvider, useSettingsInternal } from './providers/SettingsProvider.js';
 import { useEffect } from 'react';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { useScreen } from './hooks/use-screen.js';
+import { DialogProvider } from '@work-orders/common-pos/providers/DialogProvider.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -39,11 +39,11 @@ function SmartGridTile() {
 function SmartGridModal() {
   return (
     <ReactQueryProvider>
-      <UnsavedChangesDialogProvider>
+      <DialogProvider>
         <SettingsProvider>
           <WrappedNavigator />
         </SettingsProvider>
-      </UnsavedChangesDialogProvider>
+      </DialogProvider>
     </ReactQueryProvider>
   );
 }

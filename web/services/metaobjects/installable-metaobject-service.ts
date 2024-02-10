@@ -28,6 +28,8 @@ export class InstallableMetaobjectService extends InstallableService {
           `Failed to create metaobject definition '${definition.type}'`,
           result.metaobjectDefinitionCreate.userErrors,
         );
+      } else {
+        console.log(`Created metaobject definition '${definition.type}'`);
       }
     }
   }

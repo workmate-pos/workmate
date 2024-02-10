@@ -7,18 +7,18 @@ import { useProductVariantQuery } from '@work-orders/common/queries/use-product-
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 
 export function ProductLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
   const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem | null>(null);
-  const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [canAddLabour, setCanAddLabour] = useState(false);
 
   const { Screen, closePopup, cancelPopup } = useScreen('LineItemConfig', ({ readonly, lineItem, canAddLabour }) => {
     setReadonly(readonly);
     setLineItem(lineItem);
-    setUnsavedChanges(false);
+    setHasUnsavedChanges(false);
     setCanAddLabour(canAddLabour);
   });
 
@@ -28,13 +28,13 @@ export function ProductLineItemConfig() {
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
-  const unsavedChangesDialog = useUnsavedChangesDialog();
+  const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
   return (
     <Screen
       title={name ?? 'Product'}
-      overrideNavigateBack={() => unsavedChangesDialog.show({ onAction: navigation.pop, skipDialog: !unsavedChanges })}
+      overrideNavigateBack={unsavedChangesDialog.show}
       isLoading={productVariantQuery.isLoading}
       presentation={{ sheet: true }}
     >
@@ -60,7 +60,7 @@ export function ProductLineItemConfig() {
                 initialValue={lineItem.quantity}
                 onValueChanged={(value: Int) => {
                   setLineItem({ ...lineItem, quantity: value });
-                  setUnsavedChanges(true);
+                  setHasUnsavedChanges(true);
                 }}
                 value={lineItem.quantity}
               />

@@ -6,6 +6,7 @@ import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import type { Location } from '@work-orders/common/queries/use-locations-query.js';
+import { getFormattedAddressSubtitle } from '../../util/formatted-address-subtitle.js';
 
 export function LocationSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -69,20 +70,12 @@ export function LocationSelector() {
 
 function getLocationRows(locations: Location[], selectLocation: (location: Location) => void) {
   return locations.map<ListRow>(location => {
-    const getSubtitle = () => {
-      const formattedAddress = location.address.formatted;
-      if (formattedAddress.length === 0) return ['No address'] as const;
-      if (formattedAddress.length === 1) return [formattedAddress[0]!] as const;
-      if (formattedAddress.length === 2) return [formattedAddress[0]!, formattedAddress[1]!] as const;
-      return [formattedAddress[0]!, formattedAddress[1]!, formattedAddress[2]!] as const;
-    };
-
     return {
       id: location.id,
       onPress: () => selectLocation(location),
       leftSide: {
         label: location.name,
-        subtitle: getSubtitle(),
+        subtitle: getFormattedAddressSubtitle(location.address.formatted),
       },
       rightSide: { showChevron: true },
     };

@@ -20,6 +20,8 @@ query getDefinition($namespace: String!, $key: String, $ownerType: MetafieldOwne
   metafieldDefinitions(first: 1, namespace: $namespace, key: $key, ownerType: $ownerType) {
     nodes {
       id
+      namespace
+      key
     }
   }
 }
