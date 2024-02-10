@@ -32,13 +32,13 @@ import { PayButton } from '../components/PayButton.js';
 import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
 import { useUnsavedChangesDialog } from '@work-orders/common-pos/providers/UnsavedChangesDialogProvider.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
-import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
+import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { getChargesPrice } from '../create-work-order/charges.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { extractErrorMessage } from '../util/errors.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { useSettings } from '../providers/SettingsProvider.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 

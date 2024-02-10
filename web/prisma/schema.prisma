@@ -192,6 +192,7 @@ model PurchaseOrder {
 
   customerId       String?
   vendorCustomerId String?
+  note             String?
 
   products     PurchaseOrderProduct[]
   customFields PurchaseOrderCustomField[]

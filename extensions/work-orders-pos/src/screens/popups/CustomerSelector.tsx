@@ -3,8 +3,8 @@ import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state
 import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
-import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
-import { extractErrorMessage } from '../../util/errors.js';
+import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function CustomerSelector() {
   const [query, setQuery] = useDebouncedState('');

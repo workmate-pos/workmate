@@ -9,9 +9,9 @@ import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/querie
 import { useState } from 'react';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/services/gql/queries/generated/schema.js';
-import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
+import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { extractErrorMessage } from '../util/errors.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');

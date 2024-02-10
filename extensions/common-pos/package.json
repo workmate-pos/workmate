@@ -15,6 +15,10 @@
     "./providers/*": {
       "default": "./dist/providers/*",
       "types": "./src/providers/*"
+    },
+    "./util/*": {
+      "default": "./dist/util/*",
+      "types": "./src/util/*"
     }
   },
   "scripts": {
@@ -23,15 +27,11 @@
   },
   "author": "Tim van Dam",
   "devDependencies": {
-    "@types/react": "^17.0.30",
-    "@types/react-dom": "^17.0.25",
+    "@types/node": "^20.11.17",
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.14"
-  },
-  "overrides": {
-    "@types/react": "^17.0.30",
-    "@types/react-dom": "^17.0.25"
+    "@teifi-digital/shopify-app-toolbox": "^0.0.14",
+    "@work-orders/common": "file:../../common"
   }
 }

@@ -19,7 +19,7 @@ import { UnsavedChangesDialogProvider } from '@work-orders/common-pos/providers/
 import { OrderPreview } from './screens/popups/OrderPreview.js';
 import { SettingsProvider, useSettingsInternal } from './providers/SettingsProvider.js';
 import { useEffect } from 'react';
-import { extractErrorMessage } from './util/errors.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { useScreen } from './hooks/use-screen.js';
 
 function SmartGridTile() {

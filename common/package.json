@@ -37,20 +37,11 @@
   "devDependencies": {
     "@types/react": "^17.0.73",
     "@types/react-dom": "^17.0.25",
-    "@types/react-query": "^1.2.9",
     "typescript": "^5.3.3"
   },
   "dependencies": {
     "@teifi-digital/shopify-app-toolbox": "^0.0.14",
+    "react-query": "^3.39.3",
     "zod": "^3.22.4"
-  },
-  "overrides": {
-    "@types/react": "^17.0.73",
-    "@types/react-dom": "^17.0.25"
-  },
-  "peerDependencies": {
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-query": "^3.39.3"
   }
 }

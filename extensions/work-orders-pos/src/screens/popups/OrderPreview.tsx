@@ -26,7 +26,7 @@ import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { OrderLineItem, useOrderLineItemsQuery } from '@work-orders/common/queries/use-order-line-items-query.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { extractErrorMessage } from '../../util/errors.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function OrderPreview() {
   const [orderId, setOrderId] = useState<ID | null>(null);

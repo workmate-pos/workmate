@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "description": "The name of the purchase order to update (if applicable). If not provided, a new work order will be created. Unique within a store.",
+      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+    },
+    "status": {
+      "title": "status",
+      "enum": ["OPEN", "RECEIVED", "IN_PROGRESS", "CANCELLED", "CLOSED"]
+    },
+    "salesOrderId": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "workOrderId": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "locationId": {
+      "anyOf": [
+        { "const": null },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
+    "customerId": {
+      "anyOf": [
+        { "const": null },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
+    "vendorCustomerId": {
+      "anyOf": [
+        { "const": null },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "product",
+        "properties": {
+          "productVariantId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "quantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          }
+        },
+        "required": ["productVariantId", "quantity", "price"],
+        "additionalProperties": false
+      }
+    },
+    "customFields": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "name",
+    "status",
+    "salesOrderId",
+    "workOrderId",
+    "locationId",
+    "customerId",
+    "vendorCustomerId",
+    "products",
+    "customFields",
+    "note"
+  ],
+  "additionalProperties": false
+}

@@ -10,8 +10,8 @@ import {
   getFulfillmentStatusBadgeVariant,
   getStatusText,
 } from '../util/badges.js';
-import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
-import { extractErrorMessage } from '../util/errors.js';
+import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 
 export function ImportOrderSelector() {

@@ -12,7 +12,7 @@ import { IGetSubscriptionResult } from '../../services/db/queries/generated/app-
 export type AppSubscriptionCreate = gql.appSubscriptions.appSubscriptionCreate.Result['appSubscriptionCreate'];
 
 @Authenticated()
-export default class AppPlans {
+export default class AppPlansController {
   @Get('/')
   @Permission('read_app_plan')
   async getAvailableAppPlans(req: Request, res: Response<GetAvailableAppPlansResponse>) {

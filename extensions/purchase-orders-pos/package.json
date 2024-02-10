@@ -6,21 +6,14 @@
   "license": "UNLICENSED",
   "author": "Tim van Dam",
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.22",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.23",
     "@work-orders/common": "file:../../common",
-    "@work-orders/common-pos": "file:../common-pos",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-query": "^3.39.3"
+    "@work-orders/common-pos": "file:../common-pos"
   },
   "scripts": {
     "build:web": "cd ../../web && npm install && npm run build",
     "build:common": "cd ../../common && npm install && npm run build",
     "postinstall": "npm run set-app-url && npm run build:web && npm run build:common",
-    "set-app-url": "cd ../../common-pos && node ./set-app-url.js"
-  },
-  "devDependencies": {
-    "@types/react": "^17.0.75",
-    "@types/react-dom": "^17.0.25"
+    "set-app-url": "cd ../common-pos && node ./set-app-url.js"
   }
 }

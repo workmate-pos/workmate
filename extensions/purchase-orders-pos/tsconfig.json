@@ -12,7 +12,8 @@
     "paths": {
       "@web/*": ["../../web/*"]
     },
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "typeRoots": ["./node_modules/@types", "../node_modules/@types"]
   },
   "references": [
     {

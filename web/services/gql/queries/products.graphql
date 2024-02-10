@@ -35,6 +35,9 @@ fragment ProductVariantFragment on ProductVariant {
   image {
     url
   }
+  inventoryItem {
+    id
+  }
   product {
     title
     hasOnlyDefaultVariant
