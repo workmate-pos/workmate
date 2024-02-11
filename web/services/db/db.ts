@@ -4,6 +4,7 @@ import * as workOrderLabour from './queries/generated/work-order-labour.sql.js';
 import * as employee from './queries/generated/employee.sql.js';
 import * as types from './queries/generated/types.sql.js';
 import * as appPlan from './queries/generated/app-plan.sql.js';
+import * as purchaseOrder from './queries/generated/purchase-order.sql.js';
 import * as settings from './queries/generated/settings.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
@@ -18,6 +19,7 @@ export const db = {
   employee: wrapPreparedQueries(employee),
   types: wrapPreparedQueries(types),
   appPlan: wrapPreparedQueries(appPlan),
+  purchaseOrder: wrapPreparedQueries(purchaseOrder),
   settings: wrapPreparedQueries(settings),
 };
 
@@ -57,6 +59,5 @@ type WrappedPreparedQueries<T extends PreparedQueries> = {
   [queryName in keyof T]: WrappedPreparedQuery<T[queryName]>;
 };
 
-type WrappedPreparedQuery<P extends PreparedQuery<any, any>> = P extends PreparedQuery<infer Param, infer Result>
-  ? (param: Param) => Promise<Result[]>
-  : never;
+type WrappedPreparedQuery<P extends PreparedQuery<any, any>> =
+  P extends PreparedQuery<infer Param, infer Result> ? (param: Param) => Promise<Result[]> : never;

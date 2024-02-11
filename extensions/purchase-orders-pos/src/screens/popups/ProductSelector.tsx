@@ -13,17 +13,26 @@ export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 
-  const { Screen, closePopup } = useScreen('ProductSelector', () => {
+  // optional field, used to filter products by vendor
+  const [vendorName, setVendorName] = useState<string | null>(null);
+
+  const { Screen, closePopup } = useScreen('ProductSelector', ({ vendorName }) => {
     setQuery('', true);
     setSelectedProducts([]);
+    setVendorName(vendorName);
   });
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
 
-  // TODO: Only fetch products for the current vendor (if set via eg metafield)
-  const productVariantsQuery = useProductVariantsQuery({ fetch, params: { query } });
+  const vendorQuery = vendorName ? `vendor:"${vendorName}"` : '';
+  const productVariantsQuery = useProductVariantsQuery({
+    fetch,
+    params: {
+      query: `${query} ${vendorQuery}`,
+    },
+  });
   const productVariants = productVariantsQuery.data?.pages ?? [];
 
   const selectProduct = (product: Product, name: string = 'Product') => {
@@ -41,6 +50,14 @@ export function ProductSelector() {
       overrideNavigateBack={() => closePopup(selectedProducts)}
     >
       <ScrollView>
+        {vendorName && (
+          <Stack direction={'horizontal'} paddingVertical={'Medium'} alignment={'center'}>
+            <Text variant="captionMedium" color="TextSubdued">
+              Only showing products for vendor {vendorName}
+            </Text>
+          </Stack>
+        )}
+
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
             {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
@@ -98,6 +115,9 @@ function getProductVariantRows(
         selectProduct({
           productVariantId: variant.id,
           quantity: 1 as Int,
+          name: displayName,
+          sku: variant.sku,
+          handle: variant.product.handle,
         }),
       leftSide: {
         label: displayName,

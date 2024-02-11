@@ -73,6 +73,8 @@ enum PermissionNode {
   write_work_orders
   read_app_plan
   write_app_plan
+  read_purchase_orders
+  write_purchase_orders
 }
 
 model FixedPriceLabour {
@@ -88,6 +90,8 @@ model FixedPriceLabour {
   name String
 
   amount String
+
+  @@index([workOrderId])
 }
 
 model HourlyLabour {
@@ -104,6 +108,8 @@ model HourlyLabour {
 
   rate  String
   hours String
+
+  @@index([workOrderId])
 }
 
 model AppPlanSubscription {
@@ -192,13 +198,22 @@ model PurchaseOrder {
 
   customerId       String?
   vendorCustomerId String?
-  note             String?
+
+  shipFrom String?
+  shipTo   String?
+
+  // Searchable fields
+  note         String?
+  vendorName   String?
+  customerName String?
+  locationName String?
 
   products     PurchaseOrderProduct[]
   customFields PurchaseOrderCustomField[]
 
   createdAt DateTime @default(now())
 
+  // TODO: if we ever want to find all POs for a WO, add @@index([workOrderId])
   @@unique([shop, name])
 }
 
@@ -223,6 +238,13 @@ model PurchaseOrderProduct {
   productVariantId String
   quantity         Int
   price            Int
+
+  // Searchable fields
+  sku    String?
+  name   String?
+  handle String?
+
+  @@index([purchaseOrderId])
 }
 
 enum PurchaseOrderStatus {

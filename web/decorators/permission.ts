@@ -17,6 +17,8 @@ export const permissionNodes = [
   'write_work_orders',
   'read_app_plan',
   'write_app_plan',
+  'read_purchase_orders',
+  'write_purchase_orders',
 ] as const satisfies readonly PermissionNode[];
 
 export function isPermissionNode(node: string): node is PermissionNode {

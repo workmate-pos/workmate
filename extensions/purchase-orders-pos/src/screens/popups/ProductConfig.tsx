@@ -1,6 +1,6 @@
 import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { Product } from '@web/schemas/generated/create-purchase-order.js';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -29,12 +29,12 @@ export function ProductConfig() {
   const inventoryItemQuery = useInventoryItemQuery({ fetch, id: productVariant?.inventoryItem?.id ?? null });
   const inventoryLevels = inventoryItemQuery?.data?.inventoryLevels?.nodes;
 
-  const locationIds = inventoryLevels?.map(level => level.location.id) ?? [];
+  const locationIds = useMemo(() => inventoryLevels?.map(level => level.location.id) ?? [], [inventoryLevels]);
   const locationQueries = useLocationQueries({ fetch, ids: locationIds });
 
   const loadingLocations = Object.values(locationQueries).some(query => query.isLoading);
 
-  // TODO: Show current stock
+  // TODO: Show current stock in a nicer way
 
   return (
     <Screen
@@ -75,8 +75,10 @@ export function ProductConfig() {
                 </ResponsiveGrid>
               ))}
 
-              {loadingLocations && <Text variant="body">Loading locations...</Text>}
-              {!loadingLocations && inventoryLevels.length === 0 && <Text variant="body">No stock available</Text>}
+              <Stack direction={'horizontal'} alignment={'center'}>
+                {loadingLocations && <Text variant="body">Loading locations...</Text>}
+                {!loadingLocations && inventoryLevels.length === 0 && <Text variant="body">No stock available</Text>}
+              </Stack>
             </Stack>
 
             <Stack direction="vertical" spacing={2}>

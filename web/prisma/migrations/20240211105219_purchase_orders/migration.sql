@@ -12,6 +12,10 @@ CREATE TABLE "PurchaseOrder" (
     "locationId" TEXT,
     "customerId" TEXT,
     "vendorCustomerId" TEXT,
+    "note" TEXT,
+    "vendorName" TEXT,
+    "customerName" TEXT,
+    "workOrderName" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "PurchaseOrder_pkey" PRIMARY KEY ("id")
@@ -34,6 +38,8 @@ CREATE TABLE "PurchaseOrderProduct" (
     "productVariantId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
     "price" INTEGER NOT NULL,
+    "sku" TEXT,
+    "name" TEXT,
 
     CONSTRAINT "PurchaseOrderProduct_pkey" PRIMARY KEY ("id")
 );

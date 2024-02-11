@@ -9,26 +9,28 @@ export function ResponsiveGrid({
   children,
   columns,
   smColumns = 1,
+  grow = false,
 }: {
   smColumns?: number;
   columns: number;
   children?: ReactNode;
+  grow?: boolean;
 }) {
   const screenSize = useScreenSize();
 
-  const actualColumns = {
+  const columnCount = {
     tablet: columns,
     mobile: smColumns,
   }[screenSize];
 
   const childrenArray = Children.toArray(children);
-  const rows = batch(childrenArray, actualColumns);
+  const rows = batch(childrenArray, columnCount);
 
   return (
     <Stack direction={'vertical'} alignment={'flex-start'} flex={1}>
       {rows.map((row, i) => (
         <Stack key={i} direction={'horizontal'} flex={1} flexChildren>
-          {Array.from({ length: actualColumns }).map((_, j) => (
+          {Array.from({ length: grow ? row.length : columnCount }).map((_, j) => (
             <Stack direction={'horizontal'} flex={1} flexChildren>
               {row[j]}
             </Stack>

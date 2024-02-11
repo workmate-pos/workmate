@@ -21,7 +21,7 @@ export default class VendorsController {
 
     const vendorsWithCustomerId = vendors.map(vendor => ({
       ...vendor,
-      // vendor is in the CustomerSegmentMember namespace but has the same id as Customer (don't ask me why)
+      // vendor id is in the CustomerSegmentMember namespace but has the same id as Customer (don't ask me why)
       customerId: createGid('Customer', parseGid(vendor.id).id),
     }));
 
@@ -30,6 +30,6 @@ export default class VendorsController {
 }
 
 export type FetchVendorsResponse = {
-  vendors: (gql.segments.CustomerSegmentMember.Result & { customerId: ID })[];
+  vendors: (gql.segments.CustomerSegmentMemberFragment.Result & { customerId: ID })[];
   pageInfo: { hasNextPage: boolean; endCursor?: string | null };
 };

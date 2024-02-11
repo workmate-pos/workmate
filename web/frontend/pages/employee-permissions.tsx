@@ -1,7 +1,7 @@
 import { Checkbox, Frame, IndexTable, Page } from '@shopify/polaris';
 import { Loading, TitleBar } from '@shopify/app-bridge-react';
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useEmployeeMutation } from '@work-orders/common/queries/use-employee-mutation.js';
@@ -9,9 +9,11 @@ import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current
 import { NoPermissionCard } from '@web/frontend/components/NoPermissionCard.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
-export default function EmployeeRates() {
+// TODO: Fix permissions for settings page
+// TODO: <PermissionBoundary permissions={['write_employees']} /> component that displays "no permission" card if the user doesn't have the required permissions
+
+export default function EmployeePermissions() {
   const [toast, setToastAction] = useToast();
 
   const [employeePermissions, setEmployeePermissions] = useState<
@@ -104,6 +106,8 @@ export default function EmployeeRates() {
     'write_work_orders',
     'read_app_plan',
     'write_app_plan',
+    'read_purchase_orders',
+    'write_purchase_orders',
   ] as const satisfies readonly PermissionNode[];
 
   return (

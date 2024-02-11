@@ -24,6 +24,7 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
 
+// backup with the layout as in the figma mockup. Entry.tsx has fewer elements because not all are mentioned in the reqs
 export function Entry() {
   const [query, setQuery] = useState('');
 
@@ -49,7 +50,6 @@ export function Entry() {
       products: [],
     }),
   );
-  const customFieldConfigPopup = usePopup('CustomFieldConfig', customFields => dispatch.setPartial({ customFields }));
 
   const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, vendorSelectorPopup.navigate);
   const selectVendorBeforeAddingProductsDialog = useSelectVendorBeforeAddingProductsDialog(
@@ -83,120 +83,121 @@ export function Entry() {
   return (
     <Screen title={'Purchase Orders'}>
       <ScrollView>
-        <Stack direction={'vertical'} paddingVertical={'HalfPoint'}>
-          <ResponsiveGrid columns={4} grow>
-            {createPurchaseOrder.name && <TextField label={'PO ID'} disabled value={createPurchaseOrder.name} />}
-            <TextField
-              label={'Vendor'}
-              onFocus={vendorSelectorWarningDialog.show}
-              value={vendorCustomer?.displayName ?? (vendorCustomerQuery.isLoading ? 'Loading...' : '')}
-              disabled={vendorSelectorWarningDialog.isVisible || vendorCustomerQuery.isLoading}
-            />
-
-            <TextField
-              label={'Location'}
-              onFocus={locationSelectorPopup.navigate}
-              value={selectedLocation?.name ?? ''}
-              action={{
-                label: 'Clear',
-                onPress: () => dispatch.setPartial({ locationId: null }),
-                disabled: !selectedLocation,
-              }}
-            />
-            <TextField
-              label={'Status'}
-              onFocus={statusSelectorPopup.navigate}
-              value={titleCase(createPurchaseOrder.status)}
-            />
-          </ResponsiveGrid>
-
-          <ResponsiveGrid columns={3}>
-            <ResponsiveGrid columns={1}>
-              <TextArea
-                label={'Ship From'}
-                value={createPurchaseOrder.shipFrom ?? ''}
-                onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom: shipFrom || null })}
-              />
-              {!!vendorCustomer?.defaultAddress?.formatted &&
-                createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
-                  <Button
-                    title={'Use Vendor Address'}
-                    onPress={() => {
-                      if (!vendorCustomer.defaultAddress) return;
-                      dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress.formatted.join('\n') });
-                    }}
-                  />
-                )}
-            </ResponsiveGrid>
-            <ResponsiveGrid columns={1}>
-              <TextArea
-                label={'Ship To'}
-                value={createPurchaseOrder.shipTo ?? ''}
-                onChange={(shipTo: string) => dispatch.setPartial({ shipTo: shipTo || null })}
-              />
-              {!!selectedLocation?.address?.formatted &&
-                createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
-                  <Button
-                    title={'Use Location Address'}
-                    onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
-                  />
-                )}
-            </ResponsiveGrid>
-
+        <ResponsiveGrid columns={4} grow>
+          {createPurchaseOrder.name && <TextField label={'PO ID'} disabled value={createPurchaseOrder.name} />}
+          <TextField
+            label={'Vendor'}
+            onFocus={vendorSelectorWarningDialog.show}
+            value={vendorCustomer?.displayName ?? (vendorCustomerQuery.isLoading ? 'Loading...' : '')}
+            disabled={vendorSelectorWarningDialog.isVisible || vendorCustomerQuery.isLoading}
+          />
+          <TextField
+            label={'Status'}
+            onFocus={statusSelectorPopup.navigate}
+            value={titleCase(createPurchaseOrder.status)}
+          />
+          <TextField label={'Date'} />
+        </ResponsiveGrid>
+        <ResponsiveGrid columns={2}>
+          <ResponsiveGrid columns={1}>
             <TextArea
-              label={'Note'}
-              value={createPurchaseOrder.note}
-              onChange={(note: string) => dispatch.setPartial({ note: note || null })}
+              label={'Ship From'}
+              value={createPurchaseOrder.shipFrom ?? ''}
+              onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom: shipFrom || null })}
             />
+            {!!vendorCustomer?.defaultAddress?.formatted &&
+              createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
+                <Button
+                  title={'Use Vendor Address'}
+                  onPress={() => {
+                    if (!vendorCustomer.defaultAddress) return;
+                    dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress.formatted.join('\n') });
+                  }}
+                />
+              )}
           </ResponsiveGrid>
-        </Stack>
+          <ResponsiveGrid columns={1}>
+            <TextArea
+              label={'Ship To'}
+              value={createPurchaseOrder.shipTo ?? ''}
+              onChange={(shipTo: string) => dispatch.setPartial({ shipTo: shipTo || null })}
+            />
+            {!!selectedLocation?.address?.formatted &&
+              createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
+                <Button
+                  title={'Use Location Address'}
+                  onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
+                />
+              )}
+          </ResponsiveGrid>
 
-        <Stack direction={'vertical'} paddingVertical={'HalfPoint'}>
-          <ResponsiveGrid columns={3}>
+          <ResponsiveGrid columns={2}>
             <TextField
               label={'Sales Order #'}
               onChange={(salesOrderId: string) => dispatch.setPartial({ salesOrderId: salesOrderId || null })}
             />
-
-            {Object.entries(createPurchaseOrder.customFields).map(([key, value], i) => (
-              <TextField
-                key={i}
-                label={key}
-                value={value}
-                onChange={(value: string) =>
-                  dispatch.setPartial({ customFields: { ...createPurchaseOrder.customFields, [key]: value } })
-                }
-              />
-            ))}
-
-            <Button
-              title={'Manage Fields'}
-              type={'plain'}
-              onPress={() => customFieldConfigPopup.navigate(createPurchaseOrder)}
-            />
+            <TextField label={'Vendor Ref #'} />
           </ResponsiveGrid>
-        </Stack>
-
-        <Stack direction={'vertical'} paddingVertical={'HalfPoint'}>
           <ResponsiveGrid columns={2}>
-            <ResponsiveGrid columns={1}>
-              <Button title={'Add Product'} type={'primary'} onPress={selectVendorBeforeAddingProductsDialog.show} />
-              <ControlledSearchBar placeholder={'Search products'} onTextChange={setQuery} onSearch={() => {}} />
-              <List data={productRows} isLoadingMore={false} onEndReached={() => {}} imageDisplayStrategy={'always'} />
-              {productRows.length === 0 ? (
-                <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
-                  <Text variant="body" color="TextSubdued">
-                    No products added to purchase order
-                  </Text>
-                </Stack>
-              ) : null}
-            </ResponsiveGrid>
+            <TextField label={'Expected'} />
+            <TextField label={'Terms'} />
+          </ResponsiveGrid>
 
+          <ResponsiveGrid columns={2}>
+            <TextField label={'Ship via'} />
+            <TextField label={'Charge via'} />
+          </ResponsiveGrid>
+          <TextField label={'Assign Employees'} />
+
+          <TextField
+            label={'Location'}
+            onFocus={locationSelectorPopup.navigate}
+            value={selectedLocation?.name ?? ''}
+            action={{
+              label: 'Clear',
+              onPress: () => dispatch.setPartial({ locationId: null }),
+              disabled: !selectedLocation,
+            }}
+          />
+          <TextField
+            label={'Note'}
+            value={createPurchaseOrder.note}
+            onChange={(note: string) => dispatch.setPartial({ note: note || null })}
+          />
+        </ResponsiveGrid>
+
+        <ResponsiveGrid columns={2}>
+          <ResponsiveGrid columns={1}>
+            <Button title={'Add Product'} type={'primary'} onPress={selectVendorBeforeAddingProductsDialog.show} />
+            <ControlledSearchBar placeholder={'Search products'} onTextChange={setQuery} onSearch={() => {}} />
+            <List data={productRows} isLoadingMore={false} onEndReached={() => {}} imageDisplayStrategy={'always'} />
+            {productRows.length === 0 ? (
+              <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
+                <Text variant="body" color="TextSubdued">
+                  No products added to purchase order
+                </Text>
+              </Stack>
+            ) : null}
+          </ResponsiveGrid>
+
+          <ResponsiveGrid columns={1}>
+            <ResponsiveGrid columns={2}>
+              <TextField label={'Subtotal'} />
+              <TextField label={'Discount'} />
+              <TextField label={'Tax'} />
+              <TextField label={'Shipping'} />
+            </ResponsiveGrid>
+            <TextField label={'Total'} />
+            <ResponsiveGrid columns={2}>
+              <TextField label={'Deposited'} />
+              <TextField label={'Paid'} />
+            </ResponsiveGrid>
+            <TextField label={'Balance Due'} />
             <Button title={'Create Order'} type={'primary'} onPress={() => toast.show('Save')} />
           </ResponsiveGrid>
-        </Stack>
-
+        </ResponsiveGrid>
         <Text>{JSON.stringify(createPurchaseOrder, null, 2)}</Text>
+        <Text>{JSON.stringify(selectedLocationQuery.data, null, 2)}</Text>
       </ScrollView>
     </Screen>
   );

@@ -9,6 +9,7 @@ import { LocationSelector } from './screens/popups/LocationSelector.js';
 import { ProductConfig } from './screens/popups/ProductConfig.js';
 import { VendorSelector } from './screens/popups/VendorSelector.js';
 import { DialogProvider } from '@work-orders/common-pos/providers/DialogProvider.js';
+import { CustomFieldConfig } from './screens/popups/CustomFieldConfig.js';
 
 const SmartGridTile = () => {
   const { smartGrid } = useExtensionApi();
@@ -24,6 +25,7 @@ const SmartGridModal = () => {
           <Navigator>
             <Entry />
 
+            <CustomFieldConfig />
             <LocationSelector />
             <ProductConfig />
             <ProductSelector />

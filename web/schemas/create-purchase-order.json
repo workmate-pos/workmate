@@ -52,6 +52,60 @@
         }
       ]
     },
+    "shipFrom": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "shipTo": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "note": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "vendorName": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "customerName": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "locationName": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
     "products": {
       "type": "array",
       "items": {
@@ -63,9 +117,18 @@
           },
           "quantity": {
             "$ref": "scalars.json#/definitions/Int"
+          },
+          "sku": {
+            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+          },
+          "name": {
+            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+          },
+          "handle": {
+            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
           }
         },
-        "required": ["productVariantId", "quantity", "price"],
+        "required": ["productVariantId", "quantity", "price", "sku", "name", "handle"],
         "additionalProperties": false
       }
     },
@@ -74,9 +137,6 @@
       "additionalProperties": {
         "type": "string"
       }
-    },
-    "note": {
-      "type": "string"
     }
   },
   "required": [
@@ -87,9 +147,14 @@
     "locationId",
     "customerId",
     "vendorCustomerId",
+    "shipFrom",
+    "shipTo",
+    "note",
+    "vendorName",
+    "customerName",
+    "locationName",
     "products",
-    "customFields",
-    "note"
+    "customFields"
   ],
   "additionalProperties": false
 }
