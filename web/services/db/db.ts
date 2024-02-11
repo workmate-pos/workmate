@@ -3,6 +3,7 @@ import * as workOrder from './queries/generated/work-order.sql.js';
 import * as workOrderLabour from './queries/generated/work-order-labour.sql.js';
 import * as employee from './queries/generated/employee.sql.js';
 import * as types from './queries/generated/types.sql.js';
+import * as sequence from './queries/generated/sequence.sql.js';
 import * as appPlan from './queries/generated/app-plan.sql.js';
 import * as purchaseOrder from './queries/generated/purchase-order.sql.js';
 import * as settings from './queries/generated/settings.sql.js';
@@ -18,6 +19,7 @@ export const db = {
   workOrderLabour: wrapPreparedQueries(workOrderLabour),
   employee: wrapPreparedQueries(employee),
   types: wrapPreparedQueries(types),
+  sequence: wrapPreparedQueries(sequence),
   appPlan: wrapPreparedQueries(appPlan),
   purchaseOrder: wrapPreparedQueries(purchaseOrder),
   settings: wrapPreparedQueries(settings),

@@ -4,7 +4,7 @@ import { Button, Stack } from '@shopify/retail-ui-extensions-react';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function StatusSelector() {
-  const statuses: Status[] = ['OPEN', 'IN_PROGRESS', 'CLOSED', 'CANCELLED'];
+  const statuses: Status[] = ['OPEN', 'CLOSED', 'CANCELLED'];
 
   const { Screen, closePopup } = useScreen('StatusSelector');
 

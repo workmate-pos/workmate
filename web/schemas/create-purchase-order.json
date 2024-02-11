@@ -8,7 +8,7 @@
     },
     "status": {
       "title": "status",
-      "enum": ["OPEN", "RECEIVED", "IN_PROGRESS", "CANCELLED", "CLOSED"]
+      "enum": ["OPEN", "RECEIVED", "CANCELLED", "CLOSED"]
     },
     "salesOrderId": {
       "anyOf": [
@@ -20,13 +20,7 @@
       ]
     },
     "workOrderId": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+      "anyOf": [{ "const": null }, { "type": "number" }]
     },
     "locationId": {
       "anyOf": [
@@ -128,7 +122,7 @@
             "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
           }
         },
-        "required": ["productVariantId", "quantity", "price", "sku", "name", "handle"],
+        "required": ["productVariantId", "quantity", "sku", "name", "handle"],
         "additionalProperties": false
       }
     },

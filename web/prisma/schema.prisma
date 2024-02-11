@@ -237,7 +237,6 @@ model PurchaseOrderProduct {
 
   productVariantId String
   quantity         Int
-  price            Int
 
   // Searchable fields
   sku    String?

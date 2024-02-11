@@ -7,7 +7,6 @@ import {
   Text,
   TextArea,
   TextField,
-  useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { PopupNavigateFn, useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
@@ -23,6 +22,7 @@ import { useEffect, useState } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
+import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 
 export function Entry() {
   const [query, setQuery] = useState('');
@@ -32,9 +32,8 @@ export function Entry() {
   });
   const fetch = useAuthenticatedFetch();
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
-
   const [createPurchaseOrder, dispatch] = useCreatePurchaseOrderReducer();
+  const purchaseOrderMutation = usePurchaseOrderMutation({ fetch });
 
   const statusSelectorPopup = usePopup('StatusSelector', status => dispatch.setPartial({ status }));
   const productSelectorPopup = usePopup('ProductSelector', products => dispatch.addProducts({ products }));
@@ -81,9 +80,9 @@ export function Entry() {
   }, [vendorCustomer]);
 
   return (
-    <Screen title={'Purchase Orders'}>
+    <Screen title={'Purchase Orders'} isLoading={purchaseOrderMutation.isLoading}>
       <ScrollView>
-        <Stack direction={'vertical'} paddingVertical={'HalfPoint'}>
+        <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={4} grow>
             {createPurchaseOrder.name && <TextField label={'PO ID'} disabled value={createPurchaseOrder.name} />}
             <TextField
@@ -109,49 +108,49 @@ export function Entry() {
               value={titleCase(createPurchaseOrder.status)}
             />
           </ResponsiveGrid>
-
-          <ResponsiveGrid columns={3}>
-            <ResponsiveGrid columns={1}>
-              <TextArea
-                label={'Ship From'}
-                value={createPurchaseOrder.shipFrom ?? ''}
-                onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom: shipFrom || null })}
-              />
-              {!!vendorCustomer?.defaultAddress?.formatted &&
-                createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
-                  <Button
-                    title={'Use Vendor Address'}
-                    onPress={() => {
-                      if (!vendorCustomer.defaultAddress) return;
-                      dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress.formatted.join('\n') });
-                    }}
-                  />
-                )}
-            </ResponsiveGrid>
-            <ResponsiveGrid columns={1}>
-              <TextArea
-                label={'Ship To'}
-                value={createPurchaseOrder.shipTo ?? ''}
-                onChange={(shipTo: string) => dispatch.setPartial({ shipTo: shipTo || null })}
-              />
-              {!!selectedLocation?.address?.formatted &&
-                createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
-                  <Button
-                    title={'Use Location Address'}
-                    onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
-                  />
-                )}
-            </ResponsiveGrid>
-
-            <TextArea
-              label={'Note'}
-              value={createPurchaseOrder.note}
-              onChange={(note: string) => dispatch.setPartial({ note: note || null })}
-            />
-          </ResponsiveGrid>
         </Stack>
 
-        <Stack direction={'vertical'} paddingVertical={'HalfPoint'}>
+        <ResponsiveGrid columns={3}>
+          <ResponsiveGrid columns={1}>
+            <TextArea
+              label={'Ship From'}
+              value={createPurchaseOrder.shipFrom ?? ''}
+              onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom: shipFrom || null })}
+            />
+            {!!vendorCustomer?.defaultAddress?.formatted &&
+              createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
+                <Button
+                  title={'Use Vendor Address'}
+                  onPress={() => {
+                    if (!vendorCustomer.defaultAddress) return;
+                    dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress.formatted.join('\n') });
+                  }}
+                />
+              )}
+          </ResponsiveGrid>
+          <ResponsiveGrid columns={1}>
+            <TextArea
+              label={'Ship To'}
+              value={createPurchaseOrder.shipTo ?? ''}
+              onChange={(shipTo: string) => dispatch.setPartial({ shipTo: shipTo || null })}
+            />
+            {!!selectedLocation?.address?.formatted &&
+              createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
+                <Button
+                  title={'Use Location Address'}
+                  onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
+                />
+              )}
+          </ResponsiveGrid>
+
+          <TextArea
+            label={'Note'}
+            value={createPurchaseOrder.note}
+            onChange={(note: string) => dispatch.setPartial({ note: note || null })}
+          />
+        </ResponsiveGrid>
+
+        <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={3}>
             <TextField
               label={'Sales Order #'}
@@ -177,7 +176,7 @@ export function Entry() {
           </ResponsiveGrid>
         </Stack>
 
-        <Stack direction={'vertical'} paddingVertical={'HalfPoint'}>
+        <Stack direction={'vertical'} paddingVertical={'Small'} flex={1}>
           <ResponsiveGrid columns={2}>
             <ResponsiveGrid columns={1}>
               <Button title={'Add Product'} type={'primary'} onPress={selectVendorBeforeAddingProductsDialog.show} />
@@ -192,11 +191,16 @@ export function Entry() {
               ) : null}
             </ResponsiveGrid>
 
-            <Button title={'Create Order'} type={'primary'} onPress={() => toast.show('Save')} />
+            <Button
+              title={!!createPurchaseOrder.name ? 'Update order' : 'Create order'}
+              type={'primary'}
+              onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
+            />
           </ResponsiveGrid>
         </Stack>
 
         <Text>{JSON.stringify(createPurchaseOrder, null, 2)}</Text>
+        <Text>{JSON.stringify(purchaseOrderMutation.error, null, 2)}</Text>
       </ScrollView>
     </Screen>
   );

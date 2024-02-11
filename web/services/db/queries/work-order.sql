@@ -1,6 +1,3 @@
-/* @name getNextIdForShop */
-SELECT NEXTVAL(FORMAT('%I', :shopSequenceName! :: TEXT)) :: INTEGER AS "id!";
-
 /* @name upsert */
 INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", "orderId",
                          "draftOrderId")
