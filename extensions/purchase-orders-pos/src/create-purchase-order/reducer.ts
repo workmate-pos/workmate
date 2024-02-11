@@ -14,6 +14,10 @@ export type CreatePurchaseOrderAction =
   | {
       type: 'updateProduct';
       product: Product;
+    }
+  | {
+      type: 'set';
+      purchaseOrder: CreatePurchaseOrder;
     };
 
 type CreatePurchaseOrderProxy = {
@@ -63,6 +67,10 @@ function createPurchaseOrderReducer(createPurchaseOrder: CreatePurchaseOrder, ac
           .map(product => (shouldMergeProducts(product, action.product) ? action.product : product))
           .filter(product => product.quantity > 0),
       };
+    }
+
+    case 'set': {
+      return action.purchaseOrder;
     }
 
     default:

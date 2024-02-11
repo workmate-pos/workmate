@@ -6,7 +6,7 @@ export const defaultCreatePurchaseOrder: CreatePurchaseOrder = {
   name: null,
   note: null,
   salesOrderId: null,
-  workOrderId: null,
+  workOrderName: null,
   locationId: null,
   products: [],
   customFields: {},

@@ -43,7 +43,7 @@ export async function getNewWorkOrderId(shop: string) {
 }
 
 export async function getNewPurchaseOrderId(shop: string) {
-  const format = 'PO-{{id}}';
+  const format = 'PO-#{{id}}';
   assertValidFormatString(format);
   return `PO-${await getNextPurchaseOrderIdForShop(shop)}`;
 }

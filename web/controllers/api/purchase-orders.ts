@@ -14,6 +14,7 @@ import { upsertPurchaseOrder } from '../../services/purchase-orders/upsert.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { getPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
 import { PurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 @Authenticated()
 export default class PurchaseOrdersController {
@@ -28,8 +29,9 @@ export default class PurchaseOrdersController {
     const createPurchaseOrder = req.body;
 
     const { name } = await upsertPurchaseOrder(session, createPurchaseOrder);
+    const purchaseOrder = await getPurchaseOrder(session, name).then(po => po ?? never('We just made it XD'));
 
-    return res.json({ name });
+    return res.json({ purchaseOrder });
   }
 
   @Get('/:name')
@@ -68,7 +70,7 @@ export type FetchPurchaseOrderInfoPageResponse = {
 };
 
 export type CreatePurchaseOrderResponse = {
-  name: string;
+  purchaseOrder: PurchaseOrder;
 };
 
 export type FetchPurchaseOrderResponse = {

@@ -159,7 +159,7 @@ export async function getWorkOrderInfoPage(
   session: Session,
   paginationOptions: WorkOrderPaginationOptions,
 ): Promise<WorkOrderInfo[]> {
-  if (paginationOptions.query) {
+  if (paginationOptions.query !== undefined) {
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
   }
 

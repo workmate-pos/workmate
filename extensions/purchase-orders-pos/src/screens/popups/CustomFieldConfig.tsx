@@ -69,9 +69,10 @@ export function CustomFieldConfig() {
               <Button
                 title={'Remove'}
                 type={'destructive'}
-                onPress={() =>
-                  setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k, v]) => k !== key)))
-                }
+                onPress={() => {
+                  setHasUnsavedChanges(true);
+                  setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k, v]) => k !== key)));
+                }}
               />,
             ])}
           </ResponsiveGrid>

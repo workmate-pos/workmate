@@ -34,7 +34,7 @@ export function ProductConfig() {
 
   const loadingLocations = Object.values(locationQueries).some(query => query.isLoading);
 
-  // TODO: Show current stock in a nicer way
+  // TODO: Show current stock in a nicer way - maybe for just one loc? (if so change inventory level endpoint/gql query)
 
   return (
     <Screen

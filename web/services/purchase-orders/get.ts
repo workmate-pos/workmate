@@ -5,6 +5,7 @@ import { db } from '../db/db.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
 import { assertGidOrNull, assertInt } from '../../util/assertions.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export async function getPurchaseOrder(session: Session, name: string): Promise<PurchaseOrder | null> {
   const [purchaseOrder] = await db.purchaseOrder.get({ name, shop: session.shop });
@@ -24,7 +25,7 @@ export async function getPurchaseOrder(session: Session, name: string): Promise<
     name: purchaseOrder.name,
     status: purchaseOrder.status,
     salesOrderId: purchaseOrder.salesOrderId,
-    workOrderId: purchaseOrder.workOrderId,
+    workOrderName: purchaseOrder.workOrderName,
     locationId: purchaseOrder.locationId,
     customerId: purchaseOrder.customerId,
     vendorCustomerId: purchaseOrder.vendorCustomerId,
@@ -40,14 +41,22 @@ export async function getPurchaseOrder(session: Session, name: string): Promise<
 }
 
 export async function getPurchaseOrderInfoPage(
-  { shop }: Session,
+  session: Session,
   paginationOptions: PurchaseOrderPaginationOptions,
 ): Promise<PurchaseOrderInfo[]> {
-  if (paginationOptions.query) {
+  if (paginationOptions.query !== undefined) {
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
   }
 
-  return await db.purchaseOrder.getPage({ ...paginationOptions, shop });
+  const { shop } = session;
+  const names = await db.purchaseOrder.getPage({ ...paginationOptions, shop });
+
+  const purchaseOrders = await Promise.all(names.map(({ name }) => getPurchaseOrder(session, name)));
+
+  return purchaseOrders.map(purchaseOrder => {
+    const { name, ...rest } = purchaseOrder ?? never();
+    return { name: name ?? never(), ...rest };
+  });
 }
 
 async function getPurchaseOrderProducts(purchaseOrderId: number) {

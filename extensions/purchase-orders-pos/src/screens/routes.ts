@@ -4,11 +4,12 @@ import type { Vendor } from '@work-orders/common/queries/use-vendors-query.js';
 
 export type ScreenInputOutput = {
   Entry: [undefined, undefined];
+  PurchaseOrder: [CreatePurchaseOrder | null, undefined];
 
   CustomFieldConfig: [Pick<CreatePurchaseOrder, 'customFields'>, Record<string, string>];
   LocationSelector: [undefined, Location];
   ProductConfig: [Product, Product];
-  ProductSelector: [Pick<CreatePurchaseOrder, 'vendorName'>, Product[]];
+  ProductSelector: [Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>, Product[]];
   StatusSelector: [undefined, Status];
   VendorSelector: [undefined, Vendor];
 };

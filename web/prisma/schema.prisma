@@ -30,7 +30,8 @@ model Settings {
 }
 
 model WorkOrder {
-  id                 Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
+
   shop               String
   /// Used as work order id within this shop
   name               String
@@ -191,8 +192,8 @@ model PurchaseOrder {
   /// The vendor's invoice's id
   salesOrderId String?
 
-  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id])
-  workOrderId Int?
+  workOrder     WorkOrder? @relation(fields: [shop, workOrderName], references: [shop, name])
+  workOrderName String?
 
   locationId String?
 

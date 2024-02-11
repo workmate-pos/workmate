@@ -19,8 +19,8 @@
         }
       ]
     },
-    "workOrderId": {
-      "anyOf": [{ "const": null }, { "type": "number" }]
+    "workOrderName": {
+      "anyOf": [{ "const": null }, { "type": "string" }]
     },
     "locationId": {
       "anyOf": [
@@ -137,7 +137,7 @@
     "name",
     "status",
     "salesOrderId",
-    "workOrderId",
+    "workOrderName",
     "locationId",
     "customerId",
     "vendorCustomerId",

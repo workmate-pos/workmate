@@ -22,7 +22,7 @@ export async function upsertPurchaseOrder({ shop }: Session, createPurchaseOrder
       name,
       status: createPurchaseOrder.status,
       salesOrderId: createPurchaseOrder.salesOrderId,
-      workOrderId: createPurchaseOrder.workOrderId,
+      workOrderName: createPurchaseOrder.workOrderName,
       locationId: createPurchaseOrder.locationId,
       customerId: createPurchaseOrder.customerId,
       vendorCustomerId: createPurchaseOrder.vendorCustomerId,

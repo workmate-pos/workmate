@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { Int, Product } from '@web/schemas/generated/create-purchase-order.js';
@@ -8,18 +8,24 @@ import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/que
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 
-  // optional field, used to filter products by vendor
+  // optional fields, used to filter products by vendor, and show stock for a location
   const [vendorName, setVendorName] = useState<string | null>(null);
+  const [locationName, setLocationName] = useState<string | null>(null);
+  const [locationId, setLocationId] = useState<ID | null>(null);
 
-  const { Screen, closePopup } = useScreen('ProductSelector', ({ vendorName }) => {
+  const { Screen, closePopup } = useScreen('ProductSelector', ({ vendorName, locationName, locationId }) => {
     setQuery('', true);
     setSelectedProducts([]);
     setVendorName(vendorName);
+    setLocationName(locationName);
+    setLocationId(locationId);
   });
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
@@ -41,7 +47,7 @@ export function ProductSelector() {
     toast.show(`${name} added to purchase order`, { duration: 1000 });
   };
 
-  const rows = getProductVariantRows(productVariants, selectProduct);
+  const rows = useProductVariantRows(productVariants, locationId, selectProduct);
 
   return (
     <Screen
@@ -53,7 +59,7 @@ export function ProductSelector() {
         {vendorName && (
           <Stack direction={'horizontal'} paddingVertical={'Medium'} alignment={'center'}>
             <Text variant="captionMedium" color="TextSubdued">
-              Only showing products for vendor {vendorName}
+              Showing products for vendor {vendorName}, and stock for location {locationName}
             </Text>
           </Stack>
         )}
@@ -101,13 +107,25 @@ export function ProductSelector() {
   );
 }
 
-function getProductVariantRows(
+function useProductVariantRows(
   productVariants: ProductVariant[],
+  locationId: ID | null,
   selectProduct: (product: Product, name?: string) => void,
 ) {
+  const fetch = useAuthenticatedFetch();
+
+  const inventoryItemIds = productVariants.map(variant => variant.inventoryItem.id);
+  const inventoryItemQueries = useInventoryItemQueries({ fetch, ids: inventoryItemIds });
+
   return productVariants.map<ListRow>(variant => {
     const displayName = getProductVariantName(variant) ?? 'Unknown Product';
     const imageUrl = variant.image?.url ?? variant.product?.featuredImage?.url;
+
+    const inventoryItemId = variant.inventoryItem.id;
+    const inventoryItem = inventoryItemQueries[inventoryItemId]?.data;
+    const availableQuantity = inventoryItem?.inventoryLevels?.nodes
+      ?.find(level => level.location.id === locationId)
+      ?.quantities?.find(quantity => quantity.name === 'available')?.quantity;
 
     return {
       id: variant.id,
@@ -122,7 +140,8 @@ function getProductVariantRows(
       leftSide: {
         label: displayName,
         image: {
-          source: imageUrl ?? 'not found',
+          source: imageUrl,
+          badge: availableQuantity,
         },
       },
       rightSide: { showChevron: true },

@@ -1,6 +1,17 @@
 -- CreateEnum
 CREATE TYPE "PurchaseOrderStatus" AS ENUM ('OPEN', 'RECEIVED', 'CANCELLED', 'CLOSED');
 
+-- AlterEnum
+-- This migration adds more than one value to an enum.
+-- With PostgreSQL versions 11 and earlier, this is not possible
+-- in a single migration. This can be worked around by creating
+-- multiple migrations, each migration adding only one value to
+-- the enum.
+
+
+ALTER TYPE "PermissionNode" ADD VALUE 'read_purchase_orders';
+ALTER TYPE "PermissionNode" ADD VALUE 'write_purchase_orders';
+
 -- CreateTable
 CREATE TABLE "PurchaseOrder" (
     "id" SERIAL NOT NULL,
@@ -12,10 +23,12 @@ CREATE TABLE "PurchaseOrder" (
     "locationId" TEXT,
     "customerId" TEXT,
     "vendorCustomerId" TEXT,
+    "shipFrom" TEXT,
+    "shipTo" TEXT,
     "note" TEXT,
     "vendorName" TEXT,
     "customerName" TEXT,
-    "workOrderName" TEXT,
+    "locationName" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "PurchaseOrder_pkey" PRIMARY KEY ("id")
@@ -37,9 +50,9 @@ CREATE TABLE "PurchaseOrderProduct" (
     "purchaseOrderId" INTEGER NOT NULL,
     "productVariantId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
-    "price" INTEGER NOT NULL,
     "sku" TEXT,
     "name" TEXT,
+    "handle" TEXT,
 
     CONSTRAINT "PurchaseOrderProduct_pkey" PRIMARY KEY ("id")
 );
@@ -49,6 +62,15 @@ CREATE UNIQUE INDEX "PurchaseOrder_shop_name_key" ON "PurchaseOrder"("shop", "na
 
 -- CreateIndex
 CREATE UNIQUE INDEX "PurchaseOrderCustomField_purchaseOrderId_key_key" ON "PurchaseOrderCustomField"("purchaseOrderId", "key");
+
+-- CreateIndex
+CREATE INDEX "PurchaseOrderProduct_purchaseOrderId_idx" ON "PurchaseOrderProduct"("purchaseOrderId");
+
+-- CreateIndex
+CREATE INDEX "FixedPriceLabour_workOrderId_idx" ON "FixedPriceLabour"("workOrderId");
+
+-- CreateIndex
+CREATE INDEX "HourlyLabour_workOrderId_idx" ON "HourlyLabour"("workOrderId");
 
 -- AddForeignKey
 ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_workOrderId_fkey" FOREIGN KEY ("workOrderId") REFERENCES "WorkOrder"("id") ON DELETE SET NULL ON UPDATE CASCADE;

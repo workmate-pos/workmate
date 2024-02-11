@@ -20,7 +20,7 @@ export const usePurchaseOrderInfoPageQuery = (
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams();
 
-      for (const [key, value] of Object.entries({ ...params, offset })) {
+      for (const [key, value] of Object.entries({ ...params, offset, limit: 10 })) {
         if (value === undefined) continue;
         searchParams.set(key, String(value));
       }
