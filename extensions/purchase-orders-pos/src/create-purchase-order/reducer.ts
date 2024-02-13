@@ -18,11 +18,17 @@ export type CreatePurchaseOrderAction =
   | {
       type: 'set';
       purchaseOrder: CreatePurchaseOrder;
-    };
+    }
+  | ({
+      type: 'setWorkOrder';
+    } & Pick<CreatePurchaseOrder, 'workOrderName' | 'customerId' | 'customerName' | 'orderName' | 'orderId'>)
+  | ({
+      type: 'setOrder';
+    } & Pick<CreatePurchaseOrder, 'customerId' | 'customerName' | 'orderName' | 'orderId'>);
 
 export type CreatePurchaseOrderDispatchProxy = {
-  [action in CreatePurchaseOrderAction['type']]: (
-    args: DiscriminatedUnionOmit<CreatePurchaseOrderAction, 'type'>,
+  [type in CreatePurchaseOrderAction['type']]: (
+    args: DiscriminatedUnionOmit<CreatePurchaseOrderAction & { type: type }, 'type'>,
   ) => void;
 };
 
@@ -46,11 +52,18 @@ export const useCreatePurchaseOrderReducer = () => {
 
 function createPurchaseOrderReducer(createPurchaseOrder: CreatePurchaseOrder, action: CreatePurchaseOrderAction) {
   switch (action.type) {
+    case 'setWorkOrder':
+    case 'setOrder':
     case 'setPartial': {
       const { type, ...partial } = action;
       const partialNotUndefined = Object.fromEntries(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );
+
+      if (action.type === 'setOrder') {
+        partialNotUndefined.workOrderName = null;
+      }
+
       return { ...createPurchaseOrder, ...partialNotUndefined };
     }
 

@@ -58,12 +58,21 @@ export function PurchaseOrder() {
   const employeeSelectorPopup = usePopup('EmployeeSelector', employeeAssignments =>
     dispatch.setPartial({ employeeAssignments }),
   );
+  const workOrderSelectorPopup = usePopup(
+    'WorkOrderSelector',
+    ({ workOrderName, customerName, customerId, orderId, orderName }) =>
+      dispatch.setPartial({ workOrderName, customerName, customerId, orderId, orderName }),
+  );
+  const orderSelectorPopup = usePopup('OrderSelector', ({ orderId, orderName, customerId, customerName }) =>
+    dispatch.setPartial({ workOrderName: null, orderId, orderName, customerId, customerName }),
+  );
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, vendorSelectorPopup.navigate);
-  const selectVendorBeforeAddingProductsDialog = useSelectVendorBeforeAddingProductsDialog(
+  const addProductPrerequisitesDialog = useAddProductPrerequisitesDialog(
     createPurchaseOrder,
     vendorSelectorPopup.navigate,
+    locationSelectorPopup.navigate,
     productSelectorPopup.navigate,
   );
 
@@ -180,19 +189,56 @@ export function PurchaseOrder() {
               )}
           </ResponsiveGrid>
 
-          <TextArea
-            label={'Note'}
-            value={createPurchaseOrder.note}
-            onChange={(note: string) => dispatch.setPartial({ note: note || null })}
-          />
+          <ResponsiveGrid columns={1}>
+            <TextArea
+              label={'Note'}
+              value={createPurchaseOrder.note}
+              onChange={(note: string) => dispatch.setPartial({ note: note || null })}
+            />
+          </ResponsiveGrid>
         </ResponsiveGrid>
 
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={3}>
-            <TextArea
+            <TextField
               label={'Assigned Employees'}
               value={createPurchaseOrder.employeeAssignments.map(({ employeeName }) => employeeName).join(', ')}
               onFocus={() => employeeSelectorPopup.navigate(createPurchaseOrder.employeeAssignments)}
+              action={{
+                label: '×',
+                disabled: createPurchaseOrder.employeeAssignments.length === 0,
+                onPress: () => dispatch.setPartial({ employeeAssignments: [] }),
+              }}
+            />
+
+            <TextField
+              label={'Linked Work Order ID'}
+              value={createPurchaseOrder.workOrderName ?? ''}
+              onFocus={workOrderSelectorPopup.navigate}
+              action={{
+                label: '×',
+                disabled: createPurchaseOrder.workOrderName === null,
+                onPress: () =>
+                  dispatch.setWorkOrder({
+                    workOrderName: null,
+                    customerName: null,
+                    customerId: null,
+                    orderId: null,
+                    orderName: null,
+                  }),
+              }}
+            />
+
+            <TextField
+              label={'Linked Order ID'}
+              value={!!createPurchaseOrder.orderId ? createPurchaseOrder.orderName ?? 'Unknown' : ''}
+              onFocus={orderSelectorPopup.navigate}
+              action={{
+                label: '×',
+                disabled: createPurchaseOrder.orderId === null,
+                onPress: () =>
+                  dispatch.setOrder({ orderName: null, orderId: null, customerName: null, customerId: null }),
+              }}
             />
 
             {Object.entries(createPurchaseOrder.customFields).map(([key, value], i) => (
@@ -206,18 +252,14 @@ export function PurchaseOrder() {
               />
             ))}
 
-            <Button
-              title={'Manage Fields'}
-              type={'plain'}
-              onPress={() => customFieldConfigPopup.navigate(createPurchaseOrder)}
-            />
+            <Button title={'Custom Fields'} onPress={() => customFieldConfigPopup.navigate(createPurchaseOrder)} />
           </ResponsiveGrid>
         </Stack>
 
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={2}>
             <ResponsiveGrid columns={1}>
-              <Button title={'Add Product'} type={'primary'} onPress={selectVendorBeforeAddingProductsDialog.show} />
+              <Button title={'Add Product'} type={'primary'} onPress={addProductPrerequisitesDialog.show} />
               <ControlledSearchBar placeholder={'Search products'} onTextChange={setQuery} onSearch={() => {}} />
               <List data={productRows} isLoadingMore={false} onEndReached={() => {}} imageDisplayStrategy={'always'} />
               {productRows.length === 0 ? (
@@ -257,15 +299,13 @@ export function PurchaseOrder() {
             onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
           />
         </Stack>
-
-        <Text>{JSON.stringify(createPurchaseOrder, null, 2)}</Text>
       </ScrollView>
     </Screen>
   );
 }
 
 function useProductRows(
-  { products }: Pick<CreatePurchaseOrder, 'products' | 'locationId'>,
+  { products }: Pick<CreatePurchaseOrder, 'products'>,
   query: string,
   openConfig: PopupNavigateFn<'ProductConfig'>,
 ) {
@@ -337,22 +377,35 @@ const useVendorChangeWarningDialog = (
   };
 };
 
-const useSelectVendorBeforeAddingProductsDialog = (
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorCustomerId' | 'vendorName' | 'locationId' | 'locationName'>,
+const useAddProductPrerequisitesDialog = (
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorCustomerId' | 'locationId' | 'vendorName' | 'locationName'>,
   openVendorPopup: PopupNavigateFn<'VendorSelector'>,
-  openProductSelectorPopup: PopupNavigateFn<'ProductSelector'>,
+  openLocationPopup: PopupNavigateFn<'LocationSelector'>,
+  openProductPopup: PopupNavigateFn<'ProductSelector'>,
 ) => {
   const dialog = useDialog();
 
-  const showDialog = createPurchaseOrder.vendorCustomerId === null;
+  const hasVendor = createPurchaseOrder.vendorCustomerId !== null && createPurchaseOrder.vendorName !== null;
+  const hasLocation = createPurchaseOrder.locationId !== null && createPurchaseOrder.locationName !== null;
 
+  const showDialog = !hasVendor || !hasLocation;
   const onAction = () => {
-    if (showDialog) {
+    if (!hasVendor) {
       openVendorPopup();
+    } else if (!hasLocation) {
+      openLocationPopup();
     } else {
-      openProductSelectorPopup(createPurchaseOrder);
+      openProductPopup({
+        locationName: createPurchaseOrder.locationName!,
+        locationId: createPurchaseOrder.locationId!,
+        vendorName: createPurchaseOrder.vendorName!,
+      });
     }
   };
+
+  const subject = !hasVendor ? 'vendor' : 'location';
+  const title = titleCase(`Select ${subject}`);
+  const content = `You must select a ${subject} before adding products to the purchase order.`;
 
   return {
     ...dialog,
@@ -361,10 +414,10 @@ const useSelectVendorBeforeAddingProductsDialog = (
         showDialog,
         onAction,
         props: {
-          title: 'Select Vendor',
           type: 'default',
-          content: 'You must select a vendor before adding products to the purchase order.',
-          actionText: 'Select Vendor',
+          title,
+          content,
+          actionText: title,
           showSecondaryAction: true,
           secondaryActionText: 'Cancel',
         },

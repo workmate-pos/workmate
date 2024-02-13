@@ -9,8 +9,20 @@ export type ScreenInputOutput = {
   CustomFieldConfig: [Pick<CreatePurchaseOrder, 'customFields'>, Record<string, string>];
   EmployeeSelector: [CreatePurchaseOrder['employeeAssignments'], CreatePurchaseOrder['employeeAssignments']];
   LocationSelector: [undefined, Location];
+  OrderSelector: [undefined, Pick<CreatePurchaseOrder, 'orderName' | 'orderId' | 'customerId' | 'customerName'>];
   ProductConfig: [Product, Product];
-  ProductSelector: [Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>, Product[]];
+  ProductSelector: [
+    NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>>,
+    Product[],
+  ];
   StatusSelector: [undefined, Status];
   VendorSelector: [undefined, Vendor];
+  WorkOrderSelector: [
+    undefined,
+    Pick<CreatePurchaseOrder, 'workOrderName' | 'customerId' | 'customerName' | 'orderName' | 'orderId'>,
+  ];
+};
+
+type NonNullableValues<T> = {
+  [K in keyof T]-?: NonNullable<T[K]>;
 };

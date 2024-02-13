@@ -12,6 +12,8 @@ import { DialogProvider } from '@work-orders/common-pos/providers/DialogProvider
 import { CustomFieldConfig } from './screens/popups/CustomFieldConfig.js';
 import { PurchaseOrder } from './screens/PurchaseOrder.js';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
+import { WorkOrderSelector } from './screens/popups/WorkOrderSelector.js';
+import { OrderSelector } from './screens/popups/OrderSelector.js';
 
 const SmartGridTile = () => {
   const { smartGrid } = useExtensionApi();
@@ -31,10 +33,12 @@ const SmartGridModal = () => {
             <CustomFieldConfig />
             <EmployeeSelector />
             <LocationSelector />
+            <OrderSelector />
             <ProductConfig />
             <ProductSelector />
             <StatusSelector />
             <VendorSelector />
+            <WorkOrderSelector />
           </Navigator>
         </DialogProvider>
       </QueryClientProvider>

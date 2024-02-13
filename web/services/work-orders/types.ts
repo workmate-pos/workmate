@@ -79,6 +79,8 @@ export type WorkOrderInfo = {
   dueDate: DateTime;
   customerId: ID;
   order: {
+    id: ID;
+    type: 'draft-order' | 'order';
     name: string;
     total: Money;
     outstanding: Money;

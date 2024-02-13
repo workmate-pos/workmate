@@ -204,6 +204,8 @@ export async function getWorkOrderInfoPage(
       dueDate: workOrder.dueDate.toISOString() as DateTime,
       customerId: workOrder.customerId,
       order: {
+        id: workOrder.orderId ?? workOrder.draftOrderId ?? never(),
+        type: workOrder.orderId === null ? 'draft-order' : 'order',
         name: order.name,
         total: order.totalPrice,
         outstanding,

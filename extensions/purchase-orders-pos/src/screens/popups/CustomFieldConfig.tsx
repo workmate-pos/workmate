@@ -45,7 +45,7 @@ export function CustomFieldConfig() {
   }
 
   return (
-    <Screen title="Custom Fields" overrideNavigateBack={unsavedChangesDialog.show}>
+    <Screen title="Custom Fields" overrideNavigateBack={unsavedChangesDialog.show} presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction={'horizontal'} alignment={'center'}>
           <Text variant={'headingSmall'}>Custom Fields</Text>
