@@ -28,6 +28,7 @@ import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js'
 import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { MoneyField } from '../components/MoneyField.js';
+import { useToggle } from '../hooks/use-toggle.js';
 
 export function PurchaseOrder() {
   const [query, setQuery] = useState('');
@@ -36,12 +37,17 @@ export function PurchaseOrder() {
 
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer();
 
+  const [key, forceRerender] = useToggle();
+
   const { Screen, usePopup } = useScreen('PurchaseOrder', purchaseOrder => {
     setQuery('');
     setIsPriceSummaryValid(true);
     setIsPaymentSummaryValid(true);
     dispatch.set(purchaseOrder ?? defaultCreatePurchaseOrder);
     setHasUnsavedChanges(false);
+    // screens are permanently mounted, so we need to force a rerender to clear previous validation errors, etc
+    // TODO: Somehow force a rerender when leaving a screen (but without triggering the navigation lifecycle hooks)
+    forceRerender();
   });
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
@@ -306,7 +312,7 @@ export function PurchaseOrder() {
               ) : null}
             </ResponsiveGrid>
 
-            <ResponsiveGrid columns={1}>
+            <ResponsiveGrid columns={1} key={String(key)}>
               <MoneyInputGroup
                 grid={{ columns: 2 }}
                 fields={['subtotal', 'discount', 'tax', 'shipping']}
@@ -339,6 +345,8 @@ export function PurchaseOrder() {
             isLoading={purchaseOrderMutation.isLoading}
           />
         </Stack>
+
+        <Text>{JSON.stringify(createPurchaseOrder, null, 2)}</Text>
       </ScrollView>
     </Screen>
   );

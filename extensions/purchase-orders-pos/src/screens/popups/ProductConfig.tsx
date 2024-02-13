@@ -48,12 +48,12 @@ export function ProductConfig() {
       overrideNavigateBack={() => unsavedChangesDialog.show()}
     >
       <ScrollView>
-        {product && productVariant && (
+        {product && (
           <Stack direction="vertical" spacing={5} flexChildren flex={1}>
             <Stack direction="vertical">
-              <Text variant="headingLarge">{getProductVariantName(productVariant)}</Text>
+              <Text variant="headingLarge">{getProductVariantName(productVariant) ?? 'Unknown Product'}</Text>
               <Text variant="body" color="TextSubdued">
-                {productVariant.sku}
+                {productVariant?.sku}
               </Text>
             </Stack>
 

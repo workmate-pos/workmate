@@ -22,10 +22,9 @@ export function StringField({
   const [internalState, setInternalState] = useState(value);
   const [error, setError] = useState('');
 
-  // trigger initial validation without showing error
   useEffect(() => {
-    change(internalState);
-  }, []);
+    change(value);
+  }, [value]);
 
   const change = (value: string) => {
     setInternalState(value);

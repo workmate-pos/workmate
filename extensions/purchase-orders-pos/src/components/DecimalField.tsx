@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TextField } from '@shopify/retail-ui-extensions-react';
 import { BigDecimal, Decimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
@@ -30,6 +30,10 @@ export function DecimalField<const AllowEmpty extends boolean>({
 }) {
   const [internalState, setInternalState] = useState(value ?? '');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    change(value ?? '');
+  }, [value]);
 
   const change = (value: string) => {
     setInternalState(value);
