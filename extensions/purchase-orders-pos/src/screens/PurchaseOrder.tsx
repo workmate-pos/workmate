@@ -205,7 +205,7 @@ export function PurchaseOrder() {
 
             <ResponsiveGrid columns={1}>
               <ResponsiveGrid columns={2}>
-                <TextField label={'some more fields'} />
+                <Text>some more fields</Text>
               </ResponsiveGrid>
 
               <Button
@@ -221,7 +221,6 @@ export function PurchaseOrder() {
   );
 }
 
-// TODO: Fix image not working
 function useProductRows(
   { products }: Pick<CreatePurchaseOrder, 'products' | 'locationId'>,
   query: string,
@@ -296,7 +295,7 @@ const useVendorChangeWarningDialog = (
 };
 
 const useSelectVendorBeforeAddingProductsDialog = (
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorCustomerId' | 'vendorName'>,
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorCustomerId' | 'vendorName' | 'locationId' | 'locationName'>,
   openVendorPopup: PopupNavigateFn<'VendorSelector'>,
   openProductSelectorPopup: PopupNavigateFn<'ProductSelector'>,
 ) => {
