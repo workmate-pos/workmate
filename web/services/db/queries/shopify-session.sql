@@ -7,6 +7,10 @@ FROM "ShopifySession"
 WHERE id IN :ids!
 RETURNING *;
 
+/* @name removeByShop */
+DELETE FROM "ShopifySession"
+WHERE shop = :shop!;
+
 /* @name get */
 SELECT *
 FROM "ShopifySession"

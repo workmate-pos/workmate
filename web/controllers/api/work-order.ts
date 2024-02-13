@@ -18,11 +18,13 @@ import { sessionStorage } from '../../index.js';
 import { calculateDraftOrder } from '../../services/work-orders/calculate.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { Permission } from '../../decorators/permission.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
   @BodySchema('calculate-work-order')
   @Authenticated()
+  @Permission('read_work_orders')
   async getDraftDetails(
     req: Request<unknown, unknown, CalculateWorkOrder>,
     res: Response<CalculateDraftOrderResponse>,
@@ -38,6 +40,7 @@ export default class WorkOrderController {
   @Post('/')
   @BodySchema('create-work-order')
   @Authenticated()
+  @Permission('write_work_orders')
   async createWorkOrder(req: Request<unknown, unknown, CreateWorkOrder>, res: Response<CreateWorkOrderResponse>) {
     const session: Session = res.locals.shopify.session;
     const createWorkOrder = req.body;
@@ -97,6 +100,7 @@ export default class WorkOrderController {
   @Get('/')
   @QuerySchema('work-order-pagination-options')
   @Authenticated()
+  @Permission('read_work_orders')
   async fetchWorkOrderInfoPage(
     req: Request<unknown, unknown, unknown, WorkOrderPaginationOptions>,
     res: Response<FetchWorkOrderInfoPageResponse>,
@@ -111,6 +115,7 @@ export default class WorkOrderController {
 
   @Get('/:name')
   @Authenticated()
+  @Permission('read_work_orders')
   async fetchWorkOrder(req: Request<{ name: string }>, res: Response<FetchWorkOrderResponse>) {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;

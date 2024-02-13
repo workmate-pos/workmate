@@ -52,12 +52,26 @@ model WorkOrder {
   @@index([orderId])
 }
 
-model EmployeeRate {
+model Employee {
   employeeId String
   shop       String
-  rate       String
+
+  superuser   Boolean
+  permissions PermissionNode[]
+  rate        String?
 
   @@id([shop, employeeId])
+}
+
+enum PermissionNode {
+  read_settings
+  write_settings
+  read_employees
+  write_employees
+  read_work_orders
+  write_work_orders
+  read_app_plan
+  write_app_plan
 }
 
 model FixedPriceLabour {
@@ -89,4 +103,73 @@ model HourlyLabour {
 
   rate  String
   hours String
+}
+
+model AppPlanSubscription {
+  appSubscriptionShopifyId String
+  shop                     String   @id
+  appSubscriptionStatus    String
+  appPlanId                Int
+  updatedAt                DateTime @default(now()) @db.Timestamptz(3)
+  appPlan                  AppPlan  @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
+}
+
+model AppPlanSubscriptionTrials {
+  shop      String   @id
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model AppPlan {
+  id Int @id @default(autoincrement())
+
+  name     AppPlanName
+  type     AppPlanType
+  interval AppPlanInterval
+
+  allowedShopifyPlans ShopifyPlan[]
+
+  basePrice    Int
+  currencyCode String
+
+  extraLocationPrices Int[]
+  maxLocations        Int?
+
+  /// Whether this app plan is only available as a trial. Useful when trial plans differ from full plans.
+  trialOnly Boolean
+  trialDays Int
+
+  createdAt            DateTime              @default(now()) @db.Timestamptz(3)
+  appPlanSubscriptions AppPlanSubscription[]
+  appPlanCustomAccess  AppPlanCustomAccess[]
+}
+
+model AppPlanCustomAccess {
+  appPlanId Int
+  shop      String
+  appPlan   AppPlan @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
+
+  @@id([appPlanId, shop])
+}
+
+enum AppPlanName {
+  FREE
+  ESSENTIAL
+  ENTERPRISE
+}
+
+enum ShopifyPlan {
+  BASIC
+  SHOPIFY
+  ADVANCED
+  PLUS
+}
+
+enum AppPlanType {
+  DEFAULT
+  CUSTOM
+}
+
+enum AppPlanInterval {
+  EVERY_30_DAYS
+  ANNUAL
 }

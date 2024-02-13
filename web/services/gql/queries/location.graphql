@@ -1,0 +1,8 @@
+query searchLocations($query: String, $first: Int = 25) {
+  locations(query: $query, first: $first) {
+    nodes {
+      id
+      name
+    }
+  }
+}

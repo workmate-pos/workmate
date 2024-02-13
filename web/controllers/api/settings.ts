@@ -3,10 +3,12 @@ import { getShopSettings, updateSettings } from '../../services/settings.js';
 import { Session } from '@shopify/shopify-api';
 import { Authenticated, BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import type { Request, Response } from 'express-serve-static-core';
+import { Permission } from '../../decorators/permission.js';
 
 @Authenticated()
 export default class SettingsController {
   @Get('/')
+  @Permission('read_settings')
   async fetchSettings(req: Request, res: Response) {
     const session: Session = res.locals.shopify.session;
     const settings = await getShopSettings(session.shop);
@@ -15,6 +17,7 @@ export default class SettingsController {
 
   @Post('/')
   @BodySchema('partial-shop-settings')
+  @Permission('write_settings')
   async updateSetting(req: Request<unknown, unknown, PartialShopSettings>, res: Response) {
     const { shop }: Session = res.locals.shopify.session;
     const settings = req.body;

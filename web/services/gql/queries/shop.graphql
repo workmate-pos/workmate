@@ -1,0 +1,11 @@
+query getShop {
+  shop {
+    name
+    currencyCode
+    plan {
+      displayName
+      partnerDevelopment
+      shopifyPlus
+    }
+  }
+}
