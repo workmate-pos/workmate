@@ -48,7 +48,7 @@ export function CustomFieldConfig() {
     <Screen title="Custom Fields" overrideNavigateBack={unsavedChangesDialog.show} presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction={'horizontal'} alignment={'center'}>
-          <Text variant={'headingSmall'}>Custom Fields</Text>
+          <Text variant={'headingLarge'}>Custom Fields</Text>
         </Stack>
 
         <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
@@ -71,7 +71,7 @@ export function CustomFieldConfig() {
                 type={'destructive'}
                 onPress={() => {
                   setHasUnsavedChanges(true);
-                  setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k, v]) => k !== key)));
+                  setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)));
                 }}
               />,
             ])}

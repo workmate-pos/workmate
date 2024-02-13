@@ -15,10 +15,9 @@ export type CreatePurchaseOrderAction =
       type: 'updateProduct';
       product: Product;
     }
-  | {
+  | ({
       type: 'set';
-      purchaseOrder: CreatePurchaseOrder;
-    }
+    } & CreatePurchaseOrder)
   | ({
       type: 'setWorkOrder';
     } & Pick<CreatePurchaseOrder, 'workOrderName' | 'customerId' | 'customerName' | 'orderName' | 'orderId'>)
@@ -54,7 +53,8 @@ function createPurchaseOrderReducer(createPurchaseOrder: CreatePurchaseOrder, ac
   switch (action.type) {
     case 'setWorkOrder':
     case 'setOrder':
-    case 'setPartial': {
+    case 'setPartial':
+    case 'set': {
       const { type, ...partial } = action;
       const partialNotUndefined = Object.fromEntries(
         Object.entries(partial).filter(([, value]) => value !== undefined),
@@ -83,10 +83,6 @@ function createPurchaseOrderReducer(createPurchaseOrder: CreatePurchaseOrder, ac
           .map(product => (shouldMergeProducts(product, action.product) ? action.product : product))
           .filter(product => product.quantity > 0),
       };
-    }
-
-    case 'set': {
-      return action.purchaseOrder;
     }
 
     default:

@@ -15,6 +15,10 @@ export type ScreenInputOutput = {
     NonNullableValues<Pick<CreatePurchaseOrder, 'locationName' | 'locationId'>> & { product: Product },
     Product,
   ];
+  ProductCreator: [
+    NonNullableValues<Pick<CreatePurchaseOrder, 'locationId' | 'vendorName'>>,
+    CreatePurchaseOrder['products'][number],
+  ];
   ProductSelector: [
     NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>>,
     Product[],

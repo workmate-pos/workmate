@@ -1,0 +1,76 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "options": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "description": "A key-value pair. The name will be added to the product, and the value to the product variant",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": ["name", "value"],
+        "additionalProperties": false
+      }
+    },
+    "sku": {
+      "description": "The SKU of the product variant",
+      "anyOf": [{ "const": null }, { "type": "string" }]
+    },
+    "barcode": {
+      "description": "The barcode of the product variant",
+      "anyOf": [{ "const": null }, { "type": "string" }]
+    },
+    "productType": {
+      "description": "The type of the product",
+      "anyOf": [{ "const": null }, { "type": "string" }]
+    },
+    "price": {
+      "description": "The price of the product variant",
+      "$ref": "scalars.json#/definitions/Money"
+    },
+    "costPrice": {
+      "description": "The cost price of the product variant",
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "title": {
+      "type": "string",
+      "description": "The title of the product variant"
+    },
+    "allowOutOfStockPurchases": {
+      "type": "boolean",
+      "description": "Whether or not to allow out of stock purchases"
+    },
+    "vendor": {
+      "type": "string",
+      "description": "The vendor of the product variant"
+    },
+    "availableQuantity": {
+      "$ref": "scalars.json#/definitions/Int"
+    },
+    "locationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    }
+  },
+  "required": [
+    "options",
+    "sku",
+    "barcode",
+    "productType",
+    "price",
+    "costPrice",
+    "title",
+    "allowOutOfStockPurchases",
+    "vendor",
+    "locationId",
+    "availableQuantity"
+  ],
+  "additionalProperties": false
+}

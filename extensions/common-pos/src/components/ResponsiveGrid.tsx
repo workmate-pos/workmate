@@ -2,6 +2,8 @@ import { useScreenSize } from '../providers/ScreenSizeProvider.js';
 import { Children, ReactNode } from 'react';
 import { Stack } from '@shopify/retail-ui-extensions-react';
 
+export type ResponsiveGridProps = Parameters<typeof ResponsiveGrid>[0];
+
 /**
  * A responsive grid that changes the number of columns depending on the device.
  */

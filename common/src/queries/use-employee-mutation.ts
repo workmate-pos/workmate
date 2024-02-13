@@ -20,7 +20,7 @@ export const useEmployeeMutation = (
       });
 
       if (!response.ok) {
-        throw new Error('Failed to mutate app plan');
+        throw new Error('Failed to mutate update employee');
       }
 
       const result: UpsertEmployeesResponse = await response.json();

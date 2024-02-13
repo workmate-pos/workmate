@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { Int, Product } from '@web/schemas/generated/create-purchase-order.js';
-import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -20,13 +20,15 @@ export function ProductSelector() {
   const [locationName, setLocationName] = useState<string | null>(null);
   const [locationId, setLocationId] = useState<ID | null>(null);
 
-  const { Screen, closePopup } = useScreen('ProductSelector', ({ vendorName, locationName, locationId }) => {
+  const { Screen, usePopup, closePopup } = useScreen('ProductSelector', ({ vendorName, locationName, locationId }) => {
     setQuery('', true);
     setSelectedProducts([]);
     setVendorName(vendorName);
     setLocationName(locationName);
     setLocationId(locationId);
   });
+
+  const createProductPopup = usePopup('ProductCreator', product => selectProduct(product));
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
@@ -63,6 +65,24 @@ export function ProductSelector() {
             </Text>
           </Stack>
         )}
+
+        <Button
+          title={'New Product'}
+          variant={'primary'}
+          onPress={() => {
+            if (!locationId) {
+              toast.show('Location id not set');
+              return;
+            }
+
+            if (!vendorName) {
+              toast.show('Vendor name not set');
+              return;
+            }
+
+            createProductPopup.navigate({ locationId, vendorName });
+          }}
+        />
 
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">

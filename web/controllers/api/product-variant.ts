@@ -6,8 +6,7 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import { gql } from '../../services/gql/gql.js';
 import type { Ids } from '../../schemas/generated/ids.js';
 import { getShopSettings } from '../../services/settings.js';
-import { parseMetaobject } from '../../services/metaobjects/index.js';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { parseProductVariantMetafields, ProductVariantFragmentWithMetafields } from '../../services/product-variant.js';
 
 @Authenticated()
 export default class ProductVariantController {
@@ -74,17 +73,3 @@ export type FetchProductsResponse = {
 export type FetchProductsByIdResponse = {
   productVariants: (ProductVariantFragmentWithMetafields | null)[];
 };
-
-function parseProductVariantMetafields(productVariant: gql.products.ProductVariantFragment.Result) {
-  return {
-    ...productVariant,
-    defaultCharges:
-      productVariant.defaultCharges?.references?.nodes
-        .filter(isNonNullable)
-        .filter(hasPropertyValue('__typename', 'Metaobject'))
-        .map(node => parseMetaobject(node))
-        .filter(isNonNullable) ?? [],
-  };
-}
-
-type ProductVariantFragmentWithMetafields = ReturnType<typeof parseProductVariantMetafields>;
