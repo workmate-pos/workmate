@@ -47,10 +47,10 @@ export function PurchaseOrder() {
   const locationSelectorPopup = usePopup('LocationSelector', location =>
     dispatch.setPartial({ locationId: location?.id ?? null, locationName: location?.name ?? null }),
   );
-  const vendorSelectorPopup = usePopup('VendorSelector', vendor =>
+  const vendorSelectorPopup = usePopup('VendorSelector', ({ vendorName, vendorCustomerId }) =>
     dispatch.setPartial({
-      vendorCustomerId: vendor.customerId,
-      vendorName: vendor.displayName,
+      vendorCustomerId,
+      vendorName,
       products: [],
     }),
   );

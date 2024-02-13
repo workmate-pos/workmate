@@ -1,4 +1,4 @@
-import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
+import { ClosePopupFn, useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useVendorsQuery, Vendor } from '@work-orders/common/queries/use-vendors-query.js';
 import { useState } from 'react';
@@ -15,8 +15,8 @@ export function VendorSelector() {
   });
 
   const fetch = useAuthenticatedFetch();
-  const vendorsQuery = useVendorsQuery({ fetch, params: {} });
-  const vendors = vendorsQuery.data?.pages ?? [];
+  const vendorsQuery = useVendorsQuery({ fetch });
+  const vendors = vendorsQuery.data ?? [];
 
   const rows = getVendorRows(vendors, query, closePopup);
 
@@ -34,7 +34,7 @@ export function VendorSelector() {
           onSearch={() => {}}
           placeholder="Search vendors"
         />
-        <List data={rows} onEndReached={() => vendorsQuery.fetchNextPage()} isLoadingMore={vendorsQuery.isLoading} />
+        <List data={rows} />
         {vendorsQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
@@ -61,19 +61,25 @@ export function VendorSelector() {
   );
 }
 
-function getVendorRows(vendors: Vendor[], query: string, selectVendor: (vendor: Vendor) => void) {
+function getVendorRows(vendors: Vendor[], query: string, selectVendor: ClosePopupFn<'VendorSelector'>) {
   query = query.trim();
 
   const queryFilter = (vendor: Vendor) => {
-    return !query || vendor.displayName.toLowerCase().includes(query.toLowerCase());
+    return !query || vendor.name.toLowerCase().includes(query.toLowerCase());
   };
 
   return vendors.filter(queryFilter).map<ListRow>(vendor => ({
-    id: vendor.id,
-    onPress: () => selectVendor(vendor),
+    id: vendor.name,
+    onPress: () =>
+      selectVendor({
+        vendorName: vendor.name,
+        vendorCustomerId: vendor.customer?.customerId ?? null,
+      }),
     leftSide: {
-      label: vendor.displayName,
-      subtitle: vendor.defaultAddress ? getFormattedAddressSubtitle(vendor.defaultAddress.formatted) : undefined,
+      label: vendor.name,
+      subtitle: vendor.customer?.defaultAddress
+        ? getFormattedAddressSubtitle(vendor.customer.defaultAddress.formatted)
+        : undefined,
     },
     rightSide: {
       showChevron: true,

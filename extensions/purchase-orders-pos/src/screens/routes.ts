@@ -1,6 +1,7 @@
 import type { Status, Product, CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import type { Location } from '@work-orders/common/queries/use-locations-query.js';
 import type { Vendor } from '@work-orders/common/queries/use-vendors-query.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export type ScreenInputOutput = {
   Entry: [undefined, undefined];
@@ -19,7 +20,7 @@ export type ScreenInputOutput = {
     Product[],
   ];
   StatusSelector: [undefined, Status];
-  VendorSelector: [undefined, Vendor];
+  VendorSelector: [undefined, { vendorName: string; vendorCustomerId: ID | null }];
   WorkOrderSelector: [
     undefined,
     Pick<CreatePurchaseOrder, 'workOrderName' | 'customerId' | 'customerName' | 'orderName' | 'orderId'>,
