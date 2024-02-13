@@ -8,7 +8,7 @@ import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/que
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 
 export function ProductSelector() {
@@ -35,10 +35,11 @@ export function ProductSelector() {
   const fetch = useAuthenticatedFetch();
 
   const vendorQuery = vendorName ? `vendor:"${vendorName}"` : '';
+  const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : '';
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
-      query: `${query} ${vendorQuery}`,
+      query: [query, vendorQuery, locationIdQuery].filter(Boolean).join(' AND '),
     },
   });
   const productVariants = productVariantsQuery.data?.pages ?? [];
