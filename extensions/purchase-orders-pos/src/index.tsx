@@ -11,6 +11,7 @@ import { VendorSelector } from './screens/popups/VendorSelector.js';
 import { DialogProvider } from '@work-orders/common-pos/providers/DialogProvider.js';
 import { CustomFieldConfig } from './screens/popups/CustomFieldConfig.js';
 import { PurchaseOrder } from './screens/PurchaseOrder.js';
+import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
 
 const SmartGridTile = () => {
   const { smartGrid } = useExtensionApi();
@@ -28,6 +29,7 @@ const SmartGridModal = () => {
             <PurchaseOrder />
 
             <CustomFieldConfig />
+            <EmployeeSelector />
             <LocationSelector />
             <ProductConfig />
             <ProductSelector />

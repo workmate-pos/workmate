@@ -21,7 +21,8 @@ export async function upsertPurchaseOrder({ shop }: Session, createPurchaseOrder
       shop,
       name,
       status: createPurchaseOrder.status,
-      salesOrderId: createPurchaseOrder.salesOrderId,
+      orderId: createPurchaseOrder.orderId,
+      orderName: createPurchaseOrder.orderName,
       workOrderName: createPurchaseOrder.workOrderName,
       locationId: createPurchaseOrder.locationId,
       customerId: createPurchaseOrder.customerId,
@@ -35,21 +36,20 @@ export async function upsertPurchaseOrder({ shop }: Session, createPurchaseOrder
     });
 
     await Promise.all([
-      db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
       db.purchaseOrder.removeProducts({ purchaseOrderId }),
+      db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
+      db.purchaseOrder.removeAssignedEmployees({ purchaseOrderId }),
     ]);
 
-    const insertPromises = [];
-
-    for (const product of createPurchaseOrder.products) {
-      insertPromises.push(db.purchaseOrder.insertProduct({ ...product, purchaseOrderId }));
-    }
-
-    for (const [key, value] of Object.entries(createPurchaseOrder.customFields)) {
-      insertPromises.push(db.purchaseOrder.insertCustomField({ purchaseOrderId, key, value }));
-    }
-
-    await Promise.all(insertPromises);
+    await Promise.all([
+      ...createPurchaseOrder.products.map(product => db.purchaseOrder.insertProduct({ ...product, purchaseOrderId })),
+      ...Object.entries(createPurchaseOrder.customFields).map(([key, value]) =>
+        db.purchaseOrder.insertCustomField({ purchaseOrderId, key, value }),
+      ),
+      ...createPurchaseOrder.employeeAssignments.map(employee =>
+        db.purchaseOrder.insertAssignedEmployee({ ...employee, purchaseOrderId }),
+      ),
+    ]);
 
     // TODO: Also update shopify inventory depending on how the status changed
 

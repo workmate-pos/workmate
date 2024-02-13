@@ -52,6 +52,9 @@ export function PurchaseOrder() {
     }),
   );
   const customFieldConfigPopup = usePopup('CustomFieldConfig', customFields => dispatch.setPartial({ customFields }));
+  const employeeSelectorPopup = usePopup('EmployeeSelector', employeeAssignments =>
+    dispatch.setPartial({ employeeAssignments }),
+  );
 
   const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, vendorSelectorPopup.navigate);
   const selectVendorBeforeAddingProductsDialog = useSelectVendorBeforeAddingProductsDialog(
@@ -164,9 +167,10 @@ export function PurchaseOrder() {
 
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={3}>
-            <TextField
-              label={'Sales Order #'}
-              onChange={(salesOrderId: string) => dispatch.setPartial({ salesOrderId: salesOrderId || null })}
+            <TextArea
+              label={'Assigned Employees'}
+              value={createPurchaseOrder.employeeAssignments.map(({ employeeName }) => employeeName).join(', ')}
+              onFocus={() => employeeSelectorPopup.navigate(createPurchaseOrder.employeeAssignments)}
             />
 
             {Object.entries(createPurchaseOrder.customFields).map(([key, value], i) => (

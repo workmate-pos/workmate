@@ -23,10 +23,22 @@ export async function getAppNamespace(session: Session): Promise<string> {
   return `app--${parseGid(appId).id}`;
 }
 
+/**
+ * Resolves a namespace, replacing $app if it exists. Supports both standalone `$app` and `$app:some-namespace`.
+ * {@link https://shopify.dev/docs/apps/custom-data/ownership}
+ */
 export async function resolveNamespace(session: Session, namespace: string) {
-  if (namespace === '$app') {
-    return getAppNamespace(session);
+  // $app:some-namespace maps to app--123456--some-namespace
+
+  if (!namespace.startsWith('$app')) {
+    return namespace;
   }
 
-  return namespace;
+  const appNamespace = await getAppNamespace(session);
+
+  if (namespace.startsWith('$app:')) {
+    return `${appNamespace}--${namespace.slice('$app:'.length)}`;
+  }
+
+  return appNamespace;
 }

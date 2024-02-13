@@ -1,19 +1,19 @@
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
+import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { useState } from 'react';
-import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { useScreen } from '../../hooks/use-screen.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
-import { ID } from '@web/schemas/generated/ids.js';
+import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function EmployeeSelector() {
-  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<ID[]>([]);
+  const [selectedEmployees, setSelectedEmployees] = useState<CreatePurchaseOrder['employeeAssignments']>([]);
   const [query, setQuery] = useDebouncedState('');
 
-  const { Screen, closePopup } = useScreen('EmployeeSelector', ids => {
-    setSelectedEmployeeIds(ids);
+  const { Screen, closePopup } = useScreen('EmployeeSelector', employees => {
+    setSelectedEmployees(employees);
     setQuery('', true);
   });
 
@@ -21,16 +21,14 @@ export function EmployeeSelector() {
   const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
   const employees = employeesQuery.data?.pages ?? [];
 
-  const rows = getEmployeeRows(employees, selectedEmployeeIds, setSelectedEmployeeIds);
-
-  const close = () => {
-    const selected = employees.filter(e => selectedEmployeeIds.includes(e.id)).map(e => e.id);
-
-    closePopup(selected);
-  };
+  const rows = getEmployeeRows(employees, query, selectedEmployees, setSelectedEmployees);
 
   return (
-    <Screen title="Select employee" presentation={{ sheet: true }} overrideNavigateBack={close}>
+    <Screen
+      title={'Select Employees'}
+      presentation={{ sheet: true }}
+      overrideNavigateBack={() => closePopup(selectedEmployees)}
+    >
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -76,33 +74,32 @@ export function EmployeeSelector() {
   );
 }
 
-function getEmployeeRows(employees: Employee[], selectedEmployeeIds: ID[], setSelectedEmployees: (ids: ID[]) => void) {
-  return employees.map<ListRow>(({ id, name }) => ({
-    id,
-    onPress: () => {
-      const selected = selectedEmployeeIds.includes(id);
-      if (selected) {
-        setSelectedEmployees(selectedEmployeeIds.filter(e => e !== id));
-      } else {
-        setSelectedEmployees([...selectedEmployeeIds, id]);
-      }
-    },
-    leftSide: {
-      label: name,
-      badges: [
-        // TODO: add badges
-        // {
-        //   text: `${assignments} assignments`,
-        //   variant:
-        //     assignments > 7 ? 'critical' : assignments > 3 ? 'warning' : assignments === 0 ? 'success' : 'neutral',
-        //   status: assignments === 0 ? 'empty' : assignments === 10 ? 'complete' : 'partial',
-        // },
-      ],
-    },
-    rightSide: {
-      toggleSwitch: {
-        value: selectedEmployeeIds.includes(id),
+function getEmployeeRows(
+  employees: Employee[],
+  query: string,
+  selectedEmployees: CreatePurchaseOrder['employeeAssignments'],
+  setSelectedEmployees: (employees: CreatePurchaseOrder['employeeAssignments']) => void,
+) {
+  return employees.map<ListRow>(employee => {
+    const selected = selectedEmployees.some(e => e.employeeId === employee.id);
+
+    return {
+      id: employee.id,
+      onPress: () => {
+        if (selected) {
+          setSelectedEmployees(selectedEmployees.filter(e => e.employeeId !== employee.id));
+        } else {
+          setSelectedEmployees([...selectedEmployees, { employeeId: employee.id, employeeName: employee.name }]);
+        }
       },
-    },
-  }));
+      leftSide: {
+        label: employee.name,
+      },
+      rightSide: {
+        toggleSwitch: {
+          value: selected,
+        },
+      },
+    };
+  });
 }

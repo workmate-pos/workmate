@@ -17,14 +17,17 @@ export async function getPurchaseOrder(session: Session, name: string): Promise<
   assertGidOrNull(purchaseOrder.locationId);
   assertGidOrNull(purchaseOrder.customerId);
   assertGidOrNull(purchaseOrder.vendorCustomerId);
+  assertGidOrNull(purchaseOrder.orderId);
 
   const products = await getPurchaseOrderProducts(purchaseOrder.id);
   const customFields = await getPurchaseOrderCustomFields(purchaseOrder.id);
+  const employeeAssignments = await getPurchaseOrderEmployeeAssignments(purchaseOrder.id);
 
   return {
     name: purchaseOrder.name,
     status: purchaseOrder.status,
-    salesOrderId: purchaseOrder.salesOrderId,
+    orderId: purchaseOrder.orderId,
+    orderName: purchaseOrder.orderName,
     workOrderName: purchaseOrder.workOrderName,
     locationId: purchaseOrder.locationId,
     customerId: purchaseOrder.customerId,
@@ -37,6 +40,7 @@ export async function getPurchaseOrder(session: Session, name: string): Promise<
     locationName: purchaseOrder.locationName,
     customFields,
     products,
+    employeeAssignments,
   };
 }
 
@@ -61,25 +65,22 @@ export async function getPurchaseOrderInfoPage(
 
 async function getPurchaseOrderProducts(purchaseOrderId: number) {
   const products = await db.purchaseOrder.getProducts({ purchaseOrderId });
-  return products.map(({ productVariantId, quantity, ...product }) => {
+  return products.map<PurchaseOrder['products'][number]>(({ productVariantId, quantity, name, sku, handle }) => {
     assertGid(productVariantId);
     assertInt(quantity);
-    return { ...product, productVariantId, quantity };
+    return { productVariantId, quantity, name, sku, handle };
   });
 }
 
 async function getPurchaseOrderCustomFields(purchaseOrderId: number) {
-  const result: Record<string, string> = {};
-
   const customFields = await db.purchaseOrder.getCustomFields({ purchaseOrderId });
+  return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
+}
 
-  for (const { key, value } of customFields) {
-    if (key in customFields) {
-      throw new Error(`Duplicate custom field key: ${key}`);
-    }
-
-    result[key] = value;
-  }
-
-  return result;
+async function getPurchaseOrderEmployeeAssignments(purchaseOrderId: number) {
+  const employeeAssignments = await db.purchaseOrder.getAssignedEmployees({ purchaseOrderId });
+  return employeeAssignments.map<PurchaseOrder['employeeAssignments'][number]>(({ employeeId, employeeName }) => {
+    assertGid(employeeId);
+    return { employeeId, employeeName };
+  });
 }

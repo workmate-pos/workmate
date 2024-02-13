@@ -183,34 +183,36 @@ enum AppPlanInterval {
 }
 
 model PurchaseOrder {
-  id     Int                 @id @default(autoincrement())
-  shop   String
+  id Int @id @default(autoincrement())
+
+  shop String
+
+  locationId       String?
+  customerId       String?
+  vendorCustomerId String?
+  orderId          String?
+
+  // Searchable fields
+
   /// Shop specific name
   name   String
   status PurchaseOrderStatus
 
-  /// The vendor's invoice's id
-  salesOrderId String?
-
   workOrder     WorkOrder? @relation(fields: [shop, workOrderName], references: [shop, name])
   workOrderName String?
-
-  locationId String?
-
-  customerId       String?
-  vendorCustomerId String?
 
   shipFrom String?
   shipTo   String?
 
-  // Searchable fields
   note         String?
   vendorName   String?
   customerName String?
   locationName String?
+  orderName    String?
 
-  products     PurchaseOrderProduct[]
-  customFields PurchaseOrderCustomField[]
+  products            PurchaseOrderProduct[]
+  customFields        PurchaseOrderCustomField[]
+  employeeAssignments PurchaseOrderEmployeeAssignment[]
 
   createdAt DateTime @default(now())
 
@@ -225,6 +227,7 @@ model PurchaseOrderCustomField {
   purchaseOrderId Int
 
   key   String
+  // Searchable
   value String
 
   @@unique([purchaseOrderId, key])
@@ -252,4 +255,16 @@ enum PurchaseOrderStatus {
   RECEIVED
   CANCELLED
   CLOSED
+}
+
+model PurchaseOrderEmployeeAssignment {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  employeeId String
+
+  // Searchable fields
+  employeeName String?
 }

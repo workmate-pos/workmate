@@ -7,6 +7,7 @@ export type ScreenInputOutput = {
   PurchaseOrder: [CreatePurchaseOrder | null, undefined];
 
   CustomFieldConfig: [Pick<CreatePurchaseOrder, 'customFields'>, Record<string, string>];
+  EmployeeSelector: [CreatePurchaseOrder['employeeAssignments'], CreatePurchaseOrder['employeeAssignments']];
   LocationSelector: [undefined, Location];
   ProductConfig: [Product, Product];
   ProductSelector: [Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>, Product[]];

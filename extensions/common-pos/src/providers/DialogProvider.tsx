@@ -42,9 +42,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     onAction: () => {},
   });
 
-  const show = ({ onAction, showDialog, props }: ShowDialogOptions) => {
+  const show = ({ showDialog, props, ...rest }: ShowDialogOptions) => {
     const isVisible = showDialog !== false;
-    setDialogProps(current => ({ ...current, ...props, isVisible, onAction }));
+    setDialogProps(current => ({ ...current, ...props, isVisible, ...rest }));
 
     if (!isVisible) {
       onAction();

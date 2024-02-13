@@ -10,16 +10,13 @@
       "title": "status",
       "enum": ["OPEN", "RECEIVED", "CANCELLED", "CLOSED"]
     },
-    "salesOrderId": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+    "orderId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
     },
     "workOrderName": {
+      "anyOf": [{ "const": null }, { "type": "string" }]
+    },
+    "orderName": {
       "anyOf": [{ "const": null }, { "type": "string" }]
     },
     "locationId": {
@@ -131,13 +128,30 @@
       "additionalProperties": {
         "type": "string"
       }
+    },
+    "employeeAssignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "employeeName": {
+            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+          }
+        },
+        "required": ["employeeId", "employeeName"],
+        "additionalProperties": false
+      }
     }
   },
   "required": [
     "name",
     "status",
-    "salesOrderId",
+    "orderId",
     "workOrderName",
+    "orderName",
     "locationId",
     "customerId",
     "vendorCustomerId",
@@ -148,7 +162,8 @@
     "customerName",
     "locationName",
     "products",
-    "customFields"
+    "customFields",
+    "employeeAssignments"
   ],
   "additionalProperties": false
 }

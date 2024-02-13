@@ -27,7 +27,7 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"customerId":true,"query":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":231,"b":236}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":265,"b":271}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":337,"b":347}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":400,"b":405},{"a":443,"b":448},{"a":494,"b":499},{"a":547,"b":552},{"a":600,"b":605},{"a":653,"b":658},{"a":700,"b":705},{"a":749,"b":754},{"a":803,"b":808},{"a":847,"b":852},{"a":890,"b":895},{"a":936,"b":941},{"a":982,"b":987}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":1025,"b":1031}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":1040,"b":1046}]}],"statement":"SELECT DISTINCT po.id, po.name\nFROM \"PurchaseOrder\" po\n       LEFT JOIN \"PurchaseOrderProduct\" pop ON po.id = pop.\"purchaseOrderId\"\n       LEFT JOIN \"PurchaseOrderCustomField\" pocf ON po.id = pocf.\"purchaseOrderId\"\nWHERE po.shop = :shop!\n  AND po.status = COALESCE(:status, po.status)\n  AND po.\"customerId\" IS NOT DISTINCT FROM COALESCE(:customerId, po.\"customerId\")\n  AND (\n  po.name ILIKE COALESCE(:query, '%')\n    OR po.note ILIKE COALESCE(:query, '%')\n    OR po.\"vendorName\" ILIKE COALESCE(:query, '%')\n    OR po.\"customerName\" ILIKE COALESCE(:query, '%')\n    OR po.\"locationName\" ILIKE COALESCE(:query, '%')\n    OR po.\"salesOrderId\" ILIKE COALESCE(:query, '%')\n    OR po.\"shipTo\" ILIKE COALESCE(:query, '%')\n    OR po.\"shipFrom\" ILIKE COALESCE(:query, '%')\n    OR po.\"workOrderName\" ILIKE COALESCE(:query, '%')\n    OR pop.name ILIKE COALESCE(:query, '%')\n    OR pop.sku ILIKE COALESCE(:query, '%')\n    OR pop.handle ILIKE COALESCE(:query, '%')\n    OR pocf.value ILIKE COALESCE(:query, '%')\n  )\nORDER BY po.id DESC\nLIMIT :limit! OFFSET :offset"};
+const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"customerId":true,"query":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":321,"b":326}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":355,"b":361}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":427,"b":437}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":490,"b":495},{"a":533,"b":538},{"a":584,"b":589},{"a":637,"b":642},{"a":690,"b":695},{"a":740,"b":745},{"a":787,"b":792},{"a":836,"b":841},{"a":890,"b":895},{"a":934,"b":939},{"a":977,"b":982},{"a":1023,"b":1028},{"a":1069,"b":1074},{"a":1124,"b":1129}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":1167,"b":1173}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":1182,"b":1188}]}],"statement":"SELECT DISTINCT po.id, po.name\nFROM \"PurchaseOrder\" po\n       LEFT JOIN \"PurchaseOrderProduct\" pop ON po.id = pop.\"purchaseOrderId\"\n       LEFT JOIN \"PurchaseOrderCustomField\" pocf ON po.id = pocf.\"purchaseOrderId\"\n       LEFT JOIN \"PurchaseOrderEmployeeAssignment\" poea ON po.id = poea.\"purchaseOrderId\"\nWHERE po.shop = :shop!\n  AND po.status = COALESCE(:status, po.status)\n  AND po.\"customerId\" IS NOT DISTINCT FROM COALESCE(:customerId, po.\"customerId\")\n  AND (\n  po.name ILIKE COALESCE(:query, '%')\n    OR po.note ILIKE COALESCE(:query, '%')\n    OR po.\"vendorName\" ILIKE COALESCE(:query, '%')\n    OR po.\"customerName\" ILIKE COALESCE(:query, '%')\n    OR po.\"locationName\" ILIKE COALESCE(:query, '%')\n    OR po.\"orderName\" ILIKE COALESCE(:query, '%')\n    OR po.\"shipTo\" ILIKE COALESCE(:query, '%')\n    OR po.\"shipFrom\" ILIKE COALESCE(:query, '%')\n    OR po.\"workOrderName\" ILIKE COALESCE(:query, '%')\n    OR pop.name ILIKE COALESCE(:query, '%')\n    OR pop.sku ILIKE COALESCE(:query, '%')\n    OR pop.handle ILIKE COALESCE(:query, '%')\n    OR pocf.value ILIKE COALESCE(:query, '%')\n    OR poea.\"employeeName\" ILIKE COALESCE(:query, '%')\n  )\nORDER BY po.id DESC\nLIMIT :limit! OFFSET :offset"};
 
 /**
  * Query generated from SQL:
@@ -36,6 +36,7 @@ const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"customerId":t
  * FROM "PurchaseOrder" po
  *        LEFT JOIN "PurchaseOrderProduct" pop ON po.id = pop."purchaseOrderId"
  *        LEFT JOIN "PurchaseOrderCustomField" pocf ON po.id = pocf."purchaseOrderId"
+ *        LEFT JOIN "PurchaseOrderEmployeeAssignment" poea ON po.id = poea."purchaseOrderId"
  * WHERE po.shop = :shop!
  *   AND po.status = COALESCE(:status, po.status)
  *   AND po."customerId" IS NOT DISTINCT FROM COALESCE(:customerId, po."customerId")
@@ -45,7 +46,7 @@ const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"customerId":t
  *     OR po."vendorName" ILIKE COALESCE(:query, '%')
  *     OR po."customerName" ILIKE COALESCE(:query, '%')
  *     OR po."locationName" ILIKE COALESCE(:query, '%')
- *     OR po."salesOrderId" ILIKE COALESCE(:query, '%')
+ *     OR po."orderName" ILIKE COALESCE(:query, '%')
  *     OR po."shipTo" ILIKE COALESCE(:query, '%')
  *     OR po."shipFrom" ILIKE COALESCE(:query, '%')
  *     OR po."workOrderName" ILIKE COALESCE(:query, '%')
@@ -53,6 +54,7 @@ const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"customerId":t
  *     OR pop.sku ILIKE COALESCE(:query, '%')
  *     OR pop.handle ILIKE COALESCE(:query, '%')
  *     OR pocf.value ILIKE COALESCE(:query, '%')
+ *     OR poea."employeeName" ILIKE COALESCE(:query, '%')
  *   )
  * ORDER BY po.id DESC
  * LIMIT :limit! OFFSET :offset
@@ -78,7 +80,8 @@ export interface IGetResult {
   locationName: string | null;
   name: string;
   note: string | null;
-  salesOrderId: string | null;
+  orderId: string | null;
+  orderName: string | null;
   shipFrom: string | null;
   shipTo: string | null;
   shop: string;
@@ -117,7 +120,8 @@ export interface IUpsertParams {
   locationName?: string | null | void;
   name: string;
   note?: string | null | void;
-  salesOrderId?: string | null | void;
+  orderId?: string | null | void;
+  orderName?: string | null | void;
   shipFrom?: string | null | void;
   shipTo?: string | null | void;
   shop: string;
@@ -138,29 +142,30 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"salesOrderId":true,"workOrderName":true,"locationId":true,"customerId":true,"vendorCustomerId":true,"note":true,"vendorName":true,"customerName":true,"locationName":true,"shipFrom":true,"shipTo":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":270,"b":275}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":278,"b":283}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":286,"b":293},{"a":512,"b":519}]},{"name":"salesOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":296,"b":308},{"a":549,"b":561}]},{"name":"workOrderName","required":false,"transform":{"type":"scalar"},"locs":[{"a":311,"b":324},{"a":591,"b":604}]},{"name":"locationId","required":false,"transform":{"type":"scalar"},"locs":[{"a":327,"b":337},{"a":634,"b":644}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":340,"b":350},{"a":674,"b":684}]},{"name":"vendorCustomerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":353,"b":369},{"a":714,"b":730}]},{"name":"note","required":false,"transform":{"type":"scalar"},"locs":[{"a":372,"b":376},{"a":760,"b":764}]},{"name":"vendorName","required":false,"transform":{"type":"scalar"},"locs":[{"a":387,"b":397},{"a":794,"b":804}]},{"name":"customerName","required":false,"transform":{"type":"scalar"},"locs":[{"a":400,"b":412},{"a":834,"b":846}]},{"name":"locationName","required":false,"transform":{"type":"scalar"},"locs":[{"a":415,"b":427},{"a":876,"b":888}]},{"name":"shipFrom","required":false,"transform":{"type":"scalar"},"locs":[{"a":430,"b":438},{"a":918,"b":926}]},{"name":"shipTo","required":false,"transform":{"type":"scalar"},"locs":[{"a":441,"b":447},{"a":956,"b":962}]}],"statement":"INSERT INTO \"PurchaseOrder\" (shop, name, status, \"salesOrderId\", \"workOrderName\", \"locationId\", \"customerId\",\n                             \"vendorCustomerId\", note, \"vendorName\", \"customerName\", \"locationName\", \"shipFrom\",\n                             \"shipTo\")\nVALUES (:shop!, :name!, :status!, :salesOrderId, :workOrderName, :locationId, :customerId, :vendorCustomerId, :note,\n        :vendorName, :customerName, :locationName, :shipFrom, :shipTo)\nON CONFLICT (shop, name) DO UPDATE\n  SET status             = :status!,\n      \"salesOrderId\"     = :salesOrderId,\n      \"workOrderName\"    = :workOrderName,\n      \"locationId\"       = :locationId,\n      \"customerId\"       = :customerId,\n      \"vendorCustomerId\" = :vendorCustomerId,\n      note               = :note,\n      \"vendorName\"       = :vendorName,\n      \"customerName\"     = :customerName,\n      \"locationName\"     = :locationName,\n      \"shipFrom\"         = :shipFrom,\n      \"shipTo\"           = :shipTo\nRETURNING id"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"locationId":true,"customerId":true,"vendorCustomerId":true,"note":true,"vendorName":true,"customerName":true,"locationName":true,"shipFrom":true,"shipTo":true,"workOrderName":true,"orderId":true,"orderName":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":278,"b":283}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":286,"b":291}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":294,"b":301},{"a":526,"b":533}]},{"name":"locationId","required":false,"transform":{"type":"scalar"},"locs":[{"a":304,"b":314},{"a":562,"b":572}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":317,"b":327},{"a":601,"b":611}]},{"name":"vendorCustomerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":330,"b":346},{"a":640,"b":656}]},{"name":"note","required":false,"transform":{"type":"scalar"},"locs":[{"a":349,"b":353},{"a":685,"b":689}]},{"name":"vendorName","required":false,"transform":{"type":"scalar"},"locs":[{"a":356,"b":366},{"a":718,"b":728}]},{"name":"customerName","required":false,"transform":{"type":"scalar"},"locs":[{"a":369,"b":381},{"a":757,"b":769}]},{"name":"locationName","required":false,"transform":{"type":"scalar"},"locs":[{"a":392,"b":404},{"a":798,"b":810}]},{"name":"shipFrom","required":false,"transform":{"type":"scalar"},"locs":[{"a":407,"b":415},{"a":839,"b":847}]},{"name":"shipTo","required":false,"transform":{"type":"scalar"},"locs":[{"a":418,"b":424},{"a":876,"b":882}]},{"name":"workOrderName","required":false,"transform":{"type":"scalar"},"locs":[{"a":427,"b":440},{"a":911,"b":924}]},{"name":"orderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":443,"b":450},{"a":953,"b":960}]},{"name":"orderName","required":false,"transform":{"type":"scalar"},"locs":[{"a":453,"b":462},{"a":989,"b":998}]}],"statement":"INSERT INTO \"PurchaseOrder\" (shop, name, status, \"locationId\", \"customerId\", \"vendorCustomerId\", note, \"vendorName\",\n                             \"customerName\", \"locationName\", \"shipFrom\", \"shipTo\", \"workOrderName\", \"orderId\",\n                             \"orderName\")\nVALUES (:shop!, :name!, :status!, :locationId, :customerId, :vendorCustomerId, :note, :vendorName, :customerName,\n        :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName)\nON CONFLICT (shop, name) DO UPDATE\n  SET status            = :status!,\n      \"locationId\"      = :locationId,\n      \"customerId\"      = :customerId,\n      \"vendorCustomerId\"= :vendorCustomerId,\n      note              = :note,\n      \"vendorName\"      = :vendorName,\n      \"customerName\"    = :customerName,\n      \"locationName\"    = :locationName,\n      \"shipFrom\"        = :shipFrom,\n      \"shipTo\"          = :shipTo,\n      \"workOrderName\"   = :workOrderName,\n      \"orderId\"         = :orderId,\n      \"orderName\"       = :orderName\nRETURNING id"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "PurchaseOrder" (shop, name, status, "salesOrderId", "workOrderName", "locationId", "customerId",
- *                              "vendorCustomerId", note, "vendorName", "customerName", "locationName", "shipFrom",
- *                              "shipTo")
- * VALUES (:shop!, :name!, :status!, :salesOrderId, :workOrderName, :locationId, :customerId, :vendorCustomerId, :note,
- *         :vendorName, :customerName, :locationName, :shipFrom, :shipTo)
+ * INSERT INTO "PurchaseOrder" (shop, name, status, "locationId", "customerId", "vendorCustomerId", note, "vendorName",
+ *                              "customerName", "locationName", "shipFrom", "shipTo", "workOrderName", "orderId",
+ *                              "orderName")
+ * VALUES (:shop!, :name!, :status!, :locationId, :customerId, :vendorCustomerId, :note, :vendorName, :customerName,
+ *         :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName)
  * ON CONFLICT (shop, name) DO UPDATE
- *   SET status             = :status!,
- *       "salesOrderId"     = :salesOrderId,
- *       "workOrderName"    = :workOrderName,
- *       "locationId"       = :locationId,
- *       "customerId"       = :customerId,
- *       "vendorCustomerId" = :vendorCustomerId,
- *       note               = :note,
- *       "vendorName"       = :vendorName,
- *       "customerName"     = :customerName,
- *       "locationName"     = :locationName,
- *       "shipFrom"         = :shipFrom,
- *       "shipTo"           = :shipTo
+ *   SET status            = :status!,
+ *       "locationId"      = :locationId,
+ *       "customerId"      = :customerId,
+ *       "vendorCustomerId"= :vendorCustomerId,
+ *       note              = :note,
+ *       "vendorName"      = :vendorName,
+ *       "customerName"    = :customerName,
+ *       "locationName"    = :locationName,
+ *       "shipFrom"        = :shipFrom,
+ *       "shipTo"          = :shipTo,
+ *       "workOrderName"   = :workOrderName,
+ *       "orderId"         = :orderId,
+ *       "orderName"       = :orderName
  * RETURNING id
  * ```
  */
@@ -234,6 +239,38 @@ const getCustomFieldsIR: any = {"usedParamSet":{"purchaseOrderId":true},"params"
 export const getCustomFields = new PreparedQuery<IGetCustomFieldsParams,IGetCustomFieldsResult>(getCustomFieldsIR);
 
 
+/** 'GetAssignedEmployees' parameters type */
+export interface IGetAssignedEmployeesParams {
+  purchaseOrderId: number;
+}
+
+/** 'GetAssignedEmployees' return type */
+export interface IGetAssignedEmployeesResult {
+  employeeId: string;
+  employeeName: string | null;
+  id: number;
+  purchaseOrderId: number;
+}
+
+/** 'GetAssignedEmployees' query type */
+export interface IGetAssignedEmployeesQuery {
+  params: IGetAssignedEmployeesParams;
+  result: IGetAssignedEmployeesResult;
+}
+
+const getAssignedEmployeesIR: any = {"usedParamSet":{"purchaseOrderId":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":74,"b":90}]}],"statement":"SELECT *\nFROM \"PurchaseOrderEmployeeAssignment\"\nWHERE \"purchaseOrderId\" = :purchaseOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "PurchaseOrderEmployeeAssignment"
+ * WHERE "purchaseOrderId" = :purchaseOrderId!
+ * ```
+ */
+export const getAssignedEmployees = new PreparedQuery<IGetAssignedEmployeesParams,IGetAssignedEmployeesResult>(getAssignedEmployeesIR);
+
+
 /** 'RemoveProducts' parameters type */
 export interface IRemoveProductsParams {
   purchaseOrderId: number;
@@ -286,6 +323,33 @@ const removeCustomFieldsIR: any = {"usedParamSet":{"purchaseOrderId":true},"para
  * ```
  */
 export const removeCustomFields = new PreparedQuery<IRemoveCustomFieldsParams,IRemoveCustomFieldsResult>(removeCustomFieldsIR);
+
+
+/** 'RemoveAssignedEmployees' parameters type */
+export interface IRemoveAssignedEmployeesParams {
+  purchaseOrderId: number;
+}
+
+/** 'RemoveAssignedEmployees' return type */
+export type IRemoveAssignedEmployeesResult = void;
+
+/** 'RemoveAssignedEmployees' query type */
+export interface IRemoveAssignedEmployeesQuery {
+  params: IRemoveAssignedEmployeesParams;
+  result: IRemoveAssignedEmployeesResult;
+}
+
+const removeAssignedEmployeesIR: any = {"usedParamSet":{"purchaseOrderId":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":72,"b":88}]}],"statement":"DELETE\nFROM \"PurchaseOrderEmployeeAssignment\"\nWHERE \"purchaseOrderId\" = :purchaseOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "PurchaseOrderEmployeeAssignment"
+ * WHERE "purchaseOrderId" = :purchaseOrderId!
+ * ```
+ */
+export const removeAssignedEmployees = new PreparedQuery<IRemoveAssignedEmployeesParams,IRemoveAssignedEmployeesResult>(removeAssignedEmployeesIR);
 
 
 /** 'InsertProduct' parameters type */
@@ -345,5 +409,33 @@ const insertCustomFieldIR: any = {"usedParamSet":{"purchaseOrderId":true,"key":t
  * ```
  */
 export const insertCustomField = new PreparedQuery<IInsertCustomFieldParams,IInsertCustomFieldResult>(insertCustomFieldIR);
+
+
+/** 'InsertAssignedEmployee' parameters type */
+export interface IInsertAssignedEmployeeParams {
+  employeeId: string;
+  employeeName?: string | null | void;
+  purchaseOrderId: number;
+}
+
+/** 'InsertAssignedEmployee' return type */
+export type IInsertAssignedEmployeeResult = void;
+
+/** 'InsertAssignedEmployee' query type */
+export interface IInsertAssignedEmployeeQuery {
+  params: IInsertAssignedEmployeeParams;
+  result: IInsertAssignedEmployeeResult;
+}
+
+const insertAssignedEmployeeIR: any = {"usedParamSet":{"purchaseOrderId":true,"employeeId":true,"employeeName":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":104,"b":120}]},{"name":"employeeId","required":true,"transform":{"type":"scalar"},"locs":[{"a":123,"b":134}]},{"name":"employeeName","required":false,"transform":{"type":"scalar"},"locs":[{"a":137,"b":149}]}],"statement":"INSERT INTO \"PurchaseOrderEmployeeAssignment\" (\"purchaseOrderId\", \"employeeId\", \"employeeName\")\nVALUES (:purchaseOrderId!, :employeeId!, :employeeName)"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "PurchaseOrderEmployeeAssignment" ("purchaseOrderId", "employeeId", "employeeName")
+ * VALUES (:purchaseOrderId!, :employeeId!, :employeeName)
+ * ```
+ */
+export const insertAssignedEmployee = new PreparedQuery<IInsertAssignedEmployeeParams,IInsertAssignedEmployeeResult>(insertAssignedEmployeeIR);
 
 
