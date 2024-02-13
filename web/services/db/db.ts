@@ -1,7 +1,9 @@
 import * as shopifySession from './queries/generated/shopify-session.sql.js';
 import * as workOrder from './queries/generated/work-order.sql.js';
-import * as employeeRate from './queries/generated/employee-rate.sql.js';
-import * as employeeAssignment from './queries/generated/employee-assignment.sql.js';
+import * as workOrderLabour from './queries/generated/work-order-labour.sql.js';
+import * as employee from './queries/generated/employee.sql.js';
+import * as types from './queries/generated/types.sql.js';
+import * as appPlan from './queries/generated/app-plan.sql.js';
 import * as settings from './queries/generated/settings.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
@@ -12,8 +14,10 @@ import { useClient } from './client.js';
 export const db = {
   shopifySession: wrapPreparedQueries(shopifySession),
   workOrder: wrapPreparedQueries(workOrder),
-  employeeRate: wrapPreparedQueries(employeeRate),
-  employeeAssignment: wrapPreparedQueries(employeeAssignment),
+  workOrderLabour: wrapPreparedQueries(workOrderLabour),
+  employee: wrapPreparedQueries(employee),
+  types: wrapPreparedQueries(types),
+  appPlan: wrapPreparedQueries(appPlan),
   settings: wrapPreparedQueries(settings),
 };
 

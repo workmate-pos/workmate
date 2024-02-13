@@ -12,18 +12,22 @@ import { ProductLineItemConfig } from './screens/popups/ProductLineItemConfig.js
 import { ProductSelector } from './screens/popups/ProductSelector.js';
 import { DiscountSelector } from './screens/popups/DiscountSelector.js';
 import { ServiceSelector } from './screens/popups/ServiceSelector.js';
-import { EmployeeAssignmentConfig } from './screens/popups/EmployeeAssignmentConfig.js';
+import { EmployeeLabourConfig } from './screens/popups/EmployeeLabourConfig.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { LabourLineItemConfig } from './screens/popups/LabourLineItemConfig.js';
 import { UnsavedChangesDialogProvider } from './providers/UnsavedChangesDialogProvider.js';
 import { OrderPreview } from './screens/popups/OrderPreview.js';
+import { SettingsProvider, useSettingsInternal } from './providers/SettingsProvider.js';
+import { useEffect } from 'react';
+import { extractErrorMessage } from './util/errors.js';
+import { useScreen } from './hooks/use-screen.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
 
   return (
     <Tile
-      title="Work Orders"
+      title={'WorkMate'}
       onPress={() => {
         api.smartGrid.presentModal();
       }}
@@ -36,27 +40,62 @@ function SmartGridModal() {
   return (
     <ReactQueryProvider>
       <UnsavedChangesDialogProvider>
-        <Navigator>
+        <SettingsProvider>
+          <WrappedNavigator />
+        </SettingsProvider>
+      </UnsavedChangesDialogProvider>
+    </ReactQueryProvider>
+  );
+}
+
+/**
+ * Navigator that only loads in screens when the settings are loaded.
+ * Not very clean.
+ *
+ * It is possible to rerender the navigator by supplying `key={settings}`,
+ * and conditionally rendering `LoadingSettingsScreen`.
+ * But Shopify POS seems to have messed up rendering causing this to flash
+ */
+function WrappedNavigator() {
+  const { Screen: LoadingSettingsScreen, navigate } = useScreen('LoadingSettings');
+
+  const settingsQuery = useSettingsInternal();
+
+  useEffect(() => {
+    if (settingsQuery?.isError) {
+      navigate('Error', extractErrorMessage(settingsQuery.error, 'Failed to load settings'));
+    } else if (settingsQuery?.data?.settings) {
+      navigate('Entry');
+    }
+  }, [settingsQuery?.isError, settingsQuery?.data]);
+
+  return (
+    <Navigator>
+      <LoadingSettingsScreen title={'Loading settings'} isLoading={true} />
+      <Error />
+
+      {settingsQuery?.data && (
+        <>
           <Entry />
-          <Error />
           <ImportOrderSelector />
           <WorkOrderPage />
 
           <CustomerSelector />
           <DiscountSelector />
-          <EmployeeAssignmentConfig />
+          <EmployeeLabourConfig />
           <EmployeeSelector />
           <OrderPreview />
           <ProductLineItemConfig />
           <ProductSelector />
+
           <LabourLineItemConfig />
           <ServiceSelector />
           <ShippingConfig />
           <StatusSelector />
           <WorkOrderSaved />
-        </Navigator>
-      </UnsavedChangesDialogProvider>
-    </ReactQueryProvider>
+        </>
+      )}
+    </Navigator>
   );
 }
 

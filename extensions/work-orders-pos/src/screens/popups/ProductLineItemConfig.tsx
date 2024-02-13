@@ -13,11 +13,13 @@ export function ProductLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
   const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem | null>(null);
   const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const [canAddLabour, setCanAddLabour] = useState(false);
 
-  const { Screen, closePopup, cancelPopup } = useScreen('ProductLineItemConfig', ({ readonly, lineItem }) => {
+  const { Screen, closePopup, cancelPopup } = useScreen('LineItemConfig', ({ readonly, lineItem, canAddLabour }) => {
     setReadonly(readonly);
     setLineItem(lineItem);
     setUnsavedChanges(false);
+    setCanAddLabour(canAddLabour);
   });
 
   const currencyFormatter = useCurrencyFormatter();
@@ -87,12 +89,14 @@ export function ProductLineItemConfig() {
                       closePopup({ type: 'update', lineItem });
                     }}
                   />
-                  <Button
-                    title="Add Labour"
-                    onPress={() => {
-                      closePopup({ type: 'assign-employees', lineItem });
-                    }}
-                  />
+                  {canAddLabour && (
+                    <Button
+                      title="Add Labour"
+                      onPress={() => {
+                        closePopup({ type: 'assign-employees', lineItem });
+                      }}
+                    />
+                  )}
                 </>
               )}
             </Stack>

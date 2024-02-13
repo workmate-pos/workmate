@@ -2,43 +2,35 @@ import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-exten
 import { useState } from 'react';
 import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/ids.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
+import { extractErrorMessage } from '../../util/errors.js';
 
 export function EmployeeSelector() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<ID[]>([]);
   const [query, setQuery] = useDebouncedState('');
 
-  const { Screen, closePopup } = useScreen('EmployeeSelector', selectedEmployeeIds => {
-    setSelectedEmployeeIds(selectedEmployeeIds);
+  const { Screen, closePopup } = useScreen('EmployeeSelector', ids => {
+    setSelectedEmployeeIds(ids);
     setQuery('', true);
   });
 
   const fetch = useAuthenticatedFetch();
-  const settingsQuery = useSettingsQuery({ fetch });
   const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
   const employees = employeesQuery.data?.pages ?? [];
 
   const rows = getEmployeeRows(employees, selectedEmployeeIds, setSelectedEmployeeIds);
 
   const close = () => {
-    if (!settingsQuery.data) return;
-
     const selected = employees.filter(e => selectedEmployeeIds.includes(e.id)).map(e => e.id);
 
     closePopup(selected);
   };
 
   return (
-    <Screen
-      title="Select employee"
-      presentation={{ sheet: true }}
-      isLoading={settingsQuery.isLoading}
-      overrideNavigateBack={close}
-    >
+    <Screen title="Select employee" presentation={{ sheet: true }} overrideNavigateBack={close}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -75,7 +67,7 @@ export function EmployeeSelector() {
         {employeesQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
-              Error loading customers
+              {extractErrorMessage(employeesQuery.error, 'Error loading customers')}
             </Text>
           </Stack>
         )}

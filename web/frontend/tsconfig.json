@@ -10,11 +10,19 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "typeRoots": ["node_modules/@types"],
+    "paths": {
+      "@web/*": ["../*"]
+    },
     "skipLibCheck": true,
     "strictNullChecks": true,
     "noImplicitAny": true,
     "strict": true,
     "noUncheckedIndexedAccess": true
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules"],
+  "references": [
+    {
+      "path": "../tsconfig.json"
+    }
+  ]
 }

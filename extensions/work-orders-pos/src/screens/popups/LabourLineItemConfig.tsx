@@ -1,82 +1,130 @@
 import { useScreen } from '../../hooks/use-screen.js';
 import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { CreateWorkOrderEmployeeAssignment, CreateWorkOrderLineItem } from '../routes.js';
+import { CreateWorkOrderLineItem, CreateWorkOrderCharge } from '../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
-import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { EmployeeAssignmentList } from '../../components/EmployeeAssignmentsList.js';
-import { Cents, parseMoney, toDollars } from '@work-orders/common/util/money.js';
-import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
 import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { getChargesPrice } from '../../create-work-order/charges.js';
+import { uuid } from '../../util/uuid.js';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { FixedPriceLabour, HourlyLabour } from '@web/schemas/generated/create-work-order.js';
+import { SegmentedLabourControl } from '../../components/SegmentedLabourControl.js';
+import { useSettings } from '../../providers/SettingsProvider.js';
 
 export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
+  const [hasBasePrice, setHasBasePrice] = useState(false);
   const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem | null>(null);
-  const [employeeAssignments, setEmployeeAssignments] = useState<
-    Omit<CreateWorkOrderEmployeeAssignment, 'lineItemUuid'>[]
+  const [employeeLabour, setEmployeeLabour] = useState<
+    DiscriminatedUnionOmit<
+      CreateWorkOrderCharge & { employeeId: ID } & (FixedPriceLabour | HourlyLabour),
+      'lineItemUuid'
+    >[]
   >([]);
+  const [generalLabour, setGeneralLabour] = useState<DiscriminatedUnionOmit<
+    CreateWorkOrderCharge & { employeeId: null } & (FixedPriceLabour | HourlyLabour),
+    'lineItemUuid'
+  > | null>(null);
+
   const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   const { Screen, usePopup, closePopup, cancelPopup } = useScreen(
     'LabourLineItemConfig',
-    ({ readonly, lineItem, employeeAssignments }) => {
+    ({ readonly, hasBasePrice, lineItem, labour }) => {
       setReadonly(readonly);
+      setHasBasePrice(hasBasePrice);
       setLineItem(lineItem);
-      setEmployeeAssignments(employeeAssignments);
+      setEmployeeLabour(labour.filter(hasNonNullableProperty('employeeId')));
       setUnsavedChanges(false);
+
+      const generalLabours = labour.filter(hasPropertyValue('employeeId', null));
+      if (generalLabours.length === 1) {
+        setGeneralLabour(generalLabours[0]!);
+      } else if (generalLabours.length > 1) {
+        // pos only supports setting one general labour, so calculate it and use a fixed price
+        setGeneralLabour({
+          type: 'fixed-price-labour',
+          chargeUuid: uuid(),
+          employeeId: null,
+          name: generalLabours[0]!.name,
+          amount: getChargesPrice(generalLabours),
+        });
+      } else {
+        setGeneralLabour(null);
+      }
     },
   );
 
   const employeeSelectorPopup = usePopup('EmployeeSelector', result => {
     setUnsavedChanges(true);
 
-    setEmployeeAssignments(employeeAssignments =>
-      result.map(employeeId => {
-        const existingAssignment = employeeAssignments.find(e => e.employeeId === employeeId);
-        return existingAssignment ?? { employeeId, hours: 0 as Int };
+    setEmployeeLabour(employeeLabour => [
+      ...result.map(id => {
+        // For each selected employee, either keep the existing labour or create a new one
+
+        return (
+          employeeLabour.find(l => l.employeeId === id) ??
+          ({
+            type: 'fixed-price-labour',
+            chargeUuid: uuid(),
+            employeeId: id,
+            name: settings.labourLineItemName || 'Labour',
+            amount: BigDecimal.ZERO.toMoney(),
+          } as const)
+        );
       }),
-    );
+    ]);
   });
 
-  const employeeConfigPopup = usePopup('EmployeeAssignmentConfig', result => {
+  const employeeConfigPopup = usePopup('EmployeeLabourConfig', result => {
     setUnsavedChanges(true);
 
     if (result.type === 'remove') {
-      setEmployeeAssignments(employeeAssignments.filter(e => e.employeeId !== result.employeeAssignment.employeeId));
+      setEmployeeLabour(labour => labour.filter(l => l.chargeUuid !== result.chargeUuid));
     } else if (result.type === 'update') {
-      setEmployeeAssignments(
-        employeeAssignments.map(e =>
-          e.employeeId === result.employeeAssignment.employeeId ? result.employeeAssignment : e,
+      setEmployeeLabour(
+        employeeLabour.map(l =>
+          l.chargeUuid === result.chargeUuid
+            ? { ...result.labour, employeeId: result.employeeId, chargeUuid: result.chargeUuid }
+            : l,
         ),
       );
     } else {
-      return result.type satisfies never;
+      return result satisfies never;
     }
   });
 
   const currencyFormatter = useCurrencyFormatter();
+  const settings = useSettings();
   const fetch = useAuthenticatedFetch();
   const productVariantQuery = useProductVariantQuery({ fetch, id: lineItem?.productVariantId ?? null });
-  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeAssignments.map(e => e.employeeId) });
 
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
-  const labourPrice = employeeAssignments.reduce(
-    (total, { hours, employeeId }) =>
-      total + hours * toDollars(employeeQueries[employeeId]?.data?.rate ?? (0 as Cents)),
-    0,
-  );
-  const productVariantPrice = productVariant ? parseMoney(productVariant.price) : 0;
-  const totalPrice = productVariantPrice + labourPrice;
+  const labour = [
+    ...employeeLabour,
+    ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
+  ];
+
+  const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
+  const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabour.length > 0;
+
+  const labourPrice = getChargesPrice(labour);
+
+  const basePrice = productVariant && hasBasePrice ? productVariant.price : BigDecimal.ZERO.toMoney();
+  const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(labourPrice)).toMoney();
 
   const unsavedChangesDialog = useUnsavedChangesDialog();
   const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
-  // TODO: Make employee selector be for selecting just one employee???
   return (
     <Screen
       title={name ?? 'Service'}
@@ -90,24 +138,58 @@ export function LabourLineItemConfig() {
       presentation={{ sheet: true }}
     >
       <ScrollView>
-        <Stack direction={'vertical'} paddingVertical={'Small'}>
-          <Button
-            title={'Add employees'}
-            type={'primary'}
-            onPress={() => employeeSelectorPopup.navigate(employeeAssignments.map(e => e.employeeId))}
-            isDisabled={readonly}
+        <Stack direction={'vertical'} paddingVertical={'Small'} spacing={5}>
+          <Text variant={'headingLarge'}>Labour Charge</Text>
+          <SegmentedLabourControl
+            types={['none', 'hourly-labour', 'fixed-price-labour']}
+            disabled={readonly}
+            charge={generalLabour}
+            onChange={charge =>
+              charge ? setGeneralLabour({ ...charge, chargeUuid: uuid(), employeeId: null }) : setGeneralLabour(charge)
+            }
           />
-        </Stack>
-        <EmployeeAssignmentList
-          employeeAssignments={employeeAssignments}
-          readonly={readonly}
-          onClick={employeeAssignment => employeeConfigPopup.navigate(employeeAssignment)}
-        />
 
-        <Stack direction={'horizontal'} alignment={'space-evenly'} flex={1} paddingVertical={'ExtraLarge'}>
-          <Text variant={'captionMedium'}>Base Price: {currencyFormatter(productVariantPrice)}</Text>
-          <Text variant={'captionMedium'}>Labour Price: {currencyFormatter(labourPrice)}</Text>
-          <Text variant={'captionMedium'}>Total Price: {currencyFormatter(totalPrice)}</Text>
+          {shouldShowEmployeeLabour && (
+            <>
+              <Text variant={'headingLarge'}>Employee Labour Charges</Text>
+              <Stack direction={'vertical'} spacing={2}>
+                <Button
+                  title={'Add employees'}
+                  type={'primary'}
+                  onPress={() =>
+                    employeeSelectorPopup.navigate(employeeLabour.map(e => e.employeeId).filter(isNonNullable))
+                  }
+                  isDisabled={readonly || !employeeAssignmentsEnabled}
+                />
+
+                <EmployeeLabourList
+                  labour={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
+                  readonly={readonly}
+                  onClick={labour =>
+                    employeeConfigPopup.navigate({
+                      employeeId: labour.employeeId,
+                      chargeUuid: labour.chargeUuid,
+                      labour,
+                    })
+                  }
+                />
+              </Stack>
+            </>
+          )}
+
+          <Stack direction={'horizontal'} alignment={'space-evenly'} flex={1} paddingVertical={'ExtraLarge'}>
+            {hasBasePrice && (
+              <Text variant={'headingSmall'} color={'TextSubdued'}>
+                Base Price: {currencyFormatter(basePrice)}
+              </Text>
+            )}
+            <Text variant={'headingSmall'} color={'TextSubdued'}>
+              Labour Price: {currencyFormatter(labourPrice)}
+            </Text>
+            <Text variant={'headingSmall'} color={'TextSubdued'}>
+              Total Price: {currencyFormatter(totalPrice)}
+            </Text>
+          </Stack>
         </Stack>
 
         <Stack direction="vertical" flex={1} alignment="space-evenly">
@@ -127,7 +209,7 @@ export function LabourLineItemConfig() {
                 disabled={!lineItem}
                 onPress={() => {
                   if (!lineItem) return;
-                  closePopup({ type: 'remove', lineItem, employeeAssignments });
+                  closePopup({ type: 'remove', lineItem });
                 }}
               />
               <Button
@@ -135,7 +217,11 @@ export function LabourLineItemConfig() {
                 disabled={!lineItem}
                 onPress={() => {
                   if (!lineItem) return;
-                  closePopup({ type: 'update', lineItem, employeeAssignments });
+                  closePopup({
+                    type: 'update',
+                    lineItem,
+                    labour,
+                  });
                 }}
               />
             </>

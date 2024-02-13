@@ -25,12 +25,13 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { CurrencyFormatter, useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { NumberField } from '../components/NumberField.js';
-import type { ID, Money, ShopSettings } from '../../schemas/generated/shop-settings.js';
+import type { ID, ShopSettings } from '../../schemas/generated/shop-settings.js';
 import { Rule, RuleSet } from '../components/RuleSet.js';
 import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider.js';
 import { useSettingsMutation } from '../queries/use-settings-mutation.js';
 import { useCollectionsQuery } from '../queries/use-collections-query.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
+import { Money, Decimal, BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
 const CURRENCY_RANGE = 'CURRENCY_RANGE';
@@ -38,19 +39,21 @@ const PERCENTAGE_RANGE = 'PERCENTAGE_RANGE';
 
 export default function Settings() {
   const [toast, setToastAction] = useToast();
-  const [settings, setSettings] = useState<ShopSettings | null>(null);
+  const [settings, setSettings] = useState<ShopSettings>(null!);
 
   const [discountShortcutValue, setDiscountShortcutValue] = useState('');
 
   const [statusValue, setStatusValue] = useState('');
+  const [defaultStatusValue, setDefaultStatusValue] = useState('');
 
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const getSettingsQuery = useSettingsQuery(
+  const settingsQuery = useSettingsQuery(
     { fetch },
     {
       refetchOnWindowFocus: false,
       onSuccess({ settings }) {
         setSettings(settings);
+        setDefaultStatusValue(settings.defaultStatus);
       },
       onError() {
         setToastAction({
@@ -58,7 +61,7 @@ export default function Settings() {
           action: {
             content: 'Retry',
             onAction() {
-              getSettingsQuery.refetch();
+              settingsQuery.refetch();
             },
           },
         });
@@ -66,36 +69,16 @@ export default function Settings() {
     },
   );
 
-  const saveSettingsMutation = useSettingsMutation({
-    onError() {
-      setToastAction({
-        content: 'An error occurred while saving settings',
-      });
+  const saveSettingsMutation = useSettingsMutation(
+    { fetch },
+    {
+      onSuccess() {
+        setToastAction({
+          content: 'Saved settings',
+        });
+      },
     },
-    onSuccess() {
-      setToastAction({
-        content: 'Saved settings',
-      });
-    },
-  });
-
-  const [serviceCollectionValue, setServiceCollectionValue] = useState<string | undefined>(undefined);
-  const [selectedServiceCollectionName, setSelectedServiceCollectionName] = useState<string | null>(null);
-  const collectionsQuery = useCollectionsQuery({ fetch, params: { query: serviceCollectionValue } });
-
-  // set the service collection name when the settings & collections are both loaded
-  useEffect(() => {
-    if (serviceCollectionValue !== undefined) return;
-
-    const collections = collectionsQuery.data?.pages;
-    const collectionId = getSettingsQuery.data?.settings.serviceCollectionId;
-
-    if (!collections || !collectionId) return;
-
-    const selectedCollection = collections.find(collection => collection.id === collectionId);
-    setSelectedServiceCollectionName(selectedCollection?.title ?? null);
-    setServiceCollectionValue(selectedCollection?.title ?? '');
-  }, [collectionsQuery.data?.pages, getSettingsQuery.data?.settings.serviceCollectionId]);
+  );
 
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
@@ -121,7 +104,7 @@ export default function Settings() {
           content: 'Save',
           target: 'APP',
           loading: saveSettingsMutation.isLoading,
-          disabled: getSettingsQuery.isLoading,
+          disabled: settingsQuery.isLoading,
           onAction() {
             saveSettingsMutation.mutate(settings);
           },
@@ -150,7 +133,7 @@ export default function Settings() {
                         ...settings.discountShortcuts,
                         {
                           currency: { unit: 'currency', money: discountShortcutValue as Money } as const,
-                          percentage: { unit: 'percentage', percentage: Number(discountShortcutValue) } as const,
+                          percentage: { unit: 'percentage', percentage: discountShortcutValue as Decimal } as const,
                         }[unit],
                       ],
                     });
@@ -229,6 +212,23 @@ export default function Settings() {
                     </Tag>
                   ))}
                 </InlineStack>
+                <Autocomplete
+                  options={settings.statuses.map(status => ({ id: status, label: status, value: status }))}
+                  selected={[settings.defaultStatus]}
+                  onSelect={([defaultStatus]) => {
+                    setSettings(current => ({ ...current, defaultStatus: defaultStatus ?? current.defaultStatus }));
+                    setDefaultStatusValue(defaultStatus ?? settings.defaultStatus);
+                  }}
+                  textField={
+                    <Autocomplete.TextField
+                      label="Default Status"
+                      autoComplete="off"
+                      value={defaultStatusValue}
+                      onChange={setDefaultStatusValue}
+                      onBlur={() => setDefaultStatusValue(settings.defaultStatus)}
+                    />
+                  }
+                />
                 <TextField
                   label="ID Format"
                   autoComplete="off"
@@ -262,50 +262,18 @@ export default function Settings() {
             </Box>
             <Card roundedAbove="sm">
               <BlockStack gap="400">
-                <Autocomplete
-                  options={
-                    collectionsQuery.data?.pages.map(page => ({
-                      label: page.title,
-                      value: page.id,
-                    })) ?? []
-                  }
-                  allowMultiple={false}
-                  loading={collectionsQuery.isLoading}
-                  willLoadMoreResults={collectionsQuery.hasNextPage}
-                  onLoadMoreResults={collectionsQuery.fetchNextPage}
-                  selected={settings.serviceCollectionId ? [settings.serviceCollectionId] : []}
-                  emptyState={
-                    <BlockStack inlineAlign={'center'}>
-                      <Icon source={SearchMinor} />
-                      Could not find any collections
-                    </BlockStack>
-                  }
-                  textField={
-                    <Autocomplete.TextField
-                      label="Service Collection"
-                      helpText={'All products within this collection will be shown in the "Add Service" menu'}
-                      autoComplete="off"
-                      value={serviceCollectionValue}
-                      onChange={setServiceCollectionValue}
-                      onBlur={() => setServiceCollectionValue(selectedServiceCollectionName ?? '')}
-                    />
-                  }
-                  onSelect={([id]: ID[]) => {
-                    let name: string | null = null;
-                    let serviceCollectionId: ID | null = null;
-
-                    if (id !== undefined && id !== settings?.serviceCollectionId) {
-                      name = collectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
-                      serviceCollectionId = id;
-                    }
-
-                    setSelectedServiceCollectionName(name);
-                    setServiceCollectionValue(name ?? '');
-                    setSettings({ ...settings, serviceCollectionId });
-                  }}
+                <CollectionPicker
+                  label={'Fixed-Price Services Collection'}
+                  initialCollectionId={settings.fixedServiceCollectionId}
+                  onSelect={collectionId => setSettings({ ...settings, fixedServiceCollectionId: collectionId })}
+                />
+                <CollectionPicker
+                  label={'Dynamically-Priced Services Collection'}
+                  initialCollectionId={settings.mutableServiceCollectionId}
+                  onSelect={collectionId => setSettings({ ...settings, mutableServiceCollectionId: collectionId })}
                 />
                 <TextField
-                  label={'Labour Line Item Name'}
+                  label={'Default Labour Line Item Name'}
                   autoComplete={'off'}
                   value={settings.labourLineItemName}
                   onChange={value => setSettings({ ...settings, labourLineItemName: value })}
@@ -316,6 +284,39 @@ export default function Settings() {
                   value={settings.labourLineItemSKU}
                   onChange={value => setSettings({ ...settings, labourLineItemSKU: value })}
                 />
+                <BlockStack>
+                  <Text as={'p'}>Enabled Labour Options</Text>
+                  <Checkbox
+                    label={'Employee Assignments'}
+                    checked={settings.chargeSettings.employeeAssignments}
+                    onChange={enabled =>
+                      setSettings({
+                        ...settings,
+                        chargeSettings: { ...settings.chargeSettings, employeeAssignments: enabled },
+                      })
+                    }
+                  />
+                  <Checkbox
+                    label={'Hourly Labour'}
+                    checked={settings.chargeSettings.hourlyLabour}
+                    onChange={enabled =>
+                      setSettings({
+                        ...settings,
+                        chargeSettings: { ...settings.chargeSettings, hourlyLabour: enabled },
+                      })
+                    }
+                  />
+                  <Checkbox
+                    label={'Fixed-Price Labour'}
+                    checked={settings.chargeSettings.fixedPriceLabour}
+                    onChange={enabled =>
+                      setSettings({
+                        ...settings,
+                        chargeSettings: { ...settings.chargeSettings, fixedPriceLabour: enabled },
+                      })
+                    }
+                  />
+                </BlockStack>
               </BlockStack>
             </Card>
             <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
@@ -450,7 +451,7 @@ function useDiscountRules(
     },
     {
       value: CURRENCY_RANGE,
-      title: 'Allow discounts within a range',
+      title: 'Restrict discounts to a range',
       conflictingRules: [ONLY_SHORTCUTS],
       onSelect() {
         setSettings({
@@ -512,7 +513,7 @@ function useDiscountRules(
     },
     {
       value: PERCENTAGE_RANGE,
-      title: 'Allow discounts within a percentage range',
+      title: 'Restrict discounts to a percentage range',
       conflictingRules: [ONLY_SHORTCUTS],
       onSelect() {
         setSettings({
@@ -520,7 +521,7 @@ function useDiscountRules(
           discountRules: {
             ...settings.discountRules,
             onlyAllowShortcuts: false,
-            allowedPercentageRange: [0, 100],
+            allowedPercentageRange: [BigDecimal.ZERO.toDecimal(), BigDecimal.fromString('100').toDecimal()],
           },
         });
       },
@@ -544,14 +545,20 @@ function useDiscountRules(
             max={100}
             step={1}
             formatter={num => `${num}%`}
-            value={settings.discountRules.allowedPercentageRange}
+            value={[
+              Number(settings.discountRules.allowedPercentageRange[0]),
+              Number(settings.discountRules.allowedPercentageRange[1]),
+            ]}
             onChange={(allowedPercentageRange: [number, number]) =>
               setSettings({
                 ...settings,
                 discountRules: {
                   ...settings.discountRules,
                   onlyAllowShortcuts: false,
-                  allowedPercentageRange,
+                  allowedPercentageRange: [
+                    BigDecimal.fromString(String(allowedPercentageRange[0])).toDecimal(),
+                    BigDecimal.fromString(String(allowedPercentageRange[1])).toDecimal(),
+                  ],
                 },
               })
             }
@@ -612,6 +619,87 @@ function CurrencyOrPercentageInput({
           </Listbox>
         ) : null}
       </Combobox>
+      {toast}
+    </>
+  );
+}
+
+function CollectionPicker({
+  label,
+  helpText,
+  onSelect,
+  initialCollectionId,
+}: {
+  label: string;
+  helpText?: string;
+  initialCollectionId?: ID | null;
+  onSelect: (collectionId: ID | null) => void;
+}) {
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+
+  const [query, setQuery] = useState('');
+  const collectionsQuery = useCollectionsQuery({ fetch, params: { query } });
+
+  const [selectedCollectionId, setSelectedCollectionId] = useState<ID | null>(initialCollectionId ?? null);
+  const [selectedCollectionName, setSelectedCollectionName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (query) return;
+    if (!selectedCollectionId) return;
+
+    const selectedCollection = collectionsQuery.data?.pages.find(page => page.id === selectedCollectionId);
+    if (!selectedCollection) return;
+
+    setSelectedCollectionName(selectedCollection.title);
+    setQuery(selectedCollection.title);
+  }, [collectionsQuery.data?.pages]);
+
+  return (
+    <>
+      <Autocomplete
+        options={
+          collectionsQuery.data?.pages.map(page => ({
+            label: page.title,
+            value: page.id,
+          })) ?? []
+        }
+        allowMultiple={false}
+        loading={collectionsQuery.isLoading}
+        willLoadMoreResults={collectionsQuery.hasNextPage}
+        onLoadMoreResults={collectionsQuery.fetchNextPage}
+        selected={selectedCollectionId ? [selectedCollectionId] : []}
+        emptyState={
+          <BlockStack inlineAlign={'center'}>
+            <Icon source={SearchMinor} />
+            Could not find any collections
+          </BlockStack>
+        }
+        textField={
+          <Autocomplete.TextField
+            label={label}
+            helpText={helpText}
+            autoComplete="off"
+            value={query}
+            onChange={setQuery}
+            onBlur={() => setQuery(selectedCollectionName ?? '')}
+          />
+        }
+        onSelect={([id]: ID[]) => {
+          let name: string | null = null;
+          let serviceCollectionId: ID | null = null;
+
+          if (id !== undefined && id !== selectedCollectionId) {
+            name = collectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
+            serviceCollectionId = id;
+          }
+
+          setSelectedCollectionName(name ?? '');
+          setSelectedCollectionId(serviceCollectionId ?? null);
+          setQuery(name ?? '');
+          onSelect(serviceCollectionId);
+        }}
+      />
       {toast}
     </>
   );

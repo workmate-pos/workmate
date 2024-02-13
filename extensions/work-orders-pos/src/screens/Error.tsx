@@ -5,13 +5,13 @@ import { useScreen } from '../hooks/use-screen.js';
 export function Error() {
   const [error, setError] = useState('');
 
-  const { Screen } = useScreen('Error', setError);
+  const { Screen, dismiss } = useScreen('Error', setError);
 
   return (
-    <Screen title={'Error'}>
-      <Stack direction="horizontal" alignment="center">
+    <Screen title={'Error'} overrideNavigateBack={() => dismiss()}>
+      <Stack direction="horizontal" alignment="center" paddingVertical={'ExtraLarge'}>
         <Text color="TextCritical" variant="headingLarge">
-          Error: {error}
+          {error}
         </Text>
       </Stack>
     </Screen>

@@ -12,6 +12,7 @@ import {
   getStatusText,
 } from '../util/badges.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
+import { extractErrorMessage } from '../util/errors.js';
 
 export function ImportOrderSelector() {
   const { Screen, usePopup } = useScreen('ImportOrderSelector');
@@ -61,7 +62,7 @@ export function ImportOrderSelector() {
         {ordersQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
-              Error loading orders
+              {extractErrorMessage(ordersQuery.error, 'Error loading orders')}
             </Text>
           </Stack>
         )}

@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "employees": {
+      "type": "array",
+      "items": {
+        "title": "employee-options",
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "const": null
+              },
+              {
+                "$ref": "scalars.json#/definitions/Money"
+              }
+            ]
+          },
+          "superuser": {
+            "type": "boolean"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["employeeId", "rate", "superuser", "permissions"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "required": ["employees"]
+}

@@ -13,7 +13,8 @@
     "paths": {
       "@web/*": ["../web/*"]
     },
-    "sourceMap": true
+    "sourceMap": true,
+    "noUncheckedIndexedAccess": true
   },
   "include": ["src/**/*"],
   "references": [

@@ -1,19 +1,17 @@
 import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { Grid } from '../../components/Grid.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
-import { parseMoney } from '@work-orders/common/util/money.js';
+import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { useSettings } from '../../providers/SettingsProvider.js';
 
 export function DiscountSelector() {
-  const [subTotal, setSubTotal] = useState<number | null>(null);
+  const [subTotal, setSubTotal] = useState<Money | null>(null);
   const { Screen, closePopup } = useScreen('DiscountSelector', ({ subTotal }) => setSubTotal(subTotal));
 
-  const fetch = useAuthenticatedFetch();
-  const settingsQuery = useSettingsQuery({ fetch });
-  const settings = settingsQuery.data?.settings;
+  const settings = useSettings();
 
   const shortcuts = settings?.discountShortcuts;
   const rules = settings?.discountRules;
@@ -22,7 +20,7 @@ export function DiscountSelector() {
     shortcut.unit === 'currency'
       ? ({
           valueType: 'FIXED_AMOUNT',
-          value: parseMoney(shortcut.money),
+          value: shortcut.money,
         } as const)
       : ({
           valueType: 'PERCENTAGE',
@@ -32,23 +30,25 @@ export function DiscountSelector() {
 
   const customInputAllowed = !rules?.onlyAllowShortcuts;
   const allowedCurrencyRange = rules?.allowedCurrencyRange
-    ? [parseMoney(rules.allowedCurrencyRange[0]), parseMoney(rules.allowedCurrencyRange[1])]
+    ? [rules.allowedCurrencyRange[0], rules.allowedCurrencyRange[1]]
     : null;
   const allowedPercentageRange = rules?.allowedPercentageRange;
 
-  const [currencyValue, setCurrencyValue] = useState<number>(allowedCurrencyRange?.[0] ?? 0);
-  const [percentageValue, setPercentageValue] = useState<number>(allowedPercentageRange?.[0] ?? 0);
+  const [currencyValue, setCurrencyValue] = useState<Money>(allowedCurrencyRange?.[0] ?? BigDecimal.ZERO.toMoney());
+  const [percentageValue, setPercentageValue] = useState<Decimal>(
+    allowedPercentageRange?.[0] ?? BigDecimal.ZERO.toDecimal(),
+  );
 
   const currencyFormatter = useCurrencyFormatter();
 
-  const getPercentageCurrencyAmount = (percentage: number) => Math.ceil((subTotal ?? 0) * (percentage / 100));
+  const getPercentageCurrencyAmount = (percentage: Decimal) =>
+    BigDecimal.fromDecimal(percentage)
+      .divide(BigDecimal.fromString('100'), 2)
+      .multiply(BigDecimal.fromString(subTotal ?? '0'))
+      .toMoney();
 
   return (
-    <Screen
-      title={'Select discount'}
-      isLoading={settingsQuery.isLoading || subTotal === null}
-      presentation={{ sheet: true }}
-    >
+    <Screen title={'Select discount'} isLoading={subTotal === null} presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction="vertical" spacing={8}>
           <Stack direction="vertical" spacing={2} paddingVertical={'Medium'}>

@@ -3,7 +3,7 @@ import type { PaginationOptions } from '@web/schemas/generated/pagination-option
 import { createPaginatedQuery } from './create-paginated-query.js';
 import { useQueryClient } from 'react-query';
 import { UseQueryData } from './react-query.js';
-import { useEmployeeQueries, useEmployeeQuery } from './use-employee-query.js';
+import { useEmployeeQuery } from './use-employee-query.js';
 
 const query = createPaginatedQuery({
   endpoint: '/api/employee',
@@ -23,7 +23,7 @@ export const useEmployeesQuery = (...[options, ...args]: Parameters<typeof query
         onSuccess: data => {
           for (const employee of data.pages) {
             queryClient.setQueryData(
-              ['employee', employee.id],
+              ['employee', employee.employeeId],
               employee satisfies UseQueryData<typeof useEmployeeQuery>,
             );
           }

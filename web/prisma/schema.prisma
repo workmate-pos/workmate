@@ -30,46 +30,146 @@ model Settings {
 }
 
 model WorkOrder {
-  id                  Int                  @id @default(autoincrement())
-  shop                String
+  id                 Int      @id @default(autoincrement())
+  shop               String
   /// Used as work order id within this shop
-  name                String
-  status              String
-  dueDate             DateTime
-  customerId          String
+  name               String
+  status             String
+  dueDate            DateTime
+  customerId         String
   /// Draft Order ID - set when the order is still being created, but not paid
-  draftOrderId        String?
+  draftOrderId       String?
   /// Order ID - set when the order is paid
-  orderId             String?
-  derivedFromOrderId  String?
-  employeeAssignments EmployeeAssignment[]
-  createdAt           DateTime             @default(now())
+  orderId            String?
+  derivedFromOrderId String?
+  createdAt          DateTime @default(now())
+
+  fixedPriceLabour FixedPriceLabour[]
+  hourlyLabour     HourlyLabour[]
 
   @@unique([shop, name])
   @@index([draftOrderId])
   @@index([orderId])
 }
 
-model EmployeeRate {
+model Employee {
   employeeId String
   shop       String
-  rate       Int
+
+  superuser   Boolean
+  permissions PermissionNode[]
+  rate        String?
 
   @@id([shop, employeeId])
 }
 
-model EmployeeAssignment {
+enum PermissionNode {
+  read_settings
+  write_settings
+  read_employees
+  write_employees
+  read_work_orders
+  write_work_orders
+  read_app_plan
+  write_app_plan
+}
+
+model FixedPriceLabour {
   id Int @id @default(autoincrement())
-
-  productVariantId String?
-  lineItemUuid     String?
-
-  employeeId String
-  rate       Int
-  hours      Int
 
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
 
-  @@index([workOrderId])
+  lineItemUuid     String?
+  productVariantId String?
+  employeeId       String?
+
+  name String
+
+  amount String
+}
+
+model HourlyLabour {
+  id Int @id @default(autoincrement())
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+
+  lineItemUuid     String?
+  productVariantId String?
+  employeeId       String?
+
+  name String
+
+  rate  String
+  hours String
+}
+
+model AppPlanSubscription {
+  appSubscriptionShopifyId String
+  shop                     String   @id
+  appSubscriptionStatus    String
+  appPlanId                Int
+  updatedAt                DateTime @default(now()) @db.Timestamptz(3)
+  appPlan                  AppPlan  @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
+}
+
+model AppPlanSubscriptionTrials {
+  shop      String   @id
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model AppPlan {
+  id Int @id @default(autoincrement())
+
+  name     AppPlanName
+  type     AppPlanType
+  interval AppPlanInterval
+
+  allowedShopifyPlans ShopifyPlan[]
+
+  basePrice    Int
+  currencyCode String
+
+  extraLocationPrices Int[]
+  maxLocations        Int?
+
+  /// Whether this app plan is only available as a trial. Useful when trial plans differ from full plans.
+  trialOnly Boolean
+  trialDays Int
+
+  createdAt            DateTime              @default(now()) @db.Timestamptz(3)
+  appPlanSubscriptions AppPlanSubscription[]
+  appPlanCustomAccess  AppPlanCustomAccess[]
+}
+
+model AppPlanCustomAccess {
+  appPlanId Int
+  shop      String
+  appPlan   AppPlan @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
+
+  @@id([appPlanId, shop])
+}
+
+enum AppPlanName {
+  FREE
+  ESSENTIAL
+  ENTERPRISE
+}
+
+enum ShopifyPlan {
+  BASIC
+  SHOPIFY
+  ADVANCED
+  PLUS
+}
+
+enum AppPlanType {
+  DEFAULT
+  CUSTOM
+}
+
+enum AppPlanInterval {
+  EVERY_30_DAYS
+  ANNUAL
 }

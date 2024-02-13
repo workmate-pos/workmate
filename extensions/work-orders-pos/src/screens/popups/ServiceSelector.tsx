@@ -1,8 +1,6 @@
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { parseGid } from '@work-orders/common/util/gid.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
 import { useDynamicRef } from '../../hooks/use-dynamic-ref.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
@@ -10,6 +8,13 @@ import { uuid } from '../../util/uuid.js';
 import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { CreateWorkOrderCharge } from '../routes.js';
+import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
+import { extractErrorMessage } from '../../util/errors.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -18,13 +23,14 @@ export function ServiceSelector() {
   });
 
   const fetch = useAuthenticatedFetch();
-  const settingsQuery = useSettingsQuery({ fetch });
-  const serviceCollectionId = settingsQuery.data?.settings.serviceCollectionId
-    ? parseGid(settingsQuery.data?.settings.serviceCollectionId).id
-    : null;
+  const serviceCollectionIds = useServiceCollectionIds();
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
-    params: { query: `${query} collection:${serviceCollectionId}` },
+    params: {
+      query: serviceCollectionIds
+        ? `${query} AND (${serviceCollectionIds.map(id => `collection:${parseGid(id).id}`).join(' OR ')})`
+        : query,
+    },
   });
   const currencyFormatter = useCurrencyFormatter();
 
@@ -32,7 +38,7 @@ export function ServiceSelector() {
   const rows = getProductVariantRows(productVariantsQuery?.data?.pages ?? [], closeRef, currencyFormatter);
 
   return (
-    <Screen title={'Select service'} isLoading={settingsQuery.isLoading} presentation={{ sheet: true }}>
+    <Screen title={'Select service'} presentation={{ sheet: true }}>
       <ScrollView>
         <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
           <Text variant="body" color="TextSubdued">
@@ -49,21 +55,21 @@ export function ServiceSelector() {
         {productVariantsQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
-              Loading products...
+              Loading services...
             </Text>
           </Stack>
         )}
         {productVariantsQuery.isSuccess && rows.length === 0 && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
-              No products found
+              No services found
             </Text>
           </Stack>
         )}
         {productVariantsQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
-              Error loading products
+              {extractErrorMessage(productVariantsQuery.error, 'Error loading services')}
             </Text>
           </Stack>
         )}
@@ -77,33 +83,50 @@ function getProductVariantRows(
   closePopupRef: { current: ClosePopupFn<'ServiceSelector'> },
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
-  return productVariants.map(variant => {
-    let displayName = variant.product.title;
+  return productVariants
+    .map<ListRow | null>(variant => {
+      const displayName = getProductVariantName(variant) ?? 'Unknown service';
 
-    if (!variant.product.hasOnlyDefaultVariant) {
-      displayName = `${displayName} - ${variant.title}`;
-    }
+      const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
 
-    const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
+      const type = variant.product.isFixedServiceItem
+        ? 'fixed-service'
+        : variant.product.isMutableServiceItem
+          ? 'mutable-service'
+          : null;
 
-    return {
-      id: variant.id,
-      onPress: () => {
-        closePopupRef.current({
-          uuid: uuid(),
-          productVariantId: variant.id,
-          quantity: 1 as Int,
-        });
-      },
-      leftSide: {
-        label: displayName,
-        subtitle: variant.product.description ? [variant.product.description] : undefined,
-        image: { source: imageUrl ?? 'not found' },
-      },
-      rightSide: {
-        showChevron: true,
-        label: currencyFormatter(Number(variant.price)),
-      },
-    };
-  });
+      if (type === null) {
+        return null;
+      }
+
+      return {
+        id: variant.id,
+        onPress: () => {
+          const lineItemUuid = uuid();
+          const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
+            productVariantDefaultChargeToCreateWorkOrderCharge(charge, lineItemUuid),
+          );
+
+          closePopupRef.current({
+            type,
+            lineItem: {
+              uuid: lineItemUuid,
+              productVariantId: variant.id,
+              quantity: 1 as Int,
+            },
+            charges: defaultCharges,
+          });
+        },
+        leftSide: {
+          label: displayName,
+          subtitle: variant.product.description ? [variant.product.description] : undefined,
+          image: { source: imageUrl ?? 'not found' },
+        },
+        rightSide: {
+          showChevron: true,
+          label: currencyFormatter(Number(variant.price)),
+        },
+      };
+    })
+    .filter(isNonNullable);
 }

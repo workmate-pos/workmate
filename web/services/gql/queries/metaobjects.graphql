@@ -1,0 +1,36 @@
+mutation createDefinition($definition: MetaobjectDefinitionCreateInput!) {
+  metaobjectDefinitionCreate(definition: $definition) {
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+mutation updateDefinition($id: ID!, $definition: MetaobjectDefinitionUpdateInput!) {
+  metaobjectDefinitionUpdate(id: $id, definition: $definition) {
+    metaobjectDefinition {
+      type
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+query getDefinitionByType($type: String!) {
+  metaobjectDefinitionByType(type: $type) {
+    id
+    type
+  }
+}
+
+mutation deleteDefinition($id: ID!) {
+  metaobjectDefinitionDelete(id: $id) {
+    userErrors {
+      field
+      message
+    }
+  }
+}

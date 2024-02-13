@@ -6,6 +6,8 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import { gql } from '../../services/gql/gql.js';
 import type { Ids } from '../../schemas/generated/ids.js';
 import { getShopSettings } from '../../services/settings.js';
+import { parseMetaobject } from '../../services/metaobjects/index.js';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 @Authenticated()
 export default class ProductVariantController {
@@ -18,14 +20,21 @@ export default class ProductVariantController {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    const { serviceCollectionId } = await getShopSettings(session.shop);
+    const { fixedServiceCollectionId, mutableServiceCollectionId } = await getShopSettings(session.shop);
 
     const graphql = new Graphql(session);
-    const response = await gql.products.getPage.run(graphql, { ...paginationOptions, serviceCollectionId });
+    const response = await gql.products.getPage.run(graphql, {
+      ...paginationOptions,
+      fixedServiceCollectionId,
+      mutableServiceCollectionId,
+    });
 
     const { nodes: productVariants, pageInfo } = response.productVariants;
 
-    return res.json({ productVariants, pageInfo });
+    return res.json({
+      productVariants: productVariants.map(parseProductVariantMetafields),
+      pageInfo,
+    });
   }
 
   @Get('/by-ids')
@@ -37,25 +46,45 @@ export default class ProductVariantController {
     const session: Session = res.locals.shopify.session;
     const { ids } = req.query;
 
-    const { serviceCollectionId } = await getShopSettings(session.shop);
+    const { fixedServiceCollectionId, mutableServiceCollectionId } = await getShopSettings(session.shop);
 
     const graphql = new Graphql(session);
-    const { nodes } = await gql.products.getMany.run(graphql, { ids, serviceCollectionId });
+    const { nodes } = await gql.products.getMany.run(graphql, {
+      ids,
+      fixedServiceCollectionId,
+      mutableServiceCollectionId,
+    });
 
     const productVariants = nodes.filter(
       (node): node is null | (gql.products.ProductVariantFragment.Result & { __typename: 'ProductVariant' }) =>
         node === null || node.__typename === 'ProductVariant',
     );
 
-    return res.json({ productVariants });
+    return res.json({
+      productVariants: productVariants.map(pv => (pv ? parseProductVariantMetafields(pv) : pv)),
+    });
   }
 }
 
 export type FetchProductsResponse = {
-  productVariants: gql.products.ProductVariantFragment.Result[];
+  productVariants: ProductVariantFragmentWithMetafields[];
   pageInfo: { hasNextPage: boolean; endCursor?: string | null };
 };
 
 export type FetchProductsByIdResponse = {
-  productVariants: (gql.products.ProductVariantFragment.Result | null)[];
+  productVariants: (ProductVariantFragmentWithMetafields | null)[];
 };
+
+function parseProductVariantMetafields(productVariant: gql.products.ProductVariantFragment.Result) {
+  return {
+    ...productVariant,
+    defaultCharges:
+      productVariant.defaultCharges?.references?.nodes
+        .filter(isNonNullable)
+        .filter(hasPropertyValue('__typename', 'Metaobject'))
+        .map(node => parseMetaobject(node))
+        .filter(isNonNullable) ?? [],
+  };
+}
+
+type ProductVariantFragmentWithMetafields = ReturnType<typeof parseProductVariantMetafields>;

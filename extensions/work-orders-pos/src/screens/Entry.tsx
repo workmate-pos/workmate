@@ -1,4 +1,4 @@
-import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { NavigateFn, useScreen } from '../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
@@ -6,11 +6,12 @@ import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-orde
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
-import { titleCase } from '@work-orders/common/util/casing.js';
 import { useState } from 'react';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/services/gql/queries/generated/schema.js';
 import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { extractErrorMessage } from '../util/errors.js';
 
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');
@@ -25,6 +26,7 @@ export function Entry() {
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
+
   const workOrderInfoQuery = useWorkOrderInfoQuery({
     fetch,
     query,
@@ -32,14 +34,15 @@ export function Entry() {
     status: status ?? undefined,
     customerId: customerId ?? undefined,
   });
-  const workOrderInfo = workOrderInfoQuery.data?.pages ?? [];
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
   const customerQuery = useCustomerQuery({ fetch, id: customerId });
 
-  const rows = useWorkOrderRows(workOrderInfo, navigate);
+  const rows = useWorkOrderRows(workOrderInfoQuery.data?.pages ?? [], navigate);
+
+  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
   return (
-    <Screen title="Work Orders">
+    <Screen title="Work Orders" overrideNavigateBack={() => navigation.dismiss()}>
       <ScrollView>
         <Stack direction="vertical">
           <Stack direction="horizontal" alignment="space-between">
@@ -132,7 +135,7 @@ export function Entry() {
           {workOrderInfoQuery.isError && (
             <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
               <Text color="TextCritical" variant="body">
-                An error occurred while loading work orders
+                {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
               </Text>
             </Stack>
           )}

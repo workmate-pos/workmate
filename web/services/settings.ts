@@ -3,6 +3,9 @@ import { ShopSettings } from '../schemas/generated/shop-settings.js';
 import { PartialShopSettings } from '../schemas/generated/partial-shop-settings.js';
 import { db } from './db/db.js';
 import { unit } from './db/unit-of-work.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { assertValidFormatString } from './id-formatting.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
 function serialize(value: ShopSettings[keyof ShopSettings]) {
   return JSON.stringify(value);
@@ -23,6 +26,10 @@ export function upsertSetting<const K extends keyof ShopSettings>(shop: string, 
 }
 
 export async function updateSettings(shop: string, partialShopSettings: PartialShopSettings) {
+  const settings = await getShopSettings(shop);
+
+  assertValidSettings({ ...settings, ...partialShopSettings });
+
   return await unit(async () => {
     const entries = Object.entries(partialShopSettings) as [
       keyof PartialShopSettings,
@@ -50,4 +57,20 @@ export async function insertDefaultSettingsIfNotExists(shop: string) {
       ),
     );
   });
+}
+
+function assertValidSettings(settings: ShopSettings) {
+  assertValidFormatString(settings.idFormat);
+
+  if (!settings.statuses.includes(settings.defaultStatus)) {
+    throw new HttpError('Invalid default status', 400);
+  }
+
+  if (unique(settings.statuses).length !== settings.statuses.length) {
+    throw new HttpError('Duplicate statuses are not allowed', 400);
+  }
+
+  if (settings.statuses.length === 0) {
+    throw new HttpError('Must have at least one status', 400);
+  }
 }

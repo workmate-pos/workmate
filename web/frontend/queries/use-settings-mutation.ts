@@ -2,8 +2,10 @@ import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
 import { useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 
-export const useSettingsMutation = (options: UseMutationOptions<void, unknown, ShopSettings, string[]>) => {
-  const fetch = useAuthenticatedFetch();
+export const useSettingsMutation = (
+  { fetch }: { fetch: ReturnType<typeof useAuthenticatedFetch> },
+  options: UseMutationOptions<void, unknown, ShopSettings, string[]>,
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({

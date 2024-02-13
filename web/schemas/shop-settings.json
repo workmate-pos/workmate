@@ -4,12 +4,15 @@
   "required": [
     "idFormat",
     "statuses",
+    "defaultStatus",
     "discountShortcuts",
     "discountRules",
     "workOrderRequests",
-    "serviceCollectionId",
+    "mutableServiceCollectionId",
+    "fixedServiceCollectionId",
     "defaultRate",
     "labourLineItemName",
-    "labourLineItemSKU"
+    "labourLineItemSKU",
+    "chargeSettings"
   ]
 }

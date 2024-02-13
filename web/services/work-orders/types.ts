@@ -1,11 +1,6 @@
+import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ID, DateTime, Int, Money, OrderDisplayFinancialStatus } from '../gql/queries/generated/schema.js';
 import type { OrderInfo } from '../orders/types.js';
-import type { PlaceholderLineItemAttribute } from '@work-orders/common/custom-attributes/attributes/PlaceholderLineItemAttribute.js';
-import type { Cents } from '@work-orders/common/util/money.js';
-import { UuidAttribute } from '@work-orders/common/custom-attributes/attributes/UuidAttribute.js';
-import { SkuAttribute } from '@work-orders/common/custom-attributes/attributes/SkuAttribute.js';
-import { CustomAttributeValue } from '@work-orders/common/custom-attributes/CustomAttribute.js';
-import { LabourLineItemUuidAttribute } from '@work-orders/common/custom-attributes/attributes/LabourLineItemUuidAttribute.js';
 
 export type WorkOrder = {
   name: string;
@@ -24,25 +19,32 @@ export type WorkOrder = {
     outstanding: Money;
     received: Money;
     total: Money;
-    discount: {
-      valueType: 'FIXED_AMOUNT' | 'PERCENTAGE';
-      value: number;
-    } | null;
+    discount: { valueType: 'PERCENTAGE'; value: Decimal } | { valueType: 'FIXED_AMOUNT'; value: Money } | null;
     lineItems: LineItem[];
   };
-  employeeAssignments: EmployeeAssignment[];
+  charges: (FixedPriceLabour | HourlyLabour)[];
 };
 
-export type EmployeeAssignment = {
-  employeeId: ID;
-  rate: Cents;
-  hours: Int;
+export type BaseLabour = {
+  name: string;
+  employeeId: ID | null;
   /**
    * A uuid that associates this employee assignment with a line item.
    * Used to differentiate between assignments to different instances of the same productVariantId
    */
   lineItemUuid: string | null;
   productVariantId: ID | null;
+};
+
+export type FixedPriceLabour = BaseLabour & {
+  type: 'fixed-price-labour';
+  amount: Money;
+};
+
+export type HourlyLabour = BaseLabour & {
+  type: 'hourly-labour';
+  rate: Money;
+  hours: Decimal;
 };
 
 export type LineItem = {
@@ -58,17 +60,13 @@ export type LineItem = {
     product: {
       id: ID;
       title: string;
+      isMutableServiceItem: boolean;
+      isFixedServiceItem: boolean;
     };
   } | null;
   quantity: Int;
   unitPrice: Money;
   sku: string | null;
-  attributes: {
-    placeholderLineItem: CustomAttributeValue<typeof PlaceholderLineItemAttribute> | null;
-    labourLineItemUuid: CustomAttributeValue<typeof LabourLineItemUuidAttribute> | null;
-    uuid: CustomAttributeValue<typeof UuidAttribute> | null;
-    sku: CustomAttributeValue<typeof SkuAttribute> | null;
-  };
 };
 
 /**

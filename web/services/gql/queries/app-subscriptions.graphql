@@ -1,0 +1,49 @@
+fragment AppSubscriptionFragment on AppSubscription {
+  id
+  name
+  status
+  createdAt
+}
+
+mutation appSubscriptionCreate(
+  $lineItems: [AppSubscriptionLineItemInput!]!,
+  $name: String!,
+  $replacementBehavior: AppSubscriptionReplacementBehavior = STANDARD,
+  $returnUrl: URL!,
+  $test: Boolean,
+  $trialDays: Int,
+) {
+  appSubscriptionCreate(
+    lineItems: $lineItems,
+    name: $name,
+    replacementBehavior: $replacementBehavior,
+    returnUrl: $returnUrl,
+    test: $test,
+    trialDays: $trialDays,
+  ) {
+    appSubscription {
+      ...AppSubscriptionFragment
+    }
+    confirmationUrl
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+query getAppSubscription($id: ID!) {
+  node(id: $id) {
+    __typename
+    ...AppSubscriptionFragment
+  }
+}
+
+query getCurrentAppSubscriptions {
+  currentAppInstallation {
+    id
+    activeSubscriptions {
+      ...AppSubscriptionFragment
+    }
+  }
+}

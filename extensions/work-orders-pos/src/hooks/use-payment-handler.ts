@@ -1,61 +1,58 @@
-import { useCartSubscription, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useRef, useState } from 'react';
-import { parseGid } from '@work-orders/common/util/gid.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
-import { Cart } from '@shopify/retail-ui-extensions';
-import { withResolvers } from '@work-orders/common/util/promise.js';
 import { attributesToProperties } from '@work-orders/common/custom-attributes/mapping/index.js';
 import { WorkOrderOrderAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order.js';
 import { WorkOrderOrderLineItemAttributesMapping } from '@work-orders/common/custom-attributes/mapping/work-order-order-line-item.js';
-import { groupBy } from '@web/util/array.js';
-import { sum } from '@work-orders/common/util/array.js';
-import { never } from '@work-orders/common/util/never.js';
+import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
+import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
+import { getChargesPrice } from '../create-work-order/charges.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from './use-authenticated-fetch.js';
+import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { groupBy, sumMap } from '@teifi-digital/shopify-app-toolbox/array';
+import { hasNestedPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 
-const useCart = () => {
+const useCartRef = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
-  const cart = useCartSubscription();
-
-  const [previousCart, setPreviousCart] = useState<Cart>(api.cart.subscribable.initial);
-  const [currentCart, setCurrentCart] = useState<Cart>(cart);
+  const cartRef = useRef(api.cart.subscribable.initial);
 
   useEffect(() => {
-    setPreviousCart(currentCart);
-    setCurrentCart(cart);
-  }, [cart]);
+    api.cart.subscribable.subscribe(cart => {
+      cartRef.current = cart;
+    });
+  }, []);
 
-  return { previousCart, currentCart };
-};
-
-const useNewestLineItemPromise = (): { current: { promise: Promise<Cart['lineItems'][number]> } } => {
-  const { previousCart, currentCart } = useCart();
-  const promiseRef = useRef(withResolvers<Cart['lineItems'][number]>());
-
-  useEffect(() => {
-    const newLineItem = currentCart.lineItems.find(
-      lineItem => previousCart.lineItems.find(item => item.uuid === lineItem.uuid)?.quantity !== lineItem.quantity,
-    );
-
-    if (newLineItem) {
-      promiseRef.current.resolve(newLineItem);
-      promiseRef.current = withResolvers();
-    }
-  }, [previousCart, currentCart]);
-
-  return promiseRef;
+  return cartRef;
 };
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
 /**
  * Creates work order payments.
- * Attributes should always be the same as the ones in web/services/work-orders/upsert.ts !!!
  */
 export const usePaymentHandler = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();
   const [isLoading, setIsLoading] = useState(false);
-  const newestLineItemPromiseRef = useNewestLineItemPromise();
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
+
+  const cartRef = useCartRef();
 
   const handlePayment = async ({ workOrder }: { workOrder: WorkOrder }) => {
+    if (settingsQuery.isLoading) {
+      api.toast.show('Please wait until the settings are loaded');
+      return;
+    }
+
+    if (!settingsQuery.data) {
+      api.toast.show('Settings could not be loaded, try reloading the app');
+      return;
+    }
+
     setIsLoading(true);
 
     if (workOrder.order.type === 'order') {
@@ -68,46 +65,55 @@ export const usePaymentHandler = () => {
 
     api.toast.show('Preparing payment', { duration: 1000 });
 
+    // just like the backend we construct the payment from a CreateWorkOrder (a bit easier with uuid mappings)
+    const createWorkOrder = workOrderToCreateWorkOrder(workOrder);
+
     await api.cart.clearCart();
 
+    // these only work in sequence
     await api.cart.addCartProperties(getCartProperties(workOrder));
+    await api.cart.setCustomer({ id: parseGid(createWorkOrder.customerId).id });
 
-    const groupedLineItems = groupBy(workOrder.order.lineItems, lineItem => lineItem.variant?.id ?? 'custom');
-
-    for (const lineItems of Object.values(groupedLineItems)) {
-      const addedLineItem = newestLineItemPromiseRef.current.promise;
-
-      const [lineItem] = lineItems;
-      let lineItemUuids: string[] | undefined = undefined;
-
-      if (lineItem.variant) {
-        await api.cart.addLineItem(
-          parseGid(lineItem.variant.id).id,
-          sum(lineItems, li => li.quantity),
-        );
-        lineItemUuids = lineItems.map(li => li.attributes.uuid ?? never());
-      } else {
-        await api.cart.addCustomSale({
-          title: lineItem.title,
-          quantity: sum(lineItems, li => li.quantity),
-          price: lineItem.unitPrice,
-          taxable: lineItem.taxable,
-        });
-      }
-
-      const { uuid } = await addedLineItem;
-      await api.cart.addLineItemProperties(uuid, getLineItemAttributes(lineItem, lineItemUuids));
-    }
-
-    await api.cart.setCustomer({ id: parseGid(workOrder.customerId).id });
-
-    if (workOrder.order.discount) {
+    if (createWorkOrder.discount) {
       await api.cart.applyCartDiscount(
-        ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[workOrder.order.discount.valueType],
+        ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[createWorkOrder.discount.valueType],
         'Discount',
-        String(workOrder.order.discount.value),
+        createWorkOrder.discount.value,
       );
     }
+
+    const productLineItems = getProductLineItems(createWorkOrder, workOrder);
+    const chargeLineItems = getChargeLineItems(createWorkOrder);
+
+    const addLineItemPromises = [];
+
+    for (const { quantity, title, price, taxable } of chargeLineItems) {
+      addLineItemPromises.push(api.cart.addCustomSale({ quantity, title, price, taxable }));
+    }
+
+    for (const { productVariantId, quantity } of productLineItems) {
+      addLineItemPromises.push(api.cart.addLineItem(productVariantId, quantity));
+    }
+
+    await Promise.all(addLineItemPromises);
+
+    const addAttributePromises = [];
+
+    for (const lineItem of cartRef.current.lineItems) {
+      let customAttributes: Record<string, string> | undefined;
+
+      if (lineItem.variantId) {
+        customAttributes = productLineItems.find(li => li.productVariantId === lineItem.variantId)?.customAttributes;
+      } else if (lineItem.title) {
+        customAttributes = chargeLineItems.find(li => li.title === lineItem.title)?.customAttributes;
+      }
+
+      if (customAttributes) {
+        addAttributePromises.push(api.cart.addLineItemProperties(lineItem.uuid, customAttributes));
+      }
+    }
+
+    await Promise.all(addAttributePromises);
 
     api.navigation.dismiss();
 
@@ -120,17 +126,110 @@ export const usePaymentHandler = () => {
   };
 };
 
+type AddLineItemSpec = { productVariantId: number; quantity: number; customAttributes: Record<string, string> };
+type AddCustomSaleSpec = {
+  taxable: boolean;
+  quantity: number;
+  title: string;
+  price: Money;
+  customAttributes: Record<string, string>;
+};
+
+/**
+ * Get line items for products (i.e. non custom sales)
+ */
+function getProductLineItems(createWorkOrder: CreateWorkOrder, workOrder: WorkOrder): AddLineItemSpec[] {
+  const lineItemsByProductVariantId = groupBy(createWorkOrder.lineItems, lineItem => lineItem.productVariantId);
+  const result: AddLineItemSpec[] = [];
+
+  for (const [productVariantId, lineItems] of entries(lineItemsByProductVariantId)) {
+    const lineItemUuids = new Set(lineItems.map(li => li.uuid));
+
+    let quantity: number;
+
+    if (isMutableServiceLineItem(productVariantId, workOrder)) {
+      // the quantity of mutable service line items is set such that it covers the price of all related charges
+      const charges = createWorkOrder.charges.filter(
+        charge => charge.lineItemUuid && lineItemUuids.has(charge.lineItemUuid),
+      );
+
+      const unitPrice =
+        workOrder.order.lineItems.find(hasNestedPropertyValue('variant.id', productVariantId))?.unitPrice ?? never();
+      const chargePrice = getChargesPrice(charges);
+
+      quantity = parseInt(
+        BigDecimal.max(
+          BigDecimal.ONE,
+          BigDecimal.fromMoney(chargePrice).divide(BigDecimal.fromMoney(unitPrice), 2).round(0, RoundingMode.CEILING),
+        ).toDecimal(),
+      );
+    } else {
+      // simply sum the quantities of all line items
+      quantity = sumMap(lineItems, li => li.quantity);
+    }
+
+    const customAttributes = getProductLineItemAttributes([...lineItemUuids]);
+
+    result.push({
+      productVariantId: parseGid(productVariantId).id,
+      quantity,
+      customAttributes,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Get line items for additional charges, i.e. custom sales
+ */
+function getChargeLineItems(createWorkOrder: CreateWorkOrder): AddCustomSaleSpec[] {
+  const groupedCharges = groupBy(createWorkOrder.charges, charge => charge.name);
+  const result: AddCustomSaleSpec[] = [];
+
+  for (const [baseName, charges] of entries(groupedCharges)) {
+    for (const [i, charge] of charges.entries()) {
+      // ensure every charge has a unique name, otherwise line items will be merged
+      const name = charges.length === 1 ? baseName : `${baseName} ${i + 1}`;
+      const price = getChargesPrice([charge]);
+
+      const customAttributes = getChargeLineItemAttributes(charge);
+
+      result.push({
+        title: name,
+        taxable: true,
+        quantity: 1,
+        price,
+        customAttributes,
+      });
+    }
+  }
+
+  return result;
+}
+
+function isMutableServiceLineItem(productVariantId: ID, workOrder: WorkOrder) {
+  const product = workOrder.order.lineItems.find(hasNestedPropertyValue('variant.id', productVariantId));
+  if (!product) return false;
+
+  return product.variant.product.isMutableServiceItem;
+}
+
 function getCartProperties(workOrder: WorkOrder) {
   return attributesToProperties(WorkOrderOrderAttributesMapping, {
     workOrder: workOrder.name,
   });
 }
 
-function getLineItemAttributes(lineItem: WorkOrder['order']['lineItems'][number], uuids?: string[]) {
+function getProductLineItemAttributes(uuids: string[]) {
   return attributesToProperties(WorkOrderOrderLineItemAttributesMapping, {
-    labourLineItemUuid: lineItem.attributes.labourLineItemUuid,
-    placeholderLineItem: lineItem.attributes.placeholderLineItem,
-    sku: lineItem.attributes.sku,
-    uuids: uuids ?? null,
+    uuids,
+  });
+}
+
+function getChargeLineItemAttributes(labour: CreateWorkOrder['charges'][number], sku?: string) {
+  return attributesToProperties(WorkOrderOrderLineItemAttributesMapping, {
+    chargeLineItemUuid: labour.lineItemUuid,
+    sku: sku ?? null,
   });
 }

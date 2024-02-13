@@ -1,20 +1,48 @@
 import { Session } from '@shopify/shopify-api';
-import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import {
+  Authenticated,
+  BodySchema,
+  Get,
+  Post,
+  QuerySchema,
+} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
 import { db } from '../../services/db/db.js';
-import { Ids } from '../../schemas/generated/ids.js';
-import { isNotNull } from '../../util/filters.js';
-import { never } from '@work-orders/common/util/never.js';
-import { Cents, parseMoney, toCents } from '@work-orders/common/util/money.js';
 import { getShopSettings } from '../../services/settings.js';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { Permission, isPermissionNode, LocalsTeifiUser } from '../../decorators/permission.js';
+import { indexBy } from '@teifi-digital/shopify-app-toolbox/array';
+import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
+import { Ids } from '../../schemas/generated/ids.js';
+import { IUpsertManyParams } from '../../services/db/queries/generated/employee.sql.js';
+import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 @Authenticated()
 export default class EmployeeController {
+  @Get('/me')
+  @Permission('none')
+  async fetchMe(req: Request, res: Response<FetchMeResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+
+    const { defaultRate } = await getShopSettings(session.shop);
+
+    return res.json({
+      employee: {
+        ...user.staffMember,
+        ...user.user,
+        rate: (user.user.rate ?? defaultRate) as Money,
+        isDefaultRate: user.user.rate === null || user.user.rate === undefined,
+      },
+    });
+  }
+
   @Get('/')
   @QuerySchema('pagination-options')
+  @Permission('read_employees')
   async fetchEmployees(
     req: Request<unknown, unknown, unknown, PaginationOptions>,
     res: Response<FetchEmployeesResponse>,
@@ -29,13 +57,14 @@ export default class EmployeeController {
     const pageInfo = response.shop.staffMembers.pageInfo;
 
     return res.json({
-      employees: (await getEmployeesWithRate(session.shop, employees)).map(e => e ?? never()),
+      employees: await attachDatabaseEmployees(session.shop, employees),
       pageInfo,
     });
   }
 
   @Get('/by-ids')
   @QuerySchema('ids')
+  @Permission('read_employees')
   async fetchEmployeesById(req: Request<unknown, unknown, unknown, Ids>, res: Response<FetchEmployeesByIdResponse>) {
     const session: Session = res.locals.shopify.session;
     const { shop } = session;
@@ -44,33 +73,70 @@ export default class EmployeeController {
     const graphql = new Graphql(session);
     const { nodes } = await gql.staffMember.getMany.run(graphql, { ids });
 
-    const staffMembers = nodes.filter(
-      (node): node is null | (gql.staffMember.StaffMemberFragment.Result & { __typename: 'StaffMember' }) =>
-        node === null || node.__typename === 'StaffMember',
-    );
+    const staffMembers = nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember'));
+    const staffMembersWithDatabaseInfo = await attachDatabaseEmployees(shop, staffMembers);
 
-    const employeesWithRates = (await getEmployeesWithRate(shop, staffMembers)).filter(isNotNull);
+    const staffMemberRecord = indexBy(staffMembersWithDatabaseInfo, e => e.id);
 
-    return res.json({ employees: employeesWithRates });
+    return res.json({ employees: ids.map(id => staffMemberRecord[id] ?? null) });
+  }
+
+  @Post('/')
+  @Permission('write_employees')
+  @BodySchema('upsert-employees')
+  async upsertEmployees(req: Request<unknown, unknown, UpsertEmployees>, res: Response<UpsertEmployeesResponse>) {
+    const { shop }: Session = res.locals.shopify.session;
+
+    const employees: IUpsertManyParams['employees'] = req.body.employees.map(e => ({
+      employeeId: e.employeeId,
+      rate: e.rate,
+      superuser: e.superuser,
+      permissions: e.permissions.map(p => {
+        if (isPermissionNode(p)) return p;
+        throw new Error(`Invalid permission node: ${p}`);
+      }),
+    }));
+
+    await db.employee.upsertMany({ shop, employees });
+
+    return res.json({ success: true });
   }
 }
 
-async function getEmployeesWithRate(shop: string, employees: (gql.staffMember.StaffMemberFragment.Result | null)[]) {
-  const rates = await db.employeeRate.getMany({ shop, employeeIds: employees.filter(isNotNull).map(e => e.id) });
-  const ratesRecord = Object.fromEntries(rates.map(r => [r.employeeId, r.rate as Cents]));
+async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMember.StaffMemberFragment.Result[]) {
+  const staffMemberIds = staffMembers.filter(isNonNullable).map(e => e.id);
+  const employees = await db.employee.getMany({ shop, employeeIds: staffMemberIds });
   const { defaultRate } = await getShopSettings(shop);
-  const defaultRateCents = toCents(parseMoney(defaultRate));
 
-  return employees.map(e => (e ? { ...e, rate: ratesRecord[e.id] ?? defaultRateCents } : null));
+  const employeeRecord = indexBy(employees, e => e.employeeId);
+
+  return staffMembers.map(staffMember => {
+    const employee = staffMember && employeeRecord[staffMember.id];
+
+    return {
+      ...staffMember,
+      ...employee,
+      rate: (employee?.rate ?? defaultRate) as Money,
+      isDefaultRate: employee?.rate === null || employee?.rate === undefined,
+    };
+  });
 }
 
-export type EmployeeWithRate = gql.staffMember.StaffMemberFragment.Result & { rate: Cents };
+export type EmployeeWithDatabaseInfo = Awaited<ReturnType<typeof attachDatabaseEmployees>>[number];
 
 export type FetchEmployeesResponse = {
-  employees: EmployeeWithRate[];
+  employees: EmployeeWithDatabaseInfo[];
   pageInfo: { hasNextPage: boolean; endCursor?: string | null };
 };
 
 export type FetchEmployeesByIdResponse = {
-  employees: (EmployeeWithRate | null)[];
+  employees: (EmployeeWithDatabaseInfo | null)[];
+};
+
+export type UpsertEmployeesResponse = {
+  success: true;
+};
+
+export type FetchMeResponse = {
+  employee: EmployeeWithDatabaseInfo;
 };

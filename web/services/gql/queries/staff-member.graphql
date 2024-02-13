@@ -22,5 +22,5 @@ query getMany($ids: [ID!]!) {
 fragment StaffMemberFragment on StaffMember {
   id
   name
-  active
+  isShopOwner
 }

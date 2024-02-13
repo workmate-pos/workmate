@@ -1,10 +1,12 @@
-import type { Money, ShopSettings } from '../../schemas/generated/shop-settings.js';
+import { Money, Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 
 const defaultShopSettings: ShopSettings = {
   statuses: ['Draft', 'In Progress', 'Done'],
+  defaultStatus: 'Draft',
   idFormat: 'WO-#{{id}}',
   discountShortcuts: [
-    { percentage: 10, unit: 'percentage' },
+    { percentage: '10.00' as Decimal, unit: 'percentage' },
     { money: '10.00' as Money, unit: 'currency' },
   ],
   discountRules: {
@@ -16,10 +18,16 @@ const defaultShopSettings: ShopSettings = {
     enabled: false,
     status: null,
   },
-  serviceCollectionId: null,
+  mutableServiceCollectionId: null,
+  fixedServiceCollectionId: null,
   defaultRate: '15.00' as Money,
   labourLineItemName: 'Labour',
   labourLineItemSKU: '',
+  chargeSettings: {
+    fixedPriceLabour: true,
+    hourlyLabour: true,
+    employeeAssignments: true,
+  },
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {
