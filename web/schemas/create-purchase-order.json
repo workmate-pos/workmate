@@ -97,6 +97,24 @@
         }
       ]
     },
+    "subtotal": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "discount": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "tax": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "shipping": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "deposited": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "paid": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
     "products": {
       "type": "array",
       "items": {
@@ -161,6 +179,12 @@
     "vendorName",
     "customerName",
     "locationName",
+    "subtotal",
+    "discount",
+    "tax",
+    "shipping",
+    "deposited",
+    "paid",
     "products",
     "customFields",
     "employeeAssignments"

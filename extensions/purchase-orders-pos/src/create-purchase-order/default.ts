@@ -18,4 +18,10 @@ export const defaultCreatePurchaseOrder: CreatePurchaseOrder = {
   locationName: null,
   shipTo: null,
   shipFrom: null,
+  deposited: null,
+  paid: null,
+  tax: null,
+  discount: null,
+  shipping: null,
+  subtotal: null,
 };

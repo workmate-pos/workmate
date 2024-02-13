@@ -33,6 +33,12 @@ export async function upsertPurchaseOrder({ shop }: Session, createPurchaseOrder
       locationName: createPurchaseOrder.locationName,
       shipFrom: createPurchaseOrder.shipFrom,
       shipTo: createPurchaseOrder.shipTo,
+      deposited: createPurchaseOrder.deposited,
+      paid: createPurchaseOrder.paid,
+      discount: createPurchaseOrder.discount,
+      tax: createPurchaseOrder.tax,
+      shipping: createPurchaseOrder.shipping,
+      subtotal: createPurchaseOrder.subtotal,
     });
 
     await Promise.all([

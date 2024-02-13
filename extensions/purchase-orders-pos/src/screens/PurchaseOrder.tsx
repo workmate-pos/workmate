@@ -11,7 +11,7 @@ import {
 } from '@shopify/retail-ui-extensions-react';
 import { PopupNavigateFn, useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
-import { useCreatePurchaseOrderReducer } from '../create-purchase-order/reducer.js';
+import { CreatePurchaseOrderDispatchProxy, useCreatePurchaseOrderReducer } from '../create-purchase-order/reducer.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
@@ -25,15 +25,18 @@ import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query
 import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
+import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export function PurchaseOrder() {
   const [query, setQuery] = useState('');
 
-  const [createPurchaseOrder, dispatch] = useCreatePurchaseOrderReducer();
+  const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer();
 
   const { Screen, usePopup } = useScreen('PurchaseOrder', purchaseOrder => {
     setQuery('');
     dispatch.set({ purchaseOrder: purchaseOrder ?? defaultCreatePurchaseOrder });
+    setHasUnsavedChanges(false);
   });
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
@@ -56,6 +59,7 @@ export function PurchaseOrder() {
     dispatch.setPartial({ employeeAssignments }),
   );
 
+  const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, vendorSelectorPopup.navigate);
   const selectVendorBeforeAddingProductsDialog = useSelectVendorBeforeAddingProductsDialog(
     createPurchaseOrder,
@@ -73,6 +77,7 @@ export function PurchaseOrder() {
         const message = !!createPurchaseOrder.name ? 'Purchase order updated' : 'Purchase order created';
         toast.show(message);
         dispatch.set({ purchaseOrder });
+        setHasUnsavedChanges(false);
       },
     },
   );
@@ -97,8 +102,25 @@ export function PurchaseOrder() {
     dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress?.formatted?.join('\n') ?? null });
   }, [vendorCustomer]);
 
+  const total = BigDecimal.sum(
+    createPurchaseOrder.subtotal ? BigDecimal.fromMoney(createPurchaseOrder.subtotal) : BigDecimal.ZERO,
+    createPurchaseOrder.tax ? BigDecimal.fromMoney(createPurchaseOrder.tax) : BigDecimal.ZERO,
+    createPurchaseOrder.shipping ? BigDecimal.fromMoney(createPurchaseOrder.shipping) : BigDecimal.ZERO,
+  ).subtract(createPurchaseOrder.discount ? BigDecimal.fromMoney(createPurchaseOrder.discount) : BigDecimal.ZERO);
+
+  const balanceDue = total.subtract(
+    BigDecimal.sum(
+      createPurchaseOrder.deposited ? BigDecimal.fromMoney(createPurchaseOrder.deposited) : BigDecimal.ZERO,
+      createPurchaseOrder.paid ? BigDecimal.fromMoney(createPurchaseOrder.paid) : BigDecimal.ZERO,
+    ),
+  );
+
   return (
-    <Screen title={createPurchaseOrder.name ?? 'New purchase order'} isLoading={purchaseOrderMutation.isLoading}>
+    <Screen
+      title={createPurchaseOrder.name ?? 'New purchase order'}
+      isLoading={purchaseOrderMutation.isLoading}
+      overrideNavigateBack={unsavedChangesDialog.show}
+    >
       <ScrollView>
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={4} grow>
@@ -192,7 +214,7 @@ export function PurchaseOrder() {
           </ResponsiveGrid>
         </Stack>
 
-        <Stack direction={'vertical'} paddingVertical={'Small'} flex={1}>
+        <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={2}>
             <ResponsiveGrid columns={1}>
               <Button title={'Add Product'} type={'primary'} onPress={selectVendorBeforeAddingProductsDialog.show} />
@@ -208,18 +230,35 @@ export function PurchaseOrder() {
             </ResponsiveGrid>
 
             <ResponsiveGrid columns={1}>
-              <ResponsiveGrid columns={2}>
-                <Text>some more fields</Text>
+              <ResponsiveGrid columns={2} grow>
+                <MoneyInput field={'subtotal'} createPurchaseOrder={createPurchaseOrder} dispatch={dispatch} />
+                <MoneyInput field={'discount'} createPurchaseOrder={createPurchaseOrder} dispatch={dispatch} />
+                <MoneyInput field={'tax'} createPurchaseOrder={createPurchaseOrder} dispatch={dispatch} />
+                <MoneyInput field={'shipping'} createPurchaseOrder={createPurchaseOrder} dispatch={dispatch} />
+                <TextField label={'Total'} value={total.round(2, RoundingMode.CEILING).toString()} disabled />
               </ResponsiveGrid>
-
-              <Button
-                title={!!createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
-                type={'primary'}
-                onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
-              />
+              <ResponsiveGrid columns={2} grow>
+                <MoneyInput field={'deposited'} createPurchaseOrder={createPurchaseOrder} dispatch={dispatch} />
+                <MoneyInput field={'paid'} createPurchaseOrder={createPurchaseOrder} dispatch={dispatch} />
+                <TextField
+                  label={'Balance Due'}
+                  value={balanceDue.round(2, RoundingMode.CEILING).toString()}
+                  disabled
+                />
+              </ResponsiveGrid>
             </ResponsiveGrid>
           </ResponsiveGrid>
         </Stack>
+
+        <Stack direction={'vertical'} paddingVertical={'Small'}>
+          <Button
+            title={!!createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
+            type={'primary'}
+            onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
+          />
+        </Stack>
+
+        <Text>{JSON.stringify(createPurchaseOrder, null, 2)}</Text>
       </ScrollView>
     </Screen>
   );
@@ -333,3 +372,66 @@ const useSelectVendorBeforeAddingProductsDialog = (
     },
   };
 };
+
+type CreatePurchaseOrderMoneyField = 'subtotal' | 'discount' | 'tax' | 'shipping' | 'deposited' | 'paid';
+
+/**
+ * Money input that shows validation errors nicely, and automatically updates the purchase order state if valid.
+ * Custom component is needed because FormattedTextField is ass 🗣️
+ */
+function MoneyInput<const F extends CreatePurchaseOrderMoneyField>({
+  createPurchaseOrder,
+  dispatch,
+  field,
+}: {
+  field: F;
+  createPurchaseOrder: Pick<CreatePurchaseOrder, F>;
+  dispatch: CreatePurchaseOrderDispatchProxy;
+}) {
+  const [internalState, setInternalState] = useState(createPurchaseOrder[field] ?? '');
+  const [error, setError] = useState('');
+
+  const clearError = () => setError('');
+  const commit = () => {
+    if (!isMoneyInputValid(internalState)) {
+      setError('Invalid amount');
+      return;
+    }
+
+    const value = parseMoneyInput(internalState, createPurchaseOrder[field]);
+
+    setInternalState(value ?? '');
+    dispatch.setPartial({ [field]: value });
+  };
+
+  return (
+    <TextField
+      label={titleCase(field)}
+      onChange={setInternalState}
+      value={internalState}
+      error={error}
+      onFocus={clearError}
+      onBlur={commit}
+    />
+  );
+}
+
+function parseMoneyInput(value: string, fallback: Money | null = null) {
+  if (!value.trim()) {
+    return null;
+  }
+
+  if (BigDecimal.isValid(value)) {
+    return BigDecimal.fromString(value).round(2, RoundingMode.CEILING).toMoney();
+  }
+
+  return fallback;
+}
+
+function isMoneyInputValid(value: string) {
+  if (!value.trim()) {
+    return true;
+  }
+
+  return BigDecimal.isValid(value);
+}

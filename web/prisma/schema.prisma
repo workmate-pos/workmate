@@ -192,6 +192,14 @@ model PurchaseOrder {
   vendorCustomerId String?
   orderId          String?
 
+  /// Total excluding discounts, taxes, shipping
+  subtotal  String?
+  discount  String?
+  tax       String?
+  shipping  String?
+  deposited String?
+  paid      String?
+
   // Searchable fields
 
   /// Shop specific name

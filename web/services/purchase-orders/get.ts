@@ -3,7 +3,7 @@ import { PurchaseOrder, PurchaseOrderInfo } from './types.js';
 import { escapeLike } from '../db/like.js';
 import { db } from '../db/db.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
-import { assertGidOrNull, assertInt } from '../../util/assertions.js';
+import { assertGidOrNull, assertInt, assertMoneyOrNull } from '../../util/assertions.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
@@ -18,6 +18,12 @@ export async function getPurchaseOrder(session: Session, name: string): Promise<
   assertGidOrNull(purchaseOrder.customerId);
   assertGidOrNull(purchaseOrder.vendorCustomerId);
   assertGidOrNull(purchaseOrder.orderId);
+  assertMoneyOrNull(purchaseOrder.subtotal);
+  assertMoneyOrNull(purchaseOrder.discount);
+  assertMoneyOrNull(purchaseOrder.tax);
+  assertMoneyOrNull(purchaseOrder.shipping);
+  assertMoneyOrNull(purchaseOrder.deposited);
+  assertMoneyOrNull(purchaseOrder.paid);
 
   const products = await getPurchaseOrderProducts(purchaseOrder.id);
   const customFields = await getPurchaseOrderCustomFields(purchaseOrder.id);
@@ -38,6 +44,12 @@ export async function getPurchaseOrder(session: Session, name: string): Promise<
     vendorName: purchaseOrder.vendorName,
     customerName: purchaseOrder.customerName,
     locationName: purchaseOrder.locationName,
+    subtotal: purchaseOrder.subtotal,
+    discount: purchaseOrder.discount,
+    tax: purchaseOrder.tax,
+    shipping: purchaseOrder.shipping,
+    deposited: purchaseOrder.deposited,
+    paid: purchaseOrder.paid,
     customFields,
     products,
     employeeAssignments,

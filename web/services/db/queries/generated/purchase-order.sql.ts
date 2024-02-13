@@ -75,6 +75,8 @@ export interface IGetResult {
   createdAt: Date;
   customerId: string | null;
   customerName: string | null;
+  deposited: string | null;
+  discount: string | null;
   id: number;
   locationId: string | null;
   locationName: string | null;
@@ -82,10 +84,14 @@ export interface IGetResult {
   note: string | null;
   orderId: string | null;
   orderName: string | null;
+  paid: string | null;
   shipFrom: string | null;
+  shipping: string | null;
   shipTo: string | null;
   shop: string;
   status: PurchaseOrderStatus;
+  subtotal: string | null;
+  tax: string | null;
   vendorCustomerId: string | null;
   vendorName: string | null;
   workOrderName: string | null;
@@ -116,16 +122,22 @@ export const get = new PreparedQuery<IGetParams,IGetResult>(getIR);
 export interface IUpsertParams {
   customerId?: string | null | void;
   customerName?: string | null | void;
+  deposited?: string | null | void;
+  discount?: string | null | void;
   locationId?: string | null | void;
   locationName?: string | null | void;
   name: string;
   note?: string | null | void;
   orderId?: string | null | void;
   orderName?: string | null | void;
+  paid?: string | null | void;
   shipFrom?: string | null | void;
+  shipping?: string | null | void;
   shipTo?: string | null | void;
   shop: string;
   status: PurchaseOrderStatus;
+  subtotal?: string | null | void;
+  tax?: string | null | void;
   vendorCustomerId?: string | null | void;
   vendorName?: string | null | void;
   workOrderName?: string | null | void;
@@ -142,16 +154,17 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"locationId":true,"customerId":true,"vendorCustomerId":true,"note":true,"vendorName":true,"customerName":true,"locationName":true,"shipFrom":true,"shipTo":true,"workOrderName":true,"orderId":true,"orderName":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":278,"b":283}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":286,"b":291}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":294,"b":301},{"a":526,"b":533}]},{"name":"locationId","required":false,"transform":{"type":"scalar"},"locs":[{"a":304,"b":314},{"a":562,"b":572}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":317,"b":327},{"a":601,"b":611}]},{"name":"vendorCustomerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":330,"b":346},{"a":640,"b":656}]},{"name":"note","required":false,"transform":{"type":"scalar"},"locs":[{"a":349,"b":353},{"a":685,"b":689}]},{"name":"vendorName","required":false,"transform":{"type":"scalar"},"locs":[{"a":356,"b":366},{"a":718,"b":728}]},{"name":"customerName","required":false,"transform":{"type":"scalar"},"locs":[{"a":369,"b":381},{"a":757,"b":769}]},{"name":"locationName","required":false,"transform":{"type":"scalar"},"locs":[{"a":392,"b":404},{"a":798,"b":810}]},{"name":"shipFrom","required":false,"transform":{"type":"scalar"},"locs":[{"a":407,"b":415},{"a":839,"b":847}]},{"name":"shipTo","required":false,"transform":{"type":"scalar"},"locs":[{"a":418,"b":424},{"a":876,"b":882}]},{"name":"workOrderName","required":false,"transform":{"type":"scalar"},"locs":[{"a":427,"b":440},{"a":911,"b":924}]},{"name":"orderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":443,"b":450},{"a":953,"b":960}]},{"name":"orderName","required":false,"transform":{"type":"scalar"},"locs":[{"a":453,"b":462},{"a":989,"b":998}]}],"statement":"INSERT INTO \"PurchaseOrder\" (shop, name, status, \"locationId\", \"customerId\", \"vendorCustomerId\", note, \"vendorName\",\n                             \"customerName\", \"locationName\", \"shipFrom\", \"shipTo\", \"workOrderName\", \"orderId\",\n                             \"orderName\")\nVALUES (:shop!, :name!, :status!, :locationId, :customerId, :vendorCustomerId, :note, :vendorName, :customerName,\n        :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName)\nON CONFLICT (shop, name) DO UPDATE\n  SET status            = :status!,\n      \"locationId\"      = :locationId,\n      \"customerId\"      = :customerId,\n      \"vendorCustomerId\"= :vendorCustomerId,\n      note              = :note,\n      \"vendorName\"      = :vendorName,\n      \"customerName\"    = :customerName,\n      \"locationName\"    = :locationName,\n      \"shipFrom\"        = :shipFrom,\n      \"shipTo\"          = :shipTo,\n      \"workOrderName\"   = :workOrderName,\n      \"orderId\"         = :orderId,\n      \"orderName\"       = :orderName\nRETURNING id"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"locationId":true,"customerId":true,"vendorCustomerId":true,"note":true,"vendorName":true,"customerName":true,"locationName":true,"shipFrom":true,"shipTo":true,"workOrderName":true,"orderId":true,"orderName":true,"subtotal":true,"discount":true,"tax":true,"shipping":true,"deposited":true,"paid":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":342,"b":347}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":350,"b":355}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":358,"b":365},{"a":656,"b":663}]},{"name":"locationId","required":false,"transform":{"type":"scalar"},"locs":[{"a":368,"b":378},{"a":692,"b":702}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":381,"b":391},{"a":731,"b":741}]},{"name":"vendorCustomerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":394,"b":410},{"a":770,"b":786}]},{"name":"note","required":false,"transform":{"type":"scalar"},"locs":[{"a":413,"b":417},{"a":815,"b":819}]},{"name":"vendorName","required":false,"transform":{"type":"scalar"},"locs":[{"a":420,"b":430},{"a":848,"b":858}]},{"name":"customerName","required":false,"transform":{"type":"scalar"},"locs":[{"a":433,"b":445},{"a":887,"b":899}]},{"name":"locationName","required":false,"transform":{"type":"scalar"},"locs":[{"a":456,"b":468},{"a":928,"b":940}]},{"name":"shipFrom","required":false,"transform":{"type":"scalar"},"locs":[{"a":471,"b":479},{"a":969,"b":977}]},{"name":"shipTo","required":false,"transform":{"type":"scalar"},"locs":[{"a":482,"b":488},{"a":1006,"b":1012}]},{"name":"workOrderName","required":false,"transform":{"type":"scalar"},"locs":[{"a":491,"b":504},{"a":1041,"b":1054}]},{"name":"orderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":507,"b":514},{"a":1083,"b":1090}]},{"name":"orderName","required":false,"transform":{"type":"scalar"},"locs":[{"a":517,"b":526},{"a":1119,"b":1128}]},{"name":"subtotal","required":false,"transform":{"type":"scalar"},"locs":[{"a":529,"b":537},{"a":1157,"b":1165}]},{"name":"discount","required":false,"transform":{"type":"scalar"},"locs":[{"a":540,"b":548},{"a":1194,"b":1202}]},{"name":"tax","required":false,"transform":{"type":"scalar"},"locs":[{"a":551,"b":554},{"a":1231,"b":1234}]},{"name":"shipping","required":false,"transform":{"type":"scalar"},"locs":[{"a":557,"b":565},{"a":1263,"b":1271}]},{"name":"deposited","required":false,"transform":{"type":"scalar"},"locs":[{"a":576,"b":585},{"a":1300,"b":1309}]},{"name":"paid","required":false,"transform":{"type":"scalar"},"locs":[{"a":588,"b":592},{"a":1338,"b":1342}]}],"statement":"INSERT INTO \"PurchaseOrder\" (shop, name, status, \"locationId\", \"customerId\", \"vendorCustomerId\", note, \"vendorName\",\n                             \"customerName\", \"locationName\", \"shipFrom\", \"shipTo\", \"workOrderName\", \"orderId\",\n                             \"orderName\", \"subtotal\", \"discount\", \"tax\", \"shipping\", \"deposited\", \"paid\")\nVALUES (:shop!, :name!, :status!, :locationId, :customerId, :vendorCustomerId, :note, :vendorName, :customerName,\n        :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName, :subtotal, :discount, :tax, :shipping,\n        :deposited, :paid)\nON CONFLICT (shop, name) DO UPDATE\n  SET status            = :status!,\n      \"locationId\"      = :locationId,\n      \"customerId\"      = :customerId,\n      \"vendorCustomerId\"= :vendorCustomerId,\n      note              = :note,\n      \"vendorName\"      = :vendorName,\n      \"customerName\"    = :customerName,\n      \"locationName\"    = :locationName,\n      \"shipFrom\"        = :shipFrom,\n      \"shipTo\"          = :shipTo,\n      \"workOrderName\"   = :workOrderName,\n      \"orderId\"         = :orderId,\n      \"orderName\"       = :orderName,\n      subtotal          = :subtotal,\n      discount          = :discount,\n      tax               = :tax,\n      shipping          = :shipping,\n      deposited         = :deposited,\n      paid              = :paid\nRETURNING id"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "PurchaseOrder" (shop, name, status, "locationId", "customerId", "vendorCustomerId", note, "vendorName",
  *                              "customerName", "locationName", "shipFrom", "shipTo", "workOrderName", "orderId",
- *                              "orderName")
+ *                              "orderName", "subtotal", "discount", "tax", "shipping", "deposited", "paid")
  * VALUES (:shop!, :name!, :status!, :locationId, :customerId, :vendorCustomerId, :note, :vendorName, :customerName,
- *         :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName)
+ *         :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName, :subtotal, :discount, :tax, :shipping,
+ *         :deposited, :paid)
  * ON CONFLICT (shop, name) DO UPDATE
  *   SET status            = :status!,
  *       "locationId"      = :locationId,
@@ -165,7 +178,13 @@ const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"lo
  *       "shipTo"          = :shipTo,
  *       "workOrderName"   = :workOrderName,
  *       "orderId"         = :orderId,
- *       "orderName"       = :orderName
+ *       "orderName"       = :orderName,
+ *       subtotal          = :subtotal,
+ *       discount          = :discount,
+ *       tax               = :tax,
+ *       shipping          = :shipping,
+ *       deposited         = :deposited,
+ *       paid              = :paid
  * RETURNING id
  * ```
  */

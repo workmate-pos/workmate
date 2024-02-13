@@ -36,9 +36,10 @@ WHERE id = COALESCE(:id, id)
 /* @name upsert */
 INSERT INTO "PurchaseOrder" (shop, name, status, "locationId", "customerId", "vendorCustomerId", note, "vendorName",
                              "customerName", "locationName", "shipFrom", "shipTo", "workOrderName", "orderId",
-                             "orderName")
+                             "orderName", "subtotal", "discount", "tax", "shipping", "deposited", "paid")
 VALUES (:shop!, :name!, :status!, :locationId, :customerId, :vendorCustomerId, :note, :vendorName, :customerName,
-        :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName)
+        :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName, :subtotal, :discount, :tax, :shipping,
+        :deposited, :paid)
 ON CONFLICT (shop, name) DO UPDATE
   SET status            = :status!,
       "locationId"      = :locationId,
@@ -52,7 +53,13 @@ ON CONFLICT (shop, name) DO UPDATE
       "shipTo"          = :shipTo,
       "workOrderName"   = :workOrderName,
       "orderId"         = :orderId,
-      "orderName"       = :orderName
+      "orderName"       = :orderName,
+      subtotal          = :subtotal,
+      discount          = :discount,
+      tax               = :tax,
+      shipping          = :shipping,
+      deposited         = :deposited,
+      paid              = :paid
 RETURNING id;
 
 /* @name getProducts */
