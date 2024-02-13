@@ -345,8 +345,6 @@ export function PurchaseOrder() {
             isLoading={purchaseOrderMutation.isLoading}
           />
         </Stack>
-
-        <Text>{JSON.stringify(createPurchaseOrder, null, 2)}</Text>
       </ScrollView>
     </Screen>
   );
