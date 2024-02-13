@@ -1,6 +1,6 @@
 import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { Product } from '@web/schemas/generated/create-purchase-order.js';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -8,16 +8,23 @@ import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsav
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
-import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
 import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function ProductConfig() {
   const [product, setProduct] = useState<Product | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  const [locationName, setLocationName] = useState<string | null>(null);
+  const [locationId, setLocationId] = useState<ID | null>(null);
+
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
-  const { Screen, closePopup } = useScreen('ProductConfig', product => {
+  const { Screen, closePopup } = useScreen('ProductConfig', ({ product, locationId, locationName }) => {
     setProduct(product);
+    setLocationId(locationId);
+    setLocationName(locationName);
     setHasUnsavedChanges(false);
   });
 
@@ -27,12 +34,9 @@ export function ProductConfig() {
   const productVariant = productVariantQuery?.data;
 
   const inventoryItemQuery = useInventoryItemQuery({ fetch, id: productVariant?.inventoryItem?.id ?? null });
-  const inventoryLevels = inventoryItemQuery?.data?.inventoryLevels?.nodes;
-
-  const locationIds = useMemo(() => inventoryLevels?.map(level => level.location.id) ?? [], [inventoryLevels]);
-  const locationQueries = useLocationQueries({ fetch, ids: locationIds });
-
-  const loadingLocations = Object.values(locationQueries).some(query => query.isLoading);
+  const inventoryLevel = inventoryItemQuery?.data?.inventoryLevels?.nodes?.find(
+    level => level.location.id === locationId,
+  );
 
   // TODO: Show current stock in a nicer way - maybe for just one loc? (if so change inventory level endpoint/gql query)
 
@@ -44,8 +48,8 @@ export function ProductConfig() {
       overrideNavigateBack={() => unsavedChangesDialog.show()}
     >
       <ScrollView>
-        {product && productVariant && inventoryLevels && (
-          <Stack direction="vertical" spacing={5}>
+        {product && productVariant && (
+          <Stack direction="vertical" spacing={5} flexChildren flex={1}>
             <Stack direction="vertical">
               <Text variant="headingLarge">{getProductVariantName(productVariant)}</Text>
               <Text variant="body" color="TextSubdued">
@@ -53,31 +57,60 @@ export function ProductConfig() {
               </Text>
             </Stack>
 
-            <Stack direction="vertical" spacing={2}>
-              <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'Medium'}>
+            <Stack direction={'vertical'} paddingVertical={'Medium'}>
+              <Stack direction={'horizontal'} alignment={'center'}>
                 <Text variant="headingSmall" color="TextSubdued">
-                  Stock
+                  Stock at {locationName}
                 </Text>
               </Stack>
 
-              {inventoryLevels?.flatMap(level => (
-                <ResponsiveGrid columns={2} key={level.location.id}>
-                  <Stack direction={'horizontal'} alignment={'center'} flex={1}>
-                    <Text variant="body" color={'TextSubdued'}>
-                      {locationQueries[level.location.id]?.data?.name ?? 'Unknown location'}
-                    </Text>
-                  </Stack>
-                  <Stack direction={'horizontal'} alignment={'center'} flex={1}>
-                    <Text variant="body" color={'TextSubdued'}>
-                      {level.quantities.find(quantity => quantity.name === 'available')?.quantity ?? '?'}
-                    </Text>
-                  </Stack>
-                </ResponsiveGrid>
-              ))}
+              {inventoryItemQuery.isLoading && (
+                <Stack direction={'horizontal'} alignment={'center'}>
+                  <Text variant="body" color="TextSubdued">
+                    Loading...
+                  </Text>
+                </Stack>
+              )}
 
-              <Stack direction={'horizontal'} alignment={'center'}>
-                {loadingLocations && <Text variant="body">Loading locations...</Text>}
-                {!loadingLocations && inventoryLevels.length === 0 && <Text variant="body">No stock available</Text>}
+              {inventoryItemQuery.isError && (
+                <Stack direction={'horizontal'} alignment={'center'}>
+                  <Text variant="body" color="TextCritical">
+                    {extractErrorMessage(inventoryItemQuery.error, 'An error occurred while loading stock')}
+                  </Text>
+                </Stack>
+              )}
+
+              {inventoryItemQuery.data && !inventoryLevel && (
+                <Stack direction={'horizontal'} alignment={'center'}>
+                  <Text variant="body" color="TextSubdued">
+                    No stock at this location
+                  </Text>
+                </Stack>
+              )}
+
+              {inventoryLevel?.quantities?.length === 0 && (
+                <Stack direction={'horizontal'} alignment={'center'}>
+                  <Text variant="body" color="TextSubdued">
+                    No stock types found
+                  </Text>
+                </Stack>
+              )}
+
+              <Stack direction={'horizontal'} flex={1} flexChildren paddingVertical={'Medium'}>
+                <ResponsiveGrid columns={2}>
+                  {inventoryLevel?.quantities?.flatMap(({ name, quantity }) => [
+                    <Stack direction={'horizontal'} alignment={'center'}>
+                      <Text variant="body" color="TextSubdued">
+                        {titleCase(name)}
+                      </Text>
+                    </Stack>,
+                    <Stack direction={'horizontal'} alignment={'center'}>
+                      <Text variant="body" color="TextSubdued">
+                        {quantity}
+                      </Text>
+                    </Stack>,
+                  ])}
+                </ResponsiveGrid>
               </Stack>
             </Stack>
 

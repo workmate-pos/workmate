@@ -12,7 +12,7 @@ fragment InventoryLevelFragment on InventoryLevel {
   location {
     id
   }
-  quantities(names: ["available"]) {
+  quantities(names: ["incoming", "on_hand", "available", "committed"]) {
     name
     quantity
   }

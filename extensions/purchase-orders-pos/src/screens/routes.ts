@@ -10,7 +10,10 @@ export type ScreenInputOutput = {
   EmployeeSelector: [CreatePurchaseOrder['employeeAssignments'], CreatePurchaseOrder['employeeAssignments']];
   LocationSelector: [undefined, Location];
   OrderSelector: [undefined, Pick<CreatePurchaseOrder, 'orderName' | 'orderId' | 'customerId' | 'customerName'>];
-  ProductConfig: [Product, Product];
+  ProductConfig: [
+    NonNullableValues<Pick<CreatePurchaseOrder, 'locationName' | 'locationId'>> & { product: Product },
+    Product,
+  ];
   ProductSelector: [
     NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>>,
     Product[],

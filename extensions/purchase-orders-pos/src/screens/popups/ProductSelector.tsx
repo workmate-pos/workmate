@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { Int, Product } from '@web/schemas/generated/create-purchase-order.js';

@@ -305,15 +305,16 @@ export function PurchaseOrder() {
 }
 
 function useProductRows(
-  { products }: Pick<CreatePurchaseOrder, 'products'>,
+  { products, locationName, locationId }: Pick<CreatePurchaseOrder, 'products' | 'locationName' | 'locationId'>,
   query: string,
   openConfig: PopupNavigateFn<'ProductConfig'>,
 ) {
   query = query.trim();
 
-  const productVariantIds = unique(products.map(product => product.productVariantId));
-
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
+
+  const productVariantIds = unique(products.map(product => product.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
   const getDisplayName = (product: Product) => {
@@ -335,7 +336,23 @@ function useProductRows(
 
     return {
       id: String(i),
-      onPress: () => openConfig(product),
+      onPress: () => {
+        if (!locationName) {
+          toast.show('Location not set');
+          return;
+        }
+
+        if (!locationId) {
+          toast.show('Location id not set');
+          return;
+        }
+
+        openConfig({
+          product,
+          locationName,
+          locationId,
+        });
+      },
       leftSide: {
         label: displayName,
         image: {
@@ -384,6 +401,7 @@ const useAddProductPrerequisitesDialog = (
   openProductPopup: PopupNavigateFn<'ProductSelector'>,
 ) => {
   const dialog = useDialog();
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const hasVendor = createPurchaseOrder.vendorCustomerId !== null && createPurchaseOrder.vendorName !== null;
   const hasLocation = createPurchaseOrder.locationId !== null && createPurchaseOrder.locationName !== null;
@@ -395,10 +413,25 @@ const useAddProductPrerequisitesDialog = (
     } else if (!hasLocation) {
       openLocationPopup();
     } else {
+      if (!createPurchaseOrder.locationName) {
+        toast.show('Location name not set');
+        return;
+      }
+
+      if (!createPurchaseOrder.locationId) {
+        toast.show('Location id not set');
+        return;
+      }
+
+      if (!createPurchaseOrder.vendorName) {
+        toast.show('Vendor not set');
+        return;
+      }
+
       openProductPopup({
-        locationName: createPurchaseOrder.locationName!,
-        locationId: createPurchaseOrder.locationId!,
-        vendorName: createPurchaseOrder.vendorName!,
+        locationName: createPurchaseOrder.locationName,
+        locationId: createPurchaseOrder.locationId,
+        vendorName: createPurchaseOrder.vendorName,
       });
     }
   };

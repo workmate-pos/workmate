@@ -19,8 +19,8 @@ export function ResponsiveGrid({
   const screenSize = useScreenSize();
 
   const columnCount = {
-    tablet: columns,
-    mobile: smColumns,
+    tablet: Math.max(1, columns),
+    mobile: Math.max(1, smColumns),
   }[screenSize];
 
   const childrenArray = Children.toArray(children);
