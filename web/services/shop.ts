@@ -25,6 +25,7 @@ export async function getShopType(graphql: Graphql): Promise<ShopType> {
 
 // TODO: Verify this works
 export function isShopifyPlan(shop: Shop): boolean {
+  if (isAdvancedPlan(shop)) return false;
   return shop.plan.displayName.toLowerCase().includes('shopify');
 }
 
