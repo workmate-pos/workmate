@@ -234,8 +234,11 @@ model PurchaseOrderProduct {
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId Int
 
-  productVariantId String
-  quantity         Int
+  productVariantId  String
+  inventoryItemId   String
+  quantity          Int
+  /// Quantity that is added to the available inventory
+  availableQuantity Int
 
   // Searchable fields
   sku    String?

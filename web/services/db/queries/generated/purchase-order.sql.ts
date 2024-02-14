@@ -200,8 +200,10 @@ export interface IGetProductsParams {
 
 /** 'GetProducts' return type */
 export interface IGetProductsResult {
+  availableQuantity: number;
   handle: string | null;
   id: number;
+  inventoryItemId: string;
   name: string | null;
   productVariantId: string;
   purchaseOrderId: number;
@@ -375,7 +377,9 @@ export const removeAssignedEmployees = new PreparedQuery<IRemoveAssignedEmployee
 
 /** 'InsertProduct' parameters type */
 export interface IInsertProductParams {
+  availableQuantity: number;
   handle?: string | null | void;
+  inventoryItemId: string;
   name?: string | null | void;
   productVariantId: string;
   purchaseOrderId: number;
@@ -392,13 +396,16 @@ export interface IInsertProductQuery {
   result: IInsertProductResult;
 }
 
-const insertProductIR: any = {"usedParamSet":{"purchaseOrderId":true,"productVariantId":true,"quantity":true,"sku":true,"name":true,"handle":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":112,"b":128}]},{"name":"productVariantId","required":true,"transform":{"type":"scalar"},"locs":[{"a":131,"b":148}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":151,"b":160}]},{"name":"sku","required":false,"transform":{"type":"scalar"},"locs":[{"a":163,"b":166}]},{"name":"name","required":false,"transform":{"type":"scalar"},"locs":[{"a":169,"b":173}]},{"name":"handle","required":false,"transform":{"type":"scalar"},"locs":[{"a":176,"b":182}]}],"statement":"INSERT INTO \"PurchaseOrderProduct\" (\"purchaseOrderId\", \"productVariantId\", quantity, sku, name, handle)\nVALUES (:purchaseOrderId!, :productVariantId!, :quantity!, :sku, :name, :handle)"};
+const insertProductIR: any = {"usedParamSet":{"purchaseOrderId":true,"productVariantId":true,"inventoryItemId":true,"quantity":true,"availableQuantity":true,"sku":true,"name":true,"handle":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":224,"b":240}]},{"name":"productVariantId","required":true,"transform":{"type":"scalar"},"locs":[{"a":243,"b":260}]},{"name":"inventoryItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":263,"b":279}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":282,"b":291}]},{"name":"availableQuantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":294,"b":312}]},{"name":"sku","required":false,"transform":{"type":"scalar"},"locs":[{"a":315,"b":318}]},{"name":"name","required":false,"transform":{"type":"scalar"},"locs":[{"a":321,"b":325}]},{"name":"handle","required":false,"transform":{"type":"scalar"},"locs":[{"a":336,"b":342}]}],"statement":"INSERT INTO \"PurchaseOrderProduct\" (\"purchaseOrderId\", \"productVariantId\", \"inventoryItemId\", quantity,\n                                    \"availableQuantity\", sku, name,\n                                    handle)\nVALUES (:purchaseOrderId!, :productVariantId!, :inventoryItemId!, :quantity!, :availableQuantity!, :sku, :name,\n        :handle)"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "PurchaseOrderProduct" ("purchaseOrderId", "productVariantId", quantity, sku, name, handle)
- * VALUES (:purchaseOrderId!, :productVariantId!, :quantity!, :sku, :name, :handle)
+ * INSERT INTO "PurchaseOrderProduct" ("purchaseOrderId", "productVariantId", "inventoryItemId", quantity,
+ *                                     "availableQuantity", sku, name,
+ *                                     handle)
+ * VALUES (:purchaseOrderId!, :productVariantId!, :inventoryItemId!, :quantity!, :availableQuantity!, :sku, :name,
+ *         :handle)
  * ```
  */
 export const insertProduct = new PreparedQuery<IInsertProductParams,IInsertProductResult>(insertProductIR);

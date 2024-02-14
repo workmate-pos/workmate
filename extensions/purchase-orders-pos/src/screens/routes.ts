@@ -1,6 +1,5 @@
 import type { Status, Product, CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import type { Location } from '@work-orders/common/queries/use-locations-query.js';
-import type { Vendor } from '@work-orders/common/queries/use-vendors-query.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export type ScreenInputOutput = {

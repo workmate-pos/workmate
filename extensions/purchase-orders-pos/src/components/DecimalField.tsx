@@ -61,9 +61,9 @@ export function DecimalField<const AllowEmpty extends boolean>({
     const parsedValue = parseNumberInput(newValue, decimals, roundingMode, allowEmpty, value);
 
     setInternalState(parsedValue ?? '');
-    formContext?.setValidity(label, false);
+    formContext?.setValidity(label, true);
     onIsValid?.(true);
-    if (value !== parsedValue) onChange?.(parsedValue);
+    onChange?.(parsedValue);
   };
 
   return (

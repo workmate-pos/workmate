@@ -93,8 +93,11 @@ FROM "PurchaseOrderEmployeeAssignment"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
 /* @name insertProduct */
-INSERT INTO "PurchaseOrderProduct" ("purchaseOrderId", "productVariantId", quantity, sku, name, handle)
-VALUES (:purchaseOrderId!, :productVariantId!, :quantity!, :sku, :name, :handle);
+INSERT INTO "PurchaseOrderProduct" ("purchaseOrderId", "productVariantId", "inventoryItemId", quantity,
+                                    "availableQuantity", sku, name,
+                                    handle)
+VALUES (:purchaseOrderId!, :productVariantId!, :inventoryItemId!, :quantity!, :availableQuantity!, :sku, :name,
+        :handle);
 
 /* @name insertCustomField */
 INSERT INTO "PurchaseOrderCustomField" ("purchaseOrderId", key, value)
