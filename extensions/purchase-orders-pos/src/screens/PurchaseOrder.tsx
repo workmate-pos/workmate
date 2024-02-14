@@ -29,11 +29,11 @@ import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsav
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { MoneyField } from '../components/MoneyField.js';
 import { useToggle } from '../hooks/use-toggle.js';
+import { useForm } from '@work-orders/common-pos/hooks/use-form.js';
 
 export function PurchaseOrder() {
   const [query, setQuery] = useState('');
-  const [isPriceSummaryValid, setIsPriceSummaryValid] = useState(true);
-  const [isPaymentSummaryValid, setIsPaymentSummaryValid] = useState(true);
+  const { Form, isValid } = useForm();
 
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer();
 
@@ -41,8 +41,6 @@ export function PurchaseOrder() {
 
   const { Screen, usePopup } = useScreen('PurchaseOrder', purchaseOrder => {
     setQuery('');
-    setIsPriceSummaryValid(true);
-    setIsPaymentSummaryValid(true);
     dispatch.set(purchaseOrder ?? defaultCreatePurchaseOrder);
     setHasUnsavedChanges(false);
     // screens are permanently mounted, so we need to force a rerender to clear previous validation errors, etc
@@ -140,6 +138,7 @@ export function PurchaseOrder() {
     ),
   );
 
+  // TODO: Make a new input component that works with <Form /> for every type
   return (
     <Screen title={createPurchaseOrder.name ?? 'New purchase order'} overrideNavigateBack={unsavedChangesDialog.show}>
       <ScrollView>
@@ -312,27 +311,29 @@ export function PurchaseOrder() {
               ) : null}
             </ResponsiveGrid>
 
-            <ResponsiveGrid columns={1} key={String(key)}>
-              <MoneyInputGroup
-                grid={{ columns: 2 }}
-                fields={['subtotal', 'discount', 'tax', 'shipping']}
-                createPurchaseOrder={createPurchaseOrder}
-                dispatch={dispatch}
-                onIsValid={setIsPriceSummaryValid}
-                disabled={purchaseOrderMutation.isLoading}
-              />
-              <TextField label={'Total'} value={total.round(2, RoundingMode.CEILING).toString()} disabled />
+            <Form disabled={purchaseOrderMutation.isLoading}>
+              <ResponsiveGrid columns={1} key={String(key)}>
+                <MoneyInputGroup
+                  grid={{ columns: 2 }}
+                  fields={['subtotal', 'discount', 'tax', 'shipping']}
+                  createPurchaseOrder={createPurchaseOrder}
+                  dispatch={dispatch}
+                />
+                <TextField label={'Total'} value={total.round(2, RoundingMode.CEILING).toString()} disabled />
 
-              <MoneyInputGroup
-                grid={{ columns: 2 }}
-                fields={['deposited', 'paid']}
-                createPurchaseOrder={createPurchaseOrder}
-                dispatch={dispatch}
-                onIsValid={setIsPaymentSummaryValid}
-                disabled={purchaseOrderMutation.isLoading}
-              />
-              <TextField label={'Balance Due'} value={balanceDue.round(2, RoundingMode.CEILING).toString()} disabled />
-            </ResponsiveGrid>
+                <MoneyInputGroup
+                  grid={{ columns: 2 }}
+                  fields={['deposited', 'paid']}
+                  createPurchaseOrder={createPurchaseOrder}
+                  dispatch={dispatch}
+                />
+                <TextField
+                  label={'Balance Due'}
+                  value={balanceDue.round(2, RoundingMode.CEILING).toString()}
+                  disabled
+                />
+              </ResponsiveGrid>
+            </Form>
           </ResponsiveGrid>
         </Stack>
 
@@ -341,7 +342,7 @@ export function PurchaseOrder() {
             title={!!createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
             type={'primary'}
             onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
-            isDisabled={!isPriceSummaryValid || !isPaymentSummaryValid}
+            isDisabled={!isValid}
             isLoading={purchaseOrderMutation.isLoading}
           />
         </Stack>

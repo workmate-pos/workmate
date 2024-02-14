@@ -16,19 +16,26 @@ ALTER TYPE "PermissionNode" ADD VALUE 'write_purchase_orders';
 CREATE TABLE "PurchaseOrder" (
     "id" SERIAL NOT NULL,
     "shop" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "status" "PurchaseOrderStatus" NOT NULL,
-    "salesOrderId" TEXT,
-    "workOrderId" INTEGER,
     "locationId" TEXT,
     "customerId" TEXT,
     "vendorCustomerId" TEXT,
+    "orderId" TEXT,
+    "subtotal" TEXT,
+    "discount" TEXT,
+    "tax" TEXT,
+    "shipping" TEXT,
+    "deposited" TEXT,
+    "paid" TEXT,
+    "name" TEXT NOT NULL,
+    "status" "PurchaseOrderStatus" NOT NULL,
+    "workOrderName" TEXT,
     "shipFrom" TEXT,
     "shipTo" TEXT,
     "note" TEXT,
     "vendorName" TEXT,
     "customerName" TEXT,
     "locationName" TEXT,
+    "orderName" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "PurchaseOrder_pkey" PRIMARY KEY ("id")
@@ -57,6 +64,16 @@ CREATE TABLE "PurchaseOrderProduct" (
     CONSTRAINT "PurchaseOrderProduct_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "PurchaseOrderEmployeeAssignment" (
+    "id" SERIAL NOT NULL,
+    "purchaseOrderId" INTEGER NOT NULL,
+    "employeeId" TEXT NOT NULL,
+    "employeeName" TEXT,
+
+    CONSTRAINT "PurchaseOrderEmployeeAssignment_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "PurchaseOrder_shop_name_key" ON "PurchaseOrder"("shop", "name");
 
@@ -73,10 +90,13 @@ CREATE INDEX "FixedPriceLabour_workOrderId_idx" ON "FixedPriceLabour"("workOrder
 CREATE INDEX "HourlyLabour_workOrderId_idx" ON "HourlyLabour"("workOrderId");
 
 -- AddForeignKey
-ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_workOrderId_fkey" FOREIGN KEY ("workOrderId") REFERENCES "WorkOrder"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_shop_workOrderName_fkey" FOREIGN KEY ("shop", "workOrderName") REFERENCES "WorkOrder"("shop", "name") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PurchaseOrderCustomField" ADD CONSTRAINT "PurchaseOrderCustomField_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "PurchaseOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PurchaseOrderProduct" ADD CONSTRAINT "PurchaseOrderProduct_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "PurchaseOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PurchaseOrderEmployeeAssignment" ADD CONSTRAINT "PurchaseOrderEmployeeAssignment_purchaseOrderId_fkey" FOREIGN KEY ("purchaseOrderId") REFERENCES "PurchaseOrder"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

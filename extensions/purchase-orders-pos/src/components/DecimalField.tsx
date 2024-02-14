@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { TextField } from '@shopify/retail-ui-extensions-react';
 import { BigDecimal, Decimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { useFormContext } from '@work-orders/common-pos/hooks/use-form.js';
 
 export type DecimalFieldProps = Parameters<typeof DecimalField>[0];
 
@@ -30,14 +31,21 @@ export function DecimalField<const AllowEmpty extends boolean>({
 }) {
   const [internalState, setInternalState] = useState(value ?? '');
   const [error, setError] = useState('');
+  const formContext = useFormContext();
 
   useEffect(() => {
     change(value ?? '');
   }, [value]);
 
+  useEffect(() => {
+    return () => formContext?.clearValidity(label);
+  }, [label]);
+
   const change = (value: string) => {
     setInternalState(value);
-    onIsValid?.(isValidNumber(value, allowEmpty));
+    const isValid = isValidNumber(value, allowEmpty);
+    onIsValid?.(isValid);
+    formContext?.setValidity(label, isValid);
   };
 
   const clearError = () => setError('');
@@ -57,7 +65,7 @@ export function DecimalField<const AllowEmpty extends boolean>({
   return (
     <TextField
       label={label}
-      disabled={disabled}
+      disabled={disabled || !!formContext?.disabled}
       onChange={change}
       value={internalState}
       error={error}

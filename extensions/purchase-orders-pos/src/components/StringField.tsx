@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { TextField } from '@shopify/retail-ui-extensions-react';
+import { useFormContext } from '@work-orders/common-pos/hooks/use-form.js';
 
 /**
  * Decimal field with validation and errors, and automatic rounding;
@@ -21,15 +22,22 @@ export function StringField({
 }) {
   const [internalState, setInternalState] = useState(value);
   const [error, setError] = useState('');
+  const formContext = useFormContext();
 
   useEffect(() => {
     change(value);
   }, [value]);
 
+  useEffect(() => {
+    return () => formContext?.clearValidity(label);
+  }, [label]);
+
   const change = (value: string) => {
     setInternalState(value);
     const error = validate(value);
-    onIsValid?.(error === null);
+    const isValid = error === null;
+    onIsValid?.(isValid);
+    formContext?.setValidity(label, isValid);
   };
 
   const clearError = () => setError('');
@@ -48,7 +56,7 @@ export function StringField({
   return (
     <TextField
       label={label}
-      disabled={disabled}
+      disabled={disabled || !!formContext?.disabled}
       onChange={change}
       value={internalState}
       error={error}

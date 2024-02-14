@@ -1,4 +1,13 @@
-import { BadgeStatus, Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import {
+  BadgeStatus,
+  BadgeVariant,
+  Button,
+  List,
+  ListRow,
+  ScrollView,
+  Stack,
+  Text,
+} from '@shopify/retail-ui-extensions-react';
 import { PopupNavigateFn, useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
@@ -107,9 +116,8 @@ function getPurchaseOrderRows(
       subtitle: getPurchaseOrderSubtitle(purchaseOrder),
       badges: [
         {
-          variant: 'highlight',
           text: titleCase(purchaseOrder.status),
-          status: getPurchaseOrderBadgeStatus(purchaseOrder),
+          variant: getPurchaseOrderBadgeVariant(purchaseOrder),
         },
       ],
     },
@@ -134,12 +142,12 @@ function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
   return possibilities.slice(0, 3) as [string] | [string, string] | [string, string, string];
 }
 
-function getPurchaseOrderBadgeStatus(purchaseOrder: PurchaseOrderInfo): BadgeStatus {
-  const mapping: Record<Status, BadgeStatus> = {
-    OPEN: 'empty',
-    CANCELLED: 'empty',
-    CLOSED: 'empty',
-    RECEIVED: 'complete',
+function getPurchaseOrderBadgeVariant(purchaseOrder: PurchaseOrderInfo) {
+  const mapping: Record<Status, BadgeVariant> = {
+    OPEN: 'success',
+    CANCELLED: 'neutral',
+    CLOSED: 'neutral',
+    RECEIVED: 'neutral',
   };
 
   return mapping[purchaseOrder.status];

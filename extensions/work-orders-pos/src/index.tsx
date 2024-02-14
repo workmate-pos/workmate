@@ -27,7 +27,8 @@ function SmartGridTile() {
 
   return (
     <Tile
-      title={'WorkMate'}
+      title={'Work Orders'}
+      subtitle={'WorkMate'}
       onPress={() => {
         api.smartGrid.presentModal();
       }}
