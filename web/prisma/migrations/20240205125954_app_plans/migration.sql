@@ -13,7 +13,8 @@ CREATE TABLE "AppPlanSubscription" (
     "shop" TEXT NOT NULL,
     "appSubscriptionStatus" TEXT NOT NULL,
     "appPlanId" INTEGER NOT NULL,
-    "updatedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- TODO: create updatedAt trigger
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, 
 
     CONSTRAINT "AppPlanSubscription_pkey" PRIMARY KEY ("shop")
 );
