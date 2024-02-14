@@ -2,7 +2,6 @@ import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big
 import { Decimal } from '@web/schemas/generated/shop-settings.js';
 import { DecimalField, DecimalFieldProps } from './DecimalField.js';
 import { Int } from '@web/schemas/generated/create-product.js';
-import { useState } from 'react';
 
 export type IntFieldProps = {
   label: string;
@@ -16,12 +15,9 @@ export type IntFieldProps = {
  * Wrapper around DecimalField that converts from and to Int.
  */
 export function IntField({ value, onChange, ...props }: IntFieldProps) {
-  const [internalValue, setInternalValue] = useState(
-    value === null ? null : BigDecimal.fromString(String(value)).toDecimal(),
-  );
+  const internalValue = value === null ? null : BigDecimal.fromString(String(value)).toDecimal();
 
   const internalOnChange = (val: Decimal | null) => {
-    setInternalValue(val);
     onChange?.(val === null ? null : (parseInt(val) as Int));
   };
 

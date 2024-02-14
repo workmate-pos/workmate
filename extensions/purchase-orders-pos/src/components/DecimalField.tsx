@@ -33,8 +33,10 @@ export function DecimalField<const AllowEmpty extends boolean>({
   const [error, setError] = useState('');
   const formContext = useFormContext();
 
+  // TODO: Don't show error initially
   useEffect(() => {
     change(value ?? '');
+    commit(value ?? '');
   }, [value]);
 
   useEffect(() => {
@@ -42,24 +44,26 @@ export function DecimalField<const AllowEmpty extends boolean>({
   }, [label]);
 
   const change = (value: string) => {
+    setError('');
     setInternalState(value);
-    const isValid = isValidNumber(value, allowEmpty);
-    onIsValid?.(isValid);
-    formContext?.setValidity(label, isValid);
   };
 
   const clearError = () => setError('');
 
-  const commit = () => {
-    if (!isValidNumber(internalState, allowEmpty)) {
+  const commit = (newValue: string) => {
+    if (!isValidNumber(newValue, allowEmpty)) {
       setError('Invalid amount');
+      formContext?.setValidity(label, false);
+      onIsValid?.(false);
       return;
     }
 
-    const parsedValue = parseNumberInput(internalState, decimals, roundingMode, allowEmpty, value);
+    const parsedValue = parseNumberInput(newValue, decimals, roundingMode, allowEmpty, value);
 
     setInternalState(parsedValue ?? '');
-    onChange?.(parsedValue);
+    formContext?.setValidity(label, false);
+    onIsValid?.(true);
+    if (value !== parsedValue) onChange?.(parsedValue);
   };
 
   return (
@@ -70,7 +74,7 @@ export function DecimalField<const AllowEmpty extends boolean>({
       value={internalState}
       error={error}
       onFocus={clearError}
-      onBlur={commit}
+      onBlur={() => commit(internalState)}
     />
   );
 }

@@ -228,19 +228,6 @@ model PurchaseOrder {
   @@unique([shop, name])
 }
 
-model PurchaseOrderCustomField {
-  id Int @id @default(autoincrement())
-
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId Int
-
-  key   String
-  // Searchable
-  value String
-
-  @@unique([purchaseOrderId, key])
-}
-
 model PurchaseOrderProduct {
   id Int @id @default(autoincrement())
 
@@ -275,4 +262,28 @@ model PurchaseOrderEmployeeAssignment {
 
   // Searchable fields
   employeeName String?
+}
+
+model PurchaseOrderCustomField {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  key   String
+  // Searchable
+  value String
+
+  @@unique([purchaseOrderId, key])
+}
+
+model PurchaseOrderCustomFieldsPreset {
+  id Int @id @default(autoincrement())
+
+  shop String
+  name String
+
+  keys String[]
+
+  @@unique([shop, name])
 }

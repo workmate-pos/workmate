@@ -5,6 +5,8 @@ export type PurchaseOrderStatus = 'CANCELLED' | 'CLOSED' | 'OPEN' | 'RECEIVED';
 
 export type NumberOrString = number | string;
 
+export type stringArray = (string)[];
+
 /** 'GetPage' parameters type */
 export interface IGetPageParams {
   customerId?: string | null | void;
@@ -456,5 +458,96 @@ const insertAssignedEmployeeIR: any = {"usedParamSet":{"purchaseOrderId":true,"e
  * ```
  */
 export const insertAssignedEmployee = new PreparedQuery<IInsertAssignedEmployeeParams,IInsertAssignedEmployeeResult>(insertAssignedEmployeeIR);
+
+
+/** 'GetCustomFieldsPresets' parameters type */
+export interface IGetCustomFieldsPresetsParams {
+  shop: string;
+}
+
+/** 'GetCustomFieldsPresets' return type */
+export interface IGetCustomFieldsPresetsResult {
+  id: number;
+  keys: stringArray | null;
+  name: string;
+  shop: string;
+}
+
+/** 'GetCustomFieldsPresets' query type */
+export interface IGetCustomFieldsPresetsQuery {
+  params: IGetCustomFieldsPresetsParams;
+  result: IGetCustomFieldsPresetsResult;
+}
+
+const getCustomFieldsPresetsIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":61,"b":66}]}],"statement":"SELECT *\nFROM \"PurchaseOrderCustomFieldsPreset\"\nWHERE shop = :shop!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "PurchaseOrderCustomFieldsPreset"
+ * WHERE shop = :shop!
+ * ```
+ */
+export const getCustomFieldsPresets = new PreparedQuery<IGetCustomFieldsPresetsParams,IGetCustomFieldsPresetsResult>(getCustomFieldsPresetsIR);
+
+
+/** 'UpsertCustomFieldsPreset' parameters type */
+export interface IUpsertCustomFieldsPresetParams {
+  keys: stringArray;
+  name: string;
+  shop: string;
+}
+
+/** 'UpsertCustomFieldsPreset' return type */
+export type IUpsertCustomFieldsPresetResult = void;
+
+/** 'UpsertCustomFieldsPreset' query type */
+export interface IUpsertCustomFieldsPresetQuery {
+  params: IUpsertCustomFieldsPresetParams;
+  result: IUpsertCustomFieldsPresetResult;
+}
+
+const upsertCustomFieldsPresetIR: any = {"usedParamSet":{"shop":true,"name":true,"keys":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":73,"b":78}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":81,"b":86}]},{"name":"keys","required":true,"transform":{"type":"scalar"},"locs":[{"a":89,"b":94},{"a":145,"b":150}]}],"statement":"INSERT INTO \"PurchaseOrderCustomFieldsPreset\" (shop, name, keys)\nVALUES (:shop!, :name!, :keys!)\nON CONFLICT (shop, name) DO UPDATE\n  SET keys = :keys!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "PurchaseOrderCustomFieldsPreset" (shop, name, keys)
+ * VALUES (:shop!, :name!, :keys!)
+ * ON CONFLICT (shop, name) DO UPDATE
+ *   SET keys = :keys!
+ * ```
+ */
+export const upsertCustomFieldsPreset = new PreparedQuery<IUpsertCustomFieldsPresetParams,IUpsertCustomFieldsPresetResult>(upsertCustomFieldsPresetIR);
+
+
+/** 'RemoveCustomFieldsPreset' parameters type */
+export interface IRemoveCustomFieldsPresetParams {
+  name: string;
+  shop: string;
+}
+
+/** 'RemoveCustomFieldsPreset' return type */
+export type IRemoveCustomFieldsPresetResult = void;
+
+/** 'RemoveCustomFieldsPreset' query type */
+export interface IRemoveCustomFieldsPresetQuery {
+  params: IRemoveCustomFieldsPresetParams;
+  result: IRemoveCustomFieldsPresetResult;
+}
+
+const removeCustomFieldsPresetIR: any = {"usedParamSet":{"shop":true,"name":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":59,"b":64}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":79,"b":84}]}],"statement":"DELETE\nFROM \"PurchaseOrderCustomFieldsPreset\"\nWHERE shop = :shop!\n  AND name = :name!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "PurchaseOrderCustomFieldsPreset"
+ * WHERE shop = :shop!
+ *   AND name = :name!
+ * ```
+ */
+export const removeCustomFieldsPreset = new PreparedQuery<IRemoveCustomFieldsPresetParams,IRemoveCustomFieldsPresetResult>(removeCustomFieldsPresetIR);
 
 

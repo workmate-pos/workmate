@@ -24,8 +24,10 @@ export function StringField({
   const [error, setError] = useState('');
   const formContext = useFormContext();
 
+  // TODO: Don't show error initially
   useEffect(() => {
     change(value);
+    commit(value);
   }, [value]);
 
   useEffect(() => {
@@ -33,24 +35,26 @@ export function StringField({
   }, [label]);
 
   const change = (value: string) => {
+    setError('');
     setInternalState(value);
-    const error = validate(value);
-    const isValid = error === null;
-    onIsValid?.(isValid);
-    formContext?.setValidity(label, isValid);
   };
 
   const clearError = () => setError('');
 
-  const commit = () => {
-    const error = validate(internalState);
+  const commit = (newValue: string) => {
+    const error = validate(newValue);
 
     if (error) {
       setError(error);
+      formContext?.setValidity(label, false);
+      onIsValid?.(false);
       return;
     }
 
-    onChange?.(internalState);
+    setInternalState(newValue);
+    formContext?.setValidity(label, true);
+    onIsValid?.(true);
+    if (value !== newValue) onChange?.(newValue);
   };
 
   return (
@@ -61,7 +65,7 @@ export function StringField({
       value={internalState}
       error={error}
       onFocus={clearError}
-      onBlur={commit}
+      onBlur={() => commit(internalState)}
     />
   );
 }

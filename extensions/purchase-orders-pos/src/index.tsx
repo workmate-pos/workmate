@@ -15,6 +15,8 @@ import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
 import { WorkOrderSelector } from './screens/popups/WorkOrderSelector.js';
 import { OrderSelector } from './screens/popups/OrderSelector.js';
 import { ProductCreator } from './screens/popups/ProductCreator.js';
+import { SavePreset } from './screens/popups/SavePreset.js';
+import { ImportPreset } from './screens/popups/ImportPreset.js';
 
 const SmartGridTile = () => {
   const { smartGrid } = useExtensionApi();
@@ -33,11 +35,13 @@ const SmartGridModal = () => {
 
             <CustomFieldConfig />
             <EmployeeSelector />
+            <ImportPreset />
             <LocationSelector />
             <OrderSelector />
             <ProductConfig />
             <ProductCreator />
             <ProductSelector />
+            <SavePreset />
             <StatusSelector />
             <VendorSelector />
             <WorkOrderSelector />

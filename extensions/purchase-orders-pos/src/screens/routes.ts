@@ -9,6 +9,7 @@ export type ScreenInputOutput = {
 
   CustomFieldConfig: [Pick<CreatePurchaseOrder, 'customFields'>, Record<string, string>];
   EmployeeSelector: [CreatePurchaseOrder['employeeAssignments'], CreatePurchaseOrder['employeeAssignments']];
+  ImportPreset: [undefined, { keys: string[] }];
   LocationSelector: [undefined, Location];
   OrderSelector: [undefined, Pick<CreatePurchaseOrder, 'orderName' | 'orderId' | 'customerId' | 'customerName'>];
   ProductConfig: [
@@ -23,6 +24,7 @@ export type ScreenInputOutput = {
     NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>>,
     Product[],
   ];
+  SavePreset: [{ keys: [string, ...string[]] }, undefined];
   StatusSelector: [undefined, Status];
   VendorSelector: [undefined, { vendorName: string; vendorCustomerId: ID | null }];
   WorkOrderSelector: [

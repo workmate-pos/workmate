@@ -103,3 +103,20 @@ VALUES (:purchaseOrderId!, :key!, :value!);
 /* @name insertAssignedEmployee */
 INSERT INTO "PurchaseOrderEmployeeAssignment" ("purchaseOrderId", "employeeId", "employeeName")
 VALUES (:purchaseOrderId!, :employeeId!, :employeeName);
+
+/* @name getCustomFieldsPresets */
+SELECT *
+FROM "PurchaseOrderCustomFieldsPreset"
+WHERE shop = :shop!;
+
+/* @name upsertCustomFieldsPreset */
+INSERT INTO "PurchaseOrderCustomFieldsPreset" (shop, name, keys)
+VALUES (:shop!, :name!, :keys!)
+ON CONFLICT (shop, name) DO UPDATE
+  SET keys = :keys!;
+
+/* @name removeCustomFieldsPreset */
+DELETE
+FROM "PurchaseOrderCustomFieldsPreset"
+WHERE shop = :shop!
+  AND name = :name!;
