@@ -132,6 +132,8 @@ export function PurchaseOrder() {
     ),
   );
 
+  const hasProductQuantity = createPurchaseOrder.products.some(product => product.quantity > 0);
+
   // whether there is some product.availableQuantity > 0. used to determine whether we should show "Mark as received" or "Mark as not received" button
   const productHasAvailableQuantity = createPurchaseOrder.products.some(product => product.availableQuantity > 0);
 
@@ -293,7 +295,7 @@ export function PurchaseOrder() {
                 isDisabled={purchaseOrderMutation.isLoading}
               />
 
-              {createPurchaseOrder.name && productHasAvailableQuantity && (
+              {createPurchaseOrder.name && hasProductQuantity && productHasAvailableQuantity && (
                 <Button
                   title={'Mark all as not received'}
                   type={'destructive'}
@@ -301,7 +303,7 @@ export function PurchaseOrder() {
                   isDisabled={purchaseOrderMutation.isLoading}
                 />
               )}
-              {createPurchaseOrder.name && !productHasAvailableQuantity && (
+              {createPurchaseOrder.name && hasProductQuantity && !productHasAvailableQuantity && (
                 <Button
                   title={'Mark all as received'}
                   onPress={() => dispatch.setInventoryState({ inventoryState: 'available' })}
