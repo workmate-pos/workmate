@@ -20,6 +20,20 @@ Then, you can install the dependencies for all subprojects:
 npm i ; cd web && npm i ; cd frontend && npm i ; cd ../..
 ```
 
+Also link your .env file to the web directory:
+```
+cd web
+ln -s ../.env .
+cd ../
+```
+
+Finally, run prisma migrate to populate the db:
+```
+cd web
+npx prisma migrate dev generate
+cd ../
+```
+
 ### Generating Schemas
 You can generate types for the JSON schemas using the following command while in the `web` directory:
 ```bash
