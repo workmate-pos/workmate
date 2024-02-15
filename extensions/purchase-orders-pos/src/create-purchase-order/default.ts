@@ -1,0 +1,27 @@
+import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
+
+export const defaultCreatePurchaseOrder: CreatePurchaseOrder = {
+  status: 'OPEN',
+  customerId: null,
+  name: null,
+  note: null,
+  orderId: null,
+  orderName: null,
+  workOrderName: null,
+  locationId: null,
+  products: [],
+  customFields: {},
+  employeeAssignments: [],
+  vendorCustomerId: null,
+  vendorName: null,
+  customerName: null,
+  locationName: null,
+  shipTo: null,
+  shipFrom: null,
+  deposited: null,
+  paid: null,
+  tax: null,
+  discount: null,
+  shipping: null,
+  subtotal: null,
+};

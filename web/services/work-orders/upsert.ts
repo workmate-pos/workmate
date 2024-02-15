@@ -1,7 +1,7 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
 import { ID } from '../gql/queries/generated/schema.js';
-import { getFormattedId } from '../id-formatting.js';
+import { getNewWorkOrderId } from '../id-formatting.js';
 import { getShopSettings } from '../settings.js';
 import { unit } from '../db/unit-of-work.js';
 import { createWorkOrderCharges, removeWorkOrderCharges } from './charges.js';
@@ -27,7 +27,7 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
 
     const [{ id, name: workOrderName } = never()] = await db.workOrder.upsert({
       shop: session.shop,
-      name: createWorkOrder.name ?? (await getFormattedId(session.shop)),
+      name: createWorkOrder.name ?? (await getNewWorkOrderId(session.shop)),
       status: createWorkOrder.status,
       customerId: createWorkOrder.customerId,
       dueDate: new Date(createWorkOrder.dueDate),

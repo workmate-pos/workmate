@@ -1,0 +1,193 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "description": "The name of the purchase order to update (if applicable). If not provided, a new work order will be created. Unique within a store.",
+      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+    },
+    "status": {
+      "title": "status",
+      "enum": ["OPEN", "RECEIVED", "CANCELLED", "CLOSED"]
+    },
+    "orderId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "workOrderName": {
+      "anyOf": [{ "const": null }, { "type": "string" }]
+    },
+    "orderName": {
+      "anyOf": [{ "const": null }, { "type": "string" }]
+    },
+    "locationId": {
+      "anyOf": [
+        { "const": null },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
+    "customerId": {
+      "anyOf": [
+        { "const": null },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
+    "vendorCustomerId": {
+      "anyOf": [
+        { "const": null },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
+    "shipFrom": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "shipTo": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "note": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "vendorName": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "customerName": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "locationName": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "subtotal": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "discount": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "tax": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "shipping": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "deposited": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "paid": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    },
+    "products": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "product",
+        "properties": {
+          "productVariantId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "quantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          },
+          "sku": {
+            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+          },
+          "name": {
+            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+          },
+          "handle": {
+            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+          }
+        },
+        "required": ["productVariantId", "quantity", "sku", "name", "handle"],
+        "additionalProperties": false
+      }
+    },
+    "customFields": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "employeeAssignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "employeeName": {
+            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+          }
+        },
+        "required": ["employeeId", "employeeName"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "name",
+    "status",
+    "orderId",
+    "workOrderName",
+    "orderName",
+    "locationId",
+    "customerId",
+    "vendorCustomerId",
+    "shipFrom",
+    "shipTo",
+    "note",
+    "vendorName",
+    "customerName",
+    "locationName",
+    "subtotal",
+    "discount",
+    "tax",
+    "shipping",
+    "deposited",
+    "paid",
+    "products",
+    "customFields",
+    "employeeAssignments"
+  ],
+  "additionalProperties": false
+}

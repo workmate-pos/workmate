@@ -1,0 +1,16 @@
+# for some reason this endpoint does not support pagination (but it does return a cursor?)
+# its dirt cheap so just get 250 (maximum, cost of 2)
+query getProductVendors($first: Int = 250) {
+  shop {
+    productVendors(first: $first) {
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+      }
+      edges {
+        cursor
+        node
+      }
+    }
+  }
+}

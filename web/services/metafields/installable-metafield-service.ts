@@ -33,11 +33,13 @@ export class InstallableMetafieldService extends InstallableService {
       }
 
       const result = await gql.metafields.createDefinition.run(graphql, { definition });
-      if (result?.metafieldDefinitionCreate?.userErrors) {
+      if (result?.metafieldDefinitionCreate?.userErrors.length) {
         sentryErr(
           `Failed to create metafield definition '${definition.key}' on ${definition.ownerType}`,
           result.metafieldDefinitionCreate.userErrors,
         );
+      } else {
+        console.log(`Created metafield definition '${definition.key}' on ${definition.ownerType}`);
       }
     }
   }

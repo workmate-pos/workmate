@@ -5,21 +5,14 @@
   "version": "1.0.0",
   "license": "UNLICENSED",
   "dependencies": {
-    "@shopify/retail-ui-extensions": "^1.4.0",
-    "@shopify/retail-ui-extensions-react": "^1.4.0",
     "@teifi-digital/shopify-app-toolbox": "^0.0.18",
     "@work-orders/common": "file:../../common",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2",
-    "react-query": "^3.39.3"
+    "@work-orders/common-pos": "file:../common-pos"
   },
   "scripts": {
     "build:web": "cd ../../web && npm install && npm run build",
     "build:common": "cd ../../common && npm install && npm run build",
     "postinstall": "npm run set-app-url && npm run build:web && npm run build:common",
-    "set-app-url": "node ./set-app-url.js"
-  },
-  "overrides": {
-    "@types/react": "17.0.30"
+    "set-app-url": "cd ../common-pos && node ./set-app-url.js"
   }
 }

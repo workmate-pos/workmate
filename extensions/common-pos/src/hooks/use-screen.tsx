@@ -1,8 +1,19 @@
 import { Screen, ScreenProps, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useId } from './use-id.js';
-import type { ScreenInputOutput } from '../screens/routes.js';
 import { useDynamicRef } from './use-dynamic-ref.js';
+
+type RoutesBase = Record<string, [unknown, unknown]>;
+
+export interface ScreenRegister {
+  // Routes: ? extends RouterBase
+}
+
+type ScreenInputOutput = ScreenRegister extends { Routes: infer R }
+  ? R extends RoutesBase
+    ? R
+    : RoutesBase
+  : RoutesBase;
 
 /**
  * Hook that provides:
@@ -18,7 +29,7 @@ export function useScreen<const ScreenName extends ScreenNames>(
   const [popupId, setPopupId] = useState<string | null>(null);
   const [returnTo, setReturnTo] = useState<string | null>(null);
 
-  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
+  const { navigation, toast } = useExtensionApi<'pos.home.modal.render'>();
   const popupResultEventTarget = useMemo(() => new EventTarget(), []);
 
   /**
@@ -67,12 +78,12 @@ export function useScreen<const ScreenName extends ScreenNames>(
    */
   const closePopup: ClosePopupFn<ScreenName> = (result: ScreenInputOutput[ScreenName][1]) => {
     if (!returnTo) {
-      navigate('Error', 'No returnTo');
+      toast.show('No returnTo');
       return;
     }
 
     if (!popupId) {
-      navigate('Error', 'No popupId');
+      toast.show('No popupId');
       return;
     }
 
@@ -161,7 +172,7 @@ type ClosePopupParams<O = ScreenInputOutput[keyof ScreenInputOutput][1]> = {
   output: O;
 };
 
-type ScreenNames = keyof ScreenInputOutput;
+type ScreenNames = keyof ScreenInputOutput & string;
 type PopupScreenNames = { [K in ScreenNames]: ScreenInputOutput[K][1] extends undefined ? never : K }[ScreenNames];
 type NormalScreenNames = { [K in ScreenNames]: ScreenInputOutput[K][1] extends undefined ? K : never }[ScreenNames];
 

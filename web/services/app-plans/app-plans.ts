@@ -103,17 +103,17 @@ type StoreProperties = {
 };
 
 export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StoreProperties) {
+  if (storeProperties.shopType === 'PARTNER_DEVELOPMENT') {
+    return true;
+  }
+
   const { allowedShopifyPlans, maxLocations, trialOnly, trialDays } = appPlan;
 
   if (maxLocations !== null && storeProperties.locations > maxLocations) {
     return false;
   }
 
-  if (
-    allowedShopifyPlans !== null &&
-    storeProperties.shopType !== 'PARTNER_DEVELOPMENT' &&
-    !allowedShopifyPlans.includes(storeProperties.shopType)
-  ) {
+  if (allowedShopifyPlans !== null && !allowedShopifyPlans.includes(storeProperties.shopType)) {
     return false;
   }
 

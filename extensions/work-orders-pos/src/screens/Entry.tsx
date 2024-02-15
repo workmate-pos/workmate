@@ -3,15 +3,15 @@ import { NavigateFn, useScreen } from '../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useState } from 'react';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/services/gql/queries/generated/schema.js';
-import { ControlledSearchBar } from '../components/ControlledSearchBar.js';
+import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { extractErrorMessage } from '../util/errors.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');

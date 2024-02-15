@@ -3,16 +3,16 @@ import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useState } from 'react';
 import { CreateWorkOrderCharge, CreateWorkOrderLineItem } from '../routes.js';
-import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
+import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
-import { extractErrorMessage } from '../../util/errors.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');

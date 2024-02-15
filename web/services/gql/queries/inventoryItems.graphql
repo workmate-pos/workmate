@@ -1,0 +1,46 @@
+fragment InventoryItemFragment on InventoryItem {
+  id
+  inventoryLevels(first: 25) {
+    nodes {
+      ...InventoryLevelFragment
+    }
+  }
+}
+
+fragment InventoryLevelFragment on InventoryLevel {
+  id
+  location {
+    id
+  }
+  quantities(names: ["incoming", "on_hand", "available", "committed"]) {
+    name
+    quantity
+  }
+}
+
+query getMany($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ... on InventoryItem {
+      ...InventoryItemFragment
+    }
+  }
+}
+
+query get($id: ID!) {
+  inventoryItem(id: $id) {
+    ...InventoryItemFragment
+  }
+}
+
+query getPage($first: Int = 10, $after: String, $query: String) {
+  inventoryItems(first: $first, after: $after, query: $query) {
+    nodes {
+      ...InventoryItemFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

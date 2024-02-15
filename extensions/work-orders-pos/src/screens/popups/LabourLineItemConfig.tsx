@@ -1,13 +1,13 @@
 import { useScreen } from '../../hooks/use-screen.js';
-import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { CreateWorkOrderLineItem, CreateWorkOrderCharge } from '../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
-import { useUnsavedChangesDialog } from '../../providers/UnsavedChangesDialogProvider.js';
+import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { getChargesPrice } from '../../create-work-order/charges.js';
 import { uuid } from '../../util/uuid.js';
@@ -33,7 +33,7 @@ export function LabourLineItemConfig() {
     'lineItemUuid'
   > | null>(null);
 
-  const [unsavedChanges, setUnsavedChanges] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const { Screen, usePopup, closePopup, cancelPopup } = useScreen(
     'LabourLineItemConfig',
@@ -42,7 +42,7 @@ export function LabourLineItemConfig() {
       setHasBasePrice(hasBasePrice);
       setLineItem(lineItem);
       setEmployeeLabour(labour.filter(hasNonNullableProperty('employeeId')));
-      setUnsavedChanges(false);
+      setHasUnsavedChanges(false);
 
       const generalLabours = labour.filter(hasPropertyValue('employeeId', null));
       if (generalLabours.length === 1) {
@@ -63,7 +63,7 @@ export function LabourLineItemConfig() {
   );
 
   const employeeSelectorPopup = usePopup('EmployeeSelector', result => {
-    setUnsavedChanges(true);
+    setHasUnsavedChanges(true);
 
     setEmployeeLabour(employeeLabour => [
       ...result.map(id => {
@@ -84,7 +84,7 @@ export function LabourLineItemConfig() {
   });
 
   const employeeConfigPopup = usePopup('EmployeeLabourConfig', result => {
-    setUnsavedChanges(true);
+    setHasUnsavedChanges(true);
 
     if (result.type === 'remove') {
       setEmployeeLabour(labour => labour.filter(l => l.chargeUuid !== result.chargeUuid));
@@ -122,18 +122,12 @@ export function LabourLineItemConfig() {
   const basePrice = productVariant && hasBasePrice ? productVariant.price : BigDecimal.ZERO.toMoney();
   const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(labourPrice)).toMoney();
 
-  const unsavedChangesDialog = useUnsavedChangesDialog();
-  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
+  const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
   return (
     <Screen
       title={name ?? 'Service'}
-      overrideNavigateBack={() =>
-        unsavedChangesDialog.show({
-          onAction: navigation.pop,
-          skipDialog: !unsavedChanges,
-        })
-      }
+      overrideNavigateBack={unsavedChangesDialog.show}
       isLoading={productVariantQuery.isLoading}
       presentation={{ sheet: true }}
     >

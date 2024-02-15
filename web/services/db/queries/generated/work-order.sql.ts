@@ -7,33 +7,6 @@ export type NumberOrString = number | string;
 
 export type stringArray = (string)[];
 
-/** 'GetNextIdForShop' parameters type */
-export interface IGetNextIdForShopParams {
-  shopSequenceName: string;
-}
-
-/** 'GetNextIdForShop' return type */
-export interface IGetNextIdForShopResult {
-  id: number;
-}
-
-/** 'GetNextIdForShop' query type */
-export interface IGetNextIdForShopQuery {
-  params: IGetNextIdForShopParams;
-  result: IGetNextIdForShopResult;
-}
-
-const getNextIdForShopIR: any = {"usedParamSet":{"shopSequenceName":true},"params":[{"name":"shopSequenceName","required":true,"transform":{"type":"scalar"},"locs":[{"a":28,"b":45}]}],"statement":"SELECT NEXTVAL(FORMAT('%I', :shopSequenceName! :: TEXT)) :: INTEGER AS \"id!\""};
-
-/**
- * Query generated from SQL:
- * ```
- * SELECT NEXTVAL(FORMAT('%I', :shopSequenceName! :: TEXT)) :: INTEGER AS "id!"
- * ```
- */
-export const getNextIdForShop = new PreparedQuery<IGetNextIdForShopParams,IGetNextIdForShopResult>(getNextIdForShopIR);
-
-
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
   customerId: string;

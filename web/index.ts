@@ -10,12 +10,14 @@ import { appPlanHandler, AppPlanKey } from './decorators/app-plan.js';
 import { permissionHandler, PermissionKey } from './decorators/permission.js';
 import { registerEnumTypes } from './services/db/types.js';
 import { installableAppPlansService } from './services/app-plans/index.js';
+import { installableSegmentService } from './services/segments/index.js';
 
 await registerEnumTypes();
 
 installableMetaobjectService.register();
 installableMetafieldService.register();
 installableAppPlansService.register();
+installableSegmentService.register();
 
 registerDecorator(AppPlanKey, appPlanHandler);
 registerDecorator(PermissionKey, permissionHandler);

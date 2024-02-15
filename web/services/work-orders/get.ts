@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { db } from '../db/db.js';
 import { fetchAllPages, gql } from '../gql/gql.js';
-import { DateTime, ID, Money } from '../gql/queries/generated/schema.js';
+import { DateTime } from '../gql/queries/generated/schema.js';
 import { escapeLike } from '../db/like.js';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import { LineItem, WorkOrder, WorkOrderInfo } from './types.js';
@@ -13,6 +13,8 @@ import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { decimalToMoney } from '../../util/decimal.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGidOrNull } from '../../util/assertions.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [[workOrder], { fixedServiceCollectionId, mutableServiceCollectionId }] = await Promise.all([
@@ -24,6 +26,11 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     return null;
   }
 
+  assertGid(workOrder.customerId);
+  assertGidOrNull(workOrder.orderId);
+  assertGidOrNull(workOrder.draftOrderId);
+  assertGidOrNull(workOrder.derivedFromOrderId);
+
   const { id: workOrderId } = workOrder;
 
   const graphql = new Graphql(session);
@@ -31,7 +38,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
   const orderType = workOrder.orderId === null ? 'draft-order' : 'order';
   const { get, getLineItems } = orderType === 'draft-order' ? gql.draftOrder : gql.order;
 
-  const orderId = (workOrder.orderId ?? workOrder.draftOrderId ?? never('Invalid work order state')) as ID;
+  const orderId = workOrder.orderId ?? workOrder.draftOrderId ?? never('Invalid work order state');
 
   const { hourlyLabours, fixedPriceLabours, order, lineItems, derivedFromOrder } = await awaitNested({
     hourlyLabours: db.workOrderLabour.getHourlyLabours({ workOrderId }),
@@ -48,9 +55,10 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
         }),
       result => result.order?.lineItems ?? never('Invalid order id'),
     ),
-    derivedFromOrder: workOrder.derivedFromOrderId ? getOrderInfo(session, workOrder.derivedFromOrderId as ID) : null,
+    derivedFromOrder: workOrder.derivedFromOrderId ? getOrderInfo(session, workOrder.derivedFromOrderId) : null,
   });
 
+  // TODO: Clean up XD
   const discount =
     order.__typename === 'DraftOrder'
       ? order.appliedDiscount
@@ -74,34 +82,38 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
   return {
     name: workOrder.name,
     status: workOrder.status,
-    customerId: workOrder.customerId as ID,
+    customerId: workOrder.customerId,
     description: order.note ?? '',
     dueDate: workOrder.dueDate.toISOString() as DateTime,
     derivedFromOrder,
     charges: [
-      ...hourlyLabours.map(
-        ({ name, hours, rate, lineItemUuid, productVariantId, employeeId }) =>
-          ({
-            type: 'hourly-labour',
-            hours: BigDecimal.fromString(hours).toDecimal(),
-            rate: BigDecimal.fromString(rate).toMoney(),
-            productVariantId: productVariantId as ID,
-            employeeId: employeeId as ID,
-            lineItemUuid,
-            name,
-          }) as const,
-      ),
-      ...fixedPriceLabours.map(
-        ({ name, productVariantId, lineItemUuid, employeeId, amount }) =>
-          ({
-            type: 'fixed-price-labour',
-            amount: BigDecimal.fromString(amount).toMoney(),
-            productVariantId: productVariantId as ID,
-            employeeId: employeeId as ID,
-            lineItemUuid,
-            name,
-          }) as const,
-      ),
+      ...hourlyLabours.map(({ name, hours, rate, lineItemUuid, productVariantId, employeeId }) => {
+        assertGidOrNull(productVariantId);
+        assertGidOrNull(employeeId);
+
+        return {
+          type: 'hourly-labour',
+          hours: BigDecimal.fromString(hours).toDecimal(),
+          rate: BigDecimal.fromString(rate).toMoney(),
+          productVariantId: productVariantId,
+          employeeId: employeeId,
+          lineItemUuid,
+          name,
+        } as const;
+      }),
+      ...fixedPriceLabours.map(({ name, productVariantId, lineItemUuid, employeeId, amount }) => {
+        assertGidOrNull(productVariantId);
+        assertGidOrNull(employeeId);
+
+        return {
+          type: 'fixed-price-labour',
+          amount: BigDecimal.fromString(amount).toMoney(),
+          productVariantId: productVariantId,
+          employeeId: employeeId,
+          lineItemUuid,
+          name,
+        } as const;
+      }),
     ],
     order: {
       type: orderType,
@@ -111,7 +123,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
       total: order.totalPrice,
       outstanding:
         order.__typename === 'Order' ? decimalToMoney(order.totalOutstandingSet.shopMoney.amount) : order.totalPrice,
-      received: order.__typename === 'Order' ? order.totalReceived : ('0.00' as Money),
+      received: order.__typename === 'Order' ? order.totalReceived : BigDecimal.ZERO.toMoney(),
       lineItems: lineItems.map(
         ({ id, title, taxable, quantity, sku, variant, originalUnitPrice }): LineItem => ({
           id,
@@ -147,7 +159,7 @@ export async function getWorkOrderInfoPage(
   session: Session,
   paginationOptions: WorkOrderPaginationOptions,
 ): Promise<WorkOrderInfo[]> {
-  if (paginationOptions.query) {
+  if (paginationOptions.query !== undefined) {
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
   }
 
@@ -162,10 +174,19 @@ export async function getWorkOrderInfoPage(
   });
 
   const graphql = new Graphql(session);
-  const orderIds = page.map(r => r.orderId ?? r.draftOrderId ?? never()) as ID[];
+  const orderIds = page.map(r => {
+    const id = r.orderId ?? r.draftOrderId ?? never();
+    assertGid(id);
+    return id;
+  });
   const { nodes: orders } = await gql.order.getManyOrderInfoDraftOrderInfo.run(graphql, { ids: orderIds });
 
   return page.map((workOrder, i): WorkOrderInfo => {
+    assertGid(workOrder.customerId);
+    assertGidOrNull(workOrder.orderId);
+    assertGidOrNull(workOrder.draftOrderId);
+    assertGidOrNull(workOrder.derivedFromOrderId);
+
     const order = orders[i];
 
     if (!order || (order.__typename !== 'Order' && order.__typename !== 'DraftOrder')) {
@@ -181,8 +202,10 @@ export async function getWorkOrderInfoPage(
       name: workOrder.name,
       status: workOrder.status,
       dueDate: workOrder.dueDate.toISOString() as DateTime,
-      customerId: workOrder.customerId as ID,
+      customerId: workOrder.customerId,
       order: {
+        id: workOrder.orderId ?? workOrder.draftOrderId ?? never(),
+        type: workOrder.orderId === null ? 'draft-order' : 'order',
         name: order.name,
         total: order.totalPrice,
         outstanding,

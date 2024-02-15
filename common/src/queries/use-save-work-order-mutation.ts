@@ -47,7 +47,7 @@ export const useSaveWorkOrderMutation = (
         queryClient.invalidateQueries(['work-order', name]);
       }
 
-      queryClient.invalidateQueries('work-order-info');
+      queryClient.invalidateQueries(['work-order-info']);
 
       options?.onSuccess?.(...args);
     },

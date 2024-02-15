@@ -30,7 +30,8 @@ model Settings {
 }
 
 model WorkOrder {
-  id                 Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
+
   shop               String
   /// Used as work order id within this shop
   name               String
@@ -46,6 +47,7 @@ model WorkOrder {
 
   fixedPriceLabour FixedPriceLabour[]
   hourlyLabour     HourlyLabour[]
+  PurchaseOrder    PurchaseOrder[]
 
   @@unique([shop, name])
   @@index([draftOrderId])
@@ -72,6 +74,8 @@ enum PermissionNode {
   write_work_orders
   read_app_plan
   write_app_plan
+  read_purchase_orders
+  write_purchase_orders
 }
 
 model FixedPriceLabour {
@@ -87,6 +91,8 @@ model FixedPriceLabour {
   name String
 
   amount String
+
+  @@index([workOrderId])
 }
 
 model HourlyLabour {
@@ -103,6 +109,8 @@ model HourlyLabour {
 
   rate  String
   hours String
+
+  @@index([workOrderId])
 }
 
 model AppPlanSubscription {
@@ -172,4 +180,99 @@ enum AppPlanType {
 enum AppPlanInterval {
   EVERY_30_DAYS
   ANNUAL
+}
+
+model PurchaseOrder {
+  id Int @id @default(autoincrement())
+
+  shop String
+
+  locationId       String?
+  customerId       String?
+  vendorCustomerId String?
+  orderId          String?
+
+  /// Total excluding discounts, taxes, shipping
+  subtotal  String?
+  discount  String?
+  tax       String?
+  shipping  String?
+  deposited String?
+  paid      String?
+
+  // Searchable fields
+
+  /// Shop specific name
+  name   String
+  status PurchaseOrderStatus
+
+  workOrder     WorkOrder? @relation(fields: [shop, workOrderName], references: [shop, name])
+  workOrderName String?
+
+  shipFrom String?
+  shipTo   String?
+
+  note         String?
+  vendorName   String?
+  customerName String?
+  locationName String?
+  orderName    String?
+
+  products            PurchaseOrderProduct[]
+  customFields        PurchaseOrderCustomField[]
+  employeeAssignments PurchaseOrderEmployeeAssignment[]
+
+  createdAt DateTime @default(now())
+
+  // TODO: if we ever want to find all POs for a WO, add @@index([workOrderId])
+  @@unique([shop, name])
+}
+
+model PurchaseOrderCustomField {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  key   String
+  // Searchable
+  value String
+
+  @@unique([purchaseOrderId, key])
+}
+
+model PurchaseOrderProduct {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  productVariantId String
+  quantity         Int
+
+  // Searchable fields
+  sku    String?
+  name   String?
+  handle String?
+
+  @@index([purchaseOrderId])
+}
+
+enum PurchaseOrderStatus {
+  OPEN
+  RECEIVED
+  CANCELLED
+  CLOSED
+}
+
+model PurchaseOrderEmployeeAssignment {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  employeeId String
+
+  // Searchable fields
+  employeeName String?
 }

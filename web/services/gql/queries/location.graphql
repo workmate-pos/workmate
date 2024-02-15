@@ -6,3 +6,37 @@ query searchLocations($query: String, $first: Int = 25) {
     }
   }
 }
+
+query getPage($first: Int = 10, $after: String, $query: String) {
+  locations(first: $first, after: $after, query: $query, sortKey: NAME) {
+    nodes {
+      ...LocationFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+query getMany($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...LocationFragment
+  }
+}
+
+query get($id: ID!) {
+  location(id: $id) {
+    ...LocationFragment
+  }
+}
+
+fragment LocationFragment on Location {
+  id
+  name
+  address {
+    formatted
+  }
+  isActive
+}

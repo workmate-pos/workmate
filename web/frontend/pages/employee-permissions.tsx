@@ -9,6 +9,7 @@ import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current
 import { NoPermissionCard } from '@web/frontend/components/NoPermissionCard.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
+
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 
 export default function () {
@@ -97,6 +98,8 @@ function EmployeePermissions() {
     'write_work_orders',
     'read_app_plan',
     'write_app_plan',
+    'read_purchase_orders',
+    'write_purchase_orders',
   ] as const satisfies readonly PermissionNode[];
 
   return (

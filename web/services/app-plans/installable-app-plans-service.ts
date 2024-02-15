@@ -9,9 +9,9 @@ export const appPlanLevels = ['FREE', 'ESSENTIAL', 'ENTERPRISE'] as const satisf
 
 export class InstallableAppPlansService extends InstallableService {
   async initStore(graphql: Graphql): Promise<void> {
-    const activeSubscription = await gql.appSubscriptions.getCurrentAppSubscriptions
+    const [activeSubscription] = await gql.appSubscriptions.getCurrentAppSubscriptions
       .run(graphql, {})
-      .then(res => res.currentAppInstallation.activeSubscriptions.filter(s => s.status === 'ACTIVE')[0]);
+      .then(res => res.currentAppInstallation.activeSubscriptions.filter(s => s.status === 'ACTIVE'));
     if (activeSubscription == null) return;
 
     const shop = graphql.session.shop;

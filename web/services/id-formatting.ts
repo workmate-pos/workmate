@@ -5,11 +5,11 @@ import { useClient } from './db/client.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
-const formatters: Record<
+const workOrderFormatters: Record<
   string,
   ({ shop, settings }: { shop: string; settings: ShopSettings }) => Promise<string> | string
 > = {
-  id: ({ shop }) => getNextIdForShop(shop).then(String),
+  id: ({ shop }) => getNextWorkOrderIdForShop(shop).then(String),
   // TODO: adjust to local timezone (timezone setting? take from shopify?)
   year: () => new Date().getFullYear().toString(),
   month: () => (new Date().getMonth() + 1).toString(),
@@ -18,42 +18,74 @@ const formatters: Record<
   minute: () => new Date().getMinutes().toString(),
 };
 
-export async function getFormattedId(shop: string) {
-  const settings = await getShopSettings(shop);
-
-  assertValidFormatString(settings.idFormat);
-
-  let formattedId = settings.idFormat;
+async function applyFormatters<Arg>(
+  format: string,
+  formatters: Record<string, (arg: Arg) => Promise<string> | string>,
+  arg: Arg,
+) {
+  assertValidFormatString(format);
 
   for (const [key, formatter] of Object.entries(formatters)) {
     const template = `{{${key}}}`;
-    if (formattedId.includes(template)) {
-      const value = await formatter({ shop, settings });
-      formattedId = formattedId.replace(template, value);
+    if (format.includes(template)) {
+      const value = await formatter(arg);
+      format = format.replace(template, value);
     }
   }
 
-  return formattedId;
+  return format;
 }
 
-async function getNextIdForShop(shop: string) {
-  await createIdSequenceForShopIfNotExists(shop);
-  const [{ id } = never('Sequence not found')] = await db.workOrder.getNextIdForShop({
-    shopSequenceName: getShopIdSequenceName(shop),
+export async function getNewWorkOrderId(shop: string) {
+  const settings = await getShopSettings(shop);
+
+  return await applyFormatters(settings.idFormat, workOrderFormatters, { shop, settings });
+}
+
+export async function getNewPurchaseOrderId(shop: string) {
+  const format = 'PO-#{{id}}';
+  assertValidFormatString(format);
+  return format.replace('{{id}}', String(await getNextPurchaseOrderIdForShop(shop)));
+}
+
+async function getNextWorkOrderIdForShop(shop: string) {
+  await createWorkOrderIdSequenceForShopIfNotExists(shop);
+  const [{ id } = never('Sequence not found')] = await db.sequence.getNextSequenceValue({
+    sequenceName: getWorkOrderIdSequenceNameForShop(shop),
   });
 
   return id;
 }
 
-async function createIdSequenceForShopIfNotExists(shop: string) {
-  const query = `CREATE SEQUENCE IF NOT EXISTS "${getShopIdSequenceName(shop)}" AS INTEGER;`;
+async function createWorkOrderIdSequenceForShopIfNotExists(shop: string) {
+  const query = `CREATE SEQUENCE IF NOT EXISTS "${getWorkOrderIdSequenceNameForShop(shop)}" AS INTEGER;`;
 
   using client = await useClient();
   await client.query(query);
 }
 
-function getShopIdSequenceName(shop: string) {
+function getWorkOrderIdSequenceNameForShop(shop: string) {
   return `IdSeq_${shop}`;
+}
+
+async function getNextPurchaseOrderIdForShop(shop: string) {
+  await createPurchaseOrderIdSequenceForShopIfNotExists(shop);
+  const [{ id } = never('Sequence not found')] = await db.sequence.getNextSequenceValue({
+    sequenceName: getPurchaseOrderIdSequenceNameForShop(shop),
+  });
+
+  return id;
+}
+
+async function createPurchaseOrderIdSequenceForShopIfNotExists(shop: string) {
+  const query = `CREATE SEQUENCE IF NOT EXISTS "${getPurchaseOrderIdSequenceNameForShop(shop)}" AS INTEGER;`;
+
+  using client = await useClient();
+  await client.query(query);
+}
+
+function getPurchaseOrderIdSequenceNameForShop(shop: string) {
+  return `IdSeq_PO_${shop}`;
 }
 
 export function assertValidFormatString(format: string) {

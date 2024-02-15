@@ -2,7 +2,6 @@ import { InstallableMetaobjectService } from './installable-metaobject-service.j
 import type { MetaobjectDefinitionCreateInput } from '../gql/queries/generated/schema.js';
 import { fixedPriceLabourChargeMetaobject } from './fixed-price-labour-charge.js';
 import { hourlyLabourChargeMetaobject } from './hourly-labour-charge.js';
-import { metaobjects } from '../gql/queries/generated/queries.js';
 
 export type MetaobjectDefinition = { definition: MetaobjectDefinitionCreateInput; parse: (metaobject: any) => any };
 

@@ -1,0 +1,33 @@
+mutation createSegment($name: String!, $query: String!) {
+  segmentCreate(name: $name, query: $query) {
+    userErrors {
+      field
+      message
+    }
+    segment {
+      id
+    }
+  }
+}
+
+query getCustomerSegmentByQuery($first: Int = 10, $after: String, $query: String) {
+  customerSegmentMembers(query: $query, first: $first, after: $after) {
+    edges {
+      node {
+        ...CustomerSegmentMemberFragment
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+fragment CustomerSegmentMemberFragment on CustomerSegmentMember {
+  id
+  displayName
+  defaultAddress {
+    formatted
+  }
+}

@@ -35,8 +35,12 @@ fragment ProductVariantFragment on ProductVariant {
   image {
     url
   }
+  inventoryItem {
+    id
+  }
   product {
     title
+    handle
     hasOnlyDefaultVariant
     featuredImage {
       url
@@ -80,5 +84,26 @@ fragment HourlyLabourChargeFragment on Metaobject {
   }
   hours: field(key: "hours") {
     value
+  }
+}
+
+mutation create(
+  $input: ProductInput!,
+  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
+  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
+) {
+  productCreate(input: $input) {
+    userErrors {
+      message
+      field
+    }
+    product {
+      id
+      variants(first: 1) {
+        nodes {
+          ...ProductVariantFragment
+        }
+      }
+    }
   }
 }

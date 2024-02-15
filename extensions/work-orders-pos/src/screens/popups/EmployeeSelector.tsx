@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/ids.js';
-import { ControlledSearchBar } from '../../components/ControlledSearchBar.js';
-import { extractErrorMessage } from '../../util/errors.js';
+import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
 export function EmployeeSelector() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<ID[]>([]);
@@ -53,21 +53,21 @@ export function EmployeeSelector() {
         {employeesQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
-              Loading customers...
+              Loading employees...
             </Text>
           </Stack>
         )}
         {employeesQuery.isSuccess && rows.length === 0 && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
-              No customers found
+              No employees found
             </Text>
           </Stack>
         )}
         {employeesQuery.isError && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextCritical" variant="body">
-              {extractErrorMessage(employeesQuery.error, 'Error loading customers')}
+              {extractErrorMessage(employeesQuery.error, 'Error loading employees')}
             </Text>
           </Stack>
         )}

@@ -10,7 +10,7 @@ if (!process.env.APP_URL) {
   process.exit();
 }
 
-const BASE_PATH = './src';
+const BASE_PATH = resolve(process.cwd(), './src');
 
 for await (const dirent of await readdir(BASE_PATH, { withFileTypes: true })) {
   await dfs(BASE_PATH, dirent);
