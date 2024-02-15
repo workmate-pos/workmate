@@ -23,12 +23,14 @@ export type CreatePurchaseOrderAction =
     } & Pick<CreatePurchaseOrder, 'workOrderName' | 'customerId' | 'customerName' | 'orderName' | 'orderId'>)
   | ({
       type: 'setOrder';
-    } & Pick<CreatePurchaseOrder, 'customerId' | 'customerName' | 'orderName' | 'orderId'>);
+    } & Pick<CreatePurchaseOrder, 'customerId' | 'customerName' | 'orderName' | 'orderId'>)
+  | {
+      type: 'setInventoryState';
+      inventoryState: 'available' | 'unavailable';
+    };
 
 export type CreatePurchaseOrderDispatchProxy = {
-  [type in CreatePurchaseOrderAction['type']]: (
-    args: DiscriminatedUnionOmit<CreatePurchaseOrderAction & { type: type }, 'type'>,
-  ) => void;
+  [type in CreatePurchaseOrderAction['type']]: (args: Omit<CreatePurchaseOrderAction & { type: type }, 'type'>) => void;
 };
 
 export const useCreatePurchaseOrderReducer = () => {
@@ -49,7 +51,10 @@ export const useCreatePurchaseOrderReducer = () => {
   return [createPurchaseOrder, proxy, hasUnsavedChanges, setHasUnsavedChanges] as const;
 };
 
-function createPurchaseOrderReducer(createPurchaseOrder: CreatePurchaseOrder, action: CreatePurchaseOrderAction) {
+function createPurchaseOrderReducer(
+  createPurchaseOrder: CreatePurchaseOrder,
+  action: CreatePurchaseOrderAction,
+): CreatePurchaseOrder {
   switch (action.type) {
     case 'setWorkOrder':
     case 'setOrder':
@@ -85,6 +90,16 @@ function createPurchaseOrderReducer(createPurchaseOrder: CreatePurchaseOrder, ac
       };
     }
 
+    case 'setInventoryState': {
+      const products = createPurchaseOrder.products.map(product => ({
+        ...product,
+        // for now we only support having the full quantity available or none
+        availableQuantity: action.inventoryState === 'available' ? product.quantity : (0 as Int),
+      }));
+
+      return { ...createPurchaseOrder, products };
+    }
+
     default:
       return action satisfies never;
   }
@@ -104,6 +119,7 @@ function mergeProducts(...products: Product[]) {
     for (const existing of merged) {
       if (shouldMergeProducts(product, existing)) {
         existing.quantity = (existing.quantity + product.quantity) as Int;
+        existing.availableQuantity = (existing.availableQuantity + product.availableQuantity) as Int;
         found = true;
         break;
       }

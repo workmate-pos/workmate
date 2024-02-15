@@ -19,6 +19,8 @@ import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
 import { IUpsertManyParams } from '../../services/db/queries/generated/employee.sql.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 @Authenticated()
 export default class EmployeeController {
@@ -85,17 +87,37 @@ export default class EmployeeController {
   @Permission('write_employees')
   @BodySchema('upsert-employees')
   async upsertEmployees(req: Request<unknown, unknown, UpsertEmployees>, res: Response<UpsertEmployeesResponse>) {
-    const { shop }: Session = res.locals.shopify.session;
+    const session: Session = res.locals.shopify.session;
+    const { shop } = session;
 
-    const employees: IUpsertManyParams['employees'] = req.body.employees.map(e => ({
-      employeeId: e.employeeId,
-      rate: e.rate,
-      superuser: e.superuser,
-      permissions: e.permissions.map(p => {
-        if (isPermissionNode(p)) return p;
-        throw new Error(`Invalid permission node: ${p}`);
-      }),
-    }));
+    const employeeIds = req.body.employees.map(e => e.employeeId);
+
+    const graphql = new Graphql(session);
+    const staffMembers = await gql.staffMember.getMany
+      .run(graphql, { ids: employeeIds })
+      .then(({ nodes }) => nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')))
+      .then(staffMembers => indexBy(staffMembers, e => e.id));
+
+    const invalidEmployees = employeeIds.some(id => !staffMembers[id]);
+    if (invalidEmployees) {
+      throw new HttpError('Not all employees were found', 400);
+    }
+
+    const employees: IUpsertManyParams['employees'] = req.body.employees.map(e => {
+      const staffMember = staffMembers[e.employeeId] ?? never();
+
+      return {
+        employeeId: e.employeeId,
+        rate: e.rate,
+        superuser: e.superuser,
+        permissions: e.permissions.map(p => {
+          if (isPermissionNode(p)) return p;
+          throw new Error(`Invalid permission node: ${p}`);
+        }),
+        name: staffMember.name,
+        isShopOwner: staffMember.isShopOwner,
+      };
+    });
 
     await db.employee.upsertMany({ shop, employees });
 

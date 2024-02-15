@@ -28,7 +28,6 @@ import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js'
 import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { MoneyField } from '../components/MoneyField.js';
-import { useToggle } from '../hooks/use-toggle.js';
 import { useForm } from '@work-orders/common-pos/hooks/use-form.js';
 
 export function PurchaseOrder() {
@@ -37,15 +36,10 @@ export function PurchaseOrder() {
 
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer();
 
-  const [key, forceRerender] = useToggle();
-
   const { Screen, usePopup } = useScreen('PurchaseOrder', purchaseOrder => {
     setQuery('');
     dispatch.set(purchaseOrder ?? defaultCreatePurchaseOrder);
     setHasUnsavedChanges(false);
-    // screens are permanently mounted, so we need to force a rerender to clear previous validation errors, etc
-    // TODO: Somehow force a rerender when leaving a screen (but without triggering the navigation lifecycle hooks)
-    forceRerender();
   });
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
@@ -137,6 +131,11 @@ export function PurchaseOrder() {
       createPurchaseOrder.paid ? BigDecimal.fromMoney(createPurchaseOrder.paid) : BigDecimal.ZERO,
     ),
   );
+
+  const hasProductQuantity = createPurchaseOrder.products.some(product => product.quantity > 0);
+
+  // whether there is some product.availableQuantity > 0. used to determine whether we should show "Mark as received" or "Mark as not received" button
+  const productHasAvailableQuantity = createPurchaseOrder.products.some(product => product.availableQuantity > 0);
 
   // TODO: Make a new input component that works with <Form /> for every type
   return (
@@ -295,6 +294,23 @@ export function PurchaseOrder() {
                 onPress={addProductPrerequisitesDialog.show}
                 isDisabled={purchaseOrderMutation.isLoading}
               />
+
+              {createPurchaseOrder.name && hasProductQuantity && productHasAvailableQuantity && (
+                <Button
+                  title={'Mark all as not received'}
+                  type={'destructive'}
+                  onPress={() => dispatch.setInventoryState({ inventoryState: 'unavailable' })}
+                  isDisabled={purchaseOrderMutation.isLoading}
+                />
+              )}
+              {createPurchaseOrder.name && hasProductQuantity && !productHasAvailableQuantity && (
+                <Button
+                  title={'Mark all as received'}
+                  onPress={() => dispatch.setInventoryState({ inventoryState: 'available' })}
+                  isDisabled={purchaseOrderMutation.isLoading}
+                />
+              )}
+
               <ControlledSearchBar
                 placeholder={'Search products'}
                 onTextChange={setQuery}
@@ -312,7 +328,7 @@ export function PurchaseOrder() {
             </ResponsiveGrid>
 
             <Form disabled={purchaseOrderMutation.isLoading}>
-              <ResponsiveGrid columns={1} key={String(key)}>
+              <ResponsiveGrid columns={1}>
                 <MoneyInputGroup
                   grid={{ columns: 2 }}
                   fields={['subtotal', 'discount', 'tax', 'shipping']}
@@ -445,7 +461,7 @@ const useVendorChangeWarningDialog = (
 };
 
 const useAddProductPrerequisitesDialog = (
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorCustomerId' | 'locationId' | 'vendorName' | 'locationName'>,
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'locationId' | 'vendorName' | 'locationName'>,
   openVendorPopup: PopupNavigateFn<'VendorSelector'>,
   openLocationPopup: PopupNavigateFn<'LocationSelector'>,
   openProductPopup: PopupNavigateFn<'ProductSelector'>,
@@ -453,7 +469,7 @@ const useAddProductPrerequisitesDialog = (
   const dialog = useDialog();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
-  const hasVendor = createPurchaseOrder.vendorCustomerId !== null && createPurchaseOrder.vendorName !== null;
+  const hasVendor = createPurchaseOrder.vendorName !== null;
   const hasLocation = createPurchaseOrder.locationId !== null && createPurchaseOrder.locationName !== null;
 
   const showDialog = !hasVendor || !hasLocation;
@@ -511,68 +527,25 @@ const useAddProductPrerequisitesDialog = (
 
 type CreatePurchaseOrderMoneyField = 'subtotal' | 'discount' | 'tax' | 'shipping' | 'deposited' | 'paid';
 
-/**
- * Money input that shows validation errors nicely, and automatically updates the purchase order state if valid.
- * Custom component is needed because FormattedTextField is ass 🗣️
- */
-function MoneyInput<const F extends CreatePurchaseOrderMoneyField>({
-  createPurchaseOrder,
-  dispatch,
-  field,
-  onIsValid,
-  disabled,
-}: {
-  field: F;
-  createPurchaseOrder: Pick<CreatePurchaseOrder, F>;
-  dispatch: CreatePurchaseOrderDispatchProxy;
-  onIsValid?: (isValid: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <MoneyField
-      label={titleCase(field)}
-      disabled={disabled}
-      value={createPurchaseOrder[field]}
-      onChange={value => dispatch.setPartial({ [field]: value })}
-      onIsValid={onIsValid}
-      allowEmpty
-    />
-  );
-}
-
 function MoneyInputGroup<const F extends CreatePurchaseOrderMoneyField>({
   createPurchaseOrder,
   dispatch,
   fields,
-  onIsValid,
   grid,
-  disabled,
 }: {
   fields: readonly F[];
   createPurchaseOrder: Pick<CreatePurchaseOrder, F>;
   dispatch: CreatePurchaseOrderDispatchProxy;
-  onIsValid?: (isValid: boolean) => void;
   grid: ResponsiveGridProps;
-  disabled?: boolean;
 }) {
-  const [fieldValidity, setFieldValidity] = useState<Record<F, boolean>>(
-    Object.fromEntries(fields.map(field => [field, true])) as Record<F, boolean>,
-  );
-
-  useEffect(() => {
-    onIsValid?.(fields.every(field => fieldValidity[field]));
-  }, [fieldValidity]);
-
   return (
     <ResponsiveGrid {...grid}>
       {fields.map(field => (
         <MoneyField
           key={field}
           label={titleCase(field)}
-          disabled={disabled}
           value={createPurchaseOrder[field]}
           onChange={value => dispatch.setPartial({ [field]: value })}
-          onIsValid={isValid => setFieldValidity(fv => ({ ...fv, [field]: isValid }))}
           allowEmpty
         />
       ))}

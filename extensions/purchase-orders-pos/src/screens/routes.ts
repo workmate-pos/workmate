@@ -1,6 +1,5 @@
 import type { Status, Product, CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import type { Location } from '@work-orders/common/queries/use-locations-query.js';
-import type { Vendor } from '@work-orders/common/queries/use-vendors-query.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export type ScreenInputOutput = {
@@ -9,6 +8,7 @@ export type ScreenInputOutput = {
 
   CustomFieldConfig: [Pick<CreatePurchaseOrder, 'customFields'>, Record<string, string>];
   EmployeeSelector: [CreatePurchaseOrder['employeeAssignments'], CreatePurchaseOrder['employeeAssignments']];
+  ImportPreset: [undefined, { keys: string[] }];
   LocationSelector: [undefined, Location];
   OrderSelector: [undefined, Pick<CreatePurchaseOrder, 'orderName' | 'orderId' | 'customerId' | 'customerName'>];
   ProductConfig: [
@@ -23,6 +23,7 @@ export type ScreenInputOutput = {
     NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>>,
     Product[],
   ];
+  SavePreset: [{ keys: [string, ...string[]] }, undefined];
   StatusSelector: [undefined, Status];
   VendorSelector: [undefined, { vendorName: string; vendorCustomerId: ID | null }];
   WorkOrderSelector: [

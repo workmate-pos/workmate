@@ -93,8 +93,11 @@ FROM "PurchaseOrderEmployeeAssignment"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
 /* @name insertProduct */
-INSERT INTO "PurchaseOrderProduct" ("purchaseOrderId", "productVariantId", quantity, sku, name, handle)
-VALUES (:purchaseOrderId!, :productVariantId!, :quantity!, :sku, :name, :handle);
+INSERT INTO "PurchaseOrderProduct" ("purchaseOrderId", "productVariantId", "inventoryItemId", quantity,
+                                    "availableQuantity", sku, name,
+                                    handle)
+VALUES (:purchaseOrderId!, :productVariantId!, :inventoryItemId!, :quantity!, :availableQuantity!, :sku, :name,
+        :handle);
 
 /* @name insertCustomField */
 INSERT INTO "PurchaseOrderCustomField" ("purchaseOrderId", key, value)
@@ -103,3 +106,20 @@ VALUES (:purchaseOrderId!, :key!, :value!);
 /* @name insertAssignedEmployee */
 INSERT INTO "PurchaseOrderEmployeeAssignment" ("purchaseOrderId", "employeeId", "employeeName")
 VALUES (:purchaseOrderId!, :employeeId!, :employeeName);
+
+/* @name getCustomFieldsPresets */
+SELECT *
+FROM "PurchaseOrderCustomFieldsPreset"
+WHERE shop = :shop!;
+
+/* @name upsertCustomFieldsPreset */
+INSERT INTO "PurchaseOrderCustomFieldsPreset" (shop, name, keys)
+VALUES (:shop!, :name!, :keys!)
+ON CONFLICT (shop, name) DO UPDATE
+  SET keys = :keys!;
+
+/* @name removeCustomFieldsPreset */
+DELETE
+FROM "PurchaseOrderCustomFieldsPreset"
+WHERE shop = :shop!
+  AND name = :name!;

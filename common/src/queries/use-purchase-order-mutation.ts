@@ -2,6 +2,8 @@ import { Fetch } from './fetch.js';
 import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { CreatePurchaseOrderResponse } from '@web/controllers/api/purchase-orders.js';
+import { UseQueryData } from './react-query.js';
+import { usePurchaseOrderQuery } from './use-purchase-order-query.js';
 
 export const usePurchaseOrderMutation = (
   { fetch }: { fetch: Fetch },
@@ -23,12 +25,19 @@ export const usePurchaseOrderMutation = (
       return result;
     },
     onSuccess(...args) {
-      const [, { name }] = args;
-      if (name) {
-        queryClient.invalidateQueries(['purchase-order', name]);
-      }
+      const [{ purchaseOrder }] = args;
 
+      queryClient.invalidateQueries(['purchase-order', purchaseOrder.name]);
       queryClient.invalidateQueries(['purchase-order-info']);
+
+      // we don't know if any items were removed so we must invalidate all inventory items
+      queryClient.invalidateQueries(['inventory-item']);
+      queryClient.invalidateQueries(['inventory-items']);
+
+      queryClient.setQueryData(
+        ['purchase-order', purchaseOrder.name],
+        purchaseOrder satisfies UseQueryData<typeof usePurchaseOrderQuery>,
+      );
 
       options?.onSuccess?.(...args);
     },

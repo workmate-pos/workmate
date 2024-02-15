@@ -15,6 +15,7 @@ type FormContextValue = {
 
 export const useFormContext = () => useContext(FormContext);
 
+// TODO: Detect when some child is being modified and make all hide their errors
 export const useForm = () => {
   const [validityStates, setValidityStates] = useState<Record<string, boolean>>({});
   const isValid = Object.values(validityStates).every(isValid => isValid);

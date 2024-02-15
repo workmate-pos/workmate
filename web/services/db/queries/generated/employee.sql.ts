@@ -14,6 +14,8 @@ export interface IGetManyParams {
 /** 'GetMany' return type */
 export interface IGetManyResult {
   employeeId: string;
+  isShopOwner: boolean;
+  name: string;
   permissions: PermissionNodeArray | null;
   rate: string | null;
   shop: string;
@@ -46,7 +48,9 @@ export interface IUpsertManyParams {
     employeeId: string,
     superuser: boolean,
     permissions: PermissionNodeArray,
-    rate: string | null | void
+    rate: string | null | void,
+    isShopOwner: boolean,
+    name: string
   })[];
   shop: string;
 }
@@ -54,6 +58,8 @@ export interface IUpsertManyParams {
 /** 'UpsertMany' return type */
 export interface IUpsertManyResult {
   employeeId: string;
+  isShopOwner: boolean;
+  name: string;
   permissions: PermissionNodeArray | null;
   rate: string | null;
   shop: string;
@@ -66,22 +72,24 @@ export interface IUpsertManyQuery {
   result: IUpsertManyResult;
 }
 
-const upsertManyIR: any = {"usedParamSet":{"shop":true,"employees":true},"params":[{"name":"employees","required":true,"transform":{"type":"pick_array_spread","keys":[{"name":"employeeId","required":true},{"name":"superuser","required":true},{"name":"permissions","required":true},{"name":"rate","required":false}]},"locs":[{"a":151,"b":161}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":41,"b":46}]}],"statement":"WITH Input AS (\n    SELECT \"employeeId\", :shop! AS shop, rate, superuser, permissions\n    FROM (VALUES ('', FALSE, ARRAY[] :: \"PermissionNode\"[], ''), :employees! OFFSET 1) AS t (\"employeeId\", superuser, permissions, rate)\n)\nINSERT INTO \"Employee\" (\"employeeId\", shop, superuser, permissions, rate)\nSELECT \"employeeId\", shop, superuser, permissions, rate\nFROM Input\nON CONFLICT (\"employeeId\", \"shop\")\nDO UPDATE SET \"rate\" = EXCLUDED.\"rate\",\n              \"superuser\" = EXCLUDED.\"superuser\",\n              \"permissions\" = EXCLUDED.\"permissions\"\nRETURNING *"};
+const upsertManyIR: any = {"usedParamSet":{"shop":true,"employees":true},"params":[{"name":"employees","required":true,"transform":{"type":"pick_array_spread","keys":[{"name":"employeeId","required":true},{"name":"superuser","required":true},{"name":"permissions","required":true},{"name":"rate","required":false},{"name":"isShopOwner","required":true},{"name":"name","required":true}]},"locs":[{"a":183,"b":193}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":41,"b":46}]}],"statement":"WITH Input AS (\n    SELECT \"employeeId\", :shop! AS shop, rate, superuser, permissions, \"isShopOwner\", name\n    FROM (VALUES ('', FALSE, ARRAY[] :: \"PermissionNode\"[], '', FALSE, ''), :employees! OFFSET 1) AS t (\"employeeId\", superuser, permissions, rate, \"isShopOwner\", name)\n)\nINSERT INTO \"Employee\" (\"employeeId\", shop, superuser, permissions, rate, \"isShopOwner\", name)\nSELECT \"employeeId\", shop, superuser, permissions, rate, \"isShopOwner\", name\nFROM Input\nON CONFLICT (\"employeeId\", \"shop\")\nDO UPDATE SET \"rate\" = EXCLUDED.\"rate\",\n              \"superuser\" = EXCLUDED.\"superuser\",\n              \"permissions\" = EXCLUDED.\"permissions\",\n              \"isShopOwner\" = EXCLUDED.\"isShopOwner\",\n              \"name\" = EXCLUDED.\"name\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
  * WITH Input AS (
- *     SELECT "employeeId", :shop! AS shop, rate, superuser, permissions
- *     FROM (VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], ''), :employees! OFFSET 1) AS t ("employeeId", superuser, permissions, rate)
+ *     SELECT "employeeId", :shop! AS shop, rate, superuser, permissions, "isShopOwner", name
+ *     FROM (VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', FALSE, ''), :employees! OFFSET 1) AS t ("employeeId", superuser, permissions, rate, "isShopOwner", name)
  * )
- * INSERT INTO "Employee" ("employeeId", shop, superuser, permissions, rate)
- * SELECT "employeeId", shop, superuser, permissions, rate
+ * INSERT INTO "Employee" ("employeeId", shop, superuser, permissions, rate, "isShopOwner", name)
+ * SELECT "employeeId", shop, superuser, permissions, rate, "isShopOwner", name
  * FROM Input
  * ON CONFLICT ("employeeId", "shop")
  * DO UPDATE SET "rate" = EXCLUDED."rate",
  *               "superuser" = EXCLUDED."superuser",
- *               "permissions" = EXCLUDED."permissions"
+ *               "permissions" = EXCLUDED."permissions",
+ *               "isShopOwner" = EXCLUDED."isShopOwner",
+ *               "name" = EXCLUDED."name"
  * RETURNING *
  * ```
  */

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tile, Navigator, render, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { Entry } from './screens/Entry.js';
 import { ScreenSizeProvider } from '@work-orders/common-pos/providers/ScreenSizeProvider.js';
@@ -15,6 +14,8 @@ import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
 import { WorkOrderSelector } from './screens/popups/WorkOrderSelector.js';
 import { OrderSelector } from './screens/popups/OrderSelector.js';
 import { ProductCreator } from './screens/popups/ProductCreator.js';
+import { SavePreset } from './screens/popups/SavePreset.js';
+import { ImportPreset } from './screens/popups/ImportPreset.js';
 
 const SmartGridTile = () => {
   const { smartGrid } = useExtensionApi();
@@ -23,6 +24,7 @@ const SmartGridTile = () => {
 
 const SmartGridModal = () => {
   const queryClient = new QueryClient();
+
   return (
     <ScreenSizeProvider>
       <QueryClientProvider client={queryClient}>
@@ -33,11 +35,13 @@ const SmartGridModal = () => {
 
             <CustomFieldConfig />
             <EmployeeSelector />
+            <ImportPreset />
             <LocationSelector />
             <OrderSelector />
             <ProductConfig />
             <ProductCreator />
             <ProductSelector />
+            <SavePreset />
             <StatusSelector />
             <VendorSelector />
             <WorkOrderSelector />

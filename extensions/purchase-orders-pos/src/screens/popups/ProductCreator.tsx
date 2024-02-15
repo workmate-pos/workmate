@@ -35,10 +35,12 @@ export function ProductCreator() {
     {
       onSuccess: ({ product }) =>
         closePopup({
-          productVariantId: product.variant.id,
           name: getProductVariantName(product.variant) ?? 'Unknown product',
-          sku: product.variant.sku,
+          inventoryItemId: product.variant.inventoryItem.id,
           handle: product.variant.product.handle,
+          productVariantId: product.variant.id,
+          availableQuantity: 0 as Int,
+          sku: product.variant.sku,
           quantity,
         }),
     },

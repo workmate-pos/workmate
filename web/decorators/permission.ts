@@ -7,6 +7,9 @@ import { db } from '../services/db/db.js';
 import { gql } from '../services/gql/gql.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import jwt from 'jsonwebtoken';
+import type { Request, Response } from 'express-serve-static-core';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
 export const permissionNodes = [
   'read_settings',
@@ -37,22 +40,33 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
   return (async (_req, res, next) => {
     const session: Session = res.locals.shopify.session;
 
-    const associatedUser = session?.onlineAccessInfo?.associated_user;
-    if (!associatedUser) return err(res, 'You must be a staff member to access this resource', 401);
+    const associatedUser = await getAssociatedUser(_req, res);
+    if (!associatedUser) {
+      return err(res, 'You must be a staff member to access this resource', 401);
+    }
 
-    const employeeId = createGid('StaffMember', String(associatedUser.id));
+    const employeeId = associatedUser.id;
     let [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [employeeId] });
 
     if (!employee) {
       [employee = never()] = await db.employee.upsertMany({
         shop: session.shop,
-        employees: [{ employeeId, permissions: [], rate: null, superuser: false }],
+        employees: [
+          {
+            employeeId,
+            permissions: [],
+            rate: null,
+            superuser: associatedUser.isShopOwner,
+            name: associatedUser.name,
+            isShopOwner: associatedUser.isShopOwner,
+          },
+        ],
       });
     }
 
     const user: LocalsTeifiUser = {
       user: employee,
-      staffMember: associatedUserToStaffInfo(associatedUser),
+      staffMember: associatedUser,
     };
 
     res.locals.teifi ??= {};
@@ -66,6 +80,48 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     next();
   }) as RequestHandler;
 };
+
+async function getAssociatedUser(req: Request, res: Response): Promise<gql.staffMember.StaffMemberFragment.Result> {
+  const session: Session = res.locals.shopify.session;
+
+  if (session?.onlineAccessInfo?.associated_user) {
+    return associatedUserToStaffInfo(session.onlineAccessInfo.associated_user);
+  }
+
+  const bearer = req.headers.authorization;
+
+  if (!bearer) {
+    throw new HttpError('You must be a staff member to access this resource', 401);
+  }
+
+  const token = bearer.split(' ')[1] ?? never();
+  const content = jwt.decode(token, { json: true });
+
+  if (!content) {
+    throw new HttpError('Invalid token', 401);
+  }
+
+  const { sub } = content;
+
+  if (!sub) {
+    throw new HttpError('Invalid token', 401);
+  }
+
+  const staffMemberId = createGid('StaffMember', sub);
+
+  const [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
+
+  if (!employee) {
+    // this can happen if the employee has not been set up. saving permissions for them will fix it
+    throw new HttpError('You do not have access to this resource - permissions have not been configured', 401);
+  }
+
+  return {
+    id: staffMemberId,
+    name: employee.name,
+    isShopOwner: employee.isShopOwner,
+  };
+}
 
 export type LocalsTeifiUser = {
   user: IGetManyResult;

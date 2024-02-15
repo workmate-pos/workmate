@@ -26,31 +26,37 @@ export function StringField({
 
   useEffect(() => {
     change(value);
+    commit(value);
   }, [value]);
 
   useEffect(() => {
+    change(value ?? '');
+    commit(value ?? '');
+    setError('');
     return () => formContext?.clearValidity(label);
   }, [label]);
 
   const change = (value: string) => {
+    setError('');
     setInternalState(value);
-    const error = validate(value);
-    const isValid = error === null;
-    onIsValid?.(isValid);
-    formContext?.setValidity(label, isValid);
   };
 
   const clearError = () => setError('');
 
-  const commit = () => {
-    const error = validate(internalState);
+  const commit = (newValue: string) => {
+    const error = validate(newValue);
 
     if (error) {
       setError(error);
+      formContext?.setValidity(label, false);
+      onIsValid?.(false);
       return;
     }
 
-    onChange?.(internalState);
+    setInternalState(newValue);
+    formContext?.setValidity(label, true);
+    onIsValid?.(true);
+    if (value !== newValue) onChange?.(newValue);
   };
 
   return (
@@ -61,7 +67,7 @@ export function StringField({
       value={internalState}
       error={error}
       onFocus={clearError}
-      onBlur={commit}
+      onBlur={() => commit(internalState)}
     />
   );
 }

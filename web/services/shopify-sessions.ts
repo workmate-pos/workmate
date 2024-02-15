@@ -34,7 +34,13 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
   }
 
   async loadSession(id: string): Promise<Session | undefined> {
-    const [session] = await db.shopifySession.get({ id, limit: 1 });
+    let [session] = await db.shopifySession.get({ id, limit: 1 });
+
+    // fall back to an offline session if the online session is not found
+    // unfortunately required since POS does not do oauth, so not having this would require POS employees to log into admin for oauth
+    if (!session && !this.isOfflineSessionId(id)) {
+      [session] = await db.shopifySession.get({ id: this.onlineSessionIdToOfflineSessionId(id), limit: 1 });
+    }
 
     if (!session) {
       return undefined;
@@ -47,6 +53,14 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
     const record = sessionToShopifySession(session);
     await db.shopifySession.upsert(record);
     return true;
+  }
+
+  private isOfflineSessionId(id: string): boolean {
+    return id.startsWith('offline_');
+  }
+
+  private onlineSessionIdToOfflineSessionId(id: string): string {
+    return 'offline_' + id.replace(/_.+/, '');
   }
 }
 

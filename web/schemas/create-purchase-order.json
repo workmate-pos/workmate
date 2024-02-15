@@ -124,7 +124,15 @@
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
           },
+          "inventoryItemId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
           "quantity": {
+            "description": "The quantity of this product variant in the PO",
+            "$ref": "scalars.json#/definitions/Int"
+          },
+          "availableQuantity": {
+            "description": "The quantity of this product variant available in the inventory",
             "$ref": "scalars.json#/definitions/Int"
           },
           "sku": {
@@ -137,7 +145,7 @@
             "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
           }
         },
-        "required": ["productVariantId", "quantity", "sku", "name", "handle"],
+        "required": ["productVariantId", "inventoryItemId", "quantity", "availableQuantity", "sku", "name", "handle"],
         "additionalProperties": false
       }
     },

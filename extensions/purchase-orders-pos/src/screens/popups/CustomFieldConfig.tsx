@@ -1,8 +1,10 @@
 import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
-import { useEffect, useState } from 'react';
+import { Dispatch, ReactNode, SetStateAction, useEffect, useState } from 'react';
 import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { Button, ScrollView, Stack, Text, TextField } from '@shopify/retail-ui-extensions-react';
 import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
+import { useScreenSize } from '@work-orders/common-pos/providers/ScreenSizeProvider.js';
+import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
 
 export function CustomFieldConfig() {
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
@@ -11,7 +13,7 @@ export function CustomFieldConfig() {
   const [newCustomFieldName, setNewCustomFieldName] = useState('');
   const [newCustomFieldNameError, setNewCustomFieldNameError] = useState('');
 
-  const { Screen, closePopup } = useScreen('CustomFieldConfig', ({ customFields }) => {
+  const { Screen, closePopup, usePopup } = useScreen('CustomFieldConfig', ({ customFields }) => {
     setCustomFields(customFields);
     setHasUnsavedChanges(false);
 
@@ -19,7 +21,10 @@ export function CustomFieldConfig() {
     setNewCustomFieldNameError('');
   });
 
+  const savePresetPopup = usePopup('SavePreset');
+  const importPresetPopup = usePopup('ImportPreset', ({ keys }) => overrideOrMergeDialog.show(keys));
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
+  const overrideOrMergeDialog = useOverrideOrMergeDialog({ customFields, setCustomFields });
 
   useEffect(() => {
     if (Object.keys(customFields).includes(newCustomFieldName)) {
@@ -44,12 +49,52 @@ export function CustomFieldConfig() {
     });
   }
 
+  const screenSize = useScreenSize();
+
+  const saveAsPreset = (
+    <Button
+      title={'Save as Preset'}
+      type={'plain'}
+      isDisabled={!isNonEmptyArray(Object.keys(customFields))}
+      onPress={() => {
+        const keys = Object.keys(customFields);
+
+        if (isNonEmptyArray(keys)) {
+          savePresetPopup.navigate({ keys });
+        }
+      }}
+    />
+  );
+
+  const importPreset = <Button title={'Import Preset'} type={'plain'} onPress={importPresetPopup.navigate} />;
+
+  const headingOptions: Record<typeof screenSize, ReactNode> = {
+    tablet: (
+      <ResponsiveGrid columns={2}>
+        <Text variant="headingLarge">Custom Fields</Text>
+        <Stack direction={'horizontal'} alignment={'flex-end'}>
+          {saveAsPreset}
+          {importPreset}
+        </Stack>
+      </ResponsiveGrid>
+    ),
+    mobile: (
+      <ResponsiveGrid columns={1}>
+        <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'Small'}>
+          <Text variant="headingLarge">Custom Fields</Text>
+        </Stack>
+        <Stack direction={'horizontal'} flexChildren paddingVertical={'HalfPoint'}>
+          {saveAsPreset}
+          {importPreset}
+        </Stack>
+      </ResponsiveGrid>
+    ),
+  };
+
   return (
     <Screen title="Custom Fields" overrideNavigateBack={unsavedChangesDialog.show} presentation={{ sheet: true }}>
       <ScrollView>
-        <Stack direction={'horizontal'} alignment={'center'}>
-          <Text variant={'headingLarge'}>Custom Fields</Text>
-        </Stack>
+        {headingOptions[screenSize]}
 
         <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
           <ResponsiveGrid columns={2}>
@@ -104,3 +149,43 @@ export function CustomFieldConfig() {
     </Screen>
   );
 }
+
+function isNonEmptyArray<T>(value: T[]): value is [T, ...T[]] {
+  return value.length > 0;
+}
+
+/**
+ * Whether an imported preset should override or merge with the existing custom fields
+ */
+const useOverrideOrMergeDialog = ({
+  customFields,
+  setCustomFields,
+}: {
+  customFields: Record<string, string>;
+  setCustomFields: Dispatch<SetStateAction<Record<string, string>>>;
+}) => {
+  const dialog = useDialog();
+  const showDialog = Object.keys(customFields).length > 0;
+
+  return {
+    show: (keys: string[]) => {
+      const merge = () =>
+        setCustomFields(current => ({ ...Object.fromEntries(keys.map(key => [key, ''])), ...current }));
+      const override = () => setCustomFields(Object.fromEntries(keys.map(key => [key, ''])));
+
+      dialog.show({
+        showDialog,
+        onAction: merge,
+        onSecondaryAction: override,
+        props: {
+          title: 'Import Preset',
+          type: 'alert',
+          showSecondaryAction: true,
+          actionText: 'Merge',
+          secondaryActionText: 'Override',
+          content: 'Do you want to merge or override the existing custom fields?',
+        },
+      });
+    },
+  };
+};

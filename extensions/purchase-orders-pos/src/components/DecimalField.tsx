@@ -35,30 +35,36 @@ export function DecimalField<const AllowEmpty extends boolean>({
 
   useEffect(() => {
     change(value ?? '');
+    commit(value ?? '');
   }, [value]);
 
   useEffect(() => {
+    change(value ?? '');
+    commit(value ?? '');
+    setError('');
     return () => formContext?.clearValidity(label);
   }, [label]);
 
   const change = (value: string) => {
+    setError('');
     setInternalState(value);
-    const isValid = isValidNumber(value, allowEmpty);
-    onIsValid?.(isValid);
-    formContext?.setValidity(label, isValid);
   };
 
   const clearError = () => setError('');
 
-  const commit = () => {
-    if (!isValidNumber(internalState, allowEmpty)) {
+  const commit = (newValue: string) => {
+    if (!isValidNumber(newValue, allowEmpty)) {
       setError('Invalid amount');
+      formContext?.setValidity(label, false);
+      onIsValid?.(false);
       return;
     }
 
-    const parsedValue = parseNumberInput(internalState, decimals, roundingMode, allowEmpty, value);
+    const parsedValue = parseNumberInput(newValue, decimals, roundingMode, allowEmpty, value);
 
     setInternalState(parsedValue ?? '');
+    formContext?.setValidity(label, true);
+    onIsValid?.(true);
     onChange?.(parsedValue);
   };
 
@@ -70,7 +76,7 @@ export function DecimalField<const AllowEmpty extends boolean>({
       value={internalState}
       error={error}
       onFocus={clearError}
-      onBlur={commit}
+      onBlur={() => commit(internalState)}
     />
   );
 }

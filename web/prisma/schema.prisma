@@ -62,6 +62,9 @@ model Employee {
   permissions PermissionNode[]
   rate        String?
 
+  isShopOwner Boolean
+  name        String
+
   @@id([shop, employeeId])
 }
 
@@ -228,27 +231,17 @@ model PurchaseOrder {
   @@unique([shop, name])
 }
 
-model PurchaseOrderCustomField {
-  id Int @id @default(autoincrement())
-
-  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
-  purchaseOrderId Int
-
-  key   String
-  // Searchable
-  value String
-
-  @@unique([purchaseOrderId, key])
-}
-
 model PurchaseOrderProduct {
   id Int @id @default(autoincrement())
 
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId Int
 
-  productVariantId String
-  quantity         Int
+  productVariantId  String
+  inventoryItemId   String
+  quantity          Int
+  /// Quantity that is added to the available inventory
+  availableQuantity Int
 
   // Searchable fields
   sku    String?
@@ -275,4 +268,28 @@ model PurchaseOrderEmployeeAssignment {
 
   // Searchable fields
   employeeName String?
+}
+
+model PurchaseOrderCustomField {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  key   String
+  // Searchable
+  value String
+
+  @@unique([purchaseOrderId, key])
+}
+
+model PurchaseOrderCustomFieldsPreset {
+  id Int @id @default(autoincrement())
+
+  shop String
+  name String
+
+  keys String[]
+
+  @@unique([shop, name])
 }

@@ -77,11 +77,15 @@ export async function getPurchaseOrderInfoPage(
 
 async function getPurchaseOrderProducts(purchaseOrderId: number) {
   const products = await db.purchaseOrder.getProducts({ purchaseOrderId });
-  return products.map<PurchaseOrder['products'][number]>(({ productVariantId, quantity, name, sku, handle }) => {
-    assertGid(productVariantId);
-    assertInt(quantity);
-    return { productVariantId, quantity, name, sku, handle };
-  });
+  return products.map<PurchaseOrder['products'][number]>(
+    ({ productVariantId, inventoryItemId, quantity, availableQuantity, name, sku, handle }) => {
+      assertGid(productVariantId);
+      assertGid(inventoryItemId);
+      assertInt(quantity);
+      assertInt(availableQuantity);
+      return { productVariantId, inventoryItemId, quantity, availableQuantity, name, sku, handle };
+    },
+  );
 }
 
 async function getPurchaseOrderCustomFields(purchaseOrderId: number) {

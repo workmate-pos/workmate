@@ -152,11 +152,13 @@ function useProductVariantRows(
       id: variant.id,
       onPress: () =>
         selectProduct({
+          inventoryItemId: variant.inventoryItem.id,
+          handle: variant.product.handle,
           productVariantId: variant.id,
+          availableQuantity: 0 as Int,
           quantity: 1 as Int,
           name: displayName,
           sku: variant.sku,
-          handle: variant.product.handle,
         }),
       leftSide: {
         label: displayName,
