@@ -62,6 +62,9 @@ model Employee {
   permissions PermissionNode[]
   rate        String?
 
+  isShopOwner Boolean
+  name        String
+
   @@id([shop, employeeId])
 }
 

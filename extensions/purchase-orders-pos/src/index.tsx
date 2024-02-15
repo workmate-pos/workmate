@@ -1,4 +1,3 @@
-import React from 'react';
 import { Tile, Navigator, render, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { Entry } from './screens/Entry.js';
 import { ScreenSizeProvider } from '@work-orders/common-pos/providers/ScreenSizeProvider.js';
@@ -25,6 +24,7 @@ const SmartGridTile = () => {
 
 const SmartGridModal = () => {
   const queryClient = new QueryClient();
+
   return (
     <ScreenSizeProvider>
       <QueryClientProvider client={queryClient}>

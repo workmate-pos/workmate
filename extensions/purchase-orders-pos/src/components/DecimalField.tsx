@@ -33,13 +33,15 @@ export function DecimalField<const AllowEmpty extends boolean>({
   const [error, setError] = useState('');
   const formContext = useFormContext();
 
-  // TODO: Don't show error initially
   useEffect(() => {
     change(value ?? '');
     commit(value ?? '');
   }, [value]);
 
   useEffect(() => {
+    change(value ?? '');
+    commit(value ?? '');
+    setError('');
     return () => formContext?.clearValidity(label);
   }, [label]);
 
