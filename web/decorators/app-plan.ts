@@ -5,7 +5,7 @@ import { Session } from '@shopify/shopify-api';
 import { appPlanLevels } from '../services/app-plans/installable-app-plans-service.js';
 import { err } from '@teifi-digital/shopify-app-express/utils/express-utils.js';
 import { never } from '@teifi-digital/shopify-app-express/utils/never.js';
-import { AppPlanName } from '../services/db/queries/generated/app-plan.sql.js';
+import { AppPlanName, IGetSubscriptionResult } from '../services/db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from '../services/gql/queries/generated/schema.js';
 import { getAppPlanSubscription } from '../services/app-plans/app-plans.js';
 
@@ -18,6 +18,8 @@ export const AppPlanKey = 'app-plan';
 export function AppPlan(name: AppPlanName, statuses: AppSubscriptionStatus[] = ['ACTIVE']) {
   return decorator<AppPlanHandlerParam>(AppPlanKey, { name, statuses });
 }
+
+export type AppPlanSubscription = IGetSubscriptionResult;
 
 export const appPlanHandler: DecoratorHandler<AppPlanHandlerParam> = ([{ name, statuses } = never()]) => {
   return (async (_req, res, next) => {
@@ -39,7 +41,7 @@ export const appPlanHandler: DecoratorHandler<AppPlanHandlerParam> = ([{ name, s
     }
 
     if (res.locals.teifi == null) res.locals.teifi = {};
-    res.locals.teifi.appPlanSubscription = appPlanSubscription;
+    res.locals.teifi.appPlanSubscription = appPlanSubscription satisfies AppPlanSubscription;
 
     next();
   }) as RequestHandler;
