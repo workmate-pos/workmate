@@ -23,7 +23,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "build:watch": "tsc -w"
+    "build:watch": "tsc -w",
+    "preinstall": "cd ../ && npm install"
   },
   "author": "Tim van Dam",
   "devDependencies": {
