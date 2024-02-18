@@ -111,8 +111,6 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
     .run(graphql, { ids: [staffMemberId] })
     .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
 
-  console.log('Fetched employee staff member');
-
   return staffMember ?? never('Staff Member must exist because the signed token contained its id');
 }
 
