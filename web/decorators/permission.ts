@@ -5,11 +5,13 @@ import { Session } from '@shopify/shopify-api';
 import { IGetManyResult, PermissionNode } from '../services/db/queries/generated/employee.sql.js';
 import { db } from '../services/db/db.js';
 import { gql } from '../services/gql/gql.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import jwt from 'jsonwebtoken';
 import type { Request, Response } from 'express-serve-static-core';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export const permissionNodes = [
   'read_settings',
@@ -77,6 +79,7 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
         return err(res, `You do not have permission to access this resource`, 401);
       }
     }
+
     next();
   }) as RequestHandler;
 };
@@ -84,17 +87,39 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
 async function getAssociatedUser(req: Request, res: Response): Promise<gql.staffMember.StaffMemberFragment.Result> {
   const session: Session = res.locals.shopify.session;
 
+  // this works for all requests coming from admin
   if (session?.onlineAccessInfo?.associated_user) {
     return associatedUserToStaffInfo(session.onlineAccessInfo.associated_user);
   }
 
-  const bearer = req.headers.authorization;
+  // POS does not send associated_user, but will send the staff member's id in the session token
+  const staffMemberId = getBearerStaffMemberId(req.headers.authorization);
 
-  if (!bearer) {
+  const [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
+
+  if (employee) {
+    return {
+      id: staffMemberId,
+      name: employee.name,
+      isShopOwner: employee.isShopOwner,
+    };
+  }
+
+  // if this is a completely new employee we should fetch their details here. will only happen the first time
+  const graphql = new Graphql(session);
+  const [staffMember] = await gql.staffMember.getMany
+    .run(graphql, { ids: [staffMemberId] })
+    .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
+
+  return staffMember ?? never('Staff Member must exist because the signed token contained its id');
+}
+
+function getBearerStaffMemberId(authorizationHeader?: string): ID {
+  if (!authorizationHeader) {
     throw new HttpError('You must be a staff member to access this resource', 401);
   }
 
-  const token = bearer.split(' ')[1] ?? never();
+  const token = authorizationHeader.split(' ')[1] ?? never();
   const content = jwt.decode(token, { json: true });
 
   if (!content) {
@@ -107,20 +132,7 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
     throw new HttpError('Invalid token', 401);
   }
 
-  const staffMemberId = createGid('StaffMember', sub);
-
-  const [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
-
-  if (!employee) {
-    // this can happen if the employee has not been set up. saving permissions for them will fix it
-    throw new HttpError('You do not have access to this resource - permissions have not been configured', 401);
-  }
-
-  return {
-    id: staffMemberId,
-    name: employee.name,
-    isShopOwner: employee.isShopOwner,
-  };
+  return createGid('StaffMember', sub);
 }
 
 export type LocalsTeifiUser = {

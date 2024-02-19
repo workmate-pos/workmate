@@ -1,5 +1,8 @@
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 
+// store which error messages are currently being shown to prevent showing the same error message multiple times
+const currentErrorMessages = new Set<string>();
+
 export const useAuthenticatedFetch = ({
   throwOnError = true,
   showToastOnError = true,
@@ -36,7 +39,7 @@ export const useAuthenticatedFetch = ({
     const response = await fetch(requestUrl, init);
 
     if (!response.ok && process.env.NODE_ENV === 'development') {
-      api.toast.show(`${response.status} - ${input.toString()} - ${await response.clone().text()}`, { duration: 2000 });
+      api.toast.show(`${response.status} - ${input.toString()} - ${await response.clone().text()}`, { duration: 3000 });
     }
 
     if (!response.ok && (throwOnError || showToastOnError)) {
@@ -56,7 +59,14 @@ export const useAuthenticatedFetch = ({
       } catch {}
 
       if (showToastOnError) {
-        api.toast.show(error);
+        const ERROR_SHOW_TIME = 2500; // how long to show the error message for
+        const ERROR_HIDE_TIME = 3500; // how long to wait before allowing showing the same error message again
+
+        if (!currentErrorMessages.has(error)) {
+          api.toast.show(error, { duration: ERROR_SHOW_TIME });
+          currentErrorMessages.add(error);
+          setTimeout(() => currentErrorMessages.delete(error), ERROR_HIDE_TIME);
+        }
       }
 
       if (throwOnError) {
