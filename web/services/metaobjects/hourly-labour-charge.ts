@@ -39,7 +39,7 @@ export const hourlyLabourChargeMetaobject = {
       type: 'hourly-labour-charge',
       name: metaobject.name?.value ?? never(),
       rate: JSON.parse(metaobject.rate?.value ?? never()).amount as Money,
-      hours: JSON.parse(metaobject.hours?.value ?? never()).amount as Decimal,
+      hours: JSON.parse(metaobject.hours?.value ?? never()) as Decimal,
     } as const;
   },
 } as const satisfies MetaobjectDefinition;

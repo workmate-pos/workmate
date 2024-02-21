@@ -382,10 +382,12 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const serviceSelectorPopup = context.usePopup('ServiceSelector', ({ type, lineItem, charges }) => {
     const isUnstackable = type === 'mutable-service';
 
+    const createWorkOrderCharges = [...(context.createWorkOrder.charges ?? []), ...charges];
+
     context.dispatchCreateWorkOrder({
       type: 'set-field',
       field: 'charges',
-      value: [...(context.createWorkOrder.charges ?? []), ...charges],
+      value: createWorkOrderCharges,
     });
 
     context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable });
@@ -395,7 +397,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
         readonly: context.hasOrder,
         hasBasePrice: false,
         lineItem,
-        labour: context.createWorkOrder.charges?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
+        labour: createWorkOrderCharges.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
       });
     }
   });

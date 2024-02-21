@@ -15,6 +15,7 @@ import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/pr
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useDynamicRef } from '@work-orders/common-pos/hooks/use-dynamic-ref.js';
+import { getChargesPrice } from '../../create-work-order/charges.js';
 
 export function ServiceSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -99,13 +100,24 @@ function getProductVariantRows(
         return null;
       }
 
+      const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
+        productVariantDefaultChargeToCreateWorkOrderCharge(charge, 'placeholder'),
+      );
+
+      let label: string | undefined = undefined;
+
+      if (variant.product.isMutableServiceItem) {
+        if (defaultCharges) {
+          label = currencyFormatter(getChargesPrice(defaultCharges));
+        }
+      } else {
+        label = currencyFormatter(variant.price);
+      }
+
       return {
         id: variant.id,
         onPress: () => {
           const lineItemUuid = uuid();
-          const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
-            productVariantDefaultChargeToCreateWorkOrderCharge(charge, lineItemUuid),
-          );
 
           closePopupRef.current({
             type,
@@ -114,7 +126,7 @@ function getProductVariantRows(
               productVariantId: variant.id,
               quantity: 1 as Int,
             },
-            charges: defaultCharges,
+            charges: defaultCharges.map(charge => ({ ...charge, lineItemUuid })),
           });
         },
         leftSide: {
@@ -124,7 +136,7 @@ function getProductVariantRows(
         },
         rightSide: {
           showChevron: true,
-          label: currencyFormatter(Number(variant.price)),
+          label,
         },
       };
     })
