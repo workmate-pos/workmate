@@ -8,7 +8,7 @@ import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedU
 import { CreateWorkOrderCharge } from '../routes.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { SegmentedLabourControl } from '../../components/SegmentedLabourControl.js';
-import { useSettings } from '../../providers/SettingsProvider.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export function EmployeeLabourConfig() {
   const [employeeId, setEmployeeId] = useState<ID | null>(null);
@@ -26,12 +26,13 @@ export function EmployeeLabourConfig() {
     setLabour(labour);
   });
 
-  const settings = useSettings();
   const fetch = useAuthenticatedFetch();
+  const settings = useSettingsQuery({ fetch })?.data?.settings;
   const employeeQuery = useEmployeeQuery({ fetch, id: employeeId });
 
   useEffect(() => {
     if (!employeeQuery.data) return;
+    if (!settings) return;
 
     const { rate } = employeeQuery.data;
     const { labourLineItemName } = settings;

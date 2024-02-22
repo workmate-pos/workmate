@@ -5,13 +5,15 @@ import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { Grid } from '../../components/Grid.js';
 import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { useSettings } from '../../providers/SettingsProvider.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 
 export function DiscountSelector() {
   const [subTotal, setSubTotal] = useState<Money | null>(null);
   const { Screen, closePopup } = useScreen('DiscountSelector', ({ subTotal }) => setSubTotal(subTotal));
 
-  const settings = useSettings();
+  const fetch = useAuthenticatedFetch();
+  const settings = useSettingsQuery({ fetch })?.data?.settings;
 
   const shortcuts = settings?.discountShortcuts;
   const rules = settings?.discountRules;

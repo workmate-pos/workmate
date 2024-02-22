@@ -23,11 +23,12 @@
   },
   "scripts": {
     "build:web": "cd ../../web && npm install && npm run build",
+    "build:common": "cd ../../common && npm install && npm run build",
     "build": "tsc",
     "build:watch": "tsc -w",
     "preinstall": "cd ../ && npm install",
     "set-app-url": "node ./set-app-url.js",
-    "postinstall": "npm run set-app-url && npm run build:web && npm run build"
+    "postinstall": "npm run set-app-url && npm run build:web && npm run build:common && npm run build"
   },
   "author": "Tim van Dam",
   "devDependencies": {

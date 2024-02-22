@@ -10,6 +10,7 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Status } from '@web/schemas/generated/create-purchase-order.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { ResponsiveStack } from '@work-orders/common-pos/components/ResponsiveStack.js';
+import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
 
 export function Entry() {
   const [query, setQuery] = useState('');
@@ -24,9 +25,9 @@ export function Entry() {
 
   const purchaseOrderRows = getPurchaseOrderRows(purchaseOrders, arg => navigate('PurchaseOrder', arg));
 
-  return (
-    <Screen title={'Purchase Orders'}>
-      <ScrollView>
+  function render() {
+    return (
+      <>
         <ResponsiveStack
           direction={'horizontal'}
           alignment={'space-between'}
@@ -76,7 +77,22 @@ export function Entry() {
             </Text>
           </Stack>
         )}
-      </ScrollView>
+      </>
+    );
+  }
+
+  const [isLoading, setIsLoading] = useState(true);
+  const page = (
+    <PermissionBoundary
+      render={render}
+      permissions={['read_settings', 'read_purchase_orders', 'read_employees']}
+      onIsLoading={setIsLoading}
+    />
+  );
+
+  return (
+    <Screen title={'Purchase Orders'} isLoading={isLoading}>
+      <ScrollView>{page}</ScrollView>
     </Screen>
   );
 }

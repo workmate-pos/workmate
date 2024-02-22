@@ -13,7 +13,6 @@ import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { getChargesPrice } from '../../create-work-order/charges.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export function ProductSelector() {

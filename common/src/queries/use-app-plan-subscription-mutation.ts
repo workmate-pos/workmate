@@ -5,12 +5,12 @@ import type { CreateAppPlanSubscription } from '@web/schemas/generated/create-ap
 
 export const useAppPlanSubscriptionMutation = (
   { fetch }: { fetch: Fetch },
-  mutationOptions: UseMutationOptions<CreateAppPlanSubscriptionResponse, unknown, CreateAppPlanSubscription, unknown>,
+  options: UseMutationOptions<CreateAppPlanSubscriptionResponse, unknown, CreateAppPlanSubscription, unknown>,
 ) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    ...mutationOptions,
+    ...options,
     mutationKey: ['app-plan-subscription'],
     mutationFn: async (body: CreateAppPlanSubscription) => {
       const response = await fetch('/api/app-plans/subscription', {
@@ -26,8 +26,10 @@ export const useAppPlanSubscriptionMutation = (
       const result: CreateAppPlanSubscriptionResponse = await response.json();
       return result;
     },
-    onSuccess: () => {
+    onSuccess: (...args) => {
       queryClient.invalidateQueries(['app-plan-subscription']);
+
+      options.onSuccess?.(...args);
     },
   });
 };

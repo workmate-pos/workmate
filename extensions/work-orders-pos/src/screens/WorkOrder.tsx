@@ -39,9 +39,9 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { useSettings } from '../providers/SettingsProvider.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 /**
  * Stuff to pass around between components
@@ -55,9 +55,15 @@ const useWorkOrderContext = () => {
   const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
   const cart = useCartSubscription();
-  const settings = useSettings();
+  const settings = useSettingsQuery({ fetch })?.data?.settings;
 
   const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
+    if (!settings) {
+      api.toast.show('Settings not loaded');
+      navigate('Entry');
+      return;
+    }
+
     switch (action.type) {
       case 'new-work-order': {
         setTitle('New Work Order');
