@@ -21,6 +21,7 @@ import { useEffect } from 'react';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { useScreen } from './hooks/use-screen.js';
 import { DialogProvider } from '@work-orders/common-pos/providers/DialogProvider.js';
+import { ScreenSizeProvider } from '@work-orders/common-pos/providers/ScreenSizeProvider.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -42,7 +43,9 @@ function SmartGridModal() {
     <ReactQueryProvider>
       <DialogProvider>
         <SettingsProvider>
-          <WrappedNavigator />
+          <ScreenSizeProvider>
+            <WrappedNavigator />
+          </ScreenSizeProvider>
         </SettingsProvider>
       </DialogProvider>
     </ReactQueryProvider>

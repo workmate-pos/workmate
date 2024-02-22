@@ -10,10 +10,10 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { useState } from 'react';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Int } from '@web/schemas/generated/create-product.js';
-import { IntField } from '../../components/IntField.js';
-import { MoneyField } from '../../components/MoneyField.js';
-import { StringField, stringLengthValidator } from '../../components/StringField.js';
 import { useForm } from '@work-orders/common-pos/hooks/use-form.js';
+import { StringField, stringLengthValidator } from '@work-orders/common-pos/components/StringField.js';
+import { MoneyField } from '@work-orders/common-pos/components/MoneyField.js';
+import { IntField } from '@work-orders/common-pos/components/IntField.js';
 
 export function ProductCreator() {
   const [createProduct, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateProductReducer({

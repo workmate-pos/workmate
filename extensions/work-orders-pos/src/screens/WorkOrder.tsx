@@ -41,6 +41,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { useSettings } from '../providers/SettingsProvider.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
 
 /**
  * Stuff to pass around between components
@@ -225,13 +226,15 @@ export function WorkOrderPage() {
         <WorkOrderProperties context={context} />
 
         <Stack direction="horizontal" flexChildren>
-          <WorkOrderItems context={context} />
+          <ResponsiveGrid columns={2}>
+            <WorkOrderItems context={context} />
 
-          <Stack direction="vertical" flex={1} alignment="flex-start">
-            <WorkOrderDescription context={context} />
-            <WorkOrderAssignment context={context} />
-            <WorkOrderMoney context={context} />
-          </Stack>
+            <ResponsiveGrid columns={1}>
+              <WorkOrderDescription context={context} />
+              <WorkOrderAssignment context={context} />
+              <WorkOrderMoney context={context} />
+            </ResponsiveGrid>
+          </ResponsiveGrid>
         </Stack>
 
         <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
@@ -239,7 +242,12 @@ export function WorkOrderPage() {
           {!context.hasOrder && (
             <PayButton createWorkOrder={context.createWorkOrder} workOrderName={null} setLoading={setPaymentLoading} />
           )}
-          <SaveWorkOrderButton context={context} />
+          <Button
+            title={context.createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
+            type="primary"
+            onPress={() => context.saveWorkOrderMutation.mutate(context.createWorkOrder)}
+            isDisabled={context.saveWorkOrderMutation.isLoading}
+          />
         </Stack>
       </ScrollView>
     </Screen>
@@ -285,19 +293,6 @@ function ShowDerivedFromOrderPreviewButton({ context }: { context: WorkOrderCont
   );
 }
 
-function SaveWorkOrderButton({ context }: { context: WorkOrderContext }) {
-  const title = context.createWorkOrder.name ? 'Update Work Order' : 'Create Work Order';
-
-  return (
-    <Button
-      title={title}
-      type="primary"
-      onPress={() => context.saveWorkOrderMutation.mutate(context.createWorkOrder)}
-      isDisabled={context.saveWorkOrderMutation.isLoading}
-    />
-  );
-}
-
 const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
   const statusSelectorPopup = context.usePopup('StatusSelector', result =>
     context.dispatchCreateWorkOrder({
@@ -324,7 +319,7 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
     : null;
 
   return (
-    <Stack direction="horizontal" flexChildren>
+    <ResponsiveGrid columns={4} grow>
       {context.workOrderQuery?.data?.workOrder?.name && (
         <TextField label="Work Order ID" disabled value={context.workOrderQuery?.data?.workOrder?.name} />
       )}
@@ -359,7 +354,7 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
         value={customerValue}
         error={context.saveWorkOrderMutation.data?.errors?.customerId ?? ''}
       />
-    </Stack>
+    </ResponsiveGrid>
   );
 };
 
@@ -523,8 +518,8 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   });
 
   return (
-    <Stack direction="vertical" flex={1} paddingVertical={'ExtraSmall'}>
-      <Stack direction={'horizontal'} flexChildren>
+    <ResponsiveGrid columns={1}>
+      <ResponsiveGrid columns={2}>
         <Button
           title="Add Product"
           type="primary"
@@ -537,7 +532,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
           onPress={() => serviceSelectorPopup.navigate()}
           isDisabled={context.hasOrder}
         />
-      </Stack>
+      </ResponsiveGrid>
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
         <List data={rows} imageDisplayStrategy={'always'}></List>
@@ -548,7 +543,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
           </Text>
         </Stack>
       )}
-    </Stack>
+    </ResponsiveGrid>
   );
 };
 

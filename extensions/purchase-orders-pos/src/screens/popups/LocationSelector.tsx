@@ -1,6 +1,6 @@
 import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
