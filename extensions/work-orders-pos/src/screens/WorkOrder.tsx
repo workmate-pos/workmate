@@ -540,7 +540,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
       </Stack>
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
-        <List data={rows}></List>
+        <List data={rows} imageDisplayStrategy={'always'}></List>
       ) : (
         <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
           <Text variant="body" color="TextSubdued">
@@ -745,7 +745,7 @@ function useItemRows(
             label: getProductVariantName(productVariant) ?? 'Unknown item',
             subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
             image: {
-              source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? 'not found',
+              source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
               badge: productVariant?.product.isMutableServiceItem || hasLabour ? undefined : lineItem.quantity,
             },
           },

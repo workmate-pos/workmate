@@ -52,7 +52,7 @@ export function ServiceSelector() {
           onSearch={() => {}}
           placeholder={'Search services'}
         />
-        <List data={rows} />
+        <List data={rows} imageDisplayStrategy={'always'} />
         {productVariantsQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
             <Text variant="body" color="TextSubdued">
@@ -132,7 +132,7 @@ function getProductVariantRows(
         leftSide: {
           label: displayName,
           subtitle: variant.product.description ? [variant.product.description] : undefined,
-          image: { source: imageUrl ?? 'not found' },
+          image: { source: imageUrl },
         },
         rightSide: {
           showChevron: true,
