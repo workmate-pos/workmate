@@ -47,11 +47,11 @@ export function Entry() {
 
   return (
     <Screen title="Work Orders" overrideNavigateBack={() => navigation.dismiss()} isLoading={isLoading}>
-      <PermissionBoundary
-        permissions={['read_settings', 'read_work_orders', 'read_employees']}
-        onIsLoading={setIsLoading}
-      >
-        <ScrollView>
+      <ScrollView>
+        <PermissionBoundary
+          permissions={['read_settings', 'read_work_orders', 'read_employees']}
+          onIsLoading={setIsLoading}
+        >
           <ResponsiveStack
             direction={'horizontal'}
             alignment={'space-between'}
@@ -158,8 +158,8 @@ export function Entry() {
               </Text>
             </Stack>
           )}
-        </ScrollView>
-      </PermissionBoundary>
+        </PermissionBoundary>
+      </ScrollView>
     </Screen>
   );
 }
