@@ -4,10 +4,10 @@ import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retai
 import { useForm } from '@work-orders/common-pos/hooks/use-form.js';
 import { usePurchaseOrderCustomFieldsPresetMutation } from '@work-orders/common/queries/use-purchase-order-custom-fields-preset-mutation.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
-import { StringField, stringLengthValidator } from '../../components/StringField.js';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { usePurchaseOrderCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-purchase-order-custom-fields-presets-query.js';
 import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
+import { StringField, stringLengthValidator } from '@work-orders/common-pos/components/StringField.js';
 
 export function SavePreset() {
   const [keys, setKeys] = useState<[string, ...string[]]>(['sample field']);

@@ -13,6 +13,7 @@ import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');
@@ -76,6 +77,7 @@ export function ProductSelector() {
           data={rows}
           onEndReached={() => productVariantsQuery.fetchNextPage()}
           isLoadingMore={productVariantsQuery.isLoading}
+          imageDisplayStrategy={'always'}
         />
         {productVariantsQuery.isLoading && (
           <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
@@ -109,39 +111,36 @@ function getProductVariantRows(
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
   return productVariants.map(variant => {
-    let displayName = variant.product.title;
-
-    if (!variant.product.hasOnlyDefaultVariant) {
-      displayName = `${displayName} - ${variant.title}`;
-    }
+    const displayName = getProductVariantName(variant) ?? 'Unknown product';
 
     const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
 
-    const lineItemUuid = uuid();
     const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
-      productVariantDefaultChargeToCreateWorkOrderCharge(charge, lineItemUuid),
+      productVariantDefaultChargeToCreateWorkOrderCharge(charge, 'placeholder'),
     );
 
     return {
       id: variant.id,
       onPress: () => {
+        const lineItemUuid = uuid();
+
         selectLineItem(
           {
             uuid: lineItemUuid,
             productVariantId: variant.id,
             quantity: 1 as Int,
           },
-          defaultCharges,
+          defaultCharges.map(charge => ({ ...charge, lineItemUuid })),
         );
       },
       leftSide: {
-        label: displayName,
+        label: displayName + `${variant.product.isMutableServiceItem} ${variant.product.isFixedServiceItem}`,
         subtitle: variant.product.description ? [variant.product.description] : undefined,
-        image: { source: imageUrl ?? 'not found' },
+        image: { source: imageUrl },
       },
       rightSide: {
         showChevron: true,
-        label: currencyFormatter(Number(variant.price)),
+        label: currencyFormatter(variant.price),
       },
     };
   });

@@ -39,8 +39,9 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { useSettings } from '../providers/SettingsProvider.js';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 /**
  * Stuff to pass around between components
@@ -54,9 +55,15 @@ const useWorkOrderContext = () => {
   const fetch = useAuthenticatedFetch();
   const api = useExtensionApi<'pos.home.modal.render'>();
   const cart = useCartSubscription();
-  const settings = useSettings();
+  const settings = useSettingsQuery({ fetch })?.data?.settings;
 
   const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
+    if (!settings) {
+      api.toast.show('Settings not loaded');
+      navigate('Entry');
+      return;
+    }
+
     switch (action.type) {
       case 'new-work-order': {
         setTitle('New Work Order');
@@ -225,13 +232,15 @@ export function WorkOrderPage() {
         <WorkOrderProperties context={context} />
 
         <Stack direction="horizontal" flexChildren>
-          <WorkOrderItems context={context} />
+          <ResponsiveGrid columns={2}>
+            <WorkOrderItems context={context} />
 
-          <Stack direction="vertical" flex={1} alignment="flex-start">
-            <WorkOrderDescription context={context} />
-            <WorkOrderAssignment context={context} />
-            <WorkOrderMoney context={context} />
-          </Stack>
+            <ResponsiveGrid columns={1}>
+              <WorkOrderDescription context={context} />
+              <WorkOrderAssignment context={context} />
+              <WorkOrderMoney context={context} />
+            </ResponsiveGrid>
+          </ResponsiveGrid>
         </Stack>
 
         <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
@@ -239,7 +248,12 @@ export function WorkOrderPage() {
           {!context.hasOrder && (
             <PayButton createWorkOrder={context.createWorkOrder} workOrderName={null} setLoading={setPaymentLoading} />
           )}
-          <SaveWorkOrderButton context={context} />
+          <Button
+            title={context.createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
+            type="primary"
+            onPress={() => context.saveWorkOrderMutation.mutate(context.createWorkOrder)}
+            isDisabled={context.saveWorkOrderMutation.isLoading}
+          />
         </Stack>
       </ScrollView>
     </Screen>
@@ -285,19 +299,6 @@ function ShowDerivedFromOrderPreviewButton({ context }: { context: WorkOrderCont
   );
 }
 
-function SaveWorkOrderButton({ context }: { context: WorkOrderContext }) {
-  const title = context.createWorkOrder.name ? 'Update Work Order' : 'Create Work Order';
-
-  return (
-    <Button
-      title={title}
-      type="primary"
-      onPress={() => context.saveWorkOrderMutation.mutate(context.createWorkOrder)}
-      isDisabled={context.saveWorkOrderMutation.isLoading}
-    />
-  );
-}
-
 const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
   const statusSelectorPopup = context.usePopup('StatusSelector', result =>
     context.dispatchCreateWorkOrder({
@@ -324,7 +325,7 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
     : null;
 
   return (
-    <Stack direction="horizontal" flexChildren>
+    <ResponsiveGrid columns={4} grow>
       {context.workOrderQuery?.data?.workOrder?.name && (
         <TextField label="Work Order ID" disabled value={context.workOrderQuery?.data?.workOrder?.name} />
       )}
@@ -359,7 +360,7 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
         value={customerValue}
         error={context.saveWorkOrderMutation.data?.errors?.customerId ?? ''}
       />
-    </Stack>
+    </ResponsiveGrid>
   );
 };
 
@@ -382,10 +383,12 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   const serviceSelectorPopup = context.usePopup('ServiceSelector', ({ type, lineItem, charges }) => {
     const isUnstackable = type === 'mutable-service';
 
+    const createWorkOrderCharges = [...(context.createWorkOrder.charges ?? []), ...charges];
+
     context.dispatchCreateWorkOrder({
       type: 'set-field',
       field: 'charges',
-      value: [...(context.createWorkOrder.charges ?? []), ...charges],
+      value: createWorkOrderCharges,
     });
 
     context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable });
@@ -395,7 +398,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
         readonly: context.hasOrder,
         hasBasePrice: false,
         lineItem,
-        labour: context.createWorkOrder.charges?.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
+        labour: createWorkOrderCharges.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
       });
     }
   });
@@ -521,8 +524,8 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
   });
 
   return (
-    <Stack direction="vertical" flex={1} paddingVertical={'ExtraSmall'}>
-      <Stack direction={'horizontal'} flexChildren>
+    <ResponsiveGrid columns={1}>
+      <ResponsiveGrid columns={2}>
         <Button
           title="Add Product"
           type="primary"
@@ -535,10 +538,10 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
           onPress={() => serviceSelectorPopup.navigate()}
           isDisabled={context.hasOrder}
         />
-      </Stack>
+      </ResponsiveGrid>
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
-        <List data={rows}></List>
+        <List data={rows} imageDisplayStrategy={'always'}></List>
       ) : (
         <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
           <Text variant="body" color="TextSubdued">
@@ -546,7 +549,7 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
           </Text>
         </Stack>
       )}
-    </Stack>
+    </ResponsiveGrid>
   );
 };
 
@@ -743,7 +746,7 @@ function useItemRows(
             label: getProductVariantName(productVariant) ?? 'Unknown item',
             subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
             image: {
-              source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? 'not found',
+              source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
               badge: productVariant?.product.isMutableServiceItem || hasLabour ? undefined : lineItem.quantity,
             },
           },

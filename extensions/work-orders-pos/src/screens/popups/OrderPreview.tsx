@@ -118,6 +118,7 @@ export function OrderPreview() {
             <List
               title={'Products'}
               data={lineItemRows}
+              imageDisplayStrategy={'always'}
               isLoadingMore={orderLineItemsQuery.isLoading}
               onEndReached={() => orderLineItemsQuery.fetchNextPage()}
             />
@@ -164,7 +165,7 @@ function useLineItemRows(lineItems: OrderLineItem[]): ListRow[] {
         label: lineItem.title,
         subtitle: lineItem?.sku ? [lineItem.sku] : undefined,
         image: {
-          source: lineItem.variant?.image?.url ?? lineItem?.variant?.product?.featuredImage?.url ?? 'not found',
+          source: lineItem.variant?.image?.url ?? lineItem?.variant?.product?.featuredImage?.url,
           badge: lineItem.quantity > 1 ? lineItem.quantity : undefined,
         },
       },

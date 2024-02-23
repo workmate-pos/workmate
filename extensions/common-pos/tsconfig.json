@@ -10,9 +10,17 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "jsx": "react-jsx",
+    "paths": {
+      "@web/*": ["../../web/*"]
+    },
     "sourceMap": true,
     "noUncheckedIndexedAccess": true,
     "typeRoots": ["./node_modules/@types", "../node_modules/@types"]
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "references": [
+    {
+      "path": "../../web/tsconfig.json"
+    }
+  ]
 }

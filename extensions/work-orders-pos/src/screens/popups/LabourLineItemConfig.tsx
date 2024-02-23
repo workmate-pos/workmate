@@ -16,7 +16,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { FixedPriceLabour, HourlyLabour } from '@web/schemas/generated/create-work-order.js';
 import { SegmentedLabourControl } from '../../components/SegmentedLabourControl.js';
-import { useSettings } from '../../providers/SettingsProvider.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);
@@ -75,7 +75,7 @@ export function LabourLineItemConfig() {
             type: 'fixed-price-labour',
             chargeUuid: uuid(),
             employeeId: id,
-            name: settings.labourLineItemName || 'Labour',
+            name: settings?.labourLineItemName || 'Labour',
             amount: BigDecimal.ZERO.toMoney(),
           } as const)
         );
@@ -102,8 +102,8 @@ export function LabourLineItemConfig() {
   });
 
   const currencyFormatter = useCurrencyFormatter();
-  const settings = useSettings();
   const fetch = useAuthenticatedFetch();
+  const settings = useSettingsQuery({ fetch })?.data?.settings;
   const productVariantQuery = useProductVariantQuery({ fetch, id: lineItem?.productVariantId ?? null });
 
   const productVariant = productVariantQuery?.data;
@@ -114,7 +114,7 @@ export function LabourLineItemConfig() {
     ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
   ];
 
-  const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
+  const employeeAssignmentsEnabled = settings?.chargeSettings.employeeAssignments;
   const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabour.length > 0;
 
   const labourPrice = getChargesPrice(labour);

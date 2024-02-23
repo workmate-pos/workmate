@@ -1,4 +1,4 @@
-import { Button, ScrollView, Stack, Stepper, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
 import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
@@ -29,7 +29,6 @@ export function ProductLineItemConfig() {
   const name = getProductVariantName(productVariant);
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
-  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
   return (
     <Screen

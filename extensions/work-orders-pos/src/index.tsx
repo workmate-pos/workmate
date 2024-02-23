@@ -16,11 +16,8 @@ import { EmployeeLabourConfig } from './screens/popups/EmployeeLabourConfig.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { LabourLineItemConfig } from './screens/popups/LabourLineItemConfig.js';
 import { OrderPreview } from './screens/popups/OrderPreview.js';
-import { SettingsProvider, useSettingsInternal } from './providers/SettingsProvider.js';
-import { useEffect } from 'react';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { useScreen } from './hooks/use-screen.js';
 import { DialogProvider } from '@work-orders/common-pos/providers/DialogProvider.js';
+import { ScreenSizeProvider } from '@work-orders/common-pos/providers/ScreenSizeProvider.js';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -41,62 +38,30 @@ function SmartGridModal() {
   return (
     <ReactQueryProvider>
       <DialogProvider>
-        <SettingsProvider>
-          <WrappedNavigator />
-        </SettingsProvider>
+        <ScreenSizeProvider>
+          <Navigator>
+            <Entry />
+            <Error />
+            <ImportOrderSelector />
+            <WorkOrderPage />
+
+            <CustomerSelector />
+            <DiscountSelector />
+            <EmployeeLabourConfig />
+            <EmployeeSelector />
+            <OrderPreview />
+            <ProductLineItemConfig />
+            <ProductSelector />
+
+            <LabourLineItemConfig />
+            <ServiceSelector />
+            <ShippingConfig />
+            <StatusSelector />
+            <WorkOrderSaved />
+          </Navigator>
+        </ScreenSizeProvider>
       </DialogProvider>
     </ReactQueryProvider>
-  );
-}
-
-/**
- * Navigator that only loads in screens when the settings are loaded.
- * Not very clean.
- *
- * It is possible to rerender the navigator by supplying `key={settings}`,
- * and conditionally rendering `LoadingSettingsScreen`.
- * But Shopify POS seems to have messed up rendering causing this to flash
- */
-function WrappedNavigator() {
-  const { Screen: LoadingSettingsScreen, navigate } = useScreen('LoadingSettings');
-
-  const settingsQuery = useSettingsInternal();
-
-  useEffect(() => {
-    if (settingsQuery?.isError) {
-      navigate('Error', extractErrorMessage(settingsQuery.error, 'Failed to load settings'));
-    } else if (settingsQuery?.data?.settings) {
-      navigate('Entry');
-    }
-  }, [settingsQuery?.isError, settingsQuery?.data]);
-
-  return (
-    <Navigator>
-      <LoadingSettingsScreen title={'Loading settings'} isLoading={true} />
-      <Error />
-
-      {settingsQuery?.data && (
-        <>
-          <Entry />
-          <ImportOrderSelector />
-          <WorkOrderPage />
-
-          <CustomerSelector />
-          <DiscountSelector />
-          <EmployeeLabourConfig />
-          <EmployeeSelector />
-          <OrderPreview />
-          <ProductLineItemConfig />
-          <ProductSelector />
-
-          <LabourLineItemConfig />
-          <ServiceSelector />
-          <ShippingConfig />
-          <StatusSelector />
-          <WorkOrderSaved />
-        </>
-      )}
-    </Navigator>
   );
 }
 
