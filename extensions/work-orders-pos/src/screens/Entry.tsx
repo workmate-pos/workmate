@@ -43,244 +43,123 @@ export function Entry() {
 
   const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
-  function render() {
-    return (
-      <>
-        <ResponsiveStack
-          direction={'horizontal'}
-          alignment={'space-between'}
-          paddingVertical={'Small'}
-          mobile={{ direction: 'vertical', alignment: 'center' }}
-        >
-          <ResponsiveStack direction={'horizontal'} mobile={{ alignment: 'center', paddingVertical: 'Small' }}>
-            <Text variant="headingLarge">Work Orders</Text>
-          </ResponsiveStack>
-          <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
-            <Button title="Import Work Order" type={'plain'} onPress={() => navigate('ImportOrderSelector')} />
-            <Button
-              title={'New Work Order'}
-              type={'primary'}
-              onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
-            />
-          </ResponsiveStack>
-        </ResponsiveStack>
-
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
-          <Text variant="body" color="TextSubdued">
-            {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
-          </Text>
-        </Stack>
-        <ResponsiveStack
-          direction={'horizontal'}
-          alignment={'space-between'}
-          mobile={{ direction: 'vertical', alignment: 'flex-start' }}
-        >
-          <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
-            <Button title={'Filter status'} type={'plain'} onPress={() => statusSelectorPopup.navigate()} />
-            <Button title={'Filter customer'} type={'plain'} onPress={() => customerSelectorPopup.navigate()} />
-            <Button
-              title={'Filter employees'}
-              type={'plain'}
-              onPress={() => employeeSelectorPopup.navigate(employeeIds)}
-            />
-          </ResponsiveStack>
-          <Stack direction={'horizontal'}>
-            {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
-            {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
-            {employeeIds.length > 0 && (
-              <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
-            )}
-          </Stack>
-        </ResponsiveStack>
-        <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-          {status && (
-            <>
-              <Text variant={'sectionHeader'}>Status:</Text>
-              <Text variant={'captionRegular'} color={'TextSubdued'}>
-                {status}
-              </Text>
-            </>
-          )}
-        </Stack>
-        <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-          {customerId && (
-            <>
-              <Text variant={'sectionHeader'}>Customer:</Text>
-              <Text variant={'captionRegular'} color={'TextSubdued'}>
-                {customerQuery.data?.displayName ?? 'Unknown customer'}
-              </Text>
-            </>
-          )}
-        </Stack>
-        <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-          {employeeIds.length > 0 && <Text variant={'sectionHeader'}>Employees:</Text>}
-          {employeeIds.map(id => (
-            <Text key={id} variant={'captionRegular'} color={'TextSubdued'}>
-              {employeeQueries[id]?.data?.name ?? 'Unknown employee'}
-            </Text>
-          ))}
-        </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={(query: string) => setQuery(query, query === '')}
-          onSearch={() => {}}
-          placeholder="Search work orders"
-        />
-        <List
-          data={rows}
-          onEndReached={() => workOrderInfoQuery.fetchNextPage()}
-          isLoadingMore={workOrderInfoQuery.isLoading}
-        />
-        {workOrderInfoQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading work orders...
-            </Text>
-          </Stack>
-        )}
-        {workOrderInfoQuery.isSuccess && rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No work orders found
-            </Text>
-          </Stack>
-        )}
-        {workOrderInfoQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
-            </Text>
-          </Stack>
-        )}
-      </>
-    );
-  }
-
   const [isLoading, setIsLoading] = useState(false);
-  const page = (
-    <PermissionBoundary
-      render={render}
-      onIsLoading={setIsLoading}
-      permissions={['read_settings', 'read_work_orders', 'read_employees']}
-    />
-  );
 
   return (
     <Screen title="Work Orders" overrideNavigateBack={() => navigation.dismiss()} isLoading={isLoading}>
-      <ScrollView>{page}</ScrollView>
-    </Screen>
-  );
+      <PermissionBoundary
+        permissions={['read_settings', 'read_work_orders', 'read_employees']}
+        onIsLoading={setIsLoading}
+      >
+        <ScrollView>
+          <ResponsiveStack
+            direction={'horizontal'}
+            alignment={'space-between'}
+            paddingVertical={'Small'}
+            mobile={{ direction: 'vertical', alignment: 'center' }}
+          >
+            <ResponsiveStack direction={'horizontal'} mobile={{ alignment: 'center', paddingVertical: 'Small' }}>
+              <Text variant="headingLarge">Work Orders</Text>
+            </ResponsiveStack>
+            <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
+              <Button title="Import Work Order" type={'plain'} onPress={() => navigate('ImportOrderSelector')} />
+              <Button
+                title={'New Work Order'}
+                type={'primary'}
+                onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
+              />
+            </ResponsiveStack>
+          </ResponsiveStack>
 
-  return (
-    <Screen title="Work Orders" overrideNavigateBack={() => navigation.dismiss()}>
-      <ScrollView>
-        <ResponsiveStack
-          direction={'horizontal'}
-          alignment={'space-between'}
-          paddingVertical={'Small'}
-          mobile={{ direction: 'vertical', alignment: 'center' }}
-        >
-          <ResponsiveStack direction={'horizontal'} mobile={{ alignment: 'center', paddingVertical: 'Small' }}>
-            <Text variant="headingLarge">Work Orders</Text>
+          <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+            <Text variant="body" color="TextSubdued">
+              {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
+            </Text>
+          </Stack>
+          <ResponsiveStack
+            direction={'horizontal'}
+            alignment={'space-between'}
+            mobile={{ direction: 'vertical', alignment: 'flex-start' }}
+          >
+            <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
+              <Button title={'Filter status'} type={'plain'} onPress={() => statusSelectorPopup.navigate()} />
+              <Button title={'Filter customer'} type={'plain'} onPress={() => customerSelectorPopup.navigate()} />
+              <Button
+                title={'Filter employees'}
+                type={'plain'}
+                onPress={() => employeeSelectorPopup.navigate(employeeIds)}
+              />
+            </ResponsiveStack>
+            <Stack direction={'horizontal'}>
+              {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
+              {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
+              {employeeIds.length > 0 && (
+                <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
+              )}
+            </Stack>
           </ResponsiveStack>
-          <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
-            <Button title="Import Work Order" type={'plain'} onPress={() => navigate('ImportOrderSelector')} />
-            <Button
-              title={'New Work Order'}
-              type={'primary'}
-              onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
-            />
-          </ResponsiveStack>
-        </ResponsiveStack>
-
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
-          <Text variant="body" color="TextSubdued">
-            {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
-          </Text>
-        </Stack>
-        <ResponsiveStack
-          direction={'horizontal'}
-          alignment={'space-between'}
-          mobile={{ direction: 'vertical', alignment: 'flex-start' }}
-        >
-          <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
-            <Button title={'Filter status'} type={'plain'} onPress={() => statusSelectorPopup.navigate()} />
-            <Button title={'Filter customer'} type={'plain'} onPress={() => customerSelectorPopup.navigate()} />
-            <Button
-              title={'Filter employees'}
-              type={'plain'}
-              onPress={() => employeeSelectorPopup.navigate(employeeIds)}
-            />
-          </ResponsiveStack>
-          <Stack direction={'horizontal'}>
-            {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
-            {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
-            {employeeIds.length > 0 && (
-              <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
+          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+            {status && (
+              <>
+                <Text variant={'sectionHeader'}>Status:</Text>
+                <Text variant={'captionRegular'} color={'TextSubdued'}>
+                  {status}
+                </Text>
+              </>
             )}
           </Stack>
-        </ResponsiveStack>
-        <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-          {status && (
-            <>
-              <Text variant={'sectionHeader'}>Status:</Text>
-              <Text variant={'captionRegular'} color={'TextSubdued'}>
-                {status}
+          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+            {customerId && (
+              <>
+                <Text variant={'sectionHeader'}>Customer:</Text>
+                <Text variant={'captionRegular'} color={'TextSubdued'}>
+                  {customerQuery.data?.displayName ?? 'Unknown customer'}
+                </Text>
+              </>
+            )}
+          </Stack>
+          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+            {employeeIds.length > 0 && <Text variant={'sectionHeader'}>Employees:</Text>}
+            {employeeIds.map(id => (
+              <Text key={id} variant={'captionRegular'} color={'TextSubdued'}>
+                {employeeQueries[id]?.data?.name ?? 'Unknown employee'}
               </Text>
-            </>
-          )}
-        </Stack>
-        <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-          {customerId && (
-            <>
-              <Text variant={'sectionHeader'}>Customer:</Text>
-              <Text variant={'captionRegular'} color={'TextSubdued'}>
-                {customerQuery.data?.displayName ?? 'Unknown customer'}
+            ))}
+          </Stack>
+          <ControlledSearchBar
+            value={query}
+            onTextChange={(query: string) => setQuery(query, query === '')}
+            onSearch={() => {}}
+            placeholder="Search work orders"
+          />
+          <List
+            data={rows}
+            onEndReached={() => workOrderInfoQuery.fetchNextPage()}
+            isLoadingMore={workOrderInfoQuery.isLoading}
+          />
+          {workOrderInfoQuery.isLoading && (
+            <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
+              <Text variant="body" color="TextSubdued">
+                Loading work orders...
               </Text>
-            </>
+            </Stack>
           )}
-        </Stack>
-        <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-          {employeeIds.length > 0 && <Text variant={'sectionHeader'}>Employees:</Text>}
-          {employeeIds.map(id => (
-            <Text key={id} variant={'captionRegular'} color={'TextSubdued'}>
-              {employeeQueries[id]?.data?.name ?? 'Unknown employee'}
-            </Text>
-          ))}
-        </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={(query: string) => setQuery(query, query === '')}
-          onSearch={() => {}}
-          placeholder="Search work orders"
-        />
-        <List
-          data={rows}
-          onEndReached={() => workOrderInfoQuery.fetchNextPage()}
-          isLoadingMore={workOrderInfoQuery.isLoading}
-        />
-        {workOrderInfoQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading work orders...
-            </Text>
-          </Stack>
-        )}
-        {workOrderInfoQuery.isSuccess && rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No work orders found
-            </Text>
-          </Stack>
-        )}
-        {workOrderInfoQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
-            </Text>
-          </Stack>
-        )}
-      </ScrollView>
+          {workOrderInfoQuery.isSuccess && rows.length === 0 && (
+            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+              <Text variant="body" color="TextSubdued">
+                No work orders found
+              </Text>
+            </Stack>
+          )}
+          {workOrderInfoQuery.isError && (
+            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+              <Text color="TextCritical" variant="body">
+                {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
+              </Text>
+            </Stack>
+          )}
+        </ScrollView>
+      </PermissionBoundary>
     </Screen>
   );
 }

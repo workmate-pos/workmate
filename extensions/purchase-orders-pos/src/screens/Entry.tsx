@@ -25,74 +25,61 @@ export function Entry() {
 
   const purchaseOrderRows = getPurchaseOrderRows(purchaseOrders, arg => navigate('PurchaseOrder', arg));
 
-  function render() {
-    return (
-      <>
-        <ResponsiveStack
-          direction={'horizontal'}
-          alignment={'space-between'}
-          paddingVertical={'Small'}
-          mobile={{ direction: 'vertical', alignment: 'center' }}
-        >
-          <ResponsiveStack direction={'horizontal'} mobile={{ alignment: 'center', paddingVertical: 'Small' }}>
-            <Text variant="headingLarge">Purchase Orders</Text>
-          </ResponsiveStack>
-          <Button title={'New Purchase Order'} type={'primary'} onPress={() => navigate('PurchaseOrder', null)} />
-        </ResponsiveStack>
-
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
-          <Text variant="body" color="TextSubdued">
-            {purchaseOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
-          </Text>
-        </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={setQuery}
-          onSearch={() => {}}
-          placeholder={'Search purchase orders'}
-        />
-        <List
-          data={purchaseOrderRows}
-          onEndReached={purchaseOrderInfoQuery.fetchNextPage}
-          isLoadingMore={purchaseOrderInfoQuery.isFetchingNextPage}
-        />
-        {purchaseOrderInfoQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading purchase orders...
-            </Text>
-          </Stack>
-        )}
-        {purchaseOrderInfoQuery.isSuccess && purchaseOrderRows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No purchase orders found
-            </Text>
-          </Stack>
-        )}
-        {purchaseOrderInfoQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(purchaseOrderInfoQuery.error, 'An error occurred while loading purchase orders')}
-            </Text>
-          </Stack>
-        )}
-      </>
-    );
-  }
-
   const [isLoading, setIsLoading] = useState(true);
-  const page = (
-    <PermissionBoundary
-      render={render}
-      permissions={['read_settings', 'read_purchase_orders', 'read_employees']}
-      onIsLoading={setIsLoading}
-    />
-  );
 
   return (
     <Screen title={'Purchase Orders'} isLoading={isLoading}>
-      <ScrollView>{page}</ScrollView>
+      <PermissionBoundary
+        permissions={['read_settings', 'read_purchase_orders', 'read_employees']}
+        onIsLoading={setIsLoading}
+      >
+        <ScrollView>
+          <ResponsiveStack direction={'horizontal'} alignment={'space-between'} paddingVertical={'Small'}>
+            <ResponsiveStack direction={'horizontal'}>
+              <Text variant="headingLarge">Purchase Orders</Text>
+            </ResponsiveStack>
+            <Button title={'New Purchase Order'} type={'primary'} onPress={() => navigate('PurchaseOrder', null)} />
+          </ResponsiveStack>
+
+          <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+            <Text variant="body" color="TextSubdued">
+              {purchaseOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
+            </Text>
+          </Stack>
+          <ControlledSearchBar
+            value={query}
+            onTextChange={setQuery}
+            onSearch={() => {}}
+            placeholder={'Search purchase orders'}
+          />
+          <List
+            data={purchaseOrderRows}
+            onEndReached={purchaseOrderInfoQuery.fetchNextPage}
+            isLoadingMore={purchaseOrderInfoQuery.isFetchingNextPage}
+          />
+          {purchaseOrderInfoQuery.isLoading && (
+            <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
+              <Text variant="body" color="TextSubdued">
+                Loading purchase orders...
+              </Text>
+            </Stack>
+          )}
+          {purchaseOrderInfoQuery.isSuccess && purchaseOrderRows.length === 0 && (
+            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+              <Text variant="body" color="TextSubdued">
+                No purchase orders found
+              </Text>
+            </Stack>
+          )}
+          {purchaseOrderInfoQuery.isError && (
+            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+              <Text color="TextCritical" variant="body">
+                {extractErrorMessage(purchaseOrderInfoQuery.error, 'An error occurred while loading purchase orders')}
+              </Text>
+            </Stack>
+          )}
+        </ScrollView>
+      </PermissionBoundary>
     </Screen>
   );
 }

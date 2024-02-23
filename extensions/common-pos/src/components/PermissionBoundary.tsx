@@ -1,4 +1,4 @@
-import { FC, useEffect } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
@@ -8,11 +8,11 @@ import { Stack, Text } from '@shopify/retail-ui-extensions-react';
  * Wrapper component that only renders children if the user has the required permissions.
  */
 export function PermissionBoundary({
-  render,
+  children,
   permissions,
   onIsLoading,
 }: {
-  render: FC;
+  children: ReactNode;
   permissions: PermissionNode[];
   onIsLoading?: (isLoading: boolean) => void;
 }) {
@@ -24,7 +24,6 @@ export function PermissionBoundary({
   }, [currentEmployeeQuery.isLoading]);
 
   if (currentEmployeeQuery.isLoading) {
-    // TODO: Custom router that supports suspense
     return null;
   }
 
@@ -49,6 +48,5 @@ export function PermissionBoundary({
     );
   }
 
-  const Component = render;
-  return <Component />;
+  return <>{children}</>;
 }
