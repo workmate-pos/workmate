@@ -29,11 +29,11 @@ export function Entry() {
 
   return (
     <Screen title={'Purchase Orders'} isLoading={isLoading}>
-      <PermissionBoundary
-        permissions={['read_settings', 'read_purchase_orders', 'read_employees']}
-        onIsLoading={setIsLoading}
-      >
-        <ScrollView>
+      <ScrollView>
+        <PermissionBoundary
+          permissions={['read_settings', 'read_purchase_orders', 'read_employees']}
+          onIsLoading={setIsLoading}
+        >
           <ResponsiveStack direction={'horizontal'} alignment={'space-between'} paddingVertical={'Small'}>
             <ResponsiveStack direction={'horizontal'}>
               <Text variant="headingLarge">Purchase Orders</Text>
@@ -78,8 +78,8 @@ export function Entry() {
               </Text>
             </Stack>
           )}
-        </ScrollView>
-      </PermissionBoundary>
+        </PermissionBoundary>
+      </ScrollView>
     </Screen>
   );
 }
