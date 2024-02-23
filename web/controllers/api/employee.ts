@@ -32,6 +32,8 @@ export default class EmployeeController {
 
     const { defaultRate } = await getShopSettings(session.shop);
 
+    console.log(`sending /me response ${user.user} ${user.staffMember}`);
+
     return res.json({
       employee: {
         ...user.staffMember,
