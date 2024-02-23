@@ -1,6 +1,5 @@
 import { createContext, ReactNode, useContext, useState } from 'react';
-import { DialogProps } from '@shopify/retail-ui-extensions';
-import { Dialog } from '@shopify/retail-ui-extensions-react';
+import { Dialog, DialogProps } from '@shopify/retail-ui-extensions-react';
 
 const DialogContext = createContext<DialogContextValue | null>(null);
 

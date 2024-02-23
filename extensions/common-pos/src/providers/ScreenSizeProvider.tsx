@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 
-type ScreenSize = 'mobile' | 'tablet';
+export type ScreenSize = 'mobile' | 'tablet';
 
 const ScreenSizeContext = createContext<ScreenSize>('tablet');
 

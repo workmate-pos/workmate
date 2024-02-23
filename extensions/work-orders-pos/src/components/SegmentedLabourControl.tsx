@@ -6,7 +6,8 @@ import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decima
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
-import { useSettings } from '../providers/SettingsProvider.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 
 type SegmentId = CreateWorkOrderCharge['type'] | 'none';
 
@@ -46,8 +47,11 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
   onChange: (charge: ChargeType<SegmentTypes[number]>) => void;
   defaultHourlyRate?: Money;
 }) {
-  const settings = useSettings();
+  const fetch = useAuthenticatedFetch();
+  const settings = useSettingsQuery({ fetch })?.data?.settings;
   const currencyFormatter = useCurrencyFormatter();
+
+  if (!settings) return null;
 
   const shouldShowSegment = (type: SegmentTypes[number]) => {
     if (type === charge?.type) return true;

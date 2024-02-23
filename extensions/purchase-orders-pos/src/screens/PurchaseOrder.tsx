@@ -27,8 +27,8 @@ import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purcha
 import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js';
 import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { MoneyField } from '../components/MoneyField.js';
 import { useForm } from '@work-orders/common-pos/hooks/use-form.js';
+import { MoneyField } from '@work-orders/common-pos/components/MoneyField.js';
 
 export function PurchaseOrder() {
   const [query, setQuery] = useState('');

@@ -14,7 +14,6 @@
     "build:web": "cd ../../web && npm install && npm run build",
     "build:common": "cd ../../common && npm install && npm run build",
     "build:common-pos": "cd ../common-pos && npm install && npm run build",
-    "set-app-url": "cd ../common-pos && node ./set-app-url.js",
-    "postinstall": "npm run set-app-url && npm run build:common-pos && npm run build:web && npm run build:common"
+    "postinstall": "npm run build:common-pos && npm run build:web && npm run build:common"
   }
 }

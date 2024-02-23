@@ -6,7 +6,6 @@ import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-que
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useEmployeeMutation } from '@work-orders/common/queries/use-employee-mutation.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
-import { NoPermissionCard } from '@web/frontend/components/NoPermissionCard.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
 

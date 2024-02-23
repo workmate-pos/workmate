@@ -12,6 +12,8 @@ import { ID } from '@web/services/gql/queries/generated/schema.js';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
+import { ResponsiveStack } from '@work-orders/common-pos/components/ResponsiveStack.js';
+import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
 
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');
@@ -41,28 +43,45 @@ export function Entry() {
 
   const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
+  const [isLoading, setIsLoading] = useState(false);
+
   return (
-    <Screen title="Work Orders" overrideNavigateBack={() => navigation.dismiss()}>
+    <Screen title="Work Orders" overrideNavigateBack={() => navigation.dismiss()} isLoading={isLoading}>
       <ScrollView>
-        <Stack direction="vertical">
-          <Stack direction="horizontal" alignment="space-between">
-            <Text variant="headingLarge">Work Orders</Text>
-            <Stack direction={'horizontal'} spacing={2}>
+        <PermissionBoundary
+          permissions={['read_settings', 'read_work_orders', 'read_employees']}
+          onIsLoading={setIsLoading}
+        >
+          <ResponsiveStack
+            direction={'horizontal'}
+            alignment={'space-between'}
+            paddingVertical={'Small'}
+            mobile={{ direction: 'vertical', alignment: 'center' }}
+          >
+            <ResponsiveStack direction={'horizontal'} mobile={{ alignment: 'center', paddingVertical: 'Small' }}>
+              <Text variant="headingLarge">Work Orders</Text>
+            </ResponsiveStack>
+            <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
               <Button title="Import Work Order" type={'plain'} onPress={() => navigate('ImportOrderSelector')} />
               <Button
-                title="New Work Order"
-                type="primary"
+                title={'New Work Order'}
+                type={'primary'}
                 onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
               />
-            </Stack>
-          </Stack>
+            </ResponsiveStack>
+          </ResponsiveStack>
+
           <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
             <Text variant="body" color="TextSubdued">
               {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
             </Text>
           </Stack>
-          <Stack direction={'horizontal'} alignment={'space-between'}>
-            <Stack direction={'horizontal'}>
+          <ResponsiveStack
+            direction={'horizontal'}
+            alignment={'space-between'}
+            mobile={{ direction: 'vertical', alignment: 'flex-start' }}
+          >
+            <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
               <Button title={'Filter status'} type={'plain'} onPress={() => statusSelectorPopup.navigate()} />
               <Button title={'Filter customer'} type={'plain'} onPress={() => customerSelectorPopup.navigate()} />
               <Button
@@ -70,7 +89,7 @@ export function Entry() {
                 type={'plain'}
                 onPress={() => employeeSelectorPopup.navigate(employeeIds)}
               />
-            </Stack>
+            </ResponsiveStack>
             <Stack direction={'horizontal'}>
               {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
               {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
@@ -78,7 +97,7 @@ export function Entry() {
                 <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
               )}
             </Stack>
-          </Stack>
+          </ResponsiveStack>
           <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
             {status && (
               <>
@@ -139,7 +158,7 @@ export function Entry() {
               </Text>
             </Stack>
           )}
-        </Stack>
+        </PermissionBoundary>
       </ScrollView>
     </Screen>
   );

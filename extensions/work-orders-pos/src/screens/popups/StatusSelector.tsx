@@ -1,10 +1,12 @@
 import { Button, Stack } from '@shopify/retail-ui-extensions-react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useSettings } from '../../providers/SettingsProvider.js';
+import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export function StatusSelector() {
   const { Screen, closePopup } = useScreen('StatusSelector');
-  const settings = useSettings();
+  const fetch = useAuthenticatedFetch();
+  const settings = useSettingsQuery({ fetch })?.data?.settings;
 
   return (
     <Screen title="Select Status" presentation={{ sheet: true }}>
