@@ -3,6 +3,7 @@ import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { extractErrorMessage } from '../util/errors.js';
 
 /**
  * Wrapper component that only renders children if the user has the required permissions.
@@ -27,12 +28,32 @@ export function PermissionBoundary({
     return null;
   }
 
-  const superuser = currentEmployeeQuery.data?.superuser ?? false;
+  if (currentEmployeeQuery.isError) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(currentEmployeeQuery.error, 'An error occurred while employee details')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (!currentEmployeeQuery.data) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          Received no data from server
+        </Text>
+      </Stack>
+    );
+  }
+
+  const superuser = currentEmployeeQuery.data.superuser;
   const missingEmployeePermissions = superuser
     ? []
     : permissions.filter(permission => !currentEmployeeQuery.data?.permissions?.includes(permission));
 
-  if (missingEmployeePermissions.length > 0 && !superuser) {
+  if (missingEmployeePermissions.length > 0) {
     return (
       <Stack direction={'vertical'}>
         <Stack direction={'horizontal'} alignment={'center'} flex={1} flexChildren>
