@@ -64,7 +64,6 @@ export function PermissionBoundary({
             You are missing the following permissions:{' '}
             <Text color={'TextNeutral'}>{missingEmployeePermissions.join(', ')}</Text>
           </Text>
-          <Text>{JSON.stringify(currentEmployeeQuery.data, null, 2)}</Text>
         </Stack>
       </Stack>
     );
