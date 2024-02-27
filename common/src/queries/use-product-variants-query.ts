@@ -22,7 +22,7 @@ export const useProductVariantsQuery = (...[options, ...args]: Parameters<typeof
       options: {
         ...options.options,
         onSuccess: data => {
-          for (const productVariant of data.pages) {
+          for (const productVariant of data.pages.flat()) {
             queryClient.setQueryData(
               ['product-variant', productVariant.id],
               productVariant satisfies UseQueryData<typeof useProductVariantQuery>,

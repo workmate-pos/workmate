@@ -1,5 +1,5 @@
-import { Frame, IndexTable, Page } from '@shopify/polaris';
-import { Loading, TitleBar } from '@shopify/app-bridge-react';
+import { Frame, IndexTable, Page, SkeletonBodyText } from '@shopify/polaris';
+import { TitleBar } from '@shopify/app-bridge-react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState } from 'react';
 import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
@@ -12,6 +12,7 @@ import { useEmployeeMutation } from '@work-orders/common/queries/use-employee-mu
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
+import { Int } from '@web/schemas/generated/pagination-options.js';
 
 export default function () {
   return (
@@ -36,16 +37,21 @@ function EmployeeRates() {
   const superuser = currentEmployeeQuery.data?.superuser ?? false;
   const canWriteEmployees = superuser || !!currentEmployeeQuery?.data?.permissions?.includes('write_employees');
 
+  const employeePageSize = 20 as Int;
+  const [pageIndex, setPageIndex] = useState(0);
   const employeesQuery = useEmployeesQuery({
     fetch,
-    params: {},
+    params: { first: employeePageSize },
     options: {
       onSuccess(data) {
-        setEmployeeRates(
-          Object.fromEntries(
-            data.pages.filter(employee => !employee.isDefaultRate).map(employee => [employee.id, employee.rate]),
-          ),
+        // when a new page is loaded, add those employees to the permissions state if they don't already exist
+
+        const employees = data.pages.flat(1);
+        const employeePermissions = Object.fromEntries(
+          employees.map(employee => [employee.id, employee.isDefaultRate ? null : employee.rate]),
         );
+
+        setEmployeeRates(ep => ({ ...employeePermissions, ...ep }));
       },
     },
   });
@@ -69,9 +75,7 @@ function EmployeeRates() {
   const settingsQuery = useSettingsQuery({ fetch });
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
-  if (!employeesQuery.data) {
-    return <Loading />;
-  }
+  const currentPage = employeesQuery.data?.pages[pageIndex];
 
   return (
     <>
@@ -84,12 +88,15 @@ function EmployeeRates() {
           disabled: employeeMutation.isLoading || !canWriteEmployees,
           onAction() {
             employeeMutation.mutate({
-              employees: employeesQuery.data.pages.map(employee => ({
-                employeeId: employee.id,
-                permissions: employee.permissions ?? [],
-                superuser: employee.superuser ?? false,
-                rate: employeeRates[employee.id] ?? null,
-              })),
+              employees:
+                employeesQuery.data?.pages.flatMap(employees =>
+                  employees.map(employee => ({
+                    employeeId: employee.id,
+                    permissions: employee.permissions ?? [],
+                    superuser: employee.superuser ?? false,
+                    rate: employeeRates[employee.id] ?? null,
+                  })),
+                ) ?? [],
             });
           },
         }}
@@ -101,8 +108,39 @@ function EmployeeRates() {
         loading={employeesQuery.isLoading}
         hasMoreItems={employeesQuery.hasNextPage}
         selectable={false}
+        pagination={{
+          hasNext: pageIndex < (employeesQuery.data?.pages?.length ?? 0) - 1 || employeesQuery.hasNextPage,
+          onNext: () => {
+            if (pageIndex === (employeesQuery.data?.pages?.length ?? 0) - 1) {
+              employeesQuery.fetchNextPage();
+            }
+
+            setPageIndex(pageIndex + 1);
+          },
+          hasPrevious: pageIndex > 0,
+          onPrevious: () => setPageIndex(pageIndex - 1),
+        }}
       >
-        {employeesQuery.data?.pages.map((employee, i) => {
+        {!currentPage &&
+          Array.from({ length: employeePageSize }).map((_, i) => (
+            <IndexTable.Row key={i} id={String(i)} selected={false} position={i}>
+              <IndexTable.Cell>
+                <SkeletonBodyText lines={1} />
+              </IndexTable.Cell>
+              <IndexTable.Cell flush={true}>
+                <NumberField
+                  label={'Rate'}
+                  labelHidden
+                  autoComplete={'off'}
+                  variant={'borderless'}
+                  disabled
+                  decimals={2}
+                />
+              </IndexTable.Cell>
+            </IndexTable.Row>
+          ))}
+
+        {currentPage?.map((employee, i) => {
           return (
             <IndexTable.Row key={employee.id} id={employee.id} selected={false} position={i}>
               <IndexTable.Cell>{employee.name}</IndexTable.Cell>

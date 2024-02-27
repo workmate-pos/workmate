@@ -39,7 +39,7 @@ export function ProductSelector() {
     },
   });
 
-  const productVariants = productVariantsQuery.data?.pages ?? [];
+  const productVariants = productVariantsQuery.data?.pages.flat() ?? [];
   const currencyFormatter = useCurrencyFormatter();
 
   const selectLineItem = (

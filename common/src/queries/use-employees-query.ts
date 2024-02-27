@@ -21,7 +21,7 @@ export const useEmployeesQuery = (...[options, ...args]: Parameters<typeof query
       options: {
         ...options.options,
         onSuccess: data => {
-          for (const employee of data.pages) {
+          for (const employee of data.pages.flat()) {
             queryClient.setQueryData(
               ['employee', employee.employeeId],
               employee satisfies UseQueryData<typeof useEmployeeQuery>,

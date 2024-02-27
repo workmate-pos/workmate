@@ -18,7 +18,7 @@ export function LocationSelector() {
   const fetch = useAuthenticatedFetch();
 
   const locationsQuery = useLocationsQuery({ fetch, params: { query } });
-  const locations = locationsQuery.data?.pages ?? [];
+  const locations = locationsQuery.data?.pages.flat() ?? [];
 
   const rows = getLocationRows(locations, (location: Location) => closePopup(location));
 

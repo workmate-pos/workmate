@@ -25,11 +25,11 @@ export const createPaginatedQuery = <Params extends {}, Response extends { pageI
     fetch: Fetch;
     params: Params;
     options?: Omit<
-      UseInfiniteQueryOptions<Response, unknown, PageElement>,
+      UseInfiniteQueryOptions<Response, unknown, PageElement[]>,
       'queryKey' | 'queryFn' | 'select' | 'getNextPageParam'
     >;
   }) => {
-    return useInfiniteQuery<Response, unknown, PageElement>({
+    return useInfiniteQuery<Response, unknown, PageElement[]>({
       ...options,
       queryKey: queryKeyFn(params),
       queryFn: async ({ pageParam }): Promise<Response> => {
@@ -47,7 +47,7 @@ export const createPaginatedQuery = <Params extends {}, Response extends { pageI
         return await response.json();
       },
       select: ({ pages, pageParams }) => ({
-        pages: pages.flatMap(page => extractPage(page)),
+        pages: pages.map(page => extractPage(page)),
         pageParams,
       }),
       getNextPageParam: lastPage => {

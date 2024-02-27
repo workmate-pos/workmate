@@ -26,7 +26,7 @@ export function ImportOrderSelector() {
   const showOrderPreview = (orderId: ID) =>
     orderPreviewPopup.navigate({ orderId, unsavedChanges: false, showImportButton: true });
 
-  const rows = getOrderRows(ordersQuery.data?.pages ?? [], showOrderPreview);
+  const rows = getOrderRows(ordersQuery.data?.pages.flat() ?? [], showOrderPreview);
 
   return (
     <Screen title={'Import Order'}>

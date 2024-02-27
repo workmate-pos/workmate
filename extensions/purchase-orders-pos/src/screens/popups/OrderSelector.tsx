@@ -15,7 +15,7 @@ export function OrderSelector() {
 
   const fetch = useAuthenticatedFetch();
   const ordersQuery = useOrdersQuery({ fetch, params: { query } });
-  const orders = ordersQuery.data?.pages ?? [];
+  const orders = ordersQuery.data?.pages.flat() ?? [];
 
   // TODO: Order preview just like work orders? -> shared screens?
 
