@@ -36,7 +36,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
   const graphql = new Graphql(session);
 
   const orderType = workOrder.orderId === null ? 'draft-order' : 'order';
-  const { get, getLineItems } = orderType === 'draft-order' ? gql.draftOrder : gql.order;
+  const { get, getLineItems } = orderType === 'order' ? gql.order : gql.draftOrder;
 
   const orderId = workOrder.orderId ?? workOrder.draftOrderId ?? never('Invalid work order state');
 
@@ -78,6 +78,8 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
             value: BigDecimal.fromMoney(order.totalDiscounts).toMoney(),
           } as const)
         : null;
+
+  const financialStatus = order.__typename === 'Order' ? order.displayFinancialStatus : null;
 
   return {
     name: workOrder.name,
@@ -121,6 +123,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
       name: order.name,
       discount,
       total: order.totalPrice,
+      financialStatus,
       outstanding:
         order.__typename === 'Order' ? decimalToMoney(order.totalOutstandingSet.shopMoney.amount) : order.totalPrice,
       received: order.__typename === 'Order' ? order.totalReceived : BigDecimal.ZERO.toMoney(),

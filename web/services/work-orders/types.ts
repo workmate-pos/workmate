@@ -21,6 +21,7 @@ export type WorkOrder = {
     total: Money;
     discount: { valueType: 'PERCENTAGE'; value: Decimal } | { valueType: 'FIXED_AMOUNT'; value: Money } | null;
     lineItems: LineItem[];
+    financialStatus: OrderDisplayFinancialStatus | null;
   };
   charges: (FixedPriceLabour | HourlyLabour)[];
 };
