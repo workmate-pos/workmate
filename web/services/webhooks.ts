@@ -34,6 +34,8 @@ export default {
         };
       },
     ) {
+      console.log('APP_SUBSCRIPTIONS_UPDATE', payload);
+
       const appPlanId = payload.app_subscription.name.split('-')[0];
       if (appPlanId == null) throw new Error(`Unable to extract plan id from '${payload.app_subscription.name}'`);
 

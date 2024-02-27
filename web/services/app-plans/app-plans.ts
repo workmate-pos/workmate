@@ -116,6 +116,8 @@ export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StorePr
   if (trialOnly && storeProperties.usedTrialDays >= trialDays) {
     return false;
   }
+
+  return true;
 }
 
 export function getAppPlanPrice(appPlan: IGetResult, storeProperties: Pick<StoreProperties, 'locations'>) {
