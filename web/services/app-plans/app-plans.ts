@@ -1,10 +1,10 @@
 import { MILLIS_IN_DAY } from '../../util/date-utils.js';
 import { db } from '../db/db.js';
 import * as gql from '../gql/queries/generated/queries.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, ShopPlanType } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { Session } from '@shopify/shopify-api';
-import { getShopType, ShopType } from '../shop.js';
+import { getShopType } from '../shop.js';
 import { IGetResult, IGetSubscriptionResult } from '../db/queries/generated/app-plan.sql.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
@@ -98,15 +98,11 @@ export async function getAvailableAppPlans(session: Session) {
 
 type StoreProperties = {
   locations: number;
-  shopType: ShopType;
+  shopType: ShopPlanType;
   usedTrialDays: number;
 };
 
 export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StoreProperties) {
-  if (storeProperties.shopType === 'PARTNER_DEVELOPMENT') {
-    return true;
-  }
-
   const { allowedShopifyPlans, maxLocations, trialOnly, trialDays } = appPlan;
 
   if (maxLocations !== null && storeProperties.locations > maxLocations) {

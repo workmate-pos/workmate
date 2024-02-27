@@ -2,13 +2,13 @@ import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-r
 import { useState } from 'react';
 import { useScreen } from '../../hooks/use-screen.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
-import { PayButton } from '../../components/PayButton.js';
+import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
 
 export function WorkOrderSaved() {
   const [workOrder, setWorkOrder] = useState<WorkOrder | null>(null);
   const { Screen, closePopup } = useScreen('WorkOrderSaved', setWorkOrder);
 
-  const [paymentLoading, setPaymentLoading] = useState(false);
+  const paymentHandler = usePaymentHandler();
 
   const title = workOrder ? `Work order ${workOrder.name} saved` : 'Work order saved';
   const hasOrder = workOrder?.order?.type === 'order';
@@ -16,7 +16,7 @@ export function WorkOrderSaved() {
   return (
     <Screen
       title={title}
-      isLoading={!workOrder || paymentLoading}
+      isLoading={!workOrder || paymentHandler.isLoading}
       presentation={{ sheet: true }}
       overrideNavigateBack={() => closePopup(undefined)}
     >
@@ -32,7 +32,7 @@ export function WorkOrderSaved() {
               <Button title={'Back to work order'} onPress={() => closePopup(undefined)} />
 
               {!hasOrder && (
-                <PayButton workOrderName={workOrder.name} createWorkOrder={null} setLoading={setPaymentLoading} />
+                <Button title={'Pay Balance'} onPress={async () => await paymentHandler.handlePayment({ workOrder })} />
               )}
             </Stack>
           </Stack>

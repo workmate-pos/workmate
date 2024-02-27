@@ -7,7 +7,7 @@ export type AppPlanName = 'ENTERPRISE' | 'ESSENTIAL' | 'FREE';
 
 export type AppPlanType = 'CUSTOM' | 'DEFAULT';
 
-export type ShopifyPlan = 'ADVANCED' | 'BASIC' | 'PLUS' | 'SHOPIFY';
+export type ShopifyPlan = 'ADVANCED_SHOPIFY' | 'BASIC_SHOPIFY' | 'DEVELOPMENT' | 'PARTNER_DEVELOPMENT' | 'SHOPIFY' | 'SHOPIFY_PLUS' | 'SHOPIFY_PLUS_PARTNER_SANDBOX' | 'STAFF';
 
 export type ShopifyPlanArray = (ShopifyPlan)[];
 
