@@ -1,4 +1,4 @@
-import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { useCartSubscription, useExtensionApi, useStatefulSubscribableCart } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useRef, useState } from 'react';
 import { WorkOrder } from '@web/services/work-orders/types.js';
 import { attributesToProperties } from '@work-orders/common/custom-attributes/mapping/index.js';
@@ -15,15 +15,19 @@ import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-tool
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { SetLineItemPropertiesInput } from '@shopify/retail-ui-extensions';
 
 const useCartRef = () => {
-  const api = useExtensionApi<'pos.home.modal.render'>();
-  const cartRef = useRef(api.cart.subscribable.initial);
+  const { current, subscribe } = useStatefulSubscribableCart();
+
+  const cartRef = useRef(current);
 
   useEffect(() => {
-    api.cart.subscribable.subscribe(cart => {
+    const unsubscribe = subscribe(cart => {
       cartRef.current = cart;
     });
+
+    return () => unsubscribe();
   }, []);
 
   return cartRef;
@@ -83,7 +87,7 @@ export const usePaymentHandler = () => {
     }
 
     const productLineItems = getProductLineItems(createWorkOrder, workOrder);
-    const chargeLineItems = getChargeLineItems(createWorkOrder);
+    const chargeLineItems = getChargeLineItems(createWorkOrder, workOrder);
 
     const addLineItemPromises = [];
 
@@ -97,7 +101,7 @@ export const usePaymentHandler = () => {
 
     await Promise.all(addLineItemPromises);
 
-    const addAttributePromises = [];
+    const lineItemProperties: SetLineItemPropertiesInput[] = [];
 
     for (const lineItem of cartRef.current.lineItems) {
       let customAttributes: Record<string, string> | undefined;
@@ -109,11 +113,11 @@ export const usePaymentHandler = () => {
       }
 
       if (customAttributes) {
-        addAttributePromises.push(api.cart.addLineItemProperties(lineItem.uuid, customAttributes));
+        lineItemProperties.push({ lineItemUuid: lineItem.uuid, properties: customAttributes });
       }
     }
 
-    await Promise.all(addAttributePromises);
+    await api.cart.bulkAddLineItemProperties(lineItemProperties);
 
     api.navigation.dismiss();
 
@@ -183,8 +187,16 @@ function getProductLineItems(createWorkOrder: CreateWorkOrder, workOrder: WorkOr
 /**
  * Get line items for additional charges, i.e. custom sales
  */
-function getChargeLineItems(createWorkOrder: CreateWorkOrder): AddCustomSaleSpec[] {
-  const groupedCharges = groupBy(createWorkOrder.charges, charge => charge.name);
+function getChargeLineItems(createWorkOrder: CreateWorkOrder, workOrder: WorkOrder): AddCustomSaleSpec[] {
+  const mutableServiceLineItemUuids = createWorkOrder.lineItems
+    .filter(li => isMutableServiceLineItem(li.productVariantId, workOrder))
+    .map(li => li.uuid);
+
+  const chargesExcludingMutableServiceCharges = createWorkOrder.charges.filter(
+    charge => !charge.lineItemUuid || !mutableServiceLineItemUuids.includes(charge.lineItemUuid),
+  );
+
+  const groupedCharges = groupBy(chargesExcludingMutableServiceCharges, charge => charge.name);
   const result: AddCustomSaleSpec[] = [];
 
   for (const [baseName, charges] of entries(groupedCharges)) {

@@ -43,7 +43,7 @@ export const useAuthenticatedFetch = ({
     }
 
     if (!response.ok && (throwOnError || showToastOnError)) {
-      let error = 'Un unknown error occurred';
+      let error = `Un unexpected error occurred (${response.statusText})`;
 
       const txt = await response.clone().text();
 

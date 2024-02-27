@@ -4,7 +4,9 @@ import { WorkOrderAttribute } from '@work-orders/common/custom-attributes/attrib
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { AppPlanName } from './db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { gql } from './gql/gql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -77,7 +79,14 @@ export default {
       await db.workOrder.updateOrderIds({
         id: workOrder.id,
         orderId: body.admin_graphql_api_id,
+        draftOrderId: null,
       });
+
+      if (workOrder.draftOrderId) {
+        assertGid(workOrder.draftOrderId);
+        const graphql = new Graphql(session);
+        await gql.draftOrder.remove.run(graphql, { id: workOrder.draftOrderId });
+      }
     },
   },
 } as WebhookHandlers;
