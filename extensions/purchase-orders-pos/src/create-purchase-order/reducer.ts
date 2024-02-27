@@ -27,16 +27,24 @@ export type CreatePurchaseOrderAction =
   | {
       type: 'setInventoryState';
       inventoryState: 'available' | 'unavailable';
-    };
+    }
+  | ({
+      type: 'setVendor';
+    } & Pick<CreatePurchaseOrder, 'vendorName' | 'vendorCustomerId'>)
+  | ({
+      type: 'setLocation';
+    } & Pick<CreatePurchaseOrder, 'locationId' | 'locationName'>);
 
 export type CreatePurchaseOrderDispatchProxy = {
   [type in CreatePurchaseOrderAction['type']]: (args: Omit<CreatePurchaseOrderAction & { type: type }, 'type'>) => void;
 };
 
-export const useCreatePurchaseOrderReducer = () => {
+export const useCreatePurchaseOrderReducer = (
+  initialCreatePurchaseOrder: CreatePurchaseOrder = defaultCreatePurchaseOrder,
+) => {
   const [createPurchaseOrder, dispatchCreatePurchaseOrder] = useReducer(
     createPurchaseOrderReducer,
-    defaultCreatePurchaseOrder,
+    initialCreatePurchaseOrder,
   );
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -59,14 +67,20 @@ function createPurchaseOrderReducer(
     case 'setWorkOrder':
     case 'setOrder':
     case 'setPartial':
+    case 'setVendor':
+    case 'setLocation':
     case 'set': {
       const { type, ...partial } = action;
-      const partialNotUndefined = Object.fromEntries(
+      const partialNotUndefined: Partial<CreatePurchaseOrder> = Object.fromEntries(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );
 
       if (action.type === 'setOrder') {
         partialNotUndefined.workOrderName = null;
+      }
+
+      if (action.type === 'setVendor') {
+        partialNotUndefined.products = [];
       }
 
       return { ...createPurchaseOrder, ...partialNotUndefined };

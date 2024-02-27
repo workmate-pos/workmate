@@ -1,4 +1,3 @@
-import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { useState } from 'react';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
@@ -7,15 +6,17 @@ import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-emp
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
+import { useScreen } from '@work-orders/common-pos/router/controllable-screen.js';
 
-export function EmployeeSelector() {
-  const [selectedEmployees, setSelectedEmployees] = useState<CreatePurchaseOrder['employeeAssignments']>([]);
+export function EmployeeSelector({
+  initialEmployeeAssignments,
+  onSave,
+}: {
+  initialEmployeeAssignments: CreatePurchaseOrder['employeeAssignments'];
+  onSave: (employees: CreatePurchaseOrder['employeeAssignments']) => void;
+}) {
+  const [selectedEmployees, setSelectedEmployees] = useState(initialEmployeeAssignments);
   const [query, setQuery] = useDebouncedState('');
-
-  const { Screen, closePopup } = useScreen('EmployeeSelector', employees => {
-    setSelectedEmployees(employees);
-    setQuery('', true);
-  });
 
   const fetch = useAuthenticatedFetch();
   const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
@@ -23,54 +24,47 @@ export function EmployeeSelector() {
 
   const rows = getEmployeeRows(employees, query, selectedEmployees, setSelectedEmployees);
 
+  const screen = useScreen();
+  screen.addOverrideNavigateBack(() => onSave(selectedEmployees));
+
   return (
-    <Screen
-      title={'Select Employees'}
-      presentation={{ sheet: true }}
-      overrideNavigateBack={() => closePopup(selectedEmployees)}
-    >
-      <ScrollView>
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+    <ScrollView>
+      <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {employeesQuery.isRefetching ? 'Reloading...' : ' '}
+        </Text>
+      </Stack>
+      <ControlledSearchBar
+        value={query}
+        onTextChange={(query: string) => {
+          setQuery(query, query === '');
+        }}
+        onSearch={() => {}}
+        placeholder="Search employees"
+      />
+      <List data={rows} isLoadingMore={employeesQuery.isLoading} onEndReached={() => employeesQuery.fetchNextPage()} />
+      {employeesQuery.isLoading && (
+        <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
-            {employeesQuery.isRefetching ? 'Reloading...' : ' '}
+            Loading employees...
           </Text>
         </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={(query: string) => {
-            setQuery(query, query === '');
-          }}
-          onSearch={() => {}}
-          placeholder="Search employees"
-        />
-        <List
-          data={rows}
-          isLoadingMore={employeesQuery.isLoading}
-          onEndReached={() => employeesQuery.fetchNextPage()}
-        />
-        {employeesQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading employees...
-            </Text>
-          </Stack>
-        )}
-        {employeesQuery.isSuccess && rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No employees found
-            </Text>
-          </Stack>
-        )}
-        {employeesQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(employeesQuery.error, 'Error loading employees')}
-            </Text>
-          </Stack>
-        )}
-      </ScrollView>
-    </Screen>
+      )}
+      {employeesQuery.isSuccess && rows.length === 0 && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No employees found
+          </Text>
+        </Stack>
+      )}
+      {employeesQuery.isError && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(employeesQuery.error, 'Error loading employees')}
+          </Text>
+        </Stack>
+      )}
+    </ScrollView>
   );
 }
 

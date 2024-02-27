@@ -1,4 +1,3 @@
-import { ClosePopupFn, useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { Text, ScrollView, Stack, List, ListRow } from '@shopify/retail-ui-extensions-react';
 import {
   CustomFieldsPreset,
@@ -9,61 +8,55 @@ import { ControlledSearchBar } from '@work-orders/common-pos/components/Controll
 import { useState } from 'react';
 import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 
-export function ImportPreset() {
+export function ImportPreset({ onImport }: { onImport: (preset: { keys: string[] }) => void }) {
   const [query, setQuery] = useState('');
-
-  const { Screen, closePopup } = useScreen('ImportPreset', () => {
-    setQuery('');
-  });
 
   const fetch = useAuthenticatedFetch();
   const presetsQuery = usePurchaseOrderCustomFieldsPresetsQuery({ fetch });
   const presets = presetsQuery.data ?? [];
 
-  const rows = getPresetRows(presets, query, closePopup);
+  const rows = getPresetRows(presets, query, onImport);
 
   return (
-    <Screen title={'Import Preset'} presentation={{ sheet: true }}>
-      <ScrollView>
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+    <ScrollView>
+      <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {presetsQuery.isRefetching ? 'Reloading...' : ' '}
+        </Text>
+      </Stack>
+      <ControlledSearchBar
+        value={query}
+        onTextChange={(query: string) => setQuery(query)}
+        onSearch={() => {}}
+        placeholder="Search presets"
+      />
+      <List data={rows} />
+      {presetsQuery.isLoading && (
+        <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
-            {presetsQuery.isRefetching ? 'Reloading...' : ' '}
+            Loading presets...
           </Text>
         </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={(query: string) => setQuery(query)}
-          onSearch={() => {}}
-          placeholder="Search presets"
-        />
-        <List data={rows} />
-        {presetsQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading presets...
-            </Text>
-          </Stack>
-        )}
-        {presetsQuery.isSuccess && rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No presets found
-            </Text>
-          </Stack>
-        )}
-        {presetsQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(presetsQuery.error, 'Error loading presets')}
-            </Text>
-          </Stack>
-        )}
-      </ScrollView>
-    </Screen>
+      )}
+      {presetsQuery.isSuccess && rows.length === 0 && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No presets found
+          </Text>
+        </Stack>
+      )}
+      {presetsQuery.isError && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(presetsQuery.error, 'Error loading presets')}
+          </Text>
+        </Stack>
+      )}
+    </ScrollView>
   );
 }
 
-function getPresetRows(presets: CustomFieldsPreset[], query: string, closePopup: ClosePopupFn<'ImportPreset'>) {
+function getPresetRows(presets: CustomFieldsPreset[], query: string, onImport: (preset: { keys: string[] }) => void) {
   const queryFilter = (preset: CustomFieldsPreset) => preset.name.toLowerCase().includes(query.toLowerCase());
 
   const FIELD_PREVIEW_COUNT = 5;
@@ -74,7 +67,7 @@ function getPresetRows(presets: CustomFieldsPreset[], query: string, closePopup:
 
     return {
       id: preset.name,
-      onPress: () => closePopup({ keys: preset.keys }),
+      onPress: () => onImport({ keys: preset.keys }),
       leftSide: {
         label: preset.name,
         subtitle: [subtitle],

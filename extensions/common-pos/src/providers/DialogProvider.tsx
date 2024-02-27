@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useCallback, useContext, useState } from 'react';
 import { Dialog, DialogProps } from '@shopify/retail-ui-extensions-react';
 
 const DialogContext = createContext<DialogContextValue | null>(null);
@@ -41,14 +41,17 @@ export function DialogProvider({ children }: { children: ReactNode }) {
     onAction: () => {},
   });
 
-  const show = ({ showDialog, props, onAction, onSecondaryAction }: ShowDialogOptions) => {
-    const isVisible = showDialog !== false;
-    setDialogProps(current => ({ ...current, ...props, isVisible, onAction, onSecondaryAction }));
+  const show = useCallback(
+    ({ showDialog, props, onAction, onSecondaryAction }: ShowDialogOptions) => {
+      const isVisible = showDialog !== false;
+      setDialogProps(current => ({ ...current, ...props, isVisible, onAction, onSecondaryAction }));
 
-    if (!isVisible) {
-      onAction();
-    }
-  };
+      if (!isVisible) {
+        onAction();
+      }
+    },
+    [setDialogProps],
+  );
 
   return (
     <DialogContext.Provider value={{ show, isVisible: dialogProps.isVisible }}>

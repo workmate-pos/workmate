@@ -9,7 +9,6 @@ import {
   TextField,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { PopupNavigateFn, useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { ResponsiveGrid, ResponsiveGridProps } from '@work-orders/common-pos/components/ResponsiveGrid.js';
 import { CreatePurchaseOrderDispatchProxy, useCreatePurchaseOrderReducer } from '../create-purchase-order/reducer.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
@@ -24,60 +23,39 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
-import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js';
 import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useForm } from '@work-orders/common-pos/hooks/use-form.js';
 import { MoneyField } from '@work-orders/common-pos/components/MoneyField.js';
+import { useRouter } from '../routes.js';
+import { useScreen } from '@work-orders/common-pos/router/controllable-screen.js';
 
-export function PurchaseOrder() {
+export function PurchaseOrder({
+  initialCreatePurchaseOrder,
+}: {
+  initialCreatePurchaseOrder: CreatePurchaseOrder | null;
+}) {
   const [query, setQuery] = useState('');
   const { Form, isValid } = useForm();
 
-  const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer();
-
-  const { Screen, usePopup } = useScreen('PurchaseOrder', purchaseOrder => {
-    setQuery('');
-    dispatch.set(purchaseOrder ?? defaultCreatePurchaseOrder);
-    setHasUnsavedChanges(false);
-  });
+  const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
+    initialCreatePurchaseOrder ?? undefined,
+  );
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
-  const statusSelectorPopup = usePopup('StatusSelector', status => dispatch.setPartial({ status }));
-  const productSelectorPopup = usePopup('ProductSelector', products => dispatch.addProducts({ products }));
-  const productConfigPopup = usePopup('ProductConfig', product => dispatch.updateProduct({ product }));
-  const locationSelectorPopup = usePopup('LocationSelector', location =>
-    dispatch.setPartial({ locationId: location?.id ?? null, locationName: location?.name ?? null }),
-  );
-  const vendorSelectorPopup = usePopup('VendorSelector', ({ vendorName, vendorCustomerId }) =>
-    dispatch.setPartial({
-      vendorCustomerId,
-      vendorName,
-      products: [],
-    }),
-  );
-  const customFieldConfigPopup = usePopup('CustomFieldConfig', customFields => dispatch.setPartial({ customFields }));
-  const employeeSelectorPopup = usePopup('EmployeeSelector', employeeAssignments =>
-    dispatch.setPartial({ employeeAssignments }),
-  );
-  const workOrderSelectorPopup = usePopup(
-    'WorkOrderSelector',
-    ({ workOrderName, customerName, customerId, orderId, orderName }) =>
-      dispatch.setPartial({ workOrderName, customerName, customerId, orderId, orderName }),
-  );
-  const orderSelectorPopup = usePopup('OrderSelector', ({ orderId, orderName, customerId, customerName }) =>
-    dispatch.setPartial({ workOrderName: null, orderId, orderName, customerId, customerName }),
-  );
+  const router = useRouter();
 
+  const screen = useScreen();
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
-  const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, vendorSelectorPopup.navigate);
-  const addProductPrerequisitesDialog = useAddProductPrerequisitesDialog(
-    createPurchaseOrder,
-    vendorSelectorPopup.navigate,
-    locationSelectorPopup.navigate,
-    productSelectorPopup.navigate,
-  );
+
+  useEffect(() => {
+    // TODO: Fix this not working
+    // screen.addOverrideNavigateBack(unsavedChangesDialog.show);
+  }, [unsavedChangesDialog.show]);
+
+  const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, dispatch);
+  const addProductPrerequisitesDialog = useAddProductPrerequisitesDialog(createPurchaseOrder, dispatch);
 
   const fetch = useAuthenticatedFetch();
   const purchaseOrderMutation = usePurchaseOrderMutation(
@@ -112,12 +90,7 @@ export function PurchaseOrder() {
     dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress?.formatted?.join('\n') ?? null });
   }, [vendorCustomer]);
 
-  const productRows = useProductRows(
-    createPurchaseOrder,
-    query,
-    purchaseOrderMutation.isLoading,
-    productConfigPopup.navigate,
-  );
+  const productRows = useProductRows(createPurchaseOrder, dispatch, query, purchaseOrderMutation.isLoading);
 
   const total = BigDecimal.sum(
     createPurchaseOrder.subtotal ? BigDecimal.fromMoney(createPurchaseOrder.subtotal) : BigDecimal.ZERO,
@@ -137,246 +110,287 @@ export function PurchaseOrder() {
   // whether there is some product.availableQuantity > 0. used to determine whether we should show "Mark as received" or "Mark as not received" button
   const productHasAvailableQuantity = createPurchaseOrder.products.some(product => product.availableQuantity > 0);
 
+  useEffect(() => {
+    screen.setTitle(createPurchaseOrder.name ?? 'New purchase order');
+  }, [createPurchaseOrder]);
+
   // TODO: Make a new input component that works with <Form /> for every type
   return (
-    <Screen title={createPurchaseOrder.name ?? 'New purchase order'} overrideNavigateBack={unsavedChangesDialog.show}>
-      <ScrollView>
-        <Stack direction={'vertical'} paddingVertical={'Small'}>
-          <ResponsiveGrid columns={4} grow>
-            {createPurchaseOrder.name && (
-              <TextField label={'Purchase Order ID'} disabled value={createPurchaseOrder.name} />
-            )}
-            <TextField
-              label={'Vendor'}
-              onFocus={vendorSelectorWarningDialog.show}
-              value={createPurchaseOrder.vendorName ?? (vendorCustomerQuery.isLoading ? 'Loading...' : '')}
-              disabled={
-                vendorSelectorWarningDialog.isVisible ||
-                vendorCustomerQuery.isLoading ||
-                purchaseOrderMutation.isLoading
-              }
-            />
+    <ScrollView>
+      <Stack direction={'vertical'} paddingVertical={'Small'}>
+        <ResponsiveGrid columns={4} grow>
+          {createPurchaseOrder.name && (
+            <TextField label={'Purchase Order ID'} disabled value={createPurchaseOrder.name} />
+          )}
+          <TextField
+            label={'Vendor'}
+            onFocus={vendorSelectorWarningDialog.show}
+            value={createPurchaseOrder.vendorName ?? (vendorCustomerQuery.isLoading ? 'Loading...' : '')}
+            disabled={
+              vendorSelectorWarningDialog.isVisible || vendorCustomerQuery.isLoading || purchaseOrderMutation.isLoading
+            }
+          />
 
-            <TextField
-              label={'Location'}
-              onFocus={locationSelectorPopup.navigate}
-              value={selectedLocation?.name ?? ''}
-              disabled={purchaseOrderMutation.isLoading}
-            />
-            <TextField
-              label={'Status'}
-              onFocus={statusSelectorPopup.navigate}
-              value={titleCase(createPurchaseOrder.status)}
-              disabled={purchaseOrderMutation.isLoading}
-            />
-          </ResponsiveGrid>
-        </Stack>
-
-        <ResponsiveGrid columns={3}>
-          <ResponsiveGrid columns={1}>
-            <TextArea
-              label={'Ship From'}
-              value={createPurchaseOrder.shipFrom ?? ''}
-              onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom: shipFrom || null })}
-              disabled={purchaseOrderMutation.isLoading}
-            />
-            {!!vendorCustomer?.defaultAddress?.formatted &&
-              createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
-                <Button
-                  title={'Use Vendor Address'}
-                  onPress={() => {
-                    if (!vendorCustomer.defaultAddress) return;
-                    dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress.formatted.join('\n') });
-                  }}
-                  isDisabled={purchaseOrderMutation.isLoading}
-                />
-              )}
-          </ResponsiveGrid>
-          <ResponsiveGrid columns={1}>
-            <TextArea
-              label={'Ship To'}
-              value={createPurchaseOrder.shipTo ?? ''}
-              onChange={(shipTo: string) => dispatch.setPartial({ shipTo: shipTo || null })}
-              disabled={purchaseOrderMutation.isLoading}
-            />
-            {!!selectedLocation?.address?.formatted &&
-              createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
-                <Button
-                  title={'Use Location Address'}
-                  onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
-                  isDisabled={purchaseOrderMutation.isLoading}
-                />
-              )}
-          </ResponsiveGrid>
-
-          <ResponsiveGrid columns={1}>
-            <TextArea
-              label={'Note'}
-              value={createPurchaseOrder.note}
-              onChange={(note: string) => dispatch.setPartial({ note: note || null })}
-              disabled={purchaseOrderMutation.isLoading}
-            />
-          </ResponsiveGrid>
+          <TextField
+            label={'Location'}
+            onFocus={() => {
+              router.push('LocationSelector', {
+                onSelect: location => {
+                  dispatch.setLocation({ locationId: location?.id ?? null, locationName: location?.name ?? null });
+                  router.pop();
+                },
+              });
+            }}
+            value={selectedLocation?.name ?? ''}
+            disabled={purchaseOrderMutation.isLoading}
+          />
+          <TextField
+            label={'Status'}
+            onFocus={() => {
+              router.push('StatusSelector', {
+                onSelect: status => {
+                  dispatch.setPartial({ status });
+                  router.pop();
+                },
+              });
+            }}
+            value={titleCase(createPurchaseOrder.status)}
+            disabled={purchaseOrderMutation.isLoading}
+          />
         </ResponsiveGrid>
+      </Stack>
 
-        <Stack direction={'vertical'} paddingVertical={'Small'}>
-          <ResponsiveGrid columns={3}>
-            <TextField
-              label={'Assigned Employees'}
-              value={createPurchaseOrder.employeeAssignments.map(({ employeeName }) => employeeName).join(', ')}
-              onFocus={() => employeeSelectorPopup.navigate(createPurchaseOrder.employeeAssignments)}
-              action={{
-                label: '×',
-                disabled: createPurchaseOrder.employeeAssignments.length === 0,
-                onPress: () => dispatch.setPartial({ employeeAssignments: [] }),
-              }}
-              disabled={purchaseOrderMutation.isLoading}
-            />
-
-            <TextField
-              label={'Linked Work Order ID'}
-              value={createPurchaseOrder.workOrderName ?? ''}
-              onFocus={workOrderSelectorPopup.navigate}
-              action={{
-                label: '×',
-                disabled: createPurchaseOrder.workOrderName === null,
-                onPress: () =>
-                  dispatch.setWorkOrder({
-                    workOrderName: null,
-                    customerName: null,
-                    customerId: null,
-                    orderId: null,
-                    orderName: null,
-                  }),
-              }}
-              disabled={purchaseOrderMutation.isLoading}
-            />
-
-            <TextField
-              label={'Linked Order ID'}
-              value={!!createPurchaseOrder.orderId ? createPurchaseOrder.orderName ?? 'Unknown' : ''}
-              onFocus={orderSelectorPopup.navigate}
-              action={{
-                label: '×',
-                disabled: createPurchaseOrder.orderId === null,
-                onPress: () =>
-                  dispatch.setOrder({ orderName: null, orderId: null, customerName: null, customerId: null }),
-              }}
-              disabled={purchaseOrderMutation.isLoading}
-            />
-
-            {Object.entries(createPurchaseOrder.customFields).map(([key, value], i) => (
-              <TextField
-                key={i}
-                label={key}
-                value={value}
-                onChange={(value: string) =>
-                  dispatch.setPartial({ customFields: { ...createPurchaseOrder.customFields, [key]: value } })
-                }
-                disabled={purchaseOrderMutation.isLoading}
-              />
-            ))}
-
-            <Button
-              title={'Custom Fields'}
-              onPress={() => customFieldConfigPopup.navigate(createPurchaseOrder)}
-              isDisabled={purchaseOrderMutation.isLoading}
-            />
-          </ResponsiveGrid>
-        </Stack>
-
-        <Stack direction={'vertical'} paddingVertical={'Small'}>
-          <ResponsiveGrid columns={2}>
-            <ResponsiveGrid columns={1}>
+      <ResponsiveGrid columns={3}>
+        <ResponsiveGrid columns={1}>
+          <TextArea
+            label={'Ship From'}
+            value={createPurchaseOrder.shipFrom ?? ''}
+            onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom: shipFrom || null })}
+            disabled={purchaseOrderMutation.isLoading}
+          />
+          {!!vendorCustomer?.defaultAddress?.formatted &&
+            createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
               <Button
-                title={'Add Product'}
-                type={'primary'}
-                onPress={addProductPrerequisitesDialog.show}
+                title={'Use Vendor Address'}
+                onPress={() => {
+                  if (!vendorCustomer.defaultAddress) return;
+                  dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress.formatted.join('\n') });
+                }}
                 isDisabled={purchaseOrderMutation.isLoading}
               />
-
-              {createPurchaseOrder.name && hasProductQuantity && productHasAvailableQuantity && (
-                <Button
-                  title={'Mark all as not received'}
-                  type={'destructive'}
-                  onPress={() => dispatch.setInventoryState({ inventoryState: 'unavailable' })}
-                  isDisabled={purchaseOrderMutation.isLoading}
-                />
-              )}
-              {createPurchaseOrder.name && hasProductQuantity && !productHasAvailableQuantity && (
-                <Button
-                  title={'Mark all as received'}
-                  onPress={() => dispatch.setInventoryState({ inventoryState: 'available' })}
-                  isDisabled={purchaseOrderMutation.isLoading}
-                />
-              )}
-
-              <ControlledSearchBar
-                placeholder={'Search products'}
-                onTextChange={setQuery}
-                onSearch={() => {}}
-                editable={!purchaseOrderMutation.isLoading}
-              />
-              <List data={productRows} isLoadingMore={false} onEndReached={() => {}} imageDisplayStrategy={'always'} />
-              {productRows.length === 0 ? (
-                <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
-                  <Text variant="body" color="TextSubdued">
-                    No products added to purchase order
-                  </Text>
-                </Stack>
-              ) : null}
-            </ResponsiveGrid>
-
-            <Form disabled={purchaseOrderMutation.isLoading}>
-              <ResponsiveGrid columns={1}>
-                <MoneyInputGroup
-                  grid={{ columns: 2 }}
-                  fields={['subtotal', 'discount', 'tax', 'shipping']}
-                  createPurchaseOrder={createPurchaseOrder}
-                  dispatch={dispatch}
-                />
-                <TextField label={'Total'} value={total.round(2, RoundingMode.CEILING).toString()} disabled />
-
-                <MoneyInputGroup
-                  grid={{ columns: 2 }}
-                  fields={['deposited', 'paid']}
-                  createPurchaseOrder={createPurchaseOrder}
-                  dispatch={dispatch}
-                />
-                <TextField
-                  label={'Balance Due'}
-                  value={balanceDue.round(2, RoundingMode.CEILING).toString()}
-                  disabled
-                />
-              </ResponsiveGrid>
-            </Form>
-          </ResponsiveGrid>
-        </Stack>
-
-        <Stack direction={'vertical'} paddingVertical={'Small'}>
-          <Button
-            title={!!createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
-            type={'primary'}
-            onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
-            isDisabled={!isValid}
-            isLoading={purchaseOrderMutation.isLoading}
+            )}
+        </ResponsiveGrid>
+        <ResponsiveGrid columns={1}>
+          <TextArea
+            label={'Ship To'}
+            value={createPurchaseOrder.shipTo ?? ''}
+            onChange={(shipTo: string) => dispatch.setPartial({ shipTo: shipTo || null })}
+            disabled={purchaseOrderMutation.isLoading}
           />
-        </Stack>
-      </ScrollView>
-    </Screen>
+          {!!selectedLocation?.address?.formatted &&
+            createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
+              <Button
+                title={'Use Location Address'}
+                onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
+                isDisabled={purchaseOrderMutation.isLoading}
+              />
+            )}
+        </ResponsiveGrid>
+
+        <ResponsiveGrid columns={1}>
+          <TextArea
+            label={'Note'}
+            value={createPurchaseOrder.note}
+            onChange={(note: string) => dispatch.setPartial({ note: note || null })}
+            disabled={purchaseOrderMutation.isLoading}
+          />
+        </ResponsiveGrid>
+      </ResponsiveGrid>
+
+      <Stack direction={'vertical'} paddingVertical={'Small'}>
+        <ResponsiveGrid columns={3}>
+          <TextField
+            label={'Assigned Employees'}
+            value={createPurchaseOrder.employeeAssignments.map(({ employeeName }) => employeeName).join(', ')}
+            onFocus={() => {
+              router.push('EmployeeSelector', {
+                initialEmployeeAssignments: createPurchaseOrder.employeeAssignments,
+                onSave: employeeAssignments => {
+                  dispatch.setPartial({ employeeAssignments });
+                  router.pop();
+                },
+              });
+            }}
+            action={{
+              label: '×',
+              disabled: createPurchaseOrder.employeeAssignments.length === 0,
+              onPress: () => dispatch.setPartial({ employeeAssignments: [] }),
+            }}
+            disabled={purchaseOrderMutation.isLoading}
+          />
+
+          <TextField
+            label={'Linked Work Order ID'}
+            value={createPurchaseOrder.workOrderName ?? ''}
+            onFocus={() => {
+              router.push('WorkOrderSelector', {
+                onSelect: workOrderDetails => {
+                  dispatch.setWorkOrder(workOrderDetails);
+                  router.pop();
+                },
+              });
+            }}
+            action={{
+              label: '×',
+              disabled: createPurchaseOrder.workOrderName === null,
+              onPress: () =>
+                dispatch.setWorkOrder({
+                  workOrderName: null,
+                  customerName: null,
+                  customerId: null,
+                  orderId: null,
+                  orderName: null,
+                }),
+            }}
+            disabled={purchaseOrderMutation.isLoading}
+          />
+
+          <TextField
+            label={'Linked Order ID'}
+            value={!!createPurchaseOrder.orderId ? createPurchaseOrder.orderName ?? 'Unknown' : ''}
+            onFocus={() => {
+              router.push('OrderSelector', {
+                onSelect: orderDetails => {
+                  dispatch.setOrder(orderDetails);
+                  router.pop();
+                },
+              });
+            }}
+            action={{
+              label: '×',
+              disabled: createPurchaseOrder.orderId === null,
+              onPress: () =>
+                dispatch.setOrder({ orderName: null, orderId: null, customerName: null, customerId: null }),
+            }}
+            disabled={purchaseOrderMutation.isLoading}
+          />
+
+          {Object.entries(createPurchaseOrder.customFields).map(([key, value], i) => (
+            <TextField
+              key={i}
+              label={key}
+              value={value}
+              onChange={(value: string) =>
+                dispatch.setPartial({ customFields: { ...createPurchaseOrder.customFields, [key]: value } })
+              }
+              disabled={purchaseOrderMutation.isLoading}
+            />
+          ))}
+
+          <Button
+            title={'Custom Fields'}
+            onPress={() => {
+              router.push('CustomFieldConfig', {
+                initialCustomFields: createPurchaseOrder.customFields,
+                onSave: customFields => {
+                  dispatch.setPartial({ customFields });
+                  router.pop();
+                },
+              });
+            }}
+            isDisabled={purchaseOrderMutation.isLoading}
+          />
+        </ResponsiveGrid>
+      </Stack>
+
+      <Stack direction={'vertical'} paddingVertical={'Small'}>
+        <ResponsiveGrid columns={2}>
+          <ResponsiveGrid columns={1}>
+            <Button
+              title={'Add Product'}
+              type={'primary'}
+              onPress={addProductPrerequisitesDialog.show}
+              isDisabled={purchaseOrderMutation.isLoading}
+            />
+
+            {createPurchaseOrder.name && hasProductQuantity && productHasAvailableQuantity && (
+              <Button
+                title={'Mark all as not received'}
+                type={'destructive'}
+                onPress={() => dispatch.setInventoryState({ inventoryState: 'unavailable' })}
+                isDisabled={purchaseOrderMutation.isLoading}
+              />
+            )}
+            {createPurchaseOrder.name && hasProductQuantity && !productHasAvailableQuantity && (
+              <Button
+                title={'Mark all as received'}
+                onPress={() => dispatch.setInventoryState({ inventoryState: 'available' })}
+                isDisabled={purchaseOrderMutation.isLoading}
+              />
+            )}
+
+            <ControlledSearchBar
+              placeholder={'Search products'}
+              onTextChange={setQuery}
+              onSearch={() => {}}
+              editable={!purchaseOrderMutation.isLoading}
+            />
+            <List data={productRows} isLoadingMore={false} onEndReached={() => {}} imageDisplayStrategy={'always'} />
+            {productRows.length === 0 ? (
+              <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
+                <Text variant="body" color="TextSubdued">
+                  No products added to purchase order
+                </Text>
+              </Stack>
+            ) : null}
+          </ResponsiveGrid>
+
+          <Form disabled={purchaseOrderMutation.isLoading}>
+            <ResponsiveGrid columns={1}>
+              <MoneyInputGroup
+                grid={{ columns: 2 }}
+                fields={['subtotal', 'discount', 'tax', 'shipping']}
+                createPurchaseOrder={createPurchaseOrder}
+                dispatch={dispatch}
+              />
+              <TextField label={'Total'} value={total.round(2, RoundingMode.CEILING).toString()} disabled />
+
+              <MoneyInputGroup
+                grid={{ columns: 2 }}
+                fields={['deposited', 'paid']}
+                createPurchaseOrder={createPurchaseOrder}
+                dispatch={dispatch}
+              />
+              <TextField label={'Balance Due'} value={balanceDue.round(2, RoundingMode.CEILING).toString()} disabled />
+            </ResponsiveGrid>
+          </Form>
+        </ResponsiveGrid>
+      </Stack>
+
+      <Stack direction={'vertical'} paddingVertical={'Small'}>
+        <Button
+          title={!!createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
+          type={'primary'}
+          onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
+          isDisabled={!isValid}
+          isLoading={purchaseOrderMutation.isLoading}
+        />
+      </Stack>
+    </ScrollView>
   );
 }
 
 function useProductRows(
   { products, locationName, locationId }: Pick<CreatePurchaseOrder, 'products' | 'locationName' | 'locationId'>,
+  dispatch: CreatePurchaseOrderDispatchProxy,
   query: string,
   disabled: boolean,
-  openConfig: PopupNavigateFn<'ProductConfig'>,
 ) {
   query = query.trim();
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
+  const router = useRouter();
 
   const productVariantIds = unique(products.map(product => product.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
@@ -413,10 +427,14 @@ function useProductRows(
           return;
         }
 
-        openConfig({
+        router.push('ProductConfig', {
           product,
           locationName,
           locationId,
+          onSave: product => {
+            dispatch.updateProduct({ product });
+            router.pop();
+          },
         });
       },
       leftSide: {
@@ -435,9 +453,10 @@ function useProductRows(
 
 const useVendorChangeWarningDialog = (
   createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorCustomerId' | 'products'>,
-  openVendorPopup: PopupNavigateFn<'VendorSelector'>,
+  dispatch: CreatePurchaseOrderDispatchProxy,
 ) => {
   const dialog = useDialog();
+  const router = useRouter();
 
   const showDialog = createPurchaseOrder.vendorCustomerId !== null && createPurchaseOrder.products.length > 0;
 
@@ -446,7 +465,14 @@ const useVendorChangeWarningDialog = (
     show: () => {
       dialog.show({
         showDialog,
-        onAction: openVendorPopup,
+        onAction: () => {
+          router.push('VendorSelector', {
+            onSelect: vendorDetails => {
+              dispatch.setVendor(vendorDetails);
+              router.pop();
+            },
+          });
+        },
         props: {
           title: 'Vendor Already Set',
           type: 'alert',
@@ -462,12 +488,11 @@ const useVendorChangeWarningDialog = (
 
 const useAddProductPrerequisitesDialog = (
   createPurchaseOrder: Pick<CreatePurchaseOrder, 'locationId' | 'vendorName' | 'locationName'>,
-  openVendorPopup: PopupNavigateFn<'VendorSelector'>,
-  openLocationPopup: PopupNavigateFn<'LocationSelector'>,
-  openProductPopup: PopupNavigateFn<'ProductSelector'>,
+  dispatch: CreatePurchaseOrderDispatchProxy,
 ) => {
   const dialog = useDialog();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const router = useRouter();
 
   const hasVendor = createPurchaseOrder.vendorName !== null;
   const hasLocation = createPurchaseOrder.locationId !== null && createPurchaseOrder.locationName !== null;
@@ -475,9 +500,19 @@ const useAddProductPrerequisitesDialog = (
   const showDialog = !hasVendor || !hasLocation;
   const onAction = () => {
     if (!hasVendor) {
-      openVendorPopup();
+      router.push('VendorSelector', {
+        onSelect: vendorDetails => {
+          dispatch.setVendor(vendorDetails);
+          router.pop();
+        },
+      });
     } else if (!hasLocation) {
-      openLocationPopup();
+      router.push('LocationSelector', {
+        onSelect: location => {
+          dispatch.setLocation({ locationId: location?.id ?? null, locationName: location?.name ?? null });
+          router.pop();
+        },
+      });
     } else {
       if (!createPurchaseOrder.locationName) {
         toast.show('Location name not set');
@@ -494,10 +529,13 @@ const useAddProductPrerequisitesDialog = (
         return;
       }
 
-      openProductPopup({
-        locationName: createPurchaseOrder.locationName,
-        locationId: createPurchaseOrder.locationId,
-        vendorName: createPurchaseOrder.vendorName,
+      router.push('ProductSelector', {
+        filters: {
+          vendorName: createPurchaseOrder.vendorName,
+          locationName: createPurchaseOrder.locationName,
+          locationId: createPurchaseOrder.locationId,
+        },
+        onSelect: product => dispatch.addProducts({ products: [product] }),
       });
     }
   };

@@ -1,28 +1,26 @@
-import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { Dispatch, ReactNode, SetStateAction, useEffect, useState } from 'react';
 import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { Button, ScrollView, Stack, Text, TextField } from '@shopify/retail-ui-extensions-react';
 import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
 import { useScreenSize } from '@work-orders/common-pos/providers/ScreenSizeProvider.js';
 import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
+import type { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
+import { useScreen } from '@work-orders/common-pos/router/controllable-screen.js';
+import { useRouter } from '../../routes.js';
 
-export function CustomFieldConfig() {
-  const [customFields, setCustomFields] = useState<Record<string, string>>({});
+export function CustomFieldConfig({
+  initialCustomFields,
+  onSave,
+}: {
+  initialCustomFields: CreatePurchaseOrder['customFields'];
+  onSave: (customFields: Record<string, string>) => void;
+}) {
+  const [customFields, setCustomFields] = useState<Record<string, string>>(initialCustomFields);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [newCustomFieldName, setNewCustomFieldName] = useState('');
   const [newCustomFieldNameError, setNewCustomFieldNameError] = useState('');
 
-  const { Screen, closePopup, usePopup } = useScreen('CustomFieldConfig', ({ customFields }) => {
-    setCustomFields(customFields);
-    setHasUnsavedChanges(false);
-
-    setNewCustomFieldName('');
-    setNewCustomFieldNameError('');
-  });
-
-  const savePresetPopup = usePopup('SavePreset');
-  const importPresetPopup = usePopup('ImportPreset', ({ keys }) => overrideOrMergeDialog.show(keys));
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   const overrideOrMergeDialog = useOverrideOrMergeDialog({ customFields, setCustomFields });
 
@@ -49,6 +47,7 @@ export function CustomFieldConfig() {
     });
   }
 
+  const router = useRouter();
   const screenSize = useScreenSize();
 
   const saveAsPreset = (
@@ -60,14 +59,28 @@ export function CustomFieldConfig() {
         const keys = Object.keys(customFields);
 
         if (isNonEmptyArray(keys)) {
-          savePresetPopup.navigate({ keys });
+          router.push('SavePreset', { keys, onSave: router.pop });
         }
       }}
     />
   );
 
-  const importPreset = <Button title={'Import Preset'} type={'plain'} onPress={importPresetPopup.navigate} />;
+  const importPreset = (
+    <Button
+      title={'Import Preset'}
+      type={'plain'}
+      onPress={() => {
+        router.push('ImportPreset', {
+          onImport: ({ keys }) => {
+            router.pop();
+            overrideOrMergeDialog.show(keys);
+          },
+        });
+      }}
+    />
+  );
 
+  // TODO: ResponsiveStack
   const headingOptions: Record<typeof screenSize, ReactNode> = {
     tablet: (
       <ResponsiveGrid columns={2}>
@@ -91,62 +104,64 @@ export function CustomFieldConfig() {
     ),
   };
 
+  const screen = useScreen();
+  // TODO: Maybe provide these settings in useScreen directly?
+  screen.addOverrideNavigateBack(unsavedChangesDialog.show);
+
   return (
-    <Screen title="Custom Fields" overrideNavigateBack={unsavedChangesDialog.show} presentation={{ sheet: true }}>
-      <ScrollView>
-        {headingOptions[screenSize]}
+    <ScrollView>
+      {headingOptions[screenSize]}
 
-        <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
-          <ResponsiveGrid columns={2}>
-            {Object.entries(customFields).flatMap(([key, value], i) => [
-              <TextField
-                key={i}
-                label={key}
-                value={value}
-                onChange={(value: string) => {
-                  setHasUnsavedChanges(true);
-                  setCustomFields({
-                    ...customFields,
-                    [key]: value,
-                  });
-                }}
-              />,
-              <Button
-                title={'Remove'}
-                type={'destructive'}
-                onPress={() => {
-                  setHasUnsavedChanges(true);
-                  setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)));
-                }}
-              />,
-            ])}
-          </ResponsiveGrid>
-          {Object.keys(customFields).length === 0 && (
-            <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
-              <Text variant="body" color="TextSubdued">
-                No custom fields added
-              </Text>
-            </Stack>
-          )}
-        </Stack>
-
-        <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
-          <ResponsiveGrid columns={2}>
+      <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
+        <ResponsiveGrid columns={2}>
+          {Object.entries(customFields).flatMap(([key, value], i) => [
             <TextField
-              label={'New Field Name'}
-              value={newCustomFieldName}
-              onChange={setNewCustomFieldName}
-              error={newCustomFieldNameError}
-            />
-            <Button title={'Add'} disabled={newCustomFieldNameError !== undefined} onPress={createNewCustomField} />
-          </ResponsiveGrid>
-        </Stack>
+              key={i}
+              label={key}
+              value={value}
+              onChange={(value: string) => {
+                setHasUnsavedChanges(true);
+                setCustomFields({
+                  ...customFields,
+                  [key]: value,
+                });
+              }}
+            />,
+            <Button
+              title={'Remove'}
+              type={'destructive'}
+              onPress={() => {
+                setHasUnsavedChanges(true);
+                setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)));
+              }}
+            />,
+          ])}
+        </ResponsiveGrid>
+        {Object.keys(customFields).length === 0 && (
+          <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
+            <Text variant="body" color="TextSubdued">
+              No custom fields added
+            </Text>
+          </Stack>
+        )}
+      </Stack>
 
-        <Stack direction={'vertical'} alignment={'center'}>
-          <Button title={'Save'} type={'primary'} onPress={() => closePopup(customFields)} />
-        </Stack>
-      </ScrollView>
-    </Screen>
+      <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
+        <ResponsiveGrid columns={2}>
+          <TextField
+            label={'New Field Name'}
+            value={newCustomFieldName}
+            onChange={setNewCustomFieldName}
+            error={newCustomFieldNameError}
+          />
+          <Button title={'Add'} disabled={newCustomFieldNameError !== undefined} onPress={createNewCustomField} />
+        </ResponsiveGrid>
+      </Stack>
+
+      <Stack direction={'vertical'} alignment={'center'}>
+        <Button title={'Save'} type={'primary'} onPress={() => onSave(customFields)} />
+      </Stack>
+    </ScrollView>
   );
 }
 

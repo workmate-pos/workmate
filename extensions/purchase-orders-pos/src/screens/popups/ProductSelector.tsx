@@ -1,7 +1,5 @@
-import { useState } from 'react';
-import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { Int, Product } from '@web/schemas/generated/create-purchase-order.js';
+import { type CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
@@ -10,25 +8,17 @@ import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
+import { NonNullableValues } from '../../types.js';
+import { useRouter } from '../../routes.js';
 
-export function ProductSelector() {
+export function ProductSelector({
+  filters: { vendorName, locationName, locationId },
+  onSelect,
+}: {
+  filters: NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>>;
+  onSelect: (product: Product) => void;
+}) {
   const [query, setQuery] = useDebouncedState('');
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
-
-  // optional fields, used to filter products by vendor, and show stock for a location
-  const [vendorName, setVendorName] = useState<string | null>(null);
-  const [locationName, setLocationName] = useState<string | null>(null);
-  const [locationId, setLocationId] = useState<ID | null>(null);
-
-  const { Screen, usePopup, closePopup } = useScreen('ProductSelector', ({ vendorName, locationName, locationId }) => {
-    setQuery('', true);
-    setSelectedProducts([]);
-    setVendorName(vendorName);
-    setLocationName(locationName);
-    setLocationId(locationId);
-  });
-
-  const createProductPopup = usePopup('ProductCreator', product => selectProduct(product));
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
@@ -44,94 +34,96 @@ export function ProductSelector() {
   });
   const productVariants = productVariantsQuery.data?.pages ?? [];
 
-  const selectProduct = (product: Product, name: string = 'Product') => {
+  const selectProduct = (product: Product) => {
     setQuery('', true);
-    setSelectedProducts(products => [...products, product]);
-    toast.show(`${name} added to purchase order`, { duration: 1000 });
+    onSelect(product);
+    toast.show('Product added to purchase order', { duration: 1000 });
   };
 
   const rows = useProductVariantRows(productVariants, locationId, selectProduct);
 
+  const router = useRouter();
+
   return (
-    <Screen
-      title="Select Product"
-      presentation={{ sheet: true }}
-      overrideNavigateBack={() => closePopup(selectedProducts)}
-    >
-      <ScrollView>
-        {vendorName && (
-          <Stack direction={'horizontal'} paddingVertical={'Medium'} alignment={'center'}>
-            <Text variant="captionMedium" color="TextSubdued">
-              Showing products for vendor {vendorName}, and stock for location {locationName}
-            </Text>
-          </Stack>
-        )}
+    <ScrollView>
+      <Stack direction={'horizontal'} paddingVertical={'Medium'} alignment={'center'}>
+        <Text variant="captionMedium" color="TextSubdued">
+          Showing products for vendor {vendorName}, and stock for location {locationName}
+        </Text>
+      </Stack>
 
-        <Button
-          title={'New Product'}
-          variant={'primary'}
-          onPress={() => {
-            if (!locationId) {
-              toast.show('Location id not set');
-              return;
-            }
+      <Button
+        title={'New Product'}
+        variant={'primary'}
+        onPress={() => {
+          if (!locationId) {
+            toast.show('Location id not set');
+            return;
+          }
 
-            if (!vendorName) {
-              toast.show('Vendor name not set');
-              return;
-            }
+          if (!vendorName) {
+            toast.show('Vendor name not set');
+            return;
+          }
 
-            createProductPopup.navigate({ locationId, vendorName });
-          }}
-        />
+          router.push('ProductCreator', {
+            initialProduct: {
+              locationId,
+              vendorName,
+            },
+            onCreate: (product: Product) => {
+              selectProduct(product);
+            },
+          });
+        }}
+      />
 
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+      <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
+        </Text>
+      </Stack>
+      <ControlledSearchBar
+        value={query}
+        onTextChange={(query: string) => setQuery(query, !query)}
+        onSearch={() => {}}
+        placeholder={'Search products'}
+      />
+      <List
+        data={rows}
+        onEndReached={productVariantsQuery.fetchNextPage}
+        isLoadingMore={productVariantsQuery.isLoading}
+        imageDisplayStrategy={'always'}
+      />
+      {productVariantsQuery.isLoading && (
+        <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
-            {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
+            Loading products...
           </Text>
         </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={(query: string) => setQuery(query, !query)}
-          onSearch={() => {}}
-          placeholder={'Search products'}
-        />
-        <List
-          data={rows}
-          onEndReached={productVariantsQuery.fetchNextPage}
-          isLoadingMore={productVariantsQuery.isLoading}
-          imageDisplayStrategy={'always'}
-        />
-        {productVariantsQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading products...
-            </Text>
-          </Stack>
-        )}
-        {productVariantsQuery.isSuccess && rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No products found
-            </Text>
-          </Stack>
-        )}
-        {productVariantsQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(productVariantsQuery.error, 'Error loading products')}
-            </Text>
-          </Stack>
-        )}
-      </ScrollView>
-    </Screen>
+      )}
+      {productVariantsQuery.isSuccess && rows.length === 0 && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No products found
+          </Text>
+        </Stack>
+      )}
+      {productVariantsQuery.isError && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(productVariantsQuery.error, 'Error loading products')}
+          </Text>
+        </Stack>
+      )}
+    </ScrollView>
   );
 }
 
 function useProductVariantRows(
   productVariants: ProductVariant[],
   locationId: ID | null,
-  selectProduct: (product: Product, name?: string) => void,
+  selectProduct: (product: Product) => void,
 ) {
   const fetch = useAuthenticatedFetch();
 
