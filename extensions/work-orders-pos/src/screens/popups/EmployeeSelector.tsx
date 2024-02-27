@@ -19,7 +19,7 @@ export function EmployeeSelector() {
 
   const fetch = useAuthenticatedFetch();
   const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
-  const employees = employeesQuery.data?.pages ?? [];
+  const employees = employeesQuery.data?.pages.flat() ?? [];
 
   const rows = getEmployeeRows(employees, selectedEmployeeIds, setSelectedEmployeeIds);
 

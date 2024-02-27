@@ -21,7 +21,7 @@ export const useInventoryItemsQuery = (...[options, ...args]: Parameters<typeof 
       options: {
         ...options.options,
         onSuccess: data => {
-          for (const inventoryItem of data.pages) {
+          for (const inventoryItem of data.pages.flat()) {
             queryClient.setQueryData(
               ['inventory-item', inventoryItem.id],
               inventoryItem satisfies UseQueryData<typeof useInventoryItemQuery>,

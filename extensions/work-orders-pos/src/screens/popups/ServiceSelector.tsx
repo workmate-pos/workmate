@@ -36,7 +36,7 @@ export function ServiceSelector() {
   const currencyFormatter = useCurrencyFormatter();
 
   const closeRef = useDynamicRef(() => closePopup, [closePopup]);
-  const rows = getProductVariantRows(productVariantsQuery?.data?.pages ?? [], closeRef, currencyFormatter);
+  const rows = getProductVariantRows(productVariantsQuery?.data?.pages.flat() ?? [], closeRef, currencyFormatter);
 
   return (
     <Screen title={'Select service'} presentation={{ sheet: true }}>

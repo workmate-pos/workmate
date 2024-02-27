@@ -662,7 +662,7 @@ function CollectionPicker({
     if (query) return;
     if (!selectedCollectionId) return;
 
-    const selectedCollection = collectionsQuery.data?.pages.find(page => page.id === selectedCollectionId);
+    const selectedCollection = collectionsQuery.data?.pages.flat(1).find(page => page.id === selectedCollectionId);
     if (!selectedCollection) return;
 
     setSelectedCollectionName(selectedCollection.title);
@@ -673,7 +673,7 @@ function CollectionPicker({
     <>
       <Autocomplete
         options={
-          collectionsQuery.data?.pages.map(page => ({
+          collectionsQuery.data?.pages.flat().map(page => ({
             label: page.title,
             value: page.id,
           })) ?? []
@@ -704,7 +704,7 @@ function CollectionPicker({
           let serviceCollectionId: ID | null = null;
 
           if (id !== undefined && id !== selectedCollectionId) {
-            name = collectionsQuery.data?.pages.find(page => page.id === id)?.title ?? '';
+            name = collectionsQuery.data?.pages.flat(1).find(page => page.id === id)?.title ?? '';
             serviceCollectionId = id;
           }
 
