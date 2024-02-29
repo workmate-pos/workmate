@@ -85,7 +85,14 @@ export async function getAvailableAppPlans(session: Session) {
   ]);
 
   const usedTrialDays = getAppPlanTrialDaysUsed(appPlanSubscription);
-  const storeProperties: StoreProperties = { locations: locations.nodes.length, shopType, usedTrialDays };
+  const activeAppPlanId =
+    appPlanSubscription?.appSubscriptionStatus === 'ACTIVE' ? appPlanSubscription.appPlanId : null;
+  const storeProperties: StoreProperties = {
+    activeAppPlanId,
+    locations: locations.nodes.length,
+    shopType,
+    usedTrialDays,
+  };
 
   const availableAppPlans = appPlans.filter(appPlan => isAppPlanAvailable(appPlan, storeProperties));
 
@@ -100,10 +107,15 @@ type StoreProperties = {
   locations: number;
   shopType: ShopPlanType;
   usedTrialDays: number;
+  activeAppPlanId: number | null;
 };
 
 export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StoreProperties) {
-  const { allowedShopifyPlans, maxLocations, trialOnly, trialDays } = appPlan;
+  const { id, allowedShopifyPlans, maxLocations, trialOnly, trialDays } = appPlan;
+
+  if (storeProperties.activeAppPlanId === id) {
+    return false;
+  }
 
   if (maxLocations !== null && storeProperties.locations > maxLocations) {
     return false;
