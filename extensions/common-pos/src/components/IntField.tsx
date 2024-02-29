@@ -9,12 +9,13 @@ export type IntFieldProps = {
   onChange?: (value: Int | null) => void;
   onIsValid?: (isValid: boolean) => void;
   disabled?: boolean;
+  required?: boolean;
 };
 
 /**
  * Wrapper around DecimalField that converts from and to Int.
  */
-export function IntField({ value, onChange, ...props }: IntFieldProps) {
+export function IntField({ required, value, onChange, ...props }: IntFieldProps) {
   const internalValue = value === null ? null : BigDecimal.fromString(String(value)).toDecimal();
 
   const internalOnChange = (val: Decimal | null) => {
@@ -28,5 +29,6 @@ export function IntField({ value, onChange, ...props }: IntFieldProps) {
     decimals: 0,
     roundingMode: RoundingMode.CEILING,
     allowEmpty: false,
+    required,
   } as DecimalFieldProps);
 }

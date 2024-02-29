@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Screen, ScreenProps } from '@shopify/retail-ui-extensions-react';
+import { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { Screen, ScreenProps, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { RouterContextValue } from './create-router.js';
 
 const ScreenContext = createContext<ScreenContextValue | null>(null);
@@ -47,63 +47,65 @@ export function ControllableScreen({
   overrideNavigateBack: initialOverrideNavigateBack,
   isLoading: initialIsLoading,
   onNavigateBack,
-  isActive,
   router,
   ...props
-}: ScreenProps & { isActive: boolean; router: RouterContextValue<any> }) {
+}: ScreenProps & { router: RouterContextValue<any> }) {
   const [title, setTitle] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [overrideNavigateBackFunctions, setOverrideNavigateBackFunctions] = useState<
     Record<string, (next: () => void) => void>
   >({});
 
-  useEffect(() => {
-    setTitle(initialTitle ?? '');
+  useLayoutEffect(() => {
+    if (initialTitle !== undefined) {
+      setTitle(initialTitle);
+    }
   }, [initialTitle]);
 
-  useEffect(() => {
-    setIsLoading(initialIsLoading ?? false);
+  useLayoutEffect(() => {
+    if (initialIsLoading !== undefined) {
+      setIsLoading(initialIsLoading);
+    }
   }, [initialIsLoading]);
 
   const _onNavigateBack = useCallback(() => {
-    if (!isActive) {
-      // we only want to listen for navigate back when the screen is in view.
-      // this way we can detect the 'swipe down' motion.
-      // listening when not active means that calling pop() inside overrideNavigateBack will cause an infinite pop() loop
-      return;
-    }
-
-    (onNavigateBack ?? router.popStack)();
-  }, [onNavigateBack, router.popStack, isActive]);
+    onNavigateBack?.();
+    router.popStack();
+  }, [onNavigateBack, router.popStack]);
 
   const clear = useCallback(
     (id: string) =>
       setOverrideNavigateBackFunctions(overrides =>
         Object.fromEntries(Object.entries(overrides).filter(([key]) => key !== id)),
       ),
-    [setOverrideNavigateBackFunctions],
+    [],
   );
 
-  const addOverrideNavigateBack = useCallback(
-    (id: string, override: (next: () => void) => void) =>
-      setOverrideNavigateBackFunctions(overrides => ({ ...overrides, [id]: override })),
-    [setOverrideNavigateBackFunctions],
-  );
+  const addOverrideNavigateBack = useCallback((id: string, override: (next: () => void) => void) => {
+    return setOverrideNavigateBackFunctions(overrides => {
+      if (overrides[id] === override) return overrides;
+      return { ...overrides, [id]: override };
+    });
+  }, []);
 
   const composedOverrideNavigateBack = useCallback(() => {
     const composed = Object.values(overrideNavigateBackFunctions).reduce(
       (prev, override) => next => override(() => prev(next)),
-      () => (initialOverrideNavigateBack ?? onNavigateBack ?? router.pop)(),
+      next => next(),
     );
 
-    composed(function noop() {});
+    composed(initialOverrideNavigateBack ?? router.pop);
   }, [overrideNavigateBackFunctions, initialOverrideNavigateBack, router.pop]);
 
-  // TODO: Fix this (or does it work???)
-  // overrideNavigateBack={composedOverrideNavigateBack}
   return (
     <ScreenContext.Provider value={{ setTitle, clear, addOverrideNavigateBack, setIsLoading }}>
-      <Screen {...props} onNavigateBack={_onNavigateBack} title={title} isLoading={isLoading} />
+      <Screen
+        {...props}
+        title={title}
+        isLoading={isLoading}
+        onNavigateBack={_onNavigateBack}
+        overrideNavigateBack={composedOverrideNavigateBack}
+      />
     </ScreenContext.Provider>
   );
 }

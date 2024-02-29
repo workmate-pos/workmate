@@ -49,10 +49,7 @@ export function PurchaseOrder({
   const screen = useScreen();
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
-  useEffect(() => {
-    // TODO: Fix this not working
-    // screen.addOverrideNavigateBack(unsavedChangesDialog.show);
-  }, [unsavedChangesDialog.show]);
+  screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, dispatch);
   const addProductPrerequisitesDialog = useAddProductPrerequisitesDialog(createPurchaseOrder, dispatch);

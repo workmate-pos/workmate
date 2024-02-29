@@ -19,8 +19,6 @@ export const { Router, useRouter } = createRouter(
   {
     title: 'Purchase Orders',
     Component: () => {
-      // TODO: Fix lag caused by ScreenPermissionBoundary (initialLoadingState bool?)
-      // TODO: Fix override back thing
       // TODO: Fix crashing pages
       return (
         <ScreenPermissionBoundary permissions={['read_settings', 'read_purchase_orders', 'read_employees']}>

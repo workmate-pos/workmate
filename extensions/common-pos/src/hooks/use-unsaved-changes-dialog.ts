@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { ShowDialogOptions, useDialog } from '../providers/DialogProvider.js';
 import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 
@@ -12,7 +13,7 @@ export const useUnsavedChangesDialog = (options: {
   const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
   return {
-    show: () => {
+    show: useCallback(() => {
       dialog.show({
         onAction: options.onAction ?? navigation.pop,
         showDialog: options.hasUnsavedChanges,
@@ -25,6 +26,6 @@ export const useUnsavedChangesDialog = (options: {
           secondaryActionText: 'Cancel',
         },
       });
-    },
+    }, [options.onAction ?? navigation.pop, options.hasUnsavedChanges]),
   };
 };

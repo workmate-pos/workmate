@@ -3,7 +3,7 @@ import { TextField } from '@shopify/retail-ui-extensions-react';
 import { useFormContext } from '@work-orders/common-pos/hooks/use-form.js';
 
 /**
- * Decimal field with validation and errors, and automatic rounding;
+ * @TODO: Repalce with NewStringField
  */
 export function StringField({
   label,
@@ -12,6 +12,7 @@ export function StringField({
   onIsValid,
   disabled,
   validate = () => null,
+  required,
 }: {
   label: string;
   value: string;
@@ -19,10 +20,11 @@ export function StringField({
   onIsValid?: (isValid: boolean) => void;
   disabled?: boolean;
   validate?: (value: string) => string | null;
+  required?: boolean;
 }) {
   const [internalState, setInternalState] = useState(value);
   const [error, setError] = useState('');
-  const formContext = useFormContext();
+  const formContext = useFormContext(label);
 
   useEffect(() => {
     change(value);
@@ -33,7 +35,6 @@ export function StringField({
     change(value ?? '');
     commit(value ?? '');
     setError('');
-    return () => formContext?.clearValidity(label);
   }, [label]);
 
   const change = (value: string) => {
@@ -48,13 +49,13 @@ export function StringField({
 
     if (error) {
       setError(error);
-      formContext?.setValidity(label, false);
+      formContext?.setIsValid(false);
       onIsValid?.(false);
       return;
     }
 
     setInternalState(newValue);
-    formContext?.setValidity(label, true);
+    formContext?.setIsValid(true);
     onIsValid?.(true);
     if (value !== newValue) onChange?.(newValue);
   };
@@ -68,6 +69,7 @@ export function StringField({
       error={error}
       onFocus={clearError}
       onBlur={() => commit(internalState)}
+      required={required}
     />
   );
 }

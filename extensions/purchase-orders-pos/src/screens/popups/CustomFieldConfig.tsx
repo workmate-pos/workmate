@@ -105,7 +105,6 @@ export function CustomFieldConfig({
   };
 
   const screen = useScreen();
-  // TODO: Maybe provide these settings in useScreen directly?
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   return (

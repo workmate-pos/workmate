@@ -10,6 +10,7 @@ import { Int } from '@web/schemas/generated/create-product.js';
 import { useForm } from '@work-orders/common-pos/hooks/use-form.js';
 import { StringField, stringLengthValidator } from '@work-orders/common-pos/components/StringField.js';
 import { MoneyField } from '@work-orders/common-pos/components/MoneyField.js';
+import { NewMoneyField } from '@work-orders/common-pos/components/NewMoneyField.js';
 import { IntField } from '@work-orders/common-pos/components/IntField.js';
 import type { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { NonNullableValues } from '../../types.js';
@@ -65,6 +66,7 @@ export function ProductCreator({
               value={createProduct.title ?? ''}
               onChange={(value: string) => dispatch.setPartial({ title: value })}
               validate={stringLengthValidator({ min: 1 })}
+              required={true}
             />
             <StringField
               label={'SKU'}
@@ -81,15 +83,14 @@ export function ProductCreator({
               value={createProduct.productType ?? ''}
               onChange={(value: string) => dispatch.setPartial({ productType: value || null })}
             />
-            <MoneyField
+            <NewMoneyField
               label={'Price'}
               value={createProduct.price}
-              allowEmpty={false}
               onChange={price => dispatch.setPartial({ price: price ?? createProduct.price })}
+              required={true}
             />
-            <MoneyField
+            <NewMoneyField
               label={'Cost'}
-              allowEmpty={true}
               value={createProduct.costPrice}
               onChange={costPrice => dispatch.setPartial({ costPrice })}
             />

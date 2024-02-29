@@ -6,6 +6,7 @@ type Value<AllowsEmpty extends boolean> = AllowsEmpty extends false ? Money : Mo
 /**
  * The same as DecimalField, but for Money instead of Decimal.
  * Has the same props, but without `decimals` (2) and `roundingMode` (ceiling).
+ * @TODO: Replace with NewMoneyField
  */
 export function MoneyField<const AllowEmpty extends boolean>(props: {
   label: string;

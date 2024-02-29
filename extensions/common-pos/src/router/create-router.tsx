@@ -41,24 +41,18 @@ export function createRouter<const Routes extends Record<string, Route<any>>>(
 
         const idx = stack.length;
         navigation.navigate(`popup-${idx}`);
-        toast.show(`Navigated to popup-${idx}`);
       },
       [stack, setStack],
     );
 
-    const pop = useCallback(() => {
-      setStack(stack => stack.slice(0, -1));
-      navigation.pop();
-    }, [navigation, setStack]);
-
-    // pop without navigation.pop
+    const pop = useCallback(() => navigation.pop(), [navigation]);
     const popStack = useCallback(() => setStack(stack => stack.slice(0, -1)), [setStack]);
 
     const SCREEN_COUNT = 15;
 
     useEffect(() => {
       if (stack.length > SCREEN_COUNT) {
-        toast.show('Popup depth exceeded');
+        toast.show('Popup depth exceeded - please contact support');
         setStack(stack => stack.slice(0, SCREEN_COUNT));
       }
     }, [toast, stack, setStack]);
@@ -82,7 +76,6 @@ export function createRouter<const Routes extends Record<string, Route<any>>>(
           name={`popup-${i}`}
           title={route?.title ?? 'Unallocated popup'}
           presentation={{ sheet: true }}
-          isActive={i === stack.length - 1}
           router={routerContextValue}
         >
           {route && props && <route.Component {...props} />}
@@ -90,17 +83,10 @@ export function createRouter<const Routes extends Record<string, Route<any>>>(
       );
     });
 
-    // TODO: Remove isActive is possible
-
     return (
       <RouterContext.Provider value={routerContextValue}>
         <Navigator>
-          <ControllableScreen
-            name={'main'}
-            title={main.title}
-            isActive={stack.length === 0}
-            router={routerContextValue}
-          >
+          <ControllableScreen name={'main'} title={main.title} router={routerContextValue}>
             <main.Component />
           </ControllableScreen>
           {popups}
@@ -113,14 +99,27 @@ export function createRouter<const Routes extends Record<string, Route<any>>>(
 }
 
 export type RouterContextValue<Routes extends Record<string, Route<any>>> = {
+  /**
+   * Pushes to the stack and calls api.navigation.navigate to the new screen.
+   */
   push: <const K extends keyof Routes>(route: K, props: FunctionComponentArg<Routes[K]['Component']>) => void;
+  /**
+   * Calls api.navigation.pop() without popping the stack.
+   * This will result in onNavigateBack being called, which will call popStack();
+   */
   pop: () => void;
+  /**
+   * Pops the stack without navigating back.
+   */
   popStack: () => void;
   stack: Readonly<RouteStack<Routes>>;
 };
 
 type Route<P extends object> = {
   Component: FC<P>;
+  /**
+   * Initial screen title. Can be changed through useScreen.
+   */
   title: string;
 };
 

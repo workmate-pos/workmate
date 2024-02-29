@@ -16,7 +16,7 @@ export function ScreenPermissionBoundary({
   const screen = useScreen();
 
   return (
-    <PermissionBoundary permissions={permissions} onIsLoading={screen.setIsLoading}>
+    <PermissionBoundary permissions={permissions} onIsLoading={isLoading => screen.setIsLoading(isLoading)}>
       {children}
     </PermissionBoundary>
   );

@@ -9,6 +9,7 @@ type Value<AllowsEmpty extends boolean> = AllowsEmpty extends false ? Decimal : 
 
 /**
  * Decimal field with validation and errors, and automatic rounding;
+ * @TODO: Replace with NewDecimalField
  */
 export function DecimalField<const AllowEmpty extends boolean>({
   label,
@@ -19,6 +20,7 @@ export function DecimalField<const AllowEmpty extends boolean>({
   decimals,
   roundingMode,
   allowEmpty,
+  required,
 }: {
   label: string;
   value: Value<AllowEmpty>;
@@ -28,10 +30,11 @@ export function DecimalField<const AllowEmpty extends boolean>({
   decimals: number;
   roundingMode: RoundingMode;
   allowEmpty: AllowEmpty;
+  required?: boolean;
 }) {
   const [internalState, setInternalState] = useState(value ?? '');
   const [error, setError] = useState('');
-  const formContext = useFormContext();
+  const formContext = useFormContext(label);
 
   useEffect(() => {
     change(value ?? '');
@@ -42,7 +45,6 @@ export function DecimalField<const AllowEmpty extends boolean>({
     change(value ?? '');
     commit(value ?? '');
     setError('');
-    return () => formContext?.clearValidity(label);
   }, [label]);
 
   const change = (value: string) => {
@@ -55,7 +57,7 @@ export function DecimalField<const AllowEmpty extends boolean>({
   const commit = (newValue: string) => {
     if (!isValidNumber(newValue, allowEmpty)) {
       setError('Invalid amount');
-      formContext?.setValidity(label, false);
+      formContext?.setIsValid(false);
       onIsValid?.(false);
       return;
     }
@@ -63,9 +65,11 @@ export function DecimalField<const AllowEmpty extends boolean>({
     const parsedValue = parseNumberInput(newValue, decimals, roundingMode, allowEmpty, value);
 
     setInternalState(parsedValue ?? '');
-    formContext?.setValidity(label, true);
+    formContext?.setIsValid(true);
     onIsValid?.(true);
-    onChange?.(parsedValue);
+    if (newValue !== parsedValue) {
+      onChange?.(parsedValue);
+    }
   };
 
   return (
@@ -77,6 +81,7 @@ export function DecimalField<const AllowEmpty extends boolean>({
       error={error}
       onFocus={clearError}
       onBlur={() => commit(internalState)}
+      required={required}
     />
   );
 }
