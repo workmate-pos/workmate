@@ -1,12 +1,12 @@
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import { WorkOrderInfo } from '@web/services/work-orders/types.js';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import type { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 // TODO: shared screens in common-pos (or new package)
 

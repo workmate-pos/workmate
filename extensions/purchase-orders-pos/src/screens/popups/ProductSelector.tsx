@@ -1,15 +1,15 @@
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { type CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { NonNullableValues } from '../../types.js';
 import { useRouter } from '../../routes.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function ProductSelector({
   filters: { vendorName, locationName, locationId },

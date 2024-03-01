@@ -10,9 +10,9 @@ import {
   getFulfillmentStatusBadgeVariant,
   getStatusText,
 } from '../util/badges.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function ImportOrderSelector() {
   const { Screen, usePopup } = useScreen('ImportOrderSelector');

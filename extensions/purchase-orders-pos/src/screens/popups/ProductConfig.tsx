@@ -1,17 +1,17 @@
 import { type CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useState } from 'react';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
-import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { useScreen } from '@work-orders/common-pos/router/controllable-screen.js';
 import { NonNullableValues } from '../../types.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 
 export function ProductConfig({
   product: initialProduct,

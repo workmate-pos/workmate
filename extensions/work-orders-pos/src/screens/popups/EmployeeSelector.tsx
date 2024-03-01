@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ID } from '@web/schemas/generated/ids.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function EmployeeSelector() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<ID[]>([]);

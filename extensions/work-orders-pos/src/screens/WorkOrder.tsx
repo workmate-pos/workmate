@@ -15,7 +15,6 @@ import {
 } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useScreen } from '../hooks/use-screen.js';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import type { DateTime } from '@web/schemas/generated/create-work-order.js';
 import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
 import { defaultCreateWorkOrder } from '../create-work-order/default.js';
@@ -30,18 +29,19 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { PayButton } from '../components/PayButton.js';
 import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { getChargesPrice } from '../create-work-order/charges.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
-import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 
 /**
  * Stuff to pass around between components
@@ -223,7 +223,9 @@ export function WorkOrderPage() {
 
         {context.saveWorkOrderMutation.isError && (
           <Banner
-            title={'Error saving work order: ' + extractErrorMessage(context.saveWorkOrderMutation.error, '')}
+            title={
+              'Error saving work order: ' + extractErrorMessage(context.saveWorkOrderMutation.error, 'Unknown error')
+            }
             variant={'error'}
             visible
           />

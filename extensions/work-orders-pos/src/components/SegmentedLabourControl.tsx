@@ -4,10 +4,10 @@ import { Segment } from '@shopify/retail-ui-extensions/src/components/SegmentedC
 import { getChargesPrice } from '../create-work-order/charges.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 
 type SegmentId = CreateWorkOrderCharge['type'] | 'none';
 

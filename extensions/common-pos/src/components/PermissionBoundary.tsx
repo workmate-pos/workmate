@@ -1,9 +1,9 @@
 import { ReactNode, useEffect } from 'react';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
-import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { extractErrorMessage } from '../util/errors.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 /**
  * Wrapper component that only renders children if the user has the required permissions.

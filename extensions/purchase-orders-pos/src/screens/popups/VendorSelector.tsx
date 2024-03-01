@@ -1,11 +1,11 @@
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useVendorsQuery, Vendor } from '@work-orders/common/queries/use-vendors-query.js';
 import { useState } from 'react';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { getFormattedAddressSubtitle } from '../../util/formatted-address-subtitle.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function VendorSelector({
   onSelect,

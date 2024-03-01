@@ -14,7 +14,7 @@ import { hasNestedPropertyValue } from '@teifi-digital/shopify-app-toolbox/guard
 import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 
 const useCartRef = () => {
   const api = useExtensionApi<'pos.home.modal.render'>();

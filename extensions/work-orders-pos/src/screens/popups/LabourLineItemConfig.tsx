@@ -3,11 +3,8 @@ import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-r
 import { useState } from 'react';
 import { CreateWorkOrderLineItem, CreateWorkOrderCharge } from '../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { getChargesPrice } from '../../create-work-order/charges.js';
 import { uuid } from '../../util/uuid.js';
@@ -17,6 +14,9 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { FixedPriceLabour, HourlyLabour } from '@web/schemas/generated/create-work-order.js';
 import { SegmentedLabourControl } from '../../components/SegmentedLabourControl.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 
 export function LabourLineItemConfig() {
   const [readonly, setReadonly] = useState(false);

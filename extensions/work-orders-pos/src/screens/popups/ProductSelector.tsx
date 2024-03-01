@@ -2,18 +2,18 @@ import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopif
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useState } from 'react';
 import { CreateWorkOrderCharge, CreateWorkOrderLineItem } from '../routes.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function ProductSelector() {
   const [query, setQuery] = useDebouncedState('');

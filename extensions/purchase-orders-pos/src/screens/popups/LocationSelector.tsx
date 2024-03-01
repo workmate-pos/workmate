@@ -1,11 +1,11 @@
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import type { Location } from '@work-orders/common/queries/use-locations-query.js';
 import { getFormattedAddressSubtitle } from '../../util/formatted-address-subtitle.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function LocationSelector({ onSelect }: { onSelect: (location: Location) => void }) {
   const [query, setQuery] = useDebouncedState('');

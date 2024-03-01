@@ -11,18 +11,6 @@
     "./components/*": {
       "default": "./dist/components/*",
       "types": "./src/components/*"
-    },
-    "./providers/*": {
-      "default": "./dist/providers/*",
-      "types": "./src/providers/*"
-    },
-    "./util/*": {
-      "default": "./dist/util/*",
-      "types": "./src/util/*"
-    },
-    "./router/*": {
-      "default": "./dist/router/*",
-      "types": "./src/router/*"
     }
   },
   "scripts": {

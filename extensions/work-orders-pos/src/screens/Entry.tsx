@@ -1,19 +1,19 @@
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { NavigateFn, useScreen } from '../hooks/use-screen.js';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useState } from 'react';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/services/gql/queries/generated/schema.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { ResponsiveStack } from '@work-orders/common-pos/components/ResponsiveStack.js';
 import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 
 export function Entry() {
   const { Screen, navigate, usePopup } = useScreen('Entry');
@@ -56,12 +56,12 @@ export function Entry() {
             direction={'horizontal'}
             alignment={'space-between'}
             paddingVertical={'Small'}
-            mobile={{ direction: 'vertical', alignment: 'center' }}
+            sm={{ direction: 'vertical', alignment: 'center' }}
           >
-            <ResponsiveStack direction={'horizontal'} mobile={{ alignment: 'center', paddingVertical: 'Small' }}>
+            <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center', paddingVertical: 'Small' }}>
               <Text variant="headingLarge">Work Orders</Text>
             </ResponsiveStack>
-            <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
+            <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
               <Button title="Import Work Order" type={'plain'} onPress={() => navigate('ImportOrderSelector')} />
               <Button
                 title={'New Work Order'}
@@ -79,9 +79,9 @@ export function Entry() {
           <ResponsiveStack
             direction={'horizontal'}
             alignment={'space-between'}
-            mobile={{ direction: 'vertical', alignment: 'flex-start' }}
+            sm={{ direction: 'vertical', alignment: 'flex-start' }}
           >
-            <ResponsiveStack direction={'horizontal'} mobile={{ direction: 'vertical' }}>
+            <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
               <Button title={'Filter status'} type={'plain'} onPress={() => statusSelectorPopup.navigate()} />
               <Button title={'Filter customer'} type={'plain'} onPress={() => customerSelectorPopup.navigate()} />
               <Button

@@ -2,9 +2,9 @@ import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-exten
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function CustomerSelector() {
   const [query, setQuery] = useDebouncedState('');

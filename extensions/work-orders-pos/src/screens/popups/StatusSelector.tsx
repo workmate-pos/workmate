@@ -1,7 +1,7 @@
 import { Button, Stack } from '@shopify/retail-ui-extensions-react';
 import { useScreen } from '../../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 
 export function StatusSelector() {
   const { Screen, closePopup } = useScreen('StatusSelector');

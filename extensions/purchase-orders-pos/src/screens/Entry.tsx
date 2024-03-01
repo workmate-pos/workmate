@@ -1,15 +1,15 @@
 import { BadgeVariant, Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
 import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-purchase-order-info-page-query.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Status } from '@web/schemas/generated/create-purchase-order.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { ResponsiveStack } from '@work-orders/common-pos/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function Entry() {
   const [query, setQuery] = useState('');

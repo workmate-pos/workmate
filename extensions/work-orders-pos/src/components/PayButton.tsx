@@ -6,7 +6,7 @@ import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { usePaymentHandler } from '../hooks/use-payment-handler.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
 import { useEffect } from 'react';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 
 export function PayButton(
   props: (

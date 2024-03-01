@@ -1,12 +1,13 @@
 import { Dispatch, ReactNode, SetStateAction, useEffect, useState } from 'react';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { Button, ScrollView, Stack, Text, TextField } from '@shopify/retail-ui-extensions-react';
-import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
-import { useScreenSize } from '@work-orders/common-pos/providers/ScreenSizeProvider.js';
-import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
 import type { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
-import { useScreen } from '@work-orders/common-pos/router/controllable-screen.js';
 import { useRouter } from '../../routes.js';
+import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
+import { useScreenSize } from '@teifi-digital/pos-tools/providers/ScreenSizeProvider.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
 export function CustomFieldConfig({
   initialCustomFields,
@@ -80,36 +81,24 @@ export function CustomFieldConfig({
     />
   );
 
-  // TODO: ResponsiveStack
-  const headingOptions: Record<typeof screenSize, ReactNode> = {
-    tablet: (
-      <ResponsiveGrid columns={2}>
-        <Text variant="headingLarge">Custom Fields</Text>
-        <Stack direction={'horizontal'} alignment={'flex-end'}>
-          {saveAsPreset}
-          {importPreset}
-        </Stack>
-      </ResponsiveGrid>
-    ),
-    mobile: (
-      <ResponsiveGrid columns={1}>
-        <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'Small'}>
-          <Text variant="headingLarge">Custom Fields</Text>
-        </Stack>
-        <Stack direction={'horizontal'} flexChildren paddingVertical={'HalfPoint'}>
-          {saveAsPreset}
-          {importPreset}
-        </Stack>
-      </ResponsiveGrid>
-    ),
-  };
-
   const screen = useScreen();
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   return (
     <ScrollView>
-      {headingOptions[screenSize]}
+      <ResponsiveGrid columns={2}>
+        <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center' }}>
+          <Text variant="headingLarge">Custom Fields</Text>
+        </ResponsiveStack>
+        <ResponsiveStack
+          direction={'horizontal'}
+          alignment={'flex-end'}
+          sm={{ alignment: 'center', paddingVertical: 'Small' }}
+        >
+          {saveAsPreset}
+          {importPreset}
+        </ResponsiveStack>
+      </ResponsiveGrid>
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
         <ResponsiveGrid columns={2}>

@@ -1,7 +1,9 @@
 import { Screen, ScreenProps, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { useDynamicRef } from '@teifi-digital/pos-tools/hooks/use-dynamic-ref.js';
+import { useUuid } from '@teifi-digital/pos-tools/hooks/use-uuid.js';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useId } from './use-id.js';
-import { useDynamicRef } from './use-dynamic-ref.js';
+
+// TODO: Get rid of this completely and migrate to @teifi-digital/pos-tools/router. Only work orders still uses this useScreen
 
 type RoutesBase = Record<string, [unknown, unknown]>;
 
@@ -40,7 +42,7 @@ export function useScreen<const ScreenName extends ScreenNames>(
       const { navigation } = useExtensionApi<'pos.home.modal.render'>();
 
       // using an id ensures we can use the same pop-up screen for multiple purposes. it identifies a specific instance of a pop up
-      const id = `${destinationScreenName}:${useId()}`;
+      const id = `${destinationScreenName}:${useUuid()}`;
 
       const onResultRef = useDynamicRef(() => onResult, [onResult]);
 

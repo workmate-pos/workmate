@@ -1,12 +1,12 @@
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { useScreen } from '@work-orders/common-pos/router/controllable-screen.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 export function EmployeeSelector({
   initialEmployeeAssignments,
@@ -25,7 +25,7 @@ export function EmployeeSelector({
   const rows = getEmployeeRows(employees, query, selectedEmployees, setSelectedEmployees);
 
   const screen = useScreen();
-  screen.addOverrideNavigateBack(() => onSave(selectedEmployees));
+  screen.addOverrideNavigateBack(useCallback(() => onSave(selectedEmployees), [selectedEmployees]));
 
   return (
     <ScrollView>

@@ -1,7 +1,6 @@
 import { PurchaseOrder } from './screens/PurchaseOrder.js';
 import { StatusSelector } from './screens/popups/StatusSelector.js';
 import { VendorSelector } from './screens/popups/VendorSelector.js';
-import { createRouter } from '@work-orders/common-pos/router/create-router.js';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { Entry } from './screens/Entry.js';
 import { CustomFieldConfig } from './screens/popups/CustomFieldConfig.js';
@@ -14,12 +13,12 @@ import { WorkOrderSelector } from './screens/popups/WorkOrderSelector.js';
 import { ProductSelector } from './screens/popups/ProductSelector.js';
 import { ProductCreator } from './screens/popups/ProductCreator.js';
 import { ProductConfig } from './screens/popups/ProductConfig.js';
+import { createRouter } from '@teifi-digital/pos-tools/router';
 
 export const { Router, useRouter } = createRouter(
   {
     title: 'Purchase Orders',
     Component: () => {
-      // TODO: Fix crashing pages
       return (
         <ScreenPermissionBoundary permissions={['read_settings', 'read_purchase_orders', 'read_employees']}>
           <Entry />

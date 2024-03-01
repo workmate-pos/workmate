@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Button, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useForm } from '@work-orders/common-pos/hooks/use-form.js';
 import { usePurchaseOrderCustomFieldsPresetMutation } from '@work-orders/common/queries/use-purchase-order-custom-fields-preset-mutation.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { usePurchaseOrderCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-purchase-order-custom-fields-presets-query.js';
-import { useDialog } from '@work-orders/common-pos/providers/DialogProvider.js';
-import { StringField, stringLengthValidator } from '@work-orders/common-pos/components/StringField.js';
+import { useForm } from '@teifi-digital/pos-tools/form';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { stringLengthValidator } from '../../util/string-length-validator.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 
 export function SavePreset({ keys, onSave }: { keys: [string, ...string[]]; onSave: () => void }) {
   const [name, setName] = useState<string>('');
@@ -46,11 +47,11 @@ export function SavePreset({ keys, onSave }: { keys: [string, ...string[]]; onSa
 
       <Form disabled={presetMutation.isLoading}>
         <Stack direction={'vertical'} paddingHorizontal={'ExtraExtraLarge'}>
-          <StringField
+          <FormStringField
             label={'Preset Name'}
             value={name}
             onChange={setName}
-            validate={stringLengthValidator({ min: 1 })}
+            validator={stringLengthValidator({ min: 1 })}
           />
 
           <Button
