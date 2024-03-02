@@ -8,25 +8,30 @@ Use the template to create a new repository for your app. You can do this by cli
 - Node 20 or higher
 
 ### Installing
-Copy .npmrc-ci to .npmrc and replace NPM_GITHUB_TOKEN with a github token with `read:packages` scope:
+The first step is to link @teifi-digital packages to the github package registry.
+Then you need to create a github token with `read:packages` scope, and add both entries to your `.npmrc` file (located at `~/.npmrc`):
 ```bash
-cp .npmrc-ci .npmrc
-```
-Then, your file should look like this:
-```
 //npm.pkg.github.com/:_authToken=ghp_...
-...
-```
-Unfortunately, due to how npmrc works, you will need to symlink the file to the subprojects:
-```bash
-cd web && ln -s ../.npmrc .npmrc
-cd frontend && ln -s ../../.npmrc .npmrc
-cd ../..
+@teifi-digital:registry=https://npm.pkg.github.com/
 ```
 
 Then, you can install the dependencies for all subprojects:
 ```bash
 npm i ; cd web && npm i ; cd frontend && npm i ; cd ../..
+```
+
+Also link your .env file to the web directory:
+```
+cd web
+ln -s ../.env .
+cd ../
+```
+
+Finally, run prisma migrate to populate the db:
+```
+cd web
+npx prisma migrate dev generate
+cd ../
 ```
 
 ### Generating Schemas

@@ -1,5 +1,5 @@
-import { Checkbox, Frame, IndexTable, Page } from '@shopify/polaris';
-import { Loading, TitleBar } from '@shopify/app-bridge-react';
+import { Checkbox, Frame, IndexTable, Page, SkeletonBodyText } from '@shopify/polaris';
+import { TitleBar } from '@shopify/app-bridge-react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState } from 'react';
 import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
@@ -10,6 +10,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
 
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
+import { Int } from '@web/schemas/generated/pagination-options.js';
 
 export default function () {
   return (
@@ -37,20 +38,25 @@ function EmployeePermissions() {
   const permissions = currentEmployeeQuery.data?.permissions ?? [];
   const canWriteEmployees = superuser || permissions.includes('write_employees');
 
+  const employeePageSize = 20 as Int;
+  const [pageIndex, setPageIndex] = useState(0);
   const employeesQuery = useEmployeesQuery({
     fetch,
-    params: {},
+    params: { first: employeePageSize },
     options: {
       refetchOnWindowFocus: false,
       onSuccess(data) {
-        setEmployeePermissions(
-          Object.fromEntries(
-            data.pages.map(employee => [
-              employee.id,
-              { superuser: employee.superuser ?? false, permissions: employee.permissions ?? [] },
-            ]),
-          ),
+        // when a new page is loaded, add those employees to the permissions state if they don't already exist
+
+        const employees = data.pages.flat(1);
+        const employeePermissions = Object.fromEntries(
+          employees.map(employee => [
+            employee.id,
+            { superuser: employee.superuser ?? false, permissions: employee.permissions ?? [] },
+          ]),
         );
+
+        setEmployeePermissions(ep => ({ ...employeePermissions, ...ep }));
       },
     },
   });
@@ -84,9 +90,7 @@ function EmployeePermissions() {
   //   });
   // }, [JSON.stringify(employeePermissions)]);
 
-  if (!employeesQuery.data) {
-    return <Loading />;
-  }
+  const currentPage = employeesQuery.data?.pages?.[pageIndex];
 
   const permissionNodes = [
     'read_settings',
@@ -112,12 +116,15 @@ function EmployeePermissions() {
           disabled: employeeMutation.isLoading || !canWriteEmployees,
           onAction() {
             employeeMutation.mutate({
-              employees: employeesQuery.data.pages.map(employee => ({
-                employeeId: employee.id,
-                permissions: employeePermissions[employee.id]?.permissions ?? [],
-                superuser: employeePermissions[employee.id]?.superuser ?? false,
-                rate: employee.isDefaultRate ? null : employee.rate,
-              })),
+              employees:
+                employeesQuery.data?.pages?.flatMap(employees =>
+                  employees.map(employee => ({
+                    employeeId: employee.id,
+                    permissions: employeePermissions[employee.id]?.permissions ?? [],
+                    superuser: employeePermissions[employee.id]?.superuser ?? false,
+                    rate: employee.isDefaultRate ? null : employee.rate,
+                  })),
+                ) ?? [],
             });
           },
         }}
@@ -129,8 +136,36 @@ function EmployeePermissions() {
         loading={employeesQuery.isLoading}
         hasMoreItems={employeesQuery.hasNextPage}
         selectable={false}
+        pagination={{
+          hasNext: pageIndex < (employeesQuery.data?.pages?.length ?? 0) - 1 || employeesQuery.hasNextPage,
+          onNext: () => {
+            if (pageIndex === (employeesQuery.data?.pages?.length ?? 0) - 1) {
+              employeesQuery.fetchNextPage();
+            }
+
+            setPageIndex(pageIndex + 1);
+          },
+          hasPrevious: pageIndex > 0,
+          onPrevious: () => setPageIndex(pageIndex - 1),
+        }}
       >
-        {employeesQuery.data?.pages.map((employee, i) => {
+        {!currentPage &&
+          Array.from({ length: employeePageSize }).map((_, i) => (
+            <IndexTable.Row key={i} id={String(i)} selected={false} position={i}>
+              <IndexTable.Cell>
+                <SkeletonBodyText lines={1} />
+              </IndexTable.Cell>
+              <IndexTable.Cell>
+                <Checkbox label={'superuser'} labelHidden checked={false} disabled />
+              </IndexTable.Cell>
+              {permissionNodes.map(p => (
+                <IndexTable.Cell key={p}>
+                  <Checkbox label={p} labelHidden checked={false} disabled />
+                </IndexTable.Cell>
+              ))}
+            </IndexTable.Row>
+          ))}
+        {currentPage?.map((employee, i) => {
           const e = employeePermissions[employee.id];
 
           return (

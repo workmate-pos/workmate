@@ -19,7 +19,7 @@ export function ImportOrderSelector() {
   const fetch = useAuthenticatedFetch();
   const ordersQuery = useOrdersQuery({ fetch, params: { query } });
 
-  const rows = getOrderRows(ordersQuery.data?.pages ?? []);
+  const rows = getOrderRows(ordersQuery.data?.pages.flat() ?? []);
 
   return (
     <ScrollView>

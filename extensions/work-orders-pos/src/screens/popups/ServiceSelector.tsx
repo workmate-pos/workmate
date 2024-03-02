@@ -37,7 +37,7 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
   });
   const currencyFormatter = useCurrencyFormatter();
 
-  const rows = getProductVariantRows(productVariantsQuery?.data?.pages ?? [], onSelect, currencyFormatter);
+  const rows = getProductVariantRows(productVariantsQuery?.data?.pages.flat() ?? [], onSelect, currencyFormatter);
 
   return (
     <ScrollView>

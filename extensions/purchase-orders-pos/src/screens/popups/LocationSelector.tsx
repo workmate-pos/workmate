@@ -13,7 +13,7 @@ export function LocationSelector({ onSelect }: { onSelect: (location: Location) 
   const fetch = useAuthenticatedFetch();
 
   const locationsQuery = useLocationsQuery({ fetch, params: { query } });
-  const locations = locationsQuery.data?.pages ?? [];
+  const locations = locationsQuery.data?.pages.flat() ?? [];
 
   const rows = getLocationRows(locations, onSelect);
 

@@ -74,10 +74,10 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
     }));
   }, [availableAppPlans]);
 
-  const isChangingPlan = appPlanSubscriptionMutation.isLoading;
   const [chosenAppPlanId, setChosenAppPlanId] = useState<number>();
   const [chosenAppPlanIdInputValue, setChosenAppPlanIdInputValue] = useState<string>();
   const [chosenAppPlanIdError, setChosenAppPlanIdError] = useState<string>();
+  const [isChangingPlan, setIsChangingPlan] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -143,6 +143,11 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
       primaryFooterAction={{
         content: planActive ? 'Change Plan' : 'Subscribe',
         onAction: () => {
+          if (planActive && !isChangingPlan) {
+            setIsChangingPlan(true);
+            return;
+          }
+
           if (!chosenAppPlanId) {
             setChosenAppPlanIdError('Please choose a plan');
             return;

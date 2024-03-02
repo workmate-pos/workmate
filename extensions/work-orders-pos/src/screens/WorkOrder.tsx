@@ -24,7 +24,6 @@ import { useCreateWorkOrderReducer } from '../create-work-order/reducer.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { PayButton } from '../components/PayButton.js';
 import { CreateWorkOrderCharge, CreateWorkOrderLineItem } from '../types.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { getChargesPrice } from '../create-work-order/charges.js';
@@ -38,9 +37,10 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
-import { RouterContextValue, useScreen } from '@teifi-digital/pos-tools/router';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../routes.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { usePaymentHandler } from '../hooks/use-payment-handler.js';
 
 /**
  * Stuff to pass around between components
@@ -54,6 +54,7 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
   const api = useExtensionApi<'pos.home.modal.render'>();
   const settingsQuery = useSettingsQuery({ fetch });
   const router = useRouter();
+  const paymentHandler = usePaymentHandler();
 
   const [shouldOpenSavedPopup, setShouldOpenSavedPopup] = useState(false);
 
@@ -82,13 +83,18 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
     },
   );
 
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
-    fetch,
-    lineItems: createWorkOrder.lineItems ?? [],
-    charges: createWorkOrder.charges ?? [],
-    customerId: createWorkOrder.customerId,
-    discount: createWorkOrder.discount,
-  });
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      lineItems: createWorkOrder.lineItems ?? [],
+      charges: createWorkOrder.charges ?? [],
+      customerId: createWorkOrder.customerId,
+      discount: createWorkOrder.discount,
+    },
+    {
+      enabled: !createWorkOrder.name || workOrderQuery.data?.workOrder?.order.type !== 'order',
+    },
+  );
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation(
     { fetch },
@@ -101,7 +107,7 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
       },
       onSuccess(workOrder) {
         if (!workOrder.name) return;
-        setShouldOpenSavedPopup(true);
+        setUnsavedChanges(false);
         dispatchCreateWorkOrder({ type: 'set-work-order', workOrder: { ...createWorkOrder, name: workOrder.name } });
       },
     },
@@ -117,15 +123,16 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
     calculatedDraftOrderQuery,
     saveWorkOrderMutation,
     workOrderQuery,
+    setShouldOpenSavedPopup,
     hasOrder: workOrderQuery.data?.workOrder?.order.type === 'order',
     settingsQuery,
+    paymentHandler,
   };
 };
 
 export function WorkOrder({ initial }: { initial?: Partial<CreateWorkOrder> }) {
   const context = useWorkOrderContext({ initial });
 
-  const [paymentLoading, setPaymentLoading] = useState(false);
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges: context.unsavedChanges });
 
   const screen = useScreen();
@@ -133,20 +140,29 @@ export function WorkOrder({ initial }: { initial?: Partial<CreateWorkOrder> }) {
   screen.setIsLoading(
     context.workOrderQuery.isFetching ||
       context.saveWorkOrderMutation.isLoading ||
-      paymentLoading ||
+      context.paymentHandler.isLoading ||
       context.settingsQuery.isLoading,
   );
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
+  const currencyFormatter = useCurrencyFormatter();
+
+  let bannerText: string | null = null;
+
+  if (context.hasOrder) {
+    const order = context.workOrderQuery.data?.workOrder?.order;
+
+    if (order) {
+      const isFullyPaid = BigDecimal.fromMoney(order.outstanding).equals(BigDecimal.ZERO);
+      const paymentText = isFullyPaid
+        ? 'paid in full'
+        : `partially paid (${currencyFormatter(order.received)} / ${currencyFormatter(order.total)})`;
+      bannerText = `This order has been ${paymentText} through order ${context.workOrderQuery.data?.workOrder?.order?.name}. You can no longer change the products and services within this order`;
+    }
+  }
   return (
     <ScrollView>
-      {context.hasOrder && (
-        <Banner
-          title={`This order has been (partially) paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}. You can no longer change the products and services within this order`}
-          variant={'information'}
-          visible
-        />
-      )}
+      {bannerText && <Banner title={bannerText} variant={'information'} visible />}
 
       {context.saveWorkOrderMutation.isError && (
         <Banner
@@ -175,12 +191,40 @@ export function WorkOrder({ initial }: { initial?: Partial<CreateWorkOrder> }) {
       <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
         <ShowDerivedFromOrderPreviewButton context={context} />
         {!context.hasOrder && (
-          <PayButton createWorkOrder={context.createWorkOrder} workOrderName={null} setLoading={setPaymentLoading} />
+          <Button
+            title={'Pay Balance'}
+            onPress={async () => {
+              const name = await context.saveWorkOrderMutation
+                .mutateAsync(context.createWorkOrder)
+                .then(result => result.name);
+
+              if (!name) {
+                return;
+              }
+
+              const result = await context.workOrderQuery.refetch();
+              const workOrder = result.data?.workOrder;
+
+              if (!workOrder) {
+                return;
+              }
+
+              await context.paymentHandler.handlePayment({ workOrder });
+            }}
+          />
         )}
         <Button
           title={context.createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
           type="primary"
-          onPress={() => context.saveWorkOrderMutation.mutate(context.createWorkOrder)}
+          onPress={() =>
+            context.saveWorkOrderMutation.mutate(context.createWorkOrder, {
+              onSuccess: response => {
+                if (!response.errors) {
+                  context.setShouldOpenSavedPopup(true);
+                }
+              },
+            })
+          }
           isDisabled={context.saveWorkOrderMutation.isLoading}
         />
       </Stack>
@@ -397,19 +441,19 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
   const receivedBigDecimal = context.workOrderQuery?.data?.workOrder?.order?.received
     ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.received)
     : BigDecimal.ZERO;
-
-  const totalPriceBigDecimal = calculateDraftOrderResponse?.totalPrice
-    ? BigDecimal.fromMoney(calculateDraftOrderResponse?.totalPrice)
-    : context.workOrderQuery?.data?.workOrder?.order?.total
-      ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.total)
+  const totalPriceBigDecimal = context.workOrderQuery?.data?.workOrder?.order?.total
+    ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.total)
+    : calculateDraftOrderResponse?.totalPrice
+      ? BigDecimal.fromMoney(calculateDraftOrderResponse?.totalPrice)
       : BigDecimal.ZERO;
-
   const outstandingBigDecimal = totalPriceBigDecimal.subtract(receivedBigDecimal);
 
-  const outstanding =
-    outstandingBigDecimal.compare(BigDecimal.ZERO) < 0 ? '-' : currencyFormatter(outstandingBigDecimal.toMoney());
+  const outstanding = currencyFormatter(outstandingBigDecimal.toMoney());
+  const total = currencyFormatter(totalPriceBigDecimal.toMoney());
+  const received = currencyFormatter(
+    context.workOrderQuery.data?.workOrder?.order?.received ?? BigDecimal.ZERO.toMoney(),
+  );
 
-  const received = currencyFormatter(context.workOrderQuery.data?.workOrder?.order?.received ?? 0);
   const discountValue = calculateDraftOrderResponse?.appliedDiscount
     ? {
         FIXED_AMOUNT: currencyFormatter(calculateDraftOrderResponse.appliedDiscount.value),
@@ -462,9 +506,9 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
             <NumberField label={'Paid'} disabled={true} value={received} />
             <NumberField label="Balance Due" disabled value={outstanding} />
           </Stack>
-          {context.hasOrder && Number(context.workOrderQuery.data?.workOrder?.order?.outstanding ?? 0) !== 0 && (
+          {context.hasOrder && outstandingBigDecimal.compare(BigDecimal.ZERO) > 0 && (
             <Banner
-              title={`This order has been partially paid (${received} / ${outstanding}). The remaining balance can be paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}`}
+              title={`This order has been partially paid (${received} / ${total}). The remaining balance can be paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}`}
               variant={'information'}
               visible
             />

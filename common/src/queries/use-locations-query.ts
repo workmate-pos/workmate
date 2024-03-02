@@ -21,7 +21,7 @@ export const useLocationsQuery = (...[options, ...args]: Parameters<typeof query
       options: {
         ...options.options,
         onSuccess: data => {
-          for (const location of data.pages) {
+          for (const location of data.pages.flat()) {
             queryClient.setQueryData(
               ['location', location.id],
               location satisfies UseQueryData<typeof useLocationQuery>,

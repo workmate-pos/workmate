@@ -21,7 +21,7 @@ export const useCustomersQuery = (...[options, ...args]: Parameters<typeof query
       options: {
         ...options.options,
         onSuccess: data => {
-          for (const customer of data.pages) {
+          for (const customer of data.pages.flat()) {
             queryClient.setQueryData(
               ['customer', customer.id],
               customer satisfies UseQueryData<typeof useCustomerQuery>,

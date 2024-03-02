@@ -1,10 +1,10 @@
 import { MILLIS_IN_DAY } from '../../util/date-utils.js';
 import { db } from '../db/db.js';
 import * as gql from '../gql/queries/generated/queries.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, ShopPlanType } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { Session } from '@shopify/shopify-api';
-import { getShopType, ShopType } from '../shop.js';
+import { getShopType } from '../shop.js';
 import { IGetResult, IGetSubscriptionResult } from '../db/queries/generated/app-plan.sql.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
@@ -85,7 +85,14 @@ export async function getAvailableAppPlans(session: Session) {
   ]);
 
   const usedTrialDays = getAppPlanTrialDaysUsed(appPlanSubscription);
-  const storeProperties: StoreProperties = { locations: locations.nodes.length, shopType, usedTrialDays };
+  const activeAppPlanId =
+    appPlanSubscription?.appSubscriptionStatus === 'ACTIVE' ? appPlanSubscription.appPlanId : null;
+  const storeProperties: StoreProperties = {
+    activeAppPlanId,
+    locations: locations.nodes.length,
+    shopType,
+    usedTrialDays,
+  };
 
   const availableAppPlans = appPlans.filter(appPlan => isAppPlanAvailable(appPlan, storeProperties));
 
@@ -98,16 +105,17 @@ export async function getAvailableAppPlans(session: Session) {
 
 type StoreProperties = {
   locations: number;
-  shopType: ShopType;
+  shopType: ShopPlanType;
   usedTrialDays: number;
+  activeAppPlanId: number | null;
 };
 
 export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StoreProperties) {
-  if (storeProperties.shopType === 'PARTNER_DEVELOPMENT') {
-    return true;
-  }
+  const { id, allowedShopifyPlans, maxLocations, trialOnly, trialDays } = appPlan;
 
-  const { allowedShopifyPlans, maxLocations, trialOnly, trialDays } = appPlan;
+  if (storeProperties.activeAppPlanId === id) {
+    return false;
+  }
 
   if (maxLocations !== null && storeProperties.locations > maxLocations) {
     return false;
@@ -120,6 +128,8 @@ export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StorePr
   if (trialOnly && storeProperties.usedTrialDays >= trialDays) {
     return false;
   }
+
+  return true;
 }
 
 export function getAppPlanPrice(appPlan: IGetResult, storeProperties: Pick<StoreProperties, 'locations'>) {

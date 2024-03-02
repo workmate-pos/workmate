@@ -40,7 +40,7 @@ export function ProductSelector({
     toast.show('Product added to purchase order', { duration: 1000 });
   };
 
-  const rows = useProductVariantRows(productVariants, locationId, selectProduct);
+  const rows = useProductVariantRows(productVariants.flat(), locationId, selectProduct);
 
   const router = useRouter();
 

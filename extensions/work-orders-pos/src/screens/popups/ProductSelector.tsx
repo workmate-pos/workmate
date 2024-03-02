@@ -33,7 +33,7 @@ export function ProductSelector({
     },
   });
 
-  const productVariants = productVariantsQuery.data?.pages ?? [];
+  const productVariants = productVariantsQuery.data?.pages.flat() ?? [];
   const currencyFormatter = useCurrencyFormatter();
 
   const selectLineItem = (
@@ -121,7 +121,7 @@ function getProductVariantRows(
         );
       },
       leftSide: {
-        label: displayName + `${variant.product.isMutableServiceItem} ${variant.product.isFixedServiceItem}`,
+        label: displayName,
         subtitle: variant.product.description ? [variant.product.description] : undefined,
         image: { source: imageUrl },
       },
