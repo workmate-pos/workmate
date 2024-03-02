@@ -11,8 +11,6 @@ import {
 } from '@shopify/retail-ui-extensions-react';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import type { ID } from '@web/schemas/generated/ids.js';
-import { useState } from 'react';
-import { useScreen } from '../../hooks/use-screen.js';
 import {
   getFinancialStatusBadgeStatus,
   getFinancialStatusBadgeVariant,
@@ -27,18 +25,25 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useRouter } from '../../routes.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
-export function OrderPreview() {
-  const [orderId, setOrderId] = useState<ID | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [showImportButton, setShowImportButton] = useState(false);
-
-  const { Screen, navigate } = useScreen('OrderPreview', ({ orderId, unsavedChanges, showImportButton }) => {
-    setOrderId(orderId);
-    setHasUnsavedChanges(unsavedChanges);
-    setShowImportButton(showImportButton);
-  });
-
+export function OrderPreview({
+  orderId,
+  showImportButton,
+  unsavedChanges,
+}: {
+  orderId: ID;
+  /**
+   * Shows "Import Order" button.
+   * Only used when importing from an existing order, and should be false when simply viewing the derived from order of a work order.
+   */
+  showImportButton: boolean;
+  /**
+   * Whether to warn about unsaved changes when navigating away from this screen.
+   */
+  unsavedChanges: boolean;
+}) {
   const fetch = useAuthenticatedFetch();
   // TODO: Change default keepPreviousData to false & add it where needed (mostly search lists)
   const orderQuery = useOrderQuery({ fetch, id: orderId }, { keepPreviousData: false });
@@ -46,15 +51,16 @@ export function OrderPreview() {
 
   const order = orderQuery.data?.order;
 
+  const router = useRouter();
+
   const importUnsavedChangesDialog = useUnsavedChangesDialog({
-    hasUnsavedChanges,
+    hasUnsavedChanges: unsavedChanges,
     onAction: () => {
       if (!order) return;
 
-      navigate('WorkOrder', {
-        type: 'new-work-order',
+      router.push('WorkOrder', {
         initial: {
-          customerId: order.customer?.id ?? null,
+          customerId: order.customer?.id,
           derivedFromOrderId: order.id,
         },
       });
@@ -78,80 +84,80 @@ export function OrderPreview() {
 
   const lineItemRows = useLineItemRows(orderLineItemsQuery.data?.pages ?? []);
 
+  const screen = useScreen();
+  screen.setIsLoading(orderQuery.isLoading);
+  screen.setTitle(`Order ${[order?.name, order?.workOrder?.name].filter(Boolean).join(' - ')}`);
+
+  if (!order) {
+    return null;
+  }
+
   return (
-    <Screen
-      title={`Order ${[order?.name, order?.workOrder?.name].filter(Boolean).join(' - ')}`}
-      isLoading={orderQuery.isLoading}
-      presentation={{ sheet: true }}
-    >
-      {order && (
-        <ScrollView>
-          <Stack direction={'vertical'} spacing={2}>
-            <Stack direction={'vertical'} spacing={1}>
-              <Text variant="headingLarge">Order {order.name}</Text>
-              {order.workOrder && <Text variant="body">Work Order {order.workOrder.name}</Text>}
-            </Stack>
-            <Stack direction={'horizontal'} spacing={2}>
-              {order.displayFinancialStatus && (
-                <Badge
-                  text={getStatusText(order.displayFinancialStatus)}
-                  variant={getFinancialStatusBadgeVariant(order.displayFinancialStatus)}
-                  status={getFinancialStatusBadgeStatus(order.displayFinancialStatus)}
-                />
-              )}
-              <Badge
-                text={getStatusText(order.displayFulfillmentStatus)}
-                variant={getFulfillmentStatusBadgeVariant(order.displayFulfillmentStatus)}
-                status={getFulfillmentStatusBadgeStatus(order.displayFulfillmentStatus)}
-              />
-            </Stack>
-            <Grid columns={4}>
-              {orderInfo.map(
-                ({ label, value, large }) => !large && <TextField label={label} disabled={true} value={value} />,
-              )}
-            </Grid>
-            <Grid columns={1}>
-              {orderInfo.map(
-                ({ label, value, large }) => large && <TextArea label={label} disabled={true} value={value} />,
-              )}
-            </Grid>
-            <List
-              title={'Products'}
-              data={lineItemRows}
-              imageDisplayStrategy={'always'}
-              isLoadingMore={orderLineItemsQuery.isLoading}
-              onEndReached={() => orderLineItemsQuery.fetchNextPage()}
+    <ScrollView>
+      <Stack direction={'vertical'} spacing={2}>
+        <Stack direction={'vertical'} spacing={1}>
+          <Text variant="headingLarge">Order {order.name}</Text>
+          {order.workOrder && <Text variant="body">Work Order {order.workOrder.name}</Text>}
+        </Stack>
+        <Stack direction={'horizontal'} spacing={2}>
+          {order.displayFinancialStatus && (
+            <Badge
+              text={getStatusText(order.displayFinancialStatus)}
+              variant={getFinancialStatusBadgeVariant(order.displayFinancialStatus)}
+              status={getFinancialStatusBadgeStatus(order.displayFinancialStatus)}
             />
-            {orderLineItemsQuery.isLoading && (
-              <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-                <Text variant="body" color="TextSubdued">
-                  Loading line items...
-                </Text>
-              </Stack>
-            )}
-            {orderLineItemsQuery.isSuccess && lineItemRows.length === 0 && (
-              <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-                <Text variant="body" color="TextSubdued">
-                  No line items found
-                </Text>
-              </Stack>
-            )}
-            {orderLineItemsQuery.isError && (
-              <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-                <Text color="TextCritical" variant="body">
-                  {extractErrorMessage(orderLineItemsQuery.error, 'Error loading line items')}
-                </Text>
-              </Stack>
-            )}
-            {showImportButton && (
-              <Stack direction="vertical" flex={1} alignment="flex-end">
-                <Button title={'Import'} onPress={importUnsavedChangesDialog.show}></Button>
-              </Stack>
-            )}
+          )}
+          <Badge
+            text={getStatusText(order.displayFulfillmentStatus)}
+            variant={getFulfillmentStatusBadgeVariant(order.displayFulfillmentStatus)}
+            status={getFulfillmentStatusBadgeStatus(order.displayFulfillmentStatus)}
+          />
+        </Stack>
+        <Grid columns={4}>
+          {orderInfo.map(
+            ({ label, value, large }) => !large && <TextField label={label} disabled={true} value={value} />,
+          )}
+        </Grid>
+        <Grid columns={1}>
+          {orderInfo.map(
+            ({ label, value, large }) => large && <TextArea label={label} disabled={true} value={value} />,
+          )}
+        </Grid>
+        <List
+          title={'Products'}
+          data={lineItemRows}
+          imageDisplayStrategy={'always'}
+          isLoadingMore={orderLineItemsQuery.isLoading}
+          onEndReached={() => orderLineItemsQuery.fetchNextPage()}
+        />
+        {orderLineItemsQuery.isLoading && (
+          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
+            <Text variant="body" color="TextSubdued">
+              Loading line items...
+            </Text>
           </Stack>
-        </ScrollView>
-      )}
-    </Screen>
+        )}
+        {orderLineItemsQuery.isSuccess && lineItemRows.length === 0 && (
+          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+            <Text variant="body" color="TextSubdued">
+              No line items found
+            </Text>
+          </Stack>
+        )}
+        {orderLineItemsQuery.isError && (
+          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+            <Text color="TextCritical" variant="body">
+              {extractErrorMessage(orderLineItemsQuery.error, 'Error loading line items')}
+            </Text>
+          </Stack>
+        )}
+        {showImportButton && (
+          <Stack direction="vertical" flex={1} alignment="flex-end">
+            <Button title={'Import'} onPress={importUnsavedChangesDialog.show}></Button>
+          </Stack>
+        )}
+      </Stack>
+    </ScrollView>
   );
 }
 

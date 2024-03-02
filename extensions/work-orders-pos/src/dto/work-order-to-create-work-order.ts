@@ -2,7 +2,7 @@ import type { WorkOrder } from '@web/services/work-orders/types.js';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { uuid } from '../util/uuid.js';
 import type { ID, Int } from '@web/services/gql/queries/generated/schema.js';
-import { CreateWorkOrderCharge } from '../screens/routes.js';
+import { CreateWorkOrderCharge } from '../types.js';
 
 // TODO: Handle thrown errors
 export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrder {

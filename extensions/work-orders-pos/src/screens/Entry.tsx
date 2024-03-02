@@ -1,5 +1,13 @@
-import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { NavigateFn, useScreen } from '../hooks/use-screen.js';
+import {
+  Button,
+  List,
+  ListRow,
+  ScrollView,
+  Stack,
+  Text,
+  useCartSubscription,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
@@ -8,23 +16,22 @@ import { useState } from 'react';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/services/gql/queries/generated/schema.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { useRouter } from '../routes.js';
+import { useWorkOrderQueries } from '@work-orders/common/queries/use-work-order-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export function Entry() {
-  const { Screen, navigate, usePopup } = useScreen('Entry');
-
   const [status, setStatus] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<ID | null>(null);
   const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
-
-  const statusSelectorPopup = usePopup('StatusSelector', setStatus);
-  const customerSelectorPopup = usePopup('CustomerSelector', setCustomerId);
-  const employeeSelectorPopup = usePopup('EmployeeSelector', setEmployeeIds);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
@@ -38,145 +45,203 @@ export function Entry() {
   });
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
   const customerQuery = useCustomerQuery({ fetch, id: customerId });
+  const settingsQuery = useSettingsQuery({ fetch });
 
-  const rows = useWorkOrderRows(workOrderInfoQuery.data?.pages ?? [], navigate);
+  const rows = useWorkOrderRows(workOrderInfoQuery.data?.pages ?? []);
 
-  const { navigation } = useExtensionApi<'pos.home.modal.render'>();
-
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const cart = useCartSubscription();
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   return (
-    <Screen title="Work Orders" overrideNavigateBack={() => navigation.dismiss()} isLoading={isLoading}>
-      <ScrollView>
-        <PermissionBoundary
-          permissions={['read_settings', 'read_work_orders', 'read_employees']}
-          onIsLoading={setIsLoading}
-        >
-          <ResponsiveStack
-            direction={'horizontal'}
-            alignment={'space-between'}
-            paddingVertical={'Small'}
-            sm={{ direction: 'vertical', alignment: 'center' }}
-          >
-            <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center', paddingVertical: 'Small' }}>
-              <Text variant="headingLarge">Work Orders</Text>
-            </ResponsiveStack>
-            <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
-              <Button title="Import Work Order" type={'plain'} onPress={() => navigate('ImportOrderSelector')} />
-              <Button
-                title={'New Work Order'}
-                type={'primary'}
-                onPress={() => navigate('WorkOrder', { type: 'new-work-order' })}
-              />
-            </ResponsiveStack>
-          </ResponsiveStack>
+    <ScrollView>
+      <ResponsiveStack
+        direction={'horizontal'}
+        alignment={'space-between'}
+        paddingVertical={'Small'}
+        sm={{ direction: 'vertical', alignment: 'center' }}
+      >
+        <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center', paddingVertical: 'Small' }}>
+          <Text variant="headingLarge">Work Orders</Text>
+        </ResponsiveStack>
+        <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
+          <Button title="Import Work Order" type={'plain'} onPress={() => router.push('ImportOrderSelector', {})} />
+          <Button
+            title={'New Work Order'}
+            type={'primary'}
+            disabled={!settingsQuery.data}
+            onPress={() => {
+              if (!settingsQuery.data) {
+                toast.show('Settings not loaded');
+                return;
+              }
 
-          <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
-            <Text variant="body" color="TextSubdued">
-              {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
+              let customerId = undefined;
+
+              if (cart.customer) {
+                customerId = createGid('Customer', String(cart.customer.id));
+                toast.show('Imported customer from cart');
+              }
+
+              router.push('WorkOrder', {
+                initial: {
+                  customerId,
+                  status: settingsQuery.data.settings.defaultStatus,
+                },
+              });
+            }}
+          />
+        </ResponsiveStack>
+      </ResponsiveStack>
+
+      <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
+        </Text>
+      </Stack>
+      <ResponsiveStack
+        direction={'horizontal'}
+        alignment={'space-between'}
+        sm={{ direction: 'vertical', alignment: 'flex-start' }}
+      >
+        <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
+          <Button
+            title={'Filter status'}
+            type={'plain'}
+            onPress={() =>
+              router.push('StatusSelector', {
+                onSelect: status => {
+                  setStatus(status);
+                  router.pop();
+                },
+              })
+            }
+          />
+          <Button
+            title={'Filter customer'}
+            type={'plain'}
+            onPress={() =>
+              router.push('CustomerSelector', {
+                onSelect: customer => {
+                  setCustomerId(customer);
+                  router.pop();
+                },
+              })
+            }
+          />
+          <Button
+            title={'Filter employees'}
+            type={'plain'}
+            onPress={() =>
+              router.push('EmployeeSelector', {
+                selected: employeeIds,
+                onSelect: id => setEmployeeIds(c => [...c, id]),
+                onDeselect: id => setEmployeeIds(c => c.filter(e => e !== id)),
+              })
+            }
+          />
+        </ResponsiveStack>
+        <Stack direction={'horizontal'}>
+          {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
+          {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
+          {employeeIds.length > 0 && (
+            <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
+          )}
+        </Stack>
+      </ResponsiveStack>
+      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+        {status && (
+          <>
+            <Text variant={'sectionHeader'}>Status:</Text>
+            <Text variant={'captionRegular'} color={'TextSubdued'}>
+              {status}
             </Text>
-          </Stack>
-          <ResponsiveStack
-            direction={'horizontal'}
-            alignment={'space-between'}
-            sm={{ direction: 'vertical', alignment: 'flex-start' }}
-          >
-            <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
-              <Button title={'Filter status'} type={'plain'} onPress={() => statusSelectorPopup.navigate()} />
-              <Button title={'Filter customer'} type={'plain'} onPress={() => customerSelectorPopup.navigate()} />
-              <Button
-                title={'Filter employees'}
-                type={'plain'}
-                onPress={() => employeeSelectorPopup.navigate(employeeIds)}
-              />
-            </ResponsiveStack>
-            <Stack direction={'horizontal'}>
-              {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
-              {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
-              {employeeIds.length > 0 && (
-                <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
-              )}
-            </Stack>
-          </ResponsiveStack>
-          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-            {status && (
-              <>
-                <Text variant={'sectionHeader'}>Status:</Text>
-                <Text variant={'captionRegular'} color={'TextSubdued'}>
-                  {status}
-                </Text>
-              </>
-            )}
-          </Stack>
-          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-            {customerId && (
-              <>
-                <Text variant={'sectionHeader'}>Customer:</Text>
-                <Text variant={'captionRegular'} color={'TextSubdued'}>
-                  {customerQuery.data?.displayName ?? 'Unknown customer'}
-                </Text>
-              </>
-            )}
-          </Stack>
-          <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-            {employeeIds.length > 0 && <Text variant={'sectionHeader'}>Employees:</Text>}
-            {employeeIds.map(id => (
-              <Text key={id} variant={'captionRegular'} color={'TextSubdued'}>
-                {employeeQueries[id]?.data?.name ?? 'Unknown employee'}
-              </Text>
-            ))}
-          </Stack>
-          <ControlledSearchBar
-            value={query}
-            onTextChange={(query: string) => setQuery(query, query === '')}
-            onSearch={() => {}}
-            placeholder="Search work orders"
-          />
-          <List
-            data={rows}
-            onEndReached={() => workOrderInfoQuery.fetchNextPage()}
-            isLoadingMore={workOrderInfoQuery.isLoading}
-          />
-          {workOrderInfoQuery.isLoading && (
-            <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-              <Text variant="body" color="TextSubdued">
-                Loading work orders...
-              </Text>
-            </Stack>
-          )}
-          {workOrderInfoQuery.isSuccess && rows.length === 0 && (
-            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-              <Text variant="body" color="TextSubdued">
-                No work orders found
-              </Text>
-            </Stack>
-          )}
-          {workOrderInfoQuery.isError && (
-            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-              <Text color="TextCritical" variant="body">
-                {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
-              </Text>
-            </Stack>
-          )}
-        </PermissionBoundary>
-      </ScrollView>
-    </Screen>
+          </>
+        )}
+      </Stack>
+      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+        {customerId && (
+          <>
+            <Text variant={'sectionHeader'}>Customer:</Text>
+            <Text variant={'captionRegular'} color={'TextSubdued'}>
+              {customerQuery.data?.displayName ?? 'Unknown customer'}
+            </Text>
+          </>
+        )}
+      </Stack>
+      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+        {employeeIds.length > 0 && <Text variant={'sectionHeader'}>Employees:</Text>}
+        {employeeIds.map(id => (
+          <Text key={id} variant={'captionRegular'} color={'TextSubdued'}>
+            {employeeQueries[id]?.data?.name ?? 'Unknown employee'}
+          </Text>
+        ))}
+      </Stack>
+      <ControlledSearchBar
+        value={query}
+        onTextChange={(query: string) => setQuery(query, query === '')}
+        onSearch={() => {}}
+        placeholder="Search work orders"
+      />
+      <List
+        data={rows}
+        onEndReached={() => workOrderInfoQuery.fetchNextPage()}
+        isLoadingMore={workOrderInfoQuery.isLoading}
+      />
+      {workOrderInfoQuery.isLoading && (
+        <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            Loading work orders...
+          </Text>
+        </Stack>
+      )}
+      {workOrderInfoQuery.isSuccess && rows.length === 0 && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No work orders found
+          </Text>
+        </Stack>
+      )}
+      {workOrderInfoQuery.isError && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
+          </Text>
+        </Stack>
+      )}
+    </ScrollView>
   );
 }
 
-function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number][], navigate: NavigateFn): ListRow[] {
+function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number][]): ListRow[] {
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
   const customerQueries = useCustomerQueries({ fetch, ids: workOrderInfos.map(({ customerId }) => customerId) });
+  const workOrderQueries = useWorkOrderQueries(
+    { fetch, names: workOrderInfos.map(({ name }) => name) },
+    { enabled: false },
+  );
 
-  return workOrderInfos.map<ListRow>(({ name, status, dueDate, order, customerId }) => {
+  const router = useRouter();
+  const screen = useScreen();
+  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isRefetching));
+
+  return workOrderInfos.flatMap<ListRow>(({ name, status, dueDate, order, customerId }) => {
+    const query = workOrderQueries[name];
+    if (!query) return [];
+
     const dueDateString = new Date(dueDate).toLocaleDateString();
     const customer = customerQueries[customerId]?.data;
 
     return {
       id: name,
-      onPress: () => {
-        navigate('WorkOrder', { type: 'load-work-order', name });
+      onPress: async () => {
+        const result = await query.refetch();
+        const workOrder = result.data?.workOrder;
+
+        if (!workOrder) return;
+
+        router.push('WorkOrder', { initial: workOrderToCreateWorkOrder(workOrder) });
       },
       leftSide: {
         label: name,

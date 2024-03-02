@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
-import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useRouter } from '../routes.js';
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { useScreen } from '@teifi-digital/pos-tools/router';

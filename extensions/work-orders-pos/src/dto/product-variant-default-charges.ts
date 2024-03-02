@@ -1,6 +1,6 @@
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '../util/uuid.js';
-import { CreateWorkOrderCharge } from '../screens/routes.js';
+import { CreateWorkOrderCharge } from '../types.js';
 
 export function productVariantDefaultChargeToCreateWorkOrderCharge(
   charge: ProductVariant['defaultCharges'][number],

@@ -1,26 +1,32 @@
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { useScreen } from '../../hooks/use-screen.js';
-import { CreateWorkOrderLineItem } from '../routes.js';
+import { CreateWorkOrderLineItem } from '../../types.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { useRouter } from '../../routes.js';
 
-export function ProductLineItemConfig() {
-  const [readonly, setReadonly] = useState(false);
-  const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem | null>(null);
+export function ProductLineItemConfig({
+  readonly,
+  canAddLabour,
+  lineItem: initialLineItem,
+  onRemove,
+  onUpdate,
+  onAssignLabour,
+}: {
+  readonly: boolean;
+  canAddLabour: boolean;
+  lineItem: CreateWorkOrderLineItem;
+  onRemove: () => void;
+  onUpdate: (lineItem: CreateWorkOrderLineItem) => void;
+  onAssignLabour: (lineItem: CreateWorkOrderLineItem) => void;
+}) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [canAddLabour, setCanAddLabour] = useState(false);
-
-  const { Screen, closePopup, cancelPopup } = useScreen('LineItemConfig', ({ readonly, lineItem, canAddLabour }) => {
-    setReadonly(readonly);
-    setLineItem(lineItem);
-    setHasUnsavedChanges(false);
-    setCanAddLabour(canAddLabour);
-  });
+  const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem>(initialLineItem);
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
@@ -30,78 +36,54 @@ export function ProductLineItemConfig() {
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
+  const router = useRouter();
+  const screen = useScreen();
+  screen.setTitle(name ?? 'Product');
+  screen.setIsLoading(productVariantQuery.isLoading);
+  screen.addOverrideNavigateBack(unsavedChangesDialog.show);
+
+  if (!productVariant) {
+    return null;
+  }
+
   return (
-    <Screen
-      title={name ?? 'Product'}
-      overrideNavigateBack={unsavedChangesDialog.show}
-      isLoading={productVariantQuery.isLoading}
-      presentation={{ sheet: true }}
-    >
-      <ScrollView>
-        {lineItem && productVariant && (
-          <Stack direction="vertical" spacing={5}>
-            <Stack direction="vertical">
-              <Text variant="headingLarge">{name}</Text>
-              <Text variant="body" color="TextSubdued">
-                {productVariant.sku}
-              </Text>
-              <Text variant="body" color="TextSubdued">
-                {currencyFormatter(productVariant.price)}
-              </Text>
-            </Stack>
-            <Stack direction="vertical" spacing={2}>
-              <Text variant="body" color="TextSubdued">
-                Quantity
-              </Text>
-              <Stepper
-                disabled={readonly}
-                minimumValue={1}
-                initialValue={lineItem.quantity}
-                onValueChanged={(value: Int) => {
-                  setLineItem({ ...lineItem, quantity: value });
-                  setHasUnsavedChanges(true);
-                }}
-                value={lineItem.quantity}
-              />
-            </Stack>
-            <Stack direction="vertical" flex={1} alignment="flex-end">
-              {readonly && (
-                <Button
-                  title="Back"
-                  onPress={() => {
-                    cancelPopup();
-                  }}
-                />
-              )}
-              {!readonly && (
-                <>
-                  <Button
-                    title="Remove"
-                    type="destructive"
-                    onPress={() => {
-                      closePopup({ type: 'remove', lineItem });
-                    }}
-                  />
-                  <Button
-                    title="Save"
-                    onPress={() => {
-                      closePopup({ type: 'update', lineItem });
-                    }}
-                  />
-                  {canAddLabour && (
-                    <Button
-                      title="Add Labour"
-                      onPress={() => {
-                        closePopup({ type: 'assign-employees', lineItem });
-                      }}
-                    />
-                  )}
-                </>
-              )}
-            </Stack>
-          </Stack>
-        )}
-      </ScrollView>
-    </Screen>
+    <ScrollView>
+      <Stack direction="vertical" spacing={5}>
+        <Stack direction="vertical">
+          <Text variant="headingLarge">{name}</Text>
+          <Text variant="body" color="TextSubdued">
+            {productVariant.sku}
+          </Text>
+          <Text variant="body" color="TextSubdued">
+            {currencyFormatter(productVariant.price)}
+          </Text>
+        </Stack>
+        <Stack direction="vertical" spacing={2}>
+          <Text variant="body" color="TextSubdued">
+            Quantity
+          </Text>
+          <Stepper
+            disabled={readonly}
+            minimumValue={1}
+            initialValue={lineItem.quantity}
+            onValueChanged={(value: Int) => {
+              setLineItem({ ...lineItem, quantity: value });
+              setHasUnsavedChanges(true);
+            }}
+            value={lineItem.quantity}
+          />
+        </Stack>
+        <Stack direction="vertical" flex={1} alignment="flex-end">
+          {readonly && <Button title="Back" onPress={() => router.pop()} />}
+          {!readonly && (
+            <>
+              <Button title="Remove" type="destructive" onPress={() => onRemove()} />
+              <Button title="Save" onPress={() => onUpdate(lineItem)} />
+              {canAddLabour && <Button title="Add Labour" onPress={() => onAssignLabour(lineItem)} />}
+            </>
+          )}
+        </Stack>
+      </Stack>
+    </ScrollView>
   );
 }

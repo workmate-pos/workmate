@@ -3,10 +3,10 @@ import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { getChargesPrice } from '../create-work-order/charges.js';
-import { CreateWorkOrderCharge } from '../screens/routes.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { CreateWorkOrderCharge } from '../types.js';
 
 /**
  * A list of clickable EmployeeLabour items.

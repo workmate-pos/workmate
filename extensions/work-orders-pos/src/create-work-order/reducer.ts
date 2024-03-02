@@ -2,7 +2,7 @@ import { useReducer } from 'react';
 import { defaultCreateWorkOrder } from './default.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
 import type { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
-import { CreateWorkOrderLineItem } from '../screens/routes.js';
+import { CreateWorkOrderLineItem } from '../types.js';
 import { uuid } from '../util/uuid.js';
 
 export type CreateWorkOrderAction =
@@ -30,7 +30,12 @@ export type CreateWorkOrderAction =
       }[keyof CreateWorkOrder]
     >;
 
-export const useCreateWorkOrderReducer = () => useReducer(createWorkOrderReducer, defaultCreateWorkOrder);
+export const useCreateWorkOrderReducer = (initial?: Partial<CreateWorkOrder>) => {
+  const initialExceptUndefined = Object.fromEntries(
+    Object.entries(initial ?? {}).filter(([, value]) => value !== undefined),
+  );
+  return useReducer(createWorkOrderReducer, { ...defaultCreateWorkOrder, ...initialExceptUndefined });
+};
 
 const createWorkOrderReducer = (
   workOrder: Nullable<CreateWorkOrder>,
