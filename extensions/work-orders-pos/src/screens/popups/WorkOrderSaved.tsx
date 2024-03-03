@@ -24,7 +24,7 @@ export function WorkOrderSaved({ workOrder }: { workOrder: WorkOrder }) {
       </Stack>
       <Stack direction={'vertical'} alignment={'center'} paddingVertical={'ExtraLarge'}>
         <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'} flexChildren>
-          <Button title={'Back to work order'} onPress={() => router.pop()} />
+          <Button title={'Back to work order'} onPress={() => router.popCurrent()} />
 
           {!hasOrder && (
             <Button title={'Pay Balance'} onPress={async () => await paymentHandler.handlePayment({ workOrder })} />

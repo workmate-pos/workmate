@@ -6,6 +6,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useRouter } from '../../routes.js';
 
 export function VendorSelector({
   onSelect,
@@ -62,7 +63,7 @@ export function VendorSelector({
 function getVendorRows(
   vendors: Vendor[],
   query: string,
-  selectVendor: (vendor: { vendorName: string; vendorCustomerId: ID | null }) => void,
+  onSelect: (vendor: { vendorName: string; vendorCustomerId: ID | null }) => void,
 ) {
   query = query.trim();
 
@@ -70,13 +71,17 @@ function getVendorRows(
     return !query || vendor.name.toLowerCase().includes(query.toLowerCase());
   };
 
+  const router = useRouter();
+
   return vendors.filter(queryFilter).map<ListRow>(vendor => ({
     id: vendor.name,
-    onPress: () =>
-      selectVendor({
+    onPress: () => {
+      onSelect({
         vendorName: vendor.name,
         vendorCustomerId: vendor.customer?.customerId ?? null,
-      }),
+      });
+      router.popCurrent();
+    },
     leftSide: {
       label: vendor.name,
       subtitle: vendor.customer?.defaultAddress

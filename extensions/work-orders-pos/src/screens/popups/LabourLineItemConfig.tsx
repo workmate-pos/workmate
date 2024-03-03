@@ -16,6 +16,7 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
 export function LabourLineItemConfig({
   readonly,
@@ -123,13 +124,11 @@ export function LabourLineItemConfig({
                     labour,
                     onRemove: () => {
                       setHasUnsavedChanges(true);
-                      setEmployeeLabour(employeeLabour.filter(l => l.chargeUuid !== labour.chargeUuid));
+                      setEmployeeLabour(employeeLabour.filter(l => l !== labour));
                     },
-                    onUpdate: () => {
+                    onUpdate: updatedLabour => {
                       setHasUnsavedChanges(true);
-                      setEmployeeLabour(
-                        employeeLabour.map(l => (l.chargeUuid === labour.chargeUuid ? { ...l, ...labour } : l)),
-                      );
+                      setEmployeeLabour(employeeLabour.map(l => (l === labour ? { ...l, ...updatedLabour } : l)));
                     },
                   })
                 }
@@ -138,29 +137,48 @@ export function LabourLineItemConfig({
           </>
         )}
 
-        <Stack direction={'horizontal'} alignment={'space-evenly'} flex={1} paddingVertical={'ExtraLarge'}>
-          {hasBasePrice && (
+        <Stack direction={'horizontal'} alignment={'center'} flex={1}>
+          <ResponsiveStack
+            direction={'horizontal'}
+            alignment={'space-evenly'}
+            flex={1}
+            paddingVertical={'ExtraLarge'}
+            sm={{ direction: 'vertical', alignment: 'center', paddingVertical: undefined }}
+          >
+            {hasBasePrice && (
+              <Text variant={'headingSmall'} color={'TextSubdued'}>
+                Base Price: {currencyFormatter(basePrice)}
+              </Text>
+            )}
             <Text variant={'headingSmall'} color={'TextSubdued'}>
-              Base Price: {currencyFormatter(basePrice)}
+              Labour Price: {currencyFormatter(labourPrice)}
             </Text>
-          )}
-          <Text variant={'headingSmall'} color={'TextSubdued'}>
-            Labour Price: {currencyFormatter(labourPrice)}
-          </Text>
-          <Text variant={'headingSmall'} color={'TextSubdued'}>
-            Total Price: {currencyFormatter(totalPrice)}
-          </Text>
+            <Text variant={'headingSmall'} color={'TextSubdued'}>
+              Total Price: {currencyFormatter(totalPrice)}
+            </Text>
+          </ResponsiveStack>
         </Stack>
       </Stack>
 
       <Stack direction="vertical" flex={1} alignment="space-evenly">
-        {readonly && <Button title="Back" onPress={() => router.pop()} />}
+        {readonly && <Button title="Back" onPress={() => router.popCurrent()} />}
         {!readonly && (
           <>
-            <Button title="Remove" type="destructive" disabled={!lineItem} onPress={() => onRemove()} />
+            <Button
+              title="Remove"
+              type="destructive"
+              disabled={!lineItem}
+              onPress={() => {
+                onRemove();
+                router.popCurrent();
+              }}
+            />
             <Button
               title="Save"
-              onPress={() => onUpdate([...employeeLabour, ...(generalLabour ? [generalLabour] : [])])}
+              onPress={() => {
+                onUpdate([...employeeLabour, ...(generalLabour ? [generalLabour] : [])]);
+                router.popCurrent();
+              }}
             />
           </>
         )}

@@ -77,8 +77,7 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
       },
       onError() {
         api.toast.show('Error loading work order');
-        // TODO: popAll in @teifi-digital/pos-tools
-        router.pop();
+        router.popAll();
       },
     },
   );
@@ -309,10 +308,7 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
         placeholder="Status"
         onFocus={() =>
           router.push('StatusSelector', {
-            onSelect: status => {
-              context.dispatchCreateWorkOrder({ type: 'set-field', field: 'status', value: status });
-              router.pop();
-            },
+            onSelect: status => context.dispatchCreateWorkOrder({ type: 'set-field', field: 'status', value: status }),
           })
         }
         value={context.createWorkOrder.status ?? ''}
@@ -325,10 +321,8 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
         disabled={context.hasOrder}
         onFocus={() =>
           router.push('CustomerSelector', {
-            onSelect: customerId => {
-              context.dispatchCreateWorkOrder({ type: 'set-field', field: 'customerId', value: customerId });
-              router.pop();
-            },
+            onSelect: customerId =>
+              context.dispatchCreateWorkOrder({ type: 'set-field', field: 'customerId', value: customerId }),
           })
         }
         value={customerValue}
@@ -391,14 +385,11 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
                     labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
                     readonly: context.hasOrder,
                     lineItem,
-                    // TODO: Dedup with useItemRows
-                    onRemove: () => removeLineItem(router, context, lineItem),
+                    onRemove: () => removeLineItem(context, lineItem),
                     onUpdate: labour =>
-                      updateLineItemCharges({ router, context, lineItem, charges: labour, isUnstackable: true }),
+                      updateLineItemCharges({ context, lineItem, charges: labour, isUnstackable: true }),
                   });
                 }
-
-                router.pop();
               },
             })
           }
@@ -467,7 +458,6 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
     <Stack direction="vertical" flex={1}>
       <Stack direction="vertical" flex={1}>
         <Stack direction={'horizontal'} flexChildren flex={1}>
-          <NumberField label="Subtotal" disabled value={getFormattedCalculatedMoney('subtotalPrice')} />
           <NumberField
             label={'Discount'}
             value={discountValue}
@@ -487,12 +477,11 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
                   });
 
                   toast.show('Applying discount', { duration: 1000 });
-
-                  router.pop();
                 },
               });
             }}
           />
+          <NumberField label="Subtotal" disabled value={getFormattedCalculatedMoney('subtotalPrice')} />
         </Stack>
         <Stack direction={'horizontal'} flexChildren flex={1}>
           <NumberField label="Tax" disabled value={getFormattedCalculatedMoney('totalTax')} />
@@ -595,58 +584,16 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
 
             const hasCharges = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
 
-            const removeLineItem = (lineItem: CreateWorkOrderLineItem) => {
-              // TODO: Use proxy pattern
-              context.dispatchCreateWorkOrder({
-                type: 'remove-line-item',
-                lineItem,
-              });
-
-              context.dispatchCreateWorkOrder({
-                type: 'set-field',
-                field: 'charges',
-                value: context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== lineItem.uuid) ?? [],
-              });
-
-              router.pop();
-            };
-
-            const updateLineItemCharges = ({
-              lineItem,
-              charges,
-              isUnstackable,
-            }: {
-              lineItem: CreateWorkOrderLineItem;
-              charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid'>[];
-              isUnstackable: boolean;
-            }) => {
-              context.dispatchCreateWorkOrder({
-                type: 'set-field',
-                field: 'charges',
-                value: [
-                  ...(context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== lineItem.uuid) ?? []),
-                  ...charges.map(l => ({ ...l, lineItemUuid: lineItem.uuid })),
-                ],
-              });
-
-              context.dispatchCreateWorkOrder({
-                type: 'upsert-line-item',
-                lineItem,
-                isUnstackable,
-              });
-
-              router.pop();
-            };
-
             if (hasCharges || productVariant.product.isMutableServiceItem) {
               router.push('LabourLineItemConfig', {
-                hasBasePrice: false,
+                hasBasePrice: !productVariant.product.isMutableServiceItem,
                 labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
                 readonly: context.hasOrder,
                 lineItem,
-                onRemove: () => removeLineItem(lineItem),
+                onRemove: () => removeLineItem(context, lineItem),
                 onUpdate: labour =>
                   updateLineItemCharges({
+                    context,
                     lineItem,
                     charges: labour,
                     isUnstackable: productVariant.product.isMutableServiceItem,
@@ -660,25 +607,23 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
               readonly: context.hasOrder,
               lineItem,
               onAssignLabour: lineItem => {
-                router.push('LabourLineItemConfig', {
+                router.replace('LabourLineItemConfig', {
                   hasBasePrice: true,
                   labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
                   readonly: context.hasOrder,
                   lineItem,
-                  onRemove: () => removeLineItem(lineItem),
-                  onUpdate: labour => updateLineItemCharges({ lineItem, charges: labour, isUnstackable: false }),
+                  onRemove: () => removeLineItem(context, lineItem),
+                  onUpdate: labour =>
+                    updateLineItemCharges({ context, lineItem, charges: labour, isUnstackable: false }),
                 });
               },
-              onRemove: () => removeLineItem(lineItem),
-              onUpdate: lineItem => {
+              onRemove: () => removeLineItem(context, lineItem),
+              onUpdate: lineItem =>
                 context.dispatchCreateWorkOrder({
                   type: 'upsert-line-item',
                   lineItem,
                   isUnstackable: false,
-                });
-
-                router.pop();
-              },
+                }),
             });
           },
           leftSide: {
@@ -703,11 +648,7 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
   );
 }
 
-function removeLineItem(
-  router: ReturnType<typeof useRouter>,
-  context: WorkOrderContext,
-  lineItem: CreateWorkOrderLineItem,
-) {
+function removeLineItem(context: WorkOrderContext, lineItem: CreateWorkOrderLineItem) {
   // TODO: Use proxy pattern
   context.dispatchCreateWorkOrder({
     type: 'remove-line-item',
@@ -719,18 +660,14 @@ function removeLineItem(
     field: 'charges',
     value: context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== lineItem.uuid) ?? [],
   });
-
-  router.pop();
 }
 
 function updateLineItemCharges({
-  router,
   context,
   lineItem,
   charges,
   isUnstackable,
 }: {
-  router: ReturnType<typeof useRouter>;
   context: WorkOrderContext;
   lineItem: CreateWorkOrderLineItem;
   charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid'>[];
@@ -750,6 +687,4 @@ function updateLineItemCharges({
     lineItem,
     isUnstackable,
   });
-
-  router.pop();
 }

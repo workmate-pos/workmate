@@ -1,9 +1,8 @@
-import { Dispatch, ReactNode, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Button, ScrollView, Stack, Text, TextField } from '@shopify/retail-ui-extensions-react';
 import type { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { useRouter } from '../../routes.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
-import { useScreenSize } from '@teifi-digital/pos-tools/providers/ScreenSizeProvider.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
@@ -49,37 +48,6 @@ export function CustomFieldConfig({
   }
 
   const router = useRouter();
-  const screenSize = useScreenSize();
-
-  const saveAsPreset = (
-    <Button
-      title={'Save as Preset'}
-      type={'plain'}
-      isDisabled={!isNonEmptyArray(Object.keys(customFields))}
-      onPress={() => {
-        const keys = Object.keys(customFields);
-
-        if (isNonEmptyArray(keys)) {
-          router.push('SavePreset', { keys, onSave: router.pop });
-        }
-      }}
-    />
-  );
-
-  const importPreset = (
-    <Button
-      title={'Import Preset'}
-      type={'plain'}
-      onPress={() => {
-        router.push('ImportPreset', {
-          onImport: ({ keys }) => {
-            router.pop();
-            overrideOrMergeDialog.show(keys);
-          },
-        });
-      }}
-    />
-  );
 
   const screen = useScreen();
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
@@ -95,8 +63,27 @@ export function CustomFieldConfig({
           alignment={'flex-end'}
           sm={{ alignment: 'center', paddingVertical: 'Small' }}
         >
-          {saveAsPreset}
-          {importPreset}
+          <Button
+            title={'Save as Preset'}
+            type={'plain'}
+            isDisabled={!isNonEmptyArray(Object.keys(customFields))}
+            onPress={() => {
+              const keys = Object.keys(customFields);
+
+              if (isNonEmptyArray(keys)) {
+                router.push('SavePreset', { keys });
+              }
+            }}
+          />
+          <Button
+            title={'Import Preset'}
+            type={'plain'}
+            onPress={() => {
+              router.push('ImportPreset', {
+                onImport: ({ keys }) => overrideOrMergeDialog.show(keys),
+              });
+            }}
+          />
         </ResponsiveStack>
       </ResponsiveGrid>
 
@@ -147,7 +134,14 @@ export function CustomFieldConfig({
       </Stack>
 
       <Stack direction={'vertical'} alignment={'center'}>
-        <Button title={'Save'} type={'primary'} onPress={() => onSave(customFields)} />
+        <Button
+          title={'Save'}
+          type={'primary'}
+          onPress={() => {
+            onSave(customFields);
+            router.popCurrent();
+          }}
+        />
       </Stack>
     </ScrollView>
   );

@@ -71,9 +71,7 @@ export function ProductSelector({
               locationId,
               vendorName,
             },
-            onCreate: (product: Product) => {
-              selectProduct(product);
-            },
+            onCreate: (product: Product) => selectProduct(product),
           });
         }}
       />

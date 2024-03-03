@@ -9,10 +9,10 @@
     "noEmit": true,
     "jsx": "react-native",
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "paths": {
       "@web/*": ["../../web/*"]
     },
-    "noUncheckedIndexedAccess": true,
     "typeRoots": ["./node_modules/@types", "../node_modules/@types"]
   },
   "references": [

@@ -123,10 +123,8 @@ export function PurchaseOrder({
               label={'Location'}
               onFocus={() => {
                 router.push('LocationSelector', {
-                  onSelect: location => {
-                    dispatch.setLocation({ locationId: location?.id ?? null, locationName: location?.name ?? null });
-                    router.pop();
-                  },
+                  onSelect: location =>
+                    dispatch.setLocation({ locationId: location?.id ?? null, locationName: location?.name ?? null }),
                 });
               }}
               value={selectedLocation?.name ?? ''}
@@ -135,10 +133,7 @@ export function PurchaseOrder({
               label={'Status'}
               onFocus={() => {
                 router.push('StatusSelector', {
-                  onSelect: status => {
-                    dispatch.setPartial({ status });
-                    router.pop();
-                  },
+                  onSelect: status => dispatch.setPartial({ status }),
                 });
               }}
               value={titleCase(createPurchaseOrder.status)}
@@ -198,10 +193,7 @@ export function PurchaseOrder({
               onFocus={() => {
                 router.push('EmployeeSelector', {
                   initialEmployeeAssignments: createPurchaseOrder.employeeAssignments,
-                  onSave: employeeAssignments => {
-                    dispatch.setPartial({ employeeAssignments });
-                    router.pop();
-                  },
+                  onSave: employeeAssignments => dispatch.setPartial({ employeeAssignments }),
                 });
               }}
               action={{
@@ -216,10 +208,7 @@ export function PurchaseOrder({
               value={createPurchaseOrder.workOrderName ?? ''}
               onFocus={() => {
                 router.push('WorkOrderSelector', {
-                  onSelect: workOrderDetails => {
-                    dispatch.setWorkOrder(workOrderDetails);
-                    router.pop();
-                  },
+                  onSelect: workOrderDetails => dispatch.setWorkOrder(workOrderDetails),
                 });
               }}
               action={{
@@ -241,10 +230,7 @@ export function PurchaseOrder({
               value={!!createPurchaseOrder.orderId ? createPurchaseOrder.orderName ?? 'Unknown' : ''}
               onFocus={() => {
                 router.push('OrderSelector', {
-                  onSelect: orderDetails => {
-                    dispatch.setOrder(orderDetails);
-                    router.pop();
-                  },
+                  onSelect: orderDetails => dispatch.setOrder(orderDetails),
                 });
               }}
               action={{
@@ -271,10 +257,7 @@ export function PurchaseOrder({
               onPress={() => {
                 router.push('CustomFieldConfig', {
                   initialCustomFields: createPurchaseOrder.customFields,
-                  onSave: customFields => {
-                    dispatch.setPartial({ customFields });
-                    router.pop();
-                  },
+                  onSave: customFields => dispatch.setPartial({ customFields }),
                 });
               }}
             />
@@ -396,10 +379,7 @@ function useProductRows(
           product,
           locationName,
           locationId,
-          onSave: product => {
-            dispatch.updateProduct({ product });
-            router.pop();
-          },
+          onSave: product => dispatch.updateProduct({ product }),
         });
       },
       leftSide: {
@@ -432,10 +412,7 @@ const useVendorChangeWarningDialog = (
         showDialog,
         onAction: () => {
           router.push('VendorSelector', {
-            onSelect: vendorDetails => {
-              dispatch.setVendor(vendorDetails);
-              router.pop();
-            },
+            onSelect: vendorDetails => dispatch.setVendor(vendorDetails),
           });
         },
         props: {
@@ -466,17 +443,12 @@ const useAddProductPrerequisitesDialog = (
   const onAction = () => {
     if (!hasVendor) {
       router.push('VendorSelector', {
-        onSelect: vendorDetails => {
-          dispatch.setVendor(vendorDetails);
-          router.pop();
-        },
+        onSelect: vendorDetails => dispatch.setVendor(vendorDetails),
       });
     } else if (!hasLocation) {
       router.push('LocationSelector', {
-        onSelect: location => {
-          dispatch.setLocation({ locationId: location?.id ?? null, locationName: location?.name ?? null });
-          router.pop();
-        },
+        onSelect: location =>
+          dispatch.setLocation({ locationId: location?.id ?? null, locationName: location?.name ?? null }),
       });
     } else {
       if (!createPurchaseOrder.locationName) {

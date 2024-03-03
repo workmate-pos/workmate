@@ -5,6 +5,7 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useRouter } from '../../routes.js';
 
 export function CustomerSelector({ onSelect }: { onSelect: (id: ID) => void }) {
   const [query, setQuery] = useDebouncedState('');
@@ -55,9 +56,14 @@ export function CustomerSelector({ onSelect }: { onSelect: (id: ID) => void }) {
 }
 
 function getCustomerRows(customers: Customer[], onSelect: (id: ID) => void) {
+  const router = useRouter();
+
   return customers.map<ListRow>(({ id, displayName, email, phone, defaultAddress }) => ({
     id,
-    onPress: () => onSelect(id),
+    onPress: () => {
+      onSelect(id);
+      router.popCurrent();
+    },
     leftSide: {
       label: displayName,
       subtitle: [email ?? 'No email', phone ?? 'No phone', defaultAddress?.formatted?.[0] ?? 'No address'],

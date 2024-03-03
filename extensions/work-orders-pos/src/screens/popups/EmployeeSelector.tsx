@@ -5,9 +5,11 @@ import { ID } from '@web/schemas/generated/ids.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useState } from 'react';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 export function EmployeeSelector({
-  selected,
+  selected: initialSelected,
   onSelect,
   onDeselect,
 }: {
@@ -15,13 +17,14 @@ export function EmployeeSelector({
   onSelect: (id: ID) => void;
   onDeselect: (id: ID) => void;
 }) {
+  const [selected, setSelected] = useState(initialSelected);
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
   const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
   const employees = employeesQuery.data?.pages.flat() ?? [];
 
-  const rows = getEmployeeRows(employees, selected, onSelect, onDeselect);
+  const rows = getEmployeeRows(employees, selected, setSelected, onSelect, onDeselect);
 
   return (
     <ScrollView>
@@ -67,15 +70,22 @@ export function EmployeeSelector({
 function getEmployeeRows(
   employees: Employee[],
   selectedEmployeeIds: ID[],
-  onSelect?: (id: ID) => void,
-  onDeselect?: (id: ID) => void,
+  setSelected: (selectedEmployeeIds: ID[]) => void,
+  onSelect: (id: ID) => void,
+  onDeselect: (id: ID) => void,
 ) {
   return employees.map<ListRow>(({ id, name }) => ({
     id,
     onPress: () => {
       const selected = selectedEmployeeIds.includes(id);
-      if (selected) onDeselect?.(id);
-      else onSelect?.(id);
+
+      if (selected) {
+        setSelected(selectedEmployeeIds.filter(e => e !== id));
+        onDeselect(id);
+      } else {
+        setSelected([...selectedEmployeeIds, id]);
+        onSelect(id);
+      }
     },
     leftSide: {
       label: name,

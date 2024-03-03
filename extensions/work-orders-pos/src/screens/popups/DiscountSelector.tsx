@@ -7,6 +7,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { useRouter } from '../../routes.js';
 
 export function DiscountSelector({
   subTotal,
@@ -52,6 +53,8 @@ export function DiscountSelector({
       .multiply(BigDecimal.fromString(subTotal ?? '0'))
       .toMoney();
 
+  const router = useRouter();
+
   return (
     <ScrollView>
       <Stack direction="vertical" spacing={8}>
@@ -70,7 +73,15 @@ export function DiscountSelector({
                 title = currencyFormatter(shortcut.value);
               }
 
-              return <Button title={title} onPress={() => onSelect(shortcut)} />;
+              return (
+                <Button
+                  title={title}
+                  onPress={() => {
+                    onSelect(shortcut);
+                    router.popCurrent();
+                  }}
+                />
+              );
             })}
           </ResponsiveGrid>
         </Stack>

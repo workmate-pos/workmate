@@ -9,6 +9,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { CreateWorkOrderCharge } from '../../types.js';
+import { useRouter } from '../../routes.js';
 
 export function EmployeeLabourConfig({
   labour: initialLabour,
@@ -46,6 +47,7 @@ export function EmployeeLabourConfig({
     );
   }, [labour, employeeQuery.data]);
 
+  const router = useRouter();
   const screen = useScreen();
   screen.setTitle(employeeQuery?.data?.name ?? 'Employee');
   screen.setIsLoading(employeeQuery.isLoading);
@@ -63,15 +65,23 @@ export function EmployeeLabourConfig({
         />
 
         <Stack direction="vertical" flex={1} alignment="flex-end">
-          <Button title="Remove" type="destructive" onPress={() => onRemove()} />
+          <Button
+            title="Remove"
+            type="destructive"
+            onPress={() => {
+              onRemove();
+              router.popCurrent();
+            }}
+          />
           <Button
             title="Save"
-            onPress={() =>
+            onPress={() => {
               onUpdate({
                 ...labour,
                 name: labour.name || 'Unnamed labour',
-              })
-            }
+              });
+              router.popCurrent();
+            }}
           />
         </Stack>
       </Stack>

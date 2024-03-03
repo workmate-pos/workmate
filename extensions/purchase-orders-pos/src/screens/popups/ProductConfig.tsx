@@ -12,6 +12,7 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { useRouter } from '../../routes.js';
 
 export function ProductConfig({
   product: initialProduct,
@@ -35,6 +36,7 @@ export function ProductConfig({
     level => level.location.id === locationId,
   );
 
+  const router = useRouter();
   const screen = useScreen();
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
@@ -129,8 +131,22 @@ export function ProductConfig({
             />
           </Stack>
           <Stack direction="vertical" flex={1} alignment="flex-end">
-            <Button title="Remove" type="destructive" onPress={() => onSave({ ...product, quantity: 0 as Int })} />
-            <Button title="Save" type="primary" onPress={() => onSave(product)} />
+            <Button
+              title="Remove"
+              type="destructive"
+              onPress={() => {
+                onSave({ ...product, quantity: 0 as Int });
+                router.popCurrent();
+              }}
+            />
+            <Button
+              title="Save"
+              type="primary"
+              onPress={() => {
+                onSave(product);
+                router.popCurrent();
+              }}
+            />
           </Stack>
         </Stack>
       )}

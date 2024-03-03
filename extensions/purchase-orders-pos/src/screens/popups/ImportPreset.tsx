@@ -7,6 +7,7 @@ import {
   usePurchaseOrderCustomFieldsPresetsQuery,
 } from '@work-orders/common/queries/use-purchase-order-custom-fields-presets-query.js';
 import { useState } from 'react';
+import { useRouter } from '../../routes.js';
 
 export function ImportPreset({ onImport }: { onImport: (preset: { keys: string[] }) => void }) {
   const [query, setQuery] = useState('');
@@ -61,13 +62,18 @@ function getPresetRows(presets: CustomFieldsPreset[], query: string, onImport: (
 
   const FIELD_PREVIEW_COUNT = 5;
 
+  const router = useRouter();
+
   return presets.filter(queryFilter).map<ListRow>(preset => {
     const subtitle =
       preset.keys.slice(0, FIELD_PREVIEW_COUNT).join(', ') + (preset.keys.length > FIELD_PREVIEW_COUNT ? '...' : '');
 
     return {
       id: preset.name,
-      onPress: () => onImport({ keys: preset.keys }),
+      onPress: () => {
+        onImport({ keys: preset.keys });
+        router.popCurrent();
+      },
       leftSide: {
         label: preset.name,
         subtitle: [subtitle],

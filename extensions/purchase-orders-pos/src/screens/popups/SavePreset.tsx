@@ -8,12 +8,15 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { stringLengthValidator } from '../../util/string-length-validator.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
+import { useRouter } from '../../routes.js';
 
-export function SavePreset({ keys, onSave }: { keys: [string, ...string[]]; onSave: () => void }) {
+export function SavePreset({ keys }: { keys: [string, ...string[]] }) {
   const [name, setName] = useState<string>('');
 
   const { Form, isValid } = useForm();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
+
+  const router = useRouter();
 
   const fetch = useAuthenticatedFetch();
   const presetsQuery = usePurchaseOrderCustomFieldsPresetsQuery({ fetch });
@@ -21,8 +24,8 @@ export function SavePreset({ keys, onSave }: { keys: [string, ...string[]]; onSa
     { fetch },
     {
       onSuccess: () => {
-        onSave();
         toast.show('Preset saved');
+        router.popCurrent();
       },
     },
   );

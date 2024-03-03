@@ -5,6 +5,7 @@ import type { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useRouter } from '../../routes.js';
 
 export function OrderSelector({
   onSelect,
@@ -64,6 +65,8 @@ function getOrderRows(
   orders: Order[],
   onSelect: (order: Pick<CreatePurchaseOrder, 'orderName' | 'orderId' | 'customerId' | 'customerName'>) => void,
 ) {
+  const router = useRouter();
+
   return orders.map<ListRow>(({ id, name, workOrderName, customer }) => {
     const label = workOrderName ? `${name} (${workOrderName})` : name;
 
@@ -76,6 +79,8 @@ function getOrderRows(
           customerId: customer?.id ?? null,
           customerName: customer?.displayName ?? null,
         });
+
+        router.popCurrent();
       },
       leftSide: {
         label,

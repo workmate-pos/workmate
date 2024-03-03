@@ -74,12 +74,32 @@ export function ProductLineItemConfig({
           />
         </Stack>
         <Stack direction="vertical" flex={1} alignment="flex-end">
-          {readonly && <Button title="Back" onPress={() => router.pop()} />}
+          {readonly && <Button title="Back" onPress={() => router.popCurrent()} />}
           {!readonly && (
             <>
-              <Button title="Remove" type="destructive" onPress={() => onRemove()} />
-              <Button title="Save" onPress={() => onUpdate(lineItem)} />
-              {canAddLabour && <Button title="Add Labour" onPress={() => onAssignLabour(lineItem)} />}
+              <Button
+                title="Remove"
+                type="destructive"
+                onPress={() => {
+                  onRemove();
+                  router.popCurrent();
+                }}
+              />
+              <Button
+                title="Save"
+                onPress={() => {
+                  onUpdate(lineItem);
+                  router.popCurrent();
+                }}
+              />
+              {canAddLabour && (
+                <Button
+                  title="Add Labour"
+                  onPress={() => {
+                    onAssignLabour(lineItem);
+                  }}
+                />
+              )}
             </>
           )}
         </Stack>

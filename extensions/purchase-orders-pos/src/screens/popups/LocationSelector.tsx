@@ -6,6 +6,7 @@ import { getFormattedAddressSubtitle } from '../../util/formatted-address-subtit
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useRouter } from '../../routes.js';
 
 export function LocationSelector({ onSelect }: { onSelect: (location: Location) => void }) {
   const [query, setQuery] = useDebouncedState('');
@@ -61,11 +62,16 @@ export function LocationSelector({ onSelect }: { onSelect: (location: Location) 
   );
 }
 
-function getLocationRows(locations: Location[], selectLocation: (location: Location) => void) {
+function getLocationRows(locations: Location[], onSelect: (location: Location) => void) {
+  const router = useRouter();
+
   return locations.map<ListRow>(location => {
     return {
       id: location.id,
-      onPress: () => selectLocation(location),
+      onPress: () => {
+        onSelect(location);
+        router.popCurrent();
+      },
       leftSide: {
         label: location.name,
         subtitle: getFormattedAddressSubtitle(location.address.formatted),

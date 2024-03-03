@@ -69,7 +69,6 @@ export function Entry() {
           <Button
             title={'New Work Order'}
             type={'primary'}
-            disabled={!settingsQuery.data}
             onPress={() => {
               if (!settingsQuery.data) {
                 toast.show('Settings not loaded');
@@ -110,10 +109,7 @@ export function Entry() {
             type={'plain'}
             onPress={() =>
               router.push('StatusSelector', {
-                onSelect: status => {
-                  setStatus(status);
-                  router.pop();
-                },
+                onSelect: status => setStatus(status),
               })
             }
           />
@@ -122,10 +118,7 @@ export function Entry() {
             type={'plain'}
             onPress={() =>
               router.push('CustomerSelector', {
-                onSelect: customer => {
-                  setCustomerId(customer);
-                  router.pop();
-                },
+                onSelect: customer => setCustomerId(customer),
               })
             }
           />

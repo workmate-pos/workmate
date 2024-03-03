@@ -43,7 +43,7 @@ export function ProductSelector({
   ) => {
     setQuery('', true);
     onSelect({ lineItem, charges });
-    toast.show(`${name} added to cart`, { duration: 1000 });
+    toast.show(`${name} added to cart`, { duration: 750 });
   };
 
   const rows = getProductVariantRows(productVariants, selectLineItem, currencyFormatter);

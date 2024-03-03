@@ -12,9 +12,9 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getChargesPrice } from '../../create-work-order/charges.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
-import { useDynamicRef } from '@teifi-digital/pos-tools/hooks/use-dynamic-ref.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useRouter } from '../../routes.js';
 
 type OnSelect = (arg: {
   type: 'mutable-service' | 'fixed-service';
@@ -83,6 +83,8 @@ function getProductVariantRows(
   onSelect: OnSelect,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
+  const router = useRouter();
+
   return productVariants
     .map<ListRow | null>(variant => {
       const displayName = getProductVariantName(variant) ?? 'Unknown service';
@@ -127,6 +129,8 @@ function getProductVariantRows(
             },
             charges: defaultCharges.map(charge => ({ ...charge, lineItemUuid })),
           });
+
+          router.popCurrent();
         },
         leftSide: {
           label: displayName,

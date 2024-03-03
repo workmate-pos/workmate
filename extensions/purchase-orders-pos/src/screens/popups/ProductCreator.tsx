@@ -16,6 +16,7 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { FormDecimalField, roundingPostProcessor } from '@teifi-digital/pos-tools/form/components/FormDecimalField.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { stringLengthValidator } from '../../util/string-length-validator.js';
+import { useRouter } from '../../routes.js';
 
 export function ProductCreator({
   initialProduct: { vendorName, locationId },
@@ -32,10 +33,11 @@ export function ProductCreator({
   const { Form, isValid } = useForm();
 
   const fetch = useAuthenticatedFetch();
+  const router = useRouter();
   const createProductMutation = useCreateProductMutation(
     { fetch },
     {
-      onSuccess: ({ product }) =>
+      onSuccess: ({ product }) => {
         onCreate({
           name: getProductVariantName(product.variant) ?? 'Unknown product',
           inventoryItemId: product.variant.inventoryItem.id,
@@ -44,7 +46,9 @@ export function ProductCreator({
           availableQuantity: 0 as Int,
           sku: product.variant.sku,
           quantity,
-        }),
+        });
+        router.popCurrent();
+      },
     },
   );
 

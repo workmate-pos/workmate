@@ -4,7 +4,6 @@ import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state
 import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
@@ -13,7 +12,7 @@ export function EmployeeSelector({
   onSave,
 }: {
   initialEmployeeAssignments: CreatePurchaseOrder['employeeAssignments'];
-  onSave: (employees: CreatePurchaseOrder['employeeAssignments']) => void;
+  onSave: (employeeAssignments: CreatePurchaseOrder['employeeAssignments']) => void;
 }) {
   const [selectedEmployees, setSelectedEmployees] = useState(initialEmployeeAssignments);
   const [query, setQuery] = useDebouncedState('');
@@ -22,10 +21,15 @@ export function EmployeeSelector({
   const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
   const employees = employeesQuery.data?.pages.flat() ?? [];
 
-  const rows = getEmployeeRows(employees, query, selectedEmployees, setSelectedEmployees);
-
-  const screen = useScreen();
-  screen.addOverrideNavigateBack(useCallback(() => onSave(selectedEmployees), [selectedEmployees]));
+  const rows = getEmployeeRows(
+    employees,
+    query,
+    selectedEmployees,
+    (selectedEmployees: CreatePurchaseOrder['employeeAssignments']) => {
+      setSelectedEmployees(selectedEmployees);
+      onSave(selectedEmployees);
+    },
+  );
 
   return (
     <ScrollView>
@@ -74,7 +78,11 @@ function getEmployeeRows(
   selectedEmployees: CreatePurchaseOrder['employeeAssignments'],
   setSelectedEmployees: (employees: CreatePurchaseOrder['employeeAssignments']) => void,
 ) {
-  return employees.map<ListRow>(employee => {
+  const queryFilter = (employee: Employee) => {
+    return !query || employee.name.toLowerCase().includes(query.toLowerCase());
+  };
+
+  return employees.filter(queryFilter).map<ListRow>(employee => {
     const selected = selectedEmployees.some(e => e.employeeId === employee.id);
 
     return {

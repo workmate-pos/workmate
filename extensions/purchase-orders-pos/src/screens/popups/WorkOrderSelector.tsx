@@ -7,6 +7,7 @@ import type { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useRouter } from '../../routes.js';
 
 // TODO: shared screens in common-pos (or new package)
 
@@ -26,7 +27,7 @@ export function WorkOrderSelector({
   });
   const workOrderInfos = workOrderInfoQuery.data?.pages ?? [];
 
-  const rows = useWorkOrderRows(workOrderInfos, onSelect);
+  const rows = useWorkOrderRows(workOrderInfos, query, onSelect);
 
   return (
     <ScrollView>
@@ -73,6 +74,7 @@ export function WorkOrderSelector({
 
 function useWorkOrderRows(
   workOrderInfos: WorkOrderInfo[],
+  query: string,
   onSelect: (
     workOrder: Pick<CreatePurchaseOrder, 'workOrderName' | 'customerId' | 'customerName' | 'orderName' | 'orderId'>,
   ) => void,
@@ -82,7 +84,13 @@ function useWorkOrderRows(
   const customerIds = workOrderInfos.map(workOrderInfo => workOrderInfo.customerId);
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
 
-  return workOrderInfos.map<ListRow>(workOrderInfo => {
+  const router = useRouter();
+
+  const queryFilter = (workOrderInfo: WorkOrderInfo) => {
+    return !query || workOrderInfo.name.toLowerCase().includes(query.toLowerCase());
+  };
+
+  return workOrderInfos.filter(queryFilter).map<ListRow>(workOrderInfo => {
     const customerQuery = customerQueries[workOrderInfo.customerId];
 
     return {
@@ -100,10 +108,14 @@ function useWorkOrderRows(
           customerId: workOrderInfo.customerId,
           customerName: customerQuery?.data?.displayName ?? null,
         });
+
+        router.popCurrent();
       },
       leftSide: {
         label: workOrderInfo.name,
-        subtitle: [workOrderInfo.status, customerQuery?.data?.displayName],
+        subtitle: customerQuery?.data?.displayName
+          ? [workOrderInfo.status, customerQuery.data?.displayName]
+          : [workOrderInfo.status],
       },
       rightSide: {
         showChevron: true,
