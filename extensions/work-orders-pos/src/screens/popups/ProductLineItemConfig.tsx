@@ -95,7 +95,8 @@ export function ProductLineItemConfig({
               {canAddLabour && (
                 <Button
                   title="Add Labour"
-                  onPress={() => {
+                  onPress={async () => {
+                    await router.popCurrent();
                     onAssignLabour(lineItem);
                   }}
                 />

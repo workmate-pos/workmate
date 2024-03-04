@@ -606,8 +606,8 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
               canAddLabour: !productVariant.product.isFixedServiceItem,
               readonly: context.hasOrder,
               lineItem,
-              onAssignLabour: lineItem => {
-                router.replace('LabourLineItemConfig', {
+              onAssignLabour: lineItem =>
+                router.push('LabourLineItemConfig', {
                   hasBasePrice: true,
                   labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
                   readonly: context.hasOrder,
@@ -615,8 +615,7 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
                   onRemove: () => removeLineItem(context, lineItem),
                   onUpdate: labour =>
                     updateLineItemCharges({ context, lineItem, charges: labour, isUnstackable: false }),
-                });
-              },
+                }),
               onRemove: () => removeLineItem(context, lineItem),
               onUpdate: lineItem =>
                 context.dispatchCreateWorkOrder({
