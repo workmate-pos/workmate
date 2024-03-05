@@ -12,6 +12,8 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js'
 import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -47,7 +49,6 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
       discount: createPurchaseOrder.discount,
       tax: createPurchaseOrder.tax,
       shipping: createPurchaseOrder.shipping,
-      subtotal: createPurchaseOrder.subtotal,
     });
 
     await Promise.all([
@@ -68,10 +69,16 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
 
     await adjustShopifyInventory(session, existingPurchaseOrder, createPurchaseOrder);
 
+    // no need to wait for this to complete
+    adjustShopifyInventoryItemCosts(session, createPurchaseOrder);
+
     return { name };
   });
 }
 
+/**
+ * Creates an inventory adjustment to reflect the change in inventory due to the purchase order.
+ */
 async function adjustShopifyInventory(
   session: Session,
   oldPurchaseOrder: CreatePurchaseOrder | null,
@@ -124,4 +131,44 @@ async function adjustShopifyInventory(
     sentryErr('Failed to adjust inventory', { userErrors });
     throw new HttpError('Failed to adjust inventory', 500);
   }
+}
+
+/**
+ * Updates the Inventory Item cost for each product in this purchase order to the average cost of this product over all time
+ */
+async function adjustShopifyInventoryItemCosts(session: Session, newPurchaseOrder: CreatePurchaseOrder) {
+  const graphql = new Graphql(session);
+  const productVariantIds = newPurchaseOrder.products.map(({ productVariantId }) => productVariantId);
+  const productVariants = await gql.products.getMany
+    .run(graphql, { ids: productVariantIds })
+    .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'ProductVariant')));
+
+  const processProductVariant = async ({
+    id: productVariantId,
+    inventoryItem,
+  }: gql.products.ProductVariantFragment.Result) => {
+    const productVariantCosts = await db.purchaseOrder.getProductVariantCostsForShop({
+      shop: session.shop,
+      productVariantId,
+    });
+
+    const totalCost = BigDecimal.sum(
+      ...productVariantCosts.map(({ unitCost, quantity }) =>
+        BigDecimal.fromString(unitCost).multiply(BigDecimal.fromString(quantity.toFixed(0))),
+      ),
+    );
+
+    const totalQuantity = BigDecimal.sum(
+      ...productVariantCosts.map(({ quantity }) => BigDecimal.fromString(quantity.toFixed(0))),
+    );
+
+    const averageCost = totalCost.divide(totalQuantity).round(2);
+
+    await gql.inventoryItems.updateInventoryItem.run(graphql, {
+      id: inventoryItem.id,
+      input: { cost: averageCost.toDecimal() },
+    });
+  };
+
+  return await Promise.all(productVariants.map(processProductVariant));
 }

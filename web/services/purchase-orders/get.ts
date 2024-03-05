@@ -6,6 +6,7 @@ import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase
 import { assertGidOrNull, assertInt, assertMoneyOrNull } from '../../util/assertions.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export async function getPurchaseOrder(session: Session, name: string): Promise<PurchaseOrder | null> {
   const [purchaseOrder] = await db.purchaseOrder.get({ name, shop: session.shop });
@@ -18,7 +19,6 @@ export async function getPurchaseOrder(session: Session, name: string): Promise<
   assertGidOrNull(purchaseOrder.customerId);
   assertGidOrNull(purchaseOrder.vendorCustomerId);
   assertGidOrNull(purchaseOrder.orderId);
-  assertMoneyOrNull(purchaseOrder.subtotal);
   assertMoneyOrNull(purchaseOrder.discount);
   assertMoneyOrNull(purchaseOrder.tax);
   assertMoneyOrNull(purchaseOrder.shipping);
@@ -44,7 +44,6 @@ export async function getPurchaseOrder(session: Session, name: string): Promise<
     vendorName: purchaseOrder.vendorName,
     customerName: purchaseOrder.customerName,
     locationName: purchaseOrder.locationName,
-    subtotal: purchaseOrder.subtotal,
     discount: purchaseOrder.discount,
     tax: purchaseOrder.tax,
     shipping: purchaseOrder.shipping,
@@ -78,12 +77,13 @@ export async function getPurchaseOrderInfoPage(
 async function getPurchaseOrderProducts(purchaseOrderId: number) {
   const products = await db.purchaseOrder.getProducts({ purchaseOrderId });
   return products.map<PurchaseOrder['products'][number]>(
-    ({ productVariantId, inventoryItemId, quantity, availableQuantity, name, sku, handle }) => {
+    ({ productVariantId, inventoryItemId, quantity, availableQuantity, name, sku, handle, unitCost }) => {
       assertGid(productVariantId);
       assertGid(inventoryItemId);
       assertInt(quantity);
       assertInt(availableQuantity);
-      return { productVariantId, inventoryItemId, quantity, availableQuantity, name, sku, handle };
+      assertMoney(unitCost);
+      return { productVariantId, inventoryItemId, quantity, availableQuantity, name, sku, handle, unitCost };
     },
   );
 }

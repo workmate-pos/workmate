@@ -1,9 +1,10 @@
 fragment InventoryItemFragment on InventoryItem {
   id
-  inventoryLevels(first: 25) {
-    nodes {
+  unitCost {
+    amount
+  }
+  inventoryLevel(locationId: $locationId) {
       ...InventoryLevelFragment
-    }
   }
 }
 
@@ -18,7 +19,7 @@ fragment InventoryLevelFragment on InventoryLevel {
   }
 }
 
-query getMany($ids: [ID!]!) {
+query getMany($ids: [ID!]!, $locationId: ID!) {
   nodes(ids: $ids) {
     __typename
     ... on InventoryItem {
@@ -27,13 +28,13 @@ query getMany($ids: [ID!]!) {
   }
 }
 
-query get($id: ID!) {
+query get($id: ID!, $locationId: ID!) {
   inventoryItem(id: $id) {
     ...InventoryItemFragment
   }
 }
 
-query getPage($first: Int = 10, $after: String, $query: String) {
+query getPage($first: Int = 10, $after: String, $query: String, $locationId: ID!) {
   inventoryItems(first: $first, after: $after, query: $query) {
     nodes {
       ...InventoryItemFragment
@@ -44,3 +45,14 @@ query getPage($first: Int = 10, $after: String, $query: String) {
     }
   }
 }
+
+mutation updateInventoryItem($id: ID!, $input: InventoryItemUpdateInput!) {
+  inventoryItemUpdate(id: $id, input: $input) {
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+

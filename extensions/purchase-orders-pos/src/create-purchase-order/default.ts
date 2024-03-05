@@ -23,5 +23,4 @@ export const defaultCreatePurchaseOrder: CreatePurchaseOrder = {
   tax: null,
   discount: null,
   shipping: null,
-  subtotal: null,
 };

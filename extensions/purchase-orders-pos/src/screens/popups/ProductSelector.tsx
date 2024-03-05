@@ -10,6 +10,8 @@ import { useRouter } from '../../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
 
 export function ProductSelector({
   filters: { vendorName, locationName, locationId },
@@ -34,13 +36,15 @@ export function ProductSelector({
   });
   const productVariants = productVariantsQuery.data?.pages ?? [];
 
-  const selectProduct = (product: Product) => {
+  const selectProducts = (products: Product[]) => {
     setQuery('', true);
-    onSelect(product);
-    toast.show('Product added to purchase order', { duration: 1000 });
+    for (const product of products) onSelect(product);
+    const productOrProducts = products.length === 1 ? 'Product' : 'products';
+    const productCount = products.length === 1 ? '' : String(products.length);
+    toast.show(`${productCount} ${productOrProducts} added to purchase order`.trim(), { duration: 1000 });
   };
 
-  const rows = useProductVariantRows(productVariants.flat(), locationId, selectProduct);
+  const rows = useProductVariantRows(productVariants.flat(), locationId, selectProducts);
 
   const router = useRouter();
 
@@ -71,7 +75,7 @@ export function ProductSelector({
               locationId,
               vendorName,
             },
-            onCreate: (product: Product) => selectProduct(product),
+            onCreate: (product: Product) => selectProducts([product]),
           });
         }}
       />
@@ -120,13 +124,16 @@ export function ProductSelector({
 
 function useProductVariantRows(
   productVariants: ProductVariant[],
-  locationId: ID | null,
-  selectProduct: (product: Product) => void,
+  locationId: ID,
+  selectProducts: (products: Product[]) => void,
 ) {
   const fetch = useAuthenticatedFetch();
 
-  const inventoryItemIds = productVariants.map(variant => variant.inventoryItem.id);
-  const inventoryItemQueries = useInventoryItemQueries({ fetch, ids: inventoryItemIds });
+  const inventoryItemIds = productVariants.flatMap(variant => [
+    variant.inventoryItem.id,
+    ...variant.productVariantComponents.map(({ productVariant }) => productVariant.inventoryItem.id),
+  ]);
+  const inventoryItemQueries = useInventoryItemQueries({ fetch, ids: inventoryItemIds, locationId });
 
   return productVariants.map<ListRow>(variant => {
     const displayName = getProductVariantName(variant) ?? 'Unknown Product';
@@ -134,22 +141,73 @@ function useProductVariantRows(
 
     const inventoryItemId = variant.inventoryItem.id;
     const inventoryItem = inventoryItemQueries[inventoryItemId]?.data;
-    const availableQuantity = inventoryItem?.inventoryLevels?.nodes
-      ?.find(level => level.location.id === locationId)
-      ?.quantities?.find(quantity => quantity.name === 'available')?.quantity;
+    let availableQuantity = inventoryItem?.inventoryLevel?.quantities?.find(
+      quantity => quantity.name === 'available',
+    )?.quantity;
+
+    // If this is a bundle, the available quantity is the available quantity of the lowest available component divided by the quantity of that component in this bundle
+    if (variant.requiresComponents) {
+      let bundleAvailableQuantity: Int | undefined = undefined;
+
+      for (const bundleProductVariant of variant.productVariantComponents) {
+        const { quantity, productVariant } = bundleProductVariant;
+        const availableQuantityForComponent = inventoryItemQueries[
+          productVariant.inventoryItem.id
+        ]?.data?.inventoryLevel?.quantities?.find(quantity => quantity.name === 'available')?.quantity;
+
+        if (availableQuantityForComponent === undefined) {
+          bundleAvailableQuantity = undefined;
+          break;
+        }
+
+        const availableQuantityForComponentInBundle = Math.floor(availableQuantityForComponent / quantity) as Int;
+        bundleAvailableQuantity =
+          bundleAvailableQuantity === undefined
+            ? availableQuantityForComponentInBundle
+            : (Math.min(bundleAvailableQuantity, availableQuantityForComponentInBundle) as Int);
+      }
+
+      availableQuantity = bundleAvailableQuantity;
+    }
 
     return {
       id: variant.id,
-      onPress: () =>
-        selectProduct({
-          inventoryItemId: variant.inventoryItem.id,
-          handle: variant.product.handle,
-          productVariantId: variant.id,
-          availableQuantity: 0 as Int,
-          quantity: 1 as Int,
-          name: displayName,
-          sku: variant.sku,
-        }),
+      onPress: () => {
+        if (!variant.requiresComponents) {
+          selectProducts([
+            {
+              inventoryItemId: variant.inventoryItem.id,
+              handle: variant.product.handle,
+              productVariantId: variant.id,
+              availableQuantity: 0 as Int,
+              quantity: 1 as Int,
+              name: displayName,
+              sku: variant.sku,
+              unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
+            },
+          ]);
+          return;
+        }
+
+        // Bundle!
+
+        selectProducts(
+          variant.productVariantComponents.flatMap(({ quantity, productVariant }) => {
+            const inventoryItem = inventoryItemQueries[productVariant.inventoryItem.id]?.data;
+
+            return Array.from({ length: quantity }, () => ({
+              inventoryItemId: productVariant.inventoryItem.id,
+              handle: productVariant.product.handle,
+              productVariantId: productVariant.id,
+              availableQuantity: 0 as Int,
+              quantity: 1 as Int,
+              name: getProductVariantName(productVariant) ?? 'Unknown Product',
+              sku: productVariant.sku,
+              unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
+            }));
+          }),
+        );
+      },
       leftSide: {
         label: displayName,
         image: {
@@ -160,4 +218,12 @@ function useProductVariantRows(
       rightSide: { showChevron: true },
     };
   });
+}
+
+function decimalToMoneyOrDefault(decimal: Decimal | null | undefined, defaultValue: Money) {
+  if (decimal === null || decimal === undefined) {
+    return defaultValue;
+  }
+
+  return BigDecimal.fromDecimal(decimal).toMoney();
 }

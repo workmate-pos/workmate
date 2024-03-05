@@ -1,8 +1,13 @@
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { parseMetaobject } from './metaobjects/index.js';
-import { gql } from './gql/gql.js';
+import { fetchAllPages, gql } from './gql/gql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import type { Int } from '../schemas/generated/pagination-options.js';
 
-export function parseProductVariantMetafields(productVariant: gql.products.ProductVariantFragment.Result) {
+export function parseProductVariantMetafields<const T extends gql.products.ProductVariantFragment.Result>(
+  productVariant: T,
+) {
   return {
     ...productVariant,
     defaultCharges:
@@ -14,4 +19,34 @@ export function parseProductVariantMetafields(productVariant: gql.products.Produ
   };
 }
 
+export async function addProductVariantComponents<const T extends gql.products.ProductVariantFragment.Result>(
+  graphql: Graphql,
+  productVariant: T,
+  fixedServiceCollectionId: ID | null,
+  mutableServiceCollectionId: ID | null,
+) {
+  if (!productVariant.requiresComponents) {
+    return { ...productVariant, productVariantComponents: [] };
+  }
+
+  const productVariantComponents = await fetchAllPages(
+    graphql,
+    (graphql, variables) =>
+      gql.products.getProductVariantComponents.run(graphql, {
+        ...variables,
+        id: productVariant.id,
+        mutableServiceCollectionId,
+        fixedServiceCollectionId,
+      }),
+    result =>
+      result.productVariant?.productVariantComponents ?? {
+        nodes: [] as const,
+        pageInfo: { hasNextPage: false, endCursor: null },
+      },
+  );
+
+  return { ...productVariant, productVariantComponents };
+}
+
 export type ProductVariantFragmentWithMetafields = ReturnType<typeof parseProductVariantMetafields>;
+export type ProductVariantFragmentWithComponents = Awaited<ReturnType<typeof addProductVariantComponents>>;

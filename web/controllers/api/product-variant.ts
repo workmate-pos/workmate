@@ -6,7 +6,12 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import { gql } from '../../services/gql/gql.js';
 import type { Ids } from '../../schemas/generated/ids.js';
 import { getShopSettings } from '../../services/settings.js';
-import { parseProductVariantMetafields, ProductVariantFragmentWithMetafields } from '../../services/product-variant.js';
+import {
+  addProductVariantComponents,
+  parseProductVariantMetafields,
+  ProductVariantFragmentWithComponents,
+  ProductVariantFragmentWithMetafields,
+} from '../../services/product-variant.js';
 
 @Authenticated()
 export default class ProductVariantController {
@@ -31,7 +36,13 @@ export default class ProductVariantController {
     const { nodes: productVariants, pageInfo } = response.productVariants;
 
     return res.json({
-      productVariants: productVariants.map(parseProductVariantMetafields),
+      productVariants: await Promise.all(
+        productVariants
+          .map(parseProductVariantMetafields)
+          .map(productVariant =>
+            addProductVariantComponents(graphql, productVariant, fixedServiceCollectionId, mutableServiceCollectionId),
+          ),
+      ),
       pageInfo,
     });
   }
@@ -66,7 +77,7 @@ export default class ProductVariantController {
 }
 
 export type FetchProductsResponse = {
-  productVariants: ProductVariantFragmentWithMetafields[];
+  productVariants: (ProductVariantFragmentWithMetafields & ProductVariantFragmentWithComponents)[];
   pageInfo: { hasNextPage: boolean; endCursor?: string | null };
 };
 

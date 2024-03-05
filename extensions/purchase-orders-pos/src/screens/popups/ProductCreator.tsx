@@ -46,6 +46,7 @@ export function ProductCreator({
           availableQuantity: 0 as Int,
           sku: product.variant.sku,
           quantity,
+          unitCost: BigDecimal.ZERO.toMoney(),
         });
         router.popCurrent();
       },

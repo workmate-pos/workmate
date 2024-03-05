@@ -13,6 +13,8 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useRouter } from '../../routes.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 
 export function ProductConfig({
   product: initialProduct,
@@ -31,10 +33,12 @@ export function ProductConfig({
   const productVariantQuery = useProductVariantQuery({ fetch, id: product?.productVariantId ?? null });
   const productVariant = productVariantQuery?.data;
 
-  const inventoryItemQuery = useInventoryItemQuery({ fetch, id: productVariant?.inventoryItem?.id ?? null });
-  const inventoryLevel = inventoryItemQuery?.data?.inventoryLevels?.nodes?.find(
-    level => level.location.id === locationId,
-  );
+  const inventoryItemQuery = useInventoryItemQuery({
+    fetch,
+    id: productVariant?.inventoryItem?.id ?? null,
+    locationId,
+  });
+  const inventoryLevel = inventoryItemQuery?.data?.inventoryLevel;
 
   const router = useRouter();
   const screen = useScreen();
@@ -45,6 +49,8 @@ export function ProductConfig({
   screen.setIsLoading(!product || productVariantQuery.isLoading || inventoryItemQuery.isLoading);
 
   // TODO: Show current stock in a nicer way - maybe for just one loc? (if so change inventory level endpoint/gql query)
+
+  const currencyFormatter = useCurrencyFormatter();
 
   return (
     <ScrollView>
@@ -115,7 +121,7 @@ export function ProductConfig({
           </Stack>
 
           <Stack direction="vertical" spacing={2}>
-            <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'Medium'}>
+            <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="headingSmall" color="TextSubdued">
                 Quantity
               </Text>
@@ -130,6 +136,25 @@ export function ProductConfig({
               }}
             />
           </Stack>
+
+          <Stack direction="vertical" spacing={2}>
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="headingSmall" color="TextSubdued">
+                Unit Price
+              </Text>
+            </Stack>
+            <FormMoneyField
+              label={'Unit Cost'}
+              value={product.unitCost}
+              min={0}
+              formatter={test => (test === null ? '' : currencyFormatter(test))}
+              onChange={unitCost => {
+                setProduct({ ...product, unitCost: unitCost ?? product.unitCost });
+                setHasUnsavedChanges(true);
+              }}
+            />
+          </Stack>
+
           <Stack direction="vertical" flex={1} alignment="flex-end">
             <Button
               title="Remove"

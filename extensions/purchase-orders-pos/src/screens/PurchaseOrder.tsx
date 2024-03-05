@@ -15,7 +15,7 @@ import { useForm } from '@teifi-digital/pos-tools/form';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { ResponsiveGrid, ResponsiveGridProps } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -29,7 +29,7 @@ export function PurchaseOrder({
   initialCreatePurchaseOrder: CreatePurchaseOrder | null;
 }) {
   const [query, setQuery] = useState('');
-  const { Form, isValid } = useForm();
+  const { Form } = useForm();
 
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
     initialCreatePurchaseOrder ?? undefined,
@@ -82,8 +82,14 @@ export function PurchaseOrder({
 
   const productRows = useProductRows(createPurchaseOrder, dispatch, query, purchaseOrderMutation.isLoading);
 
+  const subtotal = BigDecimal.sum(
+    ...createPurchaseOrder.products.map(product =>
+      BigDecimal.fromMoney(product.unitCost).multiply(BigDecimal.fromString(product.quantity.toFixed(0))),
+    ),
+  );
+
   const total = BigDecimal.sum(
-    createPurchaseOrder.subtotal ? BigDecimal.fromMoney(createPurchaseOrder.subtotal) : BigDecimal.ZERO,
+    subtotal,
     createPurchaseOrder.tax ? BigDecimal.fromMoney(createPurchaseOrder.tax) : BigDecimal.ZERO,
     createPurchaseOrder.shipping ? BigDecimal.fromMoney(createPurchaseOrder.shipping) : BigDecimal.ZERO,
   ).subtract(createPurchaseOrder.discount ? BigDecimal.fromMoney(createPurchaseOrder.discount) : BigDecimal.ZERO);
@@ -295,20 +301,38 @@ export function PurchaseOrder({
             </ResponsiveGrid>
 
             <ResponsiveGrid columns={1}>
-              <MoneyInputGroup
-                grid={{ columns: 2 }}
-                fields={['subtotal', 'discount', 'tax', 'shipping']}
-                createPurchaseOrder={createPurchaseOrder}
-                dispatch={dispatch}
-              />
+              <ResponsiveGrid columns={2}>
+                <FormMoneyField label={'Subtotal'} value={subtotal.toMoney()} disabled />
+                <CreatePurchaseOrderMoneyField
+                  createPurchaseOrder={createPurchaseOrder}
+                  dispatch={dispatch}
+                  field={'discount'}
+                />
+                <CreatePurchaseOrderMoneyField
+                  createPurchaseOrder={createPurchaseOrder}
+                  dispatch={dispatch}
+                  field={'tax'}
+                />
+                <CreatePurchaseOrderMoneyField
+                  createPurchaseOrder={createPurchaseOrder}
+                  dispatch={dispatch}
+                  field={'shipping'}
+                />
+              </ResponsiveGrid>
               <FormMoneyField label={'Total'} value={total.toMoney()} disabled />
 
-              <MoneyInputGroup
-                grid={{ columns: 2 }}
-                fields={['deposited', 'paid']}
-                createPurchaseOrder={createPurchaseOrder}
-                dispatch={dispatch}
-              />
+              <ResponsiveGrid columns={2}>
+                <CreatePurchaseOrderMoneyField
+                  createPurchaseOrder={createPurchaseOrder}
+                  dispatch={dispatch}
+                  field={'tax'}
+                />
+                <CreatePurchaseOrderMoneyField
+                  createPurchaseOrder={createPurchaseOrder}
+                  dispatch={dispatch}
+                  field={'shipping'}
+                />
+              </ResponsiveGrid>
               <FormMoneyField label={'Balance Due'} value={balanceDue.toMoney()} disabled />
             </ResponsiveGrid>
           </ResponsiveGrid>
@@ -500,29 +524,23 @@ const useAddProductPrerequisitesDialog = (
   };
 };
 
-type CreatePurchaseOrderMoneyField = 'subtotal' | 'discount' | 'tax' | 'shipping' | 'deposited' | 'paid';
+type CreatePurchaseOrderMoneyField = 'discount' | 'tax' | 'shipping' | 'deposited' | 'paid';
 
-function MoneyInputGroup<const F extends CreatePurchaseOrderMoneyField>({
+function CreatePurchaseOrderMoneyField<const Field extends CreatePurchaseOrderMoneyField>({
   createPurchaseOrder,
   dispatch,
-  fields,
-  grid,
+  field,
 }: {
-  fields: readonly F[];
-  createPurchaseOrder: Pick<CreatePurchaseOrder, F>;
+  createPurchaseOrder: Pick<CreatePurchaseOrder, Field>;
   dispatch: CreatePurchaseOrderDispatchProxy;
-  grid: ResponsiveGridProps;
+  field: Field;
 }) {
   return (
-    <ResponsiveGrid {...grid}>
-      {fields.map(field => (
-        <FormMoneyField
-          key={field}
-          label={titleCase(field)}
-          value={createPurchaseOrder[field]}
-          onChange={value => dispatch.setPartial({ [field]: value })}
-        />
-      ))}
-    </ResponsiveGrid>
+    <FormMoneyField
+      key={field}
+      label={titleCase(field)}
+      value={createPurchaseOrder[field]}
+      onChange={value => dispatch.setPartial({ [field]: value })}
+    />
   );
 }

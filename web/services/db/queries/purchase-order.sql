@@ -36,9 +36,9 @@ WHERE id = COALESCE(:id, id)
 /* @name upsert */
 INSERT INTO "PurchaseOrder" (shop, name, status, "locationId", "customerId", "vendorCustomerId", note, "vendorName",
                              "customerName", "locationName", "shipFrom", "shipTo", "workOrderName", "orderId",
-                             "orderName", "subtotal", "discount", "tax", "shipping", "deposited", "paid")
+                             "orderName", "discount", "tax", "shipping", "deposited", "paid")
 VALUES (:shop!, :name!, :status!, :locationId, :customerId, :vendorCustomerId, :note, :vendorName, :customerName,
-        :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName, :subtotal, :discount, :tax, :shipping,
+        :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName, :discount, :tax, :shipping,
         :deposited, :paid)
 ON CONFLICT (shop, name) DO UPDATE
   SET status            = :status!,
@@ -54,7 +54,6 @@ ON CONFLICT (shop, name) DO UPDATE
       "workOrderName"   = :workOrderName,
       "orderId"         = :orderId,
       "orderName"       = :orderName,
-      subtotal          = :subtotal,
       discount          = :discount,
       tax               = :tax,
       shipping          = :shipping,
@@ -95,9 +94,9 @@ WHERE "purchaseOrderId" = :purchaseOrderId!;
 /* @name insertProduct */
 INSERT INTO "PurchaseOrderProduct" ("purchaseOrderId", "productVariantId", "inventoryItemId", quantity,
                                     "availableQuantity", sku, name,
-                                    handle)
+                                    handle, "unitCost")
 VALUES (:purchaseOrderId!, :productVariantId!, :inventoryItemId!, :quantity!, :availableQuantity!, :sku, :name,
-        :handle);
+        :handle, :unitCost!);
 
 /* @name insertCustomField */
 INSERT INTO "PurchaseOrderCustomField" ("purchaseOrderId", key, value)
@@ -123,3 +122,10 @@ DELETE
 FROM "PurchaseOrderCustomFieldsPreset"
 WHERE shop = :shop!
   AND name = :name!;
+
+/* @name getProductVariantCostsForShop */
+SELECT "unitCost", "quantity"
+FROM "PurchaseOrderProduct"
+INNER JOIN "PurchaseOrder" po ON "purchaseOrderId" = po.id
+WHERE po.shop = :shop!
+  AND "productVariantId" = :productVariantId!; 

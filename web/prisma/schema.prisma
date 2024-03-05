@@ -199,8 +199,6 @@ model PurchaseOrder {
   vendorCustomerId String?
   orderId          String?
 
-  /// Total excluding discounts, taxes, shipping
-  subtotal  String?
   discount  String?
   tax       String?
   shipping  String?
@@ -243,8 +241,9 @@ model PurchaseOrderProduct {
 
   productVariantId  String
   inventoryItemId   String
+  unitCost          String
   quantity          Int
-  /// Quantity that is added to the available inventory
+  /// Quantity that is added Shopify as available inventory
   availableQuantity Int
 
   // Searchable fields

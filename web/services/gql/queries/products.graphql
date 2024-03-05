@@ -49,12 +49,34 @@ fragment ProductVariantFragment on ProductVariant {
     isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
     isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
   }
+  requiresComponents
   defaultCharges: metafield(namespace: "$app", key: "default-charges") {
     references(first: 10) {
       nodes {
         __typename
         ...FixedPriceLabourChargeFragment
         ...HourlyLabourChargeFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+query getProductVariantComponents(
+  $id: ID!,
+  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
+  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
+) {
+  productVariant(id: $id) {
+    productVariantComponents(first: 25) {
+      nodes {
+        quantity
+        productVariant {
+          ...ProductVariantFragment
+        }
       }
       pageInfo {
         hasNextPage
