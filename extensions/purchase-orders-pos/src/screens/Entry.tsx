@@ -2,7 +2,6 @@ import { BadgeVariant, Button, List, ListRow, ScrollView, Stack, Text } from '@s
 import { useState } from 'react';
 import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-purchase-order-info-page-query.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Status } from '@web/schemas/generated/create-purchase-order.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useRouter } from '../routes.js';
@@ -10,6 +9,7 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/from-purchase-order.js';
 
 export function Entry() {
   const [query, setQuery] = useState('');
@@ -82,7 +82,9 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
   return purchaseOrders.map<ListRow>(purchaseOrder => ({
     id: purchaseOrder.name,
     onPress: () => {
-      router.push('PurchaseOrder', { initialCreatePurchaseOrder: purchaseOrder });
+      router.push('PurchaseOrder', {
+        initialCreatePurchaseOrder: createPurchaseOrderFromPurchaseOrder(purchaseOrder),
+      });
     },
     leftSide: {
       label: purchaseOrder.name,
@@ -103,10 +105,10 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
 function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
   const possibilities = [
     purchaseOrder.vendorName,
-    purchaseOrder.locationName,
-    purchaseOrder.workOrderName,
-    purchaseOrder.customerName,
-  ].filter(isNonNullable);
+    purchaseOrder.location?.name,
+    purchaseOrder.linkedOrders.map(order => order.name).join(', '),
+    purchaseOrder.linkedCustomers.map(customer => customer.displayName).join(', '),
+  ].filter(Boolean);
 
   if (possibilities.length === 0) {
     return undefined;

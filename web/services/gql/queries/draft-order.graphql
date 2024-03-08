@@ -187,6 +187,9 @@ fragment DraftOrderInfoFragment on DraftOrder {
 fragment DatabaseShopifyOrderFragment on DraftOrder {
   id
   name
+  customer {
+    id
+  }
 }
 
 fragment DatabaseShopifyOrderLineItemFragment on DraftOrderLineItem {

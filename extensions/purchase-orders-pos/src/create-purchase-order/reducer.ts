@@ -1,7 +1,8 @@
-import { useMemo, useReducer, useState } from 'react';
+import { useReducer, useState } from 'react';
 import { defaultCreatePurchaseOrder } from './default.js';
 import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { useConst } from '../util/use-const.js';
 
 export type CreatePurchaseOrderAction =
   | ({
@@ -18,22 +19,16 @@ export type CreatePurchaseOrderAction =
   | ({
       type: 'set';
     } & CreatePurchaseOrder)
-  | ({
-      type: 'setWorkOrder';
-    } & Pick<CreatePurchaseOrder, 'workOrderName' | 'customerId' | 'customerName' | 'orderName' | 'orderId'>)
-  | ({
-      type: 'setOrder';
-    } & Pick<CreatePurchaseOrder, 'customerId' | 'customerName' | 'orderName' | 'orderId'>)
   | {
       type: 'setInventoryState';
       inventoryState: 'available' | 'unavailable';
     }
   | ({
       type: 'setVendor';
-    } & Pick<CreatePurchaseOrder, 'vendorName' | 'vendorCustomerId'>)
+    } & Pick<CreatePurchaseOrder, 'vendorName'>)
   | ({
       type: 'setLocation';
-    } & Pick<CreatePurchaseOrder, 'locationId' | 'locationName'>);
+    } & Pick<CreatePurchaseOrder, 'locationId'>);
 
 export type CreatePurchaseOrderDispatchProxy = {
   [type in CreatePurchaseOrderAction['type']]: (args: Omit<CreatePurchaseOrderAction & { type: type }, 'type'>) => void;
@@ -49,7 +44,7 @@ export const useCreatePurchaseOrderReducer = (
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const proxy = useMemo(
+  const proxy = useConst(
     () =>
       new Proxy<CreatePurchaseOrderDispatchProxy>({} as CreatePurchaseOrderDispatchProxy, {
         get: (target, prop) => (args: DiscriminatedUnionOmit<CreatePurchaseOrderAction, 'type'>) => {
@@ -57,7 +52,6 @@ export const useCreatePurchaseOrderReducer = (
           dispatchCreatePurchaseOrder({ type: prop, ...args } as CreatePurchaseOrderAction);
         },
       }),
-    [],
   );
 
   return [createPurchaseOrder, proxy, hasUnsavedChanges, setHasUnsavedChanges] as const;
@@ -68,8 +62,6 @@ function createPurchaseOrderReducer(
   action: CreatePurchaseOrderAction,
 ): CreatePurchaseOrder {
   switch (action.type) {
-    case 'setWorkOrder':
-    case 'setOrder':
     case 'setPartial':
     case 'setVendor':
     case 'setLocation':
@@ -79,12 +71,8 @@ function createPurchaseOrderReducer(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );
 
-      if (action.type === 'setOrder') {
-        partialNotUndefined.workOrderName = null;
-      }
-
       if (action.type === 'setVendor') {
-        partialNotUndefined.products = [];
+        partialNotUndefined.lineItems = [];
       }
 
       return { ...createPurchaseOrder, ...partialNotUndefined };
@@ -93,7 +81,7 @@ function createPurchaseOrderReducer(
     case 'addProducts': {
       return {
         ...createPurchaseOrder,
-        products: mergeProducts(...createPurchaseOrder.products, ...action.products).filter(
+        lineItems: mergeProducts(...createPurchaseOrder.lineItems, ...action.products).filter(
           product => product.quantity > 0,
         ),
       };
@@ -102,20 +90,20 @@ function createPurchaseOrderReducer(
     case 'updateProduct': {
       return {
         ...createPurchaseOrder,
-        products: createPurchaseOrder.products
+        lineItems: createPurchaseOrder.lineItems
           .map(product => (shouldMergeProducts(product, action.product) ? action.product : product))
           .filter(product => product.quantity > 0),
       };
     }
 
     case 'setInventoryState': {
-      const products = createPurchaseOrder.products.map(product => ({
+      const lineItems = createPurchaseOrder.lineItems.map(product => ({
         ...product,
         // for now we only support having the full quantity available or none
         availableQuantity: action.inventoryState === 'available' ? product.quantity : (0 as Int),
       }));
 
-      return { ...createPurchaseOrder, products };
+      return { ...createPurchaseOrder, lineItems };
     }
 
     default:

@@ -8,8 +8,6 @@ import { SavePreset } from './screens/popups/SavePreset.js';
 import { ImportPreset } from './screens/popups/ImportPreset.js';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
 import { LocationSelector } from './screens/popups/LocationSelector.js';
-import { OrderSelector } from './screens/popups/OrderSelector.js';
-import { WorkOrderSelector } from './screens/popups/WorkOrderSelector.js';
 import { ProductSelector } from './screens/popups/ProductSelector.js';
 import { ProductCreator } from './screens/popups/ProductCreator.js';
 import { ProductConfig } from './screens/popups/ProductConfig.js';
@@ -60,14 +58,16 @@ export const { Router, useRouter } = createRouter(
       title: 'Select Location',
       Component: LocationSelector,
     },
-    OrderSelector: {
-      title: 'Select Order',
-      Component: OrderSelector,
-    },
-    WorkOrderSelector: {
-      title: 'Select Work Order',
-      Component: WorkOrderSelector,
-    },
+    // TODO: Add this back, but for selecting items to add rather than for selecting a single work order (ie this will open another popup)
+    // OrderSelector: {
+    //   title: 'Select Order',
+    //   Component: OrderSelector,
+    // },
+    // TODO: Add this back, but for selecting items to add rather than for selecting a single work order (ie this will open another popup)
+    // WorkOrderSelector: {
+    //   title: 'Select Work Order',
+    //   Component: WorkOrderSelector,
+    // },
     ProductSelector: {
       title: 'Select Product',
       Component: ProductSelector,

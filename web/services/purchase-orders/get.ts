@@ -10,6 +10,7 @@ import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { groupByKey, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export async function getPurchaseOrder(session: Session, name: string) {
   const [purchaseOrder] = await db.purchaseOrder.get({ name, shop: session.shop });
@@ -18,10 +19,11 @@ export async function getPurchaseOrder(session: Session, name: string) {
     throw new HttpError('Purchase order not found', 404);
   }
 
+  const linkedOrders = await db.shopifyOrder.getLinkedOrdersByPurchaseOrderId({ purchaseOrderId: purchaseOrder.id });
+  const linkedCustomerIds = unique(linkedOrders.map(({ customerId }) => customerId).filter(isNonNullable));
+  const linkedCustomers = await db.customers.getMany({ customerIds: linkedCustomerIds });
+
   assertGidOrNull(purchaseOrder.locationId);
-  assertGidOrNull(purchaseOrder.customerId);
-  assertGidOrNull(purchaseOrder.vendorCustomerId);
-  assertGidOrNull(purchaseOrder.orderId);
   assertMoneyOrNull(purchaseOrder.discount);
   assertMoneyOrNull(purchaseOrder.tax);
   assertMoneyOrNull(purchaseOrder.shipping);
@@ -33,11 +35,8 @@ export async function getPurchaseOrder(session: Session, name: string) {
   return await awaitNested({
     name: purchaseOrder.name,
     status: purchaseOrder.status,
-    workOrder: getWorkOrder(purchaseOrder.workOrderId),
-    order: getOrder(purchaseOrder.orderId),
     location: getLocation(purchaseOrder.locationId),
-    customer: getCustomer(purchaseOrder.customerId),
-    vendorCustomer: getCustomer(purchaseOrder.vendorCustomerId),
+    vendorName: purchaseOrder.vendorName,
     shipFrom: purchaseOrder.shipFrom,
     shipTo: purchaseOrder.shipTo,
     note: purchaseOrder.note,
@@ -49,6 +48,8 @@ export async function getPurchaseOrder(session: Session, name: string) {
     customFields: getPurchaseOrderCustomFields(purchaseOrder.id),
     lineItems: getPurchaseOrderLineItems(purchaseOrder.id),
     employeeAssignments: getPurchaseOrderEmployeeAssignments(purchaseOrder.id),
+    linkedOrders: linkedOrders.map(({ orderId: id, name }) => ({ id, name })),
+    linkedCustomers: linkedCustomers.map(({ customerId: id, displayName }) => ({ id, displayName })),
   });
 }
 
@@ -64,9 +65,7 @@ export async function getPurchaseOrderInfoPage(
   const names = await db.purchaseOrder.getPage({ ...paginationOptions, shop });
 
   // TODO: Only basic data
-  const purchaseOrders = await Promise.all(names.map(({ name }) => getPurchaseOrder(session, name)));
-
-  return purchaseOrders;
+  return await Promise.all(names.map(({ name }) => getPurchaseOrder(session, name)));
 }
 
 async function getPurchaseOrderLineItems(purchaseOrderId: number) {
@@ -84,7 +83,9 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
     const [productVariant = never('fk')] = productVariantsById?.[productVariantId] ?? [];
     const [product = never('fk')] = productsById?.[productVariant?.productId] ?? [];
 
-    assertGid(productVariantId);
+    assertGid(productVariant.productVariantId);
+    assertGid(productVariant.inventoryItemId);
+    assertGid(product.productId);
     assertGidOrNull(shopifyOrderLineItemId);
     assertInt(quantity);
     assertInt(availableQuantity);
@@ -130,39 +131,6 @@ async function getPurchaseOrderEmployeeAssignments(purchaseOrderId: number) {
   });
 }
 
-async function getWorkOrder(workOrderId: number | null) {
-  if (workOrderId === null) {
-    return null;
-  }
-
-  const [workOrder = never()] = await db.workOrder.get({ id: workOrderId });
-
-  return {
-    name: workOrder.name,
-    customerId: workOrder.customerId,
-    status: workOrder.status,
-    dueDate: workOrder.dueDate,
-    derivedFromOrderId: workOrder.derivedFromOrderId,
-  };
-}
-
-async function getOrder(orderId: string | null) {
-  if (orderId === null) {
-    return null;
-  }
-
-  const [order = never()] = await db.shopifyOrder.get({ orderId });
-
-  assertGid(orderId);
-
-  return {
-    id: orderId,
-    name: order.name,
-    fullyPaid: order.fullyPaid,
-    type: order.orderType,
-  };
-}
-
 async function getLocation(locationId: string | null) {
   if (locationId === null) {
     return null;
@@ -175,24 +143,5 @@ async function getLocation(locationId: string | null) {
   return {
     id: locationId,
     name: location.name,
-  };
-}
-
-async function getCustomer(customerId: string | null) {
-  if (customerId === null) {
-    return null;
-  }
-
-  const [customer = never()] = await db.customers.get({ customerId });
-
-  assertGid(customerId);
-
-  return {
-    id: customerId,
-    name: customer.displayName,
-    firstName: customer.firstName,
-    lastName: customer.lastName,
-    email: customer.email,
-    phone: customer.phone,
   };
 }

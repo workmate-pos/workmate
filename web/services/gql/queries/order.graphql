@@ -160,6 +160,9 @@ fragment DatabaseShopifyOrderFragment on Order {
   id
   name
   fullyPaid
+  customer {
+    id
+  }
   customAttributes {
     key
     value

@@ -7,19 +7,20 @@ FROM "PurchaseOrder" po
        LEFT JOIN "PurchaseOrderCustomField" pocf ON po.id = pocf."purchaseOrderId"
        LEFT JOIN "PurchaseOrderEmployeeAssignment" poea ON po.id = poea."purchaseOrderId"
        LEFT JOIN "Employee" e ON poea."employeeId" = e."staffMemberId"
-       LEFT JOIN "Customer" vendor ON po."vendorCustomerId" = vendor."customerId"
-       LEFT JOIN "Customer" customer ON po."customerId" = customer."customerId"
        LEFT JOIN "Location" l ON po."locationId" = l."locationId"
-       LEFT JOIN "ShopifyOrder" so ON po."orderId" = so."orderId"
-       LEFT JOIN "WorkOrder" wo ON po."workOrderId" = wo.id
+       LEFT JOIN "ShopifyOrderLineItem" soli ON poli."shopifyOrderLineItemId" = soli."lineItemId"
+       LEFT JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+       LEFT JOIN "Customer" c ON so."customerId" = c."customerId"
+       LEFT JOIN "WorkOrderItem" woi ON soli."lineItemId" = woi."shopifyOrderLineItemId"
+       LEFT JOIN "WorkOrder" wo ON woi."workOrderId" = wo."id"
 WHERE po.shop = :shop!
   AND po.status = COALESCE(:status, po.status)
-  AND po."customerId" IS NOT DISTINCT FROM COALESCE(:customerId, po."customerId")
+  AND c."customerId" IS NOT DISTINCT FROM COALESCE(:customerId, c."customerId")
   AND (
   po.name ILIKE COALESCE(:query, '%')
     OR po.note ILIKE COALESCE(:query, '%')
-    OR vendor."displayName" ILIKE COALESCE(:query, '%')
-    OR customer."displayName" ILIKE COALESCE(:query, '%')
+    OR po."vendorName" ILIKE COALESCE(:query, '%')
+    OR c."displayName" ILIKE COALESCE(:query, '%')
     OR l.name ILIKE COALESCE(:query, '%')
     OR so.name ILIKE COALESCE(:query, '%')
     OR po."shipTo" ILIKE COALESCE(:query, '%')
@@ -42,25 +43,22 @@ WHERE id = COALESCE(:id, id)
   AND name = COALESCE(:name, name);
 
 /* @name upsert */
-INSERT INTO "PurchaseOrder" (shop, "shipFrom", "shipTo", "locationId", "customerId", "vendorCustomerId", note,
-                             "orderId", discount, tax, shipping, deposited, paid, name, status, "workOrderId")
-VALUES (:shop!, :shipFrom, :shipTo, :locationId, :customerId, :vendorCustomerId, :note, :orderId, :discount, :tax,
-        :shipping, :deposited, :paid, :name!, :status!, :workOrderId)
+INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
+                             "shipTo", note, "vendorName")
+VALUES (:shop!, :locationId, :discount, :tax, :shipping, :deposited, :paid, :name!, :status!, :shipFrom!, :shipTo!,
+        :note!, :vendorName)
 ON CONFLICT (shop, name) DO UPDATE
-  SET "shipFrom"         = :shipFrom,
-      "shipTo"           = :shipTo,
-      "locationId"       = :locationId,
-      "customerId"       = :customerId,
-      "vendorCustomerId" = :vendorCustomerId,
-      note               = :note,
-      "orderId"          = :orderId,
-      discount           = :discount,
-      tax                = :tax,
-      shipping           = :shipping,
-      deposited          = :deposited,
-      paid               = :paid,
-      status             = :status!,
-      "workOrderId"      = :workOrderId
+  SET "shipFrom"   = :shipFrom,
+      "shipTo"     = :shipTo,
+      "locationId" = :locationId,
+      note         = :note,
+      discount     = :discount,
+      tax          = :tax,
+      shipping     = :shipping,
+      deposited    = :deposited,
+      paid         = :paid,
+      status       = :status!,
+      "vendorName" = :vendorName
 RETURNING id;
 
 /* @name getLineItems */

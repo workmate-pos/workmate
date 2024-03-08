@@ -27,8 +27,6 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const isNew = createPurchaseOrder.name === null;
     const existingPurchaseOrder = isNew ? null : await getPurchaseOrder(session, name);
 
-    const workOrderId = await getWorkOrderId(createPurchaseOrder.workOrderName, shop);
-
     const productVariantIds = createPurchaseOrder.lineItems.map(({ productVariantId }) => productVariantId);
     await ensureProductVariantsExist(session, productVariantIds);
 
@@ -36,11 +34,8 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
       shop,
       name,
       status: createPurchaseOrder.status,
-      orderId: createPurchaseOrder.orderId,
-      workOrderId: workOrderId,
+      vendorName: createPurchaseOrder.vendorName,
       locationId: createPurchaseOrder.locationId,
-      customerId: createPurchaseOrder.customerId,
-      vendorCustomerId: createPurchaseOrder.vendorCustomerId,
       note: createPurchaseOrder.note,
       shipFrom: createPurchaseOrder.shipFrom,
       shipTo: createPurchaseOrder.shipTo,
@@ -75,20 +70,6 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
 
     return { name };
   });
-}
-
-async function getWorkOrderId(workOrderName: string | null, shop: string) {
-  if (!workOrderName) {
-    return null;
-  }
-
-  const [workOrder] = await db.workOrder.get({ shop, name: workOrderName });
-
-  if (!workOrder) {
-    throw new HttpError('Work order not found', 404);
-  }
-
-  return workOrder.id;
 }
 
 /**

@@ -91,7 +91,7 @@ function getEmployeeRows(
         if (selected) {
           setSelectedEmployees(selectedEmployees.filter(e => e.employeeId !== employee.id));
         } else {
-          setSelectedEmployees([...selectedEmployees, { employeeId: employee.id, employeeName: employee.name }]);
+          setSelectedEmployees([...selectedEmployees, { employeeId: employee.id }]);
         }
       },
       leftSide: {

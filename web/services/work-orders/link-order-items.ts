@@ -70,6 +70,8 @@ async function linkItems(
   for (const { uuid } of items) {
     const shopifyOrderLineItemId = lineItemIdByItemUuid[uuid] ?? never();
     await db.workOrder.setLineItemShopifyOrderLineItemId({ workOrderId, uuid, shopifyOrderLineItemId });
+
+    // TODO: If present, find the DraftOrderLineItem linked to the uuid currently. Then make sure to link the purchase order line items top the new shopifyorderlineitemid
   }
 
   if (items.length !== uuids.length) {

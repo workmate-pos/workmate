@@ -54,7 +54,6 @@ model WorkOrder {
   items                   WorkOrderItem[]
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
   hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
-  purchaseOrder           PurchaseOrder[]
 
   @@unique([shop, name])
 }
@@ -144,14 +143,15 @@ model ShopifyOrder {
 
   name      String
   fullyPaid Boolean
-  // TODO: Also track the paid price and stuff
   lineItems ShopifyOrderLineItem[]
+
+  customer   Customer? @relation(fields: [customerId], references: [customerId])
+  customerId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
-  purchaseOrders PurchaseOrder[]
-  workOrders     WorkOrder[]
+  workOrders WorkOrder[]
 
   @@index([shop])
 }
@@ -169,6 +169,7 @@ model ShopifyOrderLineItem {
   quantity            Int
   unfulfilledQuantity Int
   unitPrice           String // excluding tax and line item discounts
+  // TODO: Also track the paid price and stuff
   // TODO: Also store the price with discounts and stuff
 
   createdAt DateTime @default(now())
@@ -300,27 +301,15 @@ model PurchaseOrder {
 
   shop String
 
-  shipFrom String?
-  shipTo   String?
+  shipFrom String
+  shipTo   String
 
   location   Location? @relation(fields: [locationId], references: [locationId])
   locationId String?
 
-  // TODO: Is this really needed here? Relation is known through line items
-  customer   Customer? @relation("purchaseOrderCustomer", fields: [customerId], references: [customerId])
-  customerId String?
-
-  // TODO: Is this really needed here? Relation is known through line items
-  workOrder   WorkOrder? @relation(fields: [workOrderId], references: [id])
-  workOrderId Int?
-
-  vendorCustomer   Customer? @relation("purchaseOrderVendorCustomer", fields: [vendorCustomerId], references: [customerId])
-  vendorCustomerId String?
+  vendorName String?
 
   note String
-
-  order   ShopifyOrder? @relation(fields: [orderId], references: [orderId])
-  orderId String?
 
   discount  String?
   tax       String?
@@ -462,9 +451,8 @@ model Customer {
   email       String?
   phone       String?
 
-  workOrders                   WorkOrder[]
-  customerPurchaseOrders       PurchaseOrder[] @relation("purchaseOrderCustomer")
-  vendorCustomerPurchaseOrders PurchaseOrder[] @relation("purchaseOrderVendorCustomer")
+  workOrders    WorkOrder[]
+  shopifyOrders ShopifyOrder[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now())

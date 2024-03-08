@@ -10,12 +10,6 @@
       "title": "status",
       "enum": ["OPEN", "RECEIVED", "CANCELLED", "CLOSED"]
     },
-    "orderId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
-    },
-    "workOrderName": {
-      "anyOf": [{ "const": null }, { "type": "string" }]
-    },
     "locationId": {
       "anyOf": [
         { "const": null },
@@ -24,48 +18,23 @@
         }
       ]
     },
-    "customerId": {
+    "vendorName": {
       "anyOf": [
         { "const": null },
         {
-          "$ref": "scalars.json#/definitions/ID"
-        }
-      ]
-    },
-    "vendorCustomerId": {
-      "anyOf": [
-        { "const": null },
-        {
-          "$ref": "scalars.json#/definitions/ID"
+          "type": "string",
+          "minLength": 1
         }
       ]
     },
     "shipFrom": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+      "type": "string"
     },
     "shipTo": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+      "type": "string"
     },
     "note": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+      "type": "string"
     },
     "discount": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
@@ -133,11 +102,8 @@
   "required": [
     "name",
     "status",
-    "orderId",
-    "workOrderName",
     "locationId",
-    "customerId",
-    "vendorCustomerId",
+    "vendorName",
     "shipFrom",
     "shipTo",
     "note",

@@ -49,11 +49,15 @@ export type WorkOrderInfo = {
   name: string;
   status: string;
   dueDate: DateTime;
-  customerName: string;
-  /**
-   * Names of related orders, including both draft orders and normal orders.
-   */
-  orderNames: string[];
+  customer: {
+    id: ID;
+    name: string;
+  };
+  orders: {
+    id: ID;
+    name: string;
+    type: 'DRAFT_ORDER' | 'ORDER';
+  }[];
   paymentStatus: 'unpaid' | 'partially-paid' | 'fully-paid';
   total: Money;
   outstanding: Money;

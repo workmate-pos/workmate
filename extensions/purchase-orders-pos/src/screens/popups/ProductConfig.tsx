@@ -15,13 +15,13 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { useRouter } from '../../routes.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 
 export function ProductConfig({
   product: initialProduct,
-  locationName,
   locationId,
   onSave,
-}: NonNullableValues<Pick<CreatePurchaseOrder, 'locationName' | 'locationId'>> & {
+}: NonNullableValues<Pick<CreatePurchaseOrder, 'locationId'>> & {
   product: Product;
   onSave: (product: Product) => void;
 }) {
@@ -29,6 +29,8 @@ export function ProductConfig({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const fetch = useAuthenticatedFetch();
+
+  const locationQuery = useLocationQuery({ fetch, id: locationId });
 
   const productVariantQuery = useProductVariantQuery({ fetch, id: product?.productVariantId ?? null });
   const productVariant = productVariantQuery?.data;
@@ -46,9 +48,9 @@ export function ProductConfig({
 
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
   screen.setTitle(getProductVariantName(productVariant) ?? 'Product Config');
-  screen.setIsLoading(!product || productVariantQuery.isLoading || inventoryItemQuery.isLoading);
-
-  // TODO: Show current stock in a nicer way - maybe for just one loc? (if so change inventory level endpoint/gql query)
+  screen.setIsLoading(
+    !product || productVariantQuery.isLoading || inventoryItemQuery.isLoading || locationQuery.isLoading,
+  );
 
   const currencyFormatter = useCurrencyFormatter();
 
@@ -66,7 +68,7 @@ export function ProductConfig({
           <Stack direction={'vertical'} paddingVertical={'Medium'}>
             <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="headingSmall" color="TextSubdued">
-                Stock at {locationName}
+                Stock at {locationQuery.data?.name ?? 'Unknown Location'}
               </Text>
             </Stack>
 

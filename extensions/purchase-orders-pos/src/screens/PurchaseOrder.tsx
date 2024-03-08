@@ -7,7 +7,6 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEffect, useState } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useRouter } from '../routes.js';
@@ -21,7 +20,11 @@ import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/from-purchase-order.js';
+import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
+import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 
+// TODO: A new screen to view linked orders/workorders
 // TODO: TextArea in pos-tools
 export function PurchaseOrder({
   initialCreatePurchaseOrder,
@@ -54,7 +57,7 @@ export function PurchaseOrder({
       onSuccess: ({ purchaseOrder }) => {
         const message = !!createPurchaseOrder.name ? 'Purchase order updated' : 'Purchase order created';
         toast.show(message);
-        dispatch.set(purchaseOrder);
+        dispatch.set(createPurchaseOrderFromPurchaseOrder(purchaseOrder));
         setHasUnsavedChanges(false);
       },
     },
@@ -70,20 +73,23 @@ export function PurchaseOrder({
     dispatch.setPartial({ shipTo: selectedLocation.address?.formatted?.join('\n') ?? null });
   }, [selectedLocation]);
 
-  const vendorCustomerQuery = useCustomerQuery({ fetch, id: createPurchaseOrder.vendorCustomerId });
-  const vendorCustomer = vendorCustomerQuery.data;
+  const vendorsQuery = useVendorsQuery({ fetch });
+  const vendorCustomer = vendorsQuery?.data?.find(vendor => vendor.name === createPurchaseOrder.vendorName)?.customer;
 
   // Default "Ship From" to vendor's default address
   useEffect(() => {
     if (!vendorCustomer) return;
     if (createPurchaseOrder.shipFrom) return;
-    dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress?.formatted?.join('\n') ?? null });
+    dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress?.formatted?.join('\n') });
   }, [vendorCustomer]);
+
+  const assignedEmployeeIds = createPurchaseOrder.employeeAssignments.map(({ employeeId }) => employeeId);
+  const employeeQueries = useEmployeeQueries({ fetch, ids: assignedEmployeeIds });
 
   const productRows = useProductRows(createPurchaseOrder, dispatch, query, purchaseOrderMutation.isLoading);
 
   const subtotal = BigDecimal.sum(
-    ...createPurchaseOrder.products.map(product =>
+    ...createPurchaseOrder.lineItems.map(product =>
       BigDecimal.fromMoney(product.unitCost).multiply(BigDecimal.fromString(product.quantity.toFixed(0))),
     ),
   );
@@ -101,10 +107,10 @@ export function PurchaseOrder({
     ),
   );
 
-  const hasProductQuantity = createPurchaseOrder.products.some(product => product.quantity > 0);
+  const hasProductQuantity = createPurchaseOrder.lineItems.some(product => product.quantity > 0);
 
   // whether there is some product.availableQuantity > 0. used to determine whether we should show "Mark as received" or "Mark as not received" button
-  const productHasAvailableQuantity = createPurchaseOrder.products.some(product => product.availableQuantity > 0);
+  const productHasAvailableQuantity = createPurchaseOrder.lineItems.some(product => product.availableQuantity > 0);
 
   useEffect(() => {
     screen.setTitle(createPurchaseOrder.name ?? 'New purchase order');
@@ -121,16 +127,15 @@ export function PurchaseOrder({
             <FormStringField
               label={'Vendor'}
               onFocus={vendorSelectorWarningDialog.show}
-              value={createPurchaseOrder.vendorName ?? (vendorCustomerQuery.isLoading ? 'Loading...' : '')}
-              disabled={vendorSelectorWarningDialog.isVisible || vendorCustomerQuery.isLoading}
+              value={createPurchaseOrder.vendorName ?? ''}
+              disabled={vendorSelectorWarningDialog.isVisible}
             />
 
             <FormStringField
               label={'Location'}
               onFocus={() => {
                 router.push('LocationSelector', {
-                  onSelect: location =>
-                    dispatch.setLocation({ locationId: location?.id ?? null, locationName: location?.name ?? null }),
+                  onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
                 });
               }}
               value={selectedLocation?.name ?? ''}
@@ -152,7 +157,7 @@ export function PurchaseOrder({
             <FormStringField
               label={'Ship From'}
               value={createPurchaseOrder.shipFrom ?? ''}
-              onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom: shipFrom || null })}
+              onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom })}
             />
             {!!vendorCustomer?.defaultAddress?.formatted &&
               createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
@@ -169,7 +174,7 @@ export function PurchaseOrder({
             <TextArea
               label={'Ship To'}
               value={createPurchaseOrder.shipTo ?? ''}
-              onChange={(shipTo: string) => dispatch.setPartial({ shipTo: shipTo || null })}
+              onChange={(shipTo: string) => dispatch.setPartial({ shipTo })}
               disabled={purchaseOrderMutation.isLoading}
             />
             {!!selectedLocation?.address?.formatted &&
@@ -185,7 +190,7 @@ export function PurchaseOrder({
             <TextArea
               label={'Note'}
               value={createPurchaseOrder.note}
-              onChange={(note: string) => dispatch.setPartial({ note: note || null })}
+              onChange={(note: string) => dispatch.setPartial({ note })}
               disabled={purchaseOrderMutation.isLoading}
             />
           </ResponsiveGrid>
@@ -195,7 +200,13 @@ export function PurchaseOrder({
           <ResponsiveGrid columns={3}>
             <FormStringField
               label={'Assigned Employees'}
-              value={createPurchaseOrder.employeeAssignments.map(({ employeeName }) => employeeName).join(', ')}
+              value={
+                Object.values(employeeQueries).some(query => query.isLoading)
+                  ? 'Loading...'
+                  : createPurchaseOrder.employeeAssignments
+                      .map(({ employeeId }) => employeeQueries[employeeId]?.data?.name ?? 'Unknown Employee')
+                      .join(', ')
+              }
               onFocus={() => {
                 router.push('EmployeeSelector', {
                   initialEmployeeAssignments: createPurchaseOrder.employeeAssignments,
@@ -206,44 +217,6 @@ export function PurchaseOrder({
                 label: '×',
                 disabled: createPurchaseOrder.employeeAssignments.length === 0,
                 onPress: () => dispatch.setPartial({ employeeAssignments: [] }),
-              }}
-            />
-
-            <FormStringField
-              label={'Linked Work Order ID'}
-              value={createPurchaseOrder.workOrderName ?? ''}
-              onFocus={() => {
-                router.push('WorkOrderSelector', {
-                  onSelect: workOrderDetails => dispatch.setWorkOrder(workOrderDetails),
-                });
-              }}
-              action={{
-                label: '×',
-                disabled: createPurchaseOrder.workOrderName === null,
-                onPress: () =>
-                  dispatch.setWorkOrder({
-                    workOrderName: null,
-                    customerName: null,
-                    customerId: null,
-                    orderId: null,
-                    orderName: null,
-                  }),
-              }}
-            />
-
-            <FormStringField
-              label={'Linked Order ID'}
-              value={!!createPurchaseOrder.orderId ? createPurchaseOrder.orderName ?? 'Unknown' : ''}
-              onFocus={() => {
-                router.push('OrderSelector', {
-                  onSelect: orderDetails => dispatch.setOrder(orderDetails),
-                });
-              }}
-              action={{
-                label: '×',
-                disabled: createPurchaseOrder.orderId === null,
-                onPress: () =>
-                  dispatch.setOrder({ orderName: null, orderId: null, customerName: null, customerId: null }),
               }}
             />
 
@@ -353,7 +326,7 @@ export function PurchaseOrder({
 }
 
 function useProductRows(
-  { products, locationName, locationId }: Pick<CreatePurchaseOrder, 'products' | 'locationName' | 'locationId'>,
+  { lineItems, locationId }: Pick<CreatePurchaseOrder, 'lineItems' | 'locationId'>,
   dispatch: CreatePurchaseOrderDispatchProxy,
   query: string,
   disabled: boolean,
@@ -364,7 +337,7 @@ function useProductRows(
   const fetch = useAuthenticatedFetch();
   const router = useRouter();
 
-  const productVariantIds = unique(products.map(product => product.productVariantId));
+  const productVariantIds = unique(lineItems.map(product => product.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
   const getDisplayName = (product: Product) => {
@@ -378,7 +351,7 @@ function useProductRows(
     return !query || displayName.toLowerCase().includes(query.toLowerCase()) || !!variant?.sku?.includes(query);
   };
 
-  return products.filter(queryFilter).map<ListRow>((product, i) => {
+  return lineItems.filter(queryFilter).map<ListRow>((product, i) => {
     const variant = productVariantQueries[product.productVariantId]?.data ?? null;
 
     const displayName = getDisplayName(product);
@@ -389,11 +362,6 @@ function useProductRows(
       onPress: () => {
         if (disabled) return;
 
-        if (!locationName) {
-          toast.show('Location name not set');
-          return;
-        }
-
         if (!locationId) {
           toast.show('Location id not set');
           return;
@@ -401,7 +369,6 @@ function useProductRows(
 
         router.push('ProductConfig', {
           product,
-          locationName,
           locationId,
           onSave: product => dispatch.updateProduct({ product }),
         });
@@ -421,13 +388,13 @@ function useProductRows(
 }
 
 const useVendorChangeWarningDialog = (
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorCustomerId' | 'products'>,
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorName' | 'lineItems'>,
   dispatch: CreatePurchaseOrderDispatchProxy,
 ) => {
   const dialog = useDialog();
   const router = useRouter();
 
-  const showDialog = createPurchaseOrder.vendorCustomerId !== null && createPurchaseOrder.products.length > 0;
+  const showDialog = createPurchaseOrder.vendorName !== null && createPurchaseOrder.lineItems.length > 0;
 
   return {
     ...dialog,
@@ -453,7 +420,7 @@ const useVendorChangeWarningDialog = (
 };
 
 const useAddProductPrerequisitesDialog = (
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'locationId' | 'vendorName' | 'locationName'>,
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'locationId' | 'vendorName'>,
   dispatch: CreatePurchaseOrderDispatchProxy,
 ) => {
   const dialog = useDialog();
@@ -461,7 +428,7 @@ const useAddProductPrerequisitesDialog = (
   const router = useRouter();
 
   const hasVendor = createPurchaseOrder.vendorName !== null;
-  const hasLocation = createPurchaseOrder.locationId !== null && createPurchaseOrder.locationName !== null;
+  const hasLocation = createPurchaseOrder.locationId !== null;
 
   const showDialog = !hasVendor || !hasLocation;
   const onAction = () => {
@@ -471,15 +438,9 @@ const useAddProductPrerequisitesDialog = (
       });
     } else if (!hasLocation) {
       router.push('LocationSelector', {
-        onSelect: location =>
-          dispatch.setLocation({ locationId: location?.id ?? null, locationName: location?.name ?? null }),
+        onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
       });
     } else {
-      if (!createPurchaseOrder.locationName) {
-        toast.show('Location name not set');
-        return;
-      }
-
       if (!createPurchaseOrder.locationId) {
         toast.show('Location id not set');
         return;
@@ -493,7 +454,6 @@ const useAddProductPrerequisitesDialog = (
       router.push('ProductSelector', {
         filters: {
           vendorName: createPurchaseOrder.vendorName,
-          locationName: createPurchaseOrder.locationName,
           locationId: createPurchaseOrder.locationId,
         },
         onSelect: product => dispatch.addProducts({ products: [product] }),

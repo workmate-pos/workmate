@@ -12,12 +12,14 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 export function ProductSelector({
-  filters: { vendorName, locationName, locationId },
+  filters: { vendorName, locationId },
   onSelect,
 }: {
-  filters: NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationName' | 'locationId'>>;
+  filters: NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationId'>>;
   onSelect: (product: Product) => void;
 }) {
   const [query, setQuery] = useDebouncedState('');
@@ -25,6 +27,8 @@ export function ProductSelector({
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
+
+  const locationQuery = useLocationQuery({ fetch, id: locationId });
 
   const vendorQuery = vendorName ? `vendor:"${vendorName}"` : '';
   const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : '';
@@ -47,12 +51,14 @@ export function ProductSelector({
   const rows = useProductVariantRows(productVariants.flat(), locationId, selectProducts);
 
   const router = useRouter();
+  const screen = useScreen();
+  screen.setIsLoading(locationQuery.isLoading);
 
   return (
     <ScrollView>
       <Stack direction={'horizontal'} paddingVertical={'Medium'} alignment={'center'}>
         <Text variant="captionMedium" color="TextSubdued">
-          Showing products for vendor {vendorName}, and stock for location {locationName}
+          Showing products for vendor {vendorName}, and stock for location {locationQuery.data?.name ?? 'N/A'}
         </Text>
       </Stack>
 
@@ -140,10 +146,13 @@ function useProductVariantRows(
     const imageUrl = variant.image?.url ?? variant.product?.featuredImage?.url;
 
     const inventoryItemId = variant.inventoryItem.id;
-    const inventoryItem = inventoryItemQueries[inventoryItemId]?.data;
+    const inventoryItemQuery = inventoryItemQueries[inventoryItemId];
+    const inventoryItem = inventoryItemQuery?.data;
     let availableQuantity = inventoryItem?.inventoryLevel?.quantities?.find(
       quantity => quantity.name === 'available',
     )?.quantity;
+
+    // todo: clean this mess
 
     // If this is a bundle, the available quantity is the available quantity of the lowest available component divided by the quantity of that component in this bundle
     if (variant.requiresComponents) {
@@ -170,19 +179,17 @@ function useProductVariantRows(
       availableQuantity = bundleAvailableQuantity;
     }
 
+    // TODO: Only allow clicking once its loaded everything
     return {
       id: variant.id,
       onPress: () => {
         if (!variant.requiresComponents) {
           selectProducts([
             {
-              inventoryItemId: variant.inventoryItem.id,
-              handle: variant.product.handle,
+              shopifyOrderLineItemId: null,
               productVariantId: variant.id,
               availableQuantity: 0 as Int,
               quantity: 1 as Int,
-              name: displayName,
-              sku: variant.sku,
               unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
             },
           ]);
@@ -196,7 +203,7 @@ function useProductVariantRows(
             const inventoryItem = inventoryItemQueries[productVariant.inventoryItem.id]?.data;
 
             return Array.from({ length: quantity }, () => ({
-              inventoryItemId: productVariant.inventoryItem.id,
+              shopifyOrderLineItemId: null,
               handle: productVariant.product.handle,
               productVariantId: productVariant.id,
               availableQuantity: 0 as Int,

@@ -2,6 +2,7 @@ import { CreateProduct } from '@web/schemas/generated/create-product.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useMemo, useReducer, useState } from 'react';
 import { CreateProductBase, defaultCreateProduct } from './default.js';
+import { useConst } from '../util/use-const.js';
 
 export type CreateProductAction =
   | ({
@@ -22,7 +23,7 @@ export const useCreateProductReducer = (base: CreateProductBase) => {
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const proxy = useMemo(
+  const proxy = useConst(
     () =>
       new Proxy<CreateProductDispatchProxy>({} as CreateProductDispatchProxy, {
         get: (target, prop) => (args: DiscriminatedUnionOmit<CreateProductAction, 'type'>) => {
@@ -30,7 +31,6 @@ export const useCreateProductReducer = (base: CreateProductBase) => {
           dispatchCreateProduct({ type: prop, ...args } as CreateProductAction);
         },
       }),
-    [],
   );
 
   return [createPurchaseOrder, proxy, hasUnsavedChanges, setHasUnsavedChanges] as const;

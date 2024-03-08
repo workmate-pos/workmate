@@ -130,12 +130,24 @@ export async function getWorkOrderInfoPage(
         paymentStatus = 'unpaid';
       }
 
+      assertGid(workOrder.customerId);
+
       return {
         name: workOrder.name,
         status: workOrder.status,
         dueDate: workOrder.dueDate.toISOString() as DateTime,
-        customerName: customersById[workOrder.customerId]?.[0]?.displayName ?? 'Unknown customer',
-        orderNames: linkedOrders.map(order => order.name),
+        customer: {
+          id: workOrder.customerId,
+          name: customersById[workOrder.customerId]?.[0]?.displayName ?? 'Unknown customer',
+        },
+        orders: linkedOrders.map(order => {
+          assertGid(order.orderId);
+          return {
+            id: order.orderId,
+            name: order.name,
+            type: order.orderType,
+          };
+        }),
         paymentStatus,
         // TODO: Store these in db and fetch them here
         total: BigDecimal.ZERO.toMoney(),

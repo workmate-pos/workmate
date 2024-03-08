@@ -1,7 +1,6 @@
 import { useCreateProductReducer } from '../../create-product/reducer.js';
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useCreateProductMutation } from '@work-orders/common/queries/use-create-product-mutation.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useState } from 'react';
 import { Int } from '@web/schemas/generated/create-product.js';
 import type { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
@@ -39,12 +38,9 @@ export function ProductCreator({
     {
       onSuccess: ({ product }) => {
         onCreate({
-          name: getProductVariantName(product.variant) ?? 'Unknown product',
-          inventoryItemId: product.variant.inventoryItem.id,
-          handle: product.variant.product.handle,
+          shopifyOrderLineItemId: null,
           productVariantId: product.variant.id,
           availableQuantity: 0 as Int,
-          sku: product.variant.sku,
           quantity,
           unitCost: BigDecimal.ZERO.toMoney(),
         });

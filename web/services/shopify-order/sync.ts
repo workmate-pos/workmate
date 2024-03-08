@@ -8,6 +8,7 @@ import { transaction } from '../db/transaction.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { syncWorkOrders } from '../work-orders/sync.js';
 import { linkWorkOrderItemsAndCharges } from '../work-orders/link-order-items.js';
+import { ensureCustomersExist } from '../customer/sync.js';
 
 export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[]) {
   if (orderIds.length === 0) {
@@ -79,8 +80,19 @@ export async function syncShopifyOrders(session: Session, ids: ID[]) {
 async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrderFragment.Result) {
   const { id: orderId, name, fullyPaid } = order;
 
+  if (order.customer) {
+    await ensureCustomersExist(session, [order.customer.id]);
+  }
+
   await transaction(async () => {
-    await db.shopifyOrder.upsert({ shop: session.shop, orderId, name, fullyPaid, orderType: 'ORDER' });
+    await db.shopifyOrder.upsert({
+      shop: session.shop,
+      orderId,
+      name,
+      fullyPaid,
+      orderType: 'ORDER',
+      customerId: order.customer?.id ?? null,
+    });
     await syncShopifyOrderLineItems(session, { type: 'order', order });
   });
 }
@@ -88,8 +100,19 @@ async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrd
 async function upsertDraftOrder(session: Session, draftOrder: gql.draftOrder.DatabaseShopifyOrderFragment.Result) {
   const { id: orderId, name } = draftOrder;
 
+  if (draftOrder.customer) {
+    await ensureCustomersExist(session, [draftOrder.customer.id]);
+  }
+
   await transaction(async () => {
-    await db.shopifyOrder.upsert({ shop: session.shop, orderId, name, fullyPaid: false, orderType: 'DRAFT_ORDER' });
+    await db.shopifyOrder.upsert({
+      shop: session.shop,
+      orderId,
+      name,
+      fullyPaid: false,
+      orderType: 'DRAFT_ORDER',
+      customerId: draftOrder.customer?.id ?? null,
+    });
     await syncShopifyOrderLineItems(session, { type: 'draft-order', order: draftOrder });
   });
 }
