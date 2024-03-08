@@ -23,6 +23,13 @@ query getMany($ids: [ID!]!) {
   }
 }
 
+query getManyForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseCustomerFragment
+  }
+}
+
 fragment CustomerFragment on Customer {
   id
   displayName
@@ -31,4 +38,13 @@ fragment CustomerFragment on Customer {
   defaultAddress {
     formatted
   }
+}
+
+fragment DatabaseCustomerFragment on Customer {
+  id
+  displayName
+  firstName
+  lastName
+  email
+  phone
 }

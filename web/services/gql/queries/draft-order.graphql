@@ -51,6 +51,14 @@ mutation remove($id: ID!) {
   }
 }
 
+mutation removeMany($ids: [ID!]!) {
+  draftOrderBulkDelete(ids: $ids) {
+    userErrors {
+      ...UserErrorFragment
+    }
+  }
+}
+
 fragment DraftOrderFragment on DraftOrder {
   id
   totalTax
@@ -90,6 +98,27 @@ query get($id: ID!) {
     customAttributes {
       key
       value
+    }
+  }
+}
+
+query getManyForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseShopifyOrderFragment
+  }
+}
+
+query getLineItemsForDatabase($draftOrderId: ID!, $first: Int = 25) {
+  draftOrder(id: $draftOrderId) {
+    lineItems(first: $first) {
+      nodes {
+        ...DatabaseShopifyOrderLineItemFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 }
@@ -149,6 +178,29 @@ fragment DraftOrderInfoFragment on DraftOrder {
   draftTotalTax: totalTax
   totalPrice
   totalShippingPrice
+  customAttributes {
+    key
+    value
+  }
+}
+
+fragment DatabaseShopifyOrderFragment on DraftOrder {
+  id
+  name
+}
+
+fragment DatabaseShopifyOrderLineItemFragment on DraftOrderLineItem {
+  id
+  title
+  variant {
+    id
+  }
+  quantity
+  originalUnitPriceSet {
+    shopMoney {
+      amount
+    }
+  }
   customAttributes {
     key
     value

@@ -16,9 +16,6 @@
     "workOrderName": {
       "anyOf": [{ "const": null }, { "type": "string" }]
     },
-    "orderName": {
-      "anyOf": [{ "const": null }, { "type": "string" }]
-    },
     "locationId": {
       "anyOf": [
         { "const": null },
@@ -70,33 +67,6 @@
         }
       ]
     },
-    "vendorName": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
-    },
-    "customerName": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
-    },
-    "locationName": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
-    },
     "discount": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
     },
@@ -112,7 +82,7 @@
     "paid": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
     },
-    "products": {
+    "lineItems": {
       "type": "array",
       "items": {
         "type": "object",
@@ -121,8 +91,8 @@
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
           },
-          "inventoryItemId": {
-            "$ref": "scalars.json#/definitions/ID"
+          "shopifyOrderLineItemId": {
+            "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
           },
           "quantity": {
             "description": "The quantity of this product variant in the PO",
@@ -134,27 +104,9 @@
           },
           "unitCost": {
             "$ref": "scalars.json#/definitions/Money"
-          },
-          "sku": {
-            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
-          },
-          "name": {
-            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
-          },
-          "handle": {
-            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
           }
         },
-        "required": [
-          "productVariantId",
-          "inventoryItemId",
-          "quantity",
-          "availableQuantity",
-          "unitCost",
-          "sku",
-          "name",
-          "handle"
-        ],
+        "required": ["productVariantId", "shopifyOrderLineItemId", "quantity", "availableQuantity", "unitCost"],
         "additionalProperties": false
       }
     },
@@ -171,12 +123,9 @@
         "properties": {
           "employeeId": {
             "$ref": "scalars.json#/definitions/ID"
-          },
-          "employeeName": {
-            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
           }
         },
-        "required": ["employeeId", "employeeName"],
+        "required": ["employeeId"],
         "additionalProperties": false
       }
     }
@@ -186,22 +135,18 @@
     "status",
     "orderId",
     "workOrderName",
-    "orderName",
     "locationId",
     "customerId",
     "vendorCustomerId",
     "shipFrom",
     "shipTo",
     "note",
-    "vendorName",
-    "customerName",
-    "locationName",
     "discount",
     "tax",
     "shipping",
     "deposited",
     "paid",
-    "products",
+    "lineItems",
     "customFields",
     "employeeAssignments"
   ],

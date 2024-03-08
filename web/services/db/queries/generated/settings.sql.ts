@@ -10,8 +10,10 @@ export interface IUpsertSettingParams {
 
 /** 'UpsertSetting' return type */
 export interface IUpsertSettingResult {
+  createdAt: Date;
   key: string;
   shop: string;
+  updatedAt: Date;
   value: string;
 }
 
@@ -74,8 +76,10 @@ export interface IInsertSettingIfNotExistsParams {
 
 /** 'InsertSettingIfNotExists' return type */
 export interface IInsertSettingIfNotExistsResult {
+  createdAt: Date;
   key: string;
   shop: string;
+  updatedAt: Date;
   value: string;
 }
 

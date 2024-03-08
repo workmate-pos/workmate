@@ -1,25 +1,59 @@
-/* @name insertHourlyLabour */
-INSERT INTO "HourlyLabour" ("workOrderId", "lineItemUuid", "productVariantId", "employeeId", name, rate, hours)
-VALUES (:workOrderId!, :lineItemUuid, :productVariantId, :employeeId, :name!, :rate!, :hours);
+/* @name insertHourlyLabourCharge */
+INSERT INTO "HourlyLabourCharge" ("workOrderId", "employeeId", name, rate, hours, "workOrderItemUuid",
+                                  "shopifyOrderLineItemId", uuid)
+VALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!);
 
-/* @name insertFixedPriceLabour */
-INSERT INTO "FixedPriceLabour" ("workOrderId", "lineItemUuid", "productVariantId", "employeeId", name, amount)
-VALUES (:workOrderId!, :lineItemUuid, :productVariantId, :employeeId, :name!, :amount!);
+/* @name insertFixedPriceLabourCharge */
+INSERT INTO "FixedPriceLabourCharge" ("workOrderId", "employeeId", name, amount, "workOrderItemUuid",
+                                      "shopifyOrderLineItemId", uuid)
+VALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!);
 
-/* @name removeHourlyLabour */
-DELETE FROM "HourlyLabour" hl
+/* @name removeHourlyLabourCharge */
+DELETE
+FROM "HourlyLabourCharge" hl
 WHERE hl."workOrderId" = :workOrderId!;
 
-/* @name removeFixedPriceLabour */
-DELETE FROM "FixedPriceLabour" fpl
+/* @name removeFixedPriceLabourCharge */
+DELETE
+FROM "FixedPriceLabourCharge" fpl
 WHERE fpl."workOrderId" = :workOrderId!;
 
-/* @name getHourlyLabours */
+/* @name getHourlyLabourCharges */
 SELECT *
-FROM "HourlyLabour"
+FROM "HourlyLabourCharge"
 WHERE "workOrderId" = :workOrderId!;
 
-/* @name getFixedPriceLabours */
+/* @name getFixedPriceLabourCharges */
 SELECT *
-FROM "FixedPriceLabour"
+FROM "FixedPriceLabourCharge"
 WHERE "workOrderId" = :workOrderId!;
+
+/*
+  @name getHourlyLabourChargesByUuids
+  @param uuids -> (...)
+*/
+SELECT *
+FROM "HourlyLabourCharge"
+WHERE uuid IN :uuids!
+  AND "workOrderId" = :workOrderId!;
+
+/*
+  @name getFixedPriceLabourChargesByUuids
+  @param uuids -> (...)
+*/
+SELECT *
+FROM "FixedPriceLabourCharge"
+WHERE uuid IN :uuids!
+  AND "workOrderId" = :workOrderId!;
+
+/* @name setHourlyLabourChargeShopifyOrderLineItemId */
+UPDATE "HourlyLabourCharge"
+SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
+WHERE uuid = :uuid!
+  AND "workOrderId" = :workOrderId!;
+
+/* @name setFixedPriceLabourChargeShopifyOrderLineItemId */
+UPDATE "FixedPriceLabourCharge"
+SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
+WHERE uuid = :uuid!
+  AND "workOrderId" = :workOrderId!;

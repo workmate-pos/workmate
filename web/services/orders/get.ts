@@ -1,7 +1,7 @@
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import type { Order, OrderInfo } from './types.js';
-import type { ID, Money } from '../gql/queries/generated/schema.js';
+import type { ID } from '../gql/queries/generated/schema.js';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { gql } from '../gql/gql.js';
 import { db } from '../db/db.js';
@@ -9,16 +9,15 @@ import { decimalToMoney } from '../../util/decimal.js';
 
 export async function getOrder(session: Session, id: ID): Promise<Order | null> {
   const graphql = new Graphql(session);
-  const [{ order }, [workOrder]] = await Promise.all([
+
+  const [{ order }, relatedWorkOrders] = await Promise.all([
     gql.order.get.run(graphql, { id }),
-    db.workOrder.getByDraftOrderIdOrOrderId({ id }),
+    db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId: id }),
   ]);
 
   if (!order) {
     return null;
   }
-
-  const NoMoney = '0.00' as Money;
 
   return {
     id,
@@ -29,14 +28,10 @@ export async function getOrder(session: Session, id: ID): Promise<Order | null> 
     displayFinancialStatus: order.displayFinancialStatus,
     outstanding: decimalToMoney(order.totalOutstandingSet.shopMoney.amount),
     received: order.totalReceived,
-    discount: order.totalDiscounts ?? NoMoney,
-    tax: order.totalTax ?? NoMoney,
+    discount: order.totalDiscounts,
+    tax: order.totalTax,
     customer: order.customer,
-    workOrder: workOrder
-      ? {
-          name: workOrder.name,
-        }
-      : null,
+    workOrders: relatedWorkOrders.map(({ name }) => ({ name })),
   };
 }
 
@@ -87,11 +82,11 @@ export async function getOrderLineItems(session: Session, id: ID, paginationOpti
 }
 
 async function getOrderInfoFromFragment(orderInfoFragment: gql.order.OrderInfoFragment.Result): Promise<OrderInfo> {
-  const [workOrder] = await db.workOrder.getByDraftOrderIdOrOrderId({ id: orderInfoFragment.id });
+  const workOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId: orderInfoFragment.id });
 
   return {
     id: orderInfoFragment.id,
-    workOrderName: workOrder?.name ?? null,
+    workOrders: workOrders.map(({ name }) => ({ name })),
     name: orderInfoFragment.name,
     total: orderInfoFragment.totalPrice,
     received: orderInfoFragment.totalReceived,

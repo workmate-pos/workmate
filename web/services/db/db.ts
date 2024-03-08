@@ -7,6 +7,11 @@ import * as sequence from './queries/generated/sequence.sql.js';
 import * as appPlan from './queries/generated/app-plan.sql.js';
 import * as purchaseOrder from './queries/generated/purchase-order.sql.js';
 import * as settings from './queries/generated/settings.sql.js';
+import * as locations from './queries/generated/locations.sql.js';
+import * as customers from './queries/generated/customers.sql.js';
+import * as products from './queries/generated/products.sql.js';
+import * as productVariants from './queries/generated/product-variants.sql.js';
+import * as shopifyOrder from './queries/generated/shopify-order.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
 
@@ -23,6 +28,11 @@ export const db = {
   appPlan: wrapPreparedQueries(appPlan),
   purchaseOrder: wrapPreparedQueries(purchaseOrder),
   settings: wrapPreparedQueries(settings),
+  locations: wrapPreparedQueries(locations),
+  customers: wrapPreparedQueries(customers),
+  products: wrapPreparedQueries(products),
+  productVariants: wrapPreparedQueries(productVariants),
+  shopifyOrder: wrapPreparedQueries(shopifyOrder),
 };
 
 /**

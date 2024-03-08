@@ -1,7 +1,7 @@
-import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
-import { WithNonNullable } from '../../util/types.js';
+import type { getPurchaseOrder } from './get.js';
 
-export type PurchaseOrder = WithNonNullable<CreatePurchaseOrder, 'name'>;
+// TODO: Change this to include all the stuff from the database
+export type PurchaseOrder = Awaited<ReturnType<typeof getPurchaseOrder>>;
 
 // purchase orders exist entirely in our own database, so we can afford to fetch the full object for lower latency on the front end -> better UX
-export type PurchaseOrderInfo = WithNonNullable<CreatePurchaseOrder, 'name'>;
+export type PurchaseOrderInfo = Awaited<ReturnType<typeof getPurchaseOrder>>;

@@ -8,6 +8,27 @@ query get($id: ID!) {
   }
 }
 
+query getManyForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseShopifyOrderFragment
+  }
+}
+
+query getLineItemsForDatabase($orderId: ID!, $first: Int = 25) {
+  order(id: $orderId) {
+    lineItems(first: $first) {
+      nodes {
+        ...DatabaseShopifyOrderLineItemFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
 fragment ShopMoneyAmountFragment on MoneyBag {
   shopMoney {
     amount
@@ -17,11 +38,12 @@ fragment ShopMoneyAmountFragment on MoneyBag {
 query getLineItems(
   $id: ID!,
   $after: String,
+  $first: Int = 25,
   $fixedServiceCollectionId: ID = "gid://shopify/Collection/null",
   $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
 ) {
   order(id: $id) {
-    lineItems(first: 10, after: $after) {
+    lineItems(first: $first, after: $after) {
       nodes {
         ... on LineItem {
           id
@@ -131,5 +153,34 @@ query getManyOrderInfoDraftOrderInfo($ids: [ID!]!) {
       name
       totalPrice
     }
+  }
+}
+
+fragment DatabaseShopifyOrderFragment on Order {
+  id
+  name
+  fullyPaid
+  customAttributes {
+    key
+    value
+  }
+}
+
+fragment DatabaseShopifyOrderLineItemFragment on LineItem {
+  id
+  title
+  variant {
+    id
+  }
+  quantity
+  unfulfilledQuantity
+  originalUnitPriceSet {
+    shopMoney {
+      amount
+    }
+  }
+  customAttributes {
+    key
+    value
   }
 }

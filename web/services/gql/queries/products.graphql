@@ -27,6 +27,32 @@ query getMany(
   }
 }
 
+query getManyProductsForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseProductFragment
+  }
+}
+
+query getManyProductVariantsForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseProductVariantFragment
+  }
+}
+
+query getManyInventoryItems($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ... on ProductVariant {
+      id
+      inventoryItem {
+        id
+      }
+    }
+  }
+}
+
 fragment ProductVariantFragment on ProductVariant {
   id
   title
@@ -127,5 +153,24 @@ mutation create(
         }
       }
     }
+  }
+}
+
+fragment DatabaseProductFragment on Product {
+  id
+  handle
+  title
+}
+
+
+fragment DatabaseProductVariantFragment on ProductVariant {
+  id
+  sku
+  title
+  product {
+    id
+  }
+  inventoryItem {
+    id
   }
 }

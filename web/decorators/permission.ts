@@ -48,7 +48,7 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     }
 
     const employeeId = associatedUser.id;
-    let [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [employeeId] });
+    let [employee] = await db.employee.getMany({ employeeIds: [employeeId] });
 
     if (!employee) {
       [employee = never()] = await db.employee.upsertMany({
@@ -95,7 +95,7 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
   // POS does not send associated_user, but will send the staff member's id in the session token
   const staffMemberId = getBearerStaffMemberId(req.headers.authorization);
 
-  const [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
+  const [employee] = await db.employee.getMany({ employeeIds: [staffMemberId] });
 
   if (employee) {
     return {

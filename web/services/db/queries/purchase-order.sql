@@ -1,27 +1,35 @@
 /* @name getPage */
 SELECT DISTINCT po.id, po.name
 FROM "PurchaseOrder" po
-       LEFT JOIN "PurchaseOrderProduct" pop ON po.id = pop."purchaseOrderId"
+       LEFT JOIN "PurchaseOrderLineItem" poli ON po.id = poli."purchaseOrderId"
+       LEFT JOIN "ProductVariant" pv ON poli."productVariantId" = pv."productVariantId"
+       LEFT JOIN "Product" p ON pv."productId" = p."productId"
        LEFT JOIN "PurchaseOrderCustomField" pocf ON po.id = pocf."purchaseOrderId"
        LEFT JOIN "PurchaseOrderEmployeeAssignment" poea ON po.id = poea."purchaseOrderId"
+       LEFT JOIN "Employee" e ON poea."employeeId" = e."staffMemberId"
+       LEFT JOIN "Customer" vendor ON po."vendorCustomerId" = vendor."customerId"
+       LEFT JOIN "Customer" customer ON po."customerId" = customer."customerId"
+       LEFT JOIN "Location" l ON po."locationId" = l."locationId"
+       LEFT JOIN "ShopifyOrder" so ON po."orderId" = so."orderId"
+       LEFT JOIN "WorkOrder" wo ON po."workOrderId" = wo.id
 WHERE po.shop = :shop!
   AND po.status = COALESCE(:status, po.status)
   AND po."customerId" IS NOT DISTINCT FROM COALESCE(:customerId, po."customerId")
   AND (
   po.name ILIKE COALESCE(:query, '%')
     OR po.note ILIKE COALESCE(:query, '%')
-    OR po."vendorName" ILIKE COALESCE(:query, '%')
-    OR po."customerName" ILIKE COALESCE(:query, '%')
-    OR po."locationName" ILIKE COALESCE(:query, '%')
-    OR po."orderName" ILIKE COALESCE(:query, '%')
+    OR vendor."displayName" ILIKE COALESCE(:query, '%')
+    OR customer."displayName" ILIKE COALESCE(:query, '%')
+    OR l.name ILIKE COALESCE(:query, '%')
+    OR so.name ILIKE COALESCE(:query, '%')
     OR po."shipTo" ILIKE COALESCE(:query, '%')
     OR po."shipFrom" ILIKE COALESCE(:query, '%')
-    OR po."workOrderName" ILIKE COALESCE(:query, '%')
-    OR pop.name ILIKE COALESCE(:query, '%')
-    OR pop.sku ILIKE COALESCE(:query, '%')
-    OR pop.handle ILIKE COALESCE(:query, '%')
+    OR wo.name ILIKE COALESCE(:query, '%')
+    OR pv.sku ILIKE COALESCE(:query, '%')
+    OR pv."title" ILIKE COALESCE(:query, '%')
+    OR p."title" ILIKE COALESCE(:query, '%')
     OR pocf.value ILIKE COALESCE(:query, '%')
-    OR poea."employeeName" ILIKE COALESCE(:query, '%')
+    OR e.name ILIKE COALESCE(:query, '%')
   )
 ORDER BY po.id DESC
 LIMIT :limit! OFFSET :offset;
@@ -34,36 +42,30 @@ WHERE id = COALESCE(:id, id)
   AND name = COALESCE(:name, name);
 
 /* @name upsert */
-INSERT INTO "PurchaseOrder" (shop, name, status, "locationId", "customerId", "vendorCustomerId", note, "vendorName",
-                             "customerName", "locationName", "shipFrom", "shipTo", "workOrderName", "orderId",
-                             "orderName", "discount", "tax", "shipping", "deposited", "paid")
-VALUES (:shop!, :name!, :status!, :locationId, :customerId, :vendorCustomerId, :note, :vendorName, :customerName,
-        :locationName, :shipFrom, :shipTo, :workOrderName, :orderId, :orderName, :discount, :tax, :shipping,
-        :deposited, :paid)
+INSERT INTO "PurchaseOrder" (shop, "shipFrom", "shipTo", "locationId", "customerId", "vendorCustomerId", note,
+                             "orderId", discount, tax, shipping, deposited, paid, name, status, "workOrderId")
+VALUES (:shop!, :shipFrom, :shipTo, :locationId, :customerId, :vendorCustomerId, :note, :orderId, :discount, :tax,
+        :shipping, :deposited, :paid, :name!, :status!, :workOrderId)
 ON CONFLICT (shop, name) DO UPDATE
-  SET status            = :status!,
-      "locationId"      = :locationId,
-      "customerId"      = :customerId,
-      "vendorCustomerId"= :vendorCustomerId,
-      note              = :note,
-      "vendorName"      = :vendorName,
-      "customerName"    = :customerName,
-      "locationName"    = :locationName,
-      "shipFrom"        = :shipFrom,
-      "shipTo"          = :shipTo,
-      "workOrderName"   = :workOrderName,
-      "orderId"         = :orderId,
-      "orderName"       = :orderName,
-      discount          = :discount,
-      tax               = :tax,
-      shipping          = :shipping,
-      deposited         = :deposited,
-      paid              = :paid
+  SET "shipFrom"         = :shipFrom,
+      "shipTo"           = :shipTo,
+      "locationId"       = :locationId,
+      "customerId"       = :customerId,
+      "vendorCustomerId" = :vendorCustomerId,
+      note               = :note,
+      "orderId"          = :orderId,
+      discount           = :discount,
+      tax                = :tax,
+      shipping           = :shipping,
+      deposited          = :deposited,
+      paid               = :paid,
+      status             = :status!,
+      "workOrderId"      = :workOrderId
 RETURNING id;
 
-/* @name getProducts */
+/* @name getLineItems */
 SELECT *
-FROM "PurchaseOrderProduct"
+FROM "PurchaseOrderLineItem"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
 /* @name getCustomFields */
@@ -76,9 +78,9 @@ SELECT *
 FROM "PurchaseOrderEmployeeAssignment"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
-/* @name removeProducts */
+/* @name removeLineItems */
 DELETE
-FROM "PurchaseOrderProduct"
+FROM "PurchaseOrderLineItem"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
 /* @name removeCustomFields */
@@ -91,20 +93,19 @@ DELETE
 FROM "PurchaseOrderEmployeeAssignment"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
-/* @name insertProduct */
-INSERT INTO "PurchaseOrderProduct" ("purchaseOrderId", "productVariantId", "inventoryItemId", quantity,
-                                    "availableQuantity", sku, name,
-                                    handle, "unitCost")
-VALUES (:purchaseOrderId!, :productVariantId!, :inventoryItemId!, :quantity!, :availableQuantity!, :sku, :name,
-        :handle, :unitCost!);
+/* @name insertLineItem */
+INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", "shopifyOrderLineItemId", quantity,
+                                     "availableQuantity", "unitCost")
+VALUES (:purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,
+        :unitCost!);
 
 /* @name insertCustomField */
 INSERT INTO "PurchaseOrderCustomField" ("purchaseOrderId", key, value)
 VALUES (:purchaseOrderId!, :key!, :value!);
 
 /* @name insertAssignedEmployee */
-INSERT INTO "PurchaseOrderEmployeeAssignment" ("purchaseOrderId", "employeeId", "employeeName")
-VALUES (:purchaseOrderId!, :employeeId!, :employeeName);
+INSERT INTO "PurchaseOrderEmployeeAssignment" ("purchaseOrderId", "employeeId")
+VALUES (:purchaseOrderId!, :employeeId!);
 
 /* @name getCustomFieldsPresets */
 SELECT *
@@ -125,7 +126,7 @@ WHERE shop = :shop!
 
 /* @name getProductVariantCostsForShop */
 SELECT "unitCost", "quantity"
-FROM "PurchaseOrderProduct"
-INNER JOIN "PurchaseOrder" po ON "purchaseOrderId" = po.id
+FROM "PurchaseOrderLineItem"
+       INNER JOIN "PurchaseOrder" po ON "purchaseOrderId" = po.id
 WHERE po.shop = :shop!
-  AND "productVariantId" = :productVariantId!; 
+  AND "productVariantId" = :productVariantId!;

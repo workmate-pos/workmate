@@ -127,10 +127,10 @@ export default class EmployeeController {
 
 async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMember.StaffMemberFragment.Result[]) {
   const staffMemberIds = staffMembers.filter(isNonNullable).map(e => e.id);
-  const employees = await db.employee.getMany({ shop, employeeIds: staffMemberIds });
+  const employees = await db.employee.getMany({ employeeIds: staffMemberIds });
   const { defaultRate } = await getShopSettings(shop);
 
-  const employeeRecord = indexBy(employees, e => e.employeeId);
+  const employeeRecord = indexBy(employees, e => e.staffMemberId);
 
   return staffMembers.map(staffMember => {
     const employee = staffMember && employeeRecord[staffMember.id];

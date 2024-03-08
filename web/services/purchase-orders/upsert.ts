@@ -1,5 +1,4 @@
 import { Session } from '@shopify/shopify-api';
-import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
@@ -10,10 +9,14 @@ import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { gql } from '../gql/gql.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { ensureProductVariantsExist } from '../product-variants/sync.js';
+import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
+import { PurchaseOrder } from './types.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -24,24 +27,21 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const isNew = createPurchaseOrder.name === null;
     const existingPurchaseOrder = isNew ? null : await getPurchaseOrder(session, name);
 
-    if (!isNew && !existingPurchaseOrder) {
-      throw new HttpError('Purchase order not found', 404);
-    }
+    const workOrderId = await getWorkOrderId(createPurchaseOrder.workOrderName, shop);
+
+    const productVariantIds = createPurchaseOrder.lineItems.map(({ productVariantId }) => productVariantId);
+    await ensureProductVariantsExist(session, productVariantIds);
 
     const [{ id: purchaseOrderId } = never()] = await db.purchaseOrder.upsert({
       shop,
       name,
       status: createPurchaseOrder.status,
       orderId: createPurchaseOrder.orderId,
-      orderName: createPurchaseOrder.orderName,
-      workOrderName: createPurchaseOrder.workOrderName,
+      workOrderId: workOrderId,
       locationId: createPurchaseOrder.locationId,
       customerId: createPurchaseOrder.customerId,
       vendorCustomerId: createPurchaseOrder.vendorCustomerId,
       note: createPurchaseOrder.note,
-      vendorName: createPurchaseOrder.vendorName,
-      customerName: createPurchaseOrder.customerName,
-      locationName: createPurchaseOrder.locationName,
       shipFrom: createPurchaseOrder.shipFrom,
       shipTo: createPurchaseOrder.shipTo,
       deposited: createPurchaseOrder.deposited,
@@ -52,13 +52,13 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     });
 
     await Promise.all([
-      db.purchaseOrder.removeProducts({ purchaseOrderId }),
+      db.purchaseOrder.removeLineItems({ purchaseOrderId }),
       db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
       db.purchaseOrder.removeAssignedEmployees({ purchaseOrderId }),
     ]);
 
     await Promise.all([
-      ...createPurchaseOrder.products.map(product => db.purchaseOrder.insertProduct({ ...product, purchaseOrderId })),
+      ...createPurchaseOrder.lineItems.map(product => db.purchaseOrder.insertLineItem({ ...product, purchaseOrderId })),
       ...Object.entries(createPurchaseOrder.customFields).map(([key, value]) =>
         db.purchaseOrder.insertCustomField({ purchaseOrderId, key, value }),
       ),
@@ -67,13 +67,28 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
       ),
     ]);
 
-    await adjustShopifyInventory(session, existingPurchaseOrder, createPurchaseOrder);
+    const newPurchaseOrder = await getPurchaseOrder(session, name);
+    await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
 
     // no need to wait for this to complete
-    adjustShopifyInventoryItemCosts(session, createPurchaseOrder);
+    adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
 
     return { name };
   });
+}
+
+async function getWorkOrderId(workOrderName: string | null, shop: string) {
+  if (!workOrderName) {
+    return null;
+  }
+
+  const [workOrder] = await db.workOrder.get({ shop, name: workOrderName });
+
+  if (!workOrder) {
+    throw new HttpError('Work order not found', 404);
+  }
+
+  return workOrder.id;
 }
 
 /**
@@ -81,26 +96,36 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
  */
 async function adjustShopifyInventory(
   session: Session,
-  oldPurchaseOrder: CreatePurchaseOrder | null,
-  newPurchaseOrder: CreatePurchaseOrder,
+  oldPurchaseOrder: PurchaseOrder | null,
+  newPurchaseOrder: PurchaseOrder,
 ) {
   const deltaByLocationByInventoryItemId: Record<ID, Record<ID, Int>> = {};
 
   // remove old inventory
-  if (oldPurchaseOrder?.locationId) {
-    const deltaByInventoryItemId = (deltaByLocationByInventoryItemId[oldPurchaseOrder.locationId] ??= {});
+  if (oldPurchaseOrder?.location) {
+    const deltaByInventoryItemId = (deltaByLocationByInventoryItemId[oldPurchaseOrder.location.id] ??= {});
 
-    for (const { inventoryItemId, availableQuantity } of oldPurchaseOrder.products) {
+    for (const {
+      productVariant: { inventoryItemId },
+      availableQuantity,
+    } of oldPurchaseOrder.lineItems) {
+      assertGid(inventoryItemId);
+
       const current = (deltaByInventoryItemId[inventoryItemId] ??= 0 as Int);
       deltaByInventoryItemId[inventoryItemId] = (current - availableQuantity) as Int;
     }
   }
 
   // add new inventory
-  if (newPurchaseOrder?.locationId) {
-    const deltaByInventoryItemId = (deltaByLocationByInventoryItemId[newPurchaseOrder.locationId] ??= {});
+  if (newPurchaseOrder?.location) {
+    const deltaByInventoryItemId = (deltaByLocationByInventoryItemId[newPurchaseOrder.location.id] ??= {});
 
-    for (const { inventoryItemId, availableQuantity } of newPurchaseOrder.products) {
+    for (const {
+      productVariant: { inventoryItemId },
+      availableQuantity,
+    } of newPurchaseOrder.lineItems) {
+      assertGid(inventoryItemId);
+
       const current = (deltaByInventoryItemId[inventoryItemId] ??= 0 as Int);
       deltaByInventoryItemId[inventoryItemId] = (current + availableQuantity) as Int;
     }
@@ -136,17 +161,32 @@ async function adjustShopifyInventory(
 /**
  * Updates the Inventory Item cost for each product in this purchase order to the average cost of this product over all time
  */
-async function adjustShopifyInventoryItemCosts(session: Session, newPurchaseOrder: CreatePurchaseOrder) {
+async function adjustShopifyInventoryItemCosts(
+  session: Session,
+  oldPurchaseOrder: PurchaseOrder | null,
+  newPurchaseOrder: PurchaseOrder,
+) {
   const graphql = new Graphql(session);
-  const productVariantIds = newPurchaseOrder.products.map(({ productVariantId }) => productVariantId);
-  const productVariants = await gql.products.getMany
+
+  const productVariantIds = unique(
+    [...(oldPurchaseOrder?.lineItems ?? []), ...newPurchaseOrder.lineItems].map(({ productVariant }) => {
+      const productVariantId = productVariant.id;
+      assertGid(productVariantId);
+      return productVariantId;
+    }),
+  );
+
+  const productVariants = await gql.products.getManyInventoryItems
     .run(graphql, { ids: productVariantIds })
     .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'ProductVariant')));
 
   const processProductVariant = async ({
     id: productVariantId,
     inventoryItem,
-  }: gql.products.ProductVariantFragment.Result) => {
+  }: {
+    id: ID;
+    inventoryItem: { id: ID };
+  }) => {
     const productVariantCosts = await db.purchaseOrder.getProductVariantCostsForShop({
       shop: session.shop,
       productVariantId,

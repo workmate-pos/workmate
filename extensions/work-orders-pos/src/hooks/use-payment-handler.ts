@@ -89,17 +89,13 @@ export const usePaymentHandler = () => {
     const productLineItems = getProductLineItems(createWorkOrder, workOrder);
     const chargeLineItems = getChargeLineItems(createWorkOrder, workOrder);
 
-    const addLineItemPromises = [];
-
     for (const { quantity, title, price, taxable } of chargeLineItems) {
-      addLineItemPromises.push(api.cart.addCustomSale({ quantity, title, price, taxable }));
+      await api.cart.addCustomSale({ quantity, title, price, taxable });
     }
 
     for (const { productVariantId, quantity } of productLineItems) {
-      addLineItemPromises.push(api.cart.addLineItem(productVariantId, quantity));
+      await api.cart.addLineItem(productVariantId, quantity);
     }
-
-    await Promise.all(addLineItemPromises);
 
     const lineItemProperties: SetLineItemPropertiesInput[] = [];
 

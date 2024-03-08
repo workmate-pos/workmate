@@ -1,46 +1,37 @@
 /* @name upsert */
-INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", "orderId",
-                         "draftOrderId")
-VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :orderId,
-        :draftOrderId)
+INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note)
+VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!)
 ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
                                            "dueDate"            = EXCLUDED."dueDate",
                                            "customerId"         = EXCLUDED."customerId",
                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
-                                           "orderId"            = EXCLUDED."orderId",
-                                           "draftOrderId"       = EXCLUDED."draftOrderId"
+                                           note                 = EXCLUDED.note
 RETURNING *;
 
-/* @name updateOrderIds */
-UPDATE "WorkOrder"
-SET "orderId"      = COALESCE(:orderId, "orderId"),
-    "draftOrderId" = COALESCE(:draftOrderId, "draftOrderId")
-WHERE id = :id!;
-
 /* @name getPage */
-SELECT *
+SELECT wo.*
 FROM "WorkOrder" wo
-WHERE shop = :shop!
+       LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
+WHERE wo.shop = :shop!
   AND wo.status = COALESCE(:status, wo.status)
   AND (
-  wo.status ILIKE COALESCE(:query, '%') OR
-  wo.name ILIKE COALESCE(:query, '%')
+  wo.status ILIKE COALESCE(:query, '%')
+    OR wo.name ILIKE COALESCE(:query, '%')
+    OR c."displayName" ILIKE COALESCE(:query, '%')
+    OR c.phone ILIKE COALESCE(:query, '%')
+    OR c.email ILIKE COALESCE(:query, '%')
   )
-  AND (EXISTS(
-  SELECT *
-  FROM "HourlyLabour" hl
-  WHERE hl."workOrderId" = wo.id
-    AND "employeeId" = ANY(:employeeIds)
-) OR :employeeIds IS NULL) AND (EXISTS(
-  SELECT *
-  FROM "FixedPriceLabour" fpl
-  WHERE fpl."workOrderId" = wo.id
-    AND "employeeId" = ANY(:employeeIds)
-) OR :employeeIds IS NULL)
-AND "customerId" = COALESCE(:customerId, "customerId")
+  AND (EXISTS(SELECT *
+              FROM "HourlyLabourCharge" hl
+              WHERE hl."workOrderId" = wo.id
+                AND "employeeId" = ANY (:employeeIds)) OR :employeeIds IS NULL)
+  AND (EXISTS(SELECT *
+              FROM "FixedPriceLabourCharge" fpl
+              WHERE fpl."workOrderId" = wo.id
+                AND "employeeId" = ANY (:employeeIds)) OR :employeeIds IS NULL)
+  AND wo."customerId" = COALESCE(:customerId, wo."customerId")
 ORDER BY wo.id DESC
-LIMIT :limit!
-OFFSET :offset;
+LIMIT :limit! OFFSET :offset;
 
 /* @name get */
 SELECT *
@@ -49,8 +40,48 @@ WHERE id = COALESCE(:id, id)
   AND shop = COALESCE(:shop, shop)
   AND name = COALESCE(:name, name);
 
-/* @name getByDraftOrderIdOrOrderId */
+/* @name getItems */
 SELECT *
-FROM "WorkOrder"
-WHERE "orderId" = :id!
-OR "draftOrderId" = :id!;
+FROM "WorkOrderItem"
+WHERE "workOrderId" = :workOrderId!;
+
+/* @name getUnlinkedItems */
+SELECT *
+FROM "WorkOrderItem"
+WHERE "workOrderId" = :workOrderId!
+  AND "shopifyOrderLineItemId" IS NULL;
+
+/* @name getUnlinkedHourlyLabourCharges */
+SELECT *
+FROM "HourlyLabourCharge"
+WHERE "workOrderId" = :workOrderId!
+  AND "shopifyOrderLineItemId" IS NULL;
+
+/* @name getUnlinkedFixedPriceLabourCharges */
+SELECT *
+FROM "FixedPriceLabourCharge"
+WHERE "workOrderId" = :workOrderId!
+  AND "shopifyOrderLineItemId" IS NULL;
+
+/* @name getLinkedDraftOrderIds */
+SELECT DISTINCT so."orderId"
+FROM "WorkOrderItem" woli
+       INNER JOIN "ShopifyOrderLineItem" soli ON woli."shopifyOrderLineItemId" = soli."lineItemId"
+       INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+WHERE woli."workOrderId" = :workOrderId!
+  AND so."orderType" = 'DRAFT_ORDER';
+
+/*
+  @name getItemsByUuids
+  @param uuids -> (...)
+*/
+SELECT *
+FROM "WorkOrderItem"
+WHERE uuid in :uuids!
+AND "workOrderId" = :workOrderId!;
+
+/* @name setLineItemShopifyOrderLineItemId */
+UPDATE "WorkOrderItem"
+SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
+WHERE uuid = :uuid!
+AND "workOrderId" = :workOrderId!;
