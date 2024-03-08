@@ -86,12 +86,11 @@ export default class WorkOrderController {
       status: settings.workOrderRequests.status,
       dueDate: createWorkOrderRequest.dueDate,
       customerId: createGid('Customer', customerId),
-      description: createWorkOrderRequest.description,
+      note: createWorkOrderRequest.description,
       charges: [],
-      lineItems: [],
+      items: [],
       derivedFromOrderId: null,
       name: null,
-      discount: null,
     });
 
     return res.json({ name });

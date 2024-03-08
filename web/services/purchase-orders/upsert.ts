@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
-import { getNewPurchaseOrderId } from '../id-formatting.js';
+import { getNewPurchaseOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
 import { getPurchaseOrder } from './get.js';
 import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
@@ -22,7 +22,7 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
   const { shop } = session;
 
   return await unit(async () => {
-    const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderId(shop));
+    const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
 
     const isNew = createPurchaseOrder.name === null;
     const existingPurchaseOrder = isNew ? null : await getPurchaseOrder(session, name);

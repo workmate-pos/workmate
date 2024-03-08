@@ -1,6 +1,6 @@
 import * as shopifySession from './queries/generated/shopify-session.sql.js';
 import * as workOrder from './queries/generated/work-order.sql.js';
-import * as workOrderLabour from './queries/generated/work-order-labour.sql.js';
+import * as workOrderCharges from './queries/generated/work-order-charges.sql.js';
 import * as employee from './queries/generated/employee.sql.js';
 import * as types from './queries/generated/types.sql.js';
 import * as sequence from './queries/generated/sequence.sql.js';
@@ -21,7 +21,7 @@ import { useClient } from './client.js';
 export const db = {
   shopifySession: wrapPreparedQueries(shopifySession),
   workOrder: wrapPreparedQueries(workOrder),
-  workOrderLabour: wrapPreparedQueries(workOrderLabour),
+  workOrderCharges: wrapPreparedQueries(workOrderCharges),
   employee: wrapPreparedQueries(employee),
   types: wrapPreparedQueries(types),
   sequence: wrapPreparedQueries(sequence),

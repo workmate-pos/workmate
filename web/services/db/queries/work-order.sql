@@ -22,11 +22,11 @@ WHERE wo.shop = :shop!
     OR c.email ILIKE COALESCE(:query, '%')
   )
   AND (EXISTS(SELECT *
-              FROM "HourlyLabourCharge" hl
+              FROM "WorkOrderHourlyLabourCharge" hl
               WHERE hl."workOrderId" = wo.id
                 AND "employeeId" = ANY (:employeeIds)) OR :employeeIds IS NULL)
   AND (EXISTS(SELECT *
-              FROM "FixedPriceLabourCharge" fpl
+              FROM "WorkOrderFixedPriceLabourCharge" fpl
               WHERE fpl."workOrderId" = wo.id
                 AND "employeeId" = ANY (:employeeIds)) OR :employeeIds IS NULL)
   AND wo."customerId" = COALESCE(:customerId, wo."customerId")
@@ -53,22 +53,29 @@ WHERE "workOrderId" = :workOrderId!
 
 /* @name getUnlinkedHourlyLabourCharges */
 SELECT *
-FROM "HourlyLabourCharge"
+FROM "WorkOrderHourlyLabourCharge"
 WHERE "workOrderId" = :workOrderId!
   AND "shopifyOrderLineItemId" IS NULL;
 
 /* @name getUnlinkedFixedPriceLabourCharges */
 SELECT *
-FROM "FixedPriceLabourCharge"
+FROM "WorkOrderFixedPriceLabourCharge"
 WHERE "workOrderId" = :workOrderId!
   AND "shopifyOrderLineItemId" IS NULL;
 
 /* @name getLinkedDraftOrderIds */
 SELECT DISTINCT so."orderId"
-FROM "WorkOrderItem" woli
-       INNER JOIN "ShopifyOrderLineItem" soli ON woli."shopifyOrderLineItemId" = soli."lineItemId"
+FROM "WorkOrder" wo
+       LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
+       LEFT JOIN "WorkOrderHourlyLabourCharge" hlc ON wo.id = hlc."workOrderId"
+       LEFT JOIN "WorkOrderFixedPriceLabourCharge" fplc ON wo.id = fplc."workOrderId"
+       INNER JOIN "ShopifyOrderLineItem" soli ON (
+  woi."shopifyOrderLineItemId" = soli."lineItemId"
+    OR hlc."shopifyOrderLineItemId" = soli."lineItemId"
+    OR fplc."shopifyOrderLineItemId" = soli."lineItemId"
+  )
        INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
-WHERE woli."workOrderId" = :workOrderId!
+WHERE wo.id = :workOrderId!
   AND so."orderType" = 'DRAFT_ORDER';
 
 /*
@@ -78,10 +85,24 @@ WHERE woli."workOrderId" = :workOrderId!
 SELECT *
 FROM "WorkOrderItem"
 WHERE uuid in :uuids!
-AND "workOrderId" = :workOrderId!;
+  AND "workOrderId" = :workOrderId!;
 
 /* @name setLineItemShopifyOrderLineItemId */
 UPDATE "WorkOrderItem"
 SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
 WHERE uuid = :uuid!
-AND "workOrderId" = :workOrderId!;
+  AND "workOrderId" = :workOrderId!;
+
+/* @name upsertItem */
+INSERT INTO "WorkOrderItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, "productVariantId")
+VALUES (:uuid!, :workOrderId!, :shopifyOrderLineItemId, :quantity!, :productVariantId!)
+ON CONFLICT ("workOrderId", uuid)
+  DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+                quantity                 = EXCLUDED.quantity,
+                "productVariantId"       = EXCLUDED."productVariantId";
+
+/* @name removeItem */
+DELETE
+FROM "WorkOrderItem"
+WHERE uuid = :uuid!
+  AND "workOrderId" = :workOrderId!;

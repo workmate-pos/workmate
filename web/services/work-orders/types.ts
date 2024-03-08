@@ -1,90 +1,60 @@
 import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import type { ID, DateTime, Int, Money, OrderDisplayFinancialStatus } from '../gql/queries/generated/schema.js';
-import type { OrderInfo } from '../orders/types.js';
+import type { ID, DateTime, Int, Money } from '../gql/queries/generated/schema.js';
 
 export type WorkOrder = {
   name: string;
   status: string;
-  description: string;
   dueDate: DateTime;
+  note: string;
   customerId: ID;
-  derivedFromOrder: OrderInfo | null;
-  /**
-   * The order or draft order linked to this work order.
-   */
-  order: {
-    type: 'draft-order' | 'order';
-    id: ID;
-    name: string;
-    outstanding: Money;
-    received: Money;
-    total: Money;
-    discount: { valueType: 'PERCENTAGE'; value: Decimal } | { valueType: 'FIXED_AMOUNT'; value: Money } | null;
-    lineItems: LineItem[];
-    financialStatus: OrderDisplayFinancialStatus | null;
-  };
-  charges: (FixedPriceLabour | HourlyLabour)[];
+  derivedFromOrderId: ID | null;
+  items: WorkOrderItem[];
+  charges: WorkOrderCharge[];
 };
 
-export type BaseLabour = {
-  name: string;
-  employeeId: ID | null;
-  /**
-   * A uuid that associates this employee assignment with a line item.
-   * Used to differentiate between assignments to different instances of the same productVariantId
-   */
-  lineItemUuid: string | null;
-  productVariantId: ID | null;
+export type WorkOrderItem = {
+  uuid: string;
+  shopifyOrderLineItemId: ID | null;
+  productVariantId: ID;
+  quantity: Int;
 };
 
-export type FixedPriceLabour = BaseLabour & {
+export type WorkOrderCharge = FixedPriceLabour | HourlyLabour;
+
+export type FixedPriceLabour = {
   type: 'fixed-price-labour';
+  uuid: string;
+  workOrderItemUuid: string | null;
+  shopifyOrderLineItemId: ID | null;
+  employeeId: ID | null;
+  name: string;
   amount: Money;
 };
 
-export type HourlyLabour = BaseLabour & {
+export type HourlyLabour = {
   type: 'hourly-labour';
+  uuid: string;
+  workOrderItemUuid: string | null;
+  shopifyOrderLineItemId: ID | null;
+  employeeId: ID | null;
+  name: string;
   rate: Money;
   hours: Decimal;
 };
 
-export type LineItem = {
-  id: ID;
-  title: string;
-  taxable: boolean;
-  variant: {
-    id: ID;
-    image: {
-      url: string;
-    } | null;
-    title: string;
-    product: {
-      id: ID;
-      title: string;
-      isMutableServiceItem: boolean;
-      isFixedServiceItem: boolean;
-    };
-  } | null;
-  quantity: Int;
-  unitPrice: Money;
-  sku: string | null;
-};
-
 /**
- * Similar to {@link WorkOrder}, but without details.
- * This is used to display a list of work orders.
+ * Similar to {@link WorkOrder}, but only shows aggregate information.
  */
 export type WorkOrderInfo = {
   name: string;
   status: string;
   dueDate: DateTime;
-  customerId: ID;
-  order: {
-    id: ID;
-    type: 'draft-order' | 'order';
-    name: string;
-    total: Money;
-    outstanding: Money;
-    financialStatus: OrderDisplayFinancialStatus | null;
-  };
+  customerName: string;
+  /**
+   * Names of related orders, including both draft orders and normal orders.
+   */
+  orderNames: string[];
+  paymentStatus: 'unpaid' | 'partially-paid' | 'fully-paid';
+  total: Money;
+  outstanding: Money;
 };

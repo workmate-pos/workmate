@@ -3,6 +3,7 @@ import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.j
 import type { CreateWorkOrderResponse } from '@web/controllers/api/work-order.js';
 import { Fetch } from './fetch.js';
 import { Nullable } from '../types/Nullable.js';
+import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 
 export type CreateWorkOrderValidationErrors = {
   [key in keyof CreateWorkOrder]?: string;
@@ -65,18 +66,17 @@ function validateWorkOrder(createWorkOrder: Nullable<CreateWorkOrder>):
     } {
   const errors: CreateWorkOrderValidationErrors = {};
 
-  const requiredKeys: (keyof CreateWorkOrder)[] = [
-    'status',
-    'customerId',
-    'dueDate',
-    'charges',
-    'description',
-    'lineItems',
-  ];
+  const requiredKeys: (keyof CreateWorkOrder)[] = ['status', 'customerId', 'dueDate', 'charges', 'note', 'items'];
 
   for (const key of requiredKeys) {
-    if (createWorkOrder[key] === null || createWorkOrder[key] === undefined) {
+    if (createWorkOrder[key] === null) {
       errors[key] = 'This field is required';
+    }
+  }
+
+  for (const [key, value] of entries(createWorkOrder)) {
+    if (value === undefined) {
+      errors[key] ??= 'This field is required';
     }
   }
 

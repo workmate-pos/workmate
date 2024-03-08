@@ -49,10 +49,32 @@ WHERE "lineItemId" IN :lineItemIds!;
 SELECT DISTINCT "WorkOrder"."id", "WorkOrder".name
 FROM "ShopifyOrder"
        INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
-       INNER JOIN "WorkOrderItem"
-                  ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId"
-       INNER JOIN "WorkOrder" ON "WorkOrderItem"."workOrderId" = "WorkOrder"."id"
+       LEFT JOIN "WorkOrderItem"
+                 ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId"
+       LEFT JOIN "WorkOrderHourlyLabourCharge"
+                 ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderHourlyLabourCharge"."shopifyOrderLineItemId"
+       LEFT JOIN "WorkOrderFixedPriceLabourCharge"
+                 ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderFixedPriceLabourCharge"."shopifyOrderLineItemId"
+       INNER JOIN "WorkOrder" ON ("WorkOrderItem"."workOrderId" = "WorkOrder"."id" OR
+                                 "WorkOrderHourlyLabourCharge"."workOrderId" = "WorkOrder"."id" OR
+                                 "WorkOrderFixedPriceLabourCharge"."workOrderId" = "WorkOrder"."id")
 WHERE "ShopifyOrder"."orderId" = :orderId!;
+
+/* @name getLinkedOrdersByWorkOrderId */
+SELECT DISTINCT "ShopifyOrder".*
+FROM "ShopifyOrder"
+       INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
+       LEFT JOIN "WorkOrderItem" ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId" AND
+                                     "WorkOrderItem"."workOrderId" = :workOrderId!)
+       LEFT JOIN "WorkOrderHourlyLabourCharge"
+                 ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderHourlyLabourCharge"."shopifyOrderLineItemId" AND
+                     "WorkOrderHourlyLabourCharge"."workOrderId" = :workOrderId!)
+       LEFT JOIN "WorkOrderFixedPriceLabourCharge"
+                 ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderFixedPriceLabourCharge"."shopifyOrderLineItemId" AND
+                     "WorkOrderFixedPriceLabourCharge"."workOrderId" = :workOrderId!)
+WHERE "WorkOrderItem"."uuid" IS NOT NULL
+   OR "WorkOrderHourlyLabourCharge"."uuid" IS NOT NULL
+   OR "WorkOrderFixedPriceLabourCharge"."uuid" IS NOT NULL;
 
 /*
   @name deleteOrders

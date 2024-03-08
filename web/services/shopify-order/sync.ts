@@ -7,7 +7,7 @@ import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-tool
 import { transaction } from '../db/transaction.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { syncWorkOrders } from '../work-orders/sync.js';
-import { linkWorkOrderItemsAndCharges } from '../work-orders/process-order.js';
+import { linkWorkOrderItemsAndCharges } from '../work-orders/link-order-items.js';
 
 export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[]) {
   if (orderIds.length === 0) {
@@ -19,6 +19,21 @@ export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[])
   const missingShopifyOrderIds = orderIds.filter(locationId => !existingShopifyOrderIds.has(locationId));
 
   await syncShopifyOrders(session, missingShopifyOrderIds);
+}
+
+export async function syncShopifyOrdersIfExists(session: Session, orderIds: ID[]) {
+  if (orderIds.length === 0) {
+    return;
+  }
+
+  const databaseShopifyOrders = await db.shopifyOrder.getMany({ orderIds });
+  const existingShopifyOrderIds = databaseShopifyOrders.map(shopifyOrder => {
+    const orderId = shopifyOrder.orderId;
+    assertGid(orderId);
+    return orderId;
+  });
+
+  await syncShopifyOrders(session, existingShopifyOrderIds);
 }
 
 /**
@@ -59,21 +74,6 @@ export async function syncShopifyOrders(session: Session, ids: ID[]) {
   if (errors.length > 0) {
     throw new AggregateError(errors, 'Failed to sync orders');
   }
-}
-
-export async function syncShopifyOrdersIfExists(session: Session, orderIds: ID[]) {
-  if (orderIds.length === 0) {
-    return;
-  }
-
-  const databaseShopifyOrders = await db.shopifyOrder.getMany({ orderIds });
-  const existingShopifyOrderIds = databaseShopifyOrders.map(shopifyOrder => {
-    const orderId = shopifyOrder.orderId;
-    assertGid(orderId);
-    return orderId;
-  });
-
-  await syncShopifyOrders(session, existingShopifyOrderIds);
 }
 
 async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrderFragment.Result) {

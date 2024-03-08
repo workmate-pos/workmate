@@ -10,95 +10,26 @@
       "type": "string",
       "minLength": 1
     },
-    "customerId": {
-      "$ref": "scalars.json#/definitions/ID"
-    },
     "dueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
-    "charges": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "anyOf": [
-          {
-            "title": "fixed-price-labour",
-            "description": "An absolute amount of money for some labour",
-            "properties": {
-              "type": {
-                "const": "fixed-price-labour"
-              },
-              "name": {
-                "type": "string"
-              },
-              "employeeId": {
-                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
-              },
-              "amount": {
-                "$ref": "scalars.json#/definitions/Money"
-              },
-              "lineItemUuid": {
-                "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
-              },
-              "chargeUuid": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "required": ["type", "name", "employeeId", "amount", "lineItemUuid", "chargeUuid"],
-            "additionalProperties": false
-          },
-          {
-            "title": "hourly-labour",
-            "description": "An amount of labour determined by some hourly rate",
-            "properties": {
-              "type": {
-                "const": "hourly-labour"
-              },
-              "name": {
-                "type": "string"
-              },
-              "employeeId": {
-                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
-              },
-              "rate": {
-                "$ref": "scalars.json#/definitions/Money"
-              },
-              "hours": {
-                "$ref": "scalars.json#/definitions/Decimal"
-              },
-              "lineItemUuid": {
-                "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
-              },
-              "chargeUuid": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "required": ["type", "name", "employeeId", "rate", "hours", "lineItemUuid", "chargeUuid"],
-            "additionalProperties": false
-          }
-        ]
-      }
-    },
-    "description": {
+    "note": {
       "type": "string"
+    },
+    "customerId": {
+      "$ref": "scalars.json#/definitions/ID"
     },
     "derivedFromOrderId": {
       "description": "A Shopify Order ID from which this work order was derived",
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
     },
-    "lineItems": {
-      "description": "All line items for this work order, including products and services",
+    "items": {
       "type": "array",
       "items": {
-        "title": "line-item",
         "type": "object",
         "properties": {
           "uuid": {
-            "description": "A unique identifier for this line item",
-            "type": "string",
-            "minLength": 1
+            "type": "string"
           },
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
@@ -111,52 +42,101 @@
         "additionalProperties": false
       }
     },
-    "discount": {
-      "title": "discount",
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "object",
-          "anyOf": [
-            {
-              "properties": {
-                "valueType": {
-                  "const": "FIXED_AMOUNT"
-                },
-                "value": {
-                  "$ref": "scalars.json#/definitions/Money"
-                }
+    "charges": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "title": "hourly-labour",
+            "description": "An amount of labour determined by some hourly rate",
+            "properties": {
+              "type": {
+                "const": "hourly-labour"
               },
-              "required": ["value", "valueType"],
-              "additionalProperties": false
+              "uuid": {
+                "type": "string"
+              },
+              "workOrderItemUuid": {
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "employeeId": {
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "$ref": "scalars.json#/definitions/ID"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "rate": {
+                "$ref": "scalars.json#/definitions/Money"
+              },
+              "hours": {
+                "$ref": "scalars.json#/definitions/Decimal"
+              }
             },
-            {
-              "properties": {
-                "valueType": {
-                  "const": "PERCENTAGE"
-                },
-                "value": {
-                  "$ref": "scalars.json#/definitions/Decimal"
-                }
+            "required": ["type", "uuid", "workOrderItemUuid", "employeeId", "name", "rate", "hours"],
+            "additionalProperties": false
+          },
+          {
+            "title": "fixed-price-labour",
+            "description": "An absolute amount of money for some labour",
+            "properties": {
+              "type": {
+                "const": "fixed-price-labour"
               },
-              "required": ["value", "valueType"],
-              "additionalProperties": false
-            }
-          ]
-        }
-      ]
+              "uuid": {
+                "type": "string"
+              },
+              "workOrderItemUuid": {
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "employeeId": {
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "$ref": "scalars.json#/definitions/ID"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "amount": {
+                "$ref": "scalars.json#/definitions/Money"
+              }
+            },
+            "required": ["type", "uuid", "workOrderItemUuid", "employeeId", "name", "amount"],
+            "additionalProperties": false
+          }
+        ]
+      }
     }
   },
-  "required": [
-    "name",
-    "status",
-    "customerId",
-    "dueDate",
-    "charges",
-    "description",
-    "derivedFromOrderId",
-    "lineItems",
-    "discount"
-  ],
+  "required": ["name", "status", "dueDate", "note", "customerId", "derivedFromOrderId", "items", "charges"],
   "additionalProperties": false
 }

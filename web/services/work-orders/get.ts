@@ -1,161 +1,96 @@
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { db } from '../db/db.js';
-import { fetchAllPages, gql } from '../gql/gql.js';
-import { DateTime } from '../gql/queries/generated/schema.js';
+import { DateTime, Int } from '../gql/queries/generated/schema.js';
 import { escapeLike } from '../db/like.js';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
-import { LineItem, WorkOrder, WorkOrderInfo } from './types.js';
-import { getOrderInfo } from '../orders/get.js';
-import { getShopSettings } from '../settings.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { decimalToMoney } from '../../util/decimal.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { WorkOrder, WorkOrderCharge, WorkOrderInfo, WorkOrderItem } from './types.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
+import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
+import { assertDecimal, assertMoney, BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { groupByKey, unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
-  const [[workOrder], { fixedServiceCollectionId, mutableServiceCollectionId }] = await Promise.all([
-    db.workOrder.get({ shop: session.shop, name }),
-    getShopSettings(session.shop),
-  ]);
+  const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
 
   if (!workOrder) {
     return null;
   }
 
   assertGid(workOrder.customerId);
-  assertGidOrNull(workOrder.orderId);
-  assertGidOrNull(workOrder.draftOrderId);
   assertGidOrNull(workOrder.derivedFromOrderId);
 
-  const { id: workOrderId } = workOrder;
-
-  const graphql = new Graphql(session);
-
-  const orderType = workOrder.orderId === null ? 'draft-order' : 'order';
-  const { get, getLineItems } = orderType === 'order' ? gql.order : gql.draftOrder;
-
-  const orderId = workOrder.orderId ?? workOrder.draftOrderId ?? never('Invalid work order state');
-
-  const { hourlyLabours, fixedPriceLabours, order, lineItems, derivedFromOrder } = await awaitNested({
-    hourlyLabours: db.workOrderLabour.getHourlyLabours({ workOrderId }),
-    fixedPriceLabours: db.workOrderLabour.getFixedPriceLabours({ workOrderId }),
-    order: get.run(graphql, { id: orderId }).then(r => r.order ?? never('Invalid order id')),
-    lineItems: fetchAllPages(
-      graphql,
-      (graphql, variables) =>
-        getLineItems.run(graphql, {
-          ...variables,
-          id: orderId,
-          mutableServiceCollectionId,
-          fixedServiceCollectionId,
-        }),
-      result => result.order?.lineItems ?? never('Invalid order id'),
-    ),
-    derivedFromOrder: workOrder.derivedFromOrderId ? getOrderInfo(session, workOrder.derivedFromOrderId) : null,
-  });
-
-  // TODO: Clean up XD
-  const discount =
-    order.__typename === 'DraftOrder'
-      ? order.appliedDiscount
-        ? order.appliedDiscount.valueType === 'FIXED_AMOUNT'
-          ? ({
-              valueType: 'FIXED_AMOUNT',
-              value: BigDecimal.fromString(order.appliedDiscount.value.toFixed(2)).toMoney(),
-            } as const)
-          : ({
-              valueType: 'PERCENTAGE',
-              value: BigDecimal.fromString(order.appliedDiscount.value.toFixed(2)).toDecimal(),
-            } as const)
-        : null
-      : order.totalDiscounts
-        ? ({
-            valueType: 'FIXED_AMOUNT',
-            value: BigDecimal.fromMoney(order.totalDiscounts).toMoney(),
-          } as const)
-        : null;
-
-  const financialStatus = order.__typename === 'Order' ? order.displayFinancialStatus : null;
-
-  return {
+  return await awaitNested({
     name: workOrder.name,
     status: workOrder.status,
     customerId: workOrder.customerId,
-    description: order.note ?? '',
     dueDate: workOrder.dueDate.toISOString() as DateTime,
-    derivedFromOrder,
-    charges: [
-      ...hourlyLabours.map(({ name, hours, rate, lineItemUuid, productVariantId, employeeId }) => {
-        assertGidOrNull(productVariantId);
-        assertGidOrNull(employeeId);
+    derivedFromOrderId: workOrder.derivedFromOrderId,
+    note: workOrder.note,
+    items: getWorkOrderItems(workOrder.id),
+    charges: getWorkOrderCharges(workOrder.id),
+  });
+}
 
-        return {
-          type: 'hourly-labour',
-          hours: BigDecimal.fromString(hours).toDecimal(),
-          rate: BigDecimal.fromString(rate).toMoney(),
-          productVariantId: productVariantId,
-          employeeId: employeeId,
-          lineItemUuid,
-          name,
-        } as const;
-      }),
-      ...fixedPriceLabours.map(({ name, productVariantId, lineItemUuid, employeeId, amount }) => {
-        assertGidOrNull(productVariantId);
-        assertGidOrNull(employeeId);
+async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> {
+  const items = await db.workOrder.getItems({ workOrderId });
+  return items.map<WorkOrderItem>(item => {
+    assertGidOrNull(item.shopifyOrderLineItemId);
+    assertGid(item.productVariantId);
 
-        return {
-          type: 'fixed-price-labour',
-          amount: BigDecimal.fromString(amount).toMoney(),
-          productVariantId: productVariantId,
-          employeeId: employeeId,
-          lineItemUuid,
-          name,
-        } as const;
-      }),
-    ],
-    order: {
-      type: orderType,
-      id: orderId,
-      name: order.name,
-      discount,
-      total: order.totalPrice,
-      financialStatus,
-      outstanding:
-        order.__typename === 'Order' ? decimalToMoney(order.totalOutstandingSet.shopMoney.amount) : order.totalPrice,
-      received: order.__typename === 'Order' ? order.totalReceived : BigDecimal.ZERO.toMoney(),
-      lineItems: lineItems.map(
-        ({ id, title, taxable, quantity, sku, variant, originalUnitPrice }): LineItem => ({
-          id,
-          title,
-          taxable,
-          quantity,
-          sku,
-          unitPrice: originalUnitPrice,
-          variant: variant
-            ? {
-                id: variant.id,
-                image: variant.image ? { url: variant.image.url } : null,
-                product: {
-                  id: variant.product.id,
-                  title: variant.product.title,
-                  isFixedServiceItem: variant.product.isFixedServiceItem,
-                  isMutableServiceItem: variant.product.isMutableServiceItem,
-                },
-                title: variant.title,
-              }
-            : null,
-        }),
-      ),
-    },
-  };
+    return {
+      uuid: item.uuid,
+      shopifyOrderLineItemId: item.shopifyOrderLineItemId,
+      productVariantId: item.productVariantId,
+      quantity: item.quantity as Int,
+    };
+  });
+}
+
+async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge[]> {
+  const [fixedPriceLabour, hourlyLabour] = await Promise.all([
+    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
+    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
+  ]);
+
+  return [
+    ...fixedPriceLabour.map<WorkOrderCharge>(charge => {
+      assertGidOrNull(charge.shopifyOrderLineItemId);
+      assertGidOrNull(charge.employeeId);
+      assertMoney(charge.amount);
+
+      return {
+        type: 'fixed-price-labour',
+        uuid: charge.uuid,
+        workOrderItemUuid: charge.workOrderItemUuid,
+        shopifyOrderLineItemId: charge.shopifyOrderLineItemId,
+        name: charge.name,
+        amount: charge.amount,
+        employeeId: charge.employeeId,
+      };
+    }),
+    ...hourlyLabour.map<WorkOrderCharge>(charge => {
+      assertGidOrNull(charge.shopifyOrderLineItemId);
+      assertGidOrNull(charge.employeeId);
+      assertMoney(charge.rate);
+      assertDecimal(charge.hours);
+
+      return {
+        type: 'hourly-labour',
+        uuid: charge.uuid,
+        workOrderItemUuid: charge.workOrderItemUuid,
+        shopifyOrderLineItemId: charge.shopifyOrderLineItemId,
+        name: charge.name,
+        rate: charge.rate,
+        hours: charge.hours,
+        employeeId: charge.employeeId,
+      };
+    }),
+  ];
 }
 
 /**
- * Fetches a page of work orders from the database + the corresponding (draft) orders from Shopify.
+ * Fetches a page of work orders from the database.
  * Loads only basic data to display in a list, such as the price and status.
  */
 export async function getWorkOrderInfoPage(
@@ -176,44 +111,36 @@ export async function getWorkOrderInfoPage(
     customerId: paginationOptions.customerId,
   });
 
-  const graphql = new Graphql(session);
-  const orderIds = page.map(r => {
-    const id = r.orderId ?? r.draftOrderId ?? never();
-    assertGid(id);
-    return id;
-  });
-  const { nodes: orders } = await gql.order.getManyOrderInfoDraftOrderInfo.run(graphql, { ids: orderIds });
+  const customerIds = unique(page.map(workOrder => workOrder.customerId));
+  const customers = await db.customers.getMany({ customerIds });
+  const customersById = groupByKey(customers, 'customerId');
 
-  return page.map((workOrder, i): WorkOrderInfo => {
-    assertGid(workOrder.customerId);
-    assertGidOrNull(workOrder.orderId);
-    assertGidOrNull(workOrder.draftOrderId);
-    assertGidOrNull(workOrder.derivedFromOrderId);
+  return await Promise.all(
+    page.map<Promise<WorkOrderInfo>>(async workOrder => {
+      const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
+      const orders = await db.shopifyOrder.getMany({ orderIds: linkedOrders.map(order => order.orderId) });
 
-    const order = orders[i];
+      let paymentStatus: WorkOrderInfo['paymentStatus'];
 
-    if (!order || (order.__typename !== 'Order' && order.__typename !== 'DraftOrder')) {
-      throw new HttpError('Cannot find (draft) order for this work order', 500);
-    }
+      if (orders.every(order => order.fullyPaid)) {
+        paymentStatus = 'fully-paid';
+      } else if (orders.some(order => order.fullyPaid)) {
+        paymentStatus = 'partially-paid';
+      } else {
+        paymentStatus = 'unpaid';
+      }
 
-    const outstanding =
-      order.__typename === 'Order' ? decimalToMoney(order.totalOutstandingSet.shopMoney.amount) : order.totalPrice;
-
-    const financialStatus = order.__typename === 'Order' ? order.displayFinancialStatus : null;
-
-    return {
-      name: workOrder.name,
-      status: workOrder.status,
-      dueDate: workOrder.dueDate.toISOString() as DateTime,
-      customerId: workOrder.customerId,
-      order: {
-        id: workOrder.orderId ?? workOrder.draftOrderId ?? never(),
-        type: workOrder.orderId === null ? 'draft-order' : 'order',
-        name: order.name,
-        total: order.totalPrice,
-        outstanding,
-        financialStatus,
-      },
-    };
-  });
+      return {
+        name: workOrder.name,
+        status: workOrder.status,
+        dueDate: workOrder.dueDate.toISOString() as DateTime,
+        customerName: customersById[workOrder.customerId]?.[0]?.displayName ?? 'Unknown customer',
+        orderNames: linkedOrders.map(order => order.name),
+        paymentStatus,
+        // TODO: Store these in db and fetch them here
+        total: BigDecimal.ZERO.toMoney(),
+        outstanding: BigDecimal.ZERO.toMoney(),
+      };
+    }),
+  );
 }

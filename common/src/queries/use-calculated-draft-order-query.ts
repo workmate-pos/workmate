@@ -5,39 +5,24 @@ import { CalculateWorkOrder } from '@web/schemas/generated/calculate-work-order.
 import { Fetch } from './fetch.js';
 
 export const useCalculatedDraftOrderQuery = (
-  {
-    fetch,
-    lineItems,
-    customerId,
-    charges,
-    discount,
-  }: { fetch: Fetch } & Pick<CreateWorkOrder, 'lineItems' | 'charges' | 'discount'> & {
-      customerId: CreateWorkOrder['customerId'] | null;
-    },
+  { fetch, items, customerId, charges }: { fetch: Fetch } & Pick<CreateWorkOrder, 'items' | 'charges' | 'customerId'>,
   options?: UseQueryOptions<
     { calculateDraftOrderResponse?: CalculateDraftOrderResponse },
     unknown,
     { calculateDraftOrderResponse?: CalculateDraftOrderResponse },
-    (
-      | string
-      | CreateWorkOrder['lineItems']
-      | CreateWorkOrder['customerId']
-      | CreateWorkOrder['charges']
-      | CreateWorkOrder['discount']
-    )[]
+    (string | CreateWorkOrder['items'] | CreateWorkOrder['customerId'] | CreateWorkOrder['charges'])[]
   >,
 ) =>
   useQuery({
     ...options,
-    queryKey: ['calculated-draft-order', lineItems, customerId, charges, discount],
+    queryKey: ['calculated-draft-order', items, customerId, charges],
     queryFn: async () => {
       const response = await fetch('/api/work-order/calculate-draft-order', {
         method: 'POST',
         body: JSON.stringify({
-          lineItems,
+          items,
           customerId,
           charges,
-          discount,
         } satisfies CalculateWorkOrder),
         headers: { 'Content-Type': 'application/json' },
       });

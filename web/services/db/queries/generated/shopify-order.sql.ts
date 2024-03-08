@@ -229,7 +229,7 @@ export interface IGetRelatedWorkOrdersByShopifyOrderIdQuery {
   result: IGetRelatedWorkOrdersByShopifyOrderIdResult;
 }
 
-const getRelatedWorkOrdersByShopifyOrderIdIR: any = {"usedParamSet":{"orderId":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":424,"b":432}]}],"statement":"SELECT DISTINCT \"WorkOrder\".\"id\", \"WorkOrder\".name\nFROM \"ShopifyOrder\"\n       INNER JOIN \"ShopifyOrderLineItem\" ON \"ShopifyOrder\".\"orderId\" = \"ShopifyOrderLineItem\".\"orderId\"\n       INNER JOIN \"WorkOrderItem\"\n                  ON \"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderItem\".\"shopifyOrderLineItemId\"\n       INNER JOIN \"WorkOrder\" ON \"WorkOrderItem\".\"workOrderId\" = \"WorkOrder\".\"id\"\nWHERE \"ShopifyOrder\".\"orderId\" = :orderId!"};
+const getRelatedWorkOrdersByShopifyOrderIdIR: any = {"usedParamSet":{"orderId":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":954,"b":962}]}],"statement":"SELECT DISTINCT \"WorkOrder\".\"id\", \"WorkOrder\".name\nFROM \"ShopifyOrder\"\n       INNER JOIN \"ShopifyOrderLineItem\" ON \"ShopifyOrder\".\"orderId\" = \"ShopifyOrderLineItem\".\"orderId\"\n       LEFT JOIN \"WorkOrderItem\"\n                 ON \"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderItem\".\"shopifyOrderLineItemId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\"\n                 ON \"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderHourlyLabourCharge\".\"shopifyOrderLineItemId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\"\n                 ON \"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderFixedPriceLabourCharge\".\"shopifyOrderLineItemId\"\n       INNER JOIN \"WorkOrder\" ON (\"WorkOrderItem\".\"workOrderId\" = \"WorkOrder\".\"id\" OR\n                                 \"WorkOrderHourlyLabourCharge\".\"workOrderId\" = \"WorkOrder\".\"id\" OR\n                                 \"WorkOrderFixedPriceLabourCharge\".\"workOrderId\" = \"WorkOrder\".\"id\")\nWHERE \"ShopifyOrder\".\"orderId\" = :orderId!"};
 
 /**
  * Query generated from SQL:
@@ -237,13 +237,65 @@ const getRelatedWorkOrdersByShopifyOrderIdIR: any = {"usedParamSet":{"orderId":t
  * SELECT DISTINCT "WorkOrder"."id", "WorkOrder".name
  * FROM "ShopifyOrder"
  *        INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
- *        INNER JOIN "WorkOrderItem"
- *                   ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId"
- *        INNER JOIN "WorkOrder" ON "WorkOrderItem"."workOrderId" = "WorkOrder"."id"
+ *        LEFT JOIN "WorkOrderItem"
+ *                  ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId"
+ *        LEFT JOIN "WorkOrderHourlyLabourCharge"
+ *                  ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderHourlyLabourCharge"."shopifyOrderLineItemId"
+ *        LEFT JOIN "WorkOrderFixedPriceLabourCharge"
+ *                  ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderFixedPriceLabourCharge"."shopifyOrderLineItemId"
+ *        INNER JOIN "WorkOrder" ON ("WorkOrderItem"."workOrderId" = "WorkOrder"."id" OR
+ *                                  "WorkOrderHourlyLabourCharge"."workOrderId" = "WorkOrder"."id" OR
+ *                                  "WorkOrderFixedPriceLabourCharge"."workOrderId" = "WorkOrder"."id")
  * WHERE "ShopifyOrder"."orderId" = :orderId!
  * ```
  */
 export const getRelatedWorkOrdersByShopifyOrderId = new PreparedQuery<IGetRelatedWorkOrdersByShopifyOrderIdParams,IGetRelatedWorkOrdersByShopifyOrderIdResult>(getRelatedWorkOrdersByShopifyOrderIdIR);
+
+
+/** 'GetLinkedOrdersByWorkOrderId' parameters type */
+export interface IGetLinkedOrdersByWorkOrderIdParams {
+  workOrderId: number;
+}
+
+/** 'GetLinkedOrdersByWorkOrderId' return type */
+export interface IGetLinkedOrdersByWorkOrderIdResult {
+  createdAt: Date;
+  fullyPaid: boolean;
+  name: string;
+  orderId: string;
+  orderType: ShopifyOrderType;
+  shop: string;
+  updatedAt: Date;
+}
+
+/** 'GetLinkedOrdersByWorkOrderId' query type */
+export interface IGetLinkedOrdersByWorkOrderIdQuery {
+  params: IGetLinkedOrdersByWorkOrderIdParams;
+  result: IGetLinkedOrdersByWorkOrderIdResult;
+}
+
+const getLinkedOrdersByWorkOrderIdIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":346,"b":358},{"a":593,"b":605},{"a":852,"b":864}]}],"statement":"SELECT DISTINCT \"ShopifyOrder\".*\nFROM \"ShopifyOrder\"\n       INNER JOIN \"ShopifyOrderLineItem\" ON \"ShopifyOrder\".\"orderId\" = \"ShopifyOrderLineItem\".\"orderId\"\n       LEFT JOIN \"WorkOrderItem\" ON (\"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderItem\".\"shopifyOrderLineItemId\" AND\n                                     \"WorkOrderItem\".\"workOrderId\" = :workOrderId!)\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\"\n                 ON (\"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderHourlyLabourCharge\".\"shopifyOrderLineItemId\" AND\n                     \"WorkOrderHourlyLabourCharge\".\"workOrderId\" = :workOrderId!)\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\"\n                 ON (\"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderFixedPriceLabourCharge\".\"shopifyOrderLineItemId\" AND\n                     \"WorkOrderFixedPriceLabourCharge\".\"workOrderId\" = :workOrderId!)\nWHERE \"WorkOrderItem\".\"uuid\" IS NOT NULL\n   OR \"WorkOrderHourlyLabourCharge\".\"uuid\" IS NOT NULL\n   OR \"WorkOrderFixedPriceLabourCharge\".\"uuid\" IS NOT NULL"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT DISTINCT "ShopifyOrder".*
+ * FROM "ShopifyOrder"
+ *        INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
+ *        LEFT JOIN "WorkOrderItem" ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId" AND
+ *                                      "WorkOrderItem"."workOrderId" = :workOrderId!)
+ *        LEFT JOIN "WorkOrderHourlyLabourCharge"
+ *                  ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderHourlyLabourCharge"."shopifyOrderLineItemId" AND
+ *                      "WorkOrderHourlyLabourCharge"."workOrderId" = :workOrderId!)
+ *        LEFT JOIN "WorkOrderFixedPriceLabourCharge"
+ *                  ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderFixedPriceLabourCharge"."shopifyOrderLineItemId" AND
+ *                      "WorkOrderFixedPriceLabourCharge"."workOrderId" = :workOrderId!)
+ * WHERE "WorkOrderItem"."uuid" IS NOT NULL
+ *    OR "WorkOrderHourlyLabourCharge"."uuid" IS NOT NULL
+ *    OR "WorkOrderFixedPriceLabourCharge"."uuid" IS NOT NULL
+ * ```
+ */
+export const getLinkedOrdersByWorkOrderId = new PreparedQuery<IGetLinkedOrdersByWorkOrderIdParams,IGetLinkedOrdersByWorkOrderIdResult>(getLinkedOrdersByWorkOrderIdIR);
 
 
 /** 'DeleteOrders' parameters type */

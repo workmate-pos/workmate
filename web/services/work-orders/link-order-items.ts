@@ -93,10 +93,14 @@ async function linkHourlyLabourCharges(
 
   const uuids = Object.keys(lineItemIdByHourlyChargeUuid);
 
-  const charges = await db.workOrderLabour.getHourlyLabourChargesByUuids({ workOrderId, uuids });
+  const charges = await db.workOrderCharges.getHourlyLabourChargesByUuids({ workOrderId, uuids });
   for (const { uuid } of charges) {
     const shopifyOrderLineItemId = lineItemIdByHourlyChargeUuid[uuid] ?? never();
-    await db.workOrderLabour.setHourlyLabourChargeShopifyOrderLineItemId({ workOrderId, uuid, shopifyOrderLineItemId });
+    await db.workOrderCharges.setHourlyLabourChargeShopifyOrderLineItemId({
+      workOrderId,
+      uuid,
+      shopifyOrderLineItemId,
+    });
   }
 
   if (charges.length !== uuids.length) {
@@ -120,10 +124,10 @@ async function linkFixedPriceLabourCharges(
 
   const uuids = Object.keys(lineItemIdByFixedPriceChargeUuid);
 
-  const charges = await db.workOrderLabour.getFixedPriceLabourChargesByUuids({ workOrderId, uuids });
+  const charges = await db.workOrderCharges.getFixedPriceLabourChargesByUuids({ workOrderId, uuids });
   for (const { uuid } of charges) {
     const shopifyOrderLineItemId = lineItemIdByFixedPriceChargeUuid[uuid] ?? never();
-    await db.workOrderLabour.setFixedPriceLabourChargeShopifyOrderLineItemId({
+    await db.workOrderCharges.setFixedPriceLabourChargeShopifyOrderLineItemId({
       workOrderId,
       uuid,
       shopifyOrderLineItemId,

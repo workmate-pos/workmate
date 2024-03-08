@@ -8,13 +8,10 @@
     "charges": {
       "$ref": "create-work-order.json#/properties/charges"
     },
-    "lineItems": {
-      "$ref": "create-work-order.json#/properties/lineItems"
-    },
-    "discount": {
-      "$ref": "create-work-order.json#/properties/discount"
+    "items": {
+      "$ref": "create-work-order.json#/properties/items"
     }
   },
-  "required": ["customerId", "charges", "lineItems", "discount"],
+  "required": ["customerId", "charges", "items"],
   "additionalProperties": false
 }

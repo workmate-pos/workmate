@@ -1,90 +1,293 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
-import { ID } from '../gql/queries/generated/schema.js';
-import { getNewWorkOrderId } from '../id-formatting.js';
-import { getShopSettings } from '../settings.js';
+import { getNewWorkOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
-import { createWorkOrderCharges, removeWorkOrderCharges } from './charges.js';
-import { getOrderOptions, updateOrder, upsertDraftOrder } from './order.js';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { validateCreateWorkOrder } from './validate.js';
+import { syncWorkOrder } from './sync.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { assertGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { gql } from '../gql/gql.js';
+import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
+import {
+  IGetFixedPriceLabourChargesResult,
+  IGetHourlyLabourChargesResult,
+} from '../db/queries/generated/work-order-charges.sql.js';
 
 export async function upsertWorkOrder(session: Session, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
-    const settings = await getShopSettings(session.shop);
+    await validateCreateWorkOrder(session.shop, createWorkOrder);
 
-    if (!settings.statuses.includes(createWorkOrder.status)) {
-      throw new HttpError(`Invalid status, must be in ${JSON.stringify(settings.statuses)}`, 400);
+    if (createWorkOrder.name === null) {
+      return await createNewWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
     }
 
-    const isNew = createWorkOrder.name === null;
-    const [currentWorkOrder] = isNew ? [] : await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
-
-    if (!isNew && !currentWorkOrder) {
-      throw new HttpError('Work order not found', 404);
-    }
-
-    const [{ id, name: workOrderName } = never()] = await db.workOrder.upsert({
-      shop: session.shop,
-      name: createWorkOrder.name ?? (await getNewWorkOrderId(session.shop)),
-      status: createWorkOrder.status,
-      customerId: createWorkOrder.customerId,
-      dueDate: new Date(createWorkOrder.dueDate),
-      derivedFromOrderId: createWorkOrder.derivedFromOrderId,
-      orderId: currentWorkOrder?.orderId ?? null,
-      draftOrderId: currentWorkOrder?.draftOrderId ?? null,
-    });
-
-    let draftOrderId: ID | null = null;
-    let orderId: ID | null = null;
-
-    const orderIdSet = !!currentWorkOrder?.orderId;
-
-    const action = orderIdSet ? 'updateOrder' : 'upsertDraftOrder';
-
-    const options = await getOrderOptions(session.shop);
-
-    if (action === 'upsertDraftOrder') {
-      await removeWorkOrderCharges(id);
-      await createWorkOrderCharges(id, createWorkOrder);
-    }
-
-    switch (action) {
-      case 'upsertDraftOrder': {
-        const draftOrder = await upsertDraftOrder(
-          session,
-          workOrderName,
-          createWorkOrder,
-          options,
-          (currentWorkOrder?.draftOrderId ?? undefined) as ID | undefined,
-        );
-        draftOrderId = draftOrder.id;
-        break;
-      }
-
-      case 'updateOrder': {
-        const order = await updateOrder(
-          session,
-          workOrderName,
-          createWorkOrder,
-          options,
-          (currentWorkOrder?.orderId ?? never()) as ID,
-        );
-        orderId = order.id;
-        break;
-      }
-
-      default:
-        return action satisfies never;
-    }
-
-    await db.workOrder.updateOrderIds({
-      id,
-      orderId,
-      draftOrderId,
-    });
-
-    return { name: workOrderName };
+    return await updateWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
   });
+}
+
+async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: null }) {
+  const [workOrder = never()] = await db.workOrder.upsert({
+    shop: session.shop,
+    name: await getNewWorkOrderName(session.shop),
+    derivedFromOrderId: createWorkOrder.derivedFromOrderId,
+    customerId: createWorkOrder.customerId,
+    dueDate: new Date(createWorkOrder.dueDate),
+    status: createWorkOrder.status,
+    note: createWorkOrder.note,
+  });
+
+  await upsertItems(createWorkOrder, workOrder.id, []);
+  await upsertCharges(createWorkOrder, workOrder.id, [], []);
+
+  await syncWorkOrder(session, workOrder.id);
+
+  return workOrder;
+}
+
+async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: string }) {
+  const [workOrder = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
+
+  const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
+
+  const currentItems = await db.workOrder.getItems({ workOrderId: workOrder.id });
+  const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId: workOrder.id });
+  const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId: workOrder.id });
+
+  // not all changes are allowed, e.g., once you create an order for some item it is no longer possible to change its price
+  assertNoIllegalItemChanges(createWorkOrder, currentItems);
+  assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges);
+  assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges);
+
+  const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));
+  if (createWorkOrder.customerId !== workOrder.customerId && hasOrder) {
+    throw new HttpError('Cannot change customer after the order has been created', 400);
+  }
+
+  // nothing illegal, so we can upsert and delete items/charges safely
+
+  await db.workOrder.upsert({
+    shop: session.shop,
+    name: workOrder.name,
+    status: createWorkOrder.status,
+    customerId: createWorkOrder.customerId,
+    dueDate: new Date(createWorkOrder.dueDate),
+    derivedFromOrderId: createWorkOrder.derivedFromOrderId,
+    note: createWorkOrder.note,
+  });
+
+  await upsertCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
+  await upsertItems(createWorkOrder, workOrder.id, currentItems);
+
+  await deleteCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
+  await deleteItems(createWorkOrder, workOrder.id, currentItems);
+
+  // clean up any orphan draft orders that may be left behind as a result of deleting line items
+  const newLinkedDraftOrders = await db.workOrder.getLinkedDraftOrderIds({ workOrderId: workOrder.id });
+  const currentLinkedDraftOrders = currentLinkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER'));
+  const orphanedDraftOrders = currentLinkedDraftOrders.filter(id => !newLinkedDraftOrders.includes(id));
+
+  if (orphanedDraftOrders.length) {
+    const graphql = new Graphql(session);
+    await gql.draftOrder.removeMany.run(graphql, {
+      ids: orphanedDraftOrders.map(order => {
+        assertGid(order.orderId);
+        return order.orderId;
+      }),
+    });
+  }
+
+  return workOrder;
+}
+
+function assertNoIllegalItemChanges(createWorkOrder: CreateWorkOrder, currentItems: IGetItemsResult[]) {
+  const newItemsByUuid = Object.fromEntries(createWorkOrder.items.map(item => [item.uuid, item]));
+
+  for (const currentItem of currentItems) {
+    if (currentItem.shopifyOrderLineItemId !== null && !isDraftOrderLineItemId(currentItem.shopifyOrderLineItemId)) {
+      if (!(currentItem.uuid in newItemsByUuid)) {
+        throw new HttpError(`Cannot delete item ${currentItem.uuid} as it is connected to an order`, 400);
+      }
+
+      const newItem = newItemsByUuid[currentItem.uuid] ?? never();
+
+      if (newItem.productVariantId !== currentItem.productVariantId) {
+        throw new HttpError(`Cannot change product variant of item ${currentItem.uuid}`, 400);
+      }
+
+      if (newItem.quantity !== currentItem.quantity) {
+        throw new HttpError(`Cannot change quantity of item ${currentItem.uuid}`, 400);
+      }
+    }
+  }
+}
+
+function assertNoIllegalHourlyChargeChanges(
+  createWorkOrder: CreateWorkOrder,
+  currentHourlyCharges: IGetHourlyLabourChargesResult[],
+) {
+  const newHourlyChargesByUuid = Object.fromEntries(
+    createWorkOrder.charges.filter(hasPropertyValue('type', 'hourly-labour')).map(charge => [charge.uuid, charge]),
+  );
+
+  for (const currentCharge of currentHourlyCharges) {
+    if (
+      currentCharge.shopifyOrderLineItemId !== null &&
+      !isDraftOrderLineItemId(currentCharge.shopifyOrderLineItemId)
+    ) {
+      if (!(currentCharge.uuid in newHourlyChargesByUuid)) {
+        throw new HttpError(`Cannot delete hourly charge ${currentCharge.uuid} as it is connected to an order`, 400);
+      }
+
+      const newCharge = newHourlyChargesByUuid[currentCharge.uuid] ?? never();
+
+      if (newCharge.name !== currentCharge.name) {
+        throw new HttpError(`Cannot change name of hourly charge ${newCharge.uuid}`, 400);
+      }
+
+      if (newCharge.rate !== newCharge.rate) {
+        throw new HttpError(`Cannot change rate of hourly charge ${newCharge.uuid}`, 400);
+      }
+
+      if (newCharge.hours !== newCharge.hours) {
+        throw new HttpError(`Cannot change hours of hourly charge ${newCharge.uuid}`, 400);
+      }
+    }
+  }
+}
+
+function assertNoIllegalFixedPriceChargeChanges(
+  createWorkOrder: CreateWorkOrder,
+  currentFixedPriceCharges: IGetFixedPriceLabourChargesResult[],
+) {
+  const newFixedPriceChargesByUuid = Object.fromEntries(
+    createWorkOrder.charges.filter(hasPropertyValue('type', 'fixed-price-labour')).map(charge => [charge.uuid, charge]),
+  );
+
+  for (const currentCharge of currentFixedPriceCharges) {
+    if (
+      currentCharge.shopifyOrderLineItemId !== null &&
+      !isDraftOrderLineItemId(currentCharge.shopifyOrderLineItemId)
+    ) {
+      if (!(currentCharge.uuid in newFixedPriceChargesByUuid)) {
+        throw new HttpError(
+          `Cannot delete fixed price charge ${currentCharge.uuid} as it is connected to an order`,
+          400,
+        );
+      }
+
+      const newCharge = newFixedPriceChargesByUuid[currentCharge.uuid] ?? never();
+
+      if (newCharge.name !== currentCharge.name) {
+        throw new HttpError(`Cannot change name of fixed price charge ${newCharge.uuid}`, 400);
+      }
+
+      if (newCharge.amount !== newCharge.amount) {
+        throw new HttpError(`Cannot change amount of fixed price charge ${newCharge.uuid}`, 400);
+      }
+    }
+  }
+}
+
+async function upsertItems(createWorkOrder: CreateWorkOrder, workOrderId: number, currentItems: IGetItemsResult[]) {
+  const itemsByUuid = Object.fromEntries(currentItems.map(item => [item.uuid, item]));
+
+  for (const item of createWorkOrder.items) {
+    const shopifyOrderLineItemId = itemsByUuid[item.uuid]?.shopifyOrderLineItemId ?? null;
+
+    await db.workOrder.upsertItem({
+      uuid: item.uuid,
+      productVariantId: item.productVariantId,
+      quantity: item.quantity,
+      workOrderId,
+      shopifyOrderLineItemId,
+    });
+  }
+}
+
+async function upsertCharges(
+  createWorkOrder: CreateWorkOrder,
+  workOrderId: number,
+  currentHourlyCharges: IGetHourlyLabourChargesResult[],
+  currentFixedPriceCharges: IGetFixedPriceLabourChargesResult[],
+) {
+  const currentHourlyChargeByUuid = Object.fromEntries(currentHourlyCharges.map(charge => [charge.uuid, charge]));
+  const currentFixedPriceChargeByUuid = Object.fromEntries(
+    currentFixedPriceCharges.map(charge => [charge.uuid, charge]),
+  );
+
+  for (const charge of createWorkOrder.charges) {
+    if (charge.type === 'fixed-price-labour') {
+      const shopifyOrderLineItemId = currentFixedPriceChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null;
+
+      await db.workOrderCharges.upsertFixedPriceLabourCharge({
+        workOrderId,
+        name: charge.name,
+        uuid: charge.uuid,
+        amount: charge.amount,
+        workOrderItemUuid: charge.workOrderItemUuid,
+        employeeId: charge.employeeId,
+        shopifyOrderLineItemId,
+      });
+    } else if (charge.type === 'hourly-labour') {
+      const shopifyOrderLineItemId = currentHourlyChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null;
+
+      await db.workOrderCharges.upsertHourlyLabourCharge({
+        workOrderId,
+        name: charge.name,
+        uuid: charge.uuid,
+        rate: charge.rate,
+        hours: charge.hours,
+        workOrderItemUuid: charge.workOrderItemUuid,
+        employeeId: charge.employeeId,
+        shopifyOrderLineItemId,
+      });
+    } else {
+      return charge satisfies never;
+    }
+  }
+}
+
+async function deleteItems(createWorkOrder: CreateWorkOrder, workOrderId: number, currentItems: IGetItemsResult[]) {
+  const newItemUuids = new Set(createWorkOrder.items.map(item => item.uuid));
+
+  for (const { uuid } of currentItems) {
+    if (!newItemUuids.has(uuid)) {
+      await db.workOrder.removeItem({ workOrderId, uuid });
+    }
+  }
+}
+
+async function deleteCharges(
+  createWorkOrder: CreateWorkOrder,
+  workOrderId: number,
+  currentHourlyCharges: IGetHourlyLabourChargesResult[],
+  currentFixedPriceCharges: IGetFixedPriceLabourChargesResult[],
+) {
+  const newHourlyChargesByUuid = new Set(
+    createWorkOrder.charges.filter(hasPropertyValue('type', 'hourly-labour')).map(charge => charge.uuid),
+  );
+  const newFixedPriceChargesByUuid = new Set(
+    createWorkOrder.charges.filter(hasPropertyValue('type', 'fixed-price-labour')).map(charge => charge.uuid),
+  );
+
+  for (const { uuid } of currentHourlyCharges) {
+    if (!newHourlyChargesByUuid.has(uuid)) {
+      await db.workOrderCharges.removeHourlyLabourCharge({ workOrderId, uuid });
+    }
+  }
+
+  for (const { uuid } of currentFixedPriceCharges) {
+    if (!newFixedPriceChargesByUuid.has(uuid)) {
+      await db.workOrderCharges.removeFixedPriceLabourCharge({ workOrderId, uuid });
+    }
+  }
+}
+
+// TODO: Get rid of this once draft orders are gone
+function isDraftOrderLineItemId(id: string | null) {
+  return id !== null && parseGid(id).objectName === 'DraftOrderLineItem';
 }

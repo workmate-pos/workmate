@@ -36,13 +36,13 @@ async function applyFormatters<Arg>(
   return format;
 }
 
-export async function getNewWorkOrderId(shop: string) {
+export async function getNewWorkOrderName(shop: string) {
   const settings = await getShopSettings(shop);
 
   return await applyFormatters(settings.idFormat, workOrderFormatters, { shop, settings });
 }
 
-export async function getNewPurchaseOrderId(shop: string) {
+export async function getNewPurchaseOrderName(shop: string) {
   const format = 'PO-#{{id}}';
   assertValidFormatString(format);
   return format.replace('{{id}}', String(await getNextPurchaseOrderIdForShop(shop)));

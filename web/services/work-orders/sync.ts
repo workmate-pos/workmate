@@ -25,6 +25,7 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[]) {
   }
 }
 
+// TODO: Once the Admin Work Orders app is done we don't need to make draft orders anymore
 export async function syncWorkOrder(session: Session, workOrderId: number) {
   const [workOrder] = await db.workOrder.get({ id: workOrderId });
 
