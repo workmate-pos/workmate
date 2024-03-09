@@ -6,14 +6,18 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.
 import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
 import { getWorkOrderLineItems, getCustomAttributeArrayFromObject } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { getShopSettings } from '../settings.js';
 
 export async function calculateDraftOrder(session: Session, calculateWorkOrder: CalculateWorkOrder) {
   const graphql = new Graphql(session);
+
+  const { labourLineItemSKU } = await getShopSettings(session.shop);
 
   const { lineItems, customSales } = getWorkOrderLineItems(
     calculateWorkOrder.items,
     calculateWorkOrder.charges.filter(hasPropertyValue('type', 'hourly-labour')),
     calculateWorkOrder.charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
+    { labourSku: labourLineItemSKU },
   );
 
   const result = await gql.draftOrder.calculate

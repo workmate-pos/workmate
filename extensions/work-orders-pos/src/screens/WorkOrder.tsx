@@ -382,6 +382,7 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
         : '-';
 
   // TODO: Re-do this computation
+  // TODO: Make sure that the displayed product prices match the paid prices in case it is connected to a line item
 
   const receivedBigDecimal = BigDecimal.ZERO;
   const totalPriceBigDecimal = BigDecimal.ZERO;

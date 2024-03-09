@@ -17,6 +17,7 @@ export type WorkOrderItem = {
   shopifyOrderLineItemId: ID | null;
   productVariantId: ID;
   quantity: Int;
+  absorbCharges: boolean;
 };
 
 export type WorkOrderCharge = FixedPriceLabour | HourlyLabour;

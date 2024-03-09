@@ -79,12 +79,15 @@ WHERE uuid = :uuid!
   AND "workOrderId" = :workOrderId!;
 
 /* @name upsertItem */
-INSERT INTO "WorkOrderItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, "productVariantId")
-VALUES (:uuid!, :workOrderId!, :shopifyOrderLineItemId, :quantity!, :productVariantId!)
+INSERT INTO "WorkOrderItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, "productVariantId",
+                             "absorbCharges")
+VALUES (:uuid!, :workOrderId!, :shopifyOrderLineItemId, :quantity!, :productVariantId!, :absorbCharges!)
 ON CONFLICT ("workOrderId", uuid)
   DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
                 quantity                 = EXCLUDED.quantity,
-                "productVariantId"       = EXCLUDED."productVariantId";
+                "productVariantId"       = EXCLUDED."productVariantId",
+                "absorbCharges"          = EXCLUDED."absorbCharges";
+
 
 /* @name removeItem */
 DELETE

@@ -36,9 +36,12 @@
           },
           "quantity": {
             "$ref": "scalars.json#/definitions/Int"
+          },
+          "absorbCharges": {
+            "type": "boolean"
           }
         },
-        "required": ["uuid", "productVariantId", "quantity"],
+        "required": ["uuid", "productVariantId", "quantity", "absorbCharges"],
         "additionalProperties": false
       }
     },

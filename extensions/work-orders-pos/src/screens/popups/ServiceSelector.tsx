@@ -126,6 +126,7 @@ function getProductVariantRows(
               uuid: lineItemUuid,
               productVariantId: variant.id,
               quantity: 1 as Int,
+              absorbCharges: variant.product.isMutableServiceItem,
             },
             charges: defaultCharges.map(charge => ({ ...charge, lineItemUuid })),
           });

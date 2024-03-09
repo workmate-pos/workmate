@@ -94,7 +94,7 @@ function assertNoIllegalItemChanges(createWorkOrder: CreateWorkOrder, currentIte
   const newItemsByUuid = Object.fromEntries(createWorkOrder.items.map(item => [item.uuid, item]));
 
   for (const currentItem of currentItems) {
-    if (currentItem.shopifyOrderLineItemId !== null && !isDraftOrderLineItemId(currentItem.shopifyOrderLineItemId)) {
+    if (isLineItemId(currentItem.shopifyOrderLineItemId)) {
       if (!(currentItem.uuid in newItemsByUuid)) {
         throw new HttpError(`Cannot delete item ${currentItem.uuid} as it is connected to an order`, 400);
       }
@@ -121,10 +121,7 @@ function assertNoIllegalHourlyChargeChanges(
   );
 
   for (const currentCharge of currentHourlyCharges) {
-    if (
-      currentCharge.shopifyOrderLineItemId !== null &&
-      !isDraftOrderLineItemId(currentCharge.shopifyOrderLineItemId)
-    ) {
+    if (isLineItemId(currentCharge.shopifyOrderLineItemId) !== null) {
       if (!(currentCharge.uuid in newHourlyChargesByUuid)) {
         throw new HttpError(`Cannot delete hourly charge ${currentCharge.uuid} as it is connected to an order`, 400);
       }
@@ -155,10 +152,7 @@ function assertNoIllegalFixedPriceChargeChanges(
   );
 
   for (const currentCharge of currentFixedPriceCharges) {
-    if (
-      currentCharge.shopifyOrderLineItemId !== null &&
-      !isDraftOrderLineItemId(currentCharge.shopifyOrderLineItemId)
-    ) {
+    if (isLineItemId(currentCharge.shopifyOrderLineItemId)) {
       if (!(currentCharge.uuid in newFixedPriceChargesByUuid)) {
         throw new HttpError(
           `Cannot delete fixed price charge ${currentCharge.uuid} as it is connected to an order`,
@@ -191,6 +185,7 @@ async function upsertItems(createWorkOrder: CreateWorkOrder, workOrderId: number
       quantity: item.quantity,
       workOrderId,
       shopifyOrderLineItemId,
+      absorbCharges: item.absorbCharges,
     });
   }
 }
@@ -274,7 +269,6 @@ async function deleteCharges(
   }
 }
 
-// TODO: Get rid of this once draft orders are gone
-function isDraftOrderLineItemId(id: string | null) {
-  return id !== null && parseGid(id).objectName === 'DraftOrderLineItem';
+function isLineItemId(id: string | null) {
+  return id !== null && parseGid(id).objectName === 'LineItem';
 }

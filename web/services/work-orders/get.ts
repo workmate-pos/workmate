@@ -43,6 +43,7 @@ async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> 
       shopifyOrderLineItemId: item.shopifyOrderLineItemId,
       productVariantId: item.productVariantId,
       quantity: item.quantity as Int,
+      absorbCharges: item.absorbCharges,
     };
   });
 }
@@ -118,7 +119,6 @@ export async function getWorkOrderInfoPage(
   return await Promise.all(
     page.map<Promise<WorkOrderInfo>>(async workOrder => {
       const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
-      const orders = await db.shopifyOrder.getMany({ orderIds: linkedOrders.map(order => order.orderId) });
 
       assertGid(workOrder.customerId);
 
@@ -132,13 +132,15 @@ export async function getWorkOrderInfoPage(
         },
         orders: linkedOrders.map(order => {
           assertGid(order.orderId);
+          assertMoney(order.total);
+          assertMoney(order.outstanding);
+
           return {
             id: order.orderId,
             name: order.name,
             type: order.orderType,
-            // TODO: Store these in db and fetch them here
-            total: BigDecimal.ZERO.toMoney(),
-            outstanding: BigDecimal.ZERO.toMoney(),
+            total: order.total,
+            outstanding: order.outstanding,
           };
         }),
       };

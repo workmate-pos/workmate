@@ -20,6 +20,7 @@ function mapItem(item: WorkOrder['items'][number]): CreateWorkOrderItem {
     productVariantId: item.productVariantId,
     quantity: item.quantity,
     uuid: item.uuid,
+    absorbCharges: item.absorbCharges,
   };
 }
 

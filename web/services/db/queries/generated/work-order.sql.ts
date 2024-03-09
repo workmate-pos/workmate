@@ -169,6 +169,7 @@ export interface IGetItemsParams {
 
 /** 'GetItems' return type */
 export interface IGetItemsResult {
+  absorbCharges: boolean;
   createdAt: Date;
   productVariantId: string;
   quantity: number;
@@ -204,6 +205,7 @@ export interface IGetUnlinkedItemsParams {
 
 /** 'GetUnlinkedItems' return type */
 export interface IGetUnlinkedItemsResult {
+  absorbCharges: boolean;
   createdAt: Date;
   productVariantId: string;
   quantity: number;
@@ -318,6 +320,7 @@ export interface IGetItemsByUuidsParams {
 
 /** 'GetItemsByUuids' return type */
 export interface IGetItemsByUuidsResult {
+  absorbCharges: boolean;
   createdAt: Date;
   productVariantId: string;
   quantity: number;
@@ -379,6 +382,7 @@ export const setLineItemShopifyOrderLineItemId = new PreparedQuery<ISetLineItemS
 
 /** 'UpsertItem' parameters type */
 export interface IUpsertItemParams {
+  absorbCharges: boolean;
   productVariantId: string;
   quantity: number;
   shopifyOrderLineItemId?: string | null | void;
@@ -395,17 +399,19 @@ export interface IUpsertItemQuery {
   result: IUpsertItemResult;
 }
 
-const upsertItemIR: any = {"usedParamSet":{"uuid":true,"workOrderId":true,"shopifyOrderLineItemId":true,"quantity":true,"productVariantId":true},"params":[{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":119}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":122,"b":134}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":137,"b":159}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":162,"b":171}]},{"name":"productVariantId","required":true,"transform":{"type":"scalar"},"locs":[{"a":174,"b":191}]}],"statement":"INSERT INTO \"WorkOrderItem\" (uuid, \"workOrderId\", \"shopifyOrderLineItemId\", quantity, \"productVariantId\")\nVALUES (:uuid!, :workOrderId!, :shopifyOrderLineItemId, :quantity!, :productVariantId!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n                quantity                 = EXCLUDED.quantity,\n                \"productVariantId\"       = EXCLUDED.\"productVariantId\""};
+const upsertItemIR: any = {"usedParamSet":{"uuid":true,"workOrderId":true,"shopifyOrderLineItemId":true,"quantity":true,"productVariantId":true,"absorbCharges":true},"params":[{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":160,"b":165}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":168,"b":180}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":183,"b":205}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":208,"b":217}]},{"name":"productVariantId","required":true,"transform":{"type":"scalar"},"locs":[{"a":220,"b":237}]},{"name":"absorbCharges","required":true,"transform":{"type":"scalar"},"locs":[{"a":240,"b":254}]}],"statement":"INSERT INTO \"WorkOrderItem\" (uuid, \"workOrderId\", \"shopifyOrderLineItemId\", quantity, \"productVariantId\",\n                             \"absorbCharges\")\nVALUES (:uuid!, :workOrderId!, :shopifyOrderLineItemId, :quantity!, :productVariantId!, :absorbCharges!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n                quantity                 = EXCLUDED.quantity,\n                \"productVariantId\"       = EXCLUDED.\"productVariantId\",\n                \"absorbCharges\"          = EXCLUDED.\"absorbCharges\""};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "WorkOrderItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, "productVariantId")
- * VALUES (:uuid!, :workOrderId!, :shopifyOrderLineItemId, :quantity!, :productVariantId!)
+ * INSERT INTO "WorkOrderItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, "productVariantId",
+ *                              "absorbCharges")
+ * VALUES (:uuid!, :workOrderId!, :shopifyOrderLineItemId, :quantity!, :productVariantId!, :absorbCharges!)
  * ON CONFLICT ("workOrderId", uuid)
  *   DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
  *                 quantity                 = EXCLUDED.quantity,
- *                 "productVariantId"       = EXCLUDED."productVariantId"
+ *                 "productVariantId"       = EXCLUDED."productVariantId",
+ *                 "absorbCharges"          = EXCLUDED."absorbCharges"
  * ```
  */
 export const upsertItem = new PreparedQuery<IUpsertItemParams,IUpsertItemResult>(upsertItemIR);

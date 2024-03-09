@@ -9,6 +9,7 @@ import {
   getWorkOrderOrderCustomAttributes,
 } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { getShopSettings } from '../settings.js';
 
 export async function syncWorkOrders(session: Session, workOrderIds: number[]) {
   if (workOrderIds.length === 0) {
@@ -26,8 +27,9 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[]) {
   }
 }
 
-// TODO: Once the Admin Work Orders app is done we don't need to make draft orders anymore
 export async function syncWorkOrder(session: Session, workOrderId: number) {
+  const { labourLineItemSKU } = await getShopSettings(session.shop);
+
   const [workOrder] = await db.workOrder.get({ id: workOrderId });
 
   if (!workOrder) {
@@ -59,6 +61,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number) {
     unlinkedItems,
     unlinkedHourlyLabourCharges,
     unlinkedFixedPriceLabourCharges,
+    { labourSku: labourLineItemSKU },
   );
 
   assertGid(workOrder.customerId);

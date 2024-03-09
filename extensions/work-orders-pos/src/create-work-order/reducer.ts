@@ -64,11 +64,13 @@ const createWorkOrderReducer = (
                 productVariantId: action.lineItem.productVariantId,
                 uuid: uuid(),
                 quantity: (action.lineItem.quantity - 1) as Int,
+                absorbCharges: action.lineItem.absorbCharges,
               },
               {
                 productVariantId: action.lineItem.productVariantId,
                 uuid: action.lineItem.uuid,
                 quantity: 1 as Int,
+                absorbCharges: action.lineItem.absorbCharges,
               },
               ...(workOrder.items ?? []).filter(li => li.uuid !== action.lineItem.uuid),
             ],
