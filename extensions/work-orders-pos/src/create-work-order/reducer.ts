@@ -2,7 +2,7 @@ import { useReducer } from 'react';
 import { defaultCreateWorkOrder } from './default.js';
 import { Nullable } from '@work-orders/common/types/Nullable.js';
 import type { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
-import { CreateWorkOrderLineItem } from '../types.js';
+import { CreateWorkOrderItem } from '../types.js';
 import { uuid } from '../util/uuid.js';
 
 export type CreateWorkOrderAction =
@@ -13,11 +13,11 @@ export type CreateWorkOrderAction =
     }
   | {
       type: 'remove-line-item';
-      lineItem: CreateWorkOrderLineItem;
+      lineItem: CreateWorkOrderItem;
     }
   | {
       type: 'upsert-line-item';
-      lineItem: CreateWorkOrderLineItem;
+      lineItem: CreateWorkOrderItem;
       isUnstackable: boolean;
     }
   | NonNullable<
@@ -50,7 +50,7 @@ const createWorkOrderReducer = (
 
     case 'upsert-line-item': {
       const lineItemUuidHasCharges = (lineItemUuid: string) =>
-        (workOrder.charges ?? []).find(l => l.lineItemUuid === lineItemUuid);
+        (workOrder.charges ?? []).find(l => l.workOrderItemUuid === lineItemUuid);
 
       const hasCharges = lineItemUuidHasCharges(action.lineItem.uuid);
 
@@ -59,7 +59,7 @@ const createWorkOrderReducer = (
         if (action.lineItem.quantity > 1) {
           return {
             ...workOrder,
-            lineItems: [
+            items: [
               {
                 productVariantId: action.lineItem.productVariantId,
                 uuid: uuid(),
@@ -70,14 +70,14 @@ const createWorkOrderReducer = (
                 uuid: action.lineItem.uuid,
                 quantity: 1 as Int,
               },
-              ...(workOrder.lineItems ?? []).filter(li => li.uuid !== action.lineItem.uuid),
+              ...(workOrder.items ?? []).filter(li => li.uuid !== action.lineItem.uuid),
             ],
           };
         }
 
         return {
           ...workOrder,
-          lineItems: [action.lineItem, ...(workOrder.lineItems ?? []).filter(li => li.uuid !== action.lineItem.uuid)],
+          items: [action.lineItem, ...(workOrder.items ?? []).filter(li => li.uuid !== action.lineItem.uuid)],
         };
       }
 
@@ -85,7 +85,7 @@ const createWorkOrderReducer = (
 
       // Stack items if possible.
       if (!action.isUnstackable) {
-        const stack = workOrder.lineItems?.find(
+        const stack = workOrder.items?.find(
           li =>
             li.productVariantId === action.lineItem.productVariantId &&
             // We can only stack when there is no assigned charge.
@@ -104,11 +104,9 @@ const createWorkOrderReducer = (
 
       return {
         ...workOrder,
-        lineItems: [
+        items: [
           action.lineItem,
-          ...(workOrder.lineItems ?? []).filter(
-            li => li.uuid !== originalLineItemUuid && li.uuid !== action.lineItem.uuid,
-          ),
+          ...(workOrder.items ?? []).filter(li => li.uuid !== originalLineItemUuid && li.uuid !== action.lineItem.uuid),
         ],
       };
     }
@@ -117,8 +115,8 @@ const createWorkOrderReducer = (
       const itemUuid = action.lineItem.uuid;
       return {
         ...workOrder,
-        lineItems: (workOrder.lineItems ?? []).filter(item => item.uuid !== itemUuid),
-        charges: (workOrder.charges ?? []).filter(charge => charge.lineItemUuid !== itemUuid),
+        items: (workOrder.items ?? []).filter(item => item.uuid !== itemUuid),
+        charges: (workOrder.charges ?? []).filter(charge => charge.workOrderItemUuid !== itemUuid),
       };
     }
 

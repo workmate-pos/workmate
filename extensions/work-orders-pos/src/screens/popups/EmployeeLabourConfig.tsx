@@ -11,16 +11,16 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { CreateWorkOrderCharge } from '../../types.js';
 import { useRouter } from '../../routes.js';
 
+type LabourCharge = CreateWorkOrderCharge & { type: 'hourly-labour' | 'fixed-price-labour' };
+
 export function EmployeeLabourConfig({
   labour: initialLabour,
   onRemove,
   onUpdate,
 }: {
-  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid' | 'chargeUuid'> & { employeeId: ID };
+  labour: DiscriminatedUnionOmit<LabourCharge, 'workOrderItemUuid' | 'uuid'> & { employeeId: ID };
   onRemove: () => void;
-  onUpdate: (
-    labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid' | 'employeeId' | 'chargeUuid'>,
-  ) => void;
+  onUpdate: (labour: DiscriminatedUnionOmit<LabourCharge, 'workOrderItemUuid' | 'employeeId' | 'uuid'>) => void;
 }) {
   const [labour, setLabour] = useState(initialLabour);
 

@@ -24,9 +24,9 @@ import { useCreateWorkOrderReducer } from '../create-work-order/reducer.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { CreateWorkOrderCharge, CreateWorkOrderLineItem } from '../types.js';
+import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../types.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
-import { getChargesPrice } from '../create-work-order/charges.js';
+import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -40,7 +40,8 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../routes.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { usePaymentHandler } from '../hooks/use-payment-handler.js';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 
 /**
  * Stuff to pass around between components
@@ -54,7 +55,6 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
   const api = useExtensionApi<'pos.home.modal.render'>();
   const settingsQuery = useSettingsQuery({ fetch });
   const router = useRouter();
-  const paymentHandler = usePaymentHandler();
 
   const [shouldOpenSavedPopup, setShouldOpenSavedPopup] = useState(false);
 
@@ -82,16 +82,16 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
     },
   );
 
+  // TODO: take existing orders into account
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      lineItems: createWorkOrder.lineItems ?? [],
+      items: createWorkOrder.items ?? [],
       charges: createWorkOrder.charges ?? [],
-      customerId: createWorkOrder.customerId,
-      discount: createWorkOrder.discount,
+      customerId: createWorkOrder.customerId ?? createGid('Customer', 'null'),
     },
     {
-      enabled: !createWorkOrder.name || workOrderQuery.data?.workOrder?.order.type !== 'order',
+      enabled: createWorkOrder.customerId !== null,
     },
   );
 
@@ -112,6 +112,7 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
     },
   );
 
+  // TODO: Allow modifying only items that are not in a real order
   return {
     createWorkOrder,
     dispatchCreateWorkOrder: (...[action]: Parameters<typeof dispatchCreateWorkOrder>) => {
@@ -123,9 +124,7 @@ const useWorkOrderContext = ({ initial }: { initial?: Partial<CreateWorkOrder> }
     saveWorkOrderMutation,
     workOrderQuery,
     setShouldOpenSavedPopup,
-    hasOrder: workOrderQuery.data?.workOrder?.order.type === 'order',
     settingsQuery,
-    paymentHandler,
   };
 };
 
@@ -134,35 +133,16 @@ export function WorkOrder({ initial }: { initial?: Partial<CreateWorkOrder> }) {
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges: context.unsavedChanges });
 
+  const router = useRouter();
   const screen = useScreen();
   screen.setTitle(context.createWorkOrder.name ?? 'New Work Order');
   screen.setIsLoading(
-    context.workOrderQuery.isFetching ||
-      context.saveWorkOrderMutation.isLoading ||
-      context.paymentHandler.isLoading ||
-      context.settingsQuery.isLoading,
+    context.workOrderQuery.isFetching || context.saveWorkOrderMutation.isLoading || context.settingsQuery.isLoading,
   );
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  const currencyFormatter = useCurrencyFormatter();
-
-  let bannerText: string | null = null;
-
-  if (context.hasOrder) {
-    const order = context.workOrderQuery.data?.workOrder?.order;
-
-    if (order) {
-      const isFullyPaid = BigDecimal.fromMoney(order.outstanding).equals(BigDecimal.ZERO);
-      const paymentText = isFullyPaid
-        ? 'paid in full'
-        : `partially paid (${currencyFormatter(order.received)} / ${currencyFormatter(order.total)})`;
-      bannerText = `This order has been ${paymentText} through order ${context.workOrderQuery.data?.workOrder?.order?.name}. You can no longer change the products and services within this order`;
-    }
-  }
   return (
     <ScrollView>
-      {bannerText && <Banner title={bannerText} variant={'information'} visible />}
-
       {context.saveWorkOrderMutation.isError && (
         <Banner
           title={
@@ -189,29 +169,7 @@ export function WorkOrder({ initial }: { initial?: Partial<CreateWorkOrder> }) {
 
       <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
         <ShowDerivedFromOrderPreviewButton context={context} />
-        {!context.hasOrder && (
-          <Button
-            title={'Pay Balance'}
-            onPress={async () => {
-              const name = await context.saveWorkOrderMutation
-                .mutateAsync(context.createWorkOrder)
-                .then(result => result.name);
-
-              if (!name) {
-                return;
-              }
-
-              const result = await context.workOrderQuery.refetch();
-              const workOrder = result.data?.workOrder;
-
-              if (!workOrder) {
-                return;
-              }
-
-              await context.paymentHandler.handlePayment({ workOrder });
-            }}
-          />
-        )}
+        <Button title={'Manage payments'} onPress={() => router.push('PaymentOverview', {})} />
         <Button
           title={context.createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
           type="primary"
@@ -236,25 +194,30 @@ function WorkOrderDescription({ context }: { context: WorkOrderContext }) {
     <TextArea
       rows={3}
       label="Description"
-      value={context.createWorkOrder.description}
-      onChange={(value: string) => context.dispatchCreateWorkOrder({ type: 'set-field', field: 'description', value })}
-      error={context.saveWorkOrderMutation.data?.errors?.description ?? ''}
+      value={context.createWorkOrder.note}
+      onChange={(value: string) => context.dispatchCreateWorkOrder({ type: 'set-field', field: 'note', value })}
+      error={context.saveWorkOrderMutation.data?.errors?.note ?? ''}
     />
   );
 }
 
+// TODO: Probably best to only/also allow linking to work orders?
 function ShowDerivedFromOrderPreviewButton({ context }: { context: WorkOrderContext }) {
   const router = useRouter();
 
-  if (!context.workOrderQuery.data?.workOrder?.derivedFromOrder) {
+  if (!context.workOrderQuery.data?.workOrder?.derivedFromOrderId) {
     return null;
   }
 
-  const { derivedFromOrder } = context.workOrderQuery.data.workOrder;
+  const orderQuery = useOrderQuery({ fetch, id: context.workOrderQuery.data?.workOrder?.derivedFromOrderId });
+  const order = orderQuery.data?.order;
 
-  const title = `View Previous (${[derivedFromOrder.name, derivedFromOrder.workOrderName]
-    .filter(Boolean)
-    .join(' - ')})`;
+  if (!order) {
+    return null;
+  }
+
+  const workOrderNames = order.workOrders.map(workOrder => workOrder.name).join(' • ');
+  const title = `View Previous (${[order.name, workOrderNames].filter(Boolean).join(' - ')})`;
 
   // TODO: If derived from a work order, perhaps navigate to the work order instead of the order preview? Or just a work order preview
 
@@ -263,7 +226,7 @@ function ShowDerivedFromOrderPreviewButton({ context }: { context: WorkOrderCont
       title={title}
       onPress={() =>
         router.push('OrderPreview', {
-          orderId: derivedFromOrder.id,
+          orderId: order.id,
           unsavedChanges: context.unsavedChanges,
           showImportButton: false,
         })
@@ -283,25 +246,19 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
       : customerQuery.data?.displayName ?? 'Unknown'
     : null;
 
+  const derivedFromOrderQuery = useOrderQuery({ fetch, id: context.createWorkOrder.derivedFromOrderId });
+  const derivedFromOrder = derivedFromOrderQuery.data?.order;
+  const derivedFromWorkOrderNames = derivedFromOrder?.workOrders.map(workOrder => workOrder.name).join(' • ');
+
   return (
     <ResponsiveGrid columns={4} grow>
       {context.workOrderQuery?.data?.workOrder?.name && (
         <TextField label="Work Order ID" disabled value={context.workOrderQuery?.data?.workOrder?.name} />
       )}
-      {context.workOrderQuery?.data?.workOrder?.derivedFromOrder &&
-        (context.workOrderQuery.data.workOrder.derivedFromOrder.workOrderName ? (
-          <TextField
-            label="Previous Work Order"
-            disabled
-            value={context.workOrderQuery.data.workOrder.derivedFromOrder.workOrderName}
-          />
-        ) : (
-          <TextField
-            label="Previous Order"
-            disabled
-            value={context.workOrderQuery.data.workOrder.derivedFromOrder.name}
-          />
-        ))}
+      {derivedFromOrder && <TextField label="Previous Order" disabled value={derivedFromOrder.name} />}
+      {derivedFromWorkOrderNames && (
+        <TextField label="Previous Work Order" disabled value={derivedFromWorkOrderNames} />
+      )}
       <TextField
         label="Status"
         required
@@ -318,7 +275,6 @@ const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
         label="Customer"
         required
         placeholder="Customer"
-        disabled={context.hasOrder}
         onFocus={() =>
           router.push('CustomerSelector', {
             onSelect: customerId =>
@@ -359,7 +315,6 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
               },
             })
           }
-          isDisabled={context.hasOrder}
         />
         <Button
           title="Add Service"
@@ -382,8 +337,8 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
                 if (type === 'mutable-service') {
                   router.push('LabourLineItemConfig', {
                     hasBasePrice: false,
-                    labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
-                    readonly: context.hasOrder,
+                    labour: context.createWorkOrder.charges?.filter(ea => ea.workOrderItemUuid === lineItem.uuid) ?? [],
+                    readonly: false,
                     lineItem,
                     onRemove: () => removeLineItem(context, lineItem),
                     onUpdate: labour =>
@@ -393,7 +348,6 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
               },
             })
           }
-          isDisabled={context.hasOrder}
         />
       </ResponsiveGrid>
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
@@ -411,8 +365,6 @@ const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
 };
 
 const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
-  const router = useRouter();
   const currencyFormatter = useCurrencyFormatter();
 
   const { calculateDraftOrderResponse } = context.calculatedDraftOrderQuery.data ?? {};
@@ -429,58 +381,19 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
         ? currencyFormatter(calculateDraftOrderResponse[key])
         : '-';
 
-  const receivedBigDecimal = context.workOrderQuery?.data?.workOrder?.order?.received
-    ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.received)
-    : BigDecimal.ZERO;
-  const totalPriceBigDecimal = context.workOrderQuery?.data?.workOrder?.order?.total
-    ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.total)
-    : calculateDraftOrderResponse?.totalPrice
-      ? BigDecimal.fromMoney(calculateDraftOrderResponse?.totalPrice)
-      : BigDecimal.ZERO;
+  // TODO: Re-do this computation
+
+  const receivedBigDecimal = BigDecimal.ZERO;
+  const totalPriceBigDecimal = BigDecimal.ZERO;
   const outstandingBigDecimal = totalPriceBigDecimal.subtract(receivedBigDecimal);
 
   const outstanding = currencyFormatter(outstandingBigDecimal.toMoney());
-  const total = currencyFormatter(totalPriceBigDecimal.toMoney());
-  const received = currencyFormatter(
-    context.workOrderQuery.data?.workOrder?.order?.received ?? BigDecimal.ZERO.toMoney(),
-  );
-
-  const discountValue = calculateDraftOrderResponse?.appliedDiscount
-    ? {
-        FIXED_AMOUNT: currencyFormatter(calculateDraftOrderResponse.appliedDiscount.value),
-        PERCENTAGE: `${calculateDraftOrderResponse.appliedDiscount.value}% (${currencyFormatter(
-          calculateDraftOrderResponse.appliedDiscount.amount,
-        )})`,
-      }[calculateDraftOrderResponse.appliedDiscount.valueType]
-    : '-';
+  const received = currencyFormatter(BigDecimal.ZERO.toMoney());
 
   return (
     <Stack direction="vertical" flex={1}>
       <Stack direction="vertical" flex={1}>
         <Stack direction={'horizontal'} flexChildren flex={1}>
-          <NumberField
-            label={'Discount'}
-            value={discountValue}
-            disabled={!calculateDraftOrderResponse || context.hasOrder}
-            onFocus={() => {
-              const subTotal = calculateDraftOrderResponse
-                ? calculateDraftOrderResponse.subtotalPrice
-                : BigDecimal.ZERO.toMoney();
-
-              router.push('DiscountSelector', {
-                subTotal,
-                onSelect: discount => {
-                  context.dispatchCreateWorkOrder({
-                    type: 'set-field',
-                    field: 'discount',
-                    value: discount,
-                  });
-
-                  toast.show('Applying discount', { duration: 1000 });
-                },
-              });
-            }}
-          />
           <NumberField label="Subtotal" disabled value={getFormattedCalculatedMoney('subtotalPrice')} />
         </Stack>
         <Stack direction={'horizontal'} flexChildren flex={1}>
@@ -495,13 +408,6 @@ const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
             <NumberField label={'Paid'} disabled={true} value={received} />
             <NumberField label="Balance Due" disabled value={outstanding} />
           </Stack>
-          {context.hasOrder && outstandingBigDecimal.compare(BigDecimal.ZERO) > 0 && (
-            <Banner
-              title={`This order has been partially paid (${received} / ${total}). The remaining balance can be paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}`}
-              variant={'information'}
-              visible
-            />
-          )}
         </Stack>
       </Stack>
     </Stack>
@@ -536,7 +442,6 @@ const WorkOrderAssignment = ({ context }: { context: WorkOrderContext }) => {
         disabled
         label="Assigned Employees"
         value={selectedEmployeeNames}
-        error={context.saveWorkOrderMutation.data?.errors?.description ?? ''}
       />
       <DateField
         label="Due date"
@@ -554,13 +459,13 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
 
   const productVariantQueries = useProductVariantQueries({
     fetch,
-    ids: context.createWorkOrder.lineItems?.map(li => li.productVariantId) ?? [],
+    ids: context.createWorkOrder.items?.map(li => li.productVariantId) ?? [],
   });
 
   const router = useRouter();
 
   return (
-    context.createWorkOrder.lineItems
+    context.createWorkOrder.items
       ?.map(lineItem => ({ lineItem, productVariant: productVariantQueries[lineItem.productVariantId]?.data ?? null }))
       ?.filter(
         ({ productVariant }) =>
@@ -571,24 +476,24 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
 
         const basePrice = productVariant && !isMutableServiceItem ? productVariant.price : BigDecimal.ZERO.toMoney();
 
-        const labourPrice = getChargesPrice(
-          context.createWorkOrder.charges?.filter(assignment => assignment.lineItemUuid === lineItem.uuid) ?? [],
+        const labourPrice = getTotalPriceForCharges(
+          context.createWorkOrder.charges?.filter(assignment => assignment.workOrderItemUuid === lineItem.uuid) ?? [],
         );
 
-        const hasLabour = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
+        const hasLabour = context.createWorkOrder.charges?.some(ea => ea.workOrderItemUuid === lineItem.uuid);
 
         return {
           id: lineItem.uuid,
           onPress() {
             if (!productVariant || !lineItem) return;
 
-            const hasCharges = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
+            const hasCharges = context.createWorkOrder.charges?.some(ea => ea.workOrderItemUuid === lineItem.uuid);
 
             if (hasCharges || productVariant.product.isMutableServiceItem) {
               router.push('LabourLineItemConfig', {
                 hasBasePrice: !productVariant.product.isMutableServiceItem,
-                labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
-                readonly: context.hasOrder,
+                labour: context.createWorkOrder.charges?.filter(ea => ea.workOrderItemUuid === lineItem.uuid) ?? [],
+                readonly: false,
                 lineItem,
                 onRemove: () => removeLineItem(context, lineItem),
                 onUpdate: labour =>
@@ -604,13 +509,13 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
 
             router.push('ProductLineItemConfig', {
               canAddLabour: !productVariant.product.isFixedServiceItem,
-              readonly: context.hasOrder,
+              readonly: false,
               lineItem,
               onAssignLabour: lineItem =>
                 router.push('LabourLineItemConfig', {
                   hasBasePrice: true,
-                  labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
-                  readonly: context.hasOrder,
+                  labour: context.createWorkOrder.charges?.filter(ea => ea.workOrderItemUuid === lineItem.uuid) ?? [],
+                  readonly: false,
                   lineItem,
                   onRemove: () => removeLineItem(context, lineItem),
                   onUpdate: labour =>
@@ -647,7 +552,7 @@ function useItemRows(context: WorkOrderContext, query: string): ListRow[] {
   );
 }
 
-function removeLineItem(context: WorkOrderContext, lineItem: CreateWorkOrderLineItem) {
+function removeLineItem(context: WorkOrderContext, lineItem: CreateWorkOrderItem) {
   // TODO: Use proxy pattern
   context.dispatchCreateWorkOrder({
     type: 'remove-line-item',
@@ -657,7 +562,7 @@ function removeLineItem(context: WorkOrderContext, lineItem: CreateWorkOrderLine
   context.dispatchCreateWorkOrder({
     type: 'set-field',
     field: 'charges',
-    value: context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== lineItem.uuid) ?? [],
+    value: context.createWorkOrder.charges?.filter(l => l.workOrderItemUuid !== lineItem.uuid) ?? [],
   });
 }
 
@@ -668,16 +573,16 @@ function updateLineItemCharges({
   isUnstackable,
 }: {
   context: WorkOrderContext;
-  lineItem: CreateWorkOrderLineItem;
-  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid'>[];
+  lineItem: CreateWorkOrderItem;
+  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[];
   isUnstackable: boolean;
 }) {
   context.dispatchCreateWorkOrder({
     type: 'set-field',
     field: 'charges',
     value: [
-      ...(context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== lineItem.uuid) ?? []),
-      ...charges.map(l => ({ ...l, lineItemUuid: lineItem.uuid })),
+      ...(context.createWorkOrder.charges?.filter(l => l.workOrderItemUuid !== lineItem.uuid) ?? []),
+      ...charges.map(l => ({ ...l, workOrderItemUuid: lineItem.uuid })),
     ],
   });
 

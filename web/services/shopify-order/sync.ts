@@ -78,7 +78,7 @@ export async function syncShopifyOrders(session: Session, ids: ID[]) {
 }
 
 async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrderFragment.Result) {
-  const { id: orderId, name, fullyPaid } = order;
+  const { id: orderId, name, currentTotalPriceSet, totalOutstandingSet } = order;
 
   if (order.customer) {
     await ensureCustomersExist(session, [order.customer.id]);
@@ -89,16 +89,17 @@ async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrd
       shop: session.shop,
       orderId,
       name,
-      fullyPaid,
       orderType: 'ORDER',
       customerId: order.customer?.id ?? null,
+      outstanding: totalOutstandingSet.shopMoney.amount,
+      total: currentTotalPriceSet.shopMoney.amount,
     });
     await syncShopifyOrderLineItems(session, { type: 'order', order });
   });
 }
 
 async function upsertDraftOrder(session: Session, draftOrder: gql.draftOrder.DatabaseShopifyOrderFragment.Result) {
-  const { id: orderId, name } = draftOrder;
+  const { id: orderId, name, totalPriceSet } = draftOrder;
 
   if (draftOrder.customer) {
     await ensureCustomersExist(session, [draftOrder.customer.id]);
@@ -109,9 +110,10 @@ async function upsertDraftOrder(session: Session, draftOrder: gql.draftOrder.Dat
       shop: session.shop,
       orderId,
       name,
-      fullyPaid: false,
       orderType: 'DRAFT_ORDER',
       customerId: draftOrder.customer?.id ?? null,
+      outstanding: totalPriceSet.shopMoney.amount,
+      total: totalPriceSet.shopMoney.amount,
     });
     await syncShopifyOrderLineItems(session, { type: 'draft-order', order: draftOrder });
   });
@@ -164,7 +166,7 @@ async function syncShopifyOrderLineItems(
   }
 
   // sync work orders in case any line items now don't have a related line item anymore
-  // can happen when a merchant deletes a draft order that we reference
+  // can happen when a merchant deletes a draft order that we reference, or deletes a line item from an order
   await syncWorkOrders(
     session,
     workOrders.map(({ id }) => id),

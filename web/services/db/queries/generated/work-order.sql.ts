@@ -310,45 +310,6 @@ const getUnlinkedFixedPriceLabourChargesIR: any = {"usedParamSet":{"workOrderId"
 export const getUnlinkedFixedPriceLabourCharges = new PreparedQuery<IGetUnlinkedFixedPriceLabourChargesParams,IGetUnlinkedFixedPriceLabourChargesResult>(getUnlinkedFixedPriceLabourChargesIR);
 
 
-/** 'GetLinkedDraftOrderIds' parameters type */
-export interface IGetLinkedDraftOrderIdsParams {
-  workOrderId: number;
-}
-
-/** 'GetLinkedDraftOrderIds' return type */
-export interface IGetLinkedDraftOrderIdsResult {
-  orderId: string;
-}
-
-/** 'GetLinkedDraftOrderIds' query type */
-export interface IGetLinkedDraftOrderIdsQuery {
-  params: IGetLinkedDraftOrderIdsParams;
-  result: IGetLinkedDraftOrderIdsResult;
-}
-
-const getLinkedDraftOrderIdsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":583,"b":595}]}],"statement":"SELECT DISTINCT so.\"orderId\"\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"WorkOrderItem\" woi ON wo.id = woi.\"workOrderId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\" hlc ON wo.id = hlc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\" fplc ON wo.id = fplc.\"workOrderId\"\n       INNER JOIN \"ShopifyOrderLineItem\" soli ON (\n  woi.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR hlc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR fplc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n  )\n       INNER JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\nWHERE wo.id = :workOrderId!\n  AND so.\"orderType\" = 'DRAFT_ORDER'"};
-
-/**
- * Query generated from SQL:
- * ```
- * SELECT DISTINCT so."orderId"
- * FROM "WorkOrder" wo
- *        LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
- *        LEFT JOIN "WorkOrderHourlyLabourCharge" hlc ON wo.id = hlc."workOrderId"
- *        LEFT JOIN "WorkOrderFixedPriceLabourCharge" fplc ON wo.id = fplc."workOrderId"
- *        INNER JOIN "ShopifyOrderLineItem" soli ON (
- *   woi."shopifyOrderLineItemId" = soli."lineItemId"
- *     OR hlc."shopifyOrderLineItemId" = soli."lineItemId"
- *     OR fplc."shopifyOrderLineItemId" = soli."lineItemId"
- *   )
- *        INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
- * WHERE wo.id = :workOrderId!
- *   AND so."orderType" = 'DRAFT_ORDER'
- * ```
- */
-export const getLinkedDraftOrderIds = new PreparedQuery<IGetLinkedDraftOrderIdsParams,IGetLinkedDraftOrderIdsResult>(getLinkedDraftOrderIdsIR);
-
-
 /** 'GetItemsByUuids' parameters type */
 export interface IGetItemsByUuidsParams {
   uuids: readonly (string)[];

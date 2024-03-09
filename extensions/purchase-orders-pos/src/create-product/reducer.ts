@@ -1,6 +1,6 @@
 import { CreateProduct } from '@web/schemas/generated/create-product.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { useMemo, useReducer, useState } from 'react';
+import { useReducer, useState } from 'react';
 import { CreateProductBase, defaultCreateProduct } from './default.js';
 import { useConst } from '../util/use-const.js';
 

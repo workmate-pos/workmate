@@ -12,11 +12,12 @@ export interface IGetParams {
 export interface IGetResult {
   createdAt: Date;
   customerId: string | null;
-  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
+  outstanding: string;
   shop: string;
+  total: string;
   updatedAt: Date;
 }
 
@@ -48,11 +49,12 @@ export interface IGetManyParams {
 export interface IGetManyResult {
   createdAt: Date;
   customerId: string | null;
-  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
+  outstanding: string;
   shop: string;
+  total: string;
   updatedAt: Date;
 }
 
@@ -78,11 +80,12 @@ export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyI
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
   customerId?: string | null | void;
-  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
+  outstanding: string;
   shop: string;
+  total: string;
 }
 
 /** 'Upsert' return type */
@@ -94,18 +97,20 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":true,"name":true,"fullyPaid":true,"customerId":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":99,"b":107}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":110,"b":115},{"a":219,"b":224}]},{"name":"orderType","required":true,"transform":{"type":"scalar"},"locs":[{"a":118,"b":128},{"a":247,"b":257}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":131,"b":136},{"a":280,"b":285}]},{"name":"fullyPaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":139,"b":149},{"a":308,"b":318}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":152,"b":162}]}],"statement":"INSERT INTO \"ShopifyOrder\" (\"orderId\", shop, \"orderType\", name, \"fullyPaid\", \"customerId\")\nVALUES (:orderId!, :shop!, :orderType!, :name!, :fullyPaid!, :customerId)\nON CONFLICT (\"orderId\") DO UPDATE\n  SET shop        = :shop!,\n      \"orderType\" = :orderType!,\n      name        = :name!,\n      \"fullyPaid\" = :fullyPaid!"};
+const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":true,"name":true,"customerId":true,"total":true,"outstanding":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":114}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":117,"b":122},{"a":238,"b":243}]},{"name":"orderType","required":true,"transform":{"type":"scalar"},"locs":[{"a":125,"b":135},{"a":267,"b":277}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":138,"b":143},{"a":301,"b":306}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":146,"b":156},{"a":330,"b":340}]},{"name":"total","required":true,"transform":{"type":"scalar"},"locs":[{"a":159,"b":165},{"a":364,"b":370}]},{"name":"outstanding","required":true,"transform":{"type":"scalar"},"locs":[{"a":168,"b":180},{"a":394,"b":406}]}],"statement":"INSERT INTO \"ShopifyOrder\" (\"orderId\", shop, \"orderType\", name, \"customerId\", total, outstanding)\nVALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!)\nON CONFLICT (\"orderId\") DO UPDATE\n  SET shop         = :shop!,\n      \"orderType\"  = :orderType!,\n      name         = :name!,\n      \"customerId\" = :customerId,\n      total        = :total!,\n      outstanding  = :outstanding!"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "fullyPaid", "customerId")
- * VALUES (:orderId!, :shop!, :orderType!, :name!, :fullyPaid!, :customerId)
+ * INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding)
+ * VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!)
  * ON CONFLICT ("orderId") DO UPDATE
- *   SET shop        = :shop!,
- *       "orderType" = :orderType!,
- *       name        = :name!,
- *       "fullyPaid" = :fullyPaid!
+ *   SET shop         = :shop!,
+ *       "orderType"  = :orderType!,
+ *       name         = :name!,
+ *       "customerId" = :customerId,
+ *       total        = :total!,
+ *       outstanding  = :outstanding!
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
@@ -264,11 +269,12 @@ export interface IGetLinkedOrdersByWorkOrderIdParams {
 export interface IGetLinkedOrdersByWorkOrderIdResult {
   createdAt: Date;
   customerId: string | null;
-  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
+  outstanding: string;
   shop: string;
+  total: string;
   updatedAt: Date;
 }
 
@@ -278,26 +284,24 @@ export interface IGetLinkedOrdersByWorkOrderIdQuery {
   result: IGetLinkedOrdersByWorkOrderIdResult;
 }
 
-const getLinkedOrdersByWorkOrderIdIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":346,"b":358},{"a":593,"b":605},{"a":870,"b":882}]}],"statement":"SELECT DISTINCT \"ShopifyOrder\".*\nFROM \"ShopifyOrder\"\n       INNER JOIN \"ShopifyOrderLineItem\" ON \"ShopifyOrder\".\"orderId\" = \"ShopifyOrderLineItem\".\"orderId\"\n       LEFT JOIN \"WorkOrderItem\" ON (\"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderItem\".\"shopifyOrderLineItemId\" AND\n                                     \"WorkOrderItem\".\"workOrderId\" = :workOrderId!)\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\"\n                 ON (\"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderHourlyLabourCharge\".\"shopifyOrderLineItemId\" AND\n                     \"WorkOrderHourlyLabourCharge\".\"workOrderId\" = :workOrderId!)\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\"\n                 ON (\n                   \"ShopifyOrderLineItem\".\"lineItemId\" = \"WorkOrderFixedPriceLabourCharge\".\"shopifyOrderLineItemId\" AND\n                   \"WorkOrderFixedPriceLabourCharge\".\"workOrderId\" = :workOrderId!)\nWHERE \"WorkOrderItem\".\"uuid\" IS NOT NULL\n   OR \"WorkOrderHourlyLabourCharge\".\"uuid\" IS NOT NULL\n   OR \"WorkOrderFixedPriceLabourCharge\".\"uuid\" IS NOT NULL"};
+const getLinkedOrdersByWorkOrderIdIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":575,"b":587}]}],"statement":"SELECT DISTINCT so.*\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"WorkOrderItem\" woi ON wo.id = woi.\"workOrderId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\" hlc ON wo.id = hlc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\" fplc ON wo.id = fplc.\"workOrderId\"\n       INNER JOIN \"ShopifyOrderLineItem\" soli ON (\n  woi.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR hlc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR fplc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n  )\n       INNER JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\nWHERE wo.id = :workOrderId!\n  AND so.\"orderType\" = 'DRAFT_ORDER'"};
 
 /**
  * Query generated from SQL:
  * ```
- * SELECT DISTINCT "ShopifyOrder".*
- * FROM "ShopifyOrder"
- *        INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
- *        LEFT JOIN "WorkOrderItem" ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId" AND
- *                                      "WorkOrderItem"."workOrderId" = :workOrderId!)
- *        LEFT JOIN "WorkOrderHourlyLabourCharge"
- *                  ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderHourlyLabourCharge"."shopifyOrderLineItemId" AND
- *                      "WorkOrderHourlyLabourCharge"."workOrderId" = :workOrderId!)
- *        LEFT JOIN "WorkOrderFixedPriceLabourCharge"
- *                  ON (
- *                    "ShopifyOrderLineItem"."lineItemId" = "WorkOrderFixedPriceLabourCharge"."shopifyOrderLineItemId" AND
- *                    "WorkOrderFixedPriceLabourCharge"."workOrderId" = :workOrderId!)
- * WHERE "WorkOrderItem"."uuid" IS NOT NULL
- *    OR "WorkOrderHourlyLabourCharge"."uuid" IS NOT NULL
- *    OR "WorkOrderFixedPriceLabourCharge"."uuid" IS NOT NULL
+ * SELECT DISTINCT so.*
+ * FROM "WorkOrder" wo
+ *        LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
+ *        LEFT JOIN "WorkOrderHourlyLabourCharge" hlc ON wo.id = hlc."workOrderId"
+ *        LEFT JOIN "WorkOrderFixedPriceLabourCharge" fplc ON wo.id = fplc."workOrderId"
+ *        INNER JOIN "ShopifyOrderLineItem" soli ON (
+ *   woi."shopifyOrderLineItemId" = soli."lineItemId"
+ *     OR hlc."shopifyOrderLineItemId" = soli."lineItemId"
+ *     OR fplc."shopifyOrderLineItemId" = soli."lineItemId"
+ *   )
+ *        INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+ * WHERE wo.id = :workOrderId!
+ *   AND so."orderType" = 'DRAFT_ORDER'
  * ```
  */
 export const getLinkedOrdersByWorkOrderId = new PreparedQuery<IGetLinkedOrdersByWorkOrderIdParams,IGetLinkedOrdersByWorkOrderIdResult>(getLinkedOrdersByWorkOrderIdIR);
@@ -312,11 +316,12 @@ export interface IGetLinkedOrdersByPurchaseOrderIdParams {
 export interface IGetLinkedOrdersByPurchaseOrderIdResult {
   createdAt: Date;
   customerId: string | null;
-  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
+  outstanding: string;
   shop: string;
+  total: string;
   updatedAt: Date;
 }
 

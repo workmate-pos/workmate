@@ -1,5 +1,4 @@
-import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { gql } from '../gql/gql.js';
 import {
   FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
@@ -11,6 +10,7 @@ import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
 import { Session } from '@shopify/shopify-api';
+import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 
 export async function linkWorkOrderItemsAndCharges(
   session: Session,
@@ -29,29 +29,13 @@ export async function linkWorkOrderItemsAndCharges(
     throw new Error(`Work order with name ${workOrderName} not found`);
   }
 
-  // re-linking can cause draft orders to become orphaned, so track draft orders so we can delete the orphans
-  const oldLinkedDraftOrders = await db.workOrder.getLinkedDraftOrderIds({ workOrderId: workOrder.id });
-
-  await Promise.all([
-    linkItems(order.id, lineItems, workOrder.id),
-    linkHourlyLabourCharges(order.id, lineItems, workOrder.id),
-    linkFixedPriceLabourCharges(order.id, lineItems, workOrder.id),
-  ]);
-
-  const newLinkedDraftOrders = await db.workOrder.getLinkedDraftOrderIds({ workOrderId: workOrder.id });
-  const orphanedDraftOrders = oldLinkedDraftOrders.filter(
-    ({ orderId }) => !newLinkedDraftOrders.some(({ orderId: id }) => id === orderId),
+  await cleanOrphanedDraftOrders(session, workOrder.id, () =>
+    Promise.all([
+      linkItems(order.id, lineItems, workOrder.id),
+      linkHourlyLabourCharges(order.id, lineItems, workOrder.id),
+      linkFixedPriceLabourCharges(order.id, lineItems, workOrder.id),
+    ]),
   );
-
-  if (orphanedDraftOrders.length) {
-    const graphql = new Graphql(session);
-    await gql.draftOrder.removeMany.run(graphql, {
-      ids: orphanedDraftOrders.map(({ orderId }) => {
-        assertGid(orderId);
-        return orderId;
-      }),
-    });
-  }
 }
 
 async function linkItems(
@@ -71,7 +55,13 @@ async function linkItems(
     const shopifyOrderLineItemId = lineItemIdByItemUuid[uuid] ?? never();
     await db.workOrder.setLineItemShopifyOrderLineItemId({ workOrderId, uuid, shopifyOrderLineItemId });
 
-    // TODO: If present, find the DraftOrderLineItem linked to the uuid currently. Then make sure to link the purchase order line items top the new shopifyorderlineitemid
+    // in case this line item is in some purchase order we transfer the line item id to the new order, make sure to update it there as well (e.g. when draft order becomes a real order).
+    // we only support this behavior for work orders, and not for arbitrary draft orders since mapping from draft order line items to order line items is hard to do perfectly.
+    for (const { id } of await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemId({
+      shopifyOrderLineItemId,
+    })) {
+      await db.purchaseOrder.updateLineItem({ id, shopifyOrderLineItemId });
+    }
   }
 
   if (items.length !== uuids.length) {

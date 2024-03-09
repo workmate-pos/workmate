@@ -1,11 +1,11 @@
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { CreateWorkOrderLineItem, CreateWorkOrderCharge } from '../../types.js';
+import { CreateWorkOrderItem, CreateWorkOrderCharge } from '../../types.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { getChargesPrice } from '../../create-work-order/charges.js';
+import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { uuid } from '../../util/uuid.js';
 import { hasNonNullableProperty, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -32,10 +32,10 @@ export function LabourLineItemConfig({
    * This should be false for mutable services, as they have no base price.
    */
   hasBasePrice: boolean;
-  lineItem: CreateWorkOrderLineItem;
-  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid'>[];
+  lineItem: CreateWorkOrderItem;
+  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[];
   onRemove: () => void;
-  onUpdate: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid'>[]) => void;
+  onUpdate: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[]) => void;
 }) {
   const [employeeLabour, setEmployeeLabour] = useState(initialLabour.filter(hasNonNullableProperty('employeeId')));
   const [generalLabour, setGeneralLabour] = useState(extractInitialGeneralLabour(initialLabour));
@@ -58,7 +58,7 @@ export function LabourLineItemConfig({
   const employeeAssignmentsEnabled = settings?.chargeSettings.employeeAssignments;
   const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabour.length > 0;
 
-  const labourPrice = getChargesPrice(labour);
+  const labourPrice = getTotalPriceForCharges(labour);
 
   const basePrice = productVariant && hasBasePrice ? productVariant.price : BigDecimal.ZERO.toMoney();
   const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(labourPrice)).toMoney();
@@ -80,7 +80,7 @@ export function LabourLineItemConfig({
           disabled={readonly}
           charge={generalLabour}
           onChange={charge =>
-            charge ? setGeneralLabour({ ...charge, chargeUuid: uuid(), employeeId: null }) : setGeneralLabour(charge)
+            charge ? setGeneralLabour({ ...charge, uuid: uuid(), employeeId: null }) : setGeneralLabour(charge)
           }
         />
 
@@ -100,7 +100,7 @@ export function LabourLineItemConfig({
                       const defaultLabourCharge = {
                         employeeId,
                         type: 'fixed-price-labour',
-                        chargeUuid: uuid(),
+                        uuid: uuid(),
                         name: settings?.labourLineItemName || 'Labour',
                         amount: BigDecimal.ZERO.toMoney(),
                       } as const;
@@ -187,7 +187,7 @@ export function LabourLineItemConfig({
   );
 }
 
-function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'lineItemUuid'>[]) {
+function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[]) {
   const generalLabours = labour.filter(hasPropertyValue('employeeId', null));
 
   if (generalLabours.length === 1) {
@@ -198,10 +198,10 @@ function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOr
     // pos only supports setting one general labour, so just use the total as fixed price
     return {
       type: 'fixed-price-labour',
-      chargeUuid: uuid(),
+      uuid: uuid(),
       employeeId: null,
       name: generalLabours[0]!.name,
-      amount: getChargesPrice(generalLabours),
+      amount: getTotalPriceForCharges(generalLabours),
     } as const;
   }
 

@@ -3,7 +3,7 @@ import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
-import { CreateWorkOrderCharge, CreateWorkOrderLineItem } from '../../types.js';
+import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
@@ -16,7 +16,7 @@ import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 export function ProductSelector({
   onSelect,
 }: {
-  onSelect: (arg: { lineItem: CreateWorkOrderLineItem; charges: CreateWorkOrderCharge[] }) => void;
+  onSelect: (arg: { lineItem: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 }) {
   const [query, setQuery] = useDebouncedState('');
 
@@ -37,7 +37,7 @@ export function ProductSelector({
   const currencyFormatter = useCurrencyFormatter();
 
   const selectLineItem = (
-    lineItem: CreateWorkOrderLineItem,
+    lineItem: CreateWorkOrderItem,
     charges: CreateWorkOrderCharge[],
     name: string = 'Product',
   ) => {
@@ -94,7 +94,7 @@ export function ProductSelector({
 
 function getProductVariantRows(
   productVariants: ProductVariant[],
-  selectLineItem: (lineItem: CreateWorkOrderLineItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
+  selectLineItem: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
   return productVariants.map(variant => {

@@ -62,11 +62,10 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
       ),
     ]);
 
-    const newPurchaseOrder = await getPurchaseOrder(session, name);
-    await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
+    const newPurchaseOrder = (await getPurchaseOrder(session, name)) ?? never('We just made it');
 
-    // no need to wait for this to complete
-    adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
+    await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
+    await adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
 
     return { name };
   });

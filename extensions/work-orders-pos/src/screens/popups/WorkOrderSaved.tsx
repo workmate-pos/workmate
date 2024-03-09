@@ -1,19 +1,14 @@
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { WorkOrder } from '@web/services/work-orders/types.js';
-import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
 
 export function WorkOrderSaved({ workOrder }: { workOrder: WorkOrder }) {
-  const paymentHandler = usePaymentHandler();
-
-  const title = workOrder ? `Work order ${workOrder.name} saved` : 'Work order saved';
-  const hasOrder = workOrder?.order?.type === 'order';
+  const title = `Work order ${workOrder.name} saved`;
 
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(title);
-  screen.setIsLoading(paymentHandler.isLoading);
 
   return (
     <ScrollView>
@@ -26,9 +21,13 @@ export function WorkOrderSaved({ workOrder }: { workOrder: WorkOrder }) {
         <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'} flexChildren>
           <Button title={'Back to work order'} onPress={() => router.popCurrent()} />
 
-          {!hasOrder && (
-            <Button title={'Pay Balance'} onPress={async () => await paymentHandler.handlePayment({ workOrder })} />
-          )}
+          <Button
+            title={'Manage payments'}
+            onPress={async () => {
+              await router.popCurrent();
+              router.push('PaymentOverview', {});
+            }}
+          />
         </Stack>
       </Stack>
     </ScrollView>

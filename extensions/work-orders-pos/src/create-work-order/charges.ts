@@ -3,8 +3,8 @@ import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedU
 import { CreateWorkOrderCharge } from '../types.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
-export function getChargesPrice(
-  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'employeeId' | 'lineItemUuid' | 'name' | 'chargeUuid'>[],
+export function getTotalPriceForCharges(
+  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'employeeId' | 'workOrderItemUuid' | 'name' | 'uuid'>[],
 ): Money {
   return BigDecimal.sum(
     ...labour.map(l => {

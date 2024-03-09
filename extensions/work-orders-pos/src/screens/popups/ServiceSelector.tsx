@@ -6,10 +6,10 @@ import { Int } from '@web/schemas/generated/create-work-order.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { CreateWorkOrderCharge, CreateWorkOrderLineItem } from '../../types.js';
+import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { getChargesPrice } from '../../create-work-order/charges.js';
+import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -18,7 +18,7 @@ import { useRouter } from '../../routes.js';
 
 type OnSelect = (arg: {
   type: 'mutable-service' | 'fixed-service';
-  lineItem: CreateWorkOrderLineItem;
+  lineItem: CreateWorkOrderItem;
   charges: CreateWorkOrderCharge[];
 }) => void;
 
@@ -109,7 +109,7 @@ function getProductVariantRows(
 
       if (variant.product.isMutableServiceItem) {
         if (defaultCharges) {
-          label = currencyFormatter(getChargesPrice(defaultCharges));
+          label = currencyFormatter(getTotalPriceForCharges(defaultCharges));
         }
       } else {
         label = currencyFormatter(variant.price);

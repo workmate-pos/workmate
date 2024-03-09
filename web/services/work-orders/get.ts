@@ -120,16 +120,6 @@ export async function getWorkOrderInfoPage(
       const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
       const orders = await db.shopifyOrder.getMany({ orderIds: linkedOrders.map(order => order.orderId) });
 
-      let paymentStatus: WorkOrderInfo['paymentStatus'];
-
-      if (orders.every(order => order.fullyPaid)) {
-        paymentStatus = 'fully-paid';
-      } else if (orders.some(order => order.fullyPaid)) {
-        paymentStatus = 'partially-paid';
-      } else {
-        paymentStatus = 'unpaid';
-      }
-
       assertGid(workOrder.customerId);
 
       return {
@@ -146,12 +136,11 @@ export async function getWorkOrderInfoPage(
             id: order.orderId,
             name: order.name,
             type: order.orderType,
+            // TODO: Store these in db and fetch them here
+            total: BigDecimal.ZERO.toMoney(),
+            outstanding: BigDecimal.ZERO.toMoney(),
           };
         }),
-        paymentStatus,
-        // TODO: Store these in db and fetch them here
-        total: BigDecimal.ZERO.toMoney(),
-        outstanding: BigDecimal.ZERO.toMoney(),
       };
     }),
   );

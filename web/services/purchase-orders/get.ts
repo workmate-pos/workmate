@@ -9,14 +9,13 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { groupByKey, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export async function getPurchaseOrder(session: Session, name: string) {
   const [purchaseOrder] = await db.purchaseOrder.get({ name, shop: session.shop });
 
   if (!purchaseOrder) {
-    throw new HttpError('Purchase order not found', 404);
+    return null;
   }
 
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByPurchaseOrderId({ purchaseOrderId: purchaseOrder.id });
@@ -65,7 +64,9 @@ export async function getPurchaseOrderInfoPage(
   const names = await db.purchaseOrder.getPage({ ...paginationOptions, shop });
 
   // TODO: Only basic data
-  return await Promise.all(names.map(({ name }) => getPurchaseOrder(session, name)));
+  return await Promise.all(
+    names.map(({ name }) => getPurchaseOrder(session, name).then(purchaseOrder => purchaseOrder ?? never())),
+  );
 }
 
 async function getPurchaseOrderLineItems(purchaseOrderId: number) {

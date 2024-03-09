@@ -142,11 +142,13 @@ model ShopifyOrder {
   orderType ShopifyOrderType
 
   name      String
-  fullyPaid Boolean
   lineItems ShopifyOrderLineItem[]
 
   customer   Customer? @relation(fields: [customerId], references: [customerId])
   customerId String?
+
+  total       String
+  outstanding String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -352,6 +354,7 @@ model PurchaseOrderLineItem {
   updatedAt DateTime @default(now())
 
   @@index([purchaseOrderId])
+  @@index([shopifyOrderLineItemId])
 }
 
 enum PurchaseOrderStatus {

@@ -71,9 +71,10 @@ export function OrderPreview({
   const orderInfo: { label: string; value: string; large?: boolean }[] = [
     ...(order?.customer ? [{ label: 'Customer', value: order.customer.displayName }] : []),
     ...(order
-      ? [
-          { label: 'Discount', value: currencyFormatter(order.discount) },
-          { label: 'Tax', value: currencyFormatter(order.tax) },
+      ? // TODO: On backend make sure this is current values
+        [
+          ...(order.discount === null ? [] : [{ label: 'Discount', value: currencyFormatter(order.discount) }]),
+          ...(order.tax === null ? [] : [{ label: 'Tax', value: currencyFormatter(order.tax) }]),
           { label: 'Total', value: currencyFormatter(order.total) },
           { label: 'Received', value: currencyFormatter(order.received) },
           { label: 'Outstanding', value: currencyFormatter(order.outstanding) },
@@ -84,9 +85,12 @@ export function OrderPreview({
 
   const lineItemRows = useLineItemRows(orderLineItemsQuery.data?.pages ?? []);
 
+  const workOrderNames = order?.workOrders.map(workOrder => workOrder.name).join(' • ') ?? '';
+
   const screen = useScreen();
+
   screen.setIsLoading(orderQuery.isLoading);
-  screen.setTitle(`Order ${[order?.name, order?.workOrder?.name].filter(Boolean).join(' - ')}`);
+  screen.setTitle(`Order ${[order?.name, workOrderNames].filter(Boolean).join(' - ')}`);
 
   if (!order) {
     return null;
@@ -97,7 +101,7 @@ export function OrderPreview({
       <Stack direction={'vertical'} spacing={2}>
         <Stack direction={'vertical'} spacing={1}>
           <Text variant="headingLarge">Order {order.name}</Text>
-          {order.workOrder && <Text variant="body">Work Order {order.workOrder.name}</Text>}
+          {order.workOrders.length && <Text variant="body">{workOrderNames}</Text>}
         </Stack>
         <Stack direction={'horizontal'} spacing={2}>
           {order.displayFinancialStatus && (

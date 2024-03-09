@@ -3,14 +3,13 @@ import { Nullable } from '@work-orders/common/types/Nullable.js';
 
 export const defaultCreateWorkOrder: Nullable<CreateWorkOrder> = {
   name: null,
-  description: '',
+  note: '',
   status: null,
   derivedFromOrderId: null,
   dueDate: new Date(
     Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + 1000 * 60 * 60 * 24 * 7,
   ).toISOString() as DateTime,
   charges: [],
-  lineItems: [],
+  items: [],
   customerId: null,
-  discount: null,
 };

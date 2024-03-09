@@ -1,6 +1,6 @@
 import { SegmentedControl, Stepper, Text, TextField, Stack, Selectable } from '@shopify/retail-ui-extensions-react';
 import { Segment } from '@shopify/retail-ui-extensions/src/components/SegmentedControl/SegmentedControl.js';
-import { getChargesPrice } from '../create-work-order/charges.js';
+import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
@@ -24,10 +24,7 @@ const segmentToggleName: Partial<Record<SegmentId, keyof ShopSettings['chargeSet
 
 type ChargeType<SegmentTypes extends SegmentId> = SegmentTypes extends 'none'
   ? null
-  : DiscriminatedUnionOmit<
-      CreateWorkOrderCharge & { type: SegmentTypes },
-      'chargeUuid' | 'lineItemUuid' | 'employeeId'
-    >;
+  : DiscriminatedUnionOmit<CreateWorkOrderCharge & { type: SegmentTypes }, 'uuid' | 'workOrderItemUuid' | 'employeeId'>;
 
 /**
  * Segmented labour configuration control.
@@ -84,7 +81,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
         const fixedPriceLabour: ChargeType<'fixed-price-labour'> = {
           type: 'fixed-price-labour',
           name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
-          amount: getChargesPrice(charge ? [charge] : []),
+          amount: getTotalPriceForCharges(charge ? [charge] : []),
         };
 
         onChange(fixedPriceLabour as any);
@@ -95,7 +92,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
         const hourlyLabour: ChargeType<'hourly-labour'> = {
           type: 'hourly-labour',
           name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
-          rate: getChargesPrice(charge ? [charge] : []),
+          rate: getTotalPriceForCharges(charge ? [charge] : []),
           hours: BigDecimal.ONE.toDecimal(),
         };
 

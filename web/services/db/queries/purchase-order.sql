@@ -97,6 +97,11 @@ INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", "sho
 VALUES (:purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,
         :unitCost!);
 
+/* @name updateLineItem */
+UPDATE "PurchaseOrderLineItem"
+SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId
+WHERE id = :id!;
+
 /* @name insertCustomField */
 INSERT INTO "PurchaseOrderCustomField" ("purchaseOrderId", key, value)
 VALUES (:purchaseOrderId!, :key!, :value!);
@@ -128,3 +133,8 @@ FROM "PurchaseOrderLineItem"
        INNER JOIN "PurchaseOrder" po ON "purchaseOrderId" = po.id
 WHERE po.shop = :shop!
   AND "productVariantId" = :productVariantId!;
+
+/* @name getPurchaseOrderLineItemsByShopifyOrderLineItemId */
+SELECT *
+FROM "PurchaseOrderLineItem"
+WHERE "shopifyOrderLineItemId" = :shopifyOrderLineItemId!;

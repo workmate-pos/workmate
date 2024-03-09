@@ -65,32 +65,35 @@ export function ImportOrderSelector() {
 function getOrderRows(orders: Order[]) {
   const router = useRouter();
 
-  return orders.map<ListRow>(
-    ({ id, name, workOrderName, displayFulfillmentStatus, displayFinancialStatus, customer }) => {
-      const label = workOrderName ? `${name} (${workOrderName})` : name;
+  return orders.map<ListRow>(({ id, name, workOrders, displayFulfillmentStatus, displayFinancialStatus, customer }) => {
+    let label = name;
 
-      return {
-        id,
-        onPress: () => router.push('OrderPreview', { orderId: id, unsavedChanges: false, showImportButton: true }),
-        leftSide: {
-          label,
-          badges: displayFinancialStatus
-            ? [
-                {
-                  text: getStatusText(displayFinancialStatus),
-                  variant: getFinancialStatusBadgeVariant(displayFinancialStatus),
-                  status: getFinancialStatusBadgeStatus(displayFinancialStatus),
-                },
-                {
-                  text: getStatusText(displayFulfillmentStatus),
-                  variant: getFulfillmentStatusBadgeVariant(displayFulfillmentStatus),
-                  status: getFulfillmentStatusBadgeStatus(displayFulfillmentStatus),
-                },
-              ]
-            : undefined,
-          subtitle: [customer?.displayName ?? 'No customer'],
-        },
-      };
-    },
-  );
+    const workOrderNames = workOrders.map(workOrder => workOrder.name).join(' • ');
+    if (workOrderNames) {
+      label += ` (${workOrderNames})`;
+    }
+
+    return {
+      id,
+      onPress: () => router.push('OrderPreview', { orderId: id, unsavedChanges: false, showImportButton: true }),
+      leftSide: {
+        label,
+        badges: displayFinancialStatus
+          ? [
+              {
+                text: getStatusText(displayFinancialStatus),
+                variant: getFinancialStatusBadgeVariant(displayFinancialStatus),
+                status: getFinancialStatusBadgeStatus(displayFinancialStatus),
+              },
+              {
+                text: getStatusText(displayFulfillmentStatus),
+                variant: getFulfillmentStatusBadgeVariant(displayFulfillmentStatus),
+                status: getFulfillmentStatusBadgeStatus(displayFulfillmentStatus),
+              },
+            ]
+          : undefined,
+        subtitle: [customer?.displayName ?? 'No customer'],
+      },
+    };
+  });
 }

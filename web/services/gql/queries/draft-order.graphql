@@ -190,6 +190,11 @@ fragment DatabaseShopifyOrderFragment on DraftOrder {
   customer {
     id
   }
+  totalPriceSet {
+    shopMoney {
+      amount
+    }
+  }
 }
 
 fragment DatabaseShopifyOrderLineItemFragment on DraftOrderLineItem {

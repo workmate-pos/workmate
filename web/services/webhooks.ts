@@ -139,7 +139,9 @@ export default {
     },
   },
 
-  ORDERS_UPDATE: {
+  // TODO: Make sure to support removing line items -> they should be re-added to draft order
+
+  ORDERS_UPDATED: {
     async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
       await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
     },

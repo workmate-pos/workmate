@@ -159,9 +159,18 @@ query getManyOrderInfoDraftOrderInfo($ids: [ID!]!) {
 fragment DatabaseShopifyOrderFragment on Order {
   id
   name
-  fullyPaid
   customer {
     id
+  }
+  currentTotalPriceSet {
+    shopMoney {
+      amount
+    }
+  }
+  totalOutstandingSet {
+    shopMoney {
+      amount
+    }
   }
   customAttributes {
     key

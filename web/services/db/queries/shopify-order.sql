@@ -12,13 +12,15 @@ FROM "ShopifyOrder"
 WHERE "orderId" IN :orderIds!;
 
 /* @name upsert */
-INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "fullyPaid", "customerId")
-VALUES (:orderId!, :shop!, :orderType!, :name!, :fullyPaid!, :customerId)
+INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding)
+VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!)
 ON CONFLICT ("orderId") DO UPDATE
-  SET shop        = :shop!,
-      "orderType" = :orderType!,
-      name        = :name!,
-      "fullyPaid" = :fullyPaid!;
+  SET shop         = :shop!,
+      "orderType"  = :orderType!,
+      name         = :name!,
+      "customerId" = :customerId,
+      total        = :total!,
+      outstanding  = :outstanding!;
 
 /* @name getLineItems */
 SELECT *
@@ -61,21 +63,19 @@ FROM "ShopifyOrder"
 WHERE "ShopifyOrder"."orderId" = :orderId!;
 
 /* @name getLinkedOrdersByWorkOrderId */
-SELECT DISTINCT "ShopifyOrder".*
-FROM "ShopifyOrder"
-       INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
-       LEFT JOIN "WorkOrderItem" ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId" AND
-                                     "WorkOrderItem"."workOrderId" = :workOrderId!)
-       LEFT JOIN "WorkOrderHourlyLabourCharge"
-                 ON ("ShopifyOrderLineItem"."lineItemId" = "WorkOrderHourlyLabourCharge"."shopifyOrderLineItemId" AND
-                     "WorkOrderHourlyLabourCharge"."workOrderId" = :workOrderId!)
-       LEFT JOIN "WorkOrderFixedPriceLabourCharge"
-                 ON (
-                   "ShopifyOrderLineItem"."lineItemId" = "WorkOrderFixedPriceLabourCharge"."shopifyOrderLineItemId" AND
-                   "WorkOrderFixedPriceLabourCharge"."workOrderId" = :workOrderId!)
-WHERE "WorkOrderItem"."uuid" IS NOT NULL
-   OR "WorkOrderHourlyLabourCharge"."uuid" IS NOT NULL
-   OR "WorkOrderFixedPriceLabourCharge"."uuid" IS NOT NULL;
+SELECT DISTINCT so.*
+FROM "WorkOrder" wo
+       LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
+       LEFT JOIN "WorkOrderHourlyLabourCharge" hlc ON wo.id = hlc."workOrderId"
+       LEFT JOIN "WorkOrderFixedPriceLabourCharge" fplc ON wo.id = fplc."workOrderId"
+       INNER JOIN "ShopifyOrderLineItem" soli ON (
+  woi."shopifyOrderLineItemId" = soli."lineItemId"
+    OR hlc."shopifyOrderLineItemId" = soli."lineItemId"
+    OR fplc."shopifyOrderLineItemId" = soli."lineItemId"
+  )
+       INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+WHERE wo.id = :workOrderId!
+  AND so."orderType" = 'DRAFT_ORDER';
 
 /* @name getLinkedOrdersByPurchaseOrderId */
 SELECT DISTINCT "ShopifyOrder".*

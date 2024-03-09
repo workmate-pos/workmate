@@ -11,11 +11,10 @@ import {
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
-import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
+import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useState } from 'react';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/services/gql/queries/generated/schema.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -27,6 +26,8 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
@@ -209,7 +210,6 @@ export function Entry() {
 function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number][]): ListRow[] {
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
-  const customerQueries = useCustomerQueries({ fetch, ids: workOrderInfos.map(({ customerId }) => customerId) });
   const workOrderQueries = useWorkOrderQueries(
     { fetch, names: workOrderInfos.map(({ name }) => name) },
     { enabled: false },
@@ -219,12 +219,29 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const screen = useScreen();
   screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isRefetching));
 
-  return workOrderInfos.flatMap<ListRow>(({ name, status, dueDate, order, customerId }) => {
+  return workOrderInfos.flatMap<ListRow>(({ name, status, dueDate, orders, customer }) => {
     const query = workOrderQueries[name];
     if (!query) return [];
 
     const dueDateString = new Date(dueDate).toLocaleDateString();
-    const customer = customerQueries[customerId]?.data;
+    const orderNamesSubtitle = orders
+      .filter(hasPropertyValue('type', 'ORDER'))
+      .map(order => order.name)
+      .join(' • ');
+
+    const outstanding = BigDecimal.sum(...orders.map(order => BigDecimal.fromMoney(order.outstanding)));
+    const total = BigDecimal.sum(...orders.map(order => BigDecimal.fromMoney(order.total)));
+    const moneySubtitle = [currencyFormatter(outstanding.toMoney()), currencyFormatter(total.toMoney())].join(' • ');
+
+    let financialStatus;
+
+    if (outstanding.compare(BigDecimal.ZERO) <= 0) {
+      financialStatus = 'Paid';
+    } else if (outstanding.compare(total) < 0) {
+      financialStatus = 'Partially paid';
+    } else {
+      financialStatus = 'Unpaid';
+    }
 
     return {
       id: name,
@@ -238,11 +255,11 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
       },
       leftSide: {
         label: name,
-        subtitle: [[currencyFormatter(order.outstanding), currencyFormatter(order.total)].join(' • ')],
+        subtitle: [moneySubtitle, orderNamesSubtitle],
         badges: [
           {
             variant: 'neutral',
-            text: customer?.displayName ?? 'Unknown Customer',
+            text: customer.name,
           },
           {
             variant: 'highlight',
@@ -252,14 +269,10 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
             variant: 'warning',
             text: `Due ${dueDateString}`,
           },
-          ...(order.financialStatus
-            ? [
-                {
-                  variant: 'highlight',
-                  text: titleCase(order.financialStatus.replace('_', ' ')),
-                } as const,
-              ]
-            : []),
+          {
+            variant: 'highlight',
+            text: financialStatus,
+          },
         ],
       },
       rightSide: {

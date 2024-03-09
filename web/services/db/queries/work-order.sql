@@ -63,21 +63,6 @@ FROM "WorkOrderFixedPriceLabourCharge"
 WHERE "workOrderId" = :workOrderId!
   AND "shopifyOrderLineItemId" IS NULL;
 
-/* @name getLinkedDraftOrderIds */
-SELECT DISTINCT so."orderId"
-FROM "WorkOrder" wo
-       LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
-       LEFT JOIN "WorkOrderHourlyLabourCharge" hlc ON wo.id = hlc."workOrderId"
-       LEFT JOIN "WorkOrderFixedPriceLabourCharge" fplc ON wo.id = fplc."workOrderId"
-       INNER JOIN "ShopifyOrderLineItem" soli ON (
-  woi."shopifyOrderLineItemId" = soli."lineItemId"
-    OR hlc."shopifyOrderLineItemId" = soli."lineItemId"
-    OR fplc."shopifyOrderLineItemId" = soli."lineItemId"
-  )
-       INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
-WHERE wo.id = :workOrderId!
-  AND so."orderType" = 'DRAFT_ORDER';
-
 /*
   @name getItemsByUuids
   @param uuids -> (...)

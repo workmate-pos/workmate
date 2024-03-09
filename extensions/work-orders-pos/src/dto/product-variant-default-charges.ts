@@ -4,29 +4,29 @@ import { CreateWorkOrderCharge } from '../types.js';
 
 export function productVariantDefaultChargeToCreateWorkOrderCharge(
   charge: ProductVariant['defaultCharges'][number],
-  lineItemUuid: string,
+  workOrderItemUuid: string,
 ): CreateWorkOrderCharge {
   switch (charge.type) {
     case 'fixed-price-labour-charge': {
       return {
         type: 'fixed-price-labour',
-        chargeUuid: uuid(),
+        uuid: uuid(),
         name: charge.name,
         amount: charge.amount,
         employeeId: null,
-        lineItemUuid,
+        workOrderItemUuid,
       };
     }
 
     case 'hourly-labour-charge': {
       return {
         type: 'hourly-labour',
-        chargeUuid: uuid(),
+        uuid: uuid(),
         name: charge.name,
         rate: charge.rate,
         hours: charge.hours,
         employeeId: null,
-        lineItemUuid,
+        workOrderItemUuid,
       };
     }
 

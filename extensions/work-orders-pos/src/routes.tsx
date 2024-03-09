@@ -6,7 +6,6 @@ import { ProductSelector } from './screens/popups/ProductSelector.js';
 import { createRouter } from '@teifi-digital/pos-tools/router';
 import { OrderPreview } from './screens/popups/OrderPreview.js';
 import { CustomerSelector } from './screens/popups/CustomerSelector.js';
-import { DiscountSelector } from './screens/popups/DiscountSelector.js';
 import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
 import { ServiceSelector } from './screens/popups/ServiceSelector.js';
 import { ProductLineItemConfig } from './screens/popups/ProductLineItemConfig.js';
@@ -14,6 +13,7 @@ import { EmployeeLabourConfig } from './screens/popups/EmployeeLabourConfig.js';
 import { LabourLineItemConfig } from './screens/popups/LabourLineItemConfig.js';
 import { WorkOrder } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
+import { PaymentOverview } from './screens/popups/PaymentOverview.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -47,10 +47,11 @@ export const { Router, useRouter } = createRouter(
       title: 'Select Customer',
       Component: CustomerSelector,
     },
-    DiscountSelector: {
-      title: 'Select Discount',
-      Component: DiscountSelector,
-    },
+    // TODO: Re-add if possible, though difficult when using multiple orders.
+    // DiscountSelector: {
+    //   title: 'Select Discount',
+    //   Component: DiscountSelector,
+    // },
     WorkOrderSaved: {
       title: 'Work order saved',
       Component: WorkOrderSaved,
@@ -78,6 +79,10 @@ export const { Router, useRouter } = createRouter(
     ImportOrderSelector: {
       title: 'Import Order',
       Component: ImportOrderSelector,
+    },
+    PaymentOverview: {
+      title: 'Payments',
+      Component: PaymentOverview,
     },
   },
 );

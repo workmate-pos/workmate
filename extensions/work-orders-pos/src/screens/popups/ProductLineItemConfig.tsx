@@ -1,6 +1,6 @@
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { CreateWorkOrderLineItem } from '../../types.js';
+import { CreateWorkOrderItem } from '../../types.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
@@ -20,13 +20,13 @@ export function ProductLineItemConfig({
 }: {
   readonly: boolean;
   canAddLabour: boolean;
-  lineItem: CreateWorkOrderLineItem;
+  lineItem: CreateWorkOrderItem;
   onRemove: () => void;
-  onUpdate: (lineItem: CreateWorkOrderLineItem) => void;
-  onAssignLabour: (lineItem: CreateWorkOrderLineItem) => void;
+  onUpdate: (lineItem: CreateWorkOrderItem) => void;
+  onAssignLabour: (lineItem: CreateWorkOrderItem) => void;
 }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [lineItem, setLineItem] = useState<CreateWorkOrderLineItem>(initialLineItem);
+  const [lineItem, setLineItem] = useState<CreateWorkOrderItem>(initialLineItem);
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();

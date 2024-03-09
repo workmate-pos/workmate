@@ -57,8 +57,7 @@ export type WorkOrderInfo = {
     id: ID;
     name: string;
     type: 'DRAFT_ORDER' | 'ORDER';
+    total: Money;
+    outstanding: Money;
   }[];
-  paymentStatus: 'unpaid' | 'partially-paid' | 'fully-paid';
-  total: Money;
-  outstanding: Money;
 };

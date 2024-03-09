@@ -95,7 +95,6 @@ export interface IGetResult {
   shipping: string | null;
   shipTo: string;
   shop: string;
-  shopifyOrderOrderId: string | null;
   status: PurchaseOrderStatus;
   tax: string | null;
   updatedAt: Date;
@@ -396,6 +395,34 @@ const insertLineItemIR: any = {"usedParamSet":{"purchaseOrderId":true,"productVa
 export const insertLineItem = new PreparedQuery<IInsertLineItemParams,IInsertLineItemResult>(insertLineItemIR);
 
 
+/** 'UpdateLineItem' parameters type */
+export interface IUpdateLineItemParams {
+  id: number;
+  shopifyOrderLineItemId?: string | null | void;
+}
+
+/** 'UpdateLineItem' return type */
+export type IUpdateLineItemResult = void;
+
+/** 'UpdateLineItem' query type */
+export interface IUpdateLineItemQuery {
+  params: IUpdateLineItemParams;
+  result: IUpdateLineItemResult;
+}
+
+const updateLineItemIR: any = {"usedParamSet":{"shopifyOrderLineItemId":true,"id":true},"params":[{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":62,"b":84}]},{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":97,"b":100}]}],"statement":"UPDATE \"PurchaseOrderLineItem\"\nSET \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId\nWHERE id = :id!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * UPDATE "PurchaseOrderLineItem"
+ * SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId
+ * WHERE id = :id!
+ * ```
+ */
+export const updateLineItem = new PreparedQuery<IUpdateLineItemParams,IUpdateLineItemResult>(updateLineItemIR);
+
+
 /** 'InsertCustomField' parameters type */
 export interface IInsertCustomFieldParams {
   key: string;
@@ -575,5 +602,42 @@ const getProductVariantCostsForShopIR: any = {"usedParamSet":{"shop":true,"produ
  * ```
  */
 export const getProductVariantCostsForShop = new PreparedQuery<IGetProductVariantCostsForShopParams,IGetProductVariantCostsForShopResult>(getProductVariantCostsForShopIR);
+
+
+/** 'GetPurchaseOrderLineItemsByShopifyOrderLineItemId' parameters type */
+export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdParams {
+  shopifyOrderLineItemId: string;
+}
+
+/** 'GetPurchaseOrderLineItemsByShopifyOrderLineItemId' return type */
+export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdResult {
+  availableQuantity: number;
+  createdAt: Date;
+  id: number;
+  productVariantId: string;
+  purchaseOrderId: number;
+  quantity: number;
+  shopifyOrderLineItemId: string | null;
+  unitCost: string;
+  updatedAt: Date;
+}
+
+/** 'GetPurchaseOrderLineItemsByShopifyOrderLineItemId' query type */
+export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdQuery {
+  params: IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdParams;
+  result: IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdResult;
+}
+
+const getPurchaseOrderLineItemsByShopifyOrderLineItemIdIR: any = {"usedParamSet":{"shopifyOrderLineItemId":true},"params":[{"name":"shopifyOrderLineItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":71,"b":94}]}],"statement":"SELECT *\nFROM \"PurchaseOrderLineItem\"\nWHERE \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "PurchaseOrderLineItem"
+ * WHERE "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
+ * ```
+ */
+export const getPurchaseOrderLineItemsByShopifyOrderLineItemId = new PreparedQuery<IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdParams,IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdResult>(getPurchaseOrderLineItemsByShopifyOrderLineItemIdIR);
 
 

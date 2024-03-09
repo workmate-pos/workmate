@@ -8,14 +8,13 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.
 import { validateCreateWorkOrder } from './validate.js';
 import { syncWorkOrder } from './sync.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { assertGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
-import { gql } from '../gql/gql.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import {
   IGetFixedPriceLabourChargesResult,
   IGetHourlyLabourChargesResult,
 } from '../db/queries/generated/work-order-charges.sql.js';
+import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 
 export async function upsertWorkOrder(session: Session, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
@@ -51,54 +50,42 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
 async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: string }) {
   const [workOrder = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
 
-  const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
-
-  const currentItems = await db.workOrder.getItems({ workOrderId: workOrder.id });
-  const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId: workOrder.id });
-  const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId: workOrder.id });
-
-  // not all changes are allowed, e.g., once you create an order for some item it is no longer possible to change its price
-  assertNoIllegalItemChanges(createWorkOrder, currentItems);
-  assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges);
-  assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges);
-
-  const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));
-  if (createWorkOrder.customerId !== workOrder.customerId && hasOrder) {
-    throw new HttpError('Cannot change customer after the order has been created', 400);
-  }
-
-  // nothing illegal, so we can upsert and delete items/charges safely
-
-  await db.workOrder.upsert({
-    shop: session.shop,
-    name: workOrder.name,
-    status: createWorkOrder.status,
-    customerId: createWorkOrder.customerId,
-    dueDate: new Date(createWorkOrder.dueDate),
-    derivedFromOrderId: createWorkOrder.derivedFromOrderId,
-    note: createWorkOrder.note,
-  });
-
-  await upsertCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
-  await upsertItems(createWorkOrder, workOrder.id, currentItems);
-
-  await deleteCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
-  await deleteItems(createWorkOrder, workOrder.id, currentItems);
-
-  // clean up any orphan draft orders that may be left behind as a result of deleting line items
-  const newLinkedDraftOrders = await db.workOrder.getLinkedDraftOrderIds({ workOrderId: workOrder.id });
-  const currentLinkedDraftOrders = currentLinkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER'));
-  const orphanedDraftOrders = currentLinkedDraftOrders.filter(id => !newLinkedDraftOrders.includes(id));
-
-  if (orphanedDraftOrders.length) {
-    const graphql = new Graphql(session);
-    await gql.draftOrder.removeMany.run(graphql, {
-      ids: orphanedDraftOrders.map(order => {
-        assertGid(order.orderId);
-        return order.orderId;
-      }),
+  await cleanOrphanedDraftOrders(session, workOrder.id, async () => {
+    const currentItems = await db.workOrder.getItems({ workOrderId: workOrder.id });
+    const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId: workOrder.id });
+    const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({
+      workOrderId: workOrder.id,
     });
-  }
+
+    // not all changes are allowed, e.g., once you create an order for some item it is no longer possible to change its price
+    assertNoIllegalItemChanges(createWorkOrder, currentItems);
+    assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges);
+    assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges);
+
+    const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
+    const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));
+    if (createWorkOrder.customerId !== workOrder.customerId && hasOrder) {
+      throw new HttpError('Cannot change customer after the order has been created', 400);
+    }
+
+    // nothing illegal, so we can upsert and delete items/charges safely
+
+    await db.workOrder.upsert({
+      shop: session.shop,
+      name: workOrder.name,
+      status: createWorkOrder.status,
+      customerId: createWorkOrder.customerId,
+      dueDate: new Date(createWorkOrder.dueDate),
+      derivedFromOrderId: createWorkOrder.derivedFromOrderId,
+      note: createWorkOrder.note,
+    });
+
+    await upsertCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
+    await upsertItems(createWorkOrder, workOrder.id, currentItems);
+
+    await deleteCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
+    await deleteItems(createWorkOrder, workOrder.id, currentItems);
+  });
 
   return workOrder;
 }

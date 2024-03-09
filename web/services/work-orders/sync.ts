@@ -8,6 +8,7 @@ import {
   getWorkOrderLineItems,
   getWorkOrderOrderCustomAttributes,
 } from '@work-orders/work-order-shopify-order';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export async function syncWorkOrders(session: Session, workOrderIds: number[]) {
   if (workOrderIds.length === 0) {
@@ -45,10 +46,8 @@ export async function syncWorkOrder(session: Session, workOrderId: number) {
     return;
   }
 
-  // Delete all existing draft order ids and recreate a new draft order containing all line items not associated with an order
-
-  const linkedDraftOrderIds = await db.workOrder.getLinkedDraftOrderIds({ workOrderId });
-  const draftOrderIds = linkedDraftOrderIds.map(({ orderId }) => {
+  const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
+  const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(({ orderId }) => {
     assertGid(orderId);
     return orderId;
   });
