@@ -71,7 +71,13 @@ export default class ProductVariantController {
     );
 
     return res.json({
-      productVariants: productVariants.map(pv => (pv ? parseProductVariantMetafields(pv) : pv)),
+      productVariants: await Promise.all(
+        productVariants
+          .map(pv => (pv ? parseProductVariantMetafields(pv) : pv))
+          .map(pv =>
+            pv ? addProductVariantComponents(graphql, pv, fixedServiceCollectionId, mutableServiceCollectionId) : pv,
+          ),
+      ),
     });
   }
 }
@@ -82,5 +88,5 @@ export type FetchProductsResponse = {
 };
 
 export type FetchProductsByIdResponse = {
-  productVariants: (ProductVariantFragmentWithMetafields | null)[];
+  productVariants: ((ProductVariantFragmentWithMetafields & ProductVariantFragmentWithComponents) | null)[];
 };

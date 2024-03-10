@@ -27,17 +27,28 @@ SELECT *
 FROM "ShopifyOrderLineItem"
 WHERE "orderId" = :orderId!;
 
+/*
+  @name getLineItemsByIds
+  @param lineItemIds -> (...)
+*/
+SELECT *
+FROM "ShopifyOrderLineItem"
+WHERE "lineItemId" IN :lineItemIds!;
+
 /* @name upsertLineItem */
 INSERT INTO "ShopifyOrderLineItem" ("lineItemId", "orderId", "productVariantId", quantity, "unitPrice",
-                                    "unfulfilledQuantity", "title")
-VALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!)
+                                    "unfulfilledQuantity", "title", "totalTax", "discountedUnitPrice")
+VALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!, :totalTax!,
+        :discountedUnitPrice!)
 ON CONFLICT ("lineItemId") DO UPDATE
   SET "orderId"             = :orderId!,
       "productVariantId"    = :productVariantId,
       quantity              = :quantity!,
       "unitPrice"           = :unitPrice!,
       "unfulfilledQuantity" = :unfulfilledQuantity!,
-      "title"               = :title!;
+      "title"               = :title!,
+      "totalTax"            = :totalTax!,
+      "discountedUnitPrice" = :discountedUnitPrice!;
 
 /*
   @name removeLineItemsByIds
@@ -74,8 +85,7 @@ FROM "WorkOrder" wo
     OR fplc."shopifyOrderLineItemId" = soli."lineItemId"
   )
        INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
-WHERE wo.id = :workOrderId!
-  AND so."orderType" = 'DRAFT_ORDER';
+WHERE wo.id = :workOrderId!;
 
 /* @name getLinkedOrdersByPurchaseOrderId */
 SELECT DISTINCT "ShopifyOrder".*

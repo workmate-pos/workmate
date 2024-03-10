@@ -12,6 +12,7 @@ import type { Request, Response } from 'express-serve-static-core';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { ensureEmployeesExist } from '../services/employee/sync.js';
 
 export const permissionNodes = [
   'read_settings',
@@ -48,23 +49,10 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     }
 
     const employeeId = associatedUser.id;
-    let [employee] = await db.employee.getMany({ employeeIds: [employeeId] });
 
-    if (!employee) {
-      [employee = never()] = await db.employee.upsertMany({
-        shop: session.shop,
-        employees: [
-          {
-            employeeId,
-            permissions: [],
-            rate: null,
-            superuser: associatedUser.isShopOwner,
-            name: associatedUser.name,
-            isShopOwner: associatedUser.isShopOwner,
-          },
-        ],
-      });
-    }
+    await ensureEmployeesExist(session, [employeeId]);
+
+    const [employee = never()] = await db.employee.getMany({ employeeIds: [employeeId] });
 
     const user: LocalsTeifiUser = {
       user: employee,

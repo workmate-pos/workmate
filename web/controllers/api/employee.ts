@@ -17,10 +17,10 @@ import { Permission, isPermissionNode, LocalsTeifiUser } from '../../decorators/
 import { indexBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
-import { IUpsertManyParams } from '../../services/db/queries/generated/employee.sql.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { unit } from '../../services/db/unit-of-work.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -103,23 +103,26 @@ export default class EmployeeController {
       throw new HttpError('Not all employees were found', 400);
     }
 
-    const employees: IUpsertManyParams['employees'] = req.body.employees.map(e => {
-      const staffMember = staffMembers[e.employeeId] ?? never();
+    await unit(() =>
+      Promise.all(
+        req.body.employees.map(employee => {
+          const staffMember = staffMembers[employee.employeeId] ?? never();
 
-      return {
-        employeeId: e.employeeId,
-        rate: e.rate,
-        superuser: e.superuser,
-        permissions: e.permissions.map(p => {
-          if (isPermissionNode(p)) return p;
-          throw new Error(`Invalid permission node: ${p}`);
+          return db.employee.upsert({
+            shop,
+            staffMemberId: employee.employeeId,
+            rate: employee.rate,
+            superuser: employee.superuser,
+            permissions: employee.permissions.map(p => {
+              if (isPermissionNode(p)) return p;
+              throw new Error(`Invalid permission node: ${p}`);
+            }),
+            name: staffMember.name,
+            isShopOwner: staffMember.isShopOwner,
+          });
         }),
-        name: staffMember.name,
-        isShopOwner: staffMember.isShopOwner,
-      };
-    });
-
-    await db.employee.upsertMany({ shop, employees });
+      ),
+    );
 
     return res.json({ success: true });
   }

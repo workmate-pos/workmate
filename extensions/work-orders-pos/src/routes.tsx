@@ -14,15 +14,18 @@ import { LabourLineItemConfig } from './screens/popups/LabourLineItemConfig.js';
 import { WorkOrder } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { PaymentOverview } from './screens/popups/PaymentOverview.js';
+import { ScrollView } from '@shopify/retail-ui-extensions-react';
 
 export const { Router, useRouter } = createRouter(
   {
     title: 'Work Orders',
     Component: () => {
       return (
-        <ScreenPermissionBoundary permissions={['read_settings', 'read_work_orders', 'read_employees']}>
-          <Entry />
-        </ScreenPermissionBoundary>
+        <ScrollView>
+          <ScreenPermissionBoundary permissions={['read_settings', 'read_work_orders', 'read_employees']}>
+            <Entry />
+          </ScreenPermissionBoundary>
+        </ScrollView>
       );
     },
   },

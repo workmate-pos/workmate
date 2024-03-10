@@ -8,7 +8,11 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { getShopSettings } from '../../services/settings.js';
-import { parseProductVariantMetafields, ProductVariantFragmentWithMetafields } from '../../services/product-variant.js';
+import {
+  parseProductVariantMetafields,
+  ProductVariantFragmentWithComponents,
+  ProductVariantFragmentWithMetafields,
+} from '../../services/product-variant.js';
 
 @Authenticated()
 export default class ProductsController {
@@ -74,7 +78,10 @@ export default class ProductsController {
     return res.json({
       product: {
         id: product.id,
-        variant: parseProductVariantMetafields(productVariant),
+        variant: {
+          ...parseProductVariantMetafields(productVariant),
+          productVariantComponents: [],
+        },
       },
     });
   }
@@ -83,6 +90,6 @@ export default class ProductsController {
 export type CreateProductResponse = {
   product: {
     id: ID;
-    variant: ProductVariantFragmentWithMetafields;
+    variant: ProductVariantFragmentWithMetafields & ProductVariantFragmentWithComponents;
   };
 };

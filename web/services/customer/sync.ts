@@ -13,7 +13,7 @@ export async function ensureCustomersExist(session: Session, customerIds: ID[]) 
 
   const databaseCustomers = await db.customers.getMany({ customerIds });
   const existingCustomerIds = new Set(databaseCustomers.map(customer => customer.customerId));
-  const missingCustomerIds = customerIds.filter(locationId => !existingCustomerIds.has(locationId));
+  const missingCustomerIds = customerIds.filter(customerId => !existingCustomerIds.has(customerId));
 
   await syncCustomers(session, missingCustomerIds);
 }
@@ -44,7 +44,7 @@ export async function syncCustomers(session: Session, customerIds: ID[]) {
 
   const errors: unknown[] = [];
 
-  await upsertCustomers(session.shop, customers).catch(errors.push);
+  await upsertCustomers(session.shop, customers).catch(e => errors.push(e));
 
   if (customers.length !== customerIds.length) {
     errors.push(new Error(`Some customers were not found (${customers.length}/${customerIds.length})`));

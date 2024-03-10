@@ -7,7 +7,7 @@ import { WorkOrder, WorkOrderCharge, WorkOrderInfo, WorkOrderItem } from './type
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
-import { assertDecimal, assertMoney, BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { groupByKey, unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
@@ -113,7 +113,7 @@ export async function getWorkOrderInfoPage(
   });
 
   const customerIds = unique(page.map(workOrder => workOrder.customerId));
-  const customers = await db.customers.getMany({ customerIds });
+  const customers = customerIds.length ? await db.customers.getMany({ customerIds }) : [];
   const customersById = groupByKey(customers, 'customerId');
 
   return await Promise.all(

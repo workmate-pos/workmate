@@ -60,8 +60,23 @@
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
           },
-          "shopifyOrderLineItemId": {
-            "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+          "shopifyOrderLineItem": {
+            "anyOf": [
+              { "const": null },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "scalars.json#/definitions/ID"
+                  },
+                  "orderId": {
+                    "$ref": "scalars.json#/definitions/ID"
+                  }
+                },
+                "required": ["id", "orderId"],
+                "additionalProperties": false
+              }
+            ]
           },
           "quantity": {
             "description": "The quantity of this product variant in the PO",

@@ -19,6 +19,7 @@ import { calculateDraftOrder } from '../../services/work-orders/calculate.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Permission } from '../../decorators/permission.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -46,8 +47,9 @@ export default class WorkOrderController {
     const createWorkOrder = req.body;
 
     const { name } = await upsertWorkOrder(session, createWorkOrder);
+    const workOrder = await getWorkOrder(session, name);
 
-    return res.json({ name });
+    return res.json(workOrder ?? never());
   }
 
   @Post('/request')
@@ -119,19 +121,19 @@ export default class WorkOrderController {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
-    const result = await getWorkOrder(session, name);
+    const workOrder = await getWorkOrder(session, name);
 
-    if (!result) {
+    if (!workOrder) {
       throw new HttpError('Work order not found', 404);
     }
 
-    return res.json(result);
+    return res.json(workOrder);
   }
 }
 
 export type CalculateDraftOrderResponse = Awaited<ReturnType<typeof calculateDraftOrder>>;
 
-export type CreateWorkOrderResponse = { name: string };
+export type CreateWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
 
 export type CreateWorkOrderRequestResponse = { name: string };
 

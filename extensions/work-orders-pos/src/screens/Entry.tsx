@@ -2,7 +2,6 @@ import {
   Button,
   List,
   ListRow,
-  ScrollView,
   Stack,
   Text,
   useCartSubscription,
@@ -28,6 +27,7 @@ import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
@@ -55,7 +55,7 @@ export function Entry() {
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   return (
-    <ScrollView>
+    <Stack direction={'vertical'}>
       <ResponsiveStack
         direction={'horizontal'}
         alignment={'space-between'}
@@ -76,7 +76,7 @@ export function Entry() {
                 return;
               }
 
-              let customerId = undefined;
+              let customerId = null;
 
               if (cart.customer) {
                 customerId = createGid('Customer', String(cart.customer.id));
@@ -85,8 +85,8 @@ export function Entry() {
 
               router.push('WorkOrder', {
                 initial: {
+                  ...defaultCreateWorkOrder({ status: settingsQuery.data.settings.defaultStatus }),
                   customerId,
-                  status: settingsQuery.data.settings.defaultStatus,
                 },
               });
             }}
@@ -135,13 +135,13 @@ export function Entry() {
             }
           />
         </ResponsiveStack>
-        <Stack direction={'horizontal'}>
+        <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
           {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
           {employeeIds.length > 0 && (
             <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
           )}
-        </Stack>
+        </ResponsiveStack>
       </ResponsiveStack>
       <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
         {status && (
@@ -203,7 +203,7 @@ export function Entry() {
           </Text>
         </Stack>
       )}
-    </ScrollView>
+    </Stack>
   );
 }
 
@@ -224,14 +224,11 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     if (!query) return [];
 
     const dueDateString = new Date(dueDate).toLocaleDateString();
-    const orderNamesSubtitle = orders
-      .filter(hasPropertyValue('type', 'ORDER'))
-      .map(order => order.name)
-      .join(' • ');
+    const orderNamesSubtitle = orders.map(order => order.name).join(' • ');
 
     const outstanding = BigDecimal.sum(...orders.map(order => BigDecimal.fromMoney(order.outstanding)));
     const total = BigDecimal.sum(...orders.map(order => BigDecimal.fromMoney(order.total)));
-    const moneySubtitle = [currencyFormatter(outstanding.toMoney()), currencyFormatter(total.toMoney())].join(' • ');
+    const moneySubtitle = [outstanding.toMoney(), total.toMoney()].map(currencyFormatter).join(' • ');
 
     let financialStatus;
 
@@ -255,7 +252,7 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
       },
       leftSide: {
         label: name,
-        subtitle: [moneySubtitle, orderNamesSubtitle],
+        subtitle: [moneySubtitle, orderNamesSubtitle || undefined],
         badges: [
           {
             variant: 'neutral',

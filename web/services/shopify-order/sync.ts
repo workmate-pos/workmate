@@ -9,6 +9,7 @@ import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { syncWorkOrders } from '../work-orders/sync.js';
 import { linkWorkOrderItemsAndCharges } from '../work-orders/link-order-items.js';
 import { ensureCustomersExist } from '../customer/sync.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[]) {
   if (orderIds.length === 0) {
@@ -17,7 +18,7 @@ export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[])
 
   const databaseShopifyOrders = await db.shopifyOrder.getMany({ orderIds });
   const existingShopifyOrderIds = new Set(databaseShopifyOrders.map(shopifyOrder => shopifyOrder.orderId));
-  const missingShopifyOrderIds = orderIds.filter(locationId => !existingShopifyOrderIds.has(locationId));
+  const missingShopifyOrderIds = orderIds.filter(orderId => !existingShopifyOrderIds.has(orderId));
 
   await syncShopifyOrders(session, missingShopifyOrderIds);
 }
@@ -60,8 +61,8 @@ export async function syncShopifyOrders(session: Session, ids: ID[]) {
   const errors: unknown[] = [];
 
   await Promise.all([
-    ...orders.map(order => upsertOrder(session, order).catch(errors.push)),
-    ...draftOrders.map(draftOrder => upsertDraftOrder(session, draftOrder).catch(errors.push)),
+    ...orders.map(order => upsertOrder(session, order).catch(e => errors.push(e))),
+    ...draftOrders.map(draftOrder => upsertDraftOrder(session, draftOrder).catch(e => errors.push(e))),
   ]);
 
   if (orders.length !== orderIds.length) {
@@ -142,12 +143,27 @@ async function syncShopifyOrderLineItems(
 
   const workOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId: order.order.id });
 
-  await db.shopifyOrder.removeLineItemsByIds({ lineItemIds: lineItemIdsToDelete });
+  if (lineItemIdsToDelete.length) {
+    await db.shopifyOrder.removeLineItemsByIds({ lineItemIds: lineItemIdsToDelete });
+  }
 
-  for (const { id: lineItemId, title, quantity, variant, unfulfilledQuantity, originalUnitPriceSet } of lineItems) {
+  for (const {
+    id: lineItemId,
+    title,
+    quantity,
+    variant,
+    unfulfilledQuantity,
+    taxLines,
+    discountedPriceSet,
+    originalUnitPriceSet,
+  } of lineItems) {
     if (variant) {
       await ensureProductVariantsExist(session, [variant.id]);
     }
+
+    const totalTax = BigDecimal.sum(
+      ...taxLines.map(taxLine => BigDecimal.fromDecimal(taxLine.priceSet.shopMoney.amount)),
+    ).toMoney();
 
     await db.shopifyOrder.upsertLineItem({
       lineItemId,
@@ -157,19 +173,20 @@ async function syncShopifyOrderLineItems(
       title,
       unfulfilledQuantity,
       unitPrice: originalUnitPriceSet.shopMoney.amount,
+      discountedUnitPrice: discountedPriceSet.shopMoney.amount,
+      totalTax,
     });
   }
 
-  if (order.type === 'order') {
-    // If this is an order, we should re-link work order items and work order charges if referenced
-    await linkWorkOrderItemsAndCharges(session, order.order, lineItems);
-  }
+  // We should link work order items and work order charges if referenced
+  await linkWorkOrderItemsAndCharges(session, order.order, lineItems);
 
   // sync work orders in case any line items now don't have a related line item anymore
   // can happen when a merchant deletes a draft order that we reference, or deletes a line item from an order
   await syncWorkOrders(
     session,
     workOrders.map(({ id }) => id),
+    false,
   );
 }
 

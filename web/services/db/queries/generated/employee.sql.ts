@@ -42,60 +42,44 @@ const getManyIR: any = {"usedParamSet":{"employeeIds":true},"params":[{"name":"e
 export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyIR);
 
 
-/** 'UpsertMany' parameters type */
-export interface IUpsertManyParams {
-  employees: readonly ({
-    employeeId: string,
-    superuser: boolean,
-    permissions: PermissionNodeArray,
-    rate: string | null | void,
-    isShopOwner: boolean,
-    name: string
-  })[];
-  shop: string;
-}
-
-/** 'UpsertMany' return type */
-export interface IUpsertManyResult {
-  createdAt: Date;
+/** 'Upsert' parameters type */
+export interface IUpsertParams {
   isShopOwner: boolean;
   name: string;
-  permissions: PermissionNodeArray | null;
-  rate: string | null;
+  permissions: PermissionNodeArray;
+  rate?: string | null | void;
   shop: string;
   staffMemberId: string;
   superuser: boolean;
-  updatedAt: Date;
 }
 
-/** 'UpsertMany' query type */
-export interface IUpsertManyQuery {
-  params: IUpsertManyParams;
-  result: IUpsertManyResult;
+/** 'Upsert' return type */
+export type IUpsertResult = void;
+
+/** 'Upsert' query type */
+export interface IUpsertQuery {
+  params: IUpsertParams;
+  result: IUpsertResult;
 }
 
-const upsertManyIR: any = {"usedParamSet":{"shop":true,"employees":true},"params":[{"name":"employees","required":true,"transform":{"type":"pick_array_spread","keys":[{"name":"employeeId","required":true},{"name":"superuser","required":true},{"name":"permissions","required":true},{"name":"rate","required":false},{"name":"isShopOwner","required":true},{"name":"name","required":true}]},"locs":[{"a":183,"b":193}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":41,"b":46}]}],"statement":"WITH Input AS (\n    SELECT \"employeeId\", :shop! AS shop, rate, superuser, permissions, \"isShopOwner\", name\n    FROM (VALUES ('', FALSE, ARRAY[] :: \"PermissionNode\"[], '', FALSE, ''), :employees! OFFSET 1) AS t (\"employeeId\", superuser, permissions, rate, \"isShopOwner\", name)\n)\nINSERT INTO \"Employee\" (\"staffMemberId\", shop, superuser, permissions, rate, \"isShopOwner\", name)\nSELECT \"employeeId\", shop, superuser, permissions, rate, \"isShopOwner\", name\nFROM Input\nON CONFLICT (\"staffMemberId\", \"shop\")\nDO UPDATE SET \"rate\" = EXCLUDED.\"rate\",\n              \"superuser\" = EXCLUDED.\"superuser\",\n              \"permissions\" = EXCLUDED.\"permissions\",\n              \"isShopOwner\" = EXCLUDED.\"isShopOwner\",\n              \"name\" = EXCLUDED.\"name\"\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"superuser":true,"permissions":true,"rate":true,"name":true,"isShopOwner":true,"staffMemberId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":111},{"a":253,"b":258}]},{"name":"superuser","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":124},{"a":283,"b":293}]},{"name":"permissions","required":true,"transform":{"type":"scalar"},"locs":[{"a":127,"b":139},{"a":318,"b":330}]},{"name":"rate","required":false,"transform":{"type":"scalar"},"locs":[{"a":142,"b":146},{"a":355,"b":359}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":149,"b":154},{"a":384,"b":389}]},{"name":"isShopOwner","required":true,"transform":{"type":"scalar"},"locs":[{"a":157,"b":169},{"a":414,"b":426}]},{"name":"staffMemberId","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":186}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = :shop!,\n      superuser     = :superuser!,\n      permissions   = :permissions!,\n      rate          = :rate,\n      name          = :name!,\n      \"isShopOwner\" = :isShopOwner!"};
 
 /**
  * Query generated from SQL:
  * ```
- * WITH Input AS (
- *     SELECT "employeeId", :shop! AS shop, rate, superuser, permissions, "isShopOwner", name
- *     FROM (VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', FALSE, ''), :employees! OFFSET 1) AS t ("employeeId", superuser, permissions, rate, "isShopOwner", name)
- * )
- * INSERT INTO "Employee" ("staffMemberId", shop, superuser, permissions, rate, "isShopOwner", name)
- * SELECT "employeeId", shop, superuser, permissions, rate, "isShopOwner", name
- * FROM Input
- * ON CONFLICT ("staffMemberId", "shop")
- * DO UPDATE SET "rate" = EXCLUDED."rate",
- *               "superuser" = EXCLUDED."superuser",
- *               "permissions" = EXCLUDED."permissions",
- *               "isShopOwner" = EXCLUDED."isShopOwner",
- *               "name" = EXCLUDED."name"
- * RETURNING *
+ * INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")
+ * VALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)
+ * ON CONFLICT ("staffMemberId")
+ *   DO UPDATE
+ *   SET shop          = :shop!,
+ *       superuser     = :superuser!,
+ *       permissions   = :permissions!,
+ *       rate          = :rate,
+ *       name          = :name!,
+ *       "isShopOwner" = :isShopOwner!
  * ```
  */
-export const upsertMany = new PreparedQuery<IUpsertManyParams,IUpsertManyResult>(upsertManyIR);
+export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
 
 
 /** 'DeleteMany' parameters type */
@@ -112,12 +96,13 @@ export interface IDeleteManyQuery {
   result: IDeleteManyResult;
 }
 
-const deleteManyIR: any = {"usedParamSet":{"employeeIds":true},"params":[{"name":"employeeIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":48,"b":60}]}],"statement":"DELETE FROM \"Employee\"\nWHERE \"staffMemberId\" IN :employeeIds!"};
+const deleteManyIR: any = {"usedParamSet":{"employeeIds":true},"params":[{"name":"employeeIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":48,"b":60}]}],"statement":"DELETE\nFROM \"Employee\"\nWHERE \"staffMemberId\" IN :employeeIds!"};
 
 /**
  * Query generated from SQL:
  * ```
- * DELETE FROM "Employee"
+ * DELETE
+ * FROM "Employee"
  * WHERE "staffMemberId" IN :employeeIds!
  * ```
  */

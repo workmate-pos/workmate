@@ -38,7 +38,7 @@ export function ProductCreator({
     {
       onSuccess: ({ product }) => {
         onCreate({
-          shopifyOrderLineItemId: null,
+          shopifyOrderLineItem: null,
           productVariantId: product.variant.id,
           availableQuantity: 0 as Int,
           quantity,

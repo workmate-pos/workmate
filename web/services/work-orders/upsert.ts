@@ -7,7 +7,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { validateCreateWorkOrder } from './validate.js';
 import { syncWorkOrder } from './sync.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import {
@@ -15,6 +15,12 @@ import {
   IGetHourlyLabourChargesResult,
 } from '../db/queries/generated/work-order-charges.sql.js';
 import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
+import { ensureCustomersExist } from '../customer/sync.js';
+import { ensureShopifyOrdersExist } from '../shopify-order/sync.js';
+import { ensureProductVariantsExist } from '../product-variants/sync.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { ensureEmployeesExist } from '../employee/sync.js';
+import { assertGidOrNull } from '../../util/assertions.js';
 
 export async function upsertWorkOrder(session: Session, createWorkOrder: CreateWorkOrder) {
   return await unit(async () => {
@@ -29,6 +35,12 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
 }
 
 async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: null }) {
+  await ensureCustomersExist(session, [createWorkOrder.customerId]);
+
+  if (createWorkOrder.derivedFromOrderId !== null) {
+    await ensureShopifyOrdersExist(session, [createWorkOrder.derivedFromOrderId]);
+  }
+
   const [workOrder = never()] = await db.workOrder.upsert({
     shop: session.shop,
     name: await getNewWorkOrderName(session.shop),
@@ -39,10 +51,10 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
     note: createWorkOrder.note,
   });
 
-  await upsertItems(createWorkOrder, workOrder.id, []);
-  await upsertCharges(createWorkOrder, workOrder.id, [], []);
+  await upsertItems(session, createWorkOrder, workOrder.id, []);
+  await upsertCharges(session, createWorkOrder, workOrder.id, [], []);
 
-  await syncWorkOrder(session, workOrder.id);
+  await syncWorkOrder(session, workOrder.id, true);
 
   return workOrder;
 }
@@ -80,12 +92,14 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       note: createWorkOrder.note,
     });
 
-    await upsertCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
-    await upsertItems(createWorkOrder, workOrder.id, currentItems);
+    await upsertCharges(session, createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
+    await upsertItems(session, createWorkOrder, workOrder.id, currentItems);
 
     await deleteCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
     await deleteItems(createWorkOrder, workOrder.id, currentItems);
   });
+
+  await syncWorkOrder(session, workOrder.id, true);
 
   return workOrder;
 }
@@ -173,8 +187,15 @@ function assertNoIllegalFixedPriceChargeChanges(
   }
 }
 
-async function upsertItems(createWorkOrder: CreateWorkOrder, workOrderId: number, currentItems: IGetItemsResult[]) {
+async function upsertItems(
+  session: Session,
+  createWorkOrder: CreateWorkOrder,
+  workOrderId: number,
+  currentItems: IGetItemsResult[],
+) {
   const itemsByUuid = Object.fromEntries(currentItems.map(item => [item.uuid, item]));
+
+  await ensureProductVariantsExist(session, unique(createWorkOrder.items.map(item => item.productVariantId)));
 
   for (const item of createWorkOrder.items) {
     const shopifyOrderLineItemId = itemsByUuid[item.uuid]?.shopifyOrderLineItemId ?? null;
@@ -191,6 +212,7 @@ async function upsertItems(createWorkOrder: CreateWorkOrder, workOrderId: number
 }
 
 async function upsertCharges(
+  session: Session,
   createWorkOrder: CreateWorkOrder,
   workOrderId: number,
   currentHourlyCharges: IGetHourlyLabourChargesResult[],
@@ -200,6 +222,16 @@ async function upsertCharges(
   const currentFixedPriceChargeByUuid = Object.fromEntries(
     currentFixedPriceCharges.map(charge => [charge.uuid, charge]),
   );
+
+  const employeeIds = unique(
+    createWorkOrder.charges
+      .map(charge => {
+        assertGidOrNull(charge.employeeId);
+        return charge.employeeId;
+      })
+      .filter(isNonNullable),
+  );
+  await ensureEmployeesExist(session, employeeIds);
 
   for (const charge of createWorkOrder.charges) {
     if (charge.type === 'fixed-price-labour') {

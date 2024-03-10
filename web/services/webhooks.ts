@@ -117,6 +117,24 @@ export default {
     },
   },
 
+  DRAFT_ORDERS_CREATE: {
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: ID;
+        note_attributes: { name: string; value: string }[];
+      },
+    ) {
+      const isWorkOrder = body.note_attributes.some(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
+
+      if (isWorkOrder) {
+        await syncShopifyOrders(session, [body.admin_graphql_api_id]);
+      }
+    },
+  },
+
   DRAFT_ORDERS_UPDATE: {
     async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
       await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
@@ -124,17 +142,22 @@ export default {
   },
 
   DRAFT_ORDERS_DELETE: {
-    async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
-      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({
-        orderId: body.admin_graphql_api_id,
-      });
+    async handler(session, topic, shop, body: { id: number }) {
+      // TODO: Fix this
 
-      await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [body.admin_graphql_api_id] });
-      await db.shopifyOrder.deleteOrders({ orderIds: [body.admin_graphql_api_id] });
+      const orderId = createGid('DraftOrder', body.id);
+
+      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId });
+
+      console.log('darft order delete', orderId, relatedWorkOrders);
+
+      await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
+      await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });
 
       await syncWorkOrders(
         session,
         relatedWorkOrders.map(({ id }) => id),
+        false,
       );
     },
   },
@@ -161,6 +184,7 @@ export default {
       await syncWorkOrders(
         session,
         relatedWorkOrders.map(({ id }) => id),
+        false,
       );
     },
   },

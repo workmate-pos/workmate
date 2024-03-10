@@ -184,11 +184,23 @@ fragment DatabaseShopifyOrderLineItemFragment on LineItem {
   variant {
     id
   }
-  quantity
+  quantity: currentQuantity
   unfulfilledQuantity
   originalUnitPriceSet {
     shopMoney {
       amount
+    }
+  }
+  discountedPriceSet: discountedUnitPriceAfterAllDiscountsSet {
+    shopMoney {
+      amount
+    }
+  }
+  taxLines {
+    priceSet {
+      shopMoney {
+        amount
+      }
     }
   }
   customAttributes {

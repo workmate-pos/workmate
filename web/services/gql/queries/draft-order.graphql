@@ -12,13 +12,7 @@ mutation calculate($input: DraftOrderInput!) {
 fragment CalculatedDraftOrderFragment on CalculatedDraftOrder {
   totalTax
   totalPrice
-  totalShippingPrice
   subtotalPrice
-  appliedDiscount {
-    value
-    valueType
-    amount
-  }
 }
 
 mutation create($input: DraftOrderInput!) {
@@ -190,6 +184,10 @@ fragment DatabaseShopifyOrderFragment on DraftOrder {
   customer {
     id
   }
+  customAttributes {
+    key
+    value
+  }
   totalPriceSet {
     shopMoney {
       amount
@@ -207,6 +205,18 @@ fragment DatabaseShopifyOrderLineItemFragment on DraftOrderLineItem {
   originalUnitPriceSet {
     shopMoney {
       amount
+    }
+  }
+  discountedPriceSet: discountedUnitPriceSet {
+    shopMoney {
+      amount
+    }
+  }
+  taxLines {
+    priceSet {
+      shopMoney {
+        amount
+      }
     }
   }
   customAttributes {

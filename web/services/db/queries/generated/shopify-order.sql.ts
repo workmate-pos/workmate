@@ -124,11 +124,13 @@ export interface IGetLineItemsParams {
 /** 'GetLineItems' return type */
 export interface IGetLineItemsResult {
   createdAt: Date;
+  discountedUnitPrice: string;
   lineItemId: string;
   orderId: string;
   productVariantId: string | null;
   quantity: number;
   title: string;
+  totalTax: string;
   unfulfilledQuantity: number;
   unitPrice: string;
   updatedAt: Date;
@@ -153,13 +155,54 @@ const getLineItemsIR: any = {"usedParamSet":{"orderId":true},"params":[{"name":"
 export const getLineItems = new PreparedQuery<IGetLineItemsParams,IGetLineItemsResult>(getLineItemsIR);
 
 
+/** 'GetLineItemsByIds' parameters type */
+export interface IGetLineItemsByIdsParams {
+  lineItemIds: readonly (string)[];
+}
+
+/** 'GetLineItemsByIds' return type */
+export interface IGetLineItemsByIdsResult {
+  createdAt: Date;
+  discountedUnitPrice: string;
+  lineItemId: string;
+  orderId: string;
+  productVariantId: string | null;
+  quantity: number;
+  title: string;
+  totalTax: string;
+  unfulfilledQuantity: number;
+  unitPrice: string;
+  updatedAt: Date;
+}
+
+/** 'GetLineItemsByIds' query type */
+export interface IGetLineItemsByIdsQuery {
+  params: IGetLineItemsByIdsParams;
+  result: IGetLineItemsByIdsResult;
+}
+
+const getLineItemsByIdsIR: any = {"usedParamSet":{"lineItemIds":true},"params":[{"name":"lineItemIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":59,"b":71}]}],"statement":"SELECT *\nFROM \"ShopifyOrderLineItem\"\nWHERE \"lineItemId\" IN :lineItemIds!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "ShopifyOrderLineItem"
+ * WHERE "lineItemId" IN :lineItemIds!
+ * ```
+ */
+export const getLineItemsByIds = new PreparedQuery<IGetLineItemsByIdsParams,IGetLineItemsByIdsResult>(getLineItemsByIdsIR);
+
+
 /** 'UpsertLineItem' parameters type */
 export interface IUpsertLineItemParams {
+  discountedUnitPrice: string;
   lineItemId: string;
   orderId: string;
   productVariantId?: string | null | void;
   quantity: number;
   title: string;
+  totalTax: string;
   unfulfilledQuantity: number;
   unitPrice: string;
 }
@@ -173,21 +216,24 @@ export interface IUpsertLineItemQuery {
   result: IUpsertLineItemResult;
 }
 
-const upsertLineItemIR: any = {"usedParamSet":{"lineItemId":true,"orderId":true,"productVariantId":true,"quantity":true,"unitPrice":true,"unfulfilledQuantity":true,"title":true},"params":[{"name":"lineItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":180,"b":191}]},{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":194,"b":202},{"a":348,"b":356}]},{"name":"productVariantId","required":false,"transform":{"type":"scalar"},"locs":[{"a":205,"b":221},{"a":389,"b":405}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":224,"b":233},{"a":438,"b":447}]},{"name":"unitPrice","required":true,"transform":{"type":"scalar"},"locs":[{"a":236,"b":246},{"a":480,"b":490}]},{"name":"unfulfilledQuantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":249,"b":269},{"a":523,"b":543}]},{"name":"title","required":true,"transform":{"type":"scalar"},"locs":[{"a":272,"b":278},{"a":576,"b":582}]}],"statement":"INSERT INTO \"ShopifyOrderLineItem\" (\"lineItemId\", \"orderId\", \"productVariantId\", quantity, \"unitPrice\",\n                                    \"unfulfilledQuantity\", \"title\")\nVALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!)\nON CONFLICT (\"lineItemId\") DO UPDATE\n  SET \"orderId\"             = :orderId!,\n      \"productVariantId\"    = :productVariantId,\n      quantity              = :quantity!,\n      \"unitPrice\"           = :unitPrice!,\n      \"unfulfilledQuantity\" = :unfulfilledQuantity!,\n      \"title\"               = :title!"};
+const upsertLineItemIR: any = {"usedParamSet":{"lineItemId":true,"orderId":true,"productVariantId":true,"quantity":true,"unitPrice":true,"unfulfilledQuantity":true,"title":true,"totalTax":true,"discountedUnitPrice":true},"params":[{"name":"lineItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":215,"b":226}]},{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":229,"b":237},{"a":426,"b":434}]},{"name":"productVariantId","required":false,"transform":{"type":"scalar"},"locs":[{"a":240,"b":256},{"a":467,"b":483}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":259,"b":268},{"a":516,"b":525}]},{"name":"unitPrice","required":true,"transform":{"type":"scalar"},"locs":[{"a":271,"b":281},{"a":558,"b":568}]},{"name":"unfulfilledQuantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":284,"b":304},{"a":601,"b":621}]},{"name":"title","required":true,"transform":{"type":"scalar"},"locs":[{"a":307,"b":313},{"a":654,"b":660}]},{"name":"totalTax","required":true,"transform":{"type":"scalar"},"locs":[{"a":316,"b":325},{"a":693,"b":702}]},{"name":"discountedUnitPrice","required":true,"transform":{"type":"scalar"},"locs":[{"a":336,"b":356},{"a":735,"b":755}]}],"statement":"INSERT INTO \"ShopifyOrderLineItem\" (\"lineItemId\", \"orderId\", \"productVariantId\", quantity, \"unitPrice\",\n                                    \"unfulfilledQuantity\", \"title\", \"totalTax\", \"discountedUnitPrice\")\nVALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!, :totalTax!,\n        :discountedUnitPrice!)\nON CONFLICT (\"lineItemId\") DO UPDATE\n  SET \"orderId\"             = :orderId!,\n      \"productVariantId\"    = :productVariantId,\n      quantity              = :quantity!,\n      \"unitPrice\"           = :unitPrice!,\n      \"unfulfilledQuantity\" = :unfulfilledQuantity!,\n      \"title\"               = :title!,\n      \"totalTax\"            = :totalTax!,\n      \"discountedUnitPrice\" = :discountedUnitPrice!"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "ShopifyOrderLineItem" ("lineItemId", "orderId", "productVariantId", quantity, "unitPrice",
- *                                     "unfulfilledQuantity", "title")
- * VALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!)
+ *                                     "unfulfilledQuantity", "title", "totalTax", "discountedUnitPrice")
+ * VALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!, :totalTax!,
+ *         :discountedUnitPrice!)
  * ON CONFLICT ("lineItemId") DO UPDATE
  *   SET "orderId"             = :orderId!,
  *       "productVariantId"    = :productVariantId,
  *       quantity              = :quantity!,
  *       "unitPrice"           = :unitPrice!,
  *       "unfulfilledQuantity" = :unfulfilledQuantity!,
- *       "title"               = :title!
+ *       "title"               = :title!,
+ *       "totalTax"            = :totalTax!,
+ *       "discountedUnitPrice" = :discountedUnitPrice!
  * ```
  */
 export const upsertLineItem = new PreparedQuery<IUpsertLineItemParams,IUpsertLineItemResult>(upsertLineItemIR);
@@ -284,7 +330,7 @@ export interface IGetLinkedOrdersByWorkOrderIdQuery {
   result: IGetLinkedOrdersByWorkOrderIdResult;
 }
 
-const getLinkedOrdersByWorkOrderIdIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":575,"b":587}]}],"statement":"SELECT DISTINCT so.*\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"WorkOrderItem\" woi ON wo.id = woi.\"workOrderId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\" hlc ON wo.id = hlc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\" fplc ON wo.id = fplc.\"workOrderId\"\n       INNER JOIN \"ShopifyOrderLineItem\" soli ON (\n  woi.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR hlc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR fplc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n  )\n       INNER JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\nWHERE wo.id = :workOrderId!\n  AND so.\"orderType\" = 'DRAFT_ORDER'"};
+const getLinkedOrdersByWorkOrderIdIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":575,"b":587}]}],"statement":"SELECT DISTINCT so.*\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"WorkOrderItem\" woi ON wo.id = woi.\"workOrderId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\" hlc ON wo.id = hlc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\" fplc ON wo.id = fplc.\"workOrderId\"\n       INNER JOIN \"ShopifyOrderLineItem\" soli ON (\n  woi.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR hlc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR fplc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n  )\n       INNER JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\nWHERE wo.id = :workOrderId!"};
 
 /**
  * Query generated from SQL:
@@ -301,7 +347,6 @@ const getLinkedOrdersByWorkOrderIdIR: any = {"usedParamSet":{"workOrderId":true}
  *   )
  *        INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
  * WHERE wo.id = :workOrderId!
- *   AND so."orderType" = 'DRAFT_ORDER'
  * ```
  */
 export const getLinkedOrdersByWorkOrderId = new PreparedQuery<IGetLinkedOrdersByWorkOrderIdParams,IGetLinkedOrdersByWorkOrderIdResult>(getLinkedOrdersByWorkOrderIdIR);

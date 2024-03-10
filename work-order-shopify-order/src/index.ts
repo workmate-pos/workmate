@@ -2,6 +2,7 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { groupByKey } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 
 export type WorkOrderItem = {
   uuid: string;
@@ -200,7 +201,7 @@ function getChargeCustomAttributes(
           _wm_linked_to_item_uuid: charge.workOrderItemUuid,
         }
       : {}),
-    ...(skuCustomAttribute !== undefined
+    ...(!!skuCustomAttribute
       ? {
           _wm_sku: skuCustomAttribute,
         }
@@ -222,4 +223,35 @@ function getChargeUuidCustomAttributeKey(charge: { uuid: string; type: 'hourly' 
  */
 function getAbsorbedChargeCustomAttributeKey(charge: { uuid: string; type: 'hourly' | 'fixed' }, key: string) {
   return `${getChargeUuidCustomAttributeKey(charge)}:${key}`;
+}
+
+const UUID_PREFIXES = [
+  ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+  HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+  FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+];
+
+export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
+  const prefixes = {
+    item: ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    hourly: HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    fixed: FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+  } as const;
+
+  for (const [type, prefix] of entries(prefixes)) {
+    if (!customAttributeKey.startsWith(prefix)) {
+      continue;
+    }
+
+    const uuid = customAttributeKey.slice(prefix.length);
+
+    if (uuid.includes(':')) {
+      // this is an absorbed charge custom attribute
+      continue;
+    }
+
+    return { type, uuid };
+  }
+
+  return null;
 }

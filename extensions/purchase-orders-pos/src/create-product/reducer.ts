@@ -2,7 +2,7 @@ import { CreateProduct } from '@web/schemas/generated/create-product.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useReducer, useState } from 'react';
 import { CreateProductBase, defaultCreateProduct } from './default.js';
-import { useConst } from '../util/use-const.js';
+import { useConst } from '@work-orders/common-pos/hooks/use-const.js';
 
 export type CreateProductAction =
   | ({

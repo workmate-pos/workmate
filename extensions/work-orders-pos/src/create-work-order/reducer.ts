@@ -1,134 +1,196 @@
-import { useReducer } from 'react';
-import { defaultCreateWorkOrder } from './default.js';
-import { Nullable } from '@work-orders/common/types/Nullable.js';
-import type { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
-import { CreateWorkOrderItem } from '../types.js';
+import { useReducer, useState } from 'react';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
+import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../types.js';
+import { useConst } from '@work-orders/common-pos/hooks/use-const.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { uuid } from '../util/uuid.js';
 
-export type CreateWorkOrderAction =
-  | { type: 'reset-work-order' }
-  | {
-      type: 'set-work-order';
-      workOrder: Nullable<CreateWorkOrder>;
-    }
-  | {
-      type: 'remove-line-item';
-      lineItem: CreateWorkOrderItem;
-    }
-  | {
-      type: 'upsert-line-item';
-      lineItem: CreateWorkOrderItem;
-      isUnstackable: boolean;
-    }
-  | NonNullable<
-      {
-        [key in keyof CreateWorkOrder]: {
-          type: 'set-field';
-          field: key;
-          value: CreateWorkOrder[key];
-        };
-      }[keyof CreateWorkOrder]
-    >;
-
-export const useCreateWorkOrderReducer = (initial?: Partial<CreateWorkOrder>) => {
-  const initialExceptUndefined = Object.fromEntries(
-    Object.entries(initial ?? {}).filter(([, value]) => value !== undefined),
-  );
-  return useReducer(createWorkOrderReducer, { ...defaultCreateWorkOrder, ...initialExceptUndefined });
+export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
+  customerId: CreateWorkOrder['customerId'] | null;
 };
 
-const createWorkOrderReducer = (
-  workOrder: Nullable<CreateWorkOrder>,
+export type CreateWorkOrderAction =
+  | ({
+      type: 'setPartial';
+    } & Partial<CreateWorkOrder>)
+  | {
+      /**
+       * Make sure to upsert charges before adding items
+       */
+      type: 'addItems';
+      items: CreateWorkOrderItem[];
+    }
+  | {
+      type: 'removeItems';
+      items: CreateWorkOrderItem[];
+    }
+  | {
+      /**
+       * Make sure to upsert charges before updating items
+       */
+      type: 'updateItem';
+      item: CreateWorkOrderItem;
+    }
+  | {
+      type: 'upsertCharges';
+      charges: CreateWorkOrderCharge[];
+    }
+  | ({
+      type: 'set';
+    } & CreateWorkOrder);
+
+export type CreateWorkOrderDispatchProxy = {
+  [type in CreateWorkOrderAction['type']]: (args: Omit<CreateWorkOrderAction & { type: type }, 'type'>) => void;
+};
+
+export const useCreateWorkOrderReducer = (initialCreateWorkOrder: WIPCreateWorkOrder) => {
+  const [createWorkOrder, dispatchCreateWorkOrder] = useReducer(createWorkOrderReducer, initialCreateWorkOrder);
+
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const proxy = useConst(
+    () =>
+      new Proxy<CreateWorkOrderDispatchProxy>({} as CreateWorkOrderDispatchProxy, {
+        get: (target, prop) => (args: DiscriminatedUnionOmit<CreateWorkOrderAction, 'type'>) => {
+          setHasUnsavedChanges(true);
+          dispatchCreateWorkOrder({ type: prop, ...args } as CreateWorkOrderAction);
+        },
+      }),
+  );
+
+  return [createWorkOrder, proxy, hasUnsavedChanges, setHasUnsavedChanges] as const;
+};
+
+function createWorkOrderReducer(
+  createWorkOrder: WIPCreateWorkOrder,
   action: CreateWorkOrderAction,
-): Nullable<CreateWorkOrder> => {
+): WIPCreateWorkOrder {
   switch (action.type) {
-    case 'reset-work-order':
-      return defaultCreateWorkOrder;
+    case 'setPartial':
+    case 'set': {
+      const { type, ...partial } = action;
+      const partialNotUndefined: Partial<WIPCreateWorkOrder> = Object.fromEntries(
+        Object.entries(partial).filter(([, value]) => value !== undefined),
+      );
 
-    case 'set-work-order':
-      return action.workOrder;
+      return { ...createWorkOrder, ...partialNotUndefined };
+    }
 
-    case 'upsert-line-item': {
-      const lineItemUuidHasCharges = (lineItemUuid: string) =>
-        (workOrder.charges ?? []).find(l => l.workOrderItemUuid === lineItemUuid);
+    case 'upsertCharges': {
+      const newChargeUuids = new Set(action.charges.map(charge => charge.uuid));
 
-      const hasCharges = lineItemUuidHasCharges(action.lineItem.uuid);
+      const merged = getMergedItems(createWorkOrder.items, createWorkOrder.charges);
+      const split = getSplitItems(merged, createWorkOrder.charges);
 
-      if (hasCharges) {
-        // Un-stack line items when adding charges
-        if (action.lineItem.quantity > 1) {
-          return {
-            ...workOrder,
-            items: [
-              {
-                productVariantId: action.lineItem.productVariantId,
-                uuid: uuid(),
-                quantity: (action.lineItem.quantity - 1) as Int,
-                absorbCharges: action.lineItem.absorbCharges,
-              },
-              {
-                productVariantId: action.lineItem.productVariantId,
-                uuid: action.lineItem.uuid,
-                quantity: 1 as Int,
-                absorbCharges: action.lineItem.absorbCharges,
-              },
-              ...(workOrder.items ?? []).filter(li => li.uuid !== action.lineItem.uuid),
-            ],
-          };
-        }
-
-        return {
-          ...workOrder,
-          items: [action.lineItem, ...(workOrder.items ?? []).filter(li => li.uuid !== action.lineItem.uuid)],
-        };
-      }
-
-      const originalLineItemUuid = action.lineItem.uuid;
-
-      // Stack items if possible.
-      if (!action.isUnstackable) {
-        const stack = workOrder.items?.find(
-          li =>
-            li.productVariantId === action.lineItem.productVariantId &&
-            // We can only stack when there is no assigned charge.
-            !lineItemUuidHasCharges(li.uuid) &&
-            // In case of update, don't merge with the item itself.
-            li.uuid !== action.lineItem.uuid,
-        );
-
-        if (stack) {
-          action.lineItem = {
-            ...stack,
-            quantity: (stack.quantity + action.lineItem.quantity) as Int,
-          };
-        }
-      }
-
+      // TODO: Allow deleting charges
       return {
-        ...workOrder,
-        items: [
-          action.lineItem,
-          ...(workOrder.items ?? []).filter(li => li.uuid !== originalLineItemUuid && li.uuid !== action.lineItem.uuid),
-        ],
+        ...createWorkOrder,
+        items: split.filter(item => item.quantity > 0),
+        charges: [...createWorkOrder.charges.filter(charge => !newChargeUuids.has(charge.uuid)), ...action.charges],
       };
     }
 
-    case 'remove-line-item': {
-      const itemUuid = action.lineItem.uuid;
+    case 'updateItem': {
+      const updated = createWorkOrder.items.map(item => (item.uuid === action.item.uuid ? action.item : item));
+      const merged = getMergedItems(updated, createWorkOrder.charges);
+      const split = getSplitItems(merged, createWorkOrder.charges);
+
       return {
-        ...workOrder,
-        items: (workOrder.items ?? []).filter(item => item.uuid !== itemUuid),
-        charges: (workOrder.charges ?? []).filter(charge => charge.workOrderItemUuid !== itemUuid),
+        ...createWorkOrder,
+        items: split.filter(item => item.quantity > 0),
       };
     }
 
-    case 'set-field':
+    case 'addItems': {
+      const merged = getMergedItems([...createWorkOrder.items, ...action.items], createWorkOrder.charges);
+      const split = getSplitItems(merged, createWorkOrder.charges);
+
       return {
-        ...workOrder,
-        [action.field]: action.value,
+        ...createWorkOrder,
+        items: split.filter(item => item.quantity > 0),
       };
+    }
+
+    case 'removeItems': {
+      const removedItemUuids = new Set(action.items.map(item => item.uuid));
+
+      return {
+        ...createWorkOrder,
+        items: createWorkOrder.items.filter(item => !action.items.includes(item)),
+        charges: createWorkOrder.charges.filter(
+          charge => !charge.workOrderItemUuid || !removedItemUuids.has(charge.workOrderItemUuid),
+        ),
+      };
+    }
 
     default:
       return action satisfies never;
   }
-};
+}
+
+function shouldMergeItems(a: CreateWorkOrderItem, b: CreateWorkOrderItem, charges: CreateWorkOrderCharge[]) {
+  if (a.productVariantId !== b.productVariantId) {
+    return false;
+  }
+
+  if (a.absorbCharges || b.absorbCharges) {
+    return false;
+  }
+
+  if (
+    charges.some(hasPropertyValue('workOrderItemUuid', a.uuid)) ||
+    charges.some(hasPropertyValue('workOrderItemUuid', b.uuid))
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+function getMergedItems(items: CreateWorkOrderItem[], charges: CreateWorkOrderCharge[]) {
+  const merged: CreateWorkOrderItem[] = [];
+
+  for (const item of items) {
+    let found = false;
+
+    for (const existing of merged) {
+      if (shouldMergeItems(item, existing, charges)) {
+        existing.quantity = (existing.quantity + item.quantity) as Int;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      merged.push(item);
+    }
+  }
+
+  return merged;
+}
+
+function shouldSplitItem(item: CreateWorkOrderItem, charges: CreateWorkOrderCharge[]) {
+  return item.quantity > 1 && charges.some(hasPropertyValue('workOrderItemUuid', item.uuid));
+}
+
+function getSplitItems(items: CreateWorkOrderItem[], charges: CreateWorkOrderCharge[]) {
+  return items.flatMap<CreateWorkOrderItem>(item => {
+    if (!shouldSplitItem(item, charges)) {
+      return [item];
+    }
+
+    return [
+      {
+        ...item,
+        quantity: 1 as Int,
+      },
+      {
+        uuid: uuid(),
+        productVariantId: item.productVariantId,
+        quantity: (item.quantity - 1) as Int,
+        absorbCharges: item.absorbCharges,
+      },
+    ];
+  });
+}

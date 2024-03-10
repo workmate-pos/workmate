@@ -41,14 +41,14 @@ export const usePaymentHandler = () => {
 
     await cart.clearCart();
     await cart.addCartProperties(getWorkOrderOrderCustomAttributes({ name: workOrderName }));
-    await cart.setCustomer({ id: parseGid(customerId).id });
+    await cart.setCustomer({ id: Number(parseGid(customerId).id) });
 
     for (const { quantity, title, unitPrice } of customSales) {
       await cart.addCustomSale({ quantity, title, price: unitPrice, taxable: true });
     }
 
     for (const { productVariantId, quantity } of lineItems) {
-      await cart.addLineItem(parseGid(productVariantId).id, quantity);
+      await cart.addLineItem(Number(parseGid(productVariantId).id), quantity);
     }
 
     const bulkAddLineItemProperties: SetLineItemPropertiesInput[] = [];
@@ -58,7 +58,7 @@ export const usePaymentHandler = () => {
 
       if (lineItem.variantId) {
         customAttributes = lineItems.find(
-          li => parseGid(li.productVariantId).id === lineItem.variantId,
+          li => Number(parseGid(li.productVariantId).id) === lineItem.variantId,
         )?.customAttributes;
       } else if (lineItem.title) {
         customAttributes = customSales.find(li => li.title === lineItem.title)?.customAttributes;

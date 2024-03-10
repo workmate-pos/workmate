@@ -17,6 +17,9 @@ import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { PurchaseOrder } from './types.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { ensureShopifyOrdersExist } from '../shopify-order/sync.js';
+import { ensureLocationsExist } from '../locations/sync.js';
+import { ensureEmployeesExist } from '../employee/sync.js';
 
 export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -29,6 +32,21 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
 
     const productVariantIds = createPurchaseOrder.lineItems.map(({ productVariantId }) => productVariantId);
     await ensureProductVariantsExist(session, productVariantIds);
+
+    if (createPurchaseOrder.locationId !== null) {
+      await ensureLocationsExist(session, [createPurchaseOrder.locationId]);
+    }
+
+    const employeeIds = createPurchaseOrder.employeeAssignments.map(({ employeeId }) => employeeId);
+    await ensureEmployeesExist(session, employeeIds);
+
+    const orderIds = unique(
+      createPurchaseOrder.lineItems
+        .map(({ shopifyOrderLineItem }) => shopifyOrderLineItem?.orderId)
+        .filter(isNonNullable),
+    );
+
+    await ensureShopifyOrdersExist(session, orderIds);
 
     const [{ id: purchaseOrderId } = never()] = await db.purchaseOrder.upsert({
       shop,
@@ -53,12 +71,21 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     ]);
 
     await Promise.all([
-      ...createPurchaseOrder.lineItems.map(product => db.purchaseOrder.insertLineItem({ ...product, purchaseOrderId })),
+      ...createPurchaseOrder.lineItems.map(product =>
+        db.purchaseOrder.insertLineItem({
+          productVariantId: product.productVariantId,
+          purchaseOrderId: purchaseOrderId,
+          availableQuantity: product.availableQuantity,
+          quantity: product.quantity,
+          unitCost: product.unitCost,
+          shopifyOrderLineItemId: product.shopifyOrderLineItem?.id,
+        }),
+      ),
       ...Object.entries(createPurchaseOrder.customFields).map(([key, value]) =>
         db.purchaseOrder.insertCustomField({ purchaseOrderId, key, value }),
       ),
       ...createPurchaseOrder.employeeAssignments.map(employee =>
-        db.purchaseOrder.insertAssignedEmployee({ ...employee, purchaseOrderId }),
+        db.purchaseOrder.insertAssignedEmployee({ employeeId: employee.employeeId, purchaseOrderId }),
       ),
     ]);
 

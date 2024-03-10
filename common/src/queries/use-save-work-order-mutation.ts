@@ -4,32 +4,18 @@ import type { CreateWorkOrderResponse } from '@web/controllers/api/work-order.js
 import { Fetch } from './fetch.js';
 import { Nullable } from '../types/Nullable.js';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
-
-export type CreateWorkOrderValidationErrors = {
-  [key in keyof CreateWorkOrder]?: string;
-};
+import { string } from '@teifi-digital/shopify-app-toolbox';
 
 export const useSaveWorkOrderMutation = (
   { fetch }: { fetch: Fetch },
-  options?: UseMutationOptions<
-    { name?: string; errors?: CreateWorkOrderValidationErrors },
-    unknown,
-    Nullable<CreateWorkOrder>,
-    unknown
-  >,
+  options?: UseMutationOptions<CreateWorkOrderResponse, SaveWorkOrderValidationErrors, Nullable<CreateWorkOrder>>,
 ) => {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<CreateWorkOrderResponse, SaveWorkOrderValidationErrors, Nullable<CreateWorkOrder>>({
     ...options,
-    mutationFn: async (nullableCreateWorkOrder: Nullable<CreateWorkOrder>) => {
-      const validation = validateWorkOrder(nullableCreateWorkOrder);
-
-      if (validation.type === 'error') {
-        return { errors: validation.errors };
-      }
-
-      const { createWorkOrder } = validation;
+    mutationFn: async (createWorkOrder: Nullable<CreateWorkOrder>) => {
+      validateWorkOrder(createWorkOrder);
 
       const response = await fetch('/api/work-order', {
         method: 'POST',
@@ -39,8 +25,8 @@ export const useSaveWorkOrderMutation = (
 
       if (!response.ok) throw new Error(await response.text());
 
-      const result: CreateWorkOrderResponse = await response.json();
-      return result;
+      const workOrder: CreateWorkOrderResponse = await response.json();
+      return workOrder;
     },
     onSuccess(...args) {
       const [, { name }] = args;
@@ -55,16 +41,8 @@ export const useSaveWorkOrderMutation = (
   });
 };
 
-function validateWorkOrder(createWorkOrder: Nullable<CreateWorkOrder>):
-  | {
-      type: 'error';
-      errors: CreateWorkOrderValidationErrors;
-    }
-  | {
-      type: 'success';
-      createWorkOrder: CreateWorkOrder;
-    } {
-  const errors: CreateWorkOrderValidationErrors = {};
+function validateWorkOrder(createWorkOrder: Nullable<CreateWorkOrder>): asserts createWorkOrder is CreateWorkOrder {
+  const errors: Partial<Record<keyof CreateWorkOrder, string>> = {};
 
   const requiredKeys: (keyof CreateWorkOrder)[] = ['status', 'customerId', 'dueDate', 'charges', 'note', 'items'];
 
@@ -81,14 +59,18 @@ function validateWorkOrder(createWorkOrder: Nullable<CreateWorkOrder>):
   }
 
   if (Object.keys(errors).length) {
-    return {
-      type: 'error',
-      errors,
-    };
+    throw new SaveWorkOrderValidationErrors(errors);
   }
+}
 
-  return {
-    type: 'success',
-    createWorkOrder: createWorkOrder as CreateWorkOrder,
-  };
+export class SaveWorkOrderValidationErrors extends Error {
+  constructor(
+    public readonly errors: {
+      [key in keyof CreateWorkOrder]?: string;
+    },
+  ) {
+    const invalid = Object.keys(errors).map(key => string.titleCase(key));
+
+    super(`Invalid values for ${invalid.join(', ')}`);
+  }
 }

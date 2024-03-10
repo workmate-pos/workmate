@@ -1,22 +1,14 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { gql } from '../gql/gql.js';
-import {
-  FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  WORK_ORDER_CUSTOM_ATTRIBUTE_NAME,
-} from '@work-orders/work-order-shopify-order';
+import { getUuidFromCustomAttributeKey, WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
 import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
 import { Session } from '@shopify/shopify-api';
 import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 
-export async function linkWorkOrderItemsAndCharges(
-  session: Session,
-  order: gql.order.DatabaseShopifyOrderFragment.Result,
-  lineItems: gql.order.DatabaseShopifyOrderLineItemFragment.Result[],
-) {
+type Order = { id: ID; customAttributes: { key: string; value: string | null }[] };
+type LineItem = { id: ID; customAttributes: { key: string; value: string | null }[] };
+
+export async function linkWorkOrderItemsAndCharges(session: Session, order: Order, lineItems: LineItem[]) {
   const workOrderName = order.customAttributes.find(({ key }) => key === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME)?.value;
 
   if (!workOrderName) {
@@ -29,28 +21,29 @@ export async function linkWorkOrderItemsAndCharges(
     throw new Error(`Work order with name ${workOrderName} not found`);
   }
 
+  const errors: unknown[] = [];
+
   await cleanOrphanedDraftOrders(session, workOrder.id, () =>
     Promise.all([
-      linkItems(order.id, lineItems, workOrder.id),
-      linkHourlyLabourCharges(order.id, lineItems, workOrder.id),
-      linkFixedPriceLabourCharges(order.id, lineItems, workOrder.id),
+      linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
+      linkHourlyLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
+      linkFixedPriceLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
     ]),
   );
+
+  if (errors.length) {
+    throw new AggregateError(errors, 'Failed to link work order items and charges');
+  }
 }
 
-async function linkItems(
-  orderId: ID,
-  lineItems: gql.order.DatabaseShopifyOrderLineItemFragment.Result[],
-  workOrderId: number,
-) {
-  const lineItemIdByItemUuid: Record<string, ID> = getLineItemIdsByUuids(
-    lineItems,
-    ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  );
+async function linkItems(lineItems: LineItem[], workOrderId: number) {
+  const lineItemIdByItemUuid: Record<string, ID> = getLineItemIdsByUuids(lineItems, 'item');
 
   const uuids = Object.keys(lineItemIdByItemUuid);
+  console.log('Found line item uuids:', uuids);
+  console.log(JSON.stringify(lineItems.map(li => ({ id: li.id, attributes: li.customAttributes }))));
 
-  const items = await db.workOrder.getItemsByUuids({ workOrderId, uuids });
+  const items = uuids.length ? await db.workOrder.getItemsByUuids({ workOrderId, uuids }) : [];
   for (const { uuid } of items) {
     const shopifyOrderLineItemId = lineItemIdByItemUuid[uuid] ?? never();
     await db.workOrder.setLineItemShopifyOrderLineItemId({ workOrderId, uuid, shopifyOrderLineItemId });
@@ -65,27 +58,16 @@ async function linkItems(
   }
 
   if (items.length !== uuids.length) {
-    sentryErr('Did not find all item uuids from a Shopify Order in the database', {
-      id: orderId,
-      orderUuids: uuids,
-      databaseUuids: items.map(({ uuid }) => uuid),
-    });
+    throw new Error('Did not find all item uuids from a Shopify Order in the database');
   }
 }
 
-async function linkHourlyLabourCharges(
-  orderId: ID,
-  lineItems: gql.order.DatabaseShopifyOrderLineItemFragment.Result[],
-  workOrderId: number,
-) {
-  const lineItemIdByHourlyChargeUuid: Record<string, ID> = getLineItemIdsByUuids(
-    lineItems,
-    HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  );
+async function linkHourlyLabourCharges(lineItems: LineItem[], workOrderId: number) {
+  const lineItemIdByHourlyChargeUuid: Record<string, ID> = getLineItemIdsByUuids(lineItems, 'hourly');
 
   const uuids = Object.keys(lineItemIdByHourlyChargeUuid);
 
-  const charges = await db.workOrderCharges.getHourlyLabourChargesByUuids({ workOrderId, uuids });
+  const charges = uuids.length ? await db.workOrderCharges.getHourlyLabourChargesByUuids({ workOrderId, uuids }) : [];
   for (const { uuid } of charges) {
     const shopifyOrderLineItemId = lineItemIdByHourlyChargeUuid[uuid] ?? never();
     await db.workOrderCharges.setHourlyLabourChargeShopifyOrderLineItemId({
@@ -96,27 +78,19 @@ async function linkHourlyLabourCharges(
   }
 
   if (charges.length !== uuids.length) {
-    sentryErr('Did not find all hourly labour charge uuids from a Shopify Order in the database', {
-      id: orderId,
-      orderUuids: uuids,
-      databaseUuids: charges.map(({ uuid }) => uuid),
-    });
+    throw new Error('Did not find all hourly labour charge uuids from a Shopify Order in the database');
   }
 }
 
-async function linkFixedPriceLabourCharges(
-  orderId: ID,
-  lineItems: gql.order.DatabaseShopifyOrderLineItemFragment.Result[],
-  workOrderId: number,
-) {
-  const lineItemIdByFixedPriceChargeUuid: Record<string, ID> = getLineItemIdsByUuids(
-    lineItems,
-    FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  );
+async function linkFixedPriceLabourCharges(lineItems: LineItem[], workOrderId: number) {
+  const lineItemIdByFixedPriceChargeUuid: Record<string, ID> = getLineItemIdsByUuids(lineItems, 'fixed');
 
   const uuids = Object.keys(lineItemIdByFixedPriceChargeUuid);
 
-  const charges = await db.workOrderCharges.getFixedPriceLabourChargesByUuids({ workOrderId, uuids });
+  const charges = uuids.length
+    ? await db.workOrderCharges.getFixedPriceLabourChargesByUuids({ workOrderId, uuids })
+    : [];
+
   for (const { uuid } of charges) {
     const shopifyOrderLineItemId = lineItemIdByFixedPriceChargeUuid[uuid] ?? never();
     await db.workOrderCharges.setFixedPriceLabourChargeShopifyOrderLineItemId({
@@ -127,25 +101,23 @@ async function linkFixedPriceLabourCharges(
   }
 
   if (charges.length !== uuids.length) {
-    sentryErr('Did not find all fixed price labour charge uuids from a Shopify Order in the database', {
-      id: orderId,
-      orderUuids: uuids,
-      databaseUuids: charges.map(({ uuid }) => uuid),
-    });
+    throw new Error('Did not find all fixed price labour charge uuids from a Shopify Order in the database');
   }
 }
 
 function getLineItemIdsByUuids(
-  lineItems: gql.order.DatabaseShopifyOrderLineItemFragment.Result[],
-  uuidPrefix: string,
+  lineItems: LineItem[],
+  type: NonNullable<ReturnType<typeof getUuidFromCustomAttributeKey>>['type'],
 ): Record<string, ID> {
   const lineItemIdByUuid: Record<string, ID> = {};
 
   for (const { id, customAttributes } of lineItems) {
-    const uuid = customAttributes.find(({ key }) => key.startsWith(uuidPrefix))?.key?.slice(uuidPrefix.length);
+    for (const { key } of customAttributes) {
+      const uuid = getUuidFromCustomAttributeKey(key);
 
-    if (uuid !== undefined) {
-      lineItemIdByUuid[uuid] = id;
+      if (uuid && uuid.type === type) {
+        lineItemIdByUuid[uuid.uuid] = id;
+      }
     }
   }
 

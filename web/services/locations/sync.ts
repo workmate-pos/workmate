@@ -44,7 +44,7 @@ export async function syncLocations(session: Session, locationIds: ID[]) {
 
   const errors: unknown[] = [];
 
-  await upsertLocations(session.shop, locations).catch(errors.push);
+  await upsertLocations(session.shop, locations).catch(e => errors.push(e));
 
   if (locations.length !== locationIds.length) {
     errors.push(new Error(`Some locations were not found (${locations.length}/${locationIds.length})`));

@@ -27,6 +27,8 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
+import { defaultCreateWorkOrder } from '../../create-work-order/default.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export function OrderPreview({
   orderId,
@@ -49,6 +51,8 @@ export function OrderPreview({
   const orderQuery = useOrderQuery({ fetch, id: orderId }, { keepPreviousData: false });
   const orderLineItemsQuery = useOrderLineItemsQuery({ fetch, id: orderId });
 
+  const settingsQuery = useSettingsQuery({ fetch });
+
   const order = orderQuery.data?.order;
 
   const router = useRouter();
@@ -57,11 +61,11 @@ export function OrderPreview({
     hasUnsavedChanges: unsavedChanges,
     onAction: () => {
       if (!order) return;
+      if (!settingsQuery.data) return;
 
       router.push('WorkOrder', {
         initial: {
-          customerId: order.customer?.id,
-          derivedFromOrderId: order.id,
+          ...defaultCreateWorkOrder({ status: settingsQuery.data.settings.defaultStatus }),
         },
       });
     },

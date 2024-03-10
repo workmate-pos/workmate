@@ -48,10 +48,10 @@ export function PermissionBoundary({
     );
   }
 
-  const superuser = currentEmployeeQuery.data.superuser;
+  const superuser = currentEmployeeQuery.data.superuser ?? false;
   const missingEmployeePermissions = superuser
     ? []
-    : permissions.filter(permission => !currentEmployeeQuery.data?.permissions?.includes(permission));
+    : permissions.filter(permission => !currentEmployeeQuery.data?.permissions?.includes(permission) ?? false);
 
   if (missingEmployeePermissions.length > 0) {
     return (

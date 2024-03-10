@@ -2,7 +2,7 @@ import { useReducer, useState } from 'react';
 import { defaultCreatePurchaseOrder } from './default.js';
 import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { useConst } from '../util/use-const.js';
+import { useConst } from '@work-orders/common-pos/hooks/use-const.js';
 
 export type CreatePurchaseOrderAction =
   | ({

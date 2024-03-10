@@ -13,7 +13,7 @@ export async function ensureProductsExist(session: Session, productIds: ID[]) {
 
   const databaseProducts = await db.products.getMany({ productIds });
   const existingProductIds = new Set(databaseProducts.map(product => product.productId));
-  const missingProductIds = productIds.filter(locationId => !existingProductIds.has(locationId));
+  const missingProductIds = productIds.filter(productId => !existingProductIds.has(productId));
 
   await syncProducts(session, missingProductIds);
 }
@@ -44,7 +44,7 @@ export async function syncProducts(session: Session, productIds: ID[]) {
 
   const errors: unknown[] = [];
 
-  await upsertProducts(session.shop, products).catch(errors.push);
+  await upsertProducts(session.shop, products).catch(e => errors.push(e));
 
   if (products.length !== productIds.length) {
     errors.push(new Error(`Some products were not found (${products.length}/${productIds.length})`));

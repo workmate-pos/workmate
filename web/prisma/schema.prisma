@@ -174,9 +174,9 @@ model ShopifyOrderLineItem {
   title               String
   quantity            Int
   unfulfilledQuantity Int
-  unitPrice           String // excluding tax and line item discounts
-  // TODO: Also track the paid price and stuff
-  // TODO: Also store the price with discounts and stuff
+  discountedUnitPrice String // after all discounts, including order-level (proportionally distributed)
+  unitPrice           String // before tax/discounts
+  totalTax            String // for all quantities
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())

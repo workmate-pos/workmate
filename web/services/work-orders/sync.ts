@@ -1,7 +1,7 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
-import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import {
   getCustomAttributeArrayFromObject,
@@ -11,7 +11,7 @@ import {
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
 
-export async function syncWorkOrders(session: Session, workOrderIds: number[]) {
+export async function syncWorkOrders(session: Session, workOrderIds: number[], workOrderHasChanged: boolean) {
   if (workOrderIds.length === 0) {
     return;
   }
@@ -19,7 +19,7 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[]) {
   const errors: unknown[] = [];
 
   for (const workOrderId of workOrderIds) {
-    await syncWorkOrder(session, workOrderId).catch(error => errors.push(error));
+    await syncWorkOrder(session, workOrderId, workOrderHasChanged).catch(error => errors.push(error));
   }
 
   if (errors.length > 0) {
@@ -27,7 +27,7 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[]) {
   }
 }
 
-export async function syncWorkOrder(session: Session, workOrderId: number) {
+export async function syncWorkOrder(session: Session, workOrderId: number, workOrderHasChanged: boolean) {
   const { labourLineItemSKU } = await getShopSettings(session.shop);
 
   const [workOrder] = await db.workOrder.get({ id: workOrderId });
@@ -36,15 +36,34 @@ export async function syncWorkOrder(session: Session, workOrderId: number) {
     throw new Error(`Work order with id ${workOrderId} not found`);
   }
 
-  const unlinkedItems = await db.workOrder.getUnlinkedItems({ workOrderId });
-  const unlinkedHourlyLabourCharges = await db.workOrder.getUnlinkedHourlyLabourCharges({ workOrderId });
-  const unlinkedFixedPriceLabourCharges = await db.workOrder.getUnlinkedFixedPriceLabourCharges({ workOrderId });
+  const items = await db.workOrder.getItems({ workOrderId });
+  const hourlyLabourCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
+  const fixedPriceLabourCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
 
-  if (
-    unlinkedItems.length === 0 &&
-    unlinkedHourlyLabourCharges.length === 0 &&
-    unlinkedFixedPriceLabourCharges.length === 0
-  ) {
+  const staleLineItemIdFilter = (el: { shopifyOrderLineItemId: string | null }) => {
+    if (isLineItemId(el.shopifyOrderLineItemId)) {
+      return false;
+    }
+
+    if (el.shopifyOrderLineItemId === null) {
+      return true;
+    }
+
+    // at this point we know that its a draft order line item.
+    // we only want to re-create draft line items in case the work order has changed.
+    // otherwise we would create a new draft order every time a draft order has changed via the webhook.
+    if (workOrderHasChanged) {
+      return true;
+    }
+
+    return false;
+  };
+
+  const draftItems = items.filter(staleLineItemIdFilter);
+  const draftHourlyLabourCharges = hourlyLabourCharges.filter(staleLineItemIdFilter);
+  const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(staleLineItemIdFilter);
+
+  if (draftItems.length === 0 && draftHourlyLabourCharges.length === 0 && draftFixedPriceLabourCharges.length === 0) {
     return;
   }
 
@@ -58,9 +77,9 @@ export async function syncWorkOrder(session: Session, workOrderId: number) {
   await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
 
   const { lineItems, customSales } = getWorkOrderLineItems(
-    unlinkedItems,
-    unlinkedHourlyLabourCharges,
-    unlinkedFixedPriceLabourCharges,
+    draftItems,
+    draftHourlyLabourCharges,
+    draftFixedPriceLabourCharges,
     { labourSku: labourLineItemSKU },
   );
 
@@ -80,11 +99,15 @@ export async function syncWorkOrder(session: Session, workOrderId: number) {
           title: customSale.title,
           quantity: customSale.quantity,
           customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
-          unitPrice: customSale.unitPrice,
+          originalUnitPrice: customSale.unitPrice,
         })),
       ],
       note: workOrder.note,
-      purchasingEntity: workOrder.customerId,
+      purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
     },
   });
+}
+
+function isLineItemId(id: string | null): id is ID {
+  return id !== null && parseGid(id).objectName === 'LineItem';
 }

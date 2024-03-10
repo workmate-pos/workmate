@@ -186,7 +186,7 @@ function useProductVariantRows(
         if (!variant.requiresComponents) {
           selectProducts([
             {
-              shopifyOrderLineItemId: null,
+              shopifyOrderLineItem: null,
               productVariantId: variant.id,
               availableQuantity: 0 as Int,
               quantity: 1 as Int,
@@ -203,7 +203,7 @@ function useProductVariantRows(
             const inventoryItem = inventoryItemQueries[productVariant.inventoryItem.id]?.data;
 
             return Array.from({ length: quantity }, () => ({
-              shopifyOrderLineItemId: null,
+              shopifyOrderLineItem: null,
               handle: productVariant.product.handle,
               productVariantId: productVariant.id,
               availableQuantity: 0 as Int,
