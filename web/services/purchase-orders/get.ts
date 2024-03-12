@@ -20,7 +20,9 @@ export async function getPurchaseOrder(session: Session, name: string) {
 
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByPurchaseOrderId({ purchaseOrderId: purchaseOrder.id });
   const linkedCustomerIds = unique(linkedOrders.map(({ customerId }) => customerId).filter(isNonNullable));
-  const linkedCustomers = await db.customers.getMany({ customerIds: linkedCustomerIds });
+  const linkedCustomers = linkedCustomerIds.length
+    ? await db.customers.getMany({ customerIds: linkedCustomerIds })
+    : [];
 
   assertGidOrNull(purchaseOrder.locationId);
   assertMoneyOrNull(purchaseOrder.discount);

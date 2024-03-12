@@ -5,10 +5,15 @@ import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../types.js';
 import { useConst } from '@work-orders/common-pos/hooks/use-const.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { uuid } from '../util/uuid.js';
+import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
+import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { useFreshRef } from '@teifi-digital/pos-tools/hooks/use-fresh-ref.js';
 
 export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
   customerId: CreateWorkOrder['customerId'] | null;
 };
+
+type GetItemOrder = ReturnType<typeof useWorkOrderOrders>['getItemOrder'];
 
 export type CreateWorkOrderAction =
   | ({
@@ -41,6 +46,8 @@ export type CreateWorkOrderAction =
       type: 'set';
     } & CreateWorkOrder);
 
+type CreateWorkOrderActionWithGetItemOrder = CreateWorkOrderAction & { getItemOrder: GetItemOrder };
+
 export type CreateWorkOrderDispatchProxy = {
   [type in CreateWorkOrderAction['type']]: (args: Omit<CreateWorkOrderAction & { type: type }, 'type'>) => void;
 };
@@ -50,12 +57,24 @@ export const useCreateWorkOrderReducer = (initialCreateWorkOrder: WIPCreateWorkO
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  const { workOrderQuery, getItemOrder } = useWorkOrderOrders(createWorkOrder.name);
+  const workOrderQueryDataRef = useFreshRef(workOrderQuery.data);
+
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+
   const proxy = useConst(
     () =>
       new Proxy<CreateWorkOrderDispatchProxy>({} as CreateWorkOrderDispatchProxy, {
         get: (target, prop) => (args: DiscriminatedUnionOmit<CreateWorkOrderAction, 'type'>) => {
+          // We must load the work order before we can modify it so we can make sure that we don't accidentally merge uuids with with a paid item\
+          // TODO: Maybe just pass the workorder instance into useCreateWorkOrderReducer
+          if (!workOrderQueryDataRef.current) {
+            toast.show('Cannot modify work order because it was not loaded successfully');
+            return;
+          }
+
           setHasUnsavedChanges(true);
-          dispatchCreateWorkOrder({ type: prop, ...args } as CreateWorkOrderAction);
+          dispatchCreateWorkOrder({ type: prop, ...args, getItemOrder } as CreateWorkOrderActionWithGetItemOrder);
         },
       }),
   );
@@ -65,8 +84,10 @@ export const useCreateWorkOrderReducer = (initialCreateWorkOrder: WIPCreateWorkO
 
 function createWorkOrderReducer(
   createWorkOrder: WIPCreateWorkOrder,
-  action: CreateWorkOrderAction,
+  action: CreateWorkOrderActionWithGetItemOrder,
 ): WIPCreateWorkOrder {
+  const { getItemOrder } = action;
+
   switch (action.type) {
     case 'setPartial':
     case 'set': {
@@ -84,7 +105,7 @@ function createWorkOrderReducer(
         ...action.charges.map(charge => ({ ...charge, workOrderItemUuid: action.item.uuid })),
       ];
 
-      const merged = getMergedItems(createWorkOrder.items, charges);
+      const merged = getMergedItems(createWorkOrder.items, charges, getItemOrder);
       const split = getSplitItems(merged, charges);
 
       return {
@@ -96,7 +117,7 @@ function createWorkOrderReducer(
 
     case 'updateItem': {
       const updated = createWorkOrder.items.map(item => (item.uuid === action.item.uuid ? action.item : item));
-      const merged = getMergedItems(updated, createWorkOrder.charges);
+      const merged = getMergedItems(updated, createWorkOrder.charges, getItemOrder);
       const split = getSplitItems(merged, createWorkOrder.charges);
 
       return {
@@ -106,7 +127,7 @@ function createWorkOrderReducer(
     }
 
     case 'addItems': {
-      const merged = getMergedItems([...createWorkOrder.items, ...action.items], createWorkOrder.charges);
+      const merged = getMergedItems([...createWorkOrder.items, ...action.items], createWorkOrder.charges, getItemOrder);
       const split = getSplitItems(merged, createWorkOrder.charges);
 
       return {
@@ -132,7 +153,12 @@ function createWorkOrderReducer(
   }
 }
 
-function shouldMergeItems(a: CreateWorkOrderItem, b: CreateWorkOrderItem, charges: CreateWorkOrderCharge[]) {
+function shouldMergeItems(
+  a: CreateWorkOrderItem,
+  b: CreateWorkOrderItem,
+  charges: CreateWorkOrderCharge[],
+  getItemOrder: GetItemOrder,
+) {
   if (a.productVariantId !== b.productVariantId) {
     return false;
   }
@@ -148,19 +174,21 @@ function shouldMergeItems(a: CreateWorkOrderItem, b: CreateWorkOrderItem, charge
     return false;
   }
 
-  // TODO: dont merge if the charge has an associated order line item - make sure that the reducer gets a list of uuids that are in orders
+  if (getItemOrder(a)?.type === 'ORDER' || getItemOrder(b)?.type === 'ORDER') {
+    return false;
+  }
 
   return true;
 }
 
-function getMergedItems(items: CreateWorkOrderItem[], charges: CreateWorkOrderCharge[]) {
+function getMergedItems(items: CreateWorkOrderItem[], charges: CreateWorkOrderCharge[], getItemOrder: GetItemOrder) {
   const merged: CreateWorkOrderItem[] = [];
 
   for (const item of items) {
     let found = false;
 
     for (const existing of merged) {
-      if (shouldMergeItems(item, existing, charges)) {
+      if (shouldMergeItems(item, existing, charges, getItemOrder)) {
         existing.quantity = (existing.quantity + item.quantity) as Int;
         found = true;
         break;

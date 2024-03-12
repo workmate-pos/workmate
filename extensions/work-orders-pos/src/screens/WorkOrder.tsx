@@ -33,8 +33,7 @@ import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
-import { useWorkOrderOrders } from '../hooks/use-work-order-item-order.js';
+import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
 
 export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
@@ -232,12 +231,9 @@ function WorkOrderItems({
 
                 if (type === 'mutable-service') {
                   router.push('ItemChargeConfig', {
-                    initialCharges: createWorkOrderCharges,
-                    // this is a new item so s'all good man
-                    readonlyItem: false,
-                    readonlyHourlyChargeUuids: [],
-                    readonlyFixedPriceChargeUuids: [],
                     item,
+                    initialCharges: createWorkOrderCharges,
+                    workOrderName: createWorkOrder.name,
                     onRemove: () => dispatch.removeItems({ items: [item] }),
                     onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
                   });
@@ -352,14 +348,15 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
   const productVariantIds = unique(createWorkOrder.items.map(item => item.productVariantId).filter(isNonNullable));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  const { workOrderQuery, orderByItemUuid, orderByFixedPriceLabourUuid, orderByHourlyLabourUuid } =
-    useWorkOrderOrders(createWorkOrder);
-
-  // TODO: include line item info here
+  const { workOrderQuery, getItemOrdersIncludingCharges } = useWorkOrderOrders(createWorkOrder.name);
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(Object.values(productVariantQueries).some(query => query.isLoading) || workOrderQuery.isLoading);
+  screen.setIsLoading(
+    workOrderQuery.isLoading ||
+      Object.values(productVariantQueries).some(query => query.isLoading) ||
+      workOrderQuery.isLoading,
+  );
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
@@ -373,10 +370,9 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
     .map(item => ({
       item,
       productVariant: productVariantQueries[item.productVariantId]?.data,
-      order: orderByItemUuid[item.uuid],
     }))
     .filter(({ productVariant }) => queryFilter(productVariant))
-    .map<ListRow>(({ item, productVariant, order }) => {
+    .map<ListRow>(({ item, productVariant }) => {
       const isMutableService = productVariant?.product.isMutableServiceItem ?? false;
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
       const hasCharges = charges.length > 0;
@@ -391,6 +387,8 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
         .multiply(BigDecimal.fromString(item.quantity.toFixed(0)))
         .add(BigDecimal.fromMoney(chargesPrice));
 
+      const orders = getItemOrdersIncludingCharges(item).filter(order => order.type === 'ORDER');
+
       return {
         id: item.uuid,
         leftSide: {
@@ -400,6 +398,7 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
             source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
             badge: (!isMutableService && !hasCharges) || item.quantity > 1 ? item.quantity : undefined,
           },
+          badges: unique(orders.map(order => order.name)).map(orderName => ({ text: orderName, variant: 'highlight' })),
         },
         rightSide: {
           label: currencyFormatter(totalPrice.toMoney()),
@@ -411,24 +410,11 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
             return;
           }
 
-          const readonly = order?.type === 'ORDER';
-
-          const readonlyHourlyChargeUuids = Object.entries(orderByHourlyLabourUuid)
-            .filter(([_, order]) => order?.type === 'ORDER')
-            .map(([uuid]) => uuid);
-
-          const readonlyFixedPriceChargeUuids = Object.entries(orderByFixedPriceLabourUuid)
-            .filter(([_, order]) => order?.type === 'ORDER')
-            .map(([uuid]) => uuid);
-
           if (hasCharges || isMutableService) {
             router.push('ItemChargeConfig', {
-              initialCharges: charges,
-              readonlyItem: readonly,
-              // TODO: Just pass work order name to check for readonly stuff
-              readonlyHourlyChargeUuids,
-              readonlyFixedPriceChargeUuids,
               item,
+              initialCharges: charges,
+              workOrderName: createWorkOrder.name,
               onRemove: () => dispatch.removeItems({ items: [item] }),
               onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
             });
@@ -436,18 +422,16 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
           }
 
           router.push('ItemConfig', {
-            readonly,
+            workOrderName: createWorkOrder.name,
             item,
             onRemove: () => dispatch.removeItems({ items: [item] }),
             onUpdate: item => dispatch.updateItem({ item }),
             onAssignLabour: item => {
               dispatch.updateItem({ item });
               router.push('ItemChargeConfig', {
+                item,
                 initialCharges: charges,
-                readonlyItem: readonly,
-                readonlyHourlyChargeUuids,
-                readonlyFixedPriceChargeUuids,
-                item: item,
+                workOrderName: createWorkOrder.name,
                 onRemove: () => dispatch.removeItems({ items: [item] }),
                 onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
               });

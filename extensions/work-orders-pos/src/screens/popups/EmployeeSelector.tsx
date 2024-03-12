@@ -6,14 +6,15 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useState } from 'react';
-import { useScreen } from '@teifi-digital/pos-tools/router';
 
 export function EmployeeSelector({
   selected: initialSelected,
+  disabled = [],
   onSelect,
   onDeselect,
 }: {
   selected: ID[];
+  disabled?: ID[];
   onSelect: (id: ID) => void;
   onDeselect: (id: ID) => void;
 }) {
@@ -24,7 +25,7 @@ export function EmployeeSelector({
   const employeesQuery = useEmployeesQuery({ fetch, params: { query } });
   const employees = employeesQuery.data?.pages.flat() ?? [];
 
-  const rows = getEmployeeRows(employees, selected, setSelected, onSelect, onDeselect);
+  const rows = getEmployeeRows(employees, selected, disabled, setSelected, onSelect, onDeselect);
 
   return (
     <ScrollView>
@@ -70,6 +71,7 @@ export function EmployeeSelector({
 function getEmployeeRows(
   employees: Employee[],
   selectedEmployeeIds: ID[],
+  disabledEmployeeIds: ID[],
   setSelected: (selectedEmployeeIds: ID[]) => void,
   onSelect: (id: ID) => void,
   onDeselect: (id: ID) => void,
@@ -102,6 +104,7 @@ function getEmployeeRows(
     rightSide: {
       toggleSwitch: {
         value: selectedEmployeeIds.includes(id),
+        disabled: disabledEmployeeIds.includes(id),
       },
     },
   }));

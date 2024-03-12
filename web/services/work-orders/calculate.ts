@@ -87,7 +87,7 @@ export async function calculateDraftOrder(
     const existingLineItems = await db.shopifyOrder.getLineItemsByIds({ lineItemIds: existingShopifyOrderLineItemIds });
 
     const orderIds = unique(existingLineItems.map(li => li.orderId));
-    const existingOrders = await db.shopifyOrder.getMany({ orderIds });
+    const existingOrders = orderIds.length ? await db.shopifyOrder.getMany({ orderIds }) : [];
     const existingOrdersByOrderId = indexBy(existingOrders, order => order.orderId);
 
     for (const lineItem of existingLineItems) {

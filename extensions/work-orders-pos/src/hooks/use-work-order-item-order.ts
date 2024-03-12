@@ -1,46 +1,35 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
-import { WIPCreateWorkOrder } from '../create-work-order/reducer.js';
 
-export function useWorkOrderOrders(createWorkOrder: WIPCreateWorkOrder) {
+export function useWorkOrderItemOrder(name: string, itemUuid: string) {
   const fetch = useAuthenticatedFetch();
-  const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
+  const workOrderQuery = useWorkOrderQuery({ fetch, name });
   const workOrder = workOrderQuery.data?.workOrder;
 
-  const itemUuids = createWorkOrder.items.map(item => item.uuid);
-  const hourlyLabourUuids = createWorkOrder.charges
-    .filter(charge => charge.type === 'hourly-labour')
-    .map(charge => charge.uuid);
-  const fixedPriceLabourUuids = createWorkOrder.charges
-    .filter(charge => charge.type === 'fixed-price-labour')
-    .map(charge => charge.uuid);
+  const item = workOrder?.items.find(item => item.uuid === itemUuid);
+  const order = workOrder?.orders.find(order => order.id === item?.shopifyOrderLineItem?.orderId) ?? null;
 
-  return {
-    workOrderQuery,
+  return { workOrderQuery, order };
+}
 
-    orderByItemUuid: Object.fromEntries(
-      itemUuids.map(itemUuid => {
-        const item = workOrder?.items.find(item => item.uuid === itemUuid);
-        const order = workOrder?.orders.find(order => order.id === item?.shopifyOrderLineItem?.orderId) ?? null;
-        return [itemUuid, order];
-      }),
-    ),
+export function useWorkOrderHourlyLabourChargeOrder(name: string, chargeUuid: string) {
+  const fetch = useAuthenticatedFetch();
+  const workOrderQuery = useWorkOrderQuery({ fetch, name });
+  const workOrder = workOrderQuery.data?.workOrder;
 
-    orderByHourlyLabourUuid: Object.fromEntries(
-      hourlyLabourUuids.map(hourlyLabourUuid => {
-        const hourlyLabour = workOrder?.charges.find(charge => charge.uuid === hourlyLabourUuid);
-        const order = workOrder?.orders.find(order => order.id === hourlyLabour?.shopifyOrderLineItem?.orderId) ?? null;
-        return [hourlyLabourUuid, order];
-      }),
-    ),
+  const charge = workOrder?.charges.find(charge => charge.uuid === chargeUuid);
+  const order = workOrder?.orders.find(order => order.id === charge?.shopifyOrderLineItem?.orderId) ?? null;
 
-    orderByFixedPriceLabourUuid: Object.fromEntries(
-      fixedPriceLabourUuids.map(fixedPriceLabourUuid => {
-        const fixedPriceLabour = workOrder?.charges.find(charge => charge.uuid === fixedPriceLabourUuid);
-        const order =
-          workOrder?.orders.find(order => order.id === fixedPriceLabour?.shopifyOrderLineItem?.orderId) ?? null;
-        return [fixedPriceLabourUuid, order];
-      }),
-    ),
-  };
+  return { workOrderQuery, order };
+}
+
+export function useWorkOrderFixedPriceLabourChargeOrder(name: string, chargeUuid: string) {
+  const fetch = useAuthenticatedFetch();
+  const workOrderQuery = useWorkOrderQuery({ fetch, name });
+  const workOrder = workOrderQuery.data?.workOrder;
+
+  const charge = workOrder?.charges.find(charge => charge.uuid === chargeUuid);
+  const order = workOrder?.orders.find(order => order.id === charge?.shopifyOrderLineItem?.orderId) ?? null;
+
+  return { workOrderQuery, order };
 }

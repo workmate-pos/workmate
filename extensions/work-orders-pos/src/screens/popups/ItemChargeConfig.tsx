@@ -1,4 +1,4 @@
-import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Badge, Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { CreateWorkOrderItem, CreateWorkOrderCharge } from '../../types.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -17,19 +17,16 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
 
 export function ItemChargeConfig({
-  readonlyItem,
-  readonlyFixedPriceChargeUuids,
-  readonlyHourlyChargeUuids,
   item,
   initialCharges,
+  workOrderName,
   onRemove,
   onUpdate,
 }: {
-  readonlyItem: boolean;
-  readonlyHourlyChargeUuids: string[];
-  readonlyFixedPriceChargeUuids: string[];
+  workOrderName: string | null;
   item: CreateWorkOrderItem;
   initialCharges: CreateWorkOrderCharge[];
   /**
@@ -51,21 +48,28 @@ export function ItemChargeConfig({
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
 
-  const settings = useSettingsQuery({ fetch })?.data?.settings;
-
+  const settingsQuery = useSettingsQuery({ fetch });
   const productVariantQuery = useProductVariantQuery({ fetch, id: item?.productVariantId ?? null });
+  const { workOrderQuery, getChargeOrder, getItemOrder } = useWorkOrderOrders(workOrderName);
+
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
+  const settings = settingsQuery?.data?.settings;
+
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(name ?? 'Service');
-  screen.setIsLoading(productVariantQuery.isLoading);
+  screen.setIsLoading(productVariantQuery.isLoading || settingsQuery.isLoading || workOrderQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   if (!productVariant) {
+    return null;
+  }
+
+  if (!settings) {
     return null;
   }
 
@@ -76,28 +80,26 @@ export function ItemChargeConfig({
     ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
   ];
 
-  const employeeAssignmentsEnabled = settings?.chargeSettings.employeeAssignments;
+  const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
   const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabour.length > 0;
 
   const basePrice = hasBasePrice ? productVariant.price : BigDecimal.ZERO.toMoney();
   const chargesPrice = getTotalPriceForCharges(charges);
   const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(chargesPrice)).toMoney();
 
-  function chargeIsReadonly(charge: Pick<CreateWorkOrderCharge, 'type' | 'uuid'> | null) {
-    return (
-      charge !== null &&
-      ((charge.type === 'hourly-labour' && readonlyHourlyChargeUuids.includes(charge.uuid)) ||
-        readonlyFixedPriceChargeUuids.includes(charge.uuid))
-    );
-  }
+  const itemOrder = getItemOrder(item);
 
   return (
     <ScrollView>
+      <Stack direction={'vertical'} spacing={1}>
+        <Text variant={'headingLarge'}>{name}</Text>
+        {itemOrder?.type === 'ORDER' && <Badge text={itemOrder.name} variant={'highlight'} />}
+      </Stack>
       <Stack direction={'vertical'} paddingVertical={'Small'} spacing={5}>
         <Text variant={'headingLarge'}>Labour Charge</Text>
         <SegmentedLabourControl
           types={['none', 'hourly-labour', 'fixed-price-labour']}
-          disabled={chargeIsReadonly(generalLabour)}
+          disabled={getChargeOrder(generalLabour)?.type === 'ORDER'}
           charge={generalLabour}
           onChange={charge =>
             charge ? setGeneralLabour({ ...charge, uuid: uuid(), employeeId: null }) : setGeneralLabour(charge)
@@ -114,6 +116,9 @@ export function ItemChargeConfig({
                 onPress={() =>
                   router.push('EmployeeSelector', {
                     selected: employeeLabour.map(e => e.employeeId),
+                    disabled: employeeLabour
+                      .filter(charge => getChargeOrder(charge)?.type === 'ORDER')
+                      .map(e => e.employeeId),
                     onSelect: employeeId => {
                       setHasUnsavedChanges(true);
 
@@ -130,7 +135,7 @@ export function ItemChargeConfig({
                     },
                     onDeselect: employeeId => {
                       setHasUnsavedChanges(true);
-                      setEmployeeLabour(employeeLabour.filter(l => l.employeeId !== employeeId));
+                      setEmployeeLabour(current => current.filter(l => l.employeeId !== employeeId));
                     },
                   })
                 }
@@ -139,8 +144,7 @@ export function ItemChargeConfig({
 
               <EmployeeLabourList
                 charges={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
-                readonlyHourlyChargeUuids={readonlyHourlyChargeUuids}
-                readonlyFixedPriceChargeUuids={readonlyFixedPriceChargeUuids}
+                workOrderName={workOrderName}
                 onClick={labour =>
                   router.push('EmployeeLabourConfig', {
                     labour,
@@ -186,7 +190,7 @@ export function ItemChargeConfig({
         <Button
           title="Remove"
           type="destructive"
-          isDisabled={readonlyItem}
+          isDisabled={getItemOrder(item)?.type === 'ORDER'}
           onPress={() => {
             onRemove();
             router.popCurrent();

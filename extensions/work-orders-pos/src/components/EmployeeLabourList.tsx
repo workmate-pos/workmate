@@ -7,18 +7,18 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { CreateWorkOrderCharge } from '../types.js';
+import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 /**
  * A list of clickable EmployeeLabour items.
  */
 export function EmployeeLabourList({
+  workOrderName,
   charges,
   onClick,
-  readonlyFixedPriceChargeUuids,
-  readonlyHourlyChargeUuids,
 }: {
-  readonlyHourlyChargeUuids: string[];
-  readonlyFixedPriceChargeUuids: string[];
+  workOrderName: string | null;
   charges: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>[];
   onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>) => void;
 }) {
@@ -26,6 +26,10 @@ export function EmployeeLabourList({
 
   const fetch = useAuthenticatedFetch();
   const employeeQueries = useEmployeeQueries({ fetch, ids: charges.map(e => e.employeeId).filter(isNonNullable) });
+  const { workOrderQuery, getChargeOrder } = useWorkOrderOrders(workOrderName);
+
+  const screen = useScreen();
+  screen.setIsLoading(workOrderQuery.isLoading || Object.values(employeeQueries).some(q => q.isLoading));
 
   if (charges.length === 0) {
     return (
@@ -34,14 +38,6 @@ export function EmployeeLabourList({
           No employees assigned
         </Text>
       </Stack>
-    );
-  }
-
-  function chargeIsReadonly(charge: Pick<CreateWorkOrderCharge, 'type' | 'uuid'> | null) {
-    return (
-      charge !== null &&
-      ((charge.type === 'hourly-labour' && readonlyHourlyChargeUuids.includes(charge.uuid)) ||
-        readonlyFixedPriceChargeUuids.includes(charge.uuid))
     );
   }
 
@@ -65,10 +61,16 @@ export function EmployeeLabourList({
 
         return {
           id: charge.employeeId,
-          onPress: chargeIsReadonly(charge) ? undefined : () => onClick(charge),
-          leftSide,
+          onPress: getChargeOrder(charge)?.type === 'ORDER' ? undefined : () => onClick(charge),
+          leftSide: {
+            ...leftSide,
+            badges: [getChargeOrder(charge)]
+              .filter(isNonNullable)
+              .filter(order => order?.type === 'ORDER')
+              .map(order => ({ text: order.name, variant: 'highlight' })),
+          },
           rightSide: {
-            showChevron: !chargeIsReadonly(charge),
+            showChevron: getChargeOrder(charge)?.type !== 'ORDER',
             label: currencyFormatter(price),
           },
         };

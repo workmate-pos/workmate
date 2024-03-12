@@ -1,14 +1,12 @@
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { WorkOrder, WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
+import { WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -17,6 +15,7 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
 
 /**
  * Page that allows initializing payments for line items.
@@ -25,7 +24,7 @@ import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveS
 export function PaymentOverview({ name }: { name: string }) {
   const fetch = useAuthenticatedFetch();
 
-  const workOrderQuery = useWorkOrderQuery({ fetch, name });
+  const { workOrderQuery, getItemOrder, getChargeOrder } = useWorkOrderOrders(name);
   const workOrder = workOrderQuery.data?.workOrder;
 
   const settingsQuery = useSettingsQuery({ fetch });
@@ -34,18 +33,12 @@ export function PaymentOverview({ name }: { name: string }) {
   const [selectedItems, setSelectedItems] = useState<WorkOrderItem[]>([]);
   const [selectedCharges, setSelectedCharges] = useState<WorkOrderCharge[]>([]);
 
-  // TODO: Use work order data to determine which items/charges can still be paid, then present the list using, showing price / order name if applicable
-  // getWorkOrderLineItems()
-  // TODO: Make sure to sort the list such that custom sales for some item appear below the respective item
-
   const paymentHandler = usePaymentHandler();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const screen = useScreen();
   screen.setTitle(`Payment Overview - ${name}`);
   screen.setIsLoading(workOrderQuery.isLoading || settingsQuery.isLoading);
-
-  // TODO : Show error here
 
   if (workOrderQuery.isError) {
     return (
@@ -87,7 +80,7 @@ export function PaymentOverview({ name }: { name: string }) {
   };
 
   const rows = useItemRows(
-    workOrder,
+    workOrder.name,
     selectedItems,
     selectedCharges,
     setSelectedItems,
@@ -95,11 +88,8 @@ export function PaymentOverview({ name }: { name: string }) {
     paymentHandler.isLoading,
   );
 
-  const hasOrder = (thing: { shopifyOrderLineItem: { orderId: ID } | null }) =>
-    workOrder.orders.some(order => order.type === 'ORDER' && order.id === thing.shopifyOrderLineItem?.orderId);
-
-  const selectableItems = workOrder.items.filter(item => !hasOrder(item));
-  const selectableCharges = workOrder.charges.filter(charge => !hasOrder(charge));
+  const selectableItems = workOrder.items.filter(item => getItemOrder(item)?.type !== 'ORDER');
+  const selectableCharges = workOrder.charges.filter(charge => getChargeOrder(charge)?.type !== 'ORDER');
 
   // TODO: Display total
 
@@ -141,30 +131,34 @@ export function PaymentOverview({ name }: { name: string }) {
 }
 
 function useItemRows(
-  workOrder: WorkOrder,
+  workOrderName: string,
   selectedItems: WorkOrderItem[],
   selectedCharges: WorkOrderCharge[],
   setSelectedItems: (items: WorkOrderItem[]) => void,
   setSelectedCharges: (charges: WorkOrderCharge[]) => void,
-  isLoading: boolean,
+  isLoadingPayment: boolean,
 ) {
   const fetch = useAuthenticatedFetch();
   const currencyFormatter = useCurrencyFormatter();
 
-  const productVariantIds = unique(workOrder.items.map(item => item.productVariantId));
+  const { workOrderQuery, getItemOrder, getChargeOrder } = useWorkOrderOrders(workOrderName);
+  const workOrder = workOrderQuery.data?.workOrder;
+
+  const productVariantIds = unique(workOrder?.items?.map(item => item.productVariantId) ?? []);
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  const employeeIds = unique(workOrder.charges.map(charge => charge.employeeId).filter(isNonNullable));
+  const employeeIds = unique(workOrder?.charges.map(charge => charge.employeeId).filter(isNonNullable) ?? []);
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
+
+  const screen = useScreen();
+  screen.setIsLoading(workOrderQuery.isLoading || Object.values(employeeQueries).some(q => q.isLoading));
+
+  if (!workOrder) {
+    return [];
+  }
 
   const itemRows = workOrder.items.flatMap<ListRow>(item => {
     const rows: ListRow[] = [];
-
-    // TODO: Fetch all orders used for this item
-
-    const itemOrder = workOrder.orders.find(
-      order => order.type === 'ORDER' && order.id === item.shopifyOrderLineItem?.orderId,
-    );
 
     const itemCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
     const hasCharges = itemCharges.length > 0;
@@ -176,8 +170,6 @@ function useItemRows(
     const basePrice = isMutableService ? BigDecimal.ZERO.toMoney() : productVariant?.price ?? BigDecimal.ZERO.toMoney();
     const totalPrice = BigDecimal.fromMoney(basePrice).multiply(BigDecimal.fromString(item.quantity.toFixed(0)));
 
-    // TODO: Loading indicator both here and in the WorkOrder page (just loading text instead of items)
-
     rows.push({
       id: `item-${item.uuid}`,
       leftSide: {
@@ -186,12 +178,15 @@ function useItemRows(
           source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
           badge: (!isMutableService && !hasCharges) || item.quantity > 1 ? item.quantity : undefined,
         },
-        badges: itemOrder?.name ? [{ variant: 'highlight', text: itemOrder.name }] : undefined,
+        badges: [getItemOrder(item)]
+          .filter(isNonNullable)
+          .filter(order => order?.type === 'ORDER')
+          .map(order => ({ text: order.name, variant: 'highlight' })),
       },
       rightSide: {
         toggleSwitch: {
           value: selectedItems.includes(item),
-          disabled: isLoading || itemOrder !== undefined,
+          disabled: isLoadingPayment || getItemOrder(item)?.type === 'ORDER',
         },
         label: currencyFormatter(totalPrice.toMoney()),
       },
@@ -214,10 +209,6 @@ function useItemRows(
   const unlinkedChargeRows = unlinkedCharges.map<ListRow>(charge => getChargeRow(charge));
 
   function getChargeRow(charge: WorkOrderCharge): ListRow {
-    const itemOrder = workOrder.orders.find(
-      order => order.type === 'ORDER' && order.id === charge.shopifyOrderLineItem?.orderId,
-    );
-
     const employeeQuery = charge.employeeId ? employeeQueries[charge.employeeId] : undefined;
     const employee = employeeQuery?.data;
 
@@ -225,13 +216,16 @@ function useItemRows(
       id: `charge-${charge.type}-${charge.uuid}`,
       leftSide: {
         label: charge.name,
-        subtitle: [charge.name, charge.employeeId ? employee?.name ?? 'Unknown employee' : undefined],
-        badges: itemOrder?.name ? [{ variant: 'highlight', text: itemOrder.name }] : undefined,
+        subtitle: charge.employeeId ? [employee?.name ?? 'Unknown employee'] : undefined,
+        badges: [getChargeOrder(charge)]
+          .filter(isNonNullable)
+          .filter(order => order?.type === 'ORDER')
+          .map(order => ({ text: order.name, variant: 'highlight' })),
       },
       rightSide: {
         toggleSwitch: {
           value: selectedCharges.includes(charge),
-          disabled: isLoading || itemOrder !== undefined,
+          disabled: isLoadingPayment || getChargeOrder(charge)?.type === 'ORDER',
         },
         label: currencyFormatter(getTotalPriceForCharges([charge])),
       },

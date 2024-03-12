@@ -26,8 +26,8 @@ Then, create symlinks to .npmrc for all subprojects:
 ```bash
 cd web && ln -s ../.npmrc .
 cd frontend && ln -s ../../.npmrc .
-cd ../../common && ln -s ../../.npmrc .
-cd ../extensions && ln -s ../../.npmrc .
+cd ../../common && ln -s ../.npmrc .
+cd ../extensions && ln -s ../.npmrc .
 cd common-pos && ln -s ../../.npmrc .
 cd ../work-orders-pos && ln -s ../../.npmrc .
 cd ../purchase-orders-pos && ln -s ../../.npmrc .
@@ -37,8 +37,8 @@ Do the same for the .env file:
 ```bash
 cd web && ln -s ../.env .
 cd frontend && ln -s ../../.env .
-cd ../../common && ln -s ../../.env .
-cd ../extensions && ln -s ../../.env .
+cd ../../common && ln -s ../.env .
+cd ../extensions && ln -s ../.env .
 cd common-pos && ln -s ../../.env .
 cd ../work-orders-pos && ln -s ../../.env .
 cd ../purchase-orders-pos && ln -s ../../.env .

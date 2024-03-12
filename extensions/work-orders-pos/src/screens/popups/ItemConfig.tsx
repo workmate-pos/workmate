@@ -9,15 +9,16 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
+import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
 
 export function ItemConfig({
-  readonly,
+  workOrderName,
   item: initialItem,
   onRemove,
   onUpdate,
   onAssignLabour,
 }: {
-  readonly: boolean;
+  workOrderName: string | null;
   item: CreateWorkOrderItem;
   onRemove: () => void;
   onUpdate: (lineItem: CreateWorkOrderItem) => void;
@@ -29,6 +30,8 @@ export function ItemConfig({
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
   const productVariantQuery = useProductVariantQuery({ fetch, id: item?.productVariantId ?? null });
+  const { workOrderQuery, getItemOrder } = useWorkOrderOrders(workOrderName);
+
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
@@ -37,12 +40,14 @@ export function ItemConfig({
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(name ?? 'Product');
-  screen.setIsLoading(productVariantQuery.isLoading);
+  screen.setIsLoading(productVariantQuery.isLoading || workOrderQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   if (!productVariant) {
     return null;
   }
+
+  const readonly = getItemOrder(item)?.type === 'ORDER';
 
   return (
     <ScrollView>
