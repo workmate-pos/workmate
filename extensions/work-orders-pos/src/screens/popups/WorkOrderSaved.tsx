@@ -25,7 +25,7 @@ export function WorkOrderSaved({ workOrder }: { workOrder: WorkOrder }) {
             title={'Manage payments'}
             onPress={async () => {
               await router.popCurrent();
-              router.push('PaymentOverview', {});
+              router.push('PaymentOverview', { name: workOrder.name });
             }}
           />
         </Stack>

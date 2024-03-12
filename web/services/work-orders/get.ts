@@ -3,12 +3,21 @@ import { db } from '../db/db.js';
 import { DateTime, Int } from '../gql/queries/generated/schema.js';
 import { escapeLike } from '../db/like.js';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
-import { WorkOrder, WorkOrderCharge, WorkOrderInfo, WorkOrderItem } from './types.js';
-import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import {
+  ShopifyOrderLineItem,
+  WorkOrder,
+  WorkOrderCharge,
+  WorkOrderInfo,
+  WorkOrderItem,
+  WorkOrderOrder,
+} from './types.js';
+import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { groupByKey, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { groupByKey, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
@@ -29,18 +38,50 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     note: workOrder.note,
     items: getWorkOrderItems(workOrder.id),
     charges: getWorkOrderCharges(workOrder.id),
+    orders: getWorkOrderOrders(workOrder.id),
   });
+}
+
+async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string, ShopifyOrderLineItem>> {
+  const lineItems = lineItemIds.length ? await db.shopifyOrder.getLineItemsByIds({ lineItemIds }) : [];
+  return indexByMap(
+    lineItems,
+    lineItem => lineItem.lineItemId,
+    lineItem => {
+      assertGid(lineItem.lineItemId);
+      assertGid(lineItem.orderId);
+      assertMoney(lineItem.discountedUnitPrice);
+
+      return {
+        id: lineItem.lineItemId,
+        orderId: lineItem.orderId,
+        quantity: lineItem.quantity as Int,
+        discountedUnitPrice: lineItem.discountedUnitPrice,
+      };
+    },
+  );
 }
 
 async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> {
   const items = await db.workOrder.getItems({ workOrderId });
+
+  const lineItemIds = unique(
+    items
+      .map(item => {
+        assertGidOrNull(item.shopifyOrderLineItemId);
+        return item.shopifyOrderLineItemId;
+      })
+      .filter(isNonNullable),
+  );
+  const lineItemById = await getLineItemsById(lineItemIds);
+
   return items.map<WorkOrderItem>(item => {
     assertGidOrNull(item.shopifyOrderLineItemId);
     assertGid(item.productVariantId);
 
     return {
       uuid: item.uuid,
-      shopifyOrderLineItemId: item.shopifyOrderLineItemId,
+      shopifyOrderLineItem: item.shopifyOrderLineItemId ? lineItemById[item.shopifyOrderLineItemId] ?? never() : null,
       productVariantId: item.productVariantId,
       quantity: item.quantity as Int,
       absorbCharges: item.absorbCharges,
@@ -54,6 +95,16 @@ async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge
     db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
   ]);
 
+  const lineItemIds = unique(
+    [...fixedPriceLabour, ...hourlyLabour]
+      .map(element => {
+        assertGidOrNull(element.shopifyOrderLineItemId);
+        return element.shopifyOrderLineItemId;
+      })
+      .filter(isNonNullable),
+  );
+  const lineItemById = await getLineItemsById(lineItemIds);
+
   return [
     ...fixedPriceLabour.map<WorkOrderCharge>(charge => {
       assertGidOrNull(charge.shopifyOrderLineItemId);
@@ -64,7 +115,9 @@ async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge
         type: 'fixed-price-labour',
         uuid: charge.uuid,
         workOrderItemUuid: charge.workOrderItemUuid,
-        shopifyOrderLineItemId: charge.shopifyOrderLineItemId,
+        shopifyOrderLineItem: charge.shopifyOrderLineItemId
+          ? lineItemById[charge.shopifyOrderLineItemId] ?? never()
+          : null,
         name: charge.name,
         amount: charge.amount,
         employeeId: charge.employeeId,
@@ -80,7 +133,9 @@ async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge
         type: 'hourly-labour',
         uuid: charge.uuid,
         workOrderItemUuid: charge.workOrderItemUuid,
-        shopifyOrderLineItemId: charge.shopifyOrderLineItemId,
+        shopifyOrderLineItem: charge.shopifyOrderLineItemId
+          ? lineItemById[charge.shopifyOrderLineItemId] ?? never()
+          : null,
         name: charge.name,
         rate: charge.rate,
         hours: charge.hours,
@@ -88,6 +143,20 @@ async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge
       };
     }),
   ];
+}
+
+async function getWorkOrderOrders(workOrderId: number): Promise<WorkOrderOrder[]> {
+  const relatedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
+
+  return relatedOrders.map<WorkOrderOrder>(order => {
+    assertGid(order.orderId);
+
+    return {
+      id: order.orderId,
+      name: order.name,
+      type: order.orderType,
+    };
+  });
 }
 
 /**

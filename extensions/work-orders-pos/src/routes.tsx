@@ -8,9 +8,9 @@ import { OrderPreview } from './screens/popups/OrderPreview.js';
 import { CustomerSelector } from './screens/popups/CustomerSelector.js';
 import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
 import { ServiceSelector } from './screens/popups/ServiceSelector.js';
-import { ProductLineItemConfig } from './screens/popups/ProductLineItemConfig.js';
+import { ItemConfig } from './screens/popups/ItemConfig.js';
 import { EmployeeLabourConfig } from './screens/popups/EmployeeLabourConfig.js';
-import { LabourLineItemConfig } from './screens/popups/LabourLineItemConfig.js';
+import { ItemChargeConfig } from './screens/popups/ItemChargeConfig.js';
 import { WorkOrder } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { PaymentOverview } from './screens/popups/PaymentOverview.js';
@@ -63,17 +63,17 @@ export const { Router, useRouter } = createRouter(
       title: 'Select Service',
       Component: ServiceSelector,
     },
-    ProductLineItemConfig: {
+    ItemConfig: {
       title: 'Line item config',
-      Component: ProductLineItemConfig,
+      Component: ItemConfig,
     },
     EmployeeLabourConfig: {
       title: 'Employee config',
       Component: EmployeeLabourConfig,
     },
-    LabourLineItemConfig: {
+    ItemChargeConfig: {
       title: 'Labour line item config',
-      Component: LabourLineItemConfig,
+      Component: ItemChargeConfig,
     },
     WorkOrder: {
       title: 'Work order',

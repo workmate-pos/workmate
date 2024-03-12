@@ -1,10 +1,15 @@
 import { useExtensionApi, useStatefulSubscribableCart } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useRef, useState } from 'react';
-import { WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { SetLineItemPropertiesInput } from '@shopify/retail-ui-extensions';
-import { getWorkOrderLineItems, getWorkOrderOrderCustomAttributes } from '@work-orders/work-order-shopify-order';
+import {
+  getWorkOrderLineItems,
+  getWorkOrderOrderCustomAttributes,
+  WorkOrderItem,
+} from '@work-orders/work-order-shopify-order';
+import { WorkOrderCharge } from '@web/services/work-orders/types.js';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
@@ -26,7 +31,7 @@ export const usePaymentHandler = () => {
   }: {
     workOrderName: string;
     items: WorkOrderItem[];
-    charges: WorkOrderCharge[];
+    charges: DiscriminatedUnionOmit<WorkOrderCharge, 'shopifyOrderLineItem'>[];
     customerId: ID;
     labourSku: string;
   }) => {

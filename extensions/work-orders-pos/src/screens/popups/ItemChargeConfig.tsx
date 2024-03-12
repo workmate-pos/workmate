@@ -18,52 +18,46 @@ import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
-export function LabourLineItemConfig({
-  readonly,
-  hasBasePrice,
-  lineItem,
-  labour: initialLabour,
+export function ItemChargeConfig({
+  readonlyItem,
+  readonlyFixedPriceChargeUuids,
+  readonlyHourlyChargeUuids,
+  item,
+  initialCharges,
   onRemove,
   onUpdate,
 }: {
-  readonly: boolean;
+  readonlyItem: boolean;
+  readonlyHourlyChargeUuids: string[];
+  readonlyFixedPriceChargeUuids: string[];
+  item: CreateWorkOrderItem;
+  initialCharges: CreateWorkOrderCharge[];
   /**
-   * Whether to include the product variant price in the shown price.
-   * This should be false for mutable services, as they have no base price.
+   * Remove the item from the work order.
    */
-  hasBasePrice: boolean;
-  lineItem: CreateWorkOrderItem;
-  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[];
   onRemove: () => void;
+  /**
+   * Override the charges for this line item.
+   */
   onUpdate: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[]) => void;
 }) {
-  const [employeeLabour, setEmployeeLabour] = useState(initialLabour.filter(hasNonNullableProperty('employeeId')));
-  const [generalLabour, setGeneralLabour] = useState(extractInitialGeneralLabour(initialLabour));
+  const initialItemCharges = initialCharges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
+
+  const [employeeLabour, setEmployeeLabour] = useState(initialItemCharges.filter(hasNonNullableProperty('employeeId')));
+  const [generalLabour, setGeneralLabour] = useState(extractInitialGeneralLabour(initialItemCharges));
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
+
   const settings = useSettingsQuery({ fetch })?.data?.settings;
-  const productVariantQuery = useProductVariantQuery({ fetch, id: lineItem?.productVariantId ?? null });
+
+  const productVariantQuery = useProductVariantQuery({ fetch, id: item?.productVariantId ?? null });
+  const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
-
-  const labour = [
-    ...employeeLabour,
-    ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
-  ];
-
-  const employeeAssignmentsEnabled = settings?.chargeSettings.employeeAssignments;
-  const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabour.length > 0;
-
-  const labourPrice = getTotalPriceForCharges(labour);
-
-  const basePrice = productVariant && hasBasePrice ? productVariant.price : BigDecimal.ZERO.toMoney();
-  const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(labourPrice)).toMoney();
-
-  const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
   const router = useRouter();
   const screen = useScreen();
@@ -71,13 +65,39 @@ export function LabourLineItemConfig({
   screen.setIsLoading(productVariantQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
+  if (!productVariant) {
+    return null;
+  }
+
+  const hasBasePrice = !productVariant.product.isMutableServiceItem;
+
+  const charges = [
+    ...employeeLabour,
+    ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
+  ];
+
+  const employeeAssignmentsEnabled = settings?.chargeSettings.employeeAssignments;
+  const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabour.length > 0;
+
+  const basePrice = hasBasePrice ? productVariant.price : BigDecimal.ZERO.toMoney();
+  const chargesPrice = getTotalPriceForCharges(charges);
+  const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(chargesPrice)).toMoney();
+
+  function chargeIsReadonly(charge: Pick<CreateWorkOrderCharge, 'type' | 'uuid'> | null) {
+    return (
+      charge !== null &&
+      ((charge.type === 'hourly-labour' && readonlyHourlyChargeUuids.includes(charge.uuid)) ||
+        readonlyFixedPriceChargeUuids.includes(charge.uuid))
+    );
+  }
+
   return (
     <ScrollView>
       <Stack direction={'vertical'} paddingVertical={'Small'} spacing={5}>
         <Text variant={'headingLarge'}>Labour Charge</Text>
         <SegmentedLabourControl
           types={['none', 'hourly-labour', 'fixed-price-labour']}
-          disabled={readonly}
+          disabled={chargeIsReadonly(generalLabour)}
           charge={generalLabour}
           onChange={charge =>
             charge ? setGeneralLabour({ ...charge, uuid: uuid(), employeeId: null }) : setGeneralLabour(charge)
@@ -103,6 +123,7 @@ export function LabourLineItemConfig({
                         uuid: uuid(),
                         name: settings?.labourLineItemName || 'Labour',
                         amount: BigDecimal.ZERO.toMoney(),
+                        workOrderItemUuid: item.uuid,
                       } as const;
 
                       setEmployeeLabour(current => [...current, defaultLabourCharge]);
@@ -113,12 +134,13 @@ export function LabourLineItemConfig({
                     },
                   })
                 }
-                isDisabled={readonly || !employeeAssignmentsEnabled}
+                isDisabled={!employeeAssignmentsEnabled}
               />
 
               <EmployeeLabourList
-                labour={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
-                readonly={readonly}
+                charges={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
+                readonlyHourlyChargeUuids={readonlyHourlyChargeUuids}
+                readonlyFixedPriceChargeUuids={readonlyFixedPriceChargeUuids}
                 onClick={labour =>
                   router.push('EmployeeLabourConfig', {
                     labour,
@@ -151,7 +173,7 @@ export function LabourLineItemConfig({
               </Text>
             )}
             <Text variant={'headingSmall'} color={'TextSubdued'}>
-              Labour Price: {currencyFormatter(labourPrice)}
+              Labour Price: {currencyFormatter(chargesPrice)}
             </Text>
             <Text variant={'headingSmall'} color={'TextSubdued'}>
               Total Price: {currencyFormatter(totalPrice)}
@@ -161,27 +183,22 @@ export function LabourLineItemConfig({
       </Stack>
 
       <Stack direction="vertical" flex={1} alignment="space-evenly">
-        {readonly && <Button title="Back" onPress={() => router.popCurrent()} />}
-        {!readonly && (
-          <>
-            <Button
-              title="Remove"
-              type="destructive"
-              disabled={!lineItem}
-              onPress={() => {
-                onRemove();
-                router.popCurrent();
-              }}
-            />
-            <Button
-              title="Save"
-              onPress={() => {
-                onUpdate([...employeeLabour, ...(generalLabour ? [generalLabour] : [])]);
-                router.popCurrent();
-              }}
-            />
-          </>
-        )}
+        <Button
+          title="Remove"
+          type="destructive"
+          isDisabled={readonlyItem}
+          onPress={() => {
+            onRemove();
+            router.popCurrent();
+          }}
+        />
+        <Button
+          title="Save"
+          onPress={() => {
+            onUpdate([...employeeLabour, ...(generalLabour ? [generalLabour] : [])]);
+            router.popCurrent();
+          }}
+        />
       </Stack>
     </ScrollView>
   );

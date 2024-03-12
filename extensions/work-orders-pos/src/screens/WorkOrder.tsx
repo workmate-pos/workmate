@@ -33,6 +33,8 @@ import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
+import { useWorkOrderOrders } from '../hooks/use-work-order-item-order.js';
 
 export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
@@ -97,14 +99,24 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
         <ResponsiveGrid columns={2}>
           <FormButton
             title={'Manage payments'}
-            type={'primary'}
+            type={'basic'}
             action={'button'}
-            onPress={() =>
-              router.push('PaymentOverview', {
-                workOrderId: createWorkOrder.name,
-              })
-            }
+            disabled={!createWorkOrder.name || hasUnsavedChanges}
+            onPress={() => {
+              if (createWorkOrder.name) {
+                router.push('PaymentOverview', {
+                  name: createWorkOrder.name,
+                });
+              }
+            }}
           />
+          {!createWorkOrder.name ||
+            (hasUnsavedChanges && (
+              <Text color="TextSubdued" variant="body">
+                You must save your work order before you can manage payments
+              </Text>
+            ))}
+
           <FormButton
             title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
             type="primary"
@@ -198,9 +210,9 @@ function WorkOrderItems({
           action={'button'}
           onPress={() =>
             router.push('ProductSelector', {
-              onSelect: ({ lineItem, charges }) => {
-                dispatch.upsertCharges({ charges });
-                dispatch.addItems({ items: [lineItem] });
+              onSelect: ({ item, charges }) => {
+                dispatch.updateItemCharges({ item, charges });
+                dispatch.addItems({ items: [item] });
               },
             })
           }
@@ -212,23 +224,22 @@ function WorkOrderItems({
           action={'button'}
           onPress={() =>
             router.push('ServiceSelector', {
-              onSelect: ({ type, lineItem, charges }) => {
+              onSelect: ({ type, item, charges }) => {
                 const createWorkOrderCharges = [...(createWorkOrder.charges ?? []), ...charges];
 
-                dispatch.upsertCharges({ charges: createWorkOrderCharges });
-                dispatch.addItems({ items: [lineItem] });
+                dispatch.updateItemCharges({ item, charges: createWorkOrderCharges });
+                dispatch.addItems({ items: [item] });
 
                 if (type === 'mutable-service') {
-                  router.push('LabourLineItemConfig', {
-                    hasBasePrice: false,
-                    labour: createWorkOrderCharges.filter(ea => ea.workOrderItemUuid === lineItem.uuid) ?? [],
-                    readonly: false,
-                    lineItem,
-                    onRemove: () => dispatch.removeItems({ items: [lineItem] }),
-                    onUpdate: charges =>
-                      dispatch.upsertCharges({
-                        charges: charges.map(charge => ({ ...charge, workOrderItemUuid: lineItem.uuid })),
-                      }),
+                  router.push('ItemChargeConfig', {
+                    initialCharges: createWorkOrderCharges,
+                    // this is a new item so s'all good man
+                    readonlyItem: false,
+                    readonlyHourlyChargeUuids: [],
+                    readonlyFixedPriceChargeUuids: [],
+                    item,
+                    onRemove: () => dispatch.removeItems({ items: [item] }),
+                    onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
                   });
                 }
               },
@@ -262,7 +273,7 @@ function WorkOrderEmployees({ createWorkOrder }: { createWorkOrder: WIPCreateWor
 
   return (
     <FormStringField
-      label={'Employees'}
+      label={'Assigned Employees'}
       type={'area'}
       disabled
       value={isLoading ? 'Loading...' : employeeNames.join(', ')}
@@ -341,10 +352,16 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
   const productVariantIds = unique(createWorkOrder.items.map(item => item.productVariantId).filter(isNonNullable));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  // TODO: Also get orders for every item + charges so we can show the correct price, if already in an order
-  // TODO: For that use useWorkOrderQuery
+  const { workOrderQuery, orderByItemUuid, orderByFixedPriceLabourUuid, orderByHourlyLabourUuid } =
+    useWorkOrderOrders(createWorkOrder);
+
+  // TODO: include line item info here
 
   const router = useRouter();
+  const screen = useScreen();
+  screen.setIsLoading(Object.values(productVariantQueries).some(query => query.isLoading) || workOrderQuery.isLoading);
+
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   function queryFilter(productVariant?: ProductVariant | null) {
     return (
@@ -353,9 +370,13 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
   }
 
   return createWorkOrder.items
-    .map(item => ({ item, productVariant: productVariantQueries[item.productVariantId]?.data }))
+    .map(item => ({
+      item,
+      productVariant: productVariantQueries[item.productVariantId]?.data,
+      order: orderByItemUuid[item.uuid],
+    }))
     .filter(({ productVariant }) => queryFilter(productVariant))
-    .map<ListRow>(({ item, productVariant }) => {
+    .map<ListRow>(({ item, productVariant, order }) => {
       const isMutableService = productVariant?.product.isMutableServiceItem ?? false;
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
       const hasCharges = charges.length > 0;
@@ -386,45 +407,51 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
         },
         onPress() {
           if (!productVariant) {
+            toast.show('Cannot edit item - product variant not found');
             return;
           }
 
+          const readonly = order?.type === 'ORDER';
+
+          const readonlyHourlyChargeUuids = Object.entries(orderByHourlyLabourUuid)
+            .filter(([_, order]) => order?.type === 'ORDER')
+            .map(([uuid]) => uuid);
+
+          const readonlyFixedPriceChargeUuids = Object.entries(orderByFixedPriceLabourUuid)
+            .filter(([_, order]) => order?.type === 'ORDER')
+            .map(([uuid]) => uuid);
+
           if (hasCharges || isMutableService) {
-            // TODO: Update the prop names everywhere and get rid of the omit bs - no more re-map needed that way
-            // TODO: Get rid of isMutableService - the popup can figure that out on its own...
-            // TODO: Update readonly based on whether the associated line item is in an order
-            router.push('LabourLineItemConfig', {
-              hasBasePrice: !isMutableService,
-              labour: charges,
-              readonly: false,
-              lineItem: item,
+            router.push('ItemChargeConfig', {
+              initialCharges: charges,
+              readonlyItem: readonly,
+              // TODO: Just pass work order name to check for readonly stuff
+              readonlyHourlyChargeUuids,
+              readonlyFixedPriceChargeUuids,
+              item,
               onRemove: () => dispatch.removeItems({ items: [item] }),
-              onUpdate: charges =>
-                dispatch.upsertCharges({
-                  charges: charges.map(charge => ({ ...charge, workOrderItemUuid: item.uuid })),
-                }),
+              onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
             });
             return;
           }
 
-          router.push('ProductLineItemConfig', {
-            canAddLabour: !isMutableService,
-            readonly: false,
-            lineItem: item,
+          router.push('ItemConfig', {
+            readonly,
+            item,
             onRemove: () => dispatch.removeItems({ items: [item] }),
             onUpdate: item => dispatch.updateItem({ item }),
-            onAssignLabour: item =>
-              router.push('LabourLineItemConfig', {
-                hasBasePrice: true,
-                labour: charges,
-                readonly: false,
-                lineItem: item,
+            onAssignLabour: item => {
+              dispatch.updateItem({ item });
+              router.push('ItemChargeConfig', {
+                initialCharges: charges,
+                readonlyItem: readonly,
+                readonlyHourlyChargeUuids,
+                readonlyFixedPriceChargeUuids,
+                item: item,
                 onRemove: () => dispatch.removeItems({ items: [item] }),
-                onUpdate: charges =>
-                  dispatch.upsertCharges({
-                    charges: charges.map(charge => ({ ...charge, workOrderItemUuid: item.uuid })),
-                  }),
-              }),
+                onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
+              });
+            },
           });
         },
       };

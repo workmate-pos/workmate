@@ -18,7 +18,7 @@ export type WorkOrderItem = {
   absorbCharges: boolean;
 };
 
-export type BaseCharge = {
+type BaseCharge = {
   uuid: string;
   name: string;
   workOrderItemUuid: string | null;
@@ -224,12 +224,6 @@ function getChargeUuidCustomAttributeKey(charge: { uuid: string; type: 'hourly' 
 function getAbsorbedChargeCustomAttributeKey(charge: { uuid: string; type: 'hourly' | 'fixed' }, key: string) {
   return `${getChargeUuidCustomAttributeKey(charge)}:${key}`;
 }
-
-const UUID_PREFIXES = [
-  ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-];
 
 export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
   const prefixes = {

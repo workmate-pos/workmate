@@ -33,8 +33,9 @@ export type CreateWorkOrderAction =
       item: CreateWorkOrderItem;
     }
   | {
-      type: 'upsertCharges';
-      charges: CreateWorkOrderCharge[];
+      type: 'updateItemCharges';
+      item: Pick<CreateWorkOrderItem, 'uuid'>;
+      charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[];
     }
   | ({
       type: 'set';
@@ -77,17 +78,19 @@ function createWorkOrderReducer(
       return { ...createWorkOrder, ...partialNotUndefined };
     }
 
-    case 'upsertCharges': {
-      const newChargeUuids = new Set(action.charges.map(charge => charge.uuid));
+    case 'updateItemCharges': {
+      const charges = [
+        ...createWorkOrder.charges.filter(charge => charge.workOrderItemUuid !== action.item.uuid),
+        ...action.charges.map(charge => ({ ...charge, workOrderItemUuid: action.item.uuid })),
+      ];
 
-      const merged = getMergedItems(createWorkOrder.items, createWorkOrder.charges);
-      const split = getSplitItems(merged, createWorkOrder.charges);
+      const merged = getMergedItems(createWorkOrder.items, charges);
+      const split = getSplitItems(merged, charges);
 
-      // TODO: Allow deleting charges
       return {
         ...createWorkOrder,
         items: split.filter(item => item.quantity > 0),
-        charges: [...createWorkOrder.charges.filter(charge => !newChargeUuids.has(charge.uuid)), ...action.charges],
+        charges,
       };
     }
 
@@ -144,6 +147,8 @@ function shouldMergeItems(a: CreateWorkOrderItem, b: CreateWorkOrderItem, charge
   ) {
     return false;
   }
+
+  // TODO: dont merge if the charge has an associated order line item - make sure that the reducer gets a list of uuids that are in orders
 
   return true;
 }

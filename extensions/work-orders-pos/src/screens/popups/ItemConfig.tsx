@@ -10,27 +10,25 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
 
-export function ProductLineItemConfig({
+export function ItemConfig({
   readonly,
-  canAddLabour,
-  lineItem: initialLineItem,
+  item: initialItem,
   onRemove,
   onUpdate,
   onAssignLabour,
 }: {
   readonly: boolean;
-  canAddLabour: boolean;
-  lineItem: CreateWorkOrderItem;
+  item: CreateWorkOrderItem;
   onRemove: () => void;
   onUpdate: (lineItem: CreateWorkOrderItem) => void;
   onAssignLabour: (lineItem: CreateWorkOrderItem) => void;
 }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [lineItem, setLineItem] = useState<CreateWorkOrderItem>(initialLineItem);
+  const [item, setItem] = useState<CreateWorkOrderItem>(initialItem);
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
-  const productVariantQuery = useProductVariantQuery({ fetch, id: lineItem?.productVariantId ?? null });
+  const productVariantQuery = useProductVariantQuery({ fetch, id: item?.productVariantId ?? null });
   const productVariant = productVariantQuery?.data;
   const name = getProductVariantName(productVariant);
 
@@ -65,12 +63,12 @@ export function ProductLineItemConfig({
           <Stepper
             disabled={readonly}
             minimumValue={1}
-            initialValue={lineItem.quantity}
+            initialValue={item.quantity}
             onValueChanged={(value: Int) => {
-              setLineItem({ ...lineItem, quantity: value });
+              setItem({ ...item, quantity: value });
               setHasUnsavedChanges(true);
             }}
-            value={lineItem.quantity}
+            value={item.quantity}
           />
         </Stack>
         <Stack direction="vertical" flex={1} alignment="flex-end">
@@ -88,16 +86,16 @@ export function ProductLineItemConfig({
               <Button
                 title="Save"
                 onPress={() => {
-                  onUpdate(lineItem);
+                  onUpdate(item);
                   router.popCurrent();
                 }}
               />
-              {canAddLabour && (
+              {!productVariant.product.isFixedServiceItem && (
                 <Button
                   title="Add Labour"
                   onPress={async () => {
                     await router.popCurrent();
-                    onAssignLabour(lineItem);
+                    onAssignLabour(item);
                   }}
                 />
               )}

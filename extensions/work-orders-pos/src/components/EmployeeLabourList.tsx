@@ -12,20 +12,22 @@ import { CreateWorkOrderCharge } from '../types.js';
  * A list of clickable EmployeeLabour items.
  */
 export function EmployeeLabourList({
-  labour,
+  charges,
   onClick,
-  readonly = false,
+  readonlyFixedPriceChargeUuids,
+  readonlyHourlyChargeUuids,
 }: {
-  readonly?: boolean;
-  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>[];
+  readonlyHourlyChargeUuids: string[];
+  readonlyFixedPriceChargeUuids: string[];
+  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>[];
   onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>) => void;
 }) {
   const currencyFormatter = useCurrencyFormatter();
 
   const fetch = useAuthenticatedFetch();
-  const employeeQueries = useEmployeeQueries({ fetch, ids: labour.map(e => e.employeeId).filter(isNonNullable) });
+  const employeeQueries = useEmployeeQueries({ fetch, ids: charges.map(e => e.employeeId).filter(isNonNullable) });
 
-  if (labour.length === 0) {
+  if (charges.length === 0) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text variant="body" color="TextSubdued">
@@ -35,30 +37,38 @@ export function EmployeeLabourList({
     );
   }
 
+  function chargeIsReadonly(charge: Pick<CreateWorkOrderCharge, 'type' | 'uuid'> | null) {
+    return (
+      charge !== null &&
+      ((charge.type === 'hourly-labour' && readonlyHourlyChargeUuids.includes(charge.uuid)) ||
+        readonlyFixedPriceChargeUuids.includes(charge.uuid))
+    );
+  }
+
   return (
     <List
-      data={labour.map(l => {
-        const query = employeeQueries[l.employeeId];
+      data={charges.map(charge => {
+        const query = employeeQueries[charge.employeeId];
 
-        const price = getTotalPriceForCharges([l]);
+        const price = getTotalPriceForCharges([charge]);
 
         const leftSide: ListRowLeftSide =
-          l.type === 'hourly-labour'
+          charge.type === 'hourly-labour'
             ? {
                 label: query?.data?.name ?? 'Unknown Employee',
-                subtitle: [l.name, `${l.hours} hours × ${currencyFormatter(l.rate)}/hour`],
+                subtitle: [charge.name, `${charge.hours} hours × ${currencyFormatter(charge.rate)}/hour`],
               }
             : {
                 label: query?.data?.name ?? 'Unknown Employee',
-                subtitle: [l.name, currencyFormatter(l.amount)],
+                subtitle: [charge.name, currencyFormatter(charge.amount)],
               };
 
         return {
-          id: l.employeeId,
-          onPress: readonly ? undefined : () => onClick(l),
+          id: charge.employeeId,
+          onPress: chargeIsReadonly(charge) ? undefined : () => onClick(charge),
           leftSide,
           rightSide: {
-            showChevron: !readonly,
+            showChevron: !chargeIsReadonly(charge),
             label: currencyFormatter(price),
           },
         };

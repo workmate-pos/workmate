@@ -16,7 +16,7 @@ import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 export function ProductSelector({
   onSelect,
 }: {
-  onSelect: (arg: { lineItem: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
+  onSelect: (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 }) {
   const [query, setQuery] = useDebouncedState('');
 
@@ -36,17 +36,17 @@ export function ProductSelector({
   const productVariants = productVariantsQuery.data?.pages.flat() ?? [];
   const currencyFormatter = useCurrencyFormatter();
 
-  const selectLineItem = (
+  const internalOnSelect = (
     lineItem: CreateWorkOrderItem,
     charges: CreateWorkOrderCharge[],
     name: string = 'Product',
   ) => {
     setQuery('', true);
-    onSelect({ lineItem, charges });
+    onSelect({ item: lineItem, charges });
     toast.show(`${name} added to cart`, { duration: 750 });
   };
 
-  const rows = getProductVariantRows(productVariants, selectLineItem, currencyFormatter);
+  const rows = getProductVariantRows(productVariants, internalOnSelect, currencyFormatter);
 
   return (
     <ScrollView>
@@ -94,7 +94,7 @@ export function ProductSelector({
 
 function getProductVariantRows(
   productVariants: ProductVariant[],
-  selectLineItem: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
+  onSelect: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
   return productVariants.map(variant => {
@@ -102,23 +102,21 @@ function getProductVariantRows(
 
     const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
 
-    const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
-      productVariantDefaultChargeToCreateWorkOrderCharge(charge, 'placeholder'),
-    );
+    const defaultCharges = variant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
 
     return {
       id: variant.id,
       onPress: () => {
-        const lineItemUuid = uuid();
+        const itemUuid = uuid();
 
-        selectLineItem(
+        onSelect(
           {
-            uuid: lineItemUuid,
+            uuid: itemUuid,
             productVariantId: variant.id,
             quantity: 1 as Int,
             absorbCharges: false,
           },
-          defaultCharges.map(charge => ({ ...charge, lineItemUuid })),
+          defaultCharges.map(charge => ({ ...charge, uuid: uuid(), workOrderItemUuid: itemUuid })),
         );
       },
       leftSide: {

@@ -25,7 +25,6 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 
@@ -217,7 +216,7 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isRefetching));
+  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isFetching));
 
   return workOrderInfos.flatMap<ListRow>(({ name, status, dueDate, orders, customer }) => {
     const query = workOrderQueries[name];

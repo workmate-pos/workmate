@@ -18,7 +18,7 @@ import { useRouter } from '../../routes.js';
 
 type OnSelect = (arg: {
   type: 'mutable-service' | 'fixed-service';
-  lineItem: CreateWorkOrderItem;
+  item: CreateWorkOrderItem;
   charges: CreateWorkOrderCharge[];
 }) => void;
 
@@ -101,9 +101,7 @@ function getProductVariantRows(
         return null;
       }
 
-      const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
-        productVariantDefaultChargeToCreateWorkOrderCharge(charge, 'placeholder'),
-      );
+      const defaultCharges = variant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
 
       let label: string | undefined = undefined;
 
@@ -118,17 +116,21 @@ function getProductVariantRows(
       return {
         id: variant.id,
         onPress: () => {
-          const lineItemUuid = uuid();
+          const itemUuid = uuid();
 
           onSelect({
             type,
-            lineItem: {
-              uuid: lineItemUuid,
+            item: {
+              uuid: itemUuid,
               productVariantId: variant.id,
               quantity: 1 as Int,
               absorbCharges: variant.product.isMutableServiceItem,
             },
-            charges: defaultCharges.map(charge => ({ ...charge, lineItemUuid })),
+            charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
+              ...charge,
+              uuid: uuid(),
+              workOrderItemUuid: itemUuid,
+            })),
           });
 
           router.popCurrent();

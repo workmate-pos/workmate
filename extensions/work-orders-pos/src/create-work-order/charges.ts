@@ -4,10 +4,10 @@ import { CreateWorkOrderCharge } from '../types.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export function getTotalPriceForCharges(
-  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'employeeId' | 'workOrderItemUuid' | 'name' | 'uuid'>[],
+  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'employeeId' | 'workOrderItemUuid' | 'name' | 'uuid'>[],
 ): Money {
   return BigDecimal.sum(
-    ...labour.map(l => {
+    ...charges.map(l => {
       if (l.type === 'hourly-labour') {
         return BigDecimal.fromDecimal(l.hours).multiply(BigDecimal.fromMoney(l.rate));
       }
