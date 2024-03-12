@@ -51,6 +51,10 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
     note: createWorkOrder.note,
   });
 
+  for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
+    await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
+  }
+
   await upsertItems(session, createWorkOrder, workOrder.id, []);
   await upsertCharges(session, createWorkOrder, workOrder.id, [], []);
 
@@ -91,6 +95,11 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       derivedFromOrderId: createWorkOrder.derivedFromOrderId,
       note: createWorkOrder.note,
     });
+
+    await db.workOrder.removeCustomFields({ workOrderId: workOrder.id });
+    for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
+      await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
+    }
 
     await upsertCharges(session, createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
     await upsertItems(session, createWorkOrder, workOrder.id, currentItems);

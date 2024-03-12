@@ -12,6 +12,7 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
     customerId: workOrder.customerId,
     items: workOrder.items.map(mapItem),
     charges: workOrder.charges.map(mapCharge),
+    customFields: {},
   };
 }
 

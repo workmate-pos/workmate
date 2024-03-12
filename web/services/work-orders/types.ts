@@ -12,6 +12,7 @@ export type WorkOrder = {
   items: WorkOrderItem[];
   charges: WorkOrderCharge[];
   orders: WorkOrderOrder[];
+  customFields: Record<string, string>;
 };
 
 export type WorkOrderItem = {

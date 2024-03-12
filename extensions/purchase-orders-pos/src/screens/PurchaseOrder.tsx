@@ -23,10 +23,9 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/from-purchase-order.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js';
 
 // TODO: A new screen to view linked orders/workorders
-// TODO: TextArea in pos-tools
+// TODO: A way to link purchase order line items to SO line items
 export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOrder: CreatePurchaseOrder }) {
   const [query, setQuery] = useState('');
   const { Form } = useForm();

@@ -8,6 +8,20 @@ ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.statu
                                            note                 = EXCLUDED.note
 RETURNING *;
 
+/* @name insertCustomField */
+INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
+VALUES (:workOrderId!, :key!, :value!);
+
+/* @name removeCustomFields */
+DELETE
+FROM "WorkOrderCustomField"
+WHERE "workOrderId" = :workOrderId!;
+
+/* @name getCustomFields */
+SELECT *
+FROM "WorkOrderCustomField"
+WHERE "workOrderId" = :workOrderId!;
+
 /* @name getPage */
 SELECT wo.*
 FROM "WorkOrder" wo

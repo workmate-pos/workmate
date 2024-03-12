@@ -70,61 +70,66 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
   return (
     <ScrollView>
       <Form disabled={saveWorkOrderMutation.isLoading}>
-        {saveWorkOrderMutation.error && (
-          <Banner
-            title={`Error saving work order: ${extractErrorMessage(saveWorkOrderMutation.error)}`}
-            variant={'error'}
-            visible
-          />
-        )}
-
-        <WorkOrderProperties createWorkOrder={createWorkOrder} dispatch={dispatch} />
-
-        <ResponsiveGrid columns={2}>
-          <WorkOrderItems createWorkOrder={createWorkOrder} dispatch={dispatch} />
-
-          <ResponsiveGrid columns={1}>
-            <FormStringField
-              label={'Note'}
-              type={'area'}
-              value={createWorkOrder.note}
-              onChange={(value: string) => dispatch.setPartial({ note: value })}
+        <ResponsiveStack direction={'vertical'} spacing={2}>
+          {saveWorkOrderMutation.error && (
+            <Banner
+              title={`Error saving work order: ${extractErrorMessage(saveWorkOrderMutation.error)}`}
+              variant={'error'}
+              visible
             />
-            <WorkOrderEmployees createWorkOrder={createWorkOrder} />
-            <WorkOrderMoneySummary createWorkOrder={createWorkOrder} />
+          )}
+
+          <WorkOrderProperties createWorkOrder={createWorkOrder} dispatch={dispatch} />
+          <WorkOrderCustomFields createWorkOrder={createWorkOrder} dispatch={dispatch} />
+
+          <ResponsiveGrid columns={2}>
+            <WorkOrderItems createWorkOrder={createWorkOrder} dispatch={dispatch} />
+
+            <ResponsiveGrid columns={1}>
+              <FormStringField
+                label={'Note'}
+                type={'area'}
+                value={createWorkOrder.note}
+                onChange={(value: string) => dispatch.setPartial({ note: value })}
+              />
+              <WorkOrderEmployees createWorkOrder={createWorkOrder} />
+              <WorkOrderMoneySummary createWorkOrder={createWorkOrder} />
+            </ResponsiveGrid>
           </ResponsiveGrid>
-        </ResponsiveGrid>
 
-        <ResponsiveGrid columns={2}>
-          <FormButton
-            title={'Manage payments'}
-            type={'basic'}
-            action={'button'}
-            disabled={!createWorkOrder.name || hasUnsavedChanges}
-            onPress={() => {
-              if (createWorkOrder.name) {
-                router.push('PaymentOverview', {
-                  name: createWorkOrder.name,
-                });
-              }
-            }}
-          />
-          {!createWorkOrder.name ||
-            (hasUnsavedChanges && (
-              <Text color="TextSubdued" variant="body">
-                You must save your work order before you can manage payments
-              </Text>
-            ))}
+          <ResponsiveGrid columns={2}>
+            <ResponsiveGrid columns={1}>
+              <FormButton
+                title={'Manage payments'}
+                type={'basic'}
+                action={'button'}
+                disabled={!createWorkOrder.name || hasUnsavedChanges}
+                onPress={() => {
+                  if (createWorkOrder.name) {
+                    router.push('PaymentOverview', {
+                      name: createWorkOrder.name,
+                    });
+                  }
+                }}
+              />
+              {!createWorkOrder.name ||
+                (hasUnsavedChanges && (
+                  <Text color="TextSubdued" variant="body">
+                    You must save your work order before you can manage payments
+                  </Text>
+                ))}
+            </ResponsiveGrid>
 
-          <FormButton
-            title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
-            type="primary"
-            action={'submit'}
-            disabled={!hasUnsavedChanges}
-            loading={saveWorkOrderMutation.isLoading}
-            onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
-          />
-        </ResponsiveGrid>
+            <FormButton
+              title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
+              type="primary"
+              action={'submit'}
+              disabled={!hasUnsavedChanges}
+              loading={saveWorkOrderMutation.isLoading}
+              onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
+            />
+          </ResponsiveGrid>
+        </ResponsiveStack>
       </Form>
     </ScrollView>
   );
@@ -254,6 +259,41 @@ function WorkOrderItems({
           </Text>
         </ResponsiveStack>
       )}
+    </ResponsiveGrid>
+  );
+}
+
+function WorkOrderCustomFields({
+  createWorkOrder,
+  dispatch,
+}: {
+  createWorkOrder: WIPCreateWorkOrder;
+  dispatch: CreateWorkOrderDispatchProxy;
+}) {
+  const router = useRouter();
+
+  return (
+    <ResponsiveGrid columns={4}>
+      {Object.entries(createWorkOrder.customFields).map(([key, value], i) => (
+        <FormStringField
+          key={i}
+          label={key}
+          value={value}
+          onChange={(value: string) =>
+            dispatch.setPartial({ customFields: { ...createWorkOrder.customFields, [key]: value } })
+          }
+        />
+      ))}
+
+      <FormButton
+        title={'Custom Fields'}
+        onPress={() => {
+          router.push('CustomFieldConfig', {
+            initialCustomFields: createWorkOrder.customFields,
+            onSave: customFields => dispatch.setPartial({ customFields }),
+          });
+        }}
+      />
     </ResponsiveGrid>
   );
 }

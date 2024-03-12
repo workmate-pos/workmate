@@ -39,6 +39,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     items: getWorkOrderItems(workOrder.id),
     charges: getWorkOrderCharges(workOrder.id),
     orders: getWorkOrderOrders(workOrder.id),
+    customFields: getWorkOrderCustomFields(workOrder.id),
   });
 }
 
@@ -157,6 +158,11 @@ async function getWorkOrderOrders(workOrderId: number): Promise<WorkOrderOrder[]
       type: order.orderType,
     };
   });
+}
+
+async function getWorkOrderCustomFields(workOrderId: number): Promise<Record<string, string>> {
+  const customFields = await db.workOrder.getCustomFields({ workOrderId });
+  return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
 }
 
 /**

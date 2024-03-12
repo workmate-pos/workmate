@@ -15,6 +15,9 @@ import { WorkOrder } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { PaymentOverview } from './screens/popups/PaymentOverview.js';
 import { ScrollView } from '@shopify/retail-ui-extensions-react';
+import { CustomFieldConfig } from './screens/popups/CustomFieldConfig.js';
+import { ImportPreset } from './screens/popups/ImportPreset.js';
+import { SavePreset } from './screens/popups/SavePreset.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -86,6 +89,18 @@ export const { Router, useRouter } = createRouter(
     PaymentOverview: {
       title: 'Payments',
       Component: PaymentOverview,
+    },
+    CustomFieldConfig: {
+      title: 'Custom Fields',
+      Component: CustomFieldConfig,
+    },
+    ImportPreset: {
+      title: 'Import Preset',
+      Component: ImportPreset,
+    },
+    SavePreset: {
+      title: 'Save Preset',
+      Component: SavePreset,
     },
   },
 );

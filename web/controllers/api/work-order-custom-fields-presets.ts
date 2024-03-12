@@ -8,12 +8,9 @@ import { UpsertCustomFieldsPreset } from '../../schemas/generated/upsert-custom-
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 
 @Authenticated()
-export default class PurchaseOrderCustomFieldsController {
+export default class WorkOrderCustomFieldsController {
   @Get('/')
-  async fetchPurchaseOrderCustomFieldsPresets(
-    req: Request,
-    res: Response<FetchPurchaseOrderCustomFieldsPresetsResponse>,
-  ) {
+  async fetchWorkOrderCustomFieldsPresets(req: Request, res: Response<FetchWorkOrderCustomFieldsPresetsResponse>) {
     const { shop }: Session = res.locals.shopify.session;
 
     const presets = await db.customFieldPresets.getCustomFieldsPresets({ shop, type: 'WORK_ORDER' });
@@ -28,7 +25,7 @@ export default class PurchaseOrderCustomFieldsController {
 
   @Post('/:name')
   @BodySchema('upsert-custom-fields-preset')
-  async upsertPurchaseOrderCustomFieldsPreset(
+  async upsertWorkOrderCustomFieldsPreset(
     req: Request<{ name: string }, unknown, UpsertCustomFieldsPreset>,
     res: Response<UpsertCustomFieldsPresetResponse>,
   ) {
@@ -40,13 +37,14 @@ export default class PurchaseOrderCustomFieldsController {
       throw new HttpError('Custom fields cannot be empty', 400);
     }
 
-    await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type: 'PURCHASE_ORDER' });
+    console.log(shop, name, keys);
+    await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type: 'WORK_ORDER' });
 
     return res.json({ name });
   }
 }
 
-export type FetchPurchaseOrderCustomFieldsPresetsResponse = {
+export type FetchWorkOrderCustomFieldsPresetsResponse = {
   presets: {
     name: string;
     keys: string[];

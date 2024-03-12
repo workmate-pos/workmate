@@ -12,6 +12,7 @@ import * as customers from './queries/generated/customers.sql.js';
 import * as products from './queries/generated/products.sql.js';
 import * as productVariants from './queries/generated/product-variants.sql.js';
 import * as shopifyOrder from './queries/generated/shopify-order.sql.js';
+import * as customFieldPresets from './queries/generated/custom-field-presets.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
 
@@ -33,6 +34,7 @@ export const db = {
   products: wrapPreparedQueries(products),
   productVariants: wrapPreparedQueries(productVariants),
   shopifyOrder: wrapPreparedQueries(shopifyOrder),
+  customFieldPresets: wrapPreparedQueries(customFieldPresets),
 };
 
 /**

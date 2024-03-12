@@ -56,6 +56,95 @@ const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"du
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
 
 
+/** 'InsertCustomField' parameters type */
+export interface IInsertCustomFieldParams {
+  key: string;
+  value: string;
+  workOrderId: number;
+}
+
+/** 'InsertCustomField' return type */
+export type IInsertCustomFieldResult = void;
+
+/** 'InsertCustomField' query type */
+export interface IInsertCustomFieldQuery {
+  params: IInsertCustomFieldParams;
+  result: IInsertCustomFieldResult;
+}
+
+const insertCustomFieldIR: any = {"usedParamSet":{"workOrderId":true,"key":true,"value":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":71,"b":83}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":86,"b":90}]},{"name":"value","required":true,"transform":{"type":"scalar"},"locs":[{"a":93,"b":99}]}],"statement":"INSERT INTO \"WorkOrderCustomField\" (\"workOrderId\", key, value)\nVALUES (:workOrderId!, :key!, :value!)"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
+ * VALUES (:workOrderId!, :key!, :value!)
+ * ```
+ */
+export const insertCustomField = new PreparedQuery<IInsertCustomFieldParams,IInsertCustomFieldResult>(insertCustomFieldIR);
+
+
+/** 'RemoveCustomFields' parameters type */
+export interface IRemoveCustomFieldsParams {
+  workOrderId: number;
+}
+
+/** 'RemoveCustomFields' return type */
+export type IRemoveCustomFieldsResult = void;
+
+/** 'RemoveCustomFields' query type */
+export interface IRemoveCustomFieldsQuery {
+  params: IRemoveCustomFieldsParams;
+  result: IRemoveCustomFieldsResult;
+}
+
+const removeCustomFieldsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":57,"b":69}]}],"statement":"DELETE\nFROM \"WorkOrderCustomField\"\nWHERE \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "WorkOrderCustomField"
+ * WHERE "workOrderId" = :workOrderId!
+ * ```
+ */
+export const removeCustomFields = new PreparedQuery<IRemoveCustomFieldsParams,IRemoveCustomFieldsResult>(removeCustomFieldsIR);
+
+
+/** 'GetCustomFields' parameters type */
+export interface IGetCustomFieldsParams {
+  workOrderId: number;
+}
+
+/** 'GetCustomFields' return type */
+export interface IGetCustomFieldsResult {
+  createdAt: Date;
+  id: number;
+  key: string;
+  updatedAt: Date;
+  value: string;
+  workOrderId: number;
+}
+
+/** 'GetCustomFields' query type */
+export interface IGetCustomFieldsQuery {
+  params: IGetCustomFieldsParams;
+  result: IGetCustomFieldsResult;
+}
+
+const getCustomFieldsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":59,"b":71}]}],"statement":"SELECT *\nFROM \"WorkOrderCustomField\"\nWHERE \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "WorkOrderCustomField"
+ * WHERE "workOrderId" = :workOrderId!
+ * ```
+ */
+export const getCustomFields = new PreparedQuery<IGetCustomFieldsParams,IGetCustomFieldsResult>(getCustomFieldsIR);
+
+
 /** 'GetPage' parameters type */
 export interface IGetPageParams {
   customerId?: string | null | void;

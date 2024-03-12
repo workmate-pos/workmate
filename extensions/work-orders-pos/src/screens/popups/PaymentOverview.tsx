@@ -93,6 +93,8 @@ export function PaymentOverview({ name }: { name: string }) {
 
   // TODO: Display total
 
+  const canSelectItems = selectedItems.length !== 0 || selectedCharges.length !== 0;
+
   return (
     <ScrollView>
       {selectedItems.length === selectableItems.length && selectedCharges.length === selectableCharges.length ? (
@@ -100,6 +102,7 @@ export function PaymentOverview({ name }: { name: string }) {
           title={'Deselect all items'}
           isDisabled={paymentHandler.isLoading}
           type={'plain'}
+          disabled={!canSelectItems}
           onPress={() => {
             setSelectedItems([]);
             setSelectedCharges([]);
@@ -110,6 +113,7 @@ export function PaymentOverview({ name }: { name: string }) {
           title={'Select all items'}
           isDisabled={paymentHandler.isLoading}
           type={'plain'}
+          disabled={!canSelectItems}
           onPress={() => {
             setSelectedItems(selectableItems);
             setSelectedCharges(selectableCharges);
