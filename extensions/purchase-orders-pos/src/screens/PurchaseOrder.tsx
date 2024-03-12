@@ -23,20 +23,16 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/from-purchase-order.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js';
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: TextArea in pos-tools
-export function PurchaseOrder({
-  initialCreatePurchaseOrder,
-}: {
-  initialCreatePurchaseOrder: CreatePurchaseOrder | null;
-}) {
+export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOrder: CreatePurchaseOrder }) {
   const [query, setQuery] = useState('');
   const { Form } = useForm();
 
-  const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
-    initialCreatePurchaseOrder ?? undefined,
-  );
+  const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] =
+    useCreatePurchaseOrderReducer(initialCreatePurchaseOrder);
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 

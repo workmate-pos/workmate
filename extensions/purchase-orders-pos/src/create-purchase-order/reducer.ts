@@ -34,9 +34,7 @@ export type CreatePurchaseOrderDispatchProxy = {
   [type in CreatePurchaseOrderAction['type']]: (args: Omit<CreatePurchaseOrderAction & { type: type }, 'type'>) => void;
 };
 
-export const useCreatePurchaseOrderReducer = (
-  initialCreatePurchaseOrder: CreatePurchaseOrder = defaultCreatePurchaseOrder,
-) => {
+export const useCreatePurchaseOrderReducer = (initialCreatePurchaseOrder: CreatePurchaseOrder) => {
   const [createPurchaseOrder, dispatchCreatePurchaseOrder] = useReducer(
     createPurchaseOrderReducer,
     initialCreatePurchaseOrder,

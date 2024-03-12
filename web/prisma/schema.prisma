@@ -325,7 +325,7 @@ model PurchaseOrder {
 
   /// Shop specific name
   name   String
-  status PurchaseOrderStatus
+  status String
 
   lineItems           PurchaseOrderLineItem[]
   customFields        PurchaseOrderCustomField[]
@@ -359,13 +359,6 @@ model PurchaseOrderLineItem {
 
   @@index([purchaseOrderId])
   @@index([shopifyOrderLineItemId])
-}
-
-enum PurchaseOrderStatus {
-  OPEN
-  RECEIVED
-  CANCELLED
-  CLOSED
 }
 
 model PurchaseOrderEmployeeAssignment {

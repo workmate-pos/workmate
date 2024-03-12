@@ -60,17 +60,30 @@ export async function insertDefaultSettingsIfNotExists(shop: string) {
 }
 
 function assertValidSettings(settings: ShopSettings) {
-  assertValidFormatString(settings.idFormat);
+  for (const { idFormat, defaultStatus, statuses } of [
+    {
+      idFormat: settings.idFormat,
+      defaultStatus: settings.defaultStatus,
+      statuses: settings.statuses,
+    },
+    {
+      idFormat: settings.purchaseOrderIdFormat,
+      defaultStatus: settings.defaultPurchaseOrderStatus,
+      statuses: settings.purchaseOrderStatuses,
+    },
+  ]) {
+    assertValidFormatString(idFormat);
 
-  if (!settings.statuses.includes(settings.defaultStatus)) {
-    throw new HttpError('Invalid default status', 400);
-  }
+    if (!statuses.includes(defaultStatus)) {
+      throw new HttpError('Invalid default status', 400);
+    }
 
-  if (unique(settings.statuses).length !== settings.statuses.length) {
-    throw new HttpError('Duplicate statuses are not allowed', 400);
-  }
+    if (unique(statuses).length !== statuses.length) {
+      throw new HttpError('Duplicate statuses are not allowed', 400);
+    }
 
-  if (settings.statuses.length === 0) {
-    throw new HttpError('Must have at least one status', 400);
+    if (statuses.length === 0) {
+      throw new HttpError('Must have at least one status', 400);
+    }
   }
 }

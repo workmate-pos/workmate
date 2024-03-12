@@ -28,6 +28,9 @@ const defaultShopSettings: ShopSettings = {
     hourlyLabour: true,
     employeeAssignments: true,
   },
+  purchaseOrderIdFormat: 'PO-#{{id}}',
+  purchaseOrderStatuses: ['Draft', 'In Transit', 'Received'],
+  defaultPurchaseOrderStatus: 'Draft',
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

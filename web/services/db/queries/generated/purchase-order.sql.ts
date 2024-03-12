@@ -1,8 +1,6 @@
 /** Types generated for queries found in "services/db/queries/purchase-order.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
-export type PurchaseOrderStatus = 'CANCELLED' | 'CLOSED' | 'OPEN' | 'RECEIVED';
-
 export type NumberOrString = number | string;
 
 export type stringArray = (string)[];
@@ -14,7 +12,7 @@ export interface IGetPageParams {
   offset?: NumberOrString | null | void;
   query?: string | null | void;
   shop: string;
-  status?: PurchaseOrderStatus | null | void;
+  status?: string | null | void;
 }
 
 /** 'GetPage' return type */
@@ -95,7 +93,7 @@ export interface IGetResult {
   shipping: string | null;
   shipTo: string;
   shop: string;
-  status: PurchaseOrderStatus;
+  status: string;
   tax: string | null;
   updatedAt: Date;
   vendorName: string | null;
@@ -134,7 +132,7 @@ export interface IUpsertParams {
   shipping?: string | null | void;
   shipTo: string;
   shop: string;
-  status: PurchaseOrderStatus;
+  status: string;
   tax?: string | null | void;
   vendorName?: string | null | void;
 }

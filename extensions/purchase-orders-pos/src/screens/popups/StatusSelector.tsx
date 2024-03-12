@@ -1,17 +1,33 @@
-import { Status } from '@web/schemas/generated/create-purchase-order.js';
-import { Button, ScrollView, Stack } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useRouter } from '../../routes.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 
-export function StatusSelector({ onSelect }: { onSelect: (status: Status) => void }) {
-  const statuses: Status[] = ['OPEN', 'CLOSED', 'RECEIVED', 'CANCELLED'];
+export function StatusSelector({ onSelect }: { onSelect: (status: string) => void }) {
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
 
   const router = useRouter();
+  const screen = useScreen();
+  screen.setIsLoading(settingsQuery.isLoading);
+
+  if (settingsQuery.isError || !settingsQuery.data?.settings) {
+    return (
+      <Stack alignment="center" direction="vertical" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(settingsQuery.error, 'An error occurred while loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
 
   return (
     <ScrollView>
       <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
-        {statuses.map(status => (
+        {settingsQuery.data.settings.purchaseOrderStatuses.map(status => (
           <Button
             title={titleCase(status)}
             onPress={() => {

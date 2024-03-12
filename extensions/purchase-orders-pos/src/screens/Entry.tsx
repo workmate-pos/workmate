@@ -1,8 +1,7 @@
-import { BadgeVariant, Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-purchase-order-info-page-query.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
-import { Status } from '@web/schemas/generated/create-purchase-order.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useRouter } from '../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
@@ -10,6 +9,9 @@ import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveS
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/from-purchase-order.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js';
 
 export function Entry() {
   const [query, setQuery] = useState('');
@@ -18,9 +20,24 @@ export function Entry() {
   const purchaseOrderInfoQuery = usePurchaseOrderInfoPageQuery({ fetch, query });
   const purchaseOrders = purchaseOrderInfoQuery.data?.pages ?? [];
 
+  const settingsQuery = useSettingsQuery({ fetch });
+
   const purchaseOrderRows = usePurchaseOrderRows(purchaseOrders);
 
+  const screen = useScreen();
+  screen.setIsLoading(settingsQuery.isLoading);
+
   const router = useRouter();
+
+  if (settingsQuery.isError) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(settingsQuery.error, 'An error occurred while loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
 
   return (
     <ScrollView>
@@ -31,7 +48,14 @@ export function Entry() {
         <Button
           title={'New Purchase Order'}
           type={'primary'}
-          onPress={() => router.push('PurchaseOrder', { initialCreatePurchaseOrder: null })}
+          onPress={() => {
+            const status = settingsQuery.data?.settings?.defaultPurchaseOrderStatus;
+            if (status) {
+              router.push('PurchaseOrder', {
+                initialCreatePurchaseOrder: defaultCreatePurchaseOrder({ status }),
+              });
+            }
+          }}
         />
       </ResponsiveStack>
 
@@ -92,7 +116,7 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
       badges: [
         {
           text: titleCase(purchaseOrder.status),
-          variant: getPurchaseOrderBadgeVariant(purchaseOrder),
+          variant: 'highlight',
         },
       ],
     },
@@ -115,15 +139,4 @@ function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
   }
 
   return possibilities.slice(0, 3) as [string] | [string, string] | [string, string, string];
-}
-
-function getPurchaseOrderBadgeVariant(purchaseOrder: PurchaseOrderInfo) {
-  const mapping: Record<Status, BadgeVariant> = {
-    OPEN: 'success',
-    CANCELLED: 'neutral',
-    CLOSED: 'neutral',
-    RECEIVED: 'neutral',
-  };
-
-  return mapping[purchaseOrder.status];
 }

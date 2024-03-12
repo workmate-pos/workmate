@@ -17,6 +17,21 @@
       "type": "string",
       "minLength": 1
     },
+    "purchaseOrderIdFormat": {
+      "type": "string",
+      "minLength": 1
+    },
+    "purchaseOrderStatuses": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "defaultPurchaseOrderStatus": {
+      "type": "string",
+      "minLength": 1
+    },
     "discountShortcuts": {
       "type": "array",
       "items": {

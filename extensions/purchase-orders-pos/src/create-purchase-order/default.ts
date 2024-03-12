@@ -1,7 +1,11 @@
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 
-export const defaultCreatePurchaseOrder: CreatePurchaseOrder = {
-  status: 'OPEN',
+type BaseCreatePurchaseOrder = {
+  status: string;
+};
+
+export const defaultCreatePurchaseOrder = (base: BaseCreatePurchaseOrder): CreatePurchaseOrder => ({
+  ...base,
   name: null,
   note: '',
   locationId: null,
@@ -16,4 +20,4 @@ export const defaultCreatePurchaseOrder: CreatePurchaseOrder = {
   discount: null,
   shipping: null,
   lineItems: [],
-};
+});

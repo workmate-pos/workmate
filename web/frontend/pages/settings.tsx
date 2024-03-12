@@ -57,8 +57,11 @@ function Settings() {
 
   const [discountShortcutValue, setDiscountShortcutValue] = useState('');
 
-  const [statusValue, setStatusValue] = useState('');
-  const [defaultStatusValue, setDefaultStatusValue] = useState('');
+  const [workOrderStatusValue, setWorkOrderStatusValue] = useState('');
+  const [defaultWorkOrderStatusValue, setDefaultWorkOrderStatusValue] = useState('');
+
+  const [purchaseOrderStatusValue, setPurchaseOrderStatusValue] = useState('');
+  const [defaultPurchaseOrderStatusValue, setDefaultPurchaseOrderStatusValue] = useState('');
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const settingsQuery = useSettingsQuery(
@@ -67,7 +70,7 @@ function Settings() {
       refetchOnWindowFocus: false,
       onSuccess({ settings }) {
         setSettings(settings);
-        setDefaultStatusValue(settings.defaultStatus);
+        setDefaultWorkOrderStatusValue(settings.defaultStatus);
       },
       onError() {
         setToastAction({
@@ -191,22 +194,22 @@ function Settings() {
                   <Autocomplete.TextField
                     label="Statuses"
                     autoComplete="off"
-                    value={statusValue}
-                    onChange={setStatusValue}
+                    value={workOrderStatusValue}
+                    onChange={setWorkOrderStatusValue}
                   />
                 }
                 onSelect={() => {}}
                 actionBefore={
-                  statusValue.length > 0
+                  workOrderStatusValue.length > 0
                     ? {
-                        content: `Create status "${statusValue}"`,
+                        content: `Create status "${workOrderStatusValue}"`,
                         prefix: <Icon source={CirclePlusMinor} />,
                         onAction: () => {
                           setSettings({
                             ...settings,
-                            statuses: [...settings.statuses, statusValue],
+                            statuses: [...settings.statuses, workOrderStatusValue],
                           });
-                          setStatusValue('');
+                          setWorkOrderStatusValue('');
                         },
                       }
                     : undefined
@@ -232,16 +235,19 @@ function Settings() {
                 options={settings.statuses.map(status => ({ id: status, label: status, value: status }))}
                 selected={[settings.defaultStatus]}
                 onSelect={([defaultStatus]) => {
-                  setSettings(current => ({ ...current, defaultStatus: defaultStatus ?? current.defaultStatus }));
-                  setDefaultStatusValue(defaultStatus ?? settings.defaultStatus);
+                  setSettings(current => ({
+                    ...current,
+                    defaultStatus: defaultStatus ?? current.defaultStatus,
+                  }));
+                  setDefaultWorkOrderStatusValue(defaultStatus ?? settings.defaultStatus);
                 }}
                 textField={
                   <Autocomplete.TextField
                     label="Default Status"
                     autoComplete="off"
-                    value={defaultStatusValue}
-                    onChange={setDefaultStatusValue}
-                    onBlur={() => setDefaultStatusValue(settings.defaultStatus)}
+                    value={defaultWorkOrderStatusValue}
+                    onChange={setDefaultWorkOrderStatusValue}
+                    onBlur={() => setDefaultWorkOrderStatusValue(settings.defaultStatus)}
                   />
                 }
               />
@@ -264,6 +270,103 @@ function Settings() {
                   setSettings({
                     ...settings,
                     idFormat: value,
+                  })
+                }
+              />
+            </BlockStack>
+          </Card>
+          <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+            <BlockStack gap="400">
+              <Text as="h3" variant="headingMd">
+                Purchase Orders
+              </Text>
+            </BlockStack>
+          </Box>
+          <Card roundedAbove="sm">
+            <BlockStack gap="400">
+              <Autocomplete
+                options={[]}
+                selected={[]}
+                textField={
+                  <Autocomplete.TextField
+                    label="Statuses"
+                    autoComplete="off"
+                    value={purchaseOrderStatusValue}
+                    onChange={setPurchaseOrderStatusValue}
+                  />
+                }
+                onSelect={() => {}}
+                actionBefore={
+                  purchaseOrderStatusValue.length > 0
+                    ? {
+                        content: `Create status "${purchaseOrderStatusValue}"`,
+                        prefix: <Icon source={CirclePlusMinor} />,
+                        onAction: () => {
+                          setSettings({
+                            ...settings,
+                            purchaseOrderStatuses: [...settings.purchaseOrderStatuses, purchaseOrderStatusValue],
+                          });
+                          setPurchaseOrderStatusValue('');
+                        },
+                      }
+                    : undefined
+                }
+              />
+
+              <InlineStack gap="200">
+                {settings.purchaseOrderStatuses.map((status, i) => (
+                  <Tag
+                    key={i}
+                    onRemove={() =>
+                      setSettings({
+                        ...settings,
+                        purchaseOrderStatuses: settings.purchaseOrderStatuses.filter((_, j) => i !== j),
+                      })
+                    }
+                  >
+                    {status}
+                  </Tag>
+                ))}
+              </InlineStack>
+              <Autocomplete
+                options={settings.purchaseOrderStatuses.map(status => ({ id: status, label: status, value: status }))}
+                selected={[settings.defaultPurchaseOrderStatus]}
+                onSelect={([defaultPurchaseOrderStatus]) => {
+                  setSettings(current => ({
+                    ...current,
+                    defaultPurchaseOrderStatus: defaultPurchaseOrderStatus ?? current.defaultPurchaseOrderStatus,
+                  }));
+                  setDefaultPurchaseOrderStatusValue(defaultPurchaseOrderStatus ?? settings.defaultPurchaseOrderStatus);
+                }}
+                textField={
+                  <Autocomplete.TextField
+                    label="Default Status"
+                    autoComplete="off"
+                    value={defaultPurchaseOrderStatusValue}
+                    onChange={setDefaultPurchaseOrderStatusValue}
+                    onBlur={() => setDefaultPurchaseOrderStatusValue(settings.defaultPurchaseOrderStatus)}
+                  />
+                }
+              />
+              <TextField
+                label="ID Format"
+                autoComplete="off"
+                requiredIndicator={true}
+                helpText={
+                  <>
+                    You can use variables by surrounding them in curly braces.
+                    <br />
+                    Available variables:{' '}
+                    <Text as="p" fontWeight="semibold">
+                      {'{{id}}, {{year}}, {{month}}, {{day}}, {{hour}}, {{minute}}'}
+                    </Text>
+                  </>
+                }
+                value={settings.purchaseOrderIdFormat}
+                onChange={value =>
+                  setSettings({
+                    ...settings,
+                    purchaseOrderIdFormat: value,
                   })
                 }
               />
