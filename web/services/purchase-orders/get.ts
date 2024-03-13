@@ -9,7 +9,10 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { groupByKey, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { Value } from '@sinclair/typebox/value';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { Static, Type } from '@sinclair/typebox';
 
 export async function getPurchaseOrder(session: Session, name: string) {
   const [purchaseOrder] = await db.purchaseOrder.get({ name, shop: session.shop });
@@ -63,13 +66,54 @@ export async function getPurchaseOrderInfoPage(
   }
 
   const { shop } = session;
-  const names = await db.purchaseOrder.getPage({ ...paginationOptions, shop });
+
+  const customFieldFilters =
+    paginationOptions.customFieldFilters?.map(json => {
+      const parsed = JSON.parse(json);
+      try {
+        return Value.Decode(CustomFieldFilterSchema, parsed);
+      } catch (e) {
+        throw new HttpError('Invalid custom field filter', 400);
+      }
+    }) ?? [];
+
+  const requireCustomFieldFilters = customFieldFilters.filter(hasPropertyValue('type', 'require-field')) ?? [];
+
+  const names = await db.purchaseOrder.getPage({
+    limit: paginationOptions.limit,
+    query: paginationOptions.query,
+    status: paginationOptions.status,
+    customerId: paginationOptions.customerId,
+    offset: paginationOptions.offset,
+    // the first filter is always skipped by the sql to ensure we can run this query without running into the empty record error
+    requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
+    shop,
+  });
 
   // TODO: Only basic data
   return await Promise.all(
     names.map(({ name }) => getPurchaseOrder(session, name).then(purchaseOrder => purchaseOrder ?? never())),
   );
 }
+
+const CustomFieldFilterSchema = Type.Object({
+  type: Type.Literal('require-field'),
+  /**
+   * The name of the field to require.
+   * If null, any field is required.
+   */
+  key: Type.Union([Type.Null(), Type.String()]),
+  /**
+   * A specific value the field must contain.
+   */
+  value: Type.Union([Type.Null(), Type.String()]),
+  /**
+   * Inverses the filter.
+   */
+  inverse: Type.Boolean(),
+});
+
+export type CustomFieldFilter = Static<typeof CustomFieldFilterSchema>;
 
 async function getPurchaseOrderLineItems(purchaseOrderId: number) {
   const lineItems = await db.purchaseOrder.getLineItems({ purchaseOrderId });

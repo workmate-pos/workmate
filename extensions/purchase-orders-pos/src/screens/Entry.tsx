@@ -12,12 +12,19 @@ import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/f
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js';
+import { getCustomFieldFilterText } from './popups/CustomFieldFilterConfig.js';
+import { CustomFieldFilter } from '@web/services/purchase-orders/get.js';
 
 export function Entry() {
   const [query, setQuery] = useState('');
+  const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
 
   const fetch = useAuthenticatedFetch();
-  const purchaseOrderInfoQuery = usePurchaseOrderInfoPageQuery({ fetch, query });
+  const purchaseOrderInfoQuery = usePurchaseOrderInfoPageQuery({
+    fetch,
+    query,
+    customFieldFilters,
+  });
   const purchaseOrders = purchaseOrderInfoQuery.data?.pages ?? [];
 
   const settingsQuery = useSettingsQuery({ fetch });
@@ -64,6 +71,39 @@ export function Entry() {
           {purchaseOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
         </Text>
       </Stack>
+
+      <ResponsiveStack
+        direction={'horizontal'}
+        alignment={'space-between'}
+        paddingVertical={'Small'}
+        sm={{ direction: 'vertical', alignment: 'center' }}
+      >
+        <Button
+          title={'Filter Custom Fields'}
+          onPress={() =>
+            router.push('CustomFieldFilterConfig', {
+              onSave: setCustomFieldFilters,
+              initialFilters: customFieldFilters,
+            })
+          }
+        />
+      </ResponsiveStack>
+
+      <ResponsiveStack direction={'vertical'} spacing={1} paddingVertical={'ExtraSmall'}>
+        {customFieldFilters.length > 0 && (
+          <>
+            <Text variant="body" color="TextSubdued">
+              Active filters:
+            </Text>
+            {customFieldFilters.map((filter, i) => (
+              <Text key={i} variant="body" color="TextSubdued">
+                • {getCustomFieldFilterText(filter)}
+              </Text>
+            ))}
+          </>
+        )}
+      </ResponsiveStack>
+
       <ControlledSearchBar
         value={query}
         onTextChange={setQuery}

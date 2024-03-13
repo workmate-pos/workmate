@@ -1,10 +1,14 @@
-/* @name getPage */
+/*
+  @name getPage
+  @param requiredCustomFieldFilters -> ((key, value, inverse!)...)
+*/
+WITH "CustomFieldFilters" AS (SELECT row_number() over () as row, key, val, inverse
+                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS "CustomFieldFilters"(key, val, inverse))
 SELECT DISTINCT po.id, po.name
 FROM "PurchaseOrder" po
        LEFT JOIN "PurchaseOrderLineItem" poli ON po.id = poli."purchaseOrderId"
        LEFT JOIN "ProductVariant" pv ON poli."productVariantId" = pv."productVariantId"
        LEFT JOIN "Product" p ON pv."productId" = p."productId"
-       LEFT JOIN "PurchaseOrderCustomField" pocf ON po.id = pocf."purchaseOrderId"
        LEFT JOIN "PurchaseOrderEmployeeAssignment" poea ON po.id = poea."purchaseOrderId"
        LEFT JOIN "Employee" e ON poea."employeeId" = e."staffMemberId"
        LEFT JOIN "Location" l ON po."locationId" = l."locationId"
@@ -14,7 +18,7 @@ FROM "PurchaseOrder" po
        LEFT JOIN "WorkOrderItem" woi ON soli."lineItemId" = woi."shopifyOrderLineItemId"
        LEFT JOIN "WorkOrder" wo ON woi."workOrderId" = wo."id"
 WHERE po.shop = :shop!
-  AND po.status = COALESCE(:status, po.status)
+  AND po.status ILIKE COALESCE(:status, po.status)
   AND c."customerId" IS NOT DISTINCT FROM COALESCE(:customerId, c."customerId")
   AND (
   po.name ILIKE COALESCE(:query, '%')
@@ -29,9 +33,16 @@ WHERE po.shop = :shop!
     OR pv.sku ILIKE COALESCE(:query, '%')
     OR pv."title" ILIKE COALESCE(:query, '%')
     OR p."title" ILIKE COALESCE(:query, '%')
-    OR pocf.value ILIKE COALESCE(:query, '%')
     OR e.name ILIKE COALESCE(:query, '%')
   )
+  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
+       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
+             FROM (SELECT filter.row, ((filter.key IS NOT NULL OR pocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse
+                   FROM "CustomFieldFilters" filter
+                          LEFT JOIN "PurchaseOrderCustomField" pocf
+                                    ON (pocf."purchaseOrderId" = po.id AND
+                                        pocf.key ILIKE COALESCE(filter.key, pocf.key))) AS a(row, match)
+             GROUP BY row) b(row, match))
 ORDER BY po.id DESC
 LIMIT :limit! OFFSET :offset;
 
@@ -70,6 +81,16 @@ WHERE "purchaseOrderId" = :purchaseOrderId!;
 SELECT *
 FROM "PurchaseOrderCustomField"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
+
+/* @name getCommonCustomFieldsForShop */
+SELECT DISTINCT key, COUNT(*)
+FROM "PurchaseOrderCustomField"
+       INNER JOIN "PurchaseOrder" po ON "purchaseOrderId" = po.id
+WHERE po.shop = :shop!
+  AND key ILIKE COALESCE(:query, '%')
+GROUP BY key
+ORDER BY COUNT(*)
+LIMIT :limit! OFFSET :offset!;
 
 /* @name getAssignedEmployees */
 SELECT *

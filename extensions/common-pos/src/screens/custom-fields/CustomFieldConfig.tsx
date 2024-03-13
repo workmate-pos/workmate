@@ -138,7 +138,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter }: Cu
             onChange={setNewCustomFieldName}
             error={newCustomFieldNameError}
           />
-          <Button title={'Add'} disabled={newCustomFieldNameError !== undefined} onPress={createNewCustomField} />
+          <Button title={'Add'} disabled={!!newCustomFieldNameError} onPress={createNewCustomField} />
         </ResponsiveGrid>
       </Stack>
 

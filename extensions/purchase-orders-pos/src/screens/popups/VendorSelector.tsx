@@ -8,11 +8,7 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useRouter } from '../../routes.js';
 
-export function VendorSelector({
-  onSelect,
-}: {
-  onSelect: (vendor: { vendorName: string; vendorCustomerId: ID | null }) => void;
-}) {
+export function VendorSelector({ onSelect }: { onSelect: (vendor: { vendorName: string }) => void }) {
   const [query, setQuery] = useState('');
 
   const fetch = useAuthenticatedFetch();
@@ -60,11 +56,7 @@ export function VendorSelector({
   );
 }
 
-function getVendorRows(
-  vendors: Vendor[],
-  query: string,
-  onSelect: (vendor: { vendorName: string; vendorCustomerId: ID | null }) => void,
-) {
+function getVendorRows(vendors: Vendor[], query: string, onSelect: (vendor: { vendorName: string }) => void) {
   query = query.trim();
 
   const queryFilter = (vendor: Vendor) => {
@@ -78,7 +70,6 @@ function getVendorRows(
     onPress: () => {
       onSelect({
         vendorName: vendor.name,
-        vendorCustomerId: vendor.customer?.customerId ?? null,
       });
       router.popCurrent();
     },

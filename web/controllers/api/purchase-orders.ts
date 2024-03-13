@@ -15,6 +15,8 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.
 import { getPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
 import { PurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
+import { db } from '../../services/db/db.js';
 
 @Authenticated()
 export default class PurchaseOrdersController {
@@ -63,6 +65,26 @@ export default class PurchaseOrdersController {
 
     return res.json({ purchaseOrders });
   }
+
+  @Get('/common-custom-fields')
+  @QuerySchema('offset-pagination-options')
+  @Permission('read_purchase_orders')
+  async fetchPurchaseOrderCustomFields(
+    req: Request<unknown, unknown, unknown, OffsetPaginationOptions>,
+    res: Response<FetchPurchaseOrderCustomFieldsResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const paginationOptions = req.query;
+
+    const customFields = await db.purchaseOrder.getCommonCustomFieldsForShop({
+      shop: session.shop,
+      offset: paginationOptions.offset ?? 0,
+      limit: Math.min(paginationOptions.first ?? 10, 100),
+      query: paginationOptions.query,
+    });
+
+    return res.json({ customFields: customFields.map(field => field.key) });
+  }
 }
 
 export type FetchPurchaseOrderInfoPageResponse = {
@@ -75,4 +97,8 @@ export type CreatePurchaseOrderResponse = {
 
 export type FetchPurchaseOrderResponse = {
   purchaseOrder: PurchaseOrder;
+};
+
+export type FetchPurchaseOrderCustomFieldsResponse = {
+  customFields: string[];
 };

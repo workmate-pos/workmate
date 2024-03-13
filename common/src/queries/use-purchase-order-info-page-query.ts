@@ -3,15 +3,27 @@ import { Fetch } from './fetch.js';
 import { useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
 import { FetchPurchaseOrderInfoPageResponse } from '@web/controllers/api/purchase-orders.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
+import { CustomFieldFilter } from '@web/services/purchase-orders/get.js';
 
 export const usePurchaseOrderInfoPageQuery = (
-  { fetch, ...params }: Omit<PurchaseOrderPaginationOptions, 'offset' | 'limit'> & { fetch: Fetch },
+  {
+    fetch,
+    ...params
+  }: Omit<PurchaseOrderPaginationOptions, 'offset' | 'limit' | 'customFieldFilters'> & {
+    fetch: Fetch;
+    customFieldFilters: CustomFieldFilter[];
+  },
   options?: UseInfiniteQueryOptions<
     PurchaseOrderInfo[],
     unknown,
     PurchaseOrderInfo,
     PurchaseOrderInfo[],
-    (string | Omit<PurchaseOrderPaginationOptions, 'offset' | 'limit'>)[]
+    (
+      | string
+      | (Omit<PurchaseOrderPaginationOptions, 'offset' | 'limit' | 'customFieldFilters'> & {
+          customFieldFilters: CustomFieldFilter[];
+        })
+    )[]
   >,
 ) =>
   useInfiniteQuery({
@@ -20,9 +32,14 @@ export const usePurchaseOrderInfoPageQuery = (
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams();
 
-      for (const [key, value] of Object.entries({ ...params, offset, limit: 10 })) {
+      const { customFieldFilters, ...qs } = params;
+      for (const [key, value] of Object.entries({ ...qs, offset, limit: 10 })) {
         if (value === undefined) continue;
         searchParams.set(key, String(value));
+      }
+
+      for (const filter of customFieldFilters) {
+        searchParams.append('customFieldFilters', JSON.stringify(filter));
       }
 
       const response = await fetch(`/api/purchase-orders?${searchParams}`);

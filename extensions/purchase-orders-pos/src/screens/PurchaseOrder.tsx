@@ -293,12 +293,12 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
                 <CreatePurchaseOrderMoneyField
                   createPurchaseOrder={createPurchaseOrder}
                   dispatch={dispatch}
-                  field={'tax'}
+                  field={'deposited'}
                 />
                 <CreatePurchaseOrderMoneyField
                   createPurchaseOrder={createPurchaseOrder}
                   dispatch={dispatch}
-                  field={'shipping'}
+                  field={'paid'}
                 />
               </ResponsiveGrid>
               <FormMoneyField label={'Balance Due'} value={balanceDue.toMoney()} disabled />

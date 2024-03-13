@@ -7,7 +7,7 @@
       "minimum": 0
     },
     "status": {
-      "enum": ["OPEN", "RECEIVED", "CANCELLED", "CLOSED"]
+      "type": "string"
     },
     "limit": {
       "type": "integer",
@@ -19,6 +19,12 @@
     },
     "customerId": {
       "$ref": "scalars.json#/definitions/ID"
+    },
+    "customFieldFilters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": ["limit", "offset"],

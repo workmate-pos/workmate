@@ -71,6 +71,7 @@ function Settings() {
       onSuccess({ settings }) {
         setSettings(settings);
         setDefaultWorkOrderStatusValue(settings.defaultStatus);
+        setDefaultPurchaseOrderStatusValue(settings.defaultPurchaseOrderStatus);
       },
       onError() {
         setToastAction({
