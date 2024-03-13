@@ -6,7 +6,6 @@ import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-ext
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { NonNullableValues } from '../../types.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -16,6 +15,7 @@ import { useRouter } from '../../routes.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 
 export function ProductConfig({
   product: initialProduct,

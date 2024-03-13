@@ -11,6 +11,14 @@
     "./components/*": {
       "default": "./dist/components/*",
       "types": "./src/components/*"
+    },
+    "./screens/*": {
+      "default": "./dist/screens/*",
+      "types": "./src/screens/*"
+    },
+    "./types/*": {
+      "default": "./dist/types/*",
+      "types": "./src/types/*"
     }
   },
   "scripts": {

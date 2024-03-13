@@ -44,7 +44,15 @@ export const useSaveWorkOrderMutation = (
 function validateWorkOrder(createWorkOrder: Nullable<CreateWorkOrder>): asserts createWorkOrder is CreateWorkOrder {
   const errors: Partial<Record<keyof CreateWorkOrder, string>> = {};
 
-  const requiredKeys: (keyof CreateWorkOrder)[] = ['status', 'customerId', 'dueDate', 'charges', 'note', 'items'];
+  const requiredKeys: (keyof CreateWorkOrder)[] = [
+    'status',
+    'customerId',
+    'dueDate',
+    'charges',
+    'note',
+    'items',
+    'customFields',
+  ];
 
   for (const key of requiredKeys) {
     if (createWorkOrder[key] === null) {

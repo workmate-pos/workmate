@@ -1,7 +1,7 @@
 import { CreateProduct } from '@web/schemas/generated/create-product.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useReducer, useState } from 'react';
-import { CreateProductBase, defaultCreateProduct } from './default.js';
+import { defaultCreateProduct } from './default.js';
 import { useConst } from '@work-orders/common-pos/hooks/use-const.js';
 
 export type CreateProductAction =
@@ -18,8 +18,13 @@ export type CreateProductDispatchProxy = {
   ) => void;
 };
 
-export const useCreateProductReducer = (base: CreateProductBase) => {
-  const [createPurchaseOrder, dispatchCreateProduct] = useReducer(createProductReducer, defaultCreateProduct(base));
+export const useCreateProductReducer = (initial: Partial<CreateProduct>) => {
+  const initialNoUndefined = Object.fromEntries(Object.entries(initial).filter(([, value]) => value !== undefined));
+
+  const [createPurchaseOrder, dispatchCreateProduct] = useReducer(createProductReducer, {
+    ...defaultCreateProduct,
+    ...initialNoUndefined,
+  });
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 

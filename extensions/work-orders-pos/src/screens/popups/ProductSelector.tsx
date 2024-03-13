@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '../../util/uuid.js';
@@ -12,6 +12,10 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { Product } from '@web/schemas/generated/create-purchase-order.js';
+import { useRouter } from '../../routes.js';
+
+// TODO: Share this screen too + more
 
 export function ProductSelector({
   onSelect,
@@ -47,9 +51,30 @@ export function ProductSelector({
   };
 
   const rows = getProductVariantRows(productVariants, internalOnSelect, currencyFormatter);
+  const router = useRouter();
 
   return (
     <ScrollView>
+      <Button
+        title={'New Product'}
+        variant={'primary'}
+        onPress={() => {
+          router.push('ProductCreator', {
+            initialProduct: {},
+            onCreate: (product: Product) =>
+              internalOnSelect(
+                {
+                  quantity: product.quantity,
+                  uuid: uuid(),
+                  productVariantId: product.productVariantId,
+                  absorbCharges: false,
+                },
+                [],
+              ),
+          });
+        }}
+      />
+
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">
           {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}

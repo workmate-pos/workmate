@@ -57,7 +57,7 @@ export default class ProductsController {
               cost: costPrice,
               tracked: true,
             },
-            inventoryQuantities: [{ availableQuantity, locationId }],
+            inventoryQuantities: locationId ? [{ availableQuantity, locationId }] : [],
           },
         ],
       },

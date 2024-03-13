@@ -5,7 +5,6 @@ import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/que
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
-import { NonNullableValues } from '../../types.js';
 import { useRouter } from '../../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -14,6 +13,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
+import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 
 export function ProductSelector({
   filters: { vendorName, locationId },
@@ -79,7 +79,7 @@ export function ProductSelector({
           router.push('ProductCreator', {
             initialProduct: {
               locationId,
-              vendorName,
+              vendor: vendorName,
             },
             onCreate: (product: Product) => selectProducts([product]),
           });

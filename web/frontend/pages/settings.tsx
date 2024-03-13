@@ -245,6 +245,7 @@ function Settings() {
                   <Autocomplete.TextField
                     label="Default Status"
                     autoComplete="off"
+                    requiredIndicator
                     value={defaultWorkOrderStatusValue}
                     onChange={setDefaultWorkOrderStatusValue}
                     onBlur={() => setDefaultWorkOrderStatusValue(settings.defaultStatus)}
@@ -254,7 +255,7 @@ function Settings() {
               <TextField
                 label="ID Format"
                 autoComplete="off"
-                requiredIndicator={true}
+                requiredIndicator
                 helpText={
                   <>
                     You can use variables by surrounding them in curly braces.
@@ -342,6 +343,7 @@ function Settings() {
                   <Autocomplete.TextField
                     label="Default Status"
                     autoComplete="off"
+                    requiredIndicator
                     value={defaultPurchaseOrderStatusValue}
                     onChange={setDefaultPurchaseOrderStatusValue}
                     onBlur={() => setDefaultPurchaseOrderStatusValue(settings.defaultPurchaseOrderStatus)}
@@ -351,7 +353,7 @@ function Settings() {
               <TextField
                 label="ID Format"
                 autoComplete="off"
-                requiredIndicator={true}
+                requiredIndicator
                 helpText={
                   <>
                     You can use variables by surrounding them in curly braces.
@@ -458,7 +460,7 @@ function Settings() {
                 largeStep={1}
                 min={0}
                 inputMode={'decimal'}
-                requiredIndicator={true}
+                requiredIndicator
                 onChange={(value: Money) => setSettings({ ...settings, defaultRate: value })}
                 autoComplete={'off'}
                 helpText={'Used for employees without a set hourly rate'}

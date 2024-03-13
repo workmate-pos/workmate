@@ -218,6 +218,8 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const screen = useScreen();
   screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isFetching));
 
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+
   return workOrderInfos.flatMap<ListRow>(({ name, status, dueDate, orders, customer }) => {
     const query = workOrderQueries[name];
     if (!query) return [];

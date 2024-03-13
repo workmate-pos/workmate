@@ -3,22 +3,27 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useState } from 'react';
-import { useRouter } from '../../routes.js';
 import {
   CustomFieldsPreset,
   useWorkOrderCustomFieldsPresetsQuery,
 } from '@work-orders/common/queries/use-work-order-custom-fields-presets-query.js';
+import { Router, UseRouter } from '../router.js';
 
-// TODO: Dedup with POs
+export type ImportPresetProps = {
+  onImport: (preset: { keys: string[] }) => void;
+  useRouter: UseRouter;
+};
 
-export function ImportPreset({ onImport }: { onImport: (preset: { keys: string[] }) => void }) {
+export function ImportPreset({ onImport, useRouter }: ImportPresetProps) {
   const [query, setQuery] = useState('');
 
   const fetch = useAuthenticatedFetch();
   const presetsQuery = useWorkOrderCustomFieldsPresetsQuery({ fetch });
   const presets = presetsQuery.data ?? [];
 
-  const rows = getPresetRows(presets, query, onImport);
+  const router = useRouter();
+
+  const rows = getPresetRows(presets, query, onImport, router);
 
   return (
     <ScrollView>
@@ -59,12 +64,15 @@ export function ImportPreset({ onImport }: { onImport: (preset: { keys: string[]
   );
 }
 
-function getPresetRows(presets: CustomFieldsPreset[], query: string, onImport: (preset: { keys: string[] }) => void) {
+function getPresetRows(
+  presets: CustomFieldsPreset[],
+  query: string,
+  onImport: (preset: { keys: string[] }) => void,
+  router: Router,
+) {
   const queryFilter = (preset: CustomFieldsPreset) => preset.name.toLowerCase().includes(query.toLowerCase());
 
   const FIELD_PREVIEW_COUNT = 5;
-
-  const router = useRouter();
 
   return presets.filter(queryFilter).map<ListRow>(preset => {
     const subtitle =

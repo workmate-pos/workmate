@@ -21,4 +21,5 @@ export const defaultCreateWorkOrder = (base: CreateWorkOrderBase): WIPCreateWork
   charges: [],
   items: [],
   customerId: null,
+  customFields: {},
 });

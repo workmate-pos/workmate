@@ -1,10 +1,7 @@
-import { useCreateProductReducer } from '../../create-product/reducer.js';
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useCreateProductMutation } from '@work-orders/common/queries/use-create-product-mutation.js';
 import { useState } from 'react';
-import { Int } from '@web/schemas/generated/create-product.js';
-import type { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
-import { NonNullableValues } from '../../types.js';
+import { CreateProduct, Int } from '@web/schemas/generated/create-product.js';
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
@@ -14,25 +11,24 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { FormDecimalField, roundingPostProcessor } from '@teifi-digital/pos-tools/form/components/FormDecimalField.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { stringLengthValidator } from '../../util/string-length-validator.js';
-import { useRouter } from '../../routes.js';
+import { useCreateProductReducer } from './reducer.js';
+import { UseRouter } from '../router.js';
+import { Product } from '@web/schemas/generated/create-purchase-order.js';
 
-export function ProductCreator({
-  initialProduct: { vendorName, locationId },
-  onCreate,
-}: {
-  initialProduct: NonNullableValues<Pick<CreatePurchaseOrder, 'locationId' | 'vendorName'>>;
+export type ProductCreatorProps = {
+  initialProduct: Partial<CreateProduct>;
   onCreate: (product: Product) => void;
-}) {
-  const [createProduct, dispatch, hasUnsavedChanges] = useCreateProductReducer({
-    locationId,
-    vendor: vendorName,
-  });
+  useRouter: UseRouter;
+};
+
+export function ProductCreator({ initialProduct, onCreate, useRouter }: ProductCreatorProps) {
+  const [createProduct, dispatch, hasUnsavedChanges] = useCreateProductReducer(initialProduct);
   const [quantity, setQuantity] = useState<Int>(1 as Int);
   const { Form, isValid } = useForm();
 
-  const fetch = useAuthenticatedFetch();
   const router = useRouter();
+
+  const fetch = useAuthenticatedFetch();
   const createProductMutation = useCreateProductMutation(
     { fetch },
     {
@@ -67,8 +63,7 @@ export function ProductCreator({
               label={'Title'}
               value={createProduct.title ?? ''}
               onChange={(value: string) => dispatch.setPartial({ title: value })}
-              validator={stringLengthValidator({ min: 1 })}
-              required={true}
+              required
             />
             <FormStringField
               label={'SKU'}
@@ -97,7 +92,7 @@ export function ProductCreator({
               onChange={costPrice => dispatch.setPartial({ costPrice })}
             />
             <FormDecimalField
-              label={'PO Quantity'}
+              label={'Selection Quantity'}
               value={BigDecimal.fromString(String(quantity)).toDecimal()}
               onChange={decimal => setQuantity(current => (decimal ? (Number(decimal) as Int) : current))}
               postprocessor={roundingPostProcessor(0)}

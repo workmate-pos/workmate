@@ -1,20 +1,25 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Button, ScrollView, Stack, Text, TextField } from '@shopify/retail-ui-extensions-react';
-import type { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
-import { useRouter } from '../../routes.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
+import { Route, UseRouter } from '../router.js';
+import { ImportPresetProps } from './ImportPreset.js';
+import { SavePresetProps } from './SavePreset.js';
 
-export function CustomFieldConfig({
-  initialCustomFields,
-  onSave,
-}: {
-  initialCustomFields: CreatePurchaseOrder['customFields'];
+export type CustomFieldConfigProps = {
+  initialCustomFields: CreateWorkOrder['customFields'];
   onSave: (customFields: Record<string, string>) => void;
-}) {
+  useRouter: UseRouter<{
+    ImportPreset: Route<ImportPresetProps>;
+    SavePreset: Route<SavePresetProps>;
+  }>;
+};
+
+export function CustomFieldConfig({ initialCustomFields, onSave, useRouter }: CustomFieldConfigProps) {
   const [customFields, setCustomFields] = useState<Record<string, string>>(initialCustomFields);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -32,6 +37,8 @@ export function CustomFieldConfig({
     }
   }, [newCustomFieldName]);
 
+  const router = useRouter();
+
   function createNewCustomField() {
     if (newCustomFieldName.trim().length === 0) {
       setNewCustomFieldNameError('Custom field name is required');
@@ -46,8 +53,6 @@ export function CustomFieldConfig({
       [newCustomFieldName]: '',
     });
   }
-
-  const router = useRouter();
 
   const screen = useScreen();
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
@@ -71,7 +76,10 @@ export function CustomFieldConfig({
               const keys = Object.keys(customFields);
 
               if (isNonEmptyArray(keys)) {
-                router.push('SavePreset', { keys });
+                router.push('SavePreset', {
+                  keys,
+                  useRouter,
+                });
               }
             }}
           />
@@ -81,6 +89,7 @@ export function CustomFieldConfig({
             onPress={() => {
               router.push('ImportPreset', {
                 onImport: ({ keys }) => overrideOrMergeDialog.show(keys),
+                useRouter,
               });
             }}
           />

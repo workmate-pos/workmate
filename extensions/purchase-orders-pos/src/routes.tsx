@@ -3,15 +3,18 @@ import { StatusSelector } from './screens/popups/StatusSelector.js';
 import { VendorSelector } from './screens/popups/VendorSelector.js';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { Entry } from './screens/Entry.js';
-import { CustomFieldConfig } from './screens/popups/CustomFieldConfig.js';
-import { SavePreset } from './screens/popups/SavePreset.js';
-import { ImportPreset } from './screens/popups/ImportPreset.js';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
 import { LocationSelector } from './screens/popups/LocationSelector.js';
 import { ProductSelector } from './screens/popups/ProductSelector.js';
-import { ProductCreator } from './screens/popups/ProductCreator.js';
 import { ProductConfig } from './screens/popups/ProductConfig.js';
 import { createRouter } from '@teifi-digital/pos-tools/router';
+import { ProductCreator, ProductCreatorProps } from '@work-orders/common-pos/screens/product-creator/ProductCreator.js';
+import {
+  CustomFieldConfig,
+  CustomFieldConfigProps,
+} from '@work-orders/common-pos/screens/custom-fields/CustomFieldConfig.js';
+import { ImportPreset, ImportPresetProps } from '@work-orders/common-pos/screens/custom-fields/ImportPreset.js';
+import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -39,15 +42,17 @@ export const { Router, useRouter } = createRouter(
     },
     CustomFieldConfig: {
       title: 'Custom Fields',
-      Component: CustomFieldConfig,
-    },
-    SavePreset: {
-      title: 'Save Preset',
-      Component: SavePreset,
+      Component: (props: Omit<CustomFieldConfigProps, 'useRouter'>) => (
+        <CustomFieldConfig {...props} useRouter={useRouter} />
+      ),
     },
     ImportPreset: {
       title: 'Import Preset',
-      Component: ImportPreset,
+      Component: (props: Omit<ImportPresetProps, 'useRouter'>) => <ImportPreset {...props} useRouter={useRouter} />,
+    },
+    SavePreset: {
+      title: 'Save Preset',
+      Component: (props: Omit<SavePresetProps, 'useRouter'>) => <SavePreset {...props} useRouter={useRouter} />,
     },
     EmployeeSelector: {
       title: 'Select Employee',
@@ -74,7 +79,7 @@ export const { Router, useRouter } = createRouter(
     },
     ProductCreator: {
       title: 'Create Product',
-      Component: ProductCreator,
+      Component: (props: Omit<ProductCreatorProps, 'useRouter'>) => <ProductCreator {...props} useRouter={useRouter} />,
     },
     ProductConfig: {
       title: 'Product Config',

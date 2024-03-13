@@ -5,19 +5,21 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
-import { useRouter } from '../../routes.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { useWorkOrderCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-work-order-custom-fields-presets-query.js';
 import { useWorkOrderCustomFieldsPresetMutation } from '@work-orders/common/queries/use-work-order-custom-fields-preset-mutation.js';
+import { UseRouter } from '../router.js';
 
-// TODO: Dedup with PO (this is better version with FormButton)
+export type SavePresetProps = {
+  keys: [string, ...string[]];
+  useRouter: UseRouter;
+};
 
-export function SavePreset({ keys }: { keys: [string, ...string[]] }) {
+export function SavePreset({ keys, useRouter }: SavePresetProps) {
   const [name, setName] = useState<string>('');
 
   const { Form } = useForm();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
-
   const router = useRouter();
 
   const fetch = useAuthenticatedFetch();

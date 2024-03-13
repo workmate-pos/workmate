@@ -3,7 +3,6 @@ import { parseMetaobject } from './metaobjects/index.js';
 import { fetchAllPages, gql } from './gql/gql.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import type { Int } from '../schemas/generated/pagination-options.js';
 
 export function parseProductVariantMetafields<const T extends gql.products.ProductVariantFragment.Result>(
   productVariant: T,

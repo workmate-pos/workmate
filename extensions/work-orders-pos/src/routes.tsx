@@ -15,9 +15,13 @@ import { WorkOrder } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { PaymentOverview } from './screens/popups/PaymentOverview.js';
 import { ScrollView } from '@shopify/retail-ui-extensions-react';
-import { CustomFieldConfig } from './screens/popups/CustomFieldConfig.js';
-import { ImportPreset } from './screens/popups/ImportPreset.js';
-import { SavePreset } from './screens/popups/SavePreset.js';
+import {
+  CustomFieldConfig,
+  CustomFieldConfigProps,
+} from '@work-orders/common-pos/screens/custom-fields/CustomFieldConfig.js';
+import { ImportPreset, ImportPresetProps } from '@work-orders/common-pos/screens/custom-fields/ImportPreset.js';
+import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
+import { ProductCreator, ProductCreatorProps } from '@work-orders/common-pos/screens/product-creator/ProductCreator.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -92,15 +96,21 @@ export const { Router, useRouter } = createRouter(
     },
     CustomFieldConfig: {
       title: 'Custom Fields',
-      Component: CustomFieldConfig,
+      Component: (props: Omit<CustomFieldConfigProps, 'useRouter'>) => (
+        <CustomFieldConfig {...props} useRouter={useRouter} />
+      ),
     },
     ImportPreset: {
       title: 'Import Preset',
-      Component: ImportPreset,
+      Component: (props: Omit<ImportPresetProps, 'useRouter'>) => <ImportPreset {...props} useRouter={useRouter} />,
     },
     SavePreset: {
       title: 'Save Preset',
-      Component: SavePreset,
+      Component: (props: Omit<SavePresetProps, 'useRouter'>) => <SavePreset {...props} useRouter={useRouter} />,
+    },
+    ProductCreator: {
+      title: 'Create Product',
+      Component: (props: Omit<ProductCreatorProps, 'useRouter'>) => <ProductCreator {...props} useRouter={useRouter} />,
     },
   },
 );
