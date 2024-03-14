@@ -1,4 +1,13 @@
-import { List, ListRow, ScrollView, Stack, Text, TextArea, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import {
+  Banner,
+  List,
+  ListRow,
+  ScrollView,
+  Stack,
+  Text,
+  TextArea,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { CreatePurchaseOrderDispatchProxy, useCreatePurchaseOrderReducer } from '../create-purchase-order/reducer.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
@@ -23,6 +32,7 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/from-purchase-order.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to SO line items
@@ -114,6 +124,14 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
   return (
     <ScrollView>
       <Form disabled={purchaseOrderMutation.isLoading}>
+        {purchaseOrderMutation.error && (
+          <Banner
+            title={`Error saving purchase order: ${extractErrorMessage(purchaseOrderMutation.error)}`}
+            variant={'error'}
+            visible
+          />
+        )}
+
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={4} grow>
             {createPurchaseOrder.name && (
@@ -307,6 +325,28 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
         </Stack>
 
         <Stack direction={'vertical'} paddingVertical={'Small'}>
+          <ResponsiveGrid columns={1}>
+            <FormButton
+              title={'Print'}
+              type={'basic'}
+              action={'button'}
+              disabled={!createPurchaseOrder.name || hasUnsavedChanges}
+              onPress={() => {
+                if (createPurchaseOrder.name) {
+                  router.push('PrintOverview', {
+                    name: createPurchaseOrder.name,
+                  });
+                }
+              }}
+            />
+            {!createPurchaseOrder.name ||
+              (hasUnsavedChanges && (
+                <Text color="TextSubdued" variant="body">
+                  You must save your purchase order before you can print
+                </Text>
+              ))}
+          </ResponsiveGrid>
+
           <FormButton
             title={!!createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
             type={'primary'}

@@ -12,15 +12,16 @@ FROM "Customer"
 WHERE "customerId" IN :customerIds!;
 
 /* @name upsert */
-INSERT INTO "Customer" ("customerId", shop, "displayName", "firstName", "lastName", email, phone)
-VALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone)
+INSERT INTO "Customer" ("customerId", shop, "displayName", "firstName", "lastName", email, phone, address)
+VALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone, :address)
 ON CONFLICT ("customerId") DO UPDATE
   SET shop          = :shop!,
       "displayName" = :displayName!,
       "firstName"   = :firstName,
       "lastName"    = :lastName,
       email         = :email,
-      phone         = :phone;
+      phone         = :phone,
+      address       = :address;
 
 /*
   @name softDeleteCustomers

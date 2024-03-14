@@ -12,6 +12,7 @@ export interface IGetParams {
 export interface IGetResult {
   createdAt: Date;
   customerId: string | null;
+  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
@@ -49,6 +50,7 @@ export interface IGetManyParams {
 export interface IGetManyResult {
   createdAt: Date;
   customerId: string | null;
+  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
@@ -80,6 +82,7 @@ export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyI
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
   customerId?: string | null | void;
+  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
@@ -97,20 +100,21 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":true,"name":true,"customerId":true,"total":true,"outstanding":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":114}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":117,"b":122},{"a":238,"b":243}]},{"name":"orderType","required":true,"transform":{"type":"scalar"},"locs":[{"a":125,"b":135},{"a":267,"b":277}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":138,"b":143},{"a":301,"b":306}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":146,"b":156},{"a":330,"b":340}]},{"name":"total","required":true,"transform":{"type":"scalar"},"locs":[{"a":159,"b":165},{"a":364,"b":370}]},{"name":"outstanding","required":true,"transform":{"type":"scalar"},"locs":[{"a":168,"b":180},{"a":394,"b":406}]}],"statement":"INSERT INTO \"ShopifyOrder\" (\"orderId\", shop, \"orderType\", name, \"customerId\", total, outstanding)\nVALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!)\nON CONFLICT (\"orderId\") DO UPDATE\n  SET shop         = :shop!,\n      \"orderType\"  = :orderType!,\n      name         = :name!,\n      \"customerId\" = :customerId,\n      total        = :total!,\n      outstanding  = :outstanding!"};
+const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":true,"name":true,"customerId":true,"total":true,"outstanding":true,"fullyPaid":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":119,"b":127}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":130,"b":135},{"a":264,"b":269}]},{"name":"orderType","required":true,"transform":{"type":"scalar"},"locs":[{"a":138,"b":148},{"a":293,"b":303}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":151,"b":156},{"a":327,"b":332}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":159,"b":169},{"a":356,"b":366}]},{"name":"total","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":178},{"a":390,"b":396}]},{"name":"outstanding","required":true,"transform":{"type":"scalar"},"locs":[{"a":181,"b":193},{"a":420,"b":432}]},{"name":"fullyPaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":196,"b":206},{"a":455,"b":465}]}],"statement":"INSERT INTO \"ShopifyOrder\" (\"orderId\", shop, \"orderType\", name, \"customerId\", total, outstanding, \"fullyPaid\")\nVALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)\nON CONFLICT (\"orderId\") DO UPDATE\n  SET shop         = :shop!,\n      \"orderType\"  = :orderType!,\n      name         = :name!,\n      \"customerId\" = :customerId,\n      total        = :total!,\n      outstanding  = :outstanding!,\n      \"fullyPaid\" = :fullyPaid!"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding)
- * VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!)
+ * INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding, "fullyPaid")
+ * VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)
  * ON CONFLICT ("orderId") DO UPDATE
  *   SET shop         = :shop!,
  *       "orderType"  = :orderType!,
  *       name         = :name!,
  *       "customerId" = :customerId,
  *       total        = :total!,
- *       outstanding  = :outstanding!
+ *       outstanding  = :outstanding!,
+ *       "fullyPaid" = :fullyPaid!
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
@@ -315,6 +319,7 @@ export interface IGetLinkedOrdersByWorkOrderIdParams {
 export interface IGetLinkedOrdersByWorkOrderIdResult {
   createdAt: Date;
   customerId: string | null;
+  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
@@ -361,6 +366,7 @@ export interface IGetLinkedOrdersByPurchaseOrderIdParams {
 export interface IGetLinkedOrdersByPurchaseOrderIdResult {
   createdAt: Date;
   customerId: string | null;
+  fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;

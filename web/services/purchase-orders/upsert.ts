@@ -209,7 +209,7 @@ async function adjustShopifyInventoryItemCosts(
       ...productVariantCosts.map(({ quantity }) => BigDecimal.fromString(quantity.toFixed(0))),
     );
 
-    const averageCost = totalCost.divide(totalQuantity).round(2);
+    const averageCost = totalCost.divide(BigDecimal.max(BigDecimal.ONE, totalQuantity)).round(2);
 
     await gql.inventoryItems.updateInventoryItem.run(graphql, {
       id: inventoryItem.id,

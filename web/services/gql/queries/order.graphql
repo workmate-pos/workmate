@@ -176,6 +176,7 @@ fragment DatabaseShopifyOrderFragment on Order {
     key
     value
   }
+  fullyPaid
 }
 
 fragment DatabaseShopifyOrderLineItemFragment on LineItem {

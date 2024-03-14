@@ -41,21 +41,12 @@ export async function updateSettings(shop: string, partialShopSettings: PartialS
 }
 
 export async function insertDefaultSettingsIfNotExists(shop: string) {
-  await unit(async () => {
-    const entries = getShopSettingKeys().map(key => [key, getDefaultShopSetting(key)]) as [
-      keyof ShopSettings,
-      ShopSettings[keyof ShopSettings],
-    ][];
-
-    return await Promise.all(
-      entries.map(([key, value]) =>
-        db.settings.insertSettingIfNotExists({
-          shop,
-          key,
-          value: serialize(value),
-        }),
-      ),
-    );
+  await db.settings.insertSettingsIfNotExists({
+    settings: getShopSettingKeys().map(key => ({
+      shop,
+      key,
+      value: serialize(getDefaultShopSetting(key)),
+    })),
   });
 }
 

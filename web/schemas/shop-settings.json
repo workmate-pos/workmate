@@ -16,6 +16,11 @@
     "defaultRate",
     "labourLineItemName",
     "labourLineItemSKU",
-    "chargeSettings"
+    "chargeSettings",
+    "emailFromTitle",
+    "emailReplyTo",
+    "printEmail",
+    "workOrderPrintTemplates",
+    "purchaseOrderPrintTemplates"
   ]
 }

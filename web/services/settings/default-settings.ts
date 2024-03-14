@@ -1,5 +1,8 @@
 import { Money, Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
+import { quoteTemplate } from '../mail/templates/defaults/work-order/quote.js';
+import { workOrderTemplate } from '../mail/templates/defaults/work-order/work-order.js';
+import { invoiceTemplate } from '../mail/templates/defaults/purchase-order/invoice.js';
 
 const defaultShopSettings: ShopSettings = {
   statuses: ['Draft', 'In Progress', 'Done'],
@@ -31,6 +34,25 @@ const defaultShopSettings: ShopSettings = {
   purchaseOrderIdFormat: 'PO-#{{id}}',
   purchaseOrderStatuses: ['Draft', 'In Transit', 'Received'],
   defaultPurchaseOrderStatus: 'Draft',
+  emailFromTitle: 'WorkMate',
+  emailReplyTo: '',
+  printEmail: '',
+  workOrderPrintTemplates: {
+    Quote: {
+      subject: 'Quote for {{ name }}',
+      template: quoteTemplate,
+    },
+    'Work Order Overview': {
+      subject: 'Work Order {{ name }}',
+      template: workOrderTemplate,
+    },
+  },
+  purchaseOrderPrintTemplates: {
+    Invoice: {
+      subject: 'Invoice for {{ name }}',
+      template: invoiceTemplate,
+    },
+  },
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

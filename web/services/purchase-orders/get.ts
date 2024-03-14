@@ -14,8 +14,8 @@ import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { Static, Type } from '@sinclair/typebox';
 
-export async function getPurchaseOrder(session: Session, name: string) {
-  const [purchaseOrder] = await db.purchaseOrder.get({ name, shop: session.shop });
+export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
+  const [purchaseOrder] = await db.purchaseOrder.get({ name, shop });
 
   if (!purchaseOrder) {
     return null;
@@ -149,6 +149,7 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
           title: product.title,
           handle: product.handle,
           hasOnlyDefaultVariant: product.productVariantCount === 1,
+          description: product.description,
         },
       },
       unitCost,

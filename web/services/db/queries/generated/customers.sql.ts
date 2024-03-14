@@ -8,6 +8,7 @@ export interface IGetParams {
 
 /** 'Get' return type */
 export interface IGetResult {
+  address: string | null;
   createdAt: Date;
   customerId: string;
   deletedAt: Date | null;
@@ -46,6 +47,7 @@ export interface IGetManyParams {
 
 /** 'GetMany' return type */
 export interface IGetManyResult {
+  address: string | null;
   createdAt: Date;
   customerId: string;
   deletedAt: Date | null;
@@ -79,6 +81,7 @@ export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyI
 
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
+  address?: string | null | void;
   customerId: string;
   displayName: string;
   email?: string | null | void;
@@ -97,20 +100,21 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"customerId":true,"shop":true,"displayName":true,"firstName":true,"lastName":true,"email":true,"phone":true},"params":[{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":117}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":120,"b":125},{"a":241,"b":246}]},{"name":"displayName","required":true,"transform":{"type":"scalar"},"locs":[{"a":128,"b":140},{"a":271,"b":283}]},{"name":"firstName","required":false,"transform":{"type":"scalar"},"locs":[{"a":143,"b":152},{"a":308,"b":317}]},{"name":"lastName","required":false,"transform":{"type":"scalar"},"locs":[{"a":155,"b":163},{"a":342,"b":350}]},{"name":"email","required":false,"transform":{"type":"scalar"},"locs":[{"a":166,"b":171},{"a":375,"b":380}]},{"name":"phone","required":false,"transform":{"type":"scalar"},"locs":[{"a":174,"b":179},{"a":405,"b":410}]}],"statement":"INSERT INTO \"Customer\" (\"customerId\", shop, \"displayName\", \"firstName\", \"lastName\", email, phone)\nVALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone)\nON CONFLICT (\"customerId\") DO UPDATE\n  SET shop          = :shop!,\n      \"displayName\" = :displayName!,\n      \"firstName\"   = :firstName,\n      \"lastName\"    = :lastName,\n      email         = :email,\n      phone         = :phone"};
+const upsertIR: any = {"usedParamSet":{"customerId":true,"shop":true,"displayName":true,"firstName":true,"lastName":true,"email":true,"phone":true,"address":true},"params":[{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":115,"b":126}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":129,"b":134},{"a":260,"b":265}]},{"name":"displayName","required":true,"transform":{"type":"scalar"},"locs":[{"a":137,"b":149},{"a":290,"b":302}]},{"name":"firstName","required":false,"transform":{"type":"scalar"},"locs":[{"a":152,"b":161},{"a":327,"b":336}]},{"name":"lastName","required":false,"transform":{"type":"scalar"},"locs":[{"a":164,"b":172},{"a":361,"b":369}]},{"name":"email","required":false,"transform":{"type":"scalar"},"locs":[{"a":175,"b":180},{"a":394,"b":399}]},{"name":"phone","required":false,"transform":{"type":"scalar"},"locs":[{"a":183,"b":188},{"a":424,"b":429}]},{"name":"address","required":false,"transform":{"type":"scalar"},"locs":[{"a":191,"b":198},{"a":454,"b":461}]}],"statement":"INSERT INTO \"Customer\" (\"customerId\", shop, \"displayName\", \"firstName\", \"lastName\", email, phone, address)\nVALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone, :address)\nON CONFLICT (\"customerId\") DO UPDATE\n  SET shop          = :shop!,\n      \"displayName\" = :displayName!,\n      \"firstName\"   = :firstName,\n      \"lastName\"    = :lastName,\n      email         = :email,\n      phone         = :phone,\n      address       = :address"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "Customer" ("customerId", shop, "displayName", "firstName", "lastName", email, phone)
- * VALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone)
+ * INSERT INTO "Customer" ("customerId", shop, "displayName", "firstName", "lastName", email, phone, address)
+ * VALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone, :address)
  * ON CONFLICT ("customerId") DO UPDATE
  *   SET shop          = :shop!,
  *       "displayName" = :displayName!,
  *       "firstName"   = :firstName,
  *       "lastName"    = :lastName,
  *       email         = :email,
- *       phone         = :phone
+ *       phone         = :phone,
+ *       address       = :address
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);

@@ -14,7 +14,7 @@ export interface IGetResult {
   productId: string;
   productVariantId: string;
   sku: string | null;
-  title: string | null;
+  title: string;
   updatedAt: Date;
 }
 
@@ -50,7 +50,7 @@ export interface IGetManyResult {
   productId: string;
   productVariantId: string;
   sku: string | null;
-  title: string | null;
+  title: string;
   updatedAt: Date;
 }
 

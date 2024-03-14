@@ -160,6 +160,7 @@ fragment DatabaseProductFragment on Product {
   id
   handle
   title
+  description
 }
 
 

@@ -16,6 +16,7 @@ import {
 import { ImportPreset, ImportPresetProps } from '@work-orders/common-pos/screens/custom-fields/ImportPreset.js';
 import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 import { CustomFieldFilterConfig } from './screens/popups/CustomFieldFilterConfig.js';
+import { PrintOverview } from './screens/PrintOverview.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -89,6 +90,10 @@ export const { Router, useRouter } = createRouter(
     CustomFieldFilterConfig: {
       title: 'Custom Field Filters',
       Component: CustomFieldFilterConfig,
+    },
+    PrintOverview: {
+      title: 'Print Overview',
+      Component: PrintOverview,
     },
   },
 );

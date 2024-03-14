@@ -12,15 +12,16 @@ FROM "ShopifyOrder"
 WHERE "orderId" IN :orderIds!;
 
 /* @name upsert */
-INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding)
-VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!)
+INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding, "fullyPaid")
+VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)
 ON CONFLICT ("orderId") DO UPDATE
   SET shop         = :shop!,
       "orderType"  = :orderType!,
       name         = :name!,
       "customerId" = :customerId,
       total        = :total!,
-      outstanding  = :outstanding!;
+      outstanding  = :outstanding!,
+      "fullyPaid" = :fullyPaid!;
 
 /* @name getLineItems */
 SELECT *

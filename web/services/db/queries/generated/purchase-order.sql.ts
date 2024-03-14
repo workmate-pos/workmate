@@ -131,6 +131,50 @@ const getIR: any = {"usedParamSet":{"id":true,"shop":true,"name":true},"params":
 export const get = new PreparedQuery<IGetParams,IGetResult>(getIR);
 
 
+/** 'GetMany' parameters type */
+export interface IGetManyParams {
+  purchaseOrderIds: readonly (number)[];
+}
+
+/** 'GetMany' return type */
+export interface IGetManyResult {
+  createdAt: Date;
+  deposited: string | null;
+  discount: string | null;
+  id: number;
+  locationId: string | null;
+  name: string;
+  note: string;
+  paid: string | null;
+  shipFrom: string;
+  shipping: string | null;
+  shipTo: string;
+  shop: string;
+  status: string;
+  tax: string | null;
+  updatedAt: Date;
+  vendorName: string | null;
+}
+
+/** 'GetMany' query type */
+export interface IGetManyQuery {
+  params: IGetManyParams;
+  result: IGetManyResult;
+}
+
+const getManyIR: any = {"usedParamSet":{"purchaseOrderIds":true},"params":[{"name":"purchaseOrderIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":42,"b":59}]}],"statement":"SELECT *\nFROM \"PurchaseOrder\"\nWHERE id in :purchaseOrderIds!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "PurchaseOrder"
+ * WHERE id in :purchaseOrderIds!
+ * ```
+ */
+export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyIR);
+
+
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
   deposited?: string | null | void;
@@ -593,5 +637,89 @@ const getPurchaseOrderLineItemsByShopifyOrderLineItemIdIR: any = {"usedParamSet"
  * ```
  */
 export const getPurchaseOrderLineItemsByShopifyOrderLineItemId = new PreparedQuery<IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdParams,IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdResult>(getPurchaseOrderLineItemsByShopifyOrderLineItemIdIR);
+
+
+/** 'GetPurchaseOrderLineItemsByShopifyOrderLineItemIds' parameters type */
+export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsParams {
+  shopifyOrderLineItemIds: readonly (string)[];
+}
+
+/** 'GetPurchaseOrderLineItemsByShopifyOrderLineItemIds' return type */
+export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsResult {
+  availableQuantity: number;
+  createdAt: Date;
+  id: number;
+  productVariantId: string;
+  purchaseOrderId: number;
+  quantity: number;
+  shopifyOrderLineItemId: string | null;
+  unitCost: string;
+  updatedAt: Date;
+}
+
+/** 'GetPurchaseOrderLineItemsByShopifyOrderLineItemIds' query type */
+export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsQuery {
+  params: IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsParams;
+  result: IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsResult;
+}
+
+const getPurchaseOrderLineItemsByShopifyOrderLineItemIdsIR: any = {"usedParamSet":{"shopifyOrderLineItemIds":true},"params":[{"name":"shopifyOrderLineItemIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":72,"b":96}]}],"statement":"SELECT *\nFROM \"PurchaseOrderLineItem\"\nWHERE \"shopifyOrderLineItemId\" IN :shopifyOrderLineItemIds!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "PurchaseOrderLineItem"
+ * WHERE "shopifyOrderLineItemId" IN :shopifyOrderLineItemIds!
+ * ```
+ */
+export const getPurchaseOrderLineItemsByShopifyOrderLineItemIds = new PreparedQuery<IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsParams,IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsResult>(getPurchaseOrderLineItemsByShopifyOrderLineItemIdsIR);
+
+
+/** 'GetLinkedPurchaseOrdersByShopifyOrderIds' parameters type */
+export interface IGetLinkedPurchaseOrdersByShopifyOrderIdsParams {
+  shopifyOrderIds: readonly (string)[];
+}
+
+/** 'GetLinkedPurchaseOrdersByShopifyOrderIds' return type */
+export interface IGetLinkedPurchaseOrdersByShopifyOrderIdsResult {
+  createdAt: Date;
+  deposited: string | null;
+  discount: string | null;
+  id: number;
+  locationId: string | null;
+  name: string;
+  note: string;
+  paid: string | null;
+  shipFrom: string;
+  shipping: string | null;
+  shipTo: string;
+  shop: string;
+  status: string;
+  tax: string | null;
+  updatedAt: Date;
+  vendorName: string | null;
+}
+
+/** 'GetLinkedPurchaseOrdersByShopifyOrderIds' query type */
+export interface IGetLinkedPurchaseOrdersByShopifyOrderIdsQuery {
+  params: IGetLinkedPurchaseOrdersByShopifyOrderIdsParams;
+  result: IGetLinkedPurchaseOrdersByShopifyOrderIdsResult;
+}
+
+const getLinkedPurchaseOrdersByShopifyOrderIdsIR: any = {"usedParamSet":{"shopifyOrderIds":true},"params":[{"name":"shopifyOrderIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":301,"b":317}]}],"statement":"SELECT DISTINCT po.*\nFROM \"ShopifyOrder\" so\n       INNER JOIN \"ShopifyOrderLineItem\" soli USING (\"orderId\")\n       INNER JOIN \"PurchaseOrderLineItem\" poli ON poli.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n       INNER JOIN \"PurchaseOrder\" po ON po.id = poli.\"purchaseOrderId\"\nWHERE so.\"orderId\" in :shopifyOrderIds!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT DISTINCT po.*
+ * FROM "ShopifyOrder" so
+ *        INNER JOIN "ShopifyOrderLineItem" soli USING ("orderId")
+ *        INNER JOIN "PurchaseOrderLineItem" poli ON poli."shopifyOrderLineItemId" = soli."lineItemId"
+ *        INNER JOIN "PurchaseOrder" po ON po.id = poli."purchaseOrderId"
+ * WHERE so."orderId" in :shopifyOrderIds!
+ * ```
+ */
+export const getLinkedPurchaseOrdersByShopifyOrderIds = new PreparedQuery<IGetLinkedPurchaseOrdersByShopifyOrderIdsParams,IGetLinkedPurchaseOrdersByShopifyOrderIdsResult>(getLinkedPurchaseOrdersByShopifyOrderIdsIR);
 
 

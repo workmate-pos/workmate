@@ -1,0 +1,12 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "date": {
+      "description": "A date to display in the work order printout",
+      "type": "string"
+    }
+  },
+  "required": ["date"],
+  "additionalProperties": false
+}

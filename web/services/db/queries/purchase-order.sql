@@ -53,6 +53,14 @@ WHERE id = COALESCE(:id, id)
   AND shop = COALESCE(:shop, shop)
   AND name = COALESCE(:name, name);
 
+/*
+  @name getMany
+  @param purchaseOrderIds -> (...)
+*/
+SELECT *
+FROM "PurchaseOrder"
+WHERE id in :purchaseOrderIds!;
+
 /* @name upsert */
 INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
                              "shipTo", note, "vendorName")
@@ -142,3 +150,23 @@ WHERE po.shop = :shop!
 SELECT *
 FROM "PurchaseOrderLineItem"
 WHERE "shopifyOrderLineItemId" = :shopifyOrderLineItemId!;
+
+/*
+  @name getPurchaseOrderLineItemsByShopifyOrderLineItemIds
+  @param shopifyOrderLineItemIds -> (...)
+*/
+SELECT *
+FROM "PurchaseOrderLineItem"
+WHERE "shopifyOrderLineItemId" IN :shopifyOrderLineItemIds!;
+
+/*
+  @name getLinkedPurchaseOrdersByShopifyOrderIds
+  @param shopifyOrderIds -> (...)
+*/
+SELECT DISTINCT po.*
+FROM "ShopifyOrder" so
+       INNER JOIN "ShopifyOrderLineItem" soli USING ("orderId")
+       INNER JOIN "PurchaseOrderLineItem" poli ON poli."shopifyOrderLineItemId" = soli."lineItemId"
+       INNER JOIN "PurchaseOrder" po ON po.id = poli."purchaseOrderId"
+WHERE so."orderId" in :shopifyOrderIds!;
+

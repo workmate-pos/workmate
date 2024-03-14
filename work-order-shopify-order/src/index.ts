@@ -125,9 +125,9 @@ export function getWorkOrderLineItems(
 
     const linkedCharges = charges.filter(charge => charge.workOrderItemUuid === uuid);
 
-    // Add the linked charge names to the item to make it readable for customers.
+    // Add the linked charge name and prices to the item to make it readable for customers.
     for (const charge of linkedCharges) {
-      lineItem.customAttributes[charge.name] = '';
+      lineItem.customAttributes[charge.name] = getChargeUnitPrice(charge);
     }
   }
 
@@ -163,10 +163,13 @@ export function getWorkOrderLineItems(
 
 function getChargeUnitPrice(charge: HourlyLabourCharge | FixedPriceLabourCharge): Money {
   if ('amount' in charge) {
-    return BigDecimal.fromString(charge.amount).toMoney();
+    return BigDecimal.fromString(charge.amount).round(2, RoundingMode.CEILING).toMoney();
   }
 
-  return BigDecimal.fromString(charge.hours).multiply(BigDecimal.fromString(charge.rate)).toMoney();
+  return BigDecimal.fromString(charge.hours)
+    .multiply(BigDecimal.fromString(charge.rate))
+    .round(2, RoundingMode.CEILING)
+    .toMoney();
 }
 
 export const ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_item_uuid:';

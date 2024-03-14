@@ -131,6 +131,53 @@
       },
       "required": ["employeeAssignments", "hourlyLabour", "fixedPriceLabour"],
       "additionalProperties": false
+    },
+    "emailFromTitle": {
+      "type": "string"
+    },
+    "emailReplyTo": {
+      "type": "string"
+    },
+    "printEmail": {
+      "type": "string"
+    },
+    "workOrderPrintTemplates": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "title": "work-order-print-template",
+        "properties": {
+          "template": {
+            "description": "Liquid template used to render a work order printout",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Subject used when sending print templates as email. Can include liquid variables.",
+            "type": "string"
+          }
+        },
+        "required": ["subject", "template"],
+        "additionalProperties": false
+      }
+    },
+    "purchaseOrderPrintTemplates": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "title": "purchase-order-print-template",
+        "properties": {
+          "template": {
+            "description": "Liquid template used to render a work order printout",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Subject used when sending print templates as email. Can include liquid variables.",
+            "type": "string"
+          }
+        },
+        "required": ["subject", "template"],
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false,

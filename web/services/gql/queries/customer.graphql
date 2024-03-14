@@ -47,4 +47,7 @@ fragment DatabaseCustomerFragment on Customer {
   lastName
   email
   phone
+  defaultAddress {
+    formatted
+  }
 }

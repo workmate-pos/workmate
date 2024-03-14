@@ -17,6 +17,14 @@ import { PurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
 import { db } from '../../services/db/db.js';
+import { PurchaseOrderPrintJob } from '../../schemas/generated/purchase-order-print-job.js';
+import { getShopSettings } from '../../services/settings.js';
+import {
+  getPurchaseOrderTemplateData,
+  getRenderedPurchaseOrderTemplate,
+} from '../../services/mail/templates/purchase-order.js';
+import { renderHtmlToPdfCustomFile } from '../../services/mail/html-pdf/renderer.js';
+import { mg } from '../../services/mail/mailgun.js';
 
 @Authenticated()
 export default class PurchaseOrdersController {
@@ -85,6 +93,48 @@ export default class PurchaseOrdersController {
 
     return res.json({ customFields: customFields.map(field => field.key) });
   }
+
+  @Post('/:name/print/:template')
+  @Authenticated()
+  @Permission('read_purchase_orders')
+  @QuerySchema('purchase-order-print-job')
+  async printWorkOrder(
+    req: Request<{ name: string; template: string }, unknown, unknown, PurchaseOrderPrintJob>,
+    res: Response<PrintPurchaseOrderResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const { name, template } = req.params;
+    const { date } = req.query;
+
+    const { emailReplyTo, emailFromTitle, purchaseOrderPrintTemplates, printEmail } = await getShopSettings(
+      session.shop,
+    );
+
+    if (!Object.keys(purchaseOrderPrintTemplates).includes(template)) {
+      throw new HttpError('Unknown print template', 400);
+    }
+
+    if (!printEmail) {
+      throw new HttpError('No print email address set', 400);
+    }
+
+    const printTemplate = purchaseOrderPrintTemplates[template] ?? never();
+    const context = await getPurchaseOrderTemplateData(session.shop, name, date);
+    const { subject, html } = await getRenderedPurchaseOrderTemplate(printTemplate, context);
+    const file = await renderHtmlToPdfCustomFile(subject, html);
+
+    await mg.send(
+      { emailReplyTo, emailFromTitle },
+      {
+        to: printEmail,
+        attachment: [file],
+        subject,
+        text: 'WorkMate Print Job',
+      },
+    );
+
+    return res.json({ success: true });
+  }
 }
 
 export type FetchPurchaseOrderInfoPageResponse = {
@@ -102,3 +152,5 @@ export type FetchPurchaseOrderResponse = {
 export type FetchPurchaseOrderCustomFieldsResponse = {
   customFields: string[];
 };
+
+export type PrintPurchaseOrderResponse = { success: true };

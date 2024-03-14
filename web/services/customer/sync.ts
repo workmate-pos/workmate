@@ -61,8 +61,17 @@ export async function upsertCustomers(shop: string, customers: gql.customer.Data
   }
 
   await unit(async () => {
-    for (const { id: customerId, email, phone, lastName, firstName, displayName } of customers) {
-      await db.customers.upsert({ shop, customerId, email, phone, lastName, firstName, displayName });
+    for (const { id: customerId, email, phone, lastName, firstName, displayName, defaultAddress } of customers) {
+      await db.customers.upsert({
+        shop,
+        customerId,
+        email,
+        phone,
+        lastName,
+        firstName,
+        displayName,
+        address: defaultAddress?.formatted?.join('\n') ?? null,
+      });
     }
   });
 }

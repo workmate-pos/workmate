@@ -79,7 +79,7 @@ export async function syncShopifyOrders(session: Session, ids: ID[]) {
 }
 
 async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrderFragment.Result) {
-  const { id: orderId, name, currentTotalPriceSet, totalOutstandingSet } = order;
+  const { id: orderId, name, currentTotalPriceSet, totalOutstandingSet, fullyPaid } = order;
 
   if (order.customer) {
     await ensureCustomersExist(session, [order.customer.id]);
@@ -94,6 +94,7 @@ async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrd
       customerId: order.customer?.id ?? null,
       outstanding: totalOutstandingSet.shopMoney.amount,
       total: currentTotalPriceSet.shopMoney.amount,
+      fullyPaid,
     });
     await syncShopifyOrderLineItems(session, { type: 'order', order });
   });
@@ -115,6 +116,7 @@ async function upsertDraftOrder(session: Session, draftOrder: gql.draftOrder.Dat
       customerId: draftOrder.customer?.id ?? null,
       outstanding: totalPriceSet.shopMoney.amount,
       total: totalPriceSet.shopMoney.amount,
+      fullyPaid: false,
     });
     await syncShopifyOrderLineItems(session, { type: 'draft-order', order: draftOrder });
   });

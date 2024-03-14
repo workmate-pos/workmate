@@ -89,7 +89,7 @@
             "$ref": "scalars.json#/definitions/Money"
           }
         },
-        "required": ["productVariantId", "shopifyOrderLineItemId", "quantity", "availableQuantity", "unitCost"],
+        "required": ["productVariantId", "shopifyOrderLineItem", "quantity", "availableQuantity", "unitCost"],
         "additionalProperties": false
       }
     },

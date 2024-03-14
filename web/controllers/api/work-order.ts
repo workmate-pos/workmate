@@ -20,6 +20,10 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Permission } from '../../decorators/permission.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { mg } from '../../services/mail/mailgun.js';
+import { renderHtmlToPdfCustomFile } from '../../services/mail/html-pdf/renderer.js';
+import { getRenderedWorkOrderTemplate, getWorkOrderTemplateData } from '../../services/mail/templates/work-order.js';
+import { WorkOrderPrintJob } from '../../schemas/generated/work-order-print-job.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -130,6 +134,46 @@ export default class WorkOrderController {
 
     return res.json(workOrder);
   }
+
+  @Post('/:name/print/:template')
+  @Authenticated()
+  @Permission('read_work_orders')
+  @QuerySchema('work-order-print-job')
+  async printWorkOrder(
+    req: Request<{ name: string; template: string }, unknown, unknown, WorkOrderPrintJob>,
+    res: Response<PrintWorkOrderResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const { name, template } = req.params;
+    const { date } = req.query;
+
+    const { emailReplyTo, emailFromTitle, workOrderPrintTemplates, printEmail } = await getShopSettings(session.shop);
+
+    if (!Object.keys(workOrderPrintTemplates).includes(template)) {
+      throw new HttpError('Unknown print template', 400);
+    }
+
+    if (!printEmail) {
+      throw new HttpError('No print email address set', 400);
+    }
+
+    const printTemplate = workOrderPrintTemplates[template] ?? never();
+    const context = await getWorkOrderTemplateData(session.shop, name, date);
+    const { subject, html } = await getRenderedWorkOrderTemplate(printTemplate, context);
+    const file = await renderHtmlToPdfCustomFile(subject, html);
+
+    await mg.send(
+      { emailReplyTo, emailFromTitle },
+      {
+        to: printEmail,
+        attachment: [file],
+        subject,
+        text: 'WorkMate Print Job',
+      },
+    );
+
+    return res.json({ success: true });
+  }
 }
 
 export type CalculateDraftOrderResponse = Awaited<ReturnType<typeof calculateDraftOrder>>;
@@ -141,3 +185,5 @@ export type CreateWorkOrderRequestResponse = { name: string };
 export type FetchWorkOrderInfoPageResponse = Awaited<ReturnType<typeof getWorkOrderInfoPage>>;
 
 export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
+
+export type PrintWorkOrderResponse = { success: true };

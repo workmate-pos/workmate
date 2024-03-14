@@ -10,6 +10,7 @@ export interface IGetParams {
 export interface IGetResult {
   createdAt: Date;
   deletedAt: Date | null;
+  description: string;
   handle: string;
   productId: string;
   shop: string;
@@ -45,9 +46,10 @@ export interface IGetManyParams {
 export interface IGetManyResult {
   createdAt: Date;
   deletedAt: Date | null;
+  description: string;
   handle: string;
   productId: string;
-  productVariantCount: number | null;
+  productVariantCount: number;
   shop: string;
   title: string;
   updatedAt: Date;
@@ -59,12 +61,12 @@ export interface IGetManyQuery {
   result: IGetManyResult;
 }
 
-const getManyIR: any = {"usedParamSet":{"productIds":true},"params":[{"name":"productIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":234,"b":245}]}],"statement":"SELECT \"Product\".*, COALESCE(COUNT(\"ProductVariant\".\"productId\"), 0) :: INTEGER AS \"productVariantCount\"\nFROM \"Product\"\nLEFT JOIN \"ProductVariant\" ON \"ProductVariant\".\"productId\" = \"Product\".\"productId\"\nWHERE \"Product\".\"productId\" IN :productIds!\nGROUP BY \"Product\".\"productId\""};
+const getManyIR: any = {"usedParamSet":{"productIds":true},"params":[{"name":"productIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":235,"b":246}]}],"statement":"SELECT \"Product\".*, COALESCE(COUNT(\"ProductVariant\".\"productId\"), 0) :: INTEGER AS \"productVariantCount!\"\nFROM \"Product\"\nLEFT JOIN \"ProductVariant\" ON \"ProductVariant\".\"productId\" = \"Product\".\"productId\"\nWHERE \"Product\".\"productId\" IN :productIds!\nGROUP BY \"Product\".\"productId\""};
 
 /**
  * Query generated from SQL:
  * ```
- * SELECT "Product".*, COALESCE(COUNT("ProductVariant"."productId"), 0) :: INTEGER AS "productVariantCount"
+ * SELECT "Product".*, COALESCE(COUNT("ProductVariant"."productId"), 0) :: INTEGER AS "productVariantCount!"
  * FROM "Product"
  * LEFT JOIN "ProductVariant" ON "ProductVariant"."productId" = "Product"."productId"
  * WHERE "Product"."productId" IN :productIds!
@@ -76,6 +78,7 @@ export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyI
 
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
+  description: string;
   handle: string;
   productId: string;
   shop: string;
@@ -91,17 +94,18 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"productId":true,"handle":true,"title":true,"shop":true},"params":[{"name":"productId","required":true,"transform":{"type":"scalar"},"locs":[{"a":65,"b":75}]},{"name":"handle","required":true,"transform":{"type":"scalar"},"locs":[{"a":78,"b":85},{"a":156,"b":163}]},{"name":"title","required":true,"transform":{"type":"scalar"},"locs":[{"a":88,"b":94},{"a":181,"b":187}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":97,"b":102},{"a":205,"b":210}]}],"statement":"INSERT INTO \"Product\" (\"productId\", handle, title, shop)\nVALUES (:productId!, :handle!, :title!, :shop!)\nON CONFLICT (\"productId\") DO UPDATE\n  SET handle = :handle!,\n      title  = :title!,\n      shop   = :shop!"};
+const upsertIR: any = {"usedParamSet":{"productId":true,"handle":true,"title":true,"shop":true,"description":true},"params":[{"name":"productId","required":true,"transform":{"type":"scalar"},"locs":[{"a":78,"b":88}]},{"name":"handle","required":true,"transform":{"type":"scalar"},"locs":[{"a":91,"b":98},{"a":184,"b":191}]},{"name":"title","required":true,"transform":{"type":"scalar"},"locs":[{"a":101,"b":107},{"a":209,"b":215}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":110,"b":115},{"a":233,"b":238}]},{"name":"description","required":true,"transform":{"type":"scalar"},"locs":[{"a":118,"b":130},{"a":261,"b":273}]}],"statement":"INSERT INTO \"Product\" (\"productId\", handle, title, shop, description)\nVALUES (:productId!, :handle!, :title!, :shop!, :description!)\nON CONFLICT (\"productId\") DO UPDATE\n  SET handle = :handle!,\n      title  = :title!,\n      shop   = :shop!,\n      description = :description!"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "Product" ("productId", handle, title, shop)
- * VALUES (:productId!, :handle!, :title!, :shop!)
+ * INSERT INTO "Product" ("productId", handle, title, shop, description)
+ * VALUES (:productId!, :handle!, :title!, :shop!, :description!)
  * ON CONFLICT ("productId") DO UPDATE
  *   SET handle = :handle!,
  *       title  = :title!,
- *       shop   = :shop!
+ *       shop   = :shop!,
+ *       description = :description!
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);

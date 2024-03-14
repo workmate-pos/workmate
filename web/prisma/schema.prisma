@@ -54,7 +54,7 @@ model WorkOrder {
   items                   WorkOrderItem[]
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
   hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
-  customFields    WorkOrderCustomField[]
+  customFields            WorkOrderCustomField[]
 
   @@unique([shop, name])
 }
@@ -154,6 +154,7 @@ model ShopifyOrder {
 
   total       String
   outstanding String
+  fullyPaid   Boolean
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -436,7 +437,7 @@ model ProductVariant {
 
   inventoryItemId String
   sku             String?
-  title           String?
+  title           String
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @default(now())
@@ -452,8 +453,9 @@ model Product {
 
   shop String
 
-  handle String
-  title  String
+  handle      String
+  title       String
+  description String
 
   productVariants ProductVariant[]
 
@@ -474,6 +476,7 @@ model Customer {
   lastName    String?
   email       String?
   phone       String?
+  address     String?
 
   workOrders    WorkOrder[]
   shopifyOrders ShopifyOrder[]
