@@ -324,6 +324,7 @@ type WorkOrderTemplateItem = {
   shopifyOrderName: string | null;
   purchaseOrderName: string | null;
   quantity: number;
+  // TODO: Change this to purchaseOrderQuantities: { orderedQuantity: number; availableQuantity: number; } since a work order item can have multiple purchase order line items
   purchaseOrderLineItem: WorkOrderTemplatePurchaseOrderLineItem | null;
   /**
    * Includes charges

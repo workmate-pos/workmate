@@ -1,5 +1,5 @@
 import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { type CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
+import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -14,6 +14,7 @@ import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 
 export function ProductSelector({
   filters: { vendorName, locationId },
@@ -62,29 +63,45 @@ export function ProductSelector({
         </Text>
       </Stack>
 
-      <Button
-        title={'New Product'}
-        variant={'primary'}
-        onPress={() => {
-          if (!locationId) {
-            toast.show('Location id not set');
-            return;
-          }
+      <ResponsiveGrid columns={2}>
+        <Button
+          title={'Select from Order'}
+          onPress={() => {
+            router.push('OrderSelector', {
+              onSelect: orderId => {
+                router.push('OrderProductSelector', {
+                  orderId,
+                  onSave: products => {
+                    selectProducts(products);
+                  },
+                });
+              },
+            });
+          }}
+        />
+        <Button
+          title={'New Product'}
+          onPress={() => {
+            if (!locationId) {
+              toast.show('Location id not set');
+              return;
+            }
 
-          if (!vendorName) {
-            toast.show('Vendor name not set');
-            return;
-          }
+            if (!vendorName) {
+              toast.show('Vendor name not set');
+              return;
+            }
 
-          router.push('ProductCreator', {
-            initialProduct: {
-              locationId,
-              vendor: vendorName,
-            },
-            onCreate: (product: Product) => selectProducts([product]),
-          });
-        }}
-      />
+            router.push('ProductCreator', {
+              initialProduct: {
+                locationId,
+                vendor: vendorName,
+              },
+              onCreate: (product: Product) => selectProducts([product]),
+            });
+          }}
+        />
+      </ResponsiveGrid>
 
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">

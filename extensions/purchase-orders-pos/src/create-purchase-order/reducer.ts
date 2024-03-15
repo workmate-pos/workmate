@@ -1,5 +1,4 @@
 import { useReducer, useState } from 'react';
-import { defaultCreatePurchaseOrder } from './default.js';
 import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useConst } from '@work-orders/common-pos/hooks/use-const.js';
@@ -110,7 +109,7 @@ function createPurchaseOrderReducer(
 }
 
 function shouldMergeProducts(a: Product, b: Product) {
-  return a.productVariantId === b.productVariantId;
+  return a.productVariantId === b.productVariantId && a.shopifyOrderLineItem?.id === b.shopifyOrderLineItem?.id;
 }
 
 function mergeProducts(...products: Product[]) {

@@ -8,6 +8,13 @@ query get($id: ID!) {
   }
 }
 
+query getMany($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...OrderInfoFragment
+  }
+}
+
 query getManyForDatabase($ids: [ID!]!) {
   nodes(ids: $ids) {
     __typename
@@ -58,6 +65,7 @@ query getLineItems(
             product {
               id
               title
+              hasOnlyDefaultVariant
               isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
               isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
               featuredImage {

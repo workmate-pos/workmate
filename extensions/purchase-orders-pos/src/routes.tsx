@@ -17,6 +17,8 @@ import { ImportPreset, ImportPresetProps } from '@work-orders/common-pos/screens
 import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 import { CustomFieldFilterConfig } from './screens/popups/CustomFieldFilterConfig.js';
 import { PrintOverview } from './screens/PrintOverview.js';
+import { OrderProductSelector } from './screens/popups/OrderProductSelector.js';
+import { OrderSelector } from './screens/popups/OrderSelector.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -94,6 +96,14 @@ export const { Router, useRouter } = createRouter(
     PrintOverview: {
       title: 'Print Overview',
       Component: PrintOverview,
+    },
+    OrderSelector: {
+      title: 'Select Order',
+      Component: OrderSelector,
+    },
+    OrderProductSelector: {
+      title: 'Select Order Product',
+      Component: OrderProductSelector,
     },
   },
 );

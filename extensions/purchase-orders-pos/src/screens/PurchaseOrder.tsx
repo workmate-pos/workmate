@@ -33,6 +33,9 @@ import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/f
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
+import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to SO line items
@@ -375,6 +378,9 @@ function useProductRows(
   const productVariantIds = unique(lineItems.map(product => product.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
+  const orderIds = unique(lineItems.map(lineItem => lineItem.shopifyOrderLineItem?.orderId).filter(isNonNullable));
+  const orderQueries = useOrderQueries({ fetch, ids: orderIds });
+
   const getDisplayName = (product: Product) => {
     const variant = productVariantQueries[product.productVariantId]?.data ?? null;
     return getProductVariantName(variant) ?? 'Unknown Product';
@@ -388,6 +394,8 @@ function useProductRows(
 
   return lineItems.filter(queryFilter).map<ListRow>((product, i) => {
     const variant = productVariantQueries[product.productVariantId]?.data ?? null;
+    const orderId = product.shopifyOrderLineItem?.orderId;
+    const order = orderId ? orderQueries[orderId]?.data?.order ?? null : null;
 
     const displayName = getDisplayName(product);
     const imageUrl = variant?.image?.url ?? variant?.product?.featuredImage?.url;
@@ -414,6 +422,7 @@ function useProductRows(
           source: imageUrl,
           badge: product.quantity,
         },
+        badges: [order].filter(isNonNullable).map(order => ({ variant: 'highlight', text: order.name })),
       },
       rightSide: {
         showChevron: !disabled,

@@ -16,6 +16,7 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
+import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 
 export function ProductConfig({
   product: initialProduct,
@@ -35,6 +36,9 @@ export function ProductConfig({
   const productVariantQuery = useProductVariantQuery({ fetch, id: product?.productVariantId ?? null });
   const productVariant = productVariantQuery?.data;
 
+  const orderQuery = useOrderQuery({ fetch, id: product?.shopifyOrderLineItem?.orderId ?? null });
+  const order = orderQuery?.data?.order;
+
   const inventoryItemQuery = useInventoryItemQuery({
     fetch,
     id: productVariant?.inventoryItem?.id ?? null,
@@ -49,7 +53,11 @@ export function ProductConfig({
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
   screen.setTitle(getProductVariantName(productVariant) ?? 'Product Config');
   screen.setIsLoading(
-    !product || productVariantQuery.isLoading || inventoryItemQuery.isLoading || locationQuery.isLoading,
+    !product ||
+      productVariantQuery.isLoading ||
+      inventoryItemQuery.isLoading ||
+      locationQuery.isLoading ||
+      orderQuery.isLoading,
   );
 
   const currencyFormatter = useCurrencyFormatter();
@@ -64,6 +72,14 @@ export function ProductConfig({
               {productVariant?.sku}
             </Text>
           </Stack>
+
+          {order && (
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="body" color="TextSubdued">
+                Linked to order {order.name}
+              </Text>
+            </Stack>
+          )}
 
           <Stack direction={'vertical'} paddingVertical={'Medium'}>
             <Stack direction={'horizontal'} alignment={'center'}>
