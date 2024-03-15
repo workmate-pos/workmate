@@ -253,7 +253,7 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
       },
       leftSide: {
         label: name,
-        subtitle: [moneySubtitle, orderNamesSubtitle || undefined],
+        subtitle: orderNamesSubtitle ? [moneySubtitle, orderNamesSubtitle] : [moneySubtitle],
         badges: [
           {
             variant: 'neutral',
