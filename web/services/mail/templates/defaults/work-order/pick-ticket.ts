@@ -1,4 +1,4 @@
-export const quoteTemplate = `
+export const pickTicketTemplate = `
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,7 +6,7 @@ export const quoteTemplate = `
   <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Work Order Quote</title>
+  <title>Invoice for {{ name }}</title>
   <style>
     body {
       font-family: sans-serif;
@@ -30,15 +30,13 @@ export const quoteTemplate = `
       text-align: center;
     }
 
-    #left {
+    #left, #right {
       display: flex;
       flex-direction: column;
       width: 50%;
       gap: 2rem;
-    }
-
-    #left, #right {
-      margin: 1rem 0;
+      margin: 1em 0;
+      padding: 1em;
     }
 
     .work-order-items > thead {
@@ -67,7 +65,7 @@ export const quoteTemplate = `
 
     <table>
       <tr>
-        <th colspan="2">Customer</th>
+        <th colspan="2">Bill To</th>
       </tr>
       <tr>
         <th>Name</th>
@@ -87,6 +85,7 @@ export const quoteTemplate = `
       </tr>
     </table>
 
+
     <table>
       <tr>
         <th>P.O. No.</th>
@@ -95,22 +94,21 @@ export const quoteTemplate = `
         <td>{{ purchaseOrderNames | join: ", " }}</td>
       </tr>
     </table>
-
   </div>
 
   <div id="right">
     <div class="work-order-details">
-      <h2 style="text-align: right">Quote for {{ name }}</h2>
+      <h2 style="text-align: right">Install Pick Ticket</h2>
       <table>
         <tr>
           <th>Date</th>
-          <th>W.O. No.</th>
           <th>S.O. No.</th>
+          <th>W.O. No.</th>
         </tr>
         <tr>
           <td>{{ date }}</td>
-          <td>{{ name }}</td>
           <td>{{ shopifyOrderNames | join: ", " }}</td>
+          <td>{{ name }}</td>
         </tr>
       </table>
     </div>
@@ -122,9 +120,9 @@ export const quoteTemplate = `
   <tr>
     <th>Item</th>
     <th>Description</th>
-    <th>Quantity</th>
-    <th>Cost</th>
-    <th>Total</th>
+    <th>Bin</th>
+    <th>Ordered</th>
+    <th>To Pick</th>
   </tr>
   </thead>
   <tbody>
@@ -133,42 +131,28 @@ export const quoteTemplate = `
   <tr>
     <td>{{ item.name }}</td>
     <td>{{ item.description }}</td>
+    <td></td>
+    <!-- Ordered: the quantity that is ordered, minus any that have arrived -->
+    {% if item.purchaseOrderLineItem != null %}
+    <td>{{ item.purchaseOrderLineItem.quantity | minus: item.purchaseOrderLineItem.availableQuantity }}</td>
+    {% else %}
+    <td>0</td>
+    {% endif %}
+
+    <!-- The quantity that has arrived -->
+    {% if item.purchaseOrderLineItem != null %}
+    <td>{{ item.quantity | minus: item.purchaseOrderLineItem.quantity | plus: item.purchaseOrderLineItem.availableQuantity }}</td>
+    {% else %}
     <td>{{ item.quantity }}</td>
-    <td>\${{ item.discountedUnitPrice }}</td>
-    <td>\${{ item.discountedTotalPrice }}</td>
-  </tr>
-  {% for charge in item.charges %}
-  <tr>
-    <td>{{ charge.name }}</td>
-    <td>{{ charge.details }}</td>
-    <td>1</td>
-    <td>\${{ charge.totalPrice }}</td>
-    <td>\${{ charge.totalPrice }}</td>
-  </tr>
-  {% endfor %}
-  {% endfor %}
-
-  {% for charge in charges %}
-  <tr>
-    <td>{{ charge.name }}</td>
-    <td>{{ charge.details }}</td>
-    <td>1</td>
-    <td>\${{ charge.totalPrice }}</td>
-    <td>\${{ charge.totalPrice }}</td>
+    {% endif %}
   </tr>
   {% endfor %}
 
   <tr>
-    <td>Tax</td>
-    <td></td>
-    <td></td>
-    <td></td>
-    <td>\${{ tax }}</td>
-  </tr>
-
-  <tr>
-    <td colspan="4"></td>
-    <td>\${{ total }}</td>
+    <td colspan="3">
+      <span style="font-weight: bold; font-size: 1.5em">Signature</span>
+    </td>
+    <td colspan="2"></td>
   </tr>
   </tbody>
 </table>

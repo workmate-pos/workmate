@@ -1,4 +1,5 @@
-export const invoiceTemplate = `
+export const purchaseOrderInvoiceTemplate = `
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -75,15 +76,17 @@ export const invoiceTemplate = `
 
   <div id="right">
     <div class="purchase-order-details">
-      <h2 style="text-align: right">Invoice</h2>
+      <h2 style="text-align: right">Purchase Order Invoice</h2>
       <table>
         <tr>
           <th>Date</th>
           <th>P.O. No.</th>
+          <th>Invoice #</th>
         </tr>
         <tr>
           <td>{{ date }}</td>
           <td>{{ name }}</td>
+          <td>{{ customFields["Invoice #"] }}</td>
         </tr>
       </table>
     </div>
@@ -127,5 +130,4 @@ export const invoiceTemplate = `
 </table>
 </body>
 </html>
-
 `.trim();

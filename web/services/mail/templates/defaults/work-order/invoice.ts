@@ -1,3 +1,4 @@
+export const workOrderInvoiceTemplate = `
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,7 +13,7 @@
       padding: 2em;
     }
 
-    .purchase-order-header {
+    .work-order-header {
       display: flex;
       flex-direction: row;
       justify-content: space-between;
@@ -38,22 +39,22 @@
       padding: 1em;
     }
 
-    .purchase-order-items > thead {
+    .work-order-items > thead {
       background-color: #ddd;
     }
 
-    .purchase-order-items > tbody tr:nth-child(even) {
+    .work-order-items > tbody tr:nth-child(even) {
       background-color: #eee;
     }
 
-    .purchase-order-items > tbody tr:nth-child(odd) {
+    .work-order-items > tbody tr:nth-child(odd) {
       background-color: #fff;
     }
   </style>
 </head>
 <body>
 
-<div class="purchase-order-header">
+<div class="work-order-header">
   <div id="left">
     <div>
       <h1>Company Name</h1>
@@ -64,65 +65,101 @@
 
     <table>
       <tr>
-        <th>Bill To</th>
+        <th colspan="2">Bill To</th>
       </tr>
       <tr>
-        <td>{{ customFields["Bill To"] }}</td>
+        <th>Name</th>
+        <td>{{ customer.name }}</td>
+      </tr>
+      <tr>
+        <th>Email</th>
+        <td>{{ customer.email }}</td>
+      </tr>
+      <tr>
+        <th>Phone</th>
+        <td>{{ customer.phone }}</td>
+      </tr>
+      <tr>
+        <th>Address</th>
+        <td>{{ customer.address }}</td>
       </tr>
     </table>
   </div>
 
   <div id="right">
-    <div class="purchase-order-details">
-      <h2 style="text-align: right">Invoice</h2>
+    <div class="work-order-details">
+      <h2 style="text-align: right">Work Order Invoice</h2>
       <table>
         <tr>
           <th>Date</th>
-          <th>P.O. No.</th>
+          <th>W.O. No.</th>
+          <th>Invoice #</th>
         </tr>
         <tr>
           <td>{{ date }}</td>
           <td>{{ name }}</td>
+          <td>{{ customFields["Invoice #"] }}</td>
         </tr>
       </table>
     </div>
-
-    <table>
-      <tr>
-        <th>Ship To</th>
-      </tr>
-      <tr>
-        <td>{{ shipTo | newline_to_br }}</td>
-      </tr>
-    </table>
   </div>
 </div>
 
-<table class="purchase-order-items">
+<table class="work-order-items">
   <thead>
   <tr>
     <th>Item</th>
     <th>Description</th>
     <th>Quantity</th>
+    <th>Cost</th>
+    <th>Total</th>
   </tr>
   </thead>
   <tbody>
 
-  {% for item in lineItems %}
+  {% for item in items %}
   <tr>
     <td>{{ item.name }}</td>
     <td>{{ item.description }}</td>
     <td>{{ item.quantity }}</td>
+    <td>\${{ item.discountedUnitPrice }}</td>
+    <td>\${{ item.discountedTotalPrice }}</td>
+  </tr>
+  {% for charge in item.charges %}
+  <tr>
+    <td>{{ charge.name }}</td>
+    <td>{{ charge.details }}</td>
+    <td>1</td>
+    <td>\${{ charge.totalPrice }}</td>
+    <td>\${{ charge.totalPrice }}</td>
   </tr>
   {% endfor %}
-  </tbody>
-</table>
+  {% endfor %}
 
-<table style="width: 20em; margin-top: 2em;">
+  {% for charge in charges %}
   <tr>
-    <th>Phone #</th>
-    <td>{{ customFields["Phone #"] }}</td>
+    <td>{{ charge.name }}</td>
+    <td>{{ charge.details }}</td>
+    <td>1</td>
+    <td>\${{ charge.totalPrice }}</td>
+    <td>\${{ charge.totalPrice }}</td>
   </tr>
+  {% endfor %}
+
+  <tr>
+    <td>Tax</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td>\${{ tax }}</td>
+  </tr>
+
+  <tr>
+    <td colspan="4"></td>
+    <td>\${{ total }}</td>
+  </tr>
+  </tbody>
 </table>
 </body>
 </html>
+`.trim();

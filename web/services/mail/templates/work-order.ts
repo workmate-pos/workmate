@@ -33,7 +33,7 @@ export async function getWorkOrderTemplateData(
   clientDate: string,
 ): Promise<WorkOrderTemplateData> {
   const {
-    shopifyOrderLineItemsByOrderId,
+    shopifyOrderLineItemsByLineItemId,
     shopifyOrdersByOrderId,
     workOrderItems,
     productVariantsById,
@@ -54,7 +54,7 @@ export async function getWorkOrderTemplateData(
     assertShopifyOrderLineItemIdIsSet(hourlyCharge);
 
     const shopifyOrderLineItem =
-      shopifyOrderLineItemsByOrderId[hourlyCharge.shopifyOrderLineItemId] ?? never('hlc no sli');
+      shopifyOrderLineItemsByLineItemId[hourlyCharge.shopifyOrderLineItemId] ?? never('hlc no sli');
     const shopifyOrder = shopifyOrdersByOrderId[shopifyOrderLineItem.orderId] ?? never('hlc sli no so');
 
     return {
@@ -70,7 +70,7 @@ export async function getWorkOrderTemplateData(
     assertShopifyOrderLineItemIdIsSet(fixedPriceCharge);
 
     const shopifyOrderLineItem =
-      shopifyOrderLineItemsByOrderId[fixedPriceCharge.shopifyOrderLineItemId] ?? never('flc no sli');
+      shopifyOrderLineItemsByLineItemId[fixedPriceCharge.shopifyOrderLineItemId] ?? never('flc no sli');
     const shopifyOrder = shopifyOrdersByOrderId[shopifyOrderLineItem.orderId] ?? never('flc no so');
 
     return {
@@ -82,7 +82,7 @@ export async function getWorkOrderTemplateData(
     };
   }
 
-  const items = workOrderItems.map(item => {
+  const items = workOrderItems.map<WorkOrderTemplateItem>(item => {
     assertShopifyOrderLineItemIdIsSet(item);
 
     const productVariant = productVariantsById[item.productVariantId] ?? never('no pv');
@@ -141,7 +141,7 @@ export async function getWorkOrderTemplateData(
     let chargesTotalPrice = BigDecimal.ZERO;
 
     for (const shopifyLineItemId of chargeShopifyLineItemIds) {
-      const shopifyLineItem = shopifyOrderLineItemsByOrderId[shopifyLineItemId] ?? never();
+      const shopifyLineItem = shopifyOrderLineItemsByLineItemId[shopifyLineItemId] ?? never();
       chargesTotalPrice = chargesTotalPrice.add(
         BigDecimal.fromString(shopifyLineItem.discountedUnitPrice).multiply(
           BigDecimal.fromString(shopifyLineItem.quantity.toFixed(0)),
@@ -162,6 +162,12 @@ export async function getWorkOrderTemplateData(
       purchaseOrderName: purchaseOrder?.name ?? null,
       shopifyOrderName: shopifyOrder?.name ?? null,
       quantity: item.quantity,
+      purchaseOrderLineItem: purchaseOrderLineItem
+        ? {
+            quantity: purchaseOrderLineItem.quantity,
+            availableQuantity: purchaseOrderLineItem.quantity,
+          }
+        : null,
     };
   });
 
@@ -176,13 +182,13 @@ export async function getWorkOrderTemplateData(
   ];
 
   const subtotal = BigDecimal.sum(
-    ...Object.values(shopifyOrderLineItemsByOrderId).map(li =>
+    ...Object.values(shopifyOrderLineItemsByLineItemId).map(li =>
       BigDecimal.fromString(li.discountedUnitPrice).multiply(BigDecimal.fromString(li.quantity.toFixed(0))),
     ),
   );
 
   const tax = BigDecimal.sum(
-    ...Object.values(shopifyOrderLineItemsByOrderId).map(li => BigDecimal.fromString(li.totalTax)),
+    ...Object.values(shopifyOrderLineItemsByLineItemId).map(li => BigDecimal.fromString(li.totalTax)),
   );
 
   const total = subtotal.add(tax);
@@ -255,7 +261,7 @@ async function getWorkOrderInfo(shop: string, workOrderName: string) {
   const shopifyOrderNames = shopifyOrders.filter(hasPropertyValue('orderType', 'ORDER')).map(order => order.name);
   const purchaseOrderNames = purchaseOrders.map(order => order.name);
 
-  const shopifyOrderLineItemsByOrderId = indexBy(shopifyOrderLineItems, so => so.orderId);
+  const shopifyOrderLineItemsByLineItemId = indexBy(shopifyOrderLineItems, so => so.lineItemId);
   const purchaseOrderLineItemByShopifyLineItemId = indexBy(
     purchaseOrderLineItems.filter(hasNonNullableProperty('shopifyOrderLineItemId')),
     li => li.shopifyOrderLineItemId?.toString() ?? never('just checked this'),
@@ -270,7 +276,7 @@ async function getWorkOrderInfo(shop: string, workOrderName: string) {
     shopifyOrderNames,
     purchaseOrderNames,
     customer,
-    shopifyOrderLineItemsByOrderId,
+    shopifyOrderLineItemsByLineItemId,
     purchaseOrderLineItemByShopifyLineItemId,
     purchaseOrderById,
     shopifyOrdersByOrderId,
@@ -318,6 +324,7 @@ type WorkOrderTemplateItem = {
   shopifyOrderName: string | null;
   purchaseOrderName: string | null;
   quantity: number;
+  purchaseOrderLineItem: WorkOrderTemplatePurchaseOrderLineItem | null;
   /**
    * Includes charges
    */
@@ -339,6 +346,17 @@ type WorkOrderTemplateItem = {
    */
   paid: boolean;
   charges: WorkOrderTemplateCharge[];
+};
+
+type WorkOrderTemplatePurchaseOrderLineItem = {
+  /**
+   * Quantity in the purchase order
+   */
+  quantity: number;
+  /**
+   * Quantity that has arrived/is now available/in stock
+   */
+  availableQuantity: number;
 };
 
 type WorkOrderTemplateCharge = {

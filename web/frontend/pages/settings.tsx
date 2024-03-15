@@ -752,6 +752,10 @@ function PrintTemplateGroup({
       '{{ items[x].originalTotalPrice }}': 'The original total price of the item at index x',
       '{{ items[x].discountedTotalPrice }}': 'The discounted total price of the item at index x',
       '{{ items[x].paid }}': 'Whether the item at index x has been paid for',
+      '{{ items[x].purchaseOrderLineItem.quantity }}':
+        'The quantity of this item that has been ordered in a linked purchase order',
+      '{{ items[x].purchaseOrderLineItem.availableQuantity }}':
+        'The quantity of this item ordered in a linked purchase order that is now available',
       '{{ items[x].charges[y].name }}': 'The name of the charge at index y of the item at index x',
       '{{ items[x].charges[y].shopifyOrderName }}':
         'The name of the shopify order that the charge is in at index y of the item at index x',
