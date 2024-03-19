@@ -1,5 +1,5 @@
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { fetchAllPages, gql } from '../gql/gql.js';
 import { resolveNamespace } from '../app/index.js';
 import { customerIsVendorMetafield } from '../metafields/customer-is-vendor-metafield.js';

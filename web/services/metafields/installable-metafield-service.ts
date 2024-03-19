@@ -1,8 +1,8 @@
-import type { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import type { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 import type { MetafieldDefinitionInput } from '../gql/queries/generated/schema.js';
-import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
-import { InstallableService } from '@teifi-digital/shopify-app-express/services/installable-service.js';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { InstallableService } from '@teifi-digital/shopify-app-express/services';
 import { WithRequired } from '../../util/types.js';
 
 // TODO: Include in shopify-app-express (first move it to genql)

@@ -1,7 +1,7 @@
 import { gql } from './gql/gql.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { getShopPlanType } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export type Shop = gql.shop.getShop.Result['shop'];
 const shopCache = new Map<string, Shop>();

@@ -1,11 +1,11 @@
-import { Authenticated } from '@teifi-digital/shopify-app-express/decorators/default/authenticated.js';
-import { BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated } from '@teifi-digital/shopify-app-express/decorators';
+import { BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
 import { db } from '../../services/db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { UpsertCustomFieldsPreset } from '../../schemas/generated/upsert-custom-fields-preset.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 @Authenticated()
 export default class PurchaseOrderCustomFieldsController {
@@ -16,7 +16,7 @@ export default class PurchaseOrderCustomFieldsController {
   ) {
     const { shop }: Session = res.locals.shopify.session;
 
-    const presets = await db.customFieldPresets.getCustomFieldsPresets({ shop, type: 'WORK_ORDER' });
+    const presets = await db.customFieldPresets.getCustomFieldsPresets({ shop, type: 'PURCHASE_ORDER' });
 
     return res.json({
       presets: presets.map(preset => ({

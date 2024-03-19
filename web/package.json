@@ -27,7 +27,7 @@
     "@prisma/client": "^5.5.2",
     "@sentry/node": "^7.74.1",
     "@sinclair/typebox": "^0.32.15",
-    "@teifi-digital/shopify-app-express": "^0.5.8",
+    "@teifi-digital/shopify-app-express": "^0.6.22",
     "@teifi-digital/shopify-app-toolbox": "^0.0.37",
     "@work-orders/common": "file:../common",
     "@work-orders/work-order-shopify-order": "file:../work-order-shopify-order",
@@ -40,7 +40,6 @@
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
     "prisma": "^5.5.2",
-    "puppeteer": "^22.4.1",
     "tiny-invariant": "^1.3.1",
     "uuid": "^9.0.1",
     "work-order-shopify-order": "file:../work-order-shopify-order"

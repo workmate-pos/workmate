@@ -2,9 +2,10 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unit } from '../db/unit-of-work.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export async function ensureEmployeesExist(session: Session, employeeIds: ID[]) {
   if (employeeIds.length === 0) {
@@ -55,13 +56,17 @@ export async function syncEmployees(session: Session, employeeIds: ID[]) {
   }
 }
 
-export async function upsertEmployees(shop: string, employees: gql.staffMember.DatabaseStaffMemberFragment.Result[]) {
+async function upsertEmployees(shop: string, employees: gql.staffMember.DatabaseStaffMemberFragment.Result[]) {
   if (employees.length === 0) {
     return;
   }
 
   await unit(async () => {
+    const [{ exists: doEmployeesExist } = never()] = await db.employee.doEmployeesExist();
+
     for (const { id: staffMemberId, name, isShopOwner } of employees) {
+      const superuser = isShopOwner || (employees.length === 1 && !doEmployeesExist);
+
       await db.employee.upsert({
         shop,
         name,
@@ -69,7 +74,7 @@ export async function upsertEmployees(shop: string, employees: gql.staffMember.D
         rate: null,
         isShopOwner,
         permissions: [],
-        superuser: isShopOwner,
+        superuser,
       });
     }
   });

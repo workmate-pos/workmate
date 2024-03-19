@@ -40,8 +40,6 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
   const lineItemIdByItemUuid: Record<string, ID> = getLineItemIdsByUuids(lineItems, 'item');
 
   const uuids = Object.keys(lineItemIdByItemUuid);
-  console.log('Found line item uuids:', uuids);
-  console.log(JSON.stringify(lineItems.map(li => ({ id: li.id, attributes: li.customAttributes }))));
 
   const items = uuids.length ? await db.workOrder.getItemsByUuids({ workOrderId, uuids }) : [];
   for (const { uuid } of items) {

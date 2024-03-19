@@ -2,14 +2,14 @@ import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shop
 import { db } from '../db/db.js';
 import { fetchAllPages, gql } from '../gql/gql.js';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { transaction } from '../db/transaction.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { syncWorkOrders } from '../work-orders/sync.js';
 import { linkWorkOrderItemsAndCharges } from '../work-orders/link-order-items.js';
 import { ensureCustomersExist } from '../customer/sync.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { unit } from '../db/unit-of-work.js';
 
 export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[]) {
   if (orderIds.length === 0) {
@@ -85,7 +85,7 @@ async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrd
     await ensureCustomersExist(session, [order.customer.id]);
   }
 
-  await transaction(async () => {
+  await unit(async () => {
     await db.shopifyOrder.upsert({
       shop: session.shop,
       orderId,
@@ -107,7 +107,7 @@ async function upsertDraftOrder(session: Session, draftOrder: gql.draftOrder.Dat
     await ensureCustomersExist(session, [draftOrder.customer.id]);
   }
 
-  await transaction(async () => {
+  await unit(async () => {
     await db.shopifyOrder.upsert({
       shop: session.shop,
       orderId,

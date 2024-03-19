@@ -1,6 +1,6 @@
 import { Session } from '@shopify/shopify-api';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 
 let appId: ID | null = null;

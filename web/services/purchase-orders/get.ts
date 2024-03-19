@@ -11,7 +11,7 @@ import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { groupByKey, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Value } from '@sinclair/typebox/value';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { Static, Type } from '@sinclair/typebox';
 
 export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {

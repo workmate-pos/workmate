@@ -1,4 +1,4 @@
-import appInfo, { AppInfo } from '@teifi-digital/shopify-app-express/controllers/default-api/app-info.js';
+import AppInfoCls, { AppInfo } from '@teifi-digital/shopify-app-express/controllers/default-api/app-info';
 
-export default appInfo;
+export default AppInfoCls;
 export type { AppInfo };

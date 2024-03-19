@@ -1,4 +1,4 @@
-import { WebhookHandlers } from '@teifi-digital/shopify-app-express/services/webhooks.js';
+import { WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
 import { db } from './db/db.js';
 import { AppPlanName } from './db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
@@ -143,13 +143,9 @@ export default {
 
   DRAFT_ORDERS_DELETE: {
     async handler(session, topic, shop, body: { id: number }) {
-      // TODO: Fix this
-
       const orderId = createGid('DraftOrder', body.id);
 
       const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId });
-
-      console.log('darft order delete', orderId, relatedWorkOrders);
 
       await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
       await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });

@@ -225,6 +225,11 @@ function getChargeUuidCustomAttributeKey(charge: { uuid: string; type: 'hourly' 
  * When charges are absorbed, their custom attribute keys are prefixed by the charge uuid key.
  */
 function getAbsorbedChargeCustomAttributeKey(charge: { uuid: string; type: 'hourly' | 'fixed' }, key: string) {
+  if (getUuidFromCustomAttributeKey(key) !== null) {
+    // uuids are not absorbed so we can identify absorbed charges
+    return key;
+  }
+
   return `${getChargeUuidCustomAttributeKey(charge)}:${key}`;
 }
 

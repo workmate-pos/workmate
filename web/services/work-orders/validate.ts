@@ -1,6 +1,6 @@
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { getShopSettings } from '../settings.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { validate, version } from 'uuid';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';

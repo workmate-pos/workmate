@@ -1,14 +1,8 @@
 import { Session } from '@shopify/shopify-api';
-import {
-  Authenticated,
-  BodySchema,
-  Get,
-  Post,
-  QuerySchema,
-} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
 import { db } from '../../services/db/db.js';
 import { getShopSettings } from '../../services/settings.js';
@@ -18,7 +12,7 @@ import { indexBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { unit } from '../../services/db/unit-of-work.js';
 

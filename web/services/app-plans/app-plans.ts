@@ -2,11 +2,11 @@ import { MILLIS_IN_DAY } from '../../util/date-utils.js';
 import { db } from '../db/db.js';
 import * as gql from '../gql/queries/generated/queries.js';
 import { ID, ShopPlanType } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { Session } from '@shopify/shopify-api';
 import { getShopType } from '../shop.js';
 import { IGetResult, IGetSubscriptionResult } from '../db/queries/generated/app-plan.sql.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export function getAppPlanTrialDaysUsed(appPlanSubscription: IGetSubscriptionResult | null): number {
   if (appPlanSubscription === null) {

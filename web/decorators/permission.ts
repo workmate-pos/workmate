@@ -1,5 +1,5 @@
-import { decorator, DecoratorHandler } from '@teifi-digital/shopify-app-express/decorators/registry.js';
-import { err } from '@teifi-digital/shopify-app-express/utils/express-utils.js';
+import { decorator, DecoratorHandler } from '@teifi-digital/shopify-app-express/decorators';
+import { err } from '@teifi-digital/shopify-app-express/utils';
 import { RequestHandler } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
 import { IGetManyResult, PermissionNode } from '../services/db/queries/generated/employee.sql.js';
@@ -9,8 +9,8 @@ import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import jwt from 'jsonwebtoken';
 import type { Request, Response } from 'express-serve-static-core';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ensureEmployeesExist } from '../services/employee/sync.js';
 

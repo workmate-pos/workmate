@@ -2,7 +2,7 @@ import { getShopSettings } from './settings.js';
 import { db } from './db/db.js';
 import { useClient } from './db/client.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 type Formatters = Record<string, ({ shop }: { shop: string }) => Promise<string> | string>;
 

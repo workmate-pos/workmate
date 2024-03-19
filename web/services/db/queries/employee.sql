@@ -25,3 +25,9 @@ ON CONFLICT ("staffMemberId")
 DELETE
 FROM "Employee"
 WHERE "staffMemberId" IN :employeeIds!;
+
+/* @name doEmployeesExist */
+SELECT EXISTS (
+  SELECT 1
+  FROM "Employee"
+) AS "exists";

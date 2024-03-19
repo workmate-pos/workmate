@@ -1,4 +1,4 @@
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getPurchaseOrder } from '../../purchase-orders/get.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';

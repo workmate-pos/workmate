@@ -1,7 +1,7 @@
 import type { PartialShopSettings } from '../../schemas/generated/partial-shop-settings.js';
 import { getShopSettings, updateSettings } from '../../services/settings.js';
 import { Session } from '@shopify/shopify-api';
-import { Authenticated, BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
 import { Permission } from '../../decorators/permission.js';
 

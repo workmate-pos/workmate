@@ -69,6 +69,7 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
 
   return (
     <ScrollView>
+      <Text>{JSON.stringify(createWorkOrder, null, 2)}</Text>
       <Form disabled={saveWorkOrderMutation.isLoading}>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {saveWorkOrderMutation.error && (

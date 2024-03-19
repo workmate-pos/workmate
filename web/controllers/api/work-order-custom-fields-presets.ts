@@ -1,11 +1,11 @@
-import { Authenticated } from '@teifi-digital/shopify-app-express/decorators/default/authenticated.js';
-import { BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated } from '@teifi-digital/shopify-app-express/decorators';
+import { BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
 import { db } from '../../services/db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { UpsertCustomFieldsPreset } from '../../schemas/generated/upsert-custom-fields-preset.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 @Authenticated()
 export default class WorkOrderCustomFieldsController {
@@ -37,7 +37,6 @@ export default class WorkOrderCustomFieldsController {
       throw new HttpError('Custom fields cannot be empty', 400);
     }
 
-    console.log(shop, name, keys);
     await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type: 'WORK_ORDER' });
 
     return res.json({ name });

@@ -1,6 +1,6 @@
 import { SegmentDefinition } from './installable-segment-service.js';
 import { customerIsVendorMetafield } from '../metafields/customer-is-vendor-metafield.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 
 export const vendorSegment: SegmentDefinition = async (graphql: Graphql) => {

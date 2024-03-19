@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
 import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import {
   getCustomAttributeArrayFromObject,
   getWorkOrderLineItems,

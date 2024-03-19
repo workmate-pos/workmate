@@ -1,12 +1,12 @@
-import { Authenticated, BodySchema, Post } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Post } from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { CreateProduct } from '../../schemas/generated/create-product.js';
 import { gql } from '../../services/gql/gql.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getShopSettings } from '../../services/settings.js';
 import {
   parseProductVariantMetafields,

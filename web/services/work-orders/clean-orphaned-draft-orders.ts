@@ -1,6 +1,6 @@
 import { db } from '../db/db.js';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
@@ -14,9 +14,7 @@ export async function cleanOrphanedDraftOrders<T>(
 ): Promise<T> {
   const oldLinkedDraftOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
-  try {
-    return await fn();
-  } finally {
+  async function clean() {
     const newLinkedDraftOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
     const orphanedDraftOrders = oldLinkedDraftOrders.filter(
       ({ orderId }) => !newLinkedDraftOrders.some(({ orderId: id }) => id === orderId),
@@ -30,4 +28,9 @@ export async function cleanOrphanedDraftOrders<T>(
       }),
     });
   }
+
+  return await fn().then(
+    result => clean().then(() => result),
+    error => clean().then(() => Promise.reject(error)),
+  );
 }

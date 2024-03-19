@@ -1,8 +1,8 @@
-import { Get, Authenticated, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Get, Authenticated, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Session } from '@shopify/shopify-api';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
 import { ID } from '../../services/gql/queries/generated/schema.js';
 import { Ids } from '../../schemas/generated/ids.js';

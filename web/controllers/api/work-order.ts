@@ -1,11 +1,5 @@
 import { Session } from '@shopify/shopify-api';
-import {
-  Authenticated,
-  BodySchema,
-  Get,
-  Post,
-  QuerySchema,
-} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
@@ -16,7 +10,7 @@ import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { sessionStorage } from '../../index.js';
 import { calculateDraftOrder } from '../../services/work-orders/calculate.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Permission } from '../../decorators/permission.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';

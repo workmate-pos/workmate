@@ -115,8 +115,10 @@ function getProductVariantRows(
 
       return {
         id: variant.id,
-        onPress: () => {
+        onPress: async () => {
           const itemUuid = uuid();
+
+          await router.popCurrent();
 
           onSelect({
             type,
@@ -132,8 +134,6 @@ function getProductVariantRows(
               workOrderItemUuid: itemUuid,
             })),
           });
-
-          router.popCurrent();
         },
         leftSide: {
           label: displayName,

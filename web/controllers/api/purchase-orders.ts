@@ -1,17 +1,11 @@
-import {
-  Authenticated,
-  BodySchema,
-  Get,
-  Post,
-  QuerySchema,
-} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
 import { Permission } from '../../decorators/permission.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
 import { Session } from '@shopify/shopify-api';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { upsertPurchaseOrder } from '../../services/purchase-orders/upsert.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
 import { PurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';

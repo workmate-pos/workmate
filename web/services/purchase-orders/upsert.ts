@@ -1,14 +1,14 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getNewPurchaseOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
 import { getPurchaseOrder } from './get.js';
 import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { gql } from '../gql/gql.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
-import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';

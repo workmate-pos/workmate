@@ -1,9 +1,8 @@
 import { Session } from '@shopify/shopify-api';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
-import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import {
   getWorkOrderLineItems,
   getCustomAttributeArrayFromObject,

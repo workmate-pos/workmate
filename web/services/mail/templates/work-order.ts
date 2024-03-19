@@ -1,6 +1,6 @@
 import { Liquid } from 'liquidjs';
 import { db } from '../../db/db.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';

@@ -1,4 +1,4 @@
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { Input } from './queries/generated/schema.js';
 
 export * as gql from './queries/generated/queries.js';

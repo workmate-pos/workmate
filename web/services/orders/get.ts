@@ -1,5 +1,5 @@
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import type { Order, OrderInfo } from './types.js';
 import type { ID } from '../gql/queries/generated/schema.js';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';

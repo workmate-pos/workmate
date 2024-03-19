@@ -4,7 +4,7 @@ import { getNewWorkOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { validateCreateWorkOrder } from './validate.js';
 import { syncWorkOrder } from './sync.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -101,8 +101,8 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
     }
 
-    await upsertCharges(session, createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
     await upsertItems(session, createWorkOrder, workOrder.id, currentItems);
+    await upsertCharges(session, createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
 
     await deleteCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
     await deleteItems(createWorkOrder, workOrder.id, currentItems);
@@ -144,7 +144,7 @@ function assertNoIllegalHourlyChargeChanges(
   );
 
   for (const currentCharge of currentHourlyCharges) {
-    if (isLineItemId(currentCharge.shopifyOrderLineItemId) !== null) {
+    if (isLineItemId(currentCharge.shopifyOrderLineItemId)) {
       if (!(currentCharge.uuid in newHourlyChargesByUuid)) {
         throw new HttpError(`Cannot delete hourly charge ${currentCharge.uuid} as it is connected to an order`, 400);
       }

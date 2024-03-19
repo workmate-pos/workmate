@@ -2,7 +2,7 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureProductsExist } from '../products/sync.js';
