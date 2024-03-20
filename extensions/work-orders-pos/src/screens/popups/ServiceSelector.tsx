@@ -1,6 +1,5 @@
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -15,6 +14,7 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useRouter } from '../../routes.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
 type OnSelect = (arg: {
   type: 'mutable-service' | 'fixed-service';

@@ -1,4 +1,3 @@
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
@@ -15,6 +14,7 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
 export function ProductSelector({
   filters: { vendorName, locationId },

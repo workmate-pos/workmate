@@ -1,4 +1,3 @@
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
 import { Int } from '@web/schemas/generated/create-product.js';
@@ -8,6 +7,7 @@ import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useRouter } from '../../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
 // TODO: Also support draft orders
 export function OrderSelector({ onSelect }: { onSelect: (orderId: ID) => void }) {

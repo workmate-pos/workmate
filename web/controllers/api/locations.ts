@@ -38,7 +38,7 @@ export default class LocationsController {
 
     const locations = nodes.filter(
       (node): node is null | (gql.location.getMany.Result['nodes'][number] & { __typename: 'Location' }) =>
-        node === null || node.__typename === 'Customer',
+        node === null || node.__typename === 'Location',
     );
 
     return res.json({ locations });

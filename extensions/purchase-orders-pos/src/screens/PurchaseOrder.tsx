@@ -8,13 +8,12 @@ import {
   TextArea,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { CreatePurchaseOrderDispatchProxy, useCreatePurchaseOrderReducer } from '../create-purchase-order/reducer.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useReducer, useRef } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -29,13 +28,16 @@ import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/from-purchase-order.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
 import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
+import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';
+import {
+  CreatePurchaseOrderDispatchProxy,
+  useCreatePurchaseOrderReducer,
+} from '@work-orders/common/create-purchase-order/reducer.js';
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to SO line items
@@ -43,8 +45,10 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
   const [query, setQuery] = useState('');
   const { Form } = useForm();
 
-  const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] =
-    useCreatePurchaseOrderReducer(initialCreatePurchaseOrder);
+  const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
+    initialCreatePurchaseOrder,
+    { useReducer, useState, useRef },
+  );
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 

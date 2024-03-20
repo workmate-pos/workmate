@@ -23,6 +23,7 @@ export function SavePreset({ keys, useRouter }: SavePresetProps) {
   const router = useRouter();
 
   const fetch = useAuthenticatedFetch();
+  // TODO: Fix this to be a choice - have one query with both options
   const presetsQuery = useWorkOrderCustomFieldsPresetsQuery({ fetch });
   const presetMutation = useWorkOrderCustomFieldsPresetMutation(
     { fetch },

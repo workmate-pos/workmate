@@ -4,7 +4,12 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: PurchaseOrder): CreatePurchaseOrder {
   return {
     lineItems: purchaseOrder.lineItems.map(lineItem => ({
-      shopifyOrderLineItemId: lineItem.shopifyOrderLineItemId,
+      shopifyOrderLineItem: lineItem.shopifyOrderLineItem
+        ? {
+            id: lineItem.shopifyOrderLineItem.id,
+            orderId: lineItem.shopifyOrderLineItem.orderId,
+          }
+        : null,
       availableQuantity: lineItem.availableQuantity,
       productVariantId: lineItem.productVariant.id,
       quantity: lineItem.quantity,

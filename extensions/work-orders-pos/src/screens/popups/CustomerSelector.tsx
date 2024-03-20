@@ -1,11 +1,11 @@
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useRouter } from '../../routes.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
 export function CustomerSelector({ onSelect }: { onSelect: (id: ID) => void }) {
   const [query, setQuery] = useDebouncedState('');

@@ -8,11 +8,12 @@ import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
-import { groupByKey, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { groupByKey, indexBy, unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { Static, Type } from '@sinclair/typebox';
+import { evaluate } from '../../util/evaluate.js';
 
 export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
   const [purchaseOrder] = await db.purchaseOrder.get({ name, shop });
@@ -22,9 +23,19 @@ export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: st
   }
 
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByPurchaseOrderId({ purchaseOrderId: purchaseOrder.id });
+
   const linkedCustomerIds = unique(linkedOrders.map(({ customerId }) => customerId).filter(isNonNullable));
   const linkedCustomers = linkedCustomerIds.length
     ? await db.customers.getMany({ customerIds: linkedCustomerIds })
+    : [];
+
+  const linkedOrderIds = unique(linkedOrders.map(({ orderId }) => orderId));
+  const linkedWorkOrders = linkedOrderIds.length
+    ? await Promise.all(
+        linkedOrderIds.map(orderId => db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId })),
+      )
+        .then(result => result.flat())
+        .then(result => uniqueBy(result, wo => wo.id))
     : [];
 
   assertGidOrNull(purchaseOrder.locationId);
@@ -52,8 +63,16 @@ export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: st
     customFields: getPurchaseOrderCustomFields(purchaseOrder.id),
     lineItems: getPurchaseOrderLineItems(purchaseOrder.id),
     employeeAssignments: getPurchaseOrderEmployeeAssignments(purchaseOrder.id),
-    linkedOrders: linkedOrders.map(({ orderId: id, name }) => ({ id, name })),
-    linkedCustomers: linkedCustomers.map(({ customerId: id, displayName }) => ({ id, displayName })),
+    linkedOrders: linkedOrders.map(({ orderId: id, name, orderType }) => ({
+      id,
+      name,
+      orderType,
+    })),
+    linkedCustomers: linkedCustomers.map(({ customerId: id, displayName }) => ({
+      id,
+      displayName,
+    })),
+    linkedWorkOrders: linkedWorkOrders.map(({ name }) => ({ name })),
   });
 }
 
@@ -120,15 +139,26 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
 
   const productVariantIds = unique(lineItems.map(({ productVariantId }) => productVariantId));
   const productVariants = productVariantIds.length ? await db.productVariants.getMany({ productVariantIds }) : [];
-  const productVariantsById = groupByKey(productVariants, 'productVariantId');
+  const productVariantById = indexBy(productVariants, pv => pv.productVariantId);
 
   const productIds = unique(productVariants.map(({ productId }) => productId));
   const products = productIds.length ? await db.products.getMany({ productIds }) : [];
-  const productsById = groupByKey(products, 'productId');
+  const productById = indexBy(products, p => p.productId);
+
+  const shopifyOrderLineItemIds = unique(
+    lineItems.map(({ shopifyOrderLineItemId }) => shopifyOrderLineItemId).filter(isNonNullable),
+  );
+  const shopifyOrderLineItems = shopifyOrderLineItemIds.length
+    ? await db.shopifyOrder.getLineItemsByIds({ lineItemIds: shopifyOrderLineItemIds })
+    : [];
+  const shopifyOrderLineItemById = indexBy(shopifyOrderLineItems, soli => soli.lineItemId);
 
   return lineItems.map(({ quantity, availableQuantity, productVariantId, shopifyOrderLineItemId, unitCost }) => {
-    const [productVariant = never('fk')] = productVariantsById?.[productVariantId] ?? [];
-    const [product = never('fk')] = productsById?.[productVariant?.productId] ?? [];
+    const productVariant = productVariantById?.[productVariantId] ?? never('fk');
+    const product = productById?.[productVariant?.productId] ?? never('fk');
+    const shopifyOrderLineItem = shopifyOrderLineItemId
+      ? shopifyOrderLineItemById?.[shopifyOrderLineItemId] ?? never('fk')
+      : null;
 
     assertGid(productVariant.productVariantId);
     assertGid(productVariant.inventoryItemId);
@@ -152,10 +182,22 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
           description: product.description,
         },
       },
+      shopifyOrderLineItem: evaluate(() => {
+        if (shopifyOrderLineItem == null) {
+          return null;
+        }
+
+        assertGid(shopifyOrderLineItem.lineItemId);
+        assertGid(shopifyOrderLineItem.orderId);
+
+        return {
+          id: shopifyOrderLineItem.lineItemId,
+          orderId: shopifyOrderLineItem.orderId,
+        };
+      }),
       unitCost,
       quantity,
       availableQuantity,
-      shopifyOrderLineItemId,
     };
   });
 }

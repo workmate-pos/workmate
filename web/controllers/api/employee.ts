@@ -83,8 +83,13 @@ export default class EmployeeController {
   async upsertEmployees(req: Request<unknown, unknown, UpsertEmployees>, res: Response<UpsertEmployeesResponse>) {
     const session: Session = res.locals.shopify.session;
     const { shop } = session;
+    const { employees } = req.body;
 
-    const employeeIds = req.body.employees.map(e => e.employeeId);
+    if (employees.length === 0) {
+      return res.json({ success: true });
+    }
+
+    const employeeIds = employees.map(e => e.employeeId);
 
     const graphql = new Graphql(session);
     const staffMembers = await gql.staffMember.getMany

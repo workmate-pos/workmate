@@ -1,7 +1,6 @@
-import { useReducer, useState } from 'react';
-import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
+import type { useReducer, useRef, useState } from 'react';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { useConst } from '@work-orders/common-pos/hooks/use-const.js';
+import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 
 export type CreatePurchaseOrderAction =
   | ({
@@ -33,7 +32,16 @@ export type CreatePurchaseOrderDispatchProxy = {
   [type in CreatePurchaseOrderAction['type']]: (args: Omit<CreatePurchaseOrderAction & { type: type }, 'type'>) => void;
 };
 
-export const useCreatePurchaseOrderReducer = (initialCreatePurchaseOrder: CreatePurchaseOrder) => {
+export type UseCreatePurchaseOrderReactContext = {
+  useRef: typeof useRef;
+  useState: typeof useState;
+  useReducer: typeof useReducer;
+};
+
+export const useCreatePurchaseOrderReducer = (
+  initialCreatePurchaseOrder: CreatePurchaseOrder,
+  { useState, useRef, useReducer }: UseCreatePurchaseOrderReactContext,
+) => {
   const [createPurchaseOrder, dispatchCreatePurchaseOrder] = useReducer(
     createPurchaseOrderReducer,
     initialCreatePurchaseOrder,
@@ -41,15 +49,14 @@ export const useCreatePurchaseOrderReducer = (initialCreatePurchaseOrder: Create
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const proxy = useConst(
-    () =>
-      new Proxy<CreatePurchaseOrderDispatchProxy>({} as CreatePurchaseOrderDispatchProxy, {
-        get: (target, prop) => (args: DiscriminatedUnionOmit<CreatePurchaseOrderAction, 'type'>) => {
-          setHasUnsavedChanges(true);
-          dispatchCreatePurchaseOrder({ type: prop, ...args } as CreatePurchaseOrderAction);
-        },
-      }),
-  );
+  const proxy = useRef(
+    new Proxy<CreatePurchaseOrderDispatchProxy>({} as CreatePurchaseOrderDispatchProxy, {
+      get: (target, prop) => (args: DiscriminatedUnionOmit<CreatePurchaseOrderAction, 'type'>) => {
+        setHasUnsavedChanges(true);
+        dispatchCreatePurchaseOrder({ type: prop, ...args } as CreatePurchaseOrderAction);
+      },
+    }),
+  ).current;
 
   return [createPurchaseOrder, proxy, hasUnsavedChanges, setHasUnsavedChanges] as const;
 };

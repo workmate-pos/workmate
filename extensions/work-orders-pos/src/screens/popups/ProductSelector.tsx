@@ -1,5 +1,4 @@
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
@@ -14,6 +13,7 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useRouter } from '../../routes.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
 // TODO: Share this screen too + more
 

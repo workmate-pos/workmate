@@ -7,7 +7,6 @@ import {
   useCartSubscription,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
@@ -27,6 +26,7 @@ import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { defaultCreateWorkOrder } from '../create-work-order/default.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);

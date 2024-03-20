@@ -1,33 +1,36 @@
-import { SetStateAction, useEffect, useState } from 'react';
+import type { SetStateAction, useRef, useState } from 'react';
 
-export const useDebouncedState = <T>(initialValue: T, debounceMs: number = 250) => {
-  const [internalState, setInternalState] = useState(initialValue);
-  const [externalState, setExternalState] = useState(initialValue);
-
-  useEffect(() => {
-    if (externalState === internalState) return;
-
-    const originalInternalState = internalState;
-    const timeout = setTimeout(() => {
-      setInternalState(internalState => {
-        // the internal state may have changed if setImmediately was called. do not update if this is the case
-        if (internalState !== originalInternalState) return internalState;
-        return externalState;
-      });
-    }, debounceMs);
-
-    return () => {
-      clearTimeout(timeout);
-    };
-  }, [externalState]);
-
-  const setState = (value: SetStateAction<T>, immediately: boolean = false) => {
-    if (immediately) {
-      setInternalState(value);
-    }
-
-    setExternalState(value);
-  };
-
-  return [internalState, setState] as const;
+type CreateUseDebouncedStateHooks = {
+  useRef: typeof useRef;
+  useState: typeof useState;
 };
+
+export function createUseDebouncedState({ useRef, useState }: CreateUseDebouncedStateHooks) {
+  return function <T>(initialValue: T, debounceMs: number = 250) {
+    const timerRef = useRef<NodeJS.Timeout>();
+
+    const [optimisticState, setOptimisticState] = useState(initialValue);
+    const [currentState, setCurrentState] = useState(initialValue);
+
+    const setState = (value: SetStateAction<T>, immediately: boolean = false) => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = undefined;
+      }
+
+      setOptimisticState(value);
+
+      if (immediately) {
+        setCurrentState(value);
+        return;
+      }
+
+      timerRef.current = setTimeout(() => {
+        setCurrentState(value);
+        timerRef.current = undefined;
+      }, debounceMs);
+    };
+
+    return [currentState, setState, optimisticState] as const;
+  };
+}

@@ -27,6 +27,10 @@
     "./custom-attributes/*": {
       "default": "./dist/custom-attributes/*",
       "types": "./src/custom-attributes/*"
+    },
+    "./create-purchase-order/*": {
+      "default": "./dist/create-purchase-order/*",
+      "types": "./src/create-purchase-order/*"
     }
   },
   "scripts": {

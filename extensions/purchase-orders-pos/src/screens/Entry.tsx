@@ -8,15 +8,16 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
-import { createPurchaseOrderFromPurchaseOrder } from '../create-purchase-order/from-purchase-order.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { defaultCreatePurchaseOrder } from '../create-purchase-order/default.js';
 import { getCustomFieldFilterText } from './popups/CustomFieldFilterConfig.js';
 import { CustomFieldFilter } from '@web/services/purchase-orders/get.js';
+import { defaultCreatePurchaseOrder } from '@work-orders/common/create-purchase-order/default.js';
+import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
 export function Entry() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useDebouncedState('');
   const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
 
   const fetch = useAuthenticatedFetch();

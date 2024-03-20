@@ -1,11 +1,11 @@
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
-import { useCallback, useState } from 'react';
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { useState } from 'react';
 import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
 export function EmployeeSelector({
   initialEmployeeAssignments,
