@@ -391,3 +391,129 @@ ALTER TABLE "PurchaseOrderLineItem" ADD CONSTRAINT "PurchaseOrderLineItem_purcha
 ALTER TABLE "PurchaseOrderLineItem" ADD CONSTRAINT "PurchaseOrderLineItem_shopifyOrderLineItemId_fkey" FOREIGN KEY ("shopifyOrderLineItemId") REFERENCES "ShopifyOrderLineItem"("lineItemId") ON DELETE SET NULL ON UPDATE CASCADE;
 ALTER TABLE "PurchaseOrderLineItem" ADD CONSTRAINT "PurchaseOrderLineItem_productVariantId_fkey" FOREIGN KEY ("productVariantId") REFERENCES "ProductVariant"("productVariantId") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER INDEX "PurchaseOrderProduct_purchaseOrderId_idx" RENAME TO "PurchaseOrderLineItem_purchaseOrderId_idx";
+
+
+
+CREATE FUNCTION updated_at()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW."updatedAt" = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- Settings
+-- WorkOrder
+-- WorkOrderItem
+-- WorkOrderFixedPriceLabourCharge
+-- WorkOrderHourlyLabourCharge
+-- ShopifyOrder
+-- ShopifyOrderLineItem
+-- Employee
+-- AppPlanSubscription
+-- PurchaseOrder
+-- PurchaseOrderLineItem
+-- PurchaseOrderEmployeeAssignment
+-- PurchaseOrderCustomField
+-- WorkOrderCustomField
+-- CustomFieldsPreset
+-- ProductVariant
+-- Product
+-- Customer
+-- Location
+
+CREATE TRIGGER "Settings_updatedAt"
+    BEFORE UPDATE ON "Settings"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "WorkOrder_updatedAt"
+    BEFORE UPDATE ON "WorkOrder"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "WorkOrderItem_updatedAt"
+    BEFORE UPDATE ON "WorkOrderItem"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "WorkOrderFixedPriceLabourCharge_updatedAt"
+    BEFORE UPDATE ON "WorkOrderFixedPriceLabourCharge"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "WorkOrderHourlyLabourCharge_updatedAt"
+    BEFORE UPDATE ON "WorkOrderHourlyLabourCharge"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "ShopifyOrder_updatedAt"
+    BEFORE UPDATE ON "ShopifyOrder"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "ShopifyOrderLineItem_updatedAt"
+    BEFORE UPDATE ON "ShopifyOrderLineItem"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "Employee_updatedAt"
+    BEFORE UPDATE ON "Employee"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "AppPlanSubscription_updatedAt"
+    BEFORE UPDATE ON "AppPlanSubscription"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "PurchaseOrder_updatedAt"
+    BEFORE UPDATE ON "PurchaseOrder"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "PurchaseOrderLineItem_updatedAt"
+    BEFORE UPDATE ON "PurchaseOrderLineItem"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "PurchaseOrderEmployeeAssignment_updatedAt"
+    BEFORE UPDATE ON "PurchaseOrderEmployeeAssignment"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "PurchaseOrderCustomField_updatedAt"
+    BEFORE UPDATE ON "PurchaseOrderCustomField"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "WorkOrderCustomField_updatedAt"
+    BEFORE UPDATE ON "WorkOrderCustomField"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "CustomFieldsPreset_updatedAt"
+    BEFORE UPDATE ON "CustomFieldsPreset"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "ProductVariant_updatedAt"
+    BEFORE UPDATE ON "ProductVariant"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "Product_updatedAt"
+    BEFORE UPDATE ON "Product"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "Customer_updatedAt"
+    BEFORE UPDATE ON "Customer"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
+
+CREATE TRIGGER "Location_updatedAt"
+    BEFORE UPDATE ON "Location"
+    FOR EACH ROW
+EXECUTE PROCEDURE updated_at();
