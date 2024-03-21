@@ -66,13 +66,8 @@ function PurchaseOrders() {
         title="Purchase Orders"
         primaryAction={{
           content: 'New Purchase Order',
-          target: 'APP',
+          onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/purchase-orders/new'),
         }}
-        secondaryActions={[
-          {
-            content: 'Import Purchase Order',
-          },
-        ]}
       />
 
       <IndexFilters
