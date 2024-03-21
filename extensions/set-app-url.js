@@ -10,16 +10,22 @@ if (!process.env.APP_URL) {
   process.exit();
 }
 
-const BASE_PATH = resolve(process.cwd(), './src');
+const BASE_PATH = resolve(process.cwd(), './');
 
 for await (const dirent of await readdir(BASE_PATH, { withFileTypes: true })) {
-  await dfs(BASE_PATH, dirent);
+  if (dirent.isDirectory()) {
+    await dfs(BASE_PATH, dirent);
+  }
 }
 
 /**
  * @param {string} basePath
  * @param {Dirent} dirent */
 async function dfs(basePath, dirent) {
+  if (dirent.name === 'node_modules' || dirent.name.startsWith('.')) {
+    return;
+  }
+
   if (dirent.isDirectory()) {
     for await (const child of await readdir(resolve(basePath, dirent.name), { withFileTypes: true })) {
       await dfs(resolve(basePath, dirent.name), child);

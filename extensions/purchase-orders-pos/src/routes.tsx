@@ -19,15 +19,18 @@ import { CustomFieldFilterConfig } from './screens/popups/CustomFieldFilterConfi
 import { PrintOverview } from './screens/PrintOverview.js';
 import { OrderProductSelector } from './screens/popups/OrderProductSelector.js';
 import { OrderSelector } from './screens/popups/OrderSelector.js';
+import { ScrollView } from '@shopify/retail-ui-extensions-react';
 
 export const { Router, useRouter } = createRouter(
   {
     title: 'Purchase Orders',
     Component: () => {
       return (
-        <ScreenPermissionBoundary permissions={['read_settings', 'read_purchase_orders', 'read_employees']}>
-          <Entry />
-        </ScreenPermissionBoundary>
+        <ScrollView>
+          <ScreenPermissionBoundary permissions={['read_settings', 'read_purchase_orders', 'read_employees']}>
+            <Entry />
+          </ScreenPermissionBoundary>
+        </ScrollView>
       );
     },
   },

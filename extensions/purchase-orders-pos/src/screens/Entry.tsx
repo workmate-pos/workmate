@@ -48,7 +48,7 @@ export function Entry() {
   }
 
   return (
-    <ScrollView>
+    <>
       <ResponsiveStack direction={'horizontal'} alignment={'space-between'} paddingVertical={'Small'}>
         <ResponsiveStack direction={'horizontal'}>
           <Text variant="headingLarge">Purchase Orders</Text>
@@ -137,7 +137,7 @@ export function Entry() {
           </Text>
         </Stack>
       )}
-    </ScrollView>
+    </>
   );
 }
 
