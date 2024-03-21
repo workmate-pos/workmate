@@ -30,7 +30,6 @@ RUN --mount=type=secret,id=SHOPIFY_ACCESS_TOKEN \
 
 # Install deps for common
 WORKDIR ../common
-WORKDIR ./common
 RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
   NPM_GITHUB_TOKEN=$(cat /run/secrets/NPM_GITHUB_TOKEN) \
   npm install
