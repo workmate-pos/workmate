@@ -62,6 +62,14 @@ export async function insertDefaultSettingsIfNotExists(shop: string) {
 function assertValidSettings(settings: ShopSettings) {
   assertValidFormatString(settings.idFormat);
 
+  if (settings.purchaseOrderWebhook.endpointUrl !== null) {
+    try {
+      new URL(settings.purchaseOrderWebhook.endpointUrl);
+    } catch (e) {
+      throw new HttpError('Invalid webhook endpoint URL', 400);
+    }
+  }
+
   if (!settings.statuses.includes(settings.defaultStatus)) {
     throw new HttpError('Invalid default status', 400);
   }

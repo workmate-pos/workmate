@@ -41,6 +41,7 @@ export default class ProductsController {
         vendor,
         productType,
         status: 'ACTIVE',
+        // @ts-ignore shopify schema is broken!
         options: options.map(option => option.name),
         variants: [
           {
