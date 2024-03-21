@@ -503,3 +503,53 @@ model Location {
 
   @@index([shop])
 }
+
+
+// Old schema stuff that needs to be re-synced into the new schema
+
+model OldWorkOrder {
+  id                 Int                @id @default(autoincrement())
+  shop               String
+  name               String
+  status             String
+  dueDate            DateTime
+  createdAt          DateTime           @default(now())
+  customerId         String
+  derivedFromOrderId String?
+  draftOrderId       String?
+  orderId            String?
+  fixedPriceLabour   OldFixedPriceLabour[]
+  hourlyLabour       OldHourlyLabour[]
+
+  @@unique([shop, name])
+  @@index([draftOrderId])
+  @@index([orderId])
+}
+
+
+model OldFixedPriceLabour {
+  id               Int       @id @default(autoincrement())
+  workOrderId      Int
+  lineItemUuid     String?
+  productVariantId String?
+  employeeId       String?
+  name             String
+  amount           String
+  workOrder        OldWorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@index([workOrderId])
+}
+
+model OldHourlyLabour {
+  id               Int       @id @default(autoincrement())
+  workOrderId      Int
+  lineItemUuid     String?
+  productVariantId String?
+  employeeId       String?
+  name             String
+  rate             String
+  hours            String
+  WorkOrder        OldWorkOrder @relation(fields: [workOrderId], references: [id])
+
+  @@index([workOrderId])
+}
