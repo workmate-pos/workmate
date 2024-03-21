@@ -101,7 +101,7 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
   };
 
   await fetch(url, {
-    method: 'GET',
+    method: 'POST',
     body: JSON.stringify(payload),
     headers: {
       'Content-Type': 'application/json',
