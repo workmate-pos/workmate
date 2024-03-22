@@ -8,6 +8,7 @@ import { Permission } from '../../decorators/permission.js';
 import { getAppPlan, getAppPlanSubscription, getAvailableAppPlans } from '../../services/app-plans/app-plans.js';
 import { Session } from '@shopify/shopify-api';
 import { IGetSubscriptionResult } from '../../services/db/queries/generated/app-plan.sql.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type AppSubscriptionCreate = gql.appSubscriptions.appSubscriptionCreate.Result['appSubscriptionCreate'];
 
@@ -50,21 +51,24 @@ export default class AppPlansController {
 
     const appPlan = await getAppPlan(session, appPlanId);
 
-    const lineItems = appPlan.trialOnly
-      ? []
-      : [
-          {
-            plan: {
-              appRecurringPricingDetails: {
-                interval: appPlan.interval,
-                price: {
-                  amount: appPlan.price,
-                  currencyCode: appPlan.currencyCode,
-                },
-              },
+    // free subscriptions are not allowed anymore, so we just set the price to 0.01 and the discount to 100%
+    const amount = appPlan.price === 0 ? 0.01 : appPlan.price;
+    const discount = appPlan.price === 0 ? { value: { percentage: 1 } } : null;
+
+    const lineItems = [
+      {
+        plan: {
+          appRecurringPricingDetails: {
+            interval: appPlan.interval,
+            price: {
+              amount,
+              currencyCode: appPlan.currencyCode,
             },
+            discount,
           },
-        ];
+        },
+      },
+    ];
 
     const appSubscription = await gql.appSubscriptions.appSubscriptionCreate.run(graphql, {
       name: `${appPlan.id}-${appPlan.name}`,
