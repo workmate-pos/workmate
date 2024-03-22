@@ -272,7 +272,7 @@ model AppPlan {
 model AppPlanCustomAccess {
   appPlanId Int
   shop      String
-  type      AppPlanCustomAccessType @default(DEFAULT)
+  type      AppPlanCustomAccessType
 
   appPlan   AppPlan @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
 
