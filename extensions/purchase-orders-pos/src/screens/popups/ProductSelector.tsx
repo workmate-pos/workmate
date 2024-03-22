@@ -56,6 +56,7 @@ export function ProductSelector() {
     <Screen
       title="Select Product"
       presentation={{ sheet: true }}
+      onNavigateBack={() => closePopup(selectedProducts)}
       overrideNavigateBack={() => closePopup(selectedProducts)}
     >
       <ScrollView>

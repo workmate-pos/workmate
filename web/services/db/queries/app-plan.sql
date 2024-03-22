@@ -24,7 +24,9 @@ ON CONFLICT ("shop") DO UPDATE SET
 RETURNING *;
 
 /* @name get */
-SELECT ap.* FROM "AppPlan" ap
+SELECT ap.*,
+       apca.type AS "accessType"
+       FROM "AppPlan" ap
                    LEFT JOIN "AppPlanCustomAccess" apca on ap.id = apca."appPlanId"
 WHERE (ap.type = 'DEFAULT' OR (ap.type = 'CUSTOM' AND apca.shop = :shop!))
   AND ap.id = COALESCE(:id, ap.id);

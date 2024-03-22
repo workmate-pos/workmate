@@ -1,6 +1,8 @@
 /** Types generated for queries found in "services/db/queries/app-plan.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
+export type AppPlanCustomAccessType = 'DEFAULT' | 'TEST';
+
 export type AppPlanInterval = 'ANNUAL' | 'EVERY_30_DAYS';
 
 export type AppPlanName = 'ENTERPRISE' | 'ESSENTIAL' | 'FREE';
@@ -108,6 +110,7 @@ export interface IGetParams {
 
 /** 'Get' return type */
 export interface IGetResult {
+  accessType: AppPlanCustomAccessType;
   allowedShopifyPlans: ShopifyPlanArray | null;
   basePrice: number;
   createdAt: Date;
@@ -128,12 +131,14 @@ export interface IGetQuery {
   result: IGetResult;
 }
 
-const getIR: any = {"usedParamSet":{"shop":true,"id":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":180,"b":185}]},{"name":"id","required":false,"transform":{"type":"scalar"},"locs":[{"a":212,"b":214}]}],"statement":"SELECT ap.* FROM \"AppPlan\" ap\n                   LEFT JOIN \"AppPlanCustomAccess\" apca on ap.id = apca.\"appPlanId\"\nWHERE (ap.type = 'DEFAULT' OR (ap.type = 'CUSTOM' AND apca.shop = :shop!))\n  AND ap.id = COALESCE(:id, ap.id)"};
+const getIR: any = {"usedParamSet":{"shop":true,"id":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":221,"b":226}]},{"name":"id","required":false,"transform":{"type":"scalar"},"locs":[{"a":253,"b":255}]}],"statement":"SELECT ap.*,\n       apca.type AS \"accessType\"\n       FROM \"AppPlan\" ap\n                   LEFT JOIN \"AppPlanCustomAccess\" apca on ap.id = apca.\"appPlanId\"\nWHERE (ap.type = 'DEFAULT' OR (ap.type = 'CUSTOM' AND apca.shop = :shop!))\n  AND ap.id = COALESCE(:id, ap.id)"};
 
 /**
  * Query generated from SQL:
  * ```
- * SELECT ap.* FROM "AppPlan" ap
+ * SELECT ap.*,
+ *        apca.type AS "accessType"
+ *        FROM "AppPlan" ap
  *                    LEFT JOIN "AppPlanCustomAccess" apca on ap.id = apca."appPlanId"
  * WHERE (ap.type = 'DEFAULT' OR (ap.type = 'CUSTOM' AND apca.shop = :shop!))
  *   AND ap.id = COALESCE(:id, ap.id)
