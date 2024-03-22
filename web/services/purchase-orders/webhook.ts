@@ -8,6 +8,8 @@ import { gql } from '../gql/gql.js';
 import { indexBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import fetch from 'node-fetch';
 
 // TODO: Update this after merging with wo-router
 
@@ -100,11 +102,18 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
     },
   };
 
+  let agent = undefined;
+
+  if (process.env.HTTP_PROXY_URL) {
+    agent = new HttpsProxyAgent(process.env.HTTP_PROXY_URL);
+  }
+
   await fetch(url, {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: {
       'Content-Type': 'application/json',
     },
+    agent,
   });
 }
