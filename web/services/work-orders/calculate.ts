@@ -17,6 +17,10 @@ import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertMoney, BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
+/**
+ * Calculates the price of a work order.
+ * @param calculateWorkOrder Minimal version of CreateWorkOrder. Present items/charges that are already in some order are ignored, and simply fetched from the database instead.
+ */
 export async function calculateDraftOrder(
   session: Session,
   calculateWorkOrder: CalculateWorkOrder,
@@ -28,6 +32,8 @@ export async function calculateDraftOrder(
   const options = { labourSku: labourLineItemSKU };
 
   if (!calculateWorkOrder.name) {
+    // if this is a new work order we only need to calculate the total price, without taking into account existing orders
+
     const { lineItems, customSales } = getWorkOrderLineItems(
       calculateWorkOrder.items,
       hourlyCharges,

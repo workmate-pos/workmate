@@ -152,7 +152,7 @@ export default class WorkOrderController {
     }
 
     const printTemplate = workOrderPrintTemplates[template] ?? never();
-    const context = await getWorkOrderTemplateData(session.shop, name, date);
+    const context = await getWorkOrderTemplateData(session, name, date);
     const { subject, html } = await getRenderedWorkOrderTemplate(printTemplate, context);
     const file = await renderHtmlToPdfCustomFile(subject, html);
 

@@ -1,5 +1,4 @@
 export const purchaseOrderInvoiceTemplate = `
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -21,6 +20,7 @@ export const purchaseOrderInvoiceTemplate = `
     }
 
     table {
+      table-layout: fixed;
       border-collapse: collapse;
       width: 100%;
     }
@@ -29,15 +29,22 @@ export const purchaseOrderInvoiceTemplate = `
       border: 1px solid #aaa;
       padding: 8px;
       text-align: center;
+      word-wrap: break-word;
     }
 
     #left, #right {
       display: flex;
       flex-direction: column;
-      width: 50%;
-      gap: 2rem;
+      gap: 0.75em;
       margin: 1em 0;
-      padding: 1em;
+    }
+
+    #left {
+      margin-right: 0.5em;
+    }
+
+    #right {
+      margin-left: 0.5em;
     }
 
     .purchase-order-items > thead {
@@ -75,21 +82,18 @@ export const purchaseOrderInvoiceTemplate = `
   </div>
 
   <div id="right">
-    <div class="purchase-order-details">
-      <h2 style="text-align: right">Purchase Order Invoice</h2>
-      <table>
-        <tr>
-          <th>Date</th>
-          <th>P.O. No.</th>
-          <th>Invoice #</th>
-        </tr>
-        <tr>
-          <td>{{ date }}</td>
-          <td>{{ name }}</td>
-          <td>{{ customFields["Invoice #"] }}</td>
-        </tr>
-      </table>
-    </div>
+    <h2 style="text-align: right">Purchase Order Invoice</h2>
+
+    <table>
+      <tr>
+        <th>Date</th>
+        <th>Invoice #</th>
+      </tr>
+      <tr>
+        <td>{{ date }}</td>
+        <td>{{ customFields["Invoice #"] }}</td>
+      </tr>
+    </table>
 
     <table>
       <tr>
@@ -97,6 +101,17 @@ export const purchaseOrderInvoiceTemplate = `
       </tr>
       <tr>
         <td>{{ shipTo | newline_to_br }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Rep</th>
+        <th>P.O. No.</th>
+      </tr>
+      <tr>
+        <td>{{ customFields["Rep"] }}</td>
+        <td>{{ name }}</td>
       </tr>
     </table>
   </div>
@@ -121,6 +136,11 @@ export const purchaseOrderInvoiceTemplate = `
   {% endfor %}
   </tbody>
 </table>
+
+<div style="width: 60%; border: 1px solid #aaa; margin: 1em 0; padding: 1em; font-size: 8pt; text-align: center">
+  Buyer agrees to pay all collection costs including attorney's fees and a 1.5% interest
+  (18% APR) on all past due amounts.
+</div>
 
 <table style="width: 20em; margin-top: 2em;">
   <tr>

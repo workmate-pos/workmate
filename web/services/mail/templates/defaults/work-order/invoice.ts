@@ -1,12 +1,11 @@
-export const workOrderInvoiceTemplate = `
-<!doctype html>
+export const workOrderInvoiceTemplate = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Invoice for {{ name }}</title>
+  <title>Invoice</title>
   <style>
     body {
       font-family: sans-serif;
@@ -20,6 +19,7 @@ export const workOrderInvoiceTemplate = `
     }
 
     table {
+      table-layout: fixed;
       border-collapse: collapse;
       width: 100%;
     }
@@ -28,15 +28,22 @@ export const workOrderInvoiceTemplate = `
       border: 1px solid #aaa;
       padding: 8px;
       text-align: center;
+      word-wrap: break-word;
     }
 
     #left, #right {
       display: flex;
       flex-direction: column;
-      width: 50%;
-      gap: 2rem;
+      gap: 0.75em;
       margin: 1em 0;
-      padding: 1em;
+    }
+
+    #left {
+      margin-right: 0.5em;
+    }
+
+    #right {
+      margin-left: 0.5em;
     }
 
     .work-order-items > thead {
@@ -84,24 +91,76 @@ export const workOrderInvoiceTemplate = `
         <td>{{ customer.address }}</td>
       </tr>
     </table>
+
+    <table>
+      <tr>
+        <th>Rep</th>
+        <th>Tech</th>
+        <th>P.O. No.</th>
+      </tr>
+      <tr>
+        <td>{{ customFields["Rep"] }}</td>
+        <td>{{ customFields["Tech"] }}</td>
+        <td>{{ purchaseOrderNames | join: ", " }}</td>
+      </tr>
+    </table>
   </div>
 
   <div id="right">
-    <div class="work-order-details">
-      <h2 style="text-align: right">Work Order Invoice</h2>
-      <table>
-        <tr>
-          <th>Date</th>
-          <th>W.O. No.</th>
-          <th>Invoice #</th>
-        </tr>
-        <tr>
-          <td>{{ date }}</td>
-          <td>{{ name }}</td>
-          <td>{{ customFields["Invoice #"] }}</td>
-        </tr>
-      </table>
-    </div>
+    <h2 style="text-align: right">Work Order Invoice</h2>
+
+    <table>
+      <tr>
+        <th>Date</th>
+        <th>W.O. No.</th>
+        <th>Invoice #</th>
+      </tr>
+      <tr>
+        <td>{{ date }}</td>
+        <td>{{ name }}</td>
+        <td>{{ customFields["Invoice #"] }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>VIN</th>
+        <td>{{ customFields["VIN"] }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Year</th>
+        <th>Make</th>
+        <th>Model</th>
+      </tr>
+      <tr>
+        <td>{{ customFields["Year"] }}</td>
+        <td>{{ customFields["Make"] }}</td>
+        <td>{{ customFields["Model"] }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>License#</th>
+        <th>Miles In</th>
+        <th>Miles Out</th>
+      </tr>
+      <tr>
+        <td>{{ customFields["License#"] }}</td>
+        <td>{{ customFields["Miles In"] }}</td>
+        <td>{{ customFields["Miles Out"] }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Color</th>
+        <td>{{ customFields["Color"] }}</td>
+      </tr>
+    </table>
   </div>
 </div>
 
@@ -155,11 +214,58 @@ export const workOrderInvoiceTemplate = `
   </tr>
 
   <tr>
-    <td colspan="4"></td>
-    <td>\${{ total }}</td>
+    <td colspan="3"></td>
+    <td colspan="2">
+      <span style="float: left"><strong>Total</strong></span>
+      <span style="float: right">\${{ total }}</span>
+    </td>
+  </tr>
+
+  <tr>
+    <td colspan="3"></td>
+    <td colspan="2">
+      <span style="float: left"><strong>Payments</strong></span>
+      <span style="float: right">\${{ paid }}</span>
+    </td>
+  </tr>
+
+  <tr>
+    <td colspan="3"></td>
+    <td colspan="2">
+      <span style="float: left"><strong>Balance Due</strong></span>
+      <span style="float: right">\${{ outstanding }}</span>
+    </td>
   </tr>
   </tbody>
 </table>
+
+<div style="border: 1px solid #aaa; margin: 1em auto; padding: 1em; font-size: 8pt">
+It is the buyer's responsibility to have all bolts/nuts checked after the first 100 miles on wheel
+adapters and new wheels and 500 miles on suspension components. Please contact us at
+801-395-2134 to schedule an inspection on your vehicle at that time.
+  <br />
+  <br />
+Wheel alignment, steering systems, suspension, and driveline system should be inspected by a
+qualified professional mechanic every 6-9 months. Fat Bob's Garage will re-align your vehicle
+to specification free of charge for a period of 30 days when an alignment is purchased and
+incorrect alignment is detected within this 30 day period.
+  <br />
+  <br />
+Buyer agrees to pay all collection costs including attorney's fees and a 1.5% interest (18% APR)
+on all past due amounts.
+  <br />
+  <br />
+  <span style="font-weight: bold; font-size: 1.5em">
+<strong>Signature</strong>
+  ____________________________________________________________________
+  </span>
+</div>
+
+<div style="margin: 1em auto; text-align: center; font-size: 8pt">
+  We do our best to stock popular items, however when items are not in stock at our warehouse they need to be ordered and brought in from
+  manufacturers or suppliers. In these instances the item is considered “Special Order” and may be subject to additional restocking fees if cancelled.
+  Shipping is not refundable. Deposits taken on Special Order items are Non-Refundable.
+</div>
 </body>
 </html>
 `.trim();

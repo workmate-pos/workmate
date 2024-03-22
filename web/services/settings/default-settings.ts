@@ -1,7 +1,7 @@
 import { Money, Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 import { quoteTemplate } from '../mail/templates/defaults/work-order/quote.js';
-import { workOrderTemplate } from '../mail/templates/defaults/work-order/work-order.js';
+import { workOrderInstallationOverviewTemplate } from '../mail/templates/defaults/work-order/work-order.js';
 import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchase-order/invoice.js';
 import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
 import { pickTicketTemplate } from '../mail/templates/defaults/work-order/pick-ticket.js';
@@ -44,10 +44,10 @@ const defaultShopSettings: ShopSettings = {
       subject: 'Quote for {{ name }}',
       template: quoteTemplate,
     },
-    // 'Work Order Overview': {
-    //   subject: 'Work Order {{ name }}',
-    //   template: workOrderTemplate,
-    // },
+    'Work Order Installation Overview': {
+      subject: 'Work Order {{ name }}',
+      template: workOrderInstallationOverviewTemplate,
+    },
     'WO Invoice': {
       subject: 'Invoice for {{ name }}',
       template: workOrderInvoiceTemplate,

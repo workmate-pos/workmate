@@ -6,7 +6,7 @@ export const pickTicketTemplate = `
   <meta name="viewport"
         content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Invoice for {{ name }}</title>
+  <title>Install Pick Ticket</title>
   <style>
     body {
       font-family: sans-serif;
@@ -20,6 +20,7 @@ export const pickTicketTemplate = `
     }
 
     table {
+      table-layout: fixed;
       border-collapse: collapse;
       width: 100%;
     }
@@ -28,15 +29,22 @@ export const pickTicketTemplate = `
       border: 1px solid #aaa;
       padding: 8px;
       text-align: center;
+      word-wrap: break-word;
     }
 
     #left, #right {
       display: flex;
       flex-direction: column;
-      width: 50%;
-      gap: 2rem;
+      gap: 0.75em;
       margin: 1em 0;
-      padding: 1em;
+    }
+
+    #left {
+      margin-right: 0.5em;
+    }
+
+    #right {
+      margin-left: 0.5em;
     }
 
     .work-order-items > thead {
@@ -85,33 +93,75 @@ export const pickTicketTemplate = `
       </tr>
     </table>
 
-
     <table>
       <tr>
+        <th>Rep</th>
+        <th>Tech</th>
         <th>P.O. No.</th>
       </tr>
       <tr>
+        <td>{{ customFields["Rep"] }}</td>
+        <td>{{ customFields["Tech"] }}</td>
         <td>{{ purchaseOrderNames | join: ", " }}</td>
       </tr>
     </table>
   </div>
 
   <div id="right">
-    <div class="work-order-details">
-      <h2 style="text-align: right">Install Pick Ticket</h2>
-      <table>
-        <tr>
-          <th>Date</th>
-          <th>S.O. No.</th>
-          <th>W.O. No.</th>
-        </tr>
-        <tr>
-          <td>{{ date }}</td>
-          <td>{{ shopifyOrderNames | join: ", " }}</td>
-          <td>{{ name }}</td>
-        </tr>
-      </table>
-    </div>
+    <h2 style="text-align: right">Install Pick Ticket</h2>
+
+    <table>
+      <tr>
+        <th>Date</th>
+        <th>W.O. No.</th>
+        <th>S.O. No.</th>
+      </tr>
+      <tr>
+        <td>{{ date }}</td>
+        <td>{{ name }}</td>
+        <td>{{ shopifyOrderNames | join: ", " }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>VIN</th>
+        <td>{{ customFields["VIN"] }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Year</th>
+        <th>Make</th>
+        <th>Model</th>
+      </tr>
+      <tr>
+        <td>{{ customFields["Year"] }}</td>
+        <td>{{ customFields["Make"] }}</td>
+        <td>{{ customFields["Model"] }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>License#</th>
+        <th>Miles In</th>
+        <th>Miles Out</th>
+      </tr>
+      <tr>
+        <td>{{ customFields["License#"] }}</td>
+        <td>{{ customFields["Miles In"] }}</td>
+        <td>{{ customFields["Miles Out"] }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Color</th>
+        <td>{{ customFields["Color"] }}</td>
+      </tr>
+    </table>
   </div>
 </div>
 
@@ -133,26 +183,18 @@ export const pickTicketTemplate = `
     <td>{{ item.description }}</td>
     <td></td>
     <!-- Ordered: the quantity that is ordered, minus any that have arrived -->
-    {% if item.purchaseOrderLineItem != null %}
-    <td>{{ item.purchaseOrderLineItem.quantity | minus: item.purchaseOrderLineItem.availableQuantity }}</td>
-    {% else %}
-    <td>0</td>
-    {% endif %}
+    <td>{{ item.purchaseOrderQuantities.orderedQuantity | minus: item.purchaseOrderQuantities.availableQuantity }}</td>
 
-    <!-- The quantity that has arrived -->
-    {% if item.purchaseOrderLineItem != null %}
-    <td>{{ item.quantity | minus: item.purchaseOrderLineItem.quantity | plus: item.purchaseOrderLineItem.availableQuantity }}</td>
-    {% else %}
-    <td>{{ item.quantity }}</td>
-    {% endif %}
+    <!-- The quantity that has arrived + the quantity that was available in the first place -->
+    <td>{{ item.quantity | minus: item.purchaseOrderQuantities.orderedQuantity | plus: item.purchaseOrderQuantities.availableQuantity }}</td>
   </tr>
   {% endfor %}
 
   <tr>
-    <td colspan="3">
-      <span style="font-weight: bold; font-size: 1.5em">Signature</span>
-    </td>
     <td colspan="2"></td>
+    <td colspan="3">
+      <span style="float: left"><strong>Signature</strong></span>
+    </td>
   </tr>
   </tbody>
 </table>

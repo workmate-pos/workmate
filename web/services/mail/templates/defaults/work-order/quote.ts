@@ -20,6 +20,7 @@ export const quoteTemplate = `
     }
 
     table {
+      table-layout: fixed;
       border-collapse: collapse;
       width: 100%;
     }
@@ -28,17 +29,22 @@ export const quoteTemplate = `
       border: 1px solid #aaa;
       padding: 8px;
       text-align: center;
-    }
-
-    #left {
-      display: flex;
-      flex-direction: column;
-      width: 50%;
-      gap: 2rem;
+      word-wrap: break-word;
     }
 
     #left, #right {
-      margin: 1rem 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75em;
+      margin: 1em 0;
+    }
+
+    #left {
+      margin-right: 0.5em;
+    }
+
+    #right {
+      margin-left: 0.5em;
     }
 
     .work-order-items > thead {
@@ -86,34 +92,36 @@ export const quoteTemplate = `
         <td>{{ customer.address }}</td>
       </tr>
     </table>
-
-    <table>
-      <tr>
-        <th>P.O. No.</th>
-      </tr>
-      <tr>
-        <td>{{ purchaseOrderNames | join: ", " }}</td>
-      </tr>
-    </table>
-
   </div>
 
   <div id="right">
-    <div class="work-order-details">
-      <h2 style="text-align: right">Quote for {{ name }}</h2>
-      <table>
-        <tr>
-          <th>Date</th>
-          <th>W.O. No.</th>
-          <th>S.O. No.</th>
-        </tr>
-        <tr>
-          <td>{{ date }}</td>
-          <td>{{ name }}</td>
-          <td>{{ shopifyOrderNames | join: ", " }}</td>
-        </tr>
-      </table>
-    </div>
+    <h2 style="text-align: right">Quote</h2>
+
+    <table>
+      <tr>
+        <th>Date</th>
+        <th>W.O. No.</th>
+        <th>S.O. No.</th>
+      </tr>
+      <tr>
+        <td>{{ date }}</td>
+        <td>{{ name }}</td>
+        <td>{{ shopifyOrderNames | join: ", " }}</td>
+      </tr>
+    </table>
+
+    <table>
+      <tr>
+        <th>Rep</th>
+        <th>P.O. No.</th>
+        <th>Project</th>
+      </tr>
+      <tr>
+        <td>{{ customFields["Rep"] }}</td>
+        <td>{{ purchaseOrderNames | join: ", " }}</td>
+        <td>{{ customFields["Project"] }}</td>
+      </tr>
+    </table>
   </div>
 </div>
 
@@ -139,10 +147,10 @@ export const quoteTemplate = `
   </tr>
   {% for charge in item.charges %}
   <tr>
-    <td>{{ charge.name }}</td>
+    <td>↳ {{ charge.name }}</td>
     <td>{{ charge.details }}</td>
-    <td>1</td>
-    <td>\${{ charge.totalPrice }}</td>
+    <td></td>
+    <td></td>
     <td>\${{ charge.totalPrice }}</td>
   </tr>
   {% endfor %}
@@ -152,8 +160,8 @@ export const quoteTemplate = `
   <tr>
     <td>{{ charge.name }}</td>
     <td>{{ charge.details }}</td>
-    <td>1</td>
-    <td>\${{ charge.totalPrice }}</td>
+    <td></td>
+    <td></td>
     <td>\${{ charge.totalPrice }}</td>
   </tr>
   {% endfor %}
@@ -167,11 +175,21 @@ export const quoteTemplate = `
   </tr>
 
   <tr>
-    <td colspan="4"></td>
-    <td>\${{ total }}</td>
+    <td colspan="3"></td>
+    <td colspan="2">
+      <span style="float: left"><strong>Total</strong></span>
+      <span style="float: right">\${{ total }}</span>
+    </td>
   </tr>
   </tbody>
 </table>
+
+<div style="margin: 1em auto; text-align: center; font-size: 8pt">
+  We do our best to stock popular items, however when items are not in stock at our warehouse they need to be ordered and brought in from
+  manufacturers or suppliers. In these instances the item is considered “Special Order” and may be subject to additional restocking fees if cancelled.
+
+  Shipping is not refundable. Deposits taken on Special Order items are Non-Refundable.
+</div>
 </body>
 </html>
 `.trim();
