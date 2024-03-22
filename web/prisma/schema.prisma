@@ -157,9 +157,16 @@ model AppPlan {
 model AppPlanCustomAccess {
   appPlanId Int
   shop      String
+  type      AppPlanCustomAccessType
+
   appPlan   AppPlan @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
 
   @@id([appPlanId, shop])
+}
+
+enum AppPlanCustomAccessType {
+  DEFAULT
+  TEST
 }
 
 enum AppPlanName {
