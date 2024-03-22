@@ -39,6 +39,7 @@ fragment ProductVariantFragment on ProductVariant {
     id
   }
   product {
+    id
     title
     handle
     hasOnlyDefaultVariant

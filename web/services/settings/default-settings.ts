@@ -28,6 +28,9 @@ const defaultShopSettings: ShopSettings = {
     hourlyLabour: true,
     employeeAssignments: true,
   },
+  purchaseOrderWebhook: {
+    endpointUrl: null,
+  },
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

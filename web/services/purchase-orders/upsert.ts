@@ -12,6 +12,7 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js'
 import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
+import { sendPurchaseOrderWebhook } from './webhook.js';
 
 export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -67,6 +68,10 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     ]);
 
     await adjustShopifyInventory(session, existingPurchaseOrder, createPurchaseOrder);
+
+    sendPurchaseOrderWebhook(session, name).catch(error => {
+      sentryErr('Failed to send webhook', { error });
+    });
 
     return { name };
   });
