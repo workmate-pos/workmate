@@ -55,5 +55,8 @@ export default defineConfig({
       '^/(\\?.*)?$': proxyOptions,
       '^/api(/|(\\?.*)?$)': proxyOptions,
     },
+    watch: {
+      ignored: ['!node_modules/@web/**', '!node_modules/@teifi-digital/**', '!node_modules/@work-orders/**'],
+    },
   },
 });

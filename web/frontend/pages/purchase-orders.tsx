@@ -19,7 +19,6 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
 import { useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
