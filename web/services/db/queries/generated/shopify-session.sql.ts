@@ -56,12 +56,13 @@ export interface IRemoveByShopQuery {
   result: IRemoveByShopResult;
 }
 
-const removeByShopIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]}],"statement":"DELETE FROM \"ShopifySession\"\nWHERE shop = :shop!"};
+const removeByShopIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]}],"statement":"DELETE\nFROM \"ShopifySession\"\nWHERE shop = :shop!"};
 
 /**
  * Query generated from SQL:
  * ```
- * DELETE FROM "ShopifySession"
+ * DELETE
+ * FROM "ShopifySession"
  * WHERE shop = :shop!
  * ```
  */
@@ -158,5 +159,35 @@ const upsertIR: any = {"usedParamSet":{"id":true,"shop":true,"state":true,"isOnl
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
+
+
+/** 'GetOnlineAccessInfoByShop' parameters type */
+export interface IGetOnlineAccessInfoByShopParams {
+  shop: string;
+}
+
+/** 'GetOnlineAccessInfoByShop' return type */
+export interface IGetOnlineAccessInfoByShopResult {
+  onlineAccessInfo: string | null;
+}
+
+/** 'GetOnlineAccessInfoByShop' query type */
+export interface IGetOnlineAccessInfoByShopQuery {
+  params: IGetOnlineAccessInfoByShopParams;
+  result: IGetOnlineAccessInfoByShopResult;
+}
+
+const getOnlineAccessInfoByShopIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":61,"b":66}]}],"statement":"SELECT \"onlineAccessInfo\"\nFROM \"ShopifySession\"\nWHERE shop = :shop!\n  AND \"isOnline\" = true"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT "onlineAccessInfo"
+ * FROM "ShopifySession"
+ * WHERE shop = :shop!
+ *   AND "isOnline" = true
+ * ```
+ */
+export const getOnlineAccessInfoByShop = new PreparedQuery<IGetOnlineAccessInfoByShopParams,IGetOnlineAccessInfoByShopResult>(getOnlineAccessInfoByShopIR);
 
 
