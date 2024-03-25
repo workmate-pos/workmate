@@ -1,11 +1,14 @@
-/*
-    @name getMany
-    @param employeeIds -> (...)
-*/
+/* @name getMany */
 SELECT *
 FROM "Employee"
-WHERE shop = :shop!
-AND "employeeId" IN :employeeIds!;
+WHERE shop = :shop
+AND "employeeId" = ANY(:employeeIds);
+
+/* @name getPage */
+SELECT *
+FROM "Employee"
+WHERE shop = COALESCE(:shop, shop)
+AND name ILIKE COALESCE(:query, '%');
 
 /*
     @name upsertMany

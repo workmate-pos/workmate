@@ -5,10 +5,12 @@ export type PermissionNode = 'read_app_plan' | 'read_employees' | 'read_purchase
 
 export type PermissionNodeArray = (PermissionNode)[];
 
+export type stringArray = (string)[];
+
 /** 'GetMany' parameters type */
 export interface IGetManyParams {
-  employeeIds: readonly (string)[];
-  shop: string;
+  employeeIds?: stringArray | null | void;
+  shop?: string | null | void;
 }
 
 /** 'GetMany' return type */
@@ -28,18 +30,55 @@ export interface IGetManyQuery {
   result: IGetManyResult;
 }
 
-const getManyIR: any = {"usedParamSet":{"shop":true,"employeeIds":true},"params":[{"name":"employeeIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":65,"b":77}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":38,"b":43}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE shop = :shop!\nAND \"employeeId\" IN :employeeIds!"};
+const getManyIR: any = {"usedParamSet":{"shop":true,"employeeIds":true},"params":[{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":38,"b":42}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":67,"b":78}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE shop = :shop\nAND \"employeeId\" = ANY(:employeeIds)"};
 
 /**
  * Query generated from SQL:
  * ```
  * SELECT *
  * FROM "Employee"
- * WHERE shop = :shop!
- * AND "employeeId" IN :employeeIds!
+ * WHERE shop = :shop
+ * AND "employeeId" = ANY(:employeeIds)
  * ```
  */
 export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyIR);
+
+
+/** 'GetPage' parameters type */
+export interface IGetPageParams {
+  query?: string | null | void;
+  shop?: string | null | void;
+}
+
+/** 'GetPage' return type */
+export interface IGetPageResult {
+  employeeId: string;
+  isShopOwner: boolean;
+  name: string;
+  permissions: PermissionNodeArray | null;
+  rate: string | null;
+  shop: string;
+  superuser: boolean;
+}
+
+/** 'GetPage' query type */
+export interface IGetPageQuery {
+  params: IGetPageParams;
+  result: IGetPageResult;
+}
+
+const getPageIR: any = {"usedParamSet":{"shop":true,"query":true},"params":[{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":47,"b":51}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":84,"b":89}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE shop = COALESCE(:shop, shop)\nAND name ILIKE COALESCE(:query, '%')"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "Employee"
+ * WHERE shop = COALESCE(:shop, shop)
+ * AND name ILIKE COALESCE(:query, '%')
+ * ```
+ */
+export const getPage = new PreparedQuery<IGetPageParams,IGetPageResult>(getPageIR);
 
 
 /** 'UpsertMany' parameters type */

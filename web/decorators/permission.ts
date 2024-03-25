@@ -12,6 +12,7 @@ import type { Request, Response } from 'express-serve-static-core';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasReadUsersScope } from '../services/shop.js';
 
 export const permissionNodes = [
   'read_settings',
@@ -106,7 +107,14 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
   }
 
   // if this is a completely new employee we should fetch their details here. will only happen the first time
+
   const graphql = new Graphql(session);
+
+  if (!(await hasReadUsersScope(graphql))) {
+    // only happens for low shopify plans
+    throw new HttpError('Staff member not found - log in to WorkMate on Shopify Admin first.', 401);
+  }
+
   const [staffMember] = await gql.staffMember.getMany
     .run(graphql, { ids: [staffMemberId] })
     .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));

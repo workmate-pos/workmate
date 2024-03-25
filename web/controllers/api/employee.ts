@@ -20,7 +20,8 @@ import { Ids } from '../../schemas/generated/ids.js';
 import { IUpsertManyParams } from '../../services/db/queries/generated/employee.sql.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { hasReadUsersScope } from '../../services/shop.js';
+import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 @Authenticated()
 export default class EmployeeController {
@@ -53,7 +54,29 @@ export default class EmployeeController {
     const paginationOptions = req.query;
 
     const graphql = new Graphql(session);
-    const response = await gql.staffMember.getPage.run(graphql, paginationOptions);
+
+    let response: gql.staffMember.getPage.Result;
+
+    if (!(await hasReadUsersScope(graphql))) {
+      const employees = await db.employee.getPage({ shop: session.shop, query: paginationOptions.query });
+
+      response = {
+        shop: {
+          staffMembers: {
+            nodes: employees.map(e => {
+              assertGid(e.employeeId);
+              return { isShopOwner: e.isShopOwner, name: e.name, id: e.employeeId };
+            }),
+            pageInfo: {
+              hasNextPage: false,
+              endCursor: null,
+            },
+          },
+        },
+      };
+    } else {
+      response = await gql.staffMember.getPage.run(graphql, paginationOptions);
+    }
 
     const employees = response.shop.staffMembers.nodes;
     const pageInfo = response.shop.staffMembers.pageInfo;
@@ -73,9 +96,21 @@ export default class EmployeeController {
     const { ids } = req.query;
 
     const graphql = new Graphql(session);
-    const { nodes } = await gql.staffMember.getMany.run(graphql, { ids });
 
-    const staffMembers = nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember'));
+    let staffMembers: gql.staffMember.StaffMemberFragment.Result[];
+
+    if (!(await hasReadUsersScope(graphql))) {
+      staffMembers = await db.employee.getMany({ shop, employeeIds: ids }).then(e =>
+        e.filter(isNonNullable).map(e => {
+          assertGid(e.employeeId);
+          return { id: e.employeeId, name: e.name, isShopOwner: e.isShopOwner };
+        }),
+      );
+    } else {
+      const { nodes } = await gql.staffMember.getMany.run(graphql, { ids });
+      staffMembers = nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember'));
+    }
+
     const staffMembersWithDatabaseInfo = await attachDatabaseEmployees(shop, staffMembers);
 
     const staffMemberRecord = indexBy(staffMembersWithDatabaseInfo, e => e.id);
@@ -93,18 +128,30 @@ export default class EmployeeController {
     const employeeIds = req.body.employees.map(e => e.employeeId);
 
     const graphql = new Graphql(session);
-    const staffMembers = await gql.staffMember.getMany
-      .run(graphql, { ids: employeeIds })
-      .then(({ nodes }) => nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')))
-      .then(staffMembers => indexBy(staffMembers, e => e.id));
 
-    const invalidEmployees = employeeIds.some(id => !staffMembers[id]);
-    if (invalidEmployees) {
-      throw new HttpError('Not all employees were found', 400);
+    let staffMembers: gql.staffMember.StaffMemberFragment.Result[];
+
+    if (!(await hasReadUsersScope(graphql))) {
+      staffMembers = await db.employee.getMany({ shop, employeeIds: employeeIds }).then(e =>
+        e.filter(isNonNullable).map(e => {
+          assertGid(e.employeeId);
+          return { id: e.employeeId, name: e.name, isShopOwner: e.isShopOwner };
+        }),
+      );
+    } else {
+      staffMembers = await gql.staffMember.getMany
+        .run(graphql, { ids: employeeIds })
+        .then(({ nodes }) => nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
     }
 
+    const staffMemberById = indexBy(staffMembers, e => e.id);
+
     const employees: IUpsertManyParams['employees'] = req.body.employees.map(e => {
-      const staffMember = staffMembers[e.employeeId] ?? never();
+      const staffMember = staffMemberById[e.employeeId];
+
+      if (!staffMember) {
+        throw new HttpError('Not all employees were found', 400);
+      }
 
       return {
         employeeId: e.employeeId,
