@@ -8,15 +8,15 @@ import { UpsertCustomFieldsPreset } from '../../schemas/generated/upsert-custom-
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 @Authenticated()
-export default class PurchaseOrderCustomFieldsController {
-  @Get('/')
-  async fetchPurchaseOrderCustomFieldsPresets(
-    req: Request,
-    res: Response<FetchPurchaseOrderCustomFieldsPresetsResponse>,
-  ) {
+export default class CustomFieldsPresetsController {
+  @Get('/:type')
+  async fetchCustomFieldsPresets(req: Request<{ type: string }>, res: Response<FetchCustomFieldsPresetsResponse>) {
     const { shop }: Session = res.locals.shopify.session;
+    const { type } = req.params;
 
-    const presets = await db.customFieldPresets.getCustomFieldsPresets({ shop, type: 'PURCHASE_ORDER' });
+    assertValidPresetType(type);
+
+    const presets = await db.customFieldPresets.getCustomFieldsPresets({ shop, type });
 
     return res.json({
       presets: presets.map(preset => ({
@@ -26,27 +26,29 @@ export default class PurchaseOrderCustomFieldsController {
     });
   }
 
-  @Post('/:name')
+  @Post('/:type/:name')
   @BodySchema('upsert-custom-fields-preset')
-  async upsertPurchaseOrderCustomFieldsPreset(
-    req: Request<{ name: string }, unknown, UpsertCustomFieldsPreset>,
+  async upsertCustomFieldsPreset(
+    req: Request<{ type: string; name: string }, unknown, UpsertCustomFieldsPreset>,
     res: Response<UpsertCustomFieldsPresetResponse>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
-    const { name } = req.params;
+    const { type, name } = req.params;
     const { keys } = req.body;
+
+    assertValidPresetType(type);
 
     if (keys.length === 0) {
       throw new HttpError('Custom fields cannot be empty', 400);
     }
 
-    await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type: 'PURCHASE_ORDER' });
+    await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type });
 
     return res.json({ name });
   }
 }
 
-export type FetchPurchaseOrderCustomFieldsPresetsResponse = {
+export type FetchCustomFieldsPresetsResponse = {
   presets: {
     name: string;
     keys: string[];
@@ -56,3 +58,16 @@ export type FetchPurchaseOrderCustomFieldsPresetsResponse = {
 export type UpsertCustomFieldsPresetResponse = {
   name: string;
 };
+
+const CUSTOM_FIELDS_PRESET_TYPE = {
+  WORK_ORDER: 'WORK_ORDER',
+  PURCHASE_ORDER: 'PURCHASE_ORDER',
+} as const;
+
+function assertValidPresetType(type: string): asserts type is CustomFieldsPresetType {
+  if (!Object.values(CUSTOM_FIELDS_PRESET_TYPE).some(t => t === type)) {
+    throw new HttpError('Invalid preset type', 400);
+  }
+}
+
+export type CustomFieldsPresetType = (typeof CUSTOM_FIELDS_PRESET_TYPE)[keyof typeof CUSTOM_FIELDS_PRESET_TYPE];

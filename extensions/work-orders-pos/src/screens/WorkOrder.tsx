@@ -305,6 +305,7 @@ function WorkOrderCustomFields({
           router.push('CustomFieldConfig', {
             initialCustomFields: createWorkOrder.customFields,
             onSave: customFields => dispatch.setPartial({ customFields }),
+            type: 'WORK_ORDER',
           });
         }}
       />

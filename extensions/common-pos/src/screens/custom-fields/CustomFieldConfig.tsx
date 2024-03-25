@@ -5,21 +5,22 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { Route, UseRouter } from '../router.js';
 import { ImportPresetProps } from './ImportPreset.js';
 import { SavePresetProps } from './SavePreset.js';
+import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
 
 export type CustomFieldConfigProps = {
-  initialCustomFields: CreateWorkOrder['customFields'];
+  initialCustomFields: Record<string, string>;
   onSave: (customFields: Record<string, string>) => void;
   useRouter: UseRouter<{
     ImportPreset: Route<ImportPresetProps>;
     SavePreset: Route<SavePresetProps>;
   }>;
+  type: CustomFieldsPresetType;
 };
 
-export function CustomFieldConfig({ initialCustomFields, onSave, useRouter }: CustomFieldConfigProps) {
+export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type }: CustomFieldConfigProps) {
   const [customFields, setCustomFields] = useState<Record<string, string>>(initialCustomFields);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
@@ -79,6 +80,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter }: Cu
                 router.push('SavePreset', {
                   keys,
                   useRouter,
+                  type,
                 });
               }
             }}
@@ -90,6 +92,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter }: Cu
               router.push('ImportPreset', {
                 onImport: ({ keys }) => overrideOrMergeDialog.show(keys),
                 useRouter,
+                type,
               });
             }}
           />

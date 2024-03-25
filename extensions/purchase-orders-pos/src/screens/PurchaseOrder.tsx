@@ -257,6 +257,7 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
                 router.push('CustomFieldConfig', {
                   initialCustomFields: createPurchaseOrder.customFields,
                   onSave: customFields => dispatch.setPartial({ customFields }),
+                  type: 'PURCHASE_ORDER',
                 });
               }}
             />

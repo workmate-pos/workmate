@@ -3,22 +3,24 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useState } from 'react';
+import { Router, UseRouter } from '../router.js';
+import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
 import {
   CustomFieldsPreset,
-  useWorkOrderCustomFieldsPresetsQuery,
-} from '@work-orders/common/queries/use-work-order-custom-fields-presets-query.js';
-import { Router, UseRouter } from '../router.js';
+  useCustomFieldsPresetsQuery,
+} from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 export type ImportPresetProps = {
   onImport: (preset: { keys: string[] }) => void;
   useRouter: UseRouter;
+  type: CustomFieldsPresetType;
 };
 
-export function ImportPreset({ onImport, useRouter }: ImportPresetProps) {
+export function ImportPreset({ onImport, useRouter, type }: ImportPresetProps) {
   const [query, setQuery] = useState('');
 
   const fetch = useAuthenticatedFetch();
-  const presetsQuery = useWorkOrderCustomFieldsPresetsQuery({ fetch });
+  const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type });
   const presets = presetsQuery.data ?? [];
 
   const router = useRouter();

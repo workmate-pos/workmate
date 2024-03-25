@@ -54,6 +54,7 @@ cd ../extensions && npm i --ignore-scripts
 cd common-pos && npm i --ignore-scripts
 cd ../work-orders-pos && npm i --ignore-scripts
 cd ../purchase-orders-pos && npm i --ignore-scripts
+cd ../../work-order-shopify-order && npm i --ignore-scripts
 ```
 
 Finally, run prisma migrate to populate the db:

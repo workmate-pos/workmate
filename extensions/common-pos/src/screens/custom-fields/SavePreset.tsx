@@ -6,16 +6,18 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
-import { useWorkOrderCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-work-order-custom-fields-presets-query.js';
-import { useWorkOrderCustomFieldsPresetMutation } from '@work-orders/common/queries/use-work-order-custom-fields-preset-mutation.js';
 import { UseRouter } from '../router.js';
+import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { useCustomFieldsPresetsMutation } from '@work-orders/common/queries/use-custom-fields-presets-mutation.js';
 
 export type SavePresetProps = {
   keys: [string, ...string[]];
   useRouter: UseRouter;
+  type: CustomFieldsPresetType;
 };
 
-export function SavePreset({ keys, useRouter }: SavePresetProps) {
+export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
   const [name, setName] = useState<string>('');
 
   const { Form } = useForm();
@@ -23,10 +25,9 @@ export function SavePreset({ keys, useRouter }: SavePresetProps) {
   const router = useRouter();
 
   const fetch = useAuthenticatedFetch();
-  // TODO: Fix this to be a choice - have one query with both options
-  const presetsQuery = useWorkOrderCustomFieldsPresetsQuery({ fetch });
-  const presetMutation = useWorkOrderCustomFieldsPresetMutation(
-    { fetch },
+  const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type });
+  const presetMutation = useCustomFieldsPresetsMutation(
+    { fetch, type },
     {
       onSuccess: () => {
         toast.show('Preset saved');
