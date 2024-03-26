@@ -153,12 +153,19 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
     : [];
   const shopifyOrderLineItemById = indexBy(shopifyOrderLineItems, soli => soli.lineItemId);
 
+  const orderIds = unique(shopifyOrderLineItems.map(({ orderId }) => orderId));
+  const orders = orderIds.length ? await db.shopifyOrder.getMany({ orderIds }) : [];
+  const orderById = indexBy(orders, o => o.orderId);
+
   return lineItems.map(({ quantity, availableQuantity, productVariantId, shopifyOrderLineItemId, unitCost }) => {
-    const productVariant = productVariantById?.[productVariantId] ?? never('fk');
-    const product = productById?.[productVariant?.productId] ?? never('fk');
+    const productVariant = productVariantById[productVariantId] ?? never('fk');
+    const product = productById[productVariant.productId] ?? never('fk');
+
     const shopifyOrderLineItem = shopifyOrderLineItemId
-      ? shopifyOrderLineItemById?.[shopifyOrderLineItemId] ?? never('fk')
+      ? shopifyOrderLineItemById[shopifyOrderLineItemId] ?? never('fk')
       : null;
+
+    const shopifyOrder = shopifyOrderLineItem ? orderById[shopifyOrderLineItem.orderId] ?? never('fk') : null;
 
     assertGid(productVariant.productVariantId);
     assertGid(productVariant.inventoryItemId);
@@ -187,12 +194,17 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
           return null;
         }
 
+        const order = shopifyOrder ?? never('fk');
+
         assertGid(shopifyOrderLineItem.lineItemId);
-        assertGid(shopifyOrderLineItem.orderId);
+        assertGid(order.orderId);
 
         return {
           id: shopifyOrderLineItem.lineItemId,
-          orderId: shopifyOrderLineItem.orderId,
+          order: {
+            id: order.orderId,
+            name: order.name,
+          },
         };
       }),
       unitCost,

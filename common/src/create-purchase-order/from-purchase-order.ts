@@ -7,7 +7,7 @@ export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: PurchaseOrde
       shopifyOrderLineItem: lineItem.shopifyOrderLineItem
         ? {
             id: lineItem.shopifyOrderLineItem.id,
-            orderId: lineItem.shopifyOrderLineItem.orderId,
+            orderId: lineItem.shopifyOrderLineItem.order.id,
           }
         : null,
       availableQuantity: lineItem.availableQuantity,

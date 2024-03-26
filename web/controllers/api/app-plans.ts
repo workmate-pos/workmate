@@ -50,24 +50,28 @@ export default class AppPlansController {
 
     const appPlan = await getAppPlan(session, appPlanId);
 
+    const lineItems = appPlan.trialOnly
+      ? []
+      : [
+          {
+            plan: {
+              appRecurringPricingDetails: {
+                interval: appPlan.interval,
+                price: {
+                  amount: appPlan.price,
+                  currencyCode: appPlan.currencyCode,
+                },
+              },
+            },
+          },
+        ];
+
     const appSubscription = await gql.appSubscriptions.appSubscriptionCreate.run(graphql, {
       name: `${appPlan.id}-${appPlan.name}`,
       returnUrl: `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`,
       test: process.env.NODE_ENV === 'development',
       trialDays: appPlan.trialDays === 0 ? undefined : (appPlan.trialDays as Int),
-      lineItems: [
-        {
-          plan: {
-            appRecurringPricingDetails: {
-              interval: appPlan.interval,
-              price: {
-                amount: appPlan.price,
-                currencyCode: appPlan.currencyCode,
-              },
-            },
-          },
-        },
-      ],
+      lineItems,
     });
 
     return res.json(appSubscription.appSubscriptionCreate);

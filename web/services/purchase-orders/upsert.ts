@@ -7,12 +7,11 @@ import { unit } from '../db/unit-of-work.js';
 import { getPurchaseOrder } from './get.js';
 import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { gql } from '../gql/gql.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services';
-import { sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { sendPurchaseOrderWebhook } from './webhook.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { PurchaseOrder } from './types.js';
@@ -20,6 +19,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureShopifyOrdersExist } from '../shopify-order/sync.js';
 import { ensureLocationsExist } from '../locations/sync.js';
 import { ensureEmployeesExist } from '../employee/sync.js';
+import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
 
 export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -93,6 +93,10 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
 
     await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
     await adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
+
+    sendPurchaseOrderWebhook(session, name).catch(error => {
+      sentryErr('Failed to send webhook', { error });
+    });
 
     return { name };
   });
@@ -183,36 +187,37 @@ async function adjustShopifyInventoryItemCosts(
     }),
   );
 
-  const productVariants = await gql.products.getManyInventoryItems
-    .run(graphql, { ids: productVariantIds })
-    .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'ProductVariant')));
+  const productVariants = await db.productVariants.getMany({ productVariantIds }).then(rows =>
+    rows.map(row => {
+      assertGid(row.productVariantId);
+      assertGid(row.inventoryItemId);
+      return {
+        ...row,
+        productVariantId: row.productVariantId,
+        inventoryItemId: row.inventoryItemId,
+      };
+    }),
+  );
+
+  if (productVariantIds.length !== productVariants.length) {
+    sentryErr('Failed to get all product variants', {
+      oldProductVariantIds: oldPurchaseOrder?.lineItems.map(li => li.productVariant.id),
+      newProductVariantIds: newPurchaseOrder.lineItems.map(li => li.productVariant.id),
+      foundProductVariantIds: productVariants.map(pv => pv.productVariantId),
+    });
+  }
 
   const processProductVariant = async ({
-    id: productVariantId,
-    inventoryItem,
+    productVariantId,
+    inventoryItemId,
   }: {
-    id: ID;
-    inventoryItem: { id: ID };
+    productVariantId: ID;
+    inventoryItemId: ID;
   }) => {
-    const productVariantCosts = await db.purchaseOrder.getProductVariantCostsForShop({
-      shop: session.shop,
-      productVariantId,
-    });
-
-    const totalCost = BigDecimal.sum(
-      ...productVariantCosts.map(({ unitCost, quantity }) =>
-        BigDecimal.fromString(unitCost).multiply(BigDecimal.fromString(quantity.toFixed(0))),
-      ),
-    );
-
-    const totalQuantity = BigDecimal.sum(
-      ...productVariantCosts.map(({ quantity }) => BigDecimal.fromString(quantity.toFixed(0))),
-    );
-
-    const averageCost = totalCost.divide(BigDecimal.max(BigDecimal.ONE, totalQuantity)).round(2);
+    const averageCost = await getAverageUnitCostForProductVariant(session.shop, productVariantId);
 
     await gql.inventoryItems.updateInventoryItem.run(graphql, {
-      id: inventoryItem.id,
+      id: inventoryItemId,
       input: { cost: averageCost.toDecimal() },
     });
   };

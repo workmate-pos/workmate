@@ -60,8 +60,11 @@ function Settings() {
   const [settings, setSettings] = useState<ShopSettings>(null!);
 
   const [defaultPurchaseOrderStatusValue, setDefaultPurchaseOrderStatusValue] = useState('');
-
   const [defaultWorkOrderStatusValue, setDefaultWorkOrderStatusValue] = useState('');
+
+  const [purchaseOrderWebhookIsValid, setPurchaseOrderWebhookIsValid] = useState(false);
+
+  const isValid = purchaseOrderWebhookIsValid;
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const settingsQuery = useSettingsQuery(
@@ -119,7 +122,8 @@ function Settings() {
             settingsQuery.isLoading ||
             saveSettingsMutation.isLoading ||
             currentEmployeeQuery.isLoading ||
-            !canWriteSettings,
+            !canWriteSettings ||
+            !isValid,
           onAction() {
             saveSettingsMutation.mutate(settings);
           },
@@ -143,6 +147,11 @@ function Settings() {
           <WorkOrderRequestSettings settings={settings} setSettings={setSettings} />
           <EmailSettings settings={settings} setSettings={setSettings} />
           <PrintSettings settings={settings} setSettings={setSettings} />
+          <PurchaseOrderWebhookSettings
+            settings={settings}
+            setSettings={setSettings}
+            onIsValid={setPurchaseOrderWebhookIsValid}
+          />
         </InlineGrid>
       </BlockStack>
 
@@ -929,6 +938,75 @@ function PrintTemplate({
         </Button>
       </BlockStack>
     </Card>
+  );
+}
+
+function PurchaseOrderWebhookSettings({
+  settings,
+  setSettings,
+  onIsValid,
+}: {
+  settings: ShopSettings;
+  setSettings: Dispatch<SetStateAction<ShopSettings>>;
+  onIsValid: (isValid: boolean) => void;
+}) {
+  function getErrorMessage(endpointUrl: string | null) {
+    if (endpointUrl === null) {
+      return undefined;
+    }
+
+    try {
+      new URL(endpointUrl);
+    } catch (error) {
+      return 'Invalid URL';
+    }
+
+    return undefined;
+  }
+
+  return (
+    <>
+      <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+        <BlockStack gap="400">
+          <Text as="h3" variant="headingMd">
+            Purchase Order Webhook
+          </Text>
+        </BlockStack>
+      </Box>
+      <Card roundedAbove="sm">
+        <BlockStack gap="400">
+          <Checkbox
+            label={'Enable purchase order webhook order requests'}
+            checked={settings.purchaseOrderWebhook.endpointUrl !== null}
+            onChange={enabled => {
+              setSettings({
+                ...settings,
+                purchaseOrderWebhook: {
+                  endpointUrl: enabled ? '' : null,
+                },
+              });
+              onIsValid(!enabled);
+            }}
+          />
+          <TextField
+            label={'Webhook Endpoint URL'}
+            autoComplete="off"
+            value={settings.purchaseOrderWebhook.endpointUrl ?? ''}
+            disabled={settings.purchaseOrderWebhook.endpointUrl === null}
+            onChange={value => {
+              setSettings({
+                ...settings,
+                purchaseOrderWebhook: {
+                  endpointUrl: value,
+                },
+              });
+              onIsValid(getErrorMessage(settings.purchaseOrderWebhook.endpointUrl) === undefined);
+            }}
+            error={getErrorMessage(settings.purchaseOrderWebhook.endpointUrl)}
+          />
+        </BlockStack>
+      </Card>
+    </>
   );
 }
 

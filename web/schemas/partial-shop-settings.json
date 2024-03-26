@@ -2,6 +2,16 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "purchaseOrderWebhook": {
+      "type": "object",
+      "properties": {
+        "endpointUrl": {
+          "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+        }
+      },
+      "required": ["endpointUrl"],
+      "additionalProperties": false
+    },
     "idFormat": {
       "type": "string",
       "minLength": 1

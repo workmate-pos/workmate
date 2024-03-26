@@ -77,4 +77,12 @@ function assertValidSettings(settings: ShopSettings) {
       throw new HttpError('Must have at least one status', 400);
     }
   }
+
+  if (settings.purchaseOrderWebhook.endpointUrl !== null) {
+    try {
+      new URL(settings.purchaseOrderWebhook.endpointUrl);
+    } catch (e) {
+      throw new HttpError('Invalid webhook endpoint URL', 400);
+    }
+  }
 }

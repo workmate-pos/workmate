@@ -63,6 +63,9 @@ const defaultShopSettings: ShopSettings = {
       template: purchaseOrderInvoiceTemplate,
     },
   },
+  purchaseOrderWebhook: {
+    endpointUrl: null,
+  },
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {
