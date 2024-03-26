@@ -3,9 +3,11 @@ import { hourlyLabourChargeMetaobject } from '../metaobjects/hourly-labour-charg
 import { gql } from '../gql/gql.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
-import { MetafieldDefinitionInput } from '../gql/queries/generated/schema.js';
+import type { MetafieldDefinitionInputWithNamespace } from './index.js';
 
-export async function getProductVariantDefaultChargesMetafield(graphql: Graphql): Promise<MetafieldDefinitionInput> {
+export async function getProductVariantDefaultChargesMetafield(
+  graphql: Graphql,
+): Promise<MetafieldDefinitionInputWithNamespace> {
   const validMetaobjectReferences = [fixedPriceLabourChargeMetaobject, hourlyLabourChargeMetaobject];
 
   const validMetaobjectReferenceDefinitions = await Promise.all(

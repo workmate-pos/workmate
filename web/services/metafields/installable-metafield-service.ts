@@ -3,12 +3,13 @@ import { gql } from '../gql/gql.js';
 import type { MetafieldDefinitionInput } from '../gql/queries/generated/schema.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services/sentry.js';
 import { InstallableService } from '@teifi-digital/shopify-app-express/services/installable-service.js';
+import { WithRequired } from '../../util/types.js';
 
 // TODO: Include in shopify-app-express (first move it to genql)
 
 export type MetafieldDefinitions = (
-  | MetafieldDefinitionInput
-  | ((graphql: Graphql) => Promise<MetafieldDefinitionInput>)
+  | WithRequired<MetafieldDefinitionInput, 'namespace'>
+  | ((graphql: Graphql) => Promise<WithRequired<MetafieldDefinitionInput, 'namespace'>>)
 )[];
 
 export class InstallableMetafieldService extends InstallableService {
