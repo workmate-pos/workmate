@@ -1,6 +1,6 @@
 import type { useReducer, useRef, useState } from 'react';
-import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
+import { DiscriminatedUnionOmit } from '../types/DiscriminatedUnionOmit.js';
 
 export type CreatePurchaseOrderAction =
   | ({
