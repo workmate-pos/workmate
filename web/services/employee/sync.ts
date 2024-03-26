@@ -6,6 +6,8 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unit } from '../db/unit-of-work.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { hasReadUsersScope } from '../shop.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export async function ensureEmployeesExist(session: Session, employeeIds: ID[]) {
   if (employeeIds.length === 0) {
@@ -15,6 +17,11 @@ export async function ensureEmployeesExist(session: Session, employeeIds: ID[]) 
   const databaseEmployees = await db.employee.getMany({ employeeIds });
   const existingEmployeeIds = new Set(databaseEmployees.map(employee => employee.staffMemberId));
   const missingEmployeeIds = employeeIds.filter(employeeId => !existingEmployeeIds.has(employeeId));
+
+  const graphql = new Graphql(session);
+  if (missingEmployeeIds.length > 0 && !(await hasReadUsersScope(graphql))) {
+    throw new HttpError('Employee is not synced - log in to WorkMate on Shopify Admin first.', 401);
+  }
 
   await syncEmployees(session, missingEmployeeIds);
 }
