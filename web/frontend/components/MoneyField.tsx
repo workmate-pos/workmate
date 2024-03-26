@@ -1,7 +1,7 @@
 import { TextField, TextFieldProps } from '@shopify/polaris';
 import { useEffect, useState } from 'react';
 
-export function MoneyField({ id, onChange, value, min, max, ...props }: Omit<TextFieldProps, 'type'>) {
+export function MoneyField({ id, onChange, value, min, max, prefix, ...props }: Omit<TextFieldProps, 'type'>) {
   const [internalValue, setInternalValue] = useState(value ?? '');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -31,6 +31,7 @@ export function MoneyField({ id, onChange, value, min, max, ...props }: Omit<Tex
       id={id}
       type={'currency'}
       min={min}
+      prefix={prefix ?? '$'}
       max={max}
       onChange={value => setInternalValue(value)}
       value={displayValue}

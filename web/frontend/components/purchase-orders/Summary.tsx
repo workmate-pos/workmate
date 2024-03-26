@@ -47,19 +47,11 @@ export function Summary({
   return (
     <BlockStack gap={'400'}>
       <InlineGrid gap={'400'} columns={4}>
-        <MoneyField
-          label={'Subtotal'}
-          autoComplete={'off'}
-          readOnly
-          value={subtotal.toMoney()}
-          prefix={'$'}
-          disabled={disabled}
-        />
+        <MoneyField label={'Subtotal'} autoComplete={'off'} readOnly value={subtotal.toMoney()} disabled={disabled} />
 
         <MoneyField
           label={'Discount'}
           autoComplete={'off'}
-          prefix={'$'}
           disabled={disabled}
           value={createPurchaseOrder.discount ?? ''}
           onChange={value =>
@@ -71,7 +63,6 @@ export function Summary({
         <MoneyField
           label={'Tax'}
           autoComplete={'off'}
-          prefix={'$'}
           disabled={disabled}
           value={createPurchaseOrder.tax ?? ''}
           onChange={value =>
@@ -83,7 +74,6 @@ export function Summary({
         <MoneyField
           label={'Shipping'}
           autoComplete={'off'}
-          prefix={'$'}
           disabled={disabled}
           value={createPurchaseOrder.shipping ?? ''}
           onChange={value =>
@@ -92,19 +82,11 @@ export function Summary({
             })
           }
         />
-        <MoneyField
-          label={'Total'}
-          autoComplete={'off'}
-          readOnly
-          value={total.toMoney()}
-          prefix={'$'}
-          disabled={disabled}
-        />
+        <MoneyField label={'Total'} autoComplete={'off'} readOnly value={total.toMoney()} disabled={disabled} />
 
         <MoneyField
           label={'Deposited'}
           autoComplete={'off'}
-          prefix={'$'}
           disabled={disabled}
           value={createPurchaseOrder.deposited ?? ''}
           onChange={value =>
@@ -116,7 +98,6 @@ export function Summary({
         <MoneyField
           label={'Paid'}
           autoComplete={'off'}
-          prefix={'$'}
           disabled={disabled}
           value={createPurchaseOrder.paid ?? ''}
           onChange={value =>
@@ -130,7 +111,6 @@ export function Summary({
           autoComplete={'off'}
           readOnly
           value={balanceDue.toMoney()}
-          prefix={'$'}
           disabled={disabled}
         />
       </InlineGrid>
