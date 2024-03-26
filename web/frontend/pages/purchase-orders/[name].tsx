@@ -1,5 +1,5 @@
-import { useLocation } from 'react-router-dom';
-import { ContextualSaveBar, Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
+import { useLocation, useNavigation } from 'react-router-dom';
+import { ContextualSaveBar, Loading, TitleBar, useAppBridge, useNavigate } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { useCreatePurchaseOrderReducer } from '@work-orders/common/create-purchase-order/reducer.js';
@@ -112,6 +112,8 @@ function PurchaseOrderLoader() {
 export type Location = ReturnType<typeof useLocationQuery>['data'];
 
 function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOrder: CreatePurchaseOrder }) {
+  const app = useAppBridge();
+
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
     initialCreatePurchaseOrder,
     { useReducer, useState, useRef },
@@ -128,6 +130,12 @@ function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOr
         setToastAction({ content: message });
         dispatch.set(createPurchaseOrderFromPurchaseOrder(purchaseOrder));
         setHasUnsavedChanges(false);
+        if (createPurchaseOrder.name === null) {
+          Redirect.create(app).dispatch(
+            Redirect.Action.APP,
+            `/purchase-orders/${encodeURIComponent(purchaseOrder.name)}`,
+          );
+        }
       },
     },
   );

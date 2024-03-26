@@ -1,9 +1,9 @@
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { usePurchaseOrderCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-purchase-order-custom-fields-presets-query.js';
-import { usePurchaseOrderCustomFieldsPresetMutation } from '@work-orders/common/queries/use-purchase-order-custom-fields-preset-mutation.js';
 import { useState } from 'react';
 import { BlockStack, Checkbox, InlineError, InlineGrid, Label, Modal, TextField } from '@shopify/polaris';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { useCustomFieldsPresetsMutation } from '@work-orders/common/queries/use-custom-fields-presets-mutation.js';
 
 export function SaveCustomFieldPresetModal({
   fieldNames,
@@ -17,8 +17,8 @@ export function SaveCustomFieldPresetModal({
   setToastAction: ToastActionCallable;
 }) {
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const presetsQuery = usePurchaseOrderCustomFieldsPresetsQuery({ fetch });
-  const presetMutation = usePurchaseOrderCustomFieldsPresetMutation({ fetch });
+  const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
+  const presetMutation = useCustomFieldsPresetsMutation({ fetch, type: 'PURCHASE_ORDER' });
 
   const [name, setName] = useState('');
   const [selectedFieldNames, setSelectedFieldNames] = useState(fieldNames);

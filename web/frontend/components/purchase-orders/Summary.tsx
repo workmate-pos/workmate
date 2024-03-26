@@ -1,5 +1,5 @@
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
-import { BlockStack, Box, Button, ButtonGroup, InlineGrid } from '@shopify/polaris';
+import { BlockStack, Button, ButtonGroup, InlineGrid, Tooltip } from '@shopify/polaris';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { CreatePurchaseOrderDispatchProxy } from '@work-orders/common/create-purchase-order/reducer.js';
@@ -43,6 +43,8 @@ export function Summary({
       ),
     )
     .round(2);
+
+  const canPrint = createPurchaseOrder.name && !hasUnsavedChanges;
 
   return (
     <BlockStack gap={'400'}>
@@ -116,9 +118,15 @@ export function Summary({
       </InlineGrid>
 
       <ButtonGroup fullWidth>
-        <Button disabled={disabled || !createPurchaseOrder.name || hasUnsavedChanges} onClick={() => onPrint()}>
-          Print
-        </Button>
+        <Tooltip
+          active={!canPrint}
+          content={'You must save your purchase order before you can print'}
+          dismissOnMouseOut
+        >
+          <Button disabled={disabled || !canPrint} onClick={() => onPrint()}>
+            Print
+          </Button>
+        </Tooltip>
         <Button variant={'primary'} onClick={() => onSave()} loading={isSaving}>
           Save
         </Button>

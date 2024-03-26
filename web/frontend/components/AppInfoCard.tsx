@@ -1,7 +1,7 @@
 import { BlockStack, Card, InlineStack, Spinner, Text } from '@shopify/polaris';
 import React, { useEffect, useState } from 'react';
 import { ToastActionCallable, useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
-import { AppInfo } from '@teifi-digital/shopify-app-express/controllers/default-api/app-info.js';
+import { AppInfo } from '@teifi-digital/shopify-app-express/controllers/default-api/app-info';
 
 export type AppInfoCardProps = {
   setToastAction: ToastActionCallable;

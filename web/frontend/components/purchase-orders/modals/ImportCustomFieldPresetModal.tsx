@@ -1,8 +1,8 @@
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { usePurchaseOrderCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-purchase-order-custom-fields-presets-query.js';
 import { useState } from 'react';
-import { Box, Filters, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
+import { Filters, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 export function ImportCustomFieldPresetModal({
   open,
@@ -18,7 +18,7 @@ export function ImportCustomFieldPresetModal({
   setToastAction: ToastActionCallable;
 }) {
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const presetsQuery = usePurchaseOrderCustomFieldsPresetsQuery({ fetch });
+  const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
 
   const [query, setQuery] = useState('');
 
