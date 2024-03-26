@@ -13,7 +13,7 @@ function SmartGridTile() {
 
 function SmartGridModal() {
   return (
-    <AppProvider appUrl={"https://workmate-fbg.teifi.dev"!}>
+    <AppProvider appUrl={process.env.APP_URL!}>
       <ReactQueryProvider>
         <DialogProvider>
           <ScreenSizeProvider>
