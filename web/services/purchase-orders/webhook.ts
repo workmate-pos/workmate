@@ -4,6 +4,8 @@ import { getShopSettings } from '../settings.js';
 import { PurchaseOrderWebhookBody } from './types.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
+import { HttpsProxyAgent } from 'https-proxy-agent';
+import fetch from 'node-fetch';
 
 export async function sendPurchaseOrderWebhook(session: Session, name: string) {
   const purchaseOrder = await getPurchaseOrder(session, name);
@@ -100,11 +102,18 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
     },
   };
 
+  let agent = undefined;
+
+  if (process.env.HTTP_PROXY_URL) {
+    agent = new HttpsProxyAgent(process.env.HTTP_PROXY_URL);
+  }
+
   await fetch(url, {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: {
       'Content-Type': 'application/json',
     },
+    agent,
   });
 }
