@@ -17,7 +17,8 @@
     "strictNullChecks": true,
     "noImplicitAny": true,
     "strict": true,
-    "noUncheckedIndexedAccess": true
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true
   },
   "exclude": ["node_modules"],
   "references": [

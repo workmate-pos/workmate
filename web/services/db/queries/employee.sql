@@ -1,10 +1,14 @@
-/*
-    @name getMany
-    @param employeeIds -> (...)
-*/
+/* @name getMany */
 SELECT *
 FROM "Employee"
-WHERE "staffMemberId" IN :employeeIds!;
+WHERE "staffMemberId" = ANY(:employeeIds)
+AND shop = COALESCE(:shop, shop);
+
+/* @name getPage */
+SELECT *
+FROM "Employee"
+WHERE shop = COALESCE(:shop, shop)
+  AND name ILIKE COALESCE(:query, '%');
 
 /* @name upsert */
 INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")

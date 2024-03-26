@@ -8,7 +8,8 @@ WHERE id IN :ids!
 RETURNING *;
 
 /* @name removeByShop */
-DELETE FROM "ShopifySession"
+DELETE
+FROM "ShopifySession"
 WHERE shop = :shop!;
 
 /* @name get */
@@ -30,3 +31,9 @@ ON CONFLICT (id) DO UPDATE SET shop               = :shop!,
                                "onlineAccessInfo" = :onlineAccessInfo,
                                "accessToken"      = :accessToken
 RETURNING *;
+
+/* @name getOnlineAccessInfoByShop */
+SELECT "onlineAccessInfo"
+FROM "ShopifySession"
+WHERE shop = :shop!
+  AND "isOnline" = true;

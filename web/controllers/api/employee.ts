@@ -13,7 +13,8 @@ import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { hasReadUsersScope } from '../../services/shop.js';
+import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { unit } from '../../services/db/unit-of-work.js';
 
 @Authenticated()
@@ -47,7 +48,29 @@ export default class EmployeeController {
     const paginationOptions = req.query;
 
     const graphql = new Graphql(session);
-    const response = await gql.staffMember.getPage.run(graphql, paginationOptions);
+
+    let response: gql.staffMember.getPage.Result;
+
+    if (!(await hasReadUsersScope(graphql))) {
+      const employees = await db.employee.getPage({ shop: session.shop, query: paginationOptions.query });
+
+      response = {
+        shop: {
+          staffMembers: {
+            nodes: employees.map(e => {
+              assertGid(e.staffMemberId);
+              return { isShopOwner: e.isShopOwner, name: e.name, id: e.staffMemberId };
+            }),
+            pageInfo: {
+              hasNextPage: false,
+              endCursor: null,
+            },
+          },
+        },
+      };
+    } else {
+      response = await gql.staffMember.getPage.run(graphql, paginationOptions);
+    }
 
     const employees = response.shop.staffMembers.nodes;
     const pageInfo = response.shop.staffMembers.pageInfo;
@@ -67,9 +90,21 @@ export default class EmployeeController {
     const { ids } = req.query;
 
     const graphql = new Graphql(session);
-    const { nodes } = await gql.staffMember.getMany.run(graphql, { ids });
 
-    const staffMembers = nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember'));
+    let staffMembers: gql.staffMember.StaffMemberFragment.Result[];
+
+    if (!(await hasReadUsersScope(graphql))) {
+      staffMembers = await db.employee.getMany({ shop, employeeIds: ids }).then(e =>
+        e.filter(isNonNullable).map(e => {
+          assertGid(e.staffMemberId);
+          return { id: e.staffMemberId, name: e.name, isShopOwner: e.isShopOwner };
+        }),
+      );
+    } else {
+      const { nodes } = await gql.staffMember.getMany.run(graphql, { ids });
+      staffMembers = nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember'));
+    }
+
     const staffMembersWithDatabaseInfo = await attachDatabaseEmployees(shop, staffMembers);
 
     const staffMemberRecord = indexBy(staffMembersWithDatabaseInfo, e => e.id);
@@ -83,51 +118,64 @@ export default class EmployeeController {
   async upsertEmployees(req: Request<unknown, unknown, UpsertEmployees>, res: Response<UpsertEmployeesResponse>) {
     const session: Session = res.locals.shopify.session;
     const { shop } = session;
-    const { employees } = req.body;
 
-    if (employees.length === 0) {
+    if (req.body.employees.length === 0) {
       return res.json({ success: true });
     }
 
-    const employeeIds = employees.map(e => e.employeeId);
+    const employeeIds = req.body.employees.map(e => e.employeeId);
 
     const graphql = new Graphql(session);
-    const staffMembers = await gql.staffMember.getMany
-      .run(graphql, { ids: employeeIds })
-      .then(({ nodes }) => nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')))
-      .then(staffMembers => indexBy(staffMembers, e => e.id));
 
-    const invalidEmployees = employeeIds.some(id => !staffMembers[id]);
-    if (invalidEmployees) {
-      throw new HttpError('Not all employees were found', 400);
+    let staffMembers: gql.staffMember.StaffMemberFragment.Result[];
+
+    if (!(await hasReadUsersScope(graphql))) {
+      staffMembers = await db.employee.getMany({ shop, employeeIds: employeeIds }).then(e =>
+        e.filter(isNonNullable).map(e => {
+          assertGid(e.staffMemberId);
+          return { id: e.staffMemberId, name: e.name, isShopOwner: e.isShopOwner };
+        }),
+      );
+    } else {
+      staffMembers = await gql.staffMember.getMany
+        .run(graphql, { ids: employeeIds })
+        .then(({ nodes }) => nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
     }
 
-    await unit(() =>
-      Promise.all(
-        req.body.employees.map(employee => {
-          const staffMember = staffMembers[employee.employeeId] ?? never();
+    const staffMemberById = indexBy(staffMembers, e => e.id);
 
-          return db.employee.upsert({
-            shop,
-            staffMemberId: employee.employeeId,
-            rate: employee.rate,
-            superuser: employee.superuser,
-            permissions: employee.permissions.map(p => {
-              if (isPermissionNode(p)) return p;
-              throw new Error(`Invalid permission node: ${p}`);
-            }),
-            name: staffMember.name,
-            isShopOwner: staffMember.isShopOwner,
-          });
-        }),
-      ),
-    );
+    await unit(async () => {
+      for (const { employeeId, rate, superuser, permissions } of req.body.employees) {
+        const staffMember = staffMemberById[employeeId];
+
+        if (!staffMember) {
+          throw new HttpError('Not all employees were found', 400);
+        }
+
+        await db.employee.upsert({
+          name: staffMember.name,
+          shop,
+          permissions: permissions.map(p => {
+            if (isPermissionNode(p)) return p;
+            throw new Error(`Invalid permission node: ${p}`);
+          }),
+          isShopOwner: staffMember.isShopOwner,
+          rate,
+          superuser,
+          staffMemberId: employeeId,
+        });
+      }
+    });
 
     return res.json({ success: true });
   }
 }
 
 async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMember.StaffMemberFragment.Result[]) {
+  if (staffMembers.length === 0) {
+    return [];
+  }
+
   const staffMemberIds = staffMembers.filter(isNonNullable).map(e => e.id);
   const employees = await db.employee.getMany({ employeeIds: staffMemberIds });
   const { defaultRate } = await getShopSettings(shop);

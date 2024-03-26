@@ -12,7 +12,7 @@ import type { Request, Response } from 'express-serve-static-core';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { ensureEmployeesExist } from '../services/employee/sync.js';
+import { hasReadUsersScope } from '../services/shop.js';
 
 export const permissionNodes = [
   'read_settings',
@@ -49,10 +49,19 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     }
 
     const employeeId = associatedUser.id;
+    let [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [employeeId] });
 
-    await ensureEmployeesExist(session, [employeeId]);
-
-    const [employee = never()] = await db.employee.getMany({ employeeIds: [employeeId] });
+    if (!employee) {
+      [employee = never()] = await db.employee.upsert({
+        shop: session.shop,
+        staffMemberId: employeeId,
+        permissions: [],
+        rate: null,
+        superuser: associatedUser.isShopOwner,
+        name: associatedUser.name,
+        isShopOwner: associatedUser.isShopOwner,
+      });
+    }
 
     const user: LocalsTeifiUser = {
       user: employee,
@@ -94,7 +103,14 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
   }
 
   // if this is a completely new employee we should fetch their details here. will only happen the first time
+
   const graphql = new Graphql(session);
+
+  if (!(await hasReadUsersScope(graphql))) {
+    // only happens for low shopify plans
+    throw new HttpError('Staff member not found - log in to WorkMate on Shopify Admin first.', 401);
+  }
+
   const [staffMember] = await gql.staffMember.getMany
     .run(graphql, { ids: [staffMemberId] })
     .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
