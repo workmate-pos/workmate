@@ -187,17 +187,19 @@ async function adjustShopifyInventoryItemCosts(
     }),
   );
 
-  const productVariants = await db.productVariants.getMany({ productVariantIds }).then(rows =>
-    rows.map(row => {
-      assertGid(row.productVariantId);
-      assertGid(row.inventoryItemId);
-      return {
-        ...row,
-        productVariantId: row.productVariantId,
-        inventoryItemId: row.inventoryItemId,
-      };
-    }),
-  );
+  const productVariants = productVariantIds.length
+    ? await db.productVariants.getMany({ productVariantIds }).then(rows =>
+        rows.map(row => {
+          assertGid(row.productVariantId);
+          assertGid(row.inventoryItemId);
+          return {
+            ...row,
+            productVariantId: row.productVariantId,
+            inventoryItemId: row.inventoryItemId,
+          };
+        }),
+      )
+    : [];
 
   if (productVariantIds.length !== productVariants.length) {
     sentryErr('Failed to get all product variants', {

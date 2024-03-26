@@ -186,10 +186,10 @@ export const workOrderInvoiceTemplate = `<!doctype html>
   </tr>
   {% for charge in item.charges %}
   <tr>
-    <td>{{ charge.name }}</td>
+    <td>↳ {{ charge.name }}</td>
     <td>{{ charge.details }}</td>
-    <td>1</td>
-    <td>\${{ charge.totalPrice }}</td>
+    <td></td>
+    <td></td>
     <td>\${{ charge.totalPrice }}</td>
   </tr>
   {% endfor %}

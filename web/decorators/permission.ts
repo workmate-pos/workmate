@@ -52,14 +52,17 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     let [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [employeeId] });
 
     if (!employee) {
-      [employee = never()] = await db.employee.upsert({
+      const [{ exists: doEmployeesExist } = never('cannot be empty')] = await db.employee.doEmployeesExist();
+      const superuser = associatedUser.isShopOwner || !doEmployeesExist;
+
+      [employee = never('just made it')] = await db.employee.upsert({
         shop: session.shop,
         staffMemberId: employeeId,
         permissions: [],
         rate: null,
-        superuser: associatedUser.isShopOwner,
         name: associatedUser.name,
         isShopOwner: associatedUser.isShopOwner,
+        superuser,
       });
     }
 
@@ -123,7 +126,7 @@ function getBearerStaffMemberId(authorizationHeader?: string): ID {
     throw new HttpError('You must be a staff member to access this resource', 401);
   }
 
-  const token = authorizationHeader.split(' ')[1] ?? never();
+  const token = authorizationHeader.split(' ')[1] ?? never('bad token');
   const content = jwt.decode(token, { json: true });
 
   if (!content) {

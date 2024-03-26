@@ -97,7 +97,17 @@ export interface IUpsertParams {
 }
 
 /** 'Upsert' return type */
-export type IUpsertResult = void;
+export interface IUpsertResult {
+  createdAt: Date;
+  isShopOwner: boolean;
+  name: string;
+  permissions: PermissionNodeArray | null;
+  rate: string | null;
+  shop: string;
+  staffMemberId: string;
+  superuser: boolean;
+  updatedAt: Date;
+}
 
 /** 'Upsert' query type */
 export interface IUpsertQuery {
@@ -105,7 +115,7 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"superuser":true,"permissions":true,"rate":true,"name":true,"isShopOwner":true,"staffMemberId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":111},{"a":253,"b":258}]},{"name":"superuser","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":124},{"a":283,"b":293}]},{"name":"permissions","required":true,"transform":{"type":"scalar"},"locs":[{"a":127,"b":139},{"a":318,"b":330}]},{"name":"rate","required":false,"transform":{"type":"scalar"},"locs":[{"a":142,"b":146},{"a":355,"b":359}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":149,"b":154},{"a":384,"b":389}]},{"name":"isShopOwner","required":true,"transform":{"type":"scalar"},"locs":[{"a":157,"b":169},{"a":414,"b":426}]},{"name":"staffMemberId","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":186}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = :shop!,\n      superuser     = :superuser!,\n      permissions   = :permissions!,\n      rate          = :rate,\n      name          = :name!,\n      \"isShopOwner\" = :isShopOwner!"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"superuser":true,"permissions":true,"rate":true,"name":true,"isShopOwner":true,"staffMemberId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":111},{"a":253,"b":258}]},{"name":"superuser","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":124},{"a":283,"b":293}]},{"name":"permissions","required":true,"transform":{"type":"scalar"},"locs":[{"a":127,"b":139},{"a":318,"b":330}]},{"name":"rate","required":false,"transform":{"type":"scalar"},"locs":[{"a":142,"b":146},{"a":355,"b":359}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":149,"b":154},{"a":384,"b":389}]},{"name":"isShopOwner","required":true,"transform":{"type":"scalar"},"locs":[{"a":157,"b":169},{"a":414,"b":426}]},{"name":"staffMemberId","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":186}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = :shop!,\n      superuser     = :superuser!,\n      permissions   = :permissions!,\n      rate          = :rate,\n      name          = :name!,\n      \"isShopOwner\" = :isShopOwner!\nRETURNING *"};
 
 /**
  * Query generated from SQL:
@@ -120,6 +130,7 @@ const upsertIR: any = {"usedParamSet":{"shop":true,"superuser":true,"permissions
  *       rate          = :rate,
  *       name          = :name!,
  *       "isShopOwner" = :isShopOwner!
+ * RETURNING *
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);

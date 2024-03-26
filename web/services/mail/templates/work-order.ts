@@ -68,7 +68,8 @@ export async function getWorkOrderTemplateData(
       shopifyOrderLineItemsByLineItemId[hourlyCharge.shopifyOrderLineItemId] ?? never('hlc no sli');
     const shopifyOrder = shopifyOrdersByOrderId[shopifyOrderLineItem.orderId] ?? never('hlc sli no so');
 
-    let details = `${hourlyCharge.hours} hours × ${hourlyCharge.rate}`;
+    // TODO: currency
+    let details = `${hourlyCharge.hours} hours × $${hourlyCharge.rate}`;
 
     const employee = hourlyCharge.employeeId ? employeeById[hourlyCharge.employeeId] ?? never() : null;
     if (employee) {
@@ -179,10 +180,10 @@ export async function getWorkOrderTemplateData(
       sku: productVariant.sku,
       paid: shopifyOrder?.fullyPaid ?? false,
       description: product.description,
-      discountedTotalPrice,
-      originalTotalPrice,
-      discountedUnitPrice: shopifyOrderLineItem.discountedUnitPrice,
-      originalUnitPrice: shopifyOrderLineItem.unitPrice,
+      discountedTotalPrice: round(discountedTotalPrice),
+      originalTotalPrice: round(originalTotalPrice),
+      discountedUnitPrice: round(shopifyOrderLineItem.discountedUnitPrice),
+      originalUnitPrice: round(shopifyOrderLineItem.unitPrice),
       purchaseOrderNames: purchaseOrders.map(po => po.name),
       shopifyOrderName: shopifyOrder?.name ?? null,
       quantity: item.quantity,
@@ -231,9 +232,9 @@ export async function getWorkOrderTemplateData(
     customFields: Object.fromEntries(workOrderCustomFields.map(({ key, value }) => [key, value])),
     items,
     charges,
-    tax: tax.round(2).toString(),
-    subtotal: subtotal.round(2).toString(),
-    total: total.round(2).toString(),
+    tax: round(tax.toString()),
+    subtotal: round(subtotal.toString()),
+    total: round(total.toString()),
     fullyPaid: BigDecimal.fromMoney(outstanding).compare(BigDecimal.ZERO) <= 0,
     paid,
     outstanding,
@@ -416,10 +417,13 @@ function getHourlyChargePrice(hourlyCharge: IGetHourlyLabourChargesResult) {
   const rate = BigDecimal.fromString(hourlyCharge.rate);
   const hours = BigDecimal.fromString(hourlyCharge.hours);
 
-  return rate.multiply(hours).round(2, RoundingMode.CEILING).toString();
+  return round(rate.multiply(hours).toString());
 }
 
 function getFixedPriceChargePrice(fixedPriceCharge: IGetFixedPriceLabourChargesResult) {
-  const amount = BigDecimal.fromString(fixedPriceCharge.amount);
-  return amount.round(2, RoundingMode.CEILING).toString();
+  return round(fixedPriceCharge.amount);
+}
+
+function round(amount: string) {
+  return BigDecimal.fromString(amount).round(2, RoundingMode.CEILING).toString();
 }

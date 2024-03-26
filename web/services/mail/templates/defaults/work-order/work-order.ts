@@ -200,12 +200,6 @@ export const workOrderInstallationOverviewTemplate = `
   {% endfor %}
 
   <tr>
-    <td>Tax</td>
-    <td></td>
-    <td>\${{ tax }}</td>
-  </tr>
-
-  <tr>
     <td></td>
     <td colspan="2" style="text-align: left"><strong>Signature</strong></td>
   </tr>

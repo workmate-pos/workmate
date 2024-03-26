@@ -20,7 +20,8 @@ ON CONFLICT ("staffMemberId")
       permissions   = :permissions!,
       rate          = :rate,
       name          = :name!,
-      "isShopOwner" = :isShopOwner!;
+      "isShopOwner" = :isShopOwner!
+RETURNING *;
 
 /*
     @name deleteMany
