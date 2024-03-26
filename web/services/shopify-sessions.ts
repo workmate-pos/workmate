@@ -2,6 +2,7 @@ import { TeifiSessionStorage } from '@teifi-digital/shopify-app-express';
 import { ShopifySession } from '@prisma/client';
 import { Session } from '@shopify/shopify-api';
 import { db } from './db/db.js';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export class ShopifySessionStorage implements TeifiSessionStorage {
   deleteSession(id: string): Promise<boolean> {
@@ -44,7 +45,14 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
     // fall back to an offline session if the online session is not found
     // unfortunately required since POS does not do oauth, so not having this would require POS employees to log into admin for oauth
     if (!session && !this.isOfflineSessionId(id)) {
-      [session] = await db.shopifySession.get({ id: this.onlineSessionIdToOfflineSessionId(id), limit: 1 });
+      // we should NOT fall back in case this is the first time the user logs in.
+      // otherwise the staff member will never be added to the database in case they have a store without read_users capabilities
+      const staffMemberId = this.getOnlineSessionIdStaffMemberId(id);
+      const staffMembers = await db.employee.getMany({ employeeIds: [staffMemberId] });
+
+      if (staffMembers.length) {
+        [session] = await db.shopifySession.get({ id: this.onlineSessionIdToOfflineSessionId(id), limit: 1 });
+      }
     }
 
     if (!session) {
@@ -66,6 +74,20 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
 
   private onlineSessionIdToOfflineSessionId(id: string): string {
     return 'offline_' + id.replace(/_.+/, '');
+  }
+
+  private getOnlineSessionIdStaffMemberId(sessionId: string): ID {
+    if (this.isOfflineSessionId(sessionId)) {
+      throw new Error('Cannot get staff member id for offline session');
+    }
+
+    const id = sessionId.split('_').at(-1);
+
+    if (!id) {
+      throw new Error('Invalid session id');
+    }
+
+    return createGid('StaffMember', id);
   }
 }
 
