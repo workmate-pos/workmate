@@ -130,7 +130,7 @@ export const purchaseOrderInvoiceTemplate = `
   {% for item in lineItems %}
   <tr>
     <td>{{ item.name }}</td>
-    <td>{{ item.description }}</td>
+    <td>{{ item.description | truncate: 150 }}</td>
     <td>{{ item.quantity }}</td>
   </tr>
   {% endfor %}

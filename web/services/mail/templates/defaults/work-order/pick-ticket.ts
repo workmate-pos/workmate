@@ -180,7 +180,7 @@ export const pickTicketTemplate = `
   {% for item in items %}
   <tr>
     <td>{{ item.name }}</td>
-    <td>{{ item.description }}</td>
+    <td>{{ item.description | truncate: 150 }}</td>
     <td></td>
     <!-- Ordered: the quantity that is ordered, minus any that have arrived -->
     <td>{{ item.purchaseOrderQuantities.orderedQuantity | minus: item.purchaseOrderQuantities.availableQuantity }}</td>

@@ -179,7 +179,7 @@ export const workOrderInvoiceTemplate = `<!doctype html>
   {% for item in items %}
   <tr>
     <td>{{ item.name }}</td>
-    <td>{{ item.description }}</td>
+    <td>{{ item.description | truncate: 150 }}</td>
     <td>{{ item.quantity }}</td>
     <td>\${{ item.discountedUnitPrice }}</td>
     <td>\${{ item.discountedTotalPrice }}</td>
