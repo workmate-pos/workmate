@@ -73,7 +73,7 @@ export default class AppPlansController {
     const appSubscription = await gql.appSubscriptions.appSubscriptionCreate.run(graphql, {
       name: `${appPlan.id}-${appPlan.name}`,
       returnUrl: `https://${session.shop}/admin/apps/${process.env.SHOPIFY_API_KEY}`,
-      test: process.env.NODE_ENV === 'development',
+      test: process.env.NODE_ENV === 'development' || appPlan.accessType === 'TEST',
       trialDays: appPlan.trialDays === 0 ? undefined : (appPlan.trialDays as Int),
       lineItems,
     });
