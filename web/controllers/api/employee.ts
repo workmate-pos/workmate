@@ -22,6 +22,7 @@ import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
 import { hasReadUsersScope } from '../../services/shop.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { escapeLike } from '../../services/db/like.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -58,7 +59,10 @@ export default class EmployeeController {
     let response: gql.staffMember.getPage.Result;
 
     if (!(await hasReadUsersScope(graphql))) {
-      const employees = await db.employee.getPage({ shop: session.shop, query: paginationOptions.query });
+      const employees = await db.employee.getPage({
+        shop: session.shop,
+        query: paginationOptions.query ? `%${escapeLike(paginationOptions.query)}%` : undefined,
+      });
 
       response = {
         shop: {
