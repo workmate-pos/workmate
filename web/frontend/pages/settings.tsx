@@ -55,7 +55,7 @@ function Settings() {
   const [toast, setToastAction] = useToast();
   const [settings, setSettings] = useState<ShopSettings>(null!);
 
-  const [purchaseOrderWebhookIsValid, setPurchaseOrderWebhookIsValid] = useState(false);
+  const [purchaseOrderWebhookIsValid, setPurchaseOrderWebhookIsValid] = useState(true);
 
   const isValid = purchaseOrderWebhookIsValid;
 
