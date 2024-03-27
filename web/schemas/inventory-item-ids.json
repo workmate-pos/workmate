@@ -15,5 +15,5 @@
     }
   },
   "additionalProperties": false,
-  "required": ["locationId", "inventoryItemIds"]
+  "required": ["inventoryItemIds"]
 }

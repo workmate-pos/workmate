@@ -143,7 +143,7 @@ function EmployeeRates() {
         {currentPage?.map((employee, i) => {
           return (
             <IndexTable.Row key={employee.id} id={employee.id} selected={false} position={i}>
-              <IndexTable.Cell>{employee.name}</IndexTable.Cell>
+              <IndexTable.Cell>{employee.name || 'Unnamed employee'}</IndexTable.Cell>
               <IndexTable.Cell flush={true}>
                 <NumberField
                   variant={'borderless'}

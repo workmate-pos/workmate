@@ -97,41 +97,33 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
             </ResponsiveGrid>
           </ResponsiveGrid>
 
-          <ResponsiveGrid columns={2}>
-            <ResponsiveGrid columns={2} grow>
-              <FormButton
-                title={'Manage payments'}
-                type={'basic'}
-                action={'button'}
-                disabled={!createWorkOrder.name || hasUnsavedChanges}
-                onPress={() => {
-                  if (createWorkOrder.name) {
-                    router.push('PaymentOverview', {
-                      name: createWorkOrder.name,
-                    });
-                  }
-                }}
-              />
-              <FormButton
-                title={'Print'}
-                type={'basic'}
-                action={'button'}
-                disabled={!createWorkOrder.name || hasUnsavedChanges}
-                onPress={() => {
-                  if (createWorkOrder.name) {
-                    router.push('PrintOverview', {
-                      name: createWorkOrder.name,
-                    });
-                  }
-                }}
-              />
-              {!createWorkOrder.name ||
-                (hasUnsavedChanges && (
-                  <Text color="TextSubdued" variant="body">
-                    You must save your work order before you can manage payments/print
-                  </Text>
-                ))}
-            </ResponsiveGrid>
+          <ResponsiveGrid columns={3} grow>
+            <FormButton
+              title={'Manage payments'}
+              type={'basic'}
+              action={'button'}
+              disabled={!createWorkOrder.name || hasUnsavedChanges}
+              onPress={() => {
+                if (createWorkOrder.name) {
+                  router.push('PaymentOverview', {
+                    name: createWorkOrder.name,
+                  });
+                }
+              }}
+            />
+            <FormButton
+              title={'Print'}
+              type={'basic'}
+              action={'button'}
+              disabled={!createWorkOrder.name || hasUnsavedChanges}
+              onPress={() => {
+                if (createWorkOrder.name) {
+                  router.push('PrintOverview', {
+                    name: createWorkOrder.name,
+                  });
+                }
+              }}
+            />
 
             <FormButton
               title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
@@ -142,6 +134,13 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
               onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
             />
           </ResponsiveGrid>
+
+          {!createWorkOrder.name ||
+            (hasUnsavedChanges && (
+              <Text color="TextSubdued" variant="body">
+                You must save your work order before you can manage payments/print
+              </Text>
+            ))}
         </ResponsiveStack>
       </Form>
     </ScrollView>

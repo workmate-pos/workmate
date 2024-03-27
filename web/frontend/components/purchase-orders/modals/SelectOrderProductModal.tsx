@@ -49,7 +49,7 @@ export function SelectOrderProductModal({
   const inventoryItemQueries = useInventoryItemQueries({
     fetch,
     ids: inventoryItemIds,
-    locationId: createGid('Location', 'null'),
+    locationId: null,
   });
 
   const [selectedLineItems, setSelectedLineItems] = useState<typeof lineItems>([]);

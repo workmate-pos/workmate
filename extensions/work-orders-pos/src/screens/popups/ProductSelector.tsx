@@ -28,12 +28,15 @@ export function ProductSelector({
 
   const fetch = useAuthenticatedFetch();
   const serviceCollectionIds = useServiceCollectionIds();
+  const collectionQueries =
+    serviceCollectionIds?.map(collectionId => `NOT collection:${parseGid(collectionId).id}`) ?? [];
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
-      query: serviceCollectionIds
-        ? `${query} ${serviceCollectionIds.map(id => `NOT collection:${parseGid(id).id}`).join(' ')}`
-        : query,
+      query: [query, ...collectionQueries]
+        .filter(Boolean)
+        .map(q => `(${q})`)
+        .join(' AND '),
     },
   });
 

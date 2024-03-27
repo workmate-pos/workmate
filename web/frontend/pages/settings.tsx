@@ -62,7 +62,7 @@ function Settings() {
   const [defaultPurchaseOrderStatusValue, setDefaultPurchaseOrderStatusValue] = useState('');
   const [defaultWorkOrderStatusValue, setDefaultWorkOrderStatusValue] = useState('');
 
-  const [purchaseOrderWebhookIsValid, setPurchaseOrderWebhookIsValid] = useState(false);
+  const [purchaseOrderWebhookIsValid, setPurchaseOrderWebhookIsValid] = useState(true);
 
   const isValid = purchaseOrderWebhookIsValid;
 

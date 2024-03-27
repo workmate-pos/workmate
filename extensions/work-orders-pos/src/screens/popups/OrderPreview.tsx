@@ -47,8 +47,7 @@ export function OrderPreview({
   unsavedChanges: boolean;
 }) {
   const fetch = useAuthenticatedFetch();
-  // TODO: Change default keepPreviousData to false & add it where needed (mostly search lists)
-  const orderQuery = useOrderQuery({ fetch, id: orderId }, { keepPreviousData: false });
+  const orderQuery = useOrderQuery({ fetch, id: orderId });
   const orderLineItemsQuery = useOrderLineItemsQuery({ fetch, id: orderId });
 
   const settingsQuery = useSettingsQuery({ fetch });

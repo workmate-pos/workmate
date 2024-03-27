@@ -35,11 +35,7 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
 }
 
 async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: null }) {
-  await ensureCustomersExist(session, [createWorkOrder.customerId]);
-
-  if (createWorkOrder.derivedFromOrderId !== null) {
-    await ensureShopifyOrdersExist(session, [createWorkOrder.derivedFromOrderId]);
-  }
+  await ensureRequiredDatabaseDataExists(session, createWorkOrder);
 
   const [workOrder = never()] = await db.workOrder.upsert({
     shop: session.shop,
@@ -86,6 +82,8 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
 
     // nothing illegal, so we can upsert and delete items/charges safely
 
+    await ensureRequiredDatabaseDataExists(session, createWorkOrder);
+
     await db.workOrder.upsert({
       shop: session.shop,
       name: workOrder.name,
@@ -111,6 +109,21 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
   await syncWorkOrder(session, workOrder.id, true);
 
   return workOrder;
+}
+
+async function ensureRequiredDatabaseDataExists(session: Session, createWorkOrder: CreateWorkOrder) {
+  const errors: unknown[] = [];
+
+  await Promise.all([
+    ensureCustomersExist(session, [createWorkOrder.customerId]).catch(error => errors.push(error)),
+    createWorkOrder.derivedFromOrderId
+      ? ensureShopifyOrdersExist(session, [createWorkOrder.derivedFromOrderId]).catch(error => errors.push(error))
+      : null,
+  ]);
+
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'Failed to ensure required database data exists');
+  }
 }
 
 function assertNoIllegalItemChanges(createWorkOrder: CreateWorkOrder, currentItems: IGetItemsResult[]) {

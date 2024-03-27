@@ -34,13 +34,20 @@ export function ProductsCard({
   disabled,
   onAddProductClick,
   onAddOrderProductClick,
+  onMarkAllAsReceivedClick,
+  onMarkAllAsNotReceivedClick,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
   onAddProductClick: () => void;
   onAddOrderProductClick: () => void;
+  onMarkAllAsReceivedClick: () => void;
+  onMarkAllAsNotReceivedClick: () => void;
 }) {
+  const noLineItems = createPurchaseOrder.lineItems.length === 0;
+  const allAreReceived = !noLineItems && createPurchaseOrder.lineItems.every(li => li.availableQuantity >= li.quantity);
+
   return (
     <Card>
       <BlockStack gap={'400'}>
@@ -53,8 +60,17 @@ export function ProductsCard({
             Add Product
           </Button>
           <Button onClick={() => onAddOrderProductClick()} disabled={disabled}>
-            Select Product from Order
+            Select from Order
           </Button>
+          {allAreReceived ? (
+            <Button onClick={() => onMarkAllAsNotReceivedClick()} disabled={disabled || noLineItems} tone={'critical'}>
+              Mark all as not received
+            </Button>
+          ) : (
+            <Button onClick={() => onMarkAllAsReceivedClick()} disabled={disabled || noLineItems}>
+              Mark all as received
+            </Button>
+          )}
         </ButtonGroup>
       </BlockStack>
     </Card>
@@ -111,14 +127,16 @@ function ProductsList({
           const orderQuery = item.shopifyOrderLineItem ? orderQueries[item.shopifyOrderLineItem.orderId] : null;
           const order = orderQuery?.data?.order;
 
-          let quantityBadgeTone: Tone = 'info-strong';
+          let quantityBadgeTone: Tone | undefined;
 
-          if (item.quantity === item.availableQuantity) {
+          if (item.availableQuantity >= item.quantity) {
             quantityBadgeTone = 'success';
+          } else {
+            quantityBadgeTone = 'warning';
           }
 
           if (disabled) {
-            quantityBadgeTone = 'enabled';
+            quantityBadgeTone = undefined;
           }
 
           return (

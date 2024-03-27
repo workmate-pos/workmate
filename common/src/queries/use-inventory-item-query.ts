@@ -4,39 +4,43 @@ import { Fetch } from './fetch.js';
 import { useBatcher } from '../batcher/use-batcher.js';
 import { FetchInventoryItemsByIdResponse } from '@web/controllers/api/inventory-items.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { withResolvers } from '@teifi-digital/shopify-app-toolbox/promise';
 
 // TODO: Make batcher support grouping natively
 const useInventoryItemBatcher = (fetch: Fetch) =>
   useBatcher({
     name: 'inventory-items',
-    maxSize: 10,
-    handler: async (ids: { inventoryItemId: ID; locationId: ID }[]) => {
+    maxSize: 25,
+    handler: async (ids: { inventoryItemId: ID; locationId: ID | null }[]) => {
       if (ids.length === 0) {
         return [];
       }
 
-      const resolversByLocationIdByInventoryItemId: Record<
-        ID,
+      const resolversByLocationIdByInventoryItemId = new Map<
+        ID | null,
         Record<ID, ReturnType<typeof withResolvers<InventoryItem>>>
-      > = {};
+      >();
 
       const result: Promise<InventoryItem>[] = [];
 
       for (const { inventoryItemId, locationId } of ids) {
-        const resolversByInventoryItemId = (resolversByLocationIdByInventoryItemId[locationId] ??= {});
+        const resolversByInventoryItemId = resolversByLocationIdByInventoryItemId.get(locationId) ?? {};
+        resolversByLocationIdByInventoryItemId.set(locationId, resolversByInventoryItemId);
+
         const resolver = withResolvers<InventoryItem>();
         resolversByInventoryItemId[inventoryItemId] ??= resolver;
         result.push(resolver.promise);
       }
 
-      for (const [locationId, resolversByInventoryItemId] of entries(resolversByLocationIdByInventoryItemId)) {
+      for (const [locationId, resolversByInventoryItemId] of resolversByLocationIdByInventoryItemId.entries()) {
         const inventoryItemIds = Object.keys(resolversByInventoryItemId) as ID[];
 
         const searchParams = new URLSearchParams();
 
-        searchParams.set('locationId', locationId);
+        if (locationId) {
+          searchParams.set('locationId', locationId);
+        }
+
         for (const id of inventoryItemIds) {
           searchParams.append('inventoryItemIds', id);
         }
@@ -75,13 +79,9 @@ export const useInventoryItemQuery = ({
 }) => {
   const batcher = useInventoryItemBatcher(fetch);
   return useQuery({
-    queryKey: ['inventory-item', locationId, id] as const,
+    queryKey: ['inventory-item', id, locationId] as const,
     queryFn: () => {
       if (id === null) {
-        return null;
-      }
-
-      if (locationId === null) {
         return null;
       }
 
@@ -90,11 +90,19 @@ export const useInventoryItemQuery = ({
   });
 };
 
-export const useInventoryItemQueries = ({ fetch, ids, locationId }: { fetch: Fetch; ids: ID[]; locationId: ID }) => {
+export const useInventoryItemQueries = ({
+  fetch,
+  ids,
+  locationId,
+}: {
+  fetch: Fetch;
+  ids: ID[];
+  locationId: ID | null;
+}) => {
   const batcher = useInventoryItemBatcher(fetch);
   const queries = useQueries(
     ids.map(id => ({
-      queryKey: ['inventory-item', locationId, id],
+      queryKey: ['inventory-item', id, locationId],
       queryFn: () => batcher.fetch({ inventoryItemId: id, locationId }),
     })),
   );

@@ -36,7 +36,10 @@ export function ProductSelector({
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
-      query: [query, vendorQuery, locationIdQuery].filter(Boolean).join(' AND '),
+      query: [query, vendorQuery, locationIdQuery]
+        .filter(Boolean)
+        .map(q => `(${q})`)
+        .join(' AND '),
     },
   });
   const productVariants = productVariantsQuery.data?.pages ?? [];

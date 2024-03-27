@@ -1,5 +1,5 @@
-import { useLocation, useNavigation } from 'react-router-dom';
-import { ContextualSaveBar, Loading, TitleBar, useAppBridge, useNavigate } from '@shopify/app-bridge-react';
+import { useLocation } from 'react-router-dom';
+import { ContextualSaveBar, Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { useEffect, useReducer, useRef, useState } from 'react';
 import { useCreatePurchaseOrderReducer } from '@work-orders/common/create-purchase-order/reducer.js';
@@ -32,8 +32,7 @@ import { ProductsCard } from '@web/frontend/components/purchase-orders/ProductsC
 import { Summary } from '@web/frontend/components/purchase-orders/Summary.js';
 import { AddProductModal } from '@web/frontend/components/purchase-orders/modals/AddProductModal.js';
 import { AddOrderProductModal } from '@web/frontend/components/purchase-orders/modals/AddOrderProductModal.js';
-
-// TODO: Only allow save if valid
+import { Int } from '@web/schemas/generated/create-product.js';
 
 export default function () {
   return (
@@ -275,6 +274,16 @@ function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOr
               }
 
               setIsAddOrderProductModalOpen(true);
+            }}
+            onMarkAllAsNotReceivedClick={() => {
+              for (const product of createPurchaseOrder.lineItems) {
+                dispatch.updateProduct({ product: { ...product, availableQuantity: 0 as Int } });
+              }
+            }}
+            onMarkAllAsReceivedClick={() => {
+              for (const product of createPurchaseOrder.lineItems) {
+                dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
+              }
             }}
           />
 

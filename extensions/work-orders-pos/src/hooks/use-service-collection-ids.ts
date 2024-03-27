@@ -16,9 +16,5 @@ export const useServiceCollectionIds = () => {
     settingsQuery.data.settings.fixedServiceCollectionId,
   ].filter(isNonNullable);
 
-  if (ids.length === 0) {
-    return [createGid('Collection', '-1')];
-  }
-
   return ids;
 };

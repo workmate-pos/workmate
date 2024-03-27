@@ -84,21 +84,17 @@ export function getWorkOrderLineItems(
   const lineItemByVariantId: Record<ID, LineItem> = {};
 
   for (const item of items) {
-    const { uuid, productVariantId } = item;
+    const { uuid, productVariantId, quantity } = item;
 
     assertGid(productVariantId);
 
     const lineItem = (lineItemByVariantId[productVariantId] ??= {
       productVariantId,
-      quantity: 0,
+      quantity,
       customAttributes: {},
     });
 
-    let itemQuantity: number;
-
-    if (!item.absorbCharges) {
-      itemQuantity = item.quantity;
-    } else {
+    if (item.absorbCharges) {
       const absorbedHourlyCharges = hourlyLabourCharges.filter(hasPropertyValue('workOrderItemUuid', uuid));
       const absorbedFixedCharges = fixedPriceLabourCharges.filter(hasPropertyValue('workOrderItemUuid', uuid));
 
@@ -107,11 +103,12 @@ export function getWorkOrderLineItems(
         ...absorbedFixedCharges.map(charge => ({ ...charge, type: 'fixed' }) as const),
       ];
 
-      const totalCost = BigDecimal.sum(
+      const totalChargeCost = BigDecimal.sum(
         ...absorbedCharges.map(getChargeUnitPrice).map(money => BigDecimal.fromMoney(money)),
       );
 
-      itemQuantity = Number(totalCost.round(0, RoundingMode.CEILING).toString());
+      // if we absorb charges we should override, as it is assumed that the product is a service with price 1.00
+      lineItem.quantity = Number(totalChargeCost.round(0, RoundingMode.CEILING).toString());
 
       for (const absorbedCharge of absorbedCharges) {
         const quantity = 1;
@@ -122,7 +119,6 @@ export function getWorkOrderLineItems(
       }
     }
 
-    lineItem.quantity += itemQuantity;
     lineItem.customAttributes[`${ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${uuid}`] = String(item.quantity);
 
     const linkedCharges = charges.filter(charge => charge.workOrderItemUuid === uuid);
