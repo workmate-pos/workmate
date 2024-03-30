@@ -58,6 +58,7 @@ fragment ProductVariantFragment on ProductVariant {
   title
   sku
   price
+  barcode
   image {
     url
   }

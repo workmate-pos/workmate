@@ -12,9 +12,37 @@ import {
   ProductVariantFragmentWithComponents,
   ProductVariantFragmentWithMetafields,
 } from '../../services/product-variant.js';
+import { Int } from '../../services/gql/queries/generated/schema.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 @Authenticated()
 export default class ProductVariantController {
+  @Get('/barcode/:barcode')
+  async fetchProductVariantByBarcode(req: Request<{ barcode: string }>, res: Response<FetchProductVariantResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { barcode } = req.params;
+
+    const graphql = new Graphql(session);
+    const {
+      productVariants: { nodes },
+    } = await gql.products.getPage.run(graphql, { first: 10 as Int, query: `barcode:"${barcode}"` });
+
+    const productVariant = nodes.find(node => node.barcode === barcode);
+
+    if (!productVariant) {
+      throw new HttpError('Product variant not found', 404);
+    }
+
+    return res.json({
+      productVariant: await addProductVariantComponents(
+        graphql,
+        parseProductVariantMetafields(productVariant),
+        null,
+        null,
+      ),
+    });
+  }
+
   @Get('/')
   @QuerySchema('pagination-options')
   async fetchProductVariants(
@@ -81,6 +109,10 @@ export default class ProductVariantController {
     });
   }
 }
+
+export type FetchProductVariantResponse = {
+  productVariant: (ProductVariantFragmentWithMetafields & ProductVariantFragmentWithComponents) | null;
+};
 
 export type FetchProductsResponse = {
   productVariants: (ProductVariantFragmentWithMetafields & ProductVariantFragmentWithComponents)[];

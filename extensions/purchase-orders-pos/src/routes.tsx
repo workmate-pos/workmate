@@ -4,7 +4,6 @@ import { VendorSelector } from './screens/popups/VendorSelector.js';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { Entry } from './screens/Entry.js';
 import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
-import { LocationSelector } from './screens/popups/LocationSelector.js';
 import { ProductSelector } from './screens/popups/ProductSelector.js';
 import { ProductConfig } from './screens/popups/ProductConfig.js';
 import { createRouter } from '@teifi-digital/pos-tools/router';
@@ -20,6 +19,7 @@ import { PrintOverview } from './screens/PrintOverview.js';
 import { OrderProductSelector } from './screens/popups/OrderProductSelector.js';
 import { OrderSelector } from './screens/popups/OrderSelector.js';
 import { ScrollView } from '@shopify/retail-ui-extensions-react';
+import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -68,7 +68,9 @@ export const { Router, useRouter } = createRouter(
     },
     LocationSelector: {
       title: 'Select Location',
-      Component: LocationSelector,
+      Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
+        <LocationSelector {...props} useRouter={useRouter} />
+      ),
     },
     // TODO: Add this back, but for selecting items to add rather than for selecting a single work order (ie this will open another popup)
     // OrderSelector: {

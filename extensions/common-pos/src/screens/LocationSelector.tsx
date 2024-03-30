@@ -1,14 +1,18 @@
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import type { Location } from '@work-orders/common/queries/use-locations-query.js';
-import { getFormattedAddressSubtitle } from '../../util/formatted-address-subtitle.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
-import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { UseRouter } from './router.js';
 
-export function LocationSelector({ onSelect }: { onSelect: (location: Location) => void }) {
+export type LocationSelectorProps = {
+  onSelect: (location: Location) => void;
+  useRouter: UseRouter;
+};
+
+export function LocationSelector({ onSelect, useRouter }: LocationSelectorProps) {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
@@ -16,7 +20,7 @@ export function LocationSelector({ onSelect }: { onSelect: (location: Location) 
   const locationsQuery = useLocationsQuery({ fetch, params: { query } });
   const locations = locationsQuery.data?.pages.flat() ?? [];
 
-  const rows = getLocationRows(locations, onSelect);
+  const rows = getLocationRows(useRouter, locations, onSelect);
 
   return (
     <ScrollView>
@@ -62,15 +66,19 @@ export function LocationSelector({ onSelect }: { onSelect: (location: Location) 
   );
 }
 
-function getLocationRows(locations: Location[], onSelect: (location: Location) => void) {
+function getLocationRows(
+  useRouter: LocationSelectorProps['useRouter'],
+  locations: Location[],
+  onSelect: (location: Location) => void,
+) {
   const router = useRouter();
 
   return locations.map<ListRow>(location => {
     return {
       id: location.id,
       onPress: () => {
-        onSelect(location);
         router.popCurrent();
+        onSelect(location);
       },
       leftSide: {
         label: location.name,
@@ -79,4 +87,11 @@ function getLocationRows(locations: Location[], onSelect: (location: Location) =
       rightSide: { showChevron: true },
     };
   });
+}
+
+function getFormattedAddressSubtitle(formattedAddress: string[]): ListRow['leftSide']['subtitle'] {
+  if (formattedAddress.length === 0) return ['No address'] as const;
+  if (formattedAddress.length === 1) return [formattedAddress[0]!] as const;
+  if (formattedAddress.length === 2) return [formattedAddress[0]!, formattedAddress[1]!] as const;
+  return [formattedAddress[0]!, formattedAddress[1]!, formattedAddress[2]!] as const;
 }
