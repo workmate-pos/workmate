@@ -1,8 +1,9 @@
-import { useQueries, useQuery, UseQueryOptions } from 'react-query';
+import { useQueries, useQuery, useQueryClient, UseQueryOptions } from 'react-query';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import { Fetch } from './fetch.js';
 import type { FetchProductsByIdResponse } from '@web/controllers/api/product-variant.js';
 import { BatcherFetchResult, useBatcher } from '../batcher/use-batcher.js';
+import { UseQueryData } from './react-query.js';
 
 const useProductVariantBatcher = (fetch: Fetch) =>
   useBatcher({
@@ -36,26 +37,48 @@ export const useProductVariantQuery = (
   { fetch, id }: { fetch: Fetch; id: ID | null },
   options?: UseQueryOptions<BatchResult, unknown, BatchResult, (string | null)[]>,
 ) => {
+  const queryClient = useQueryClient();
   const batcher = useProductVariantBatcher(fetch);
   return useQuery({
     ...options,
     queryKey: ['product-variant', id],
-    queryFn: () => {
+    queryFn: async () => {
       if (id === null) {
         return null;
       }
 
-      return batcher.fetch(id);
+      const productVariant = await batcher.fetch(id);
+
+      if (productVariant?.barcode) {
+        queryClient.setQueryData(
+          ['product-variant-by-barcode', productVariant.barcode],
+          productVariant satisfies UseQueryData<typeof useProductVariantQuery>,
+        );
+      }
+
+      return productVariant;
     },
   });
 };
 
 export const useProductVariantQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID[] }) => {
   const batcher = useProductVariantBatcher(fetch);
+  const queryClient = useQueryClient();
   const queries = useQueries(
     ids.map(id => ({
       queryKey: ['product-variant', id],
-      queryFn: () => batcher.fetch(id),
+      queryFn: async () => {
+        const productVariant = await batcher.fetch(id);
+
+        if (productVariant?.barcode) {
+          queryClient.setQueryData(
+            ['product-variant-by-barcode', productVariant.barcode],
+            productVariant satisfies UseQueryData<typeof useProductVariantQuery>,
+          );
+        }
+
+        return productVariant;
+      },
     })),
   );
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));

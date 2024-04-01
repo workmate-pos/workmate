@@ -3,7 +3,7 @@ import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-qu
 import { Int } from '@web/schemas/generated/create-product.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useRouter } from '../../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';

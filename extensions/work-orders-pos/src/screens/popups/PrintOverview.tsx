@@ -2,7 +2,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useWorkOrderPrintJobMutation } from '@work-orders/common/queries/use-work-order-print-job-mutation.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { RadioButtonList, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { useForm } from '@teifi-digital/pos-tools/form';

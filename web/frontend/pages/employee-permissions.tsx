@@ -103,6 +103,7 @@ function EmployeePermissions() {
     'write_app_plan',
     'read_purchase_orders',
     'write_purchase_orders',
+    'cycle_count',
   ] as const satisfies readonly PermissionNode[];
 
   return (

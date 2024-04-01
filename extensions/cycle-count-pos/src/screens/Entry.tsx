@@ -3,46 +3,40 @@ import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveS
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { useMutation } from '@work-orders/common/queries/react-query.js';
-import {
-  Button,
-  CameraScanner,
-  Text,
-  useExtensionApi,
-  useScannerDataSubscription,
-  useScannerSourcesSubscription,
-} from '@shopify/retail-ui-extensions-react';
-import { useEffect, useState } from 'react';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { Banner, List, ListRow, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { useRouter } from '../routes.js';
-import { useProductVariantByBarcodeQuery } from '@work-orders/common/queries/use-product-variant-by-barcode-query.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { ProductScanner } from '../components/ProductScanner.js';
+import { Dispatch, SetStateAction, useState } from 'react';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { useRouter } from '../routes.js';
+import { useCycleCountMutation } from '@work-orders/common/queries/use-cycle-count-mutation.ts.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { Int } from '@web/schemas/generated/create-product.js';
 
 export function Entry() {
   const { Form } = useForm();
   const { toast, navigation, session } = useExtensionApi<'pos.home.modal.render'>();
-  const router = useRouter();
 
   const locationId = createGid('Location', session.currentSession.locationId.toString());
+  const [products, setProducts] = useState<Record<ID, number>>({});
 
-  // TODO: Allow selecting which products to include in the cycle count
-  // TODO: Allow shortcuts to select all products for some vendor at the current location
+  // TODO: Allow adding arbitrary products as well
 
   const fetch = useAuthenticatedFetch();
   const locationQuery = useLocationQuery({ fetch, id: locationId });
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 1000));
+  const cycleCountMutation = useCycleCountMutation(
+    { fetch },
+    {
+      onSuccess() {
+        toast.show('Updated inventory!');
+        navigation.dismiss();
+      },
     },
-    onSuccess() {
-      toast.show('Updated inventory!');
-      navigation.dismiss();
-    },
-  });
+  );
 
   const locationName = (() => {
     if (!locationId) {
@@ -56,76 +50,130 @@ export function Entry() {
     return locationQuery.data?.name ?? 'Unknown location';
   })();
 
-  const { data } = useScannerDataSubscription();
-  const availableScanners = useScannerSourcesSubscription();
-  const hasCamera = availableScanners.includes('camera');
-  const hasScanner = availableScanners.length > 0;
-  const [cameraOpened, setCameraOpened] = useState(false);
+  const rows = useProductRows(products, setProducts);
 
-  const scannedProductVariantQuery = useProductVariantByBarcodeQuery(
-    { fetch, barcode: data ?? '' },
-    { enabled: !!data, retry: false },
-  );
-
-  const scanErrorMessage = scannedProductVariantQuery.isError
-    ? extractErrorMessage(scannedProductVariantQuery.error)
-    : null;
-
-  const scanSuccessMessage = scannedProductVariantQuery.isSuccess
-    ? `Added ${getProductVariantName(scannedProductVariantQuery.data) ?? '?'}`
-    : null;
-
-  useEffect(() => {
-    if (!cameraOpened) {
-      if (scanSuccessMessage) {
-        toast.show(scanSuccessMessage);
-      }
-
-      if (scanErrorMessage) {
-        toast.show(scanErrorMessage);
-      }
-    }
-  }, [scanErrorMessage, scanSuccessMessage]);
-
-  useEffect(() => {
-    if (scannedProductVariantQuery.data) {
-      // TODO: Add/inc
-    }
-  }, [scannedProductVariantQuery.data]);
+  const router = useRouter();
 
   return (
-    <Form>
+    <Form disabled={cycleCountMutation.isLoading}>
       <ResponsiveStack spacing={4} direction={'vertical'}>
+        <Banner
+          visible={cycleCountMutation.isError}
+          title={'Could not update inventory'}
+          variant={'error'}
+          action={extractErrorMessage(cycleCountMutation.error, '')}
+        />
+
         <ResponsiveGrid columns={4} grow>
           <FormStringField label={'Location'} type={'normal'} value={locationName} disabled />
+
+          <FormButton
+            title={'Select Vendor'}
+            onPress={() =>
+              router.push('VendorSelector', {
+                onSelect: (vendorName, productVariantIds) => {
+                  toast.show(`Added products from vendor ${vendorName}`);
+                  setProducts(products => ({
+                    ...Object.fromEntries(productVariantIds.map(productVariantId => [productVariantId, 0])),
+                    ...products,
+                  }));
+                },
+              })
+            }
+          />
+
+          <ProductScanner
+            onProductScanned={productVariantId =>
+              setProducts(products => {
+                const newProducts = { ...products };
+                newProducts[productVariantId] ??= 0;
+                newProducts[productVariantId] += 1;
+                return newProducts;
+              })
+            }
+          />
+
+          <FormButton title={'Clear'} onPress={() => setProducts({})} type={'destructive'} />
         </ResponsiveGrid>
 
-        {hasScanner && !hasCamera && <Text>Scanner found</Text>}
-        {!hasScanner && <Text color={'TextCritical'}>No scanner found</Text>}
-        {hasCamera && (
-          <>
-            {cameraOpened && <Button title={'Close camera'} onPress={() => setCameraOpened(false)} />}
-            {!cameraOpened && <Button title={'Open camera'} onPress={() => setCameraOpened(true)} />}
-            {cameraOpened && (
-              <CameraScanner
-                bannerProps={{
-                  visible: (scanSuccessMessage ?? scanErrorMessage) !== null,
-                  title: scanSuccessMessage ?? scanErrorMessage ?? '',
-                  variant: scanErrorMessage !== null ? 'error' : 'confirmation',
-                }}
-              />
-            )}
-          </>
+        <List data={rows} imageDisplayStrategy={'always'} />
+        {rows.length === 0 && (
+          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+            <Text variant="body" color="TextSubdued">
+              No products scanned
+            </Text>
+          </Stack>
         )}
 
         <FormButton
           title={'Save'}
           type={'primary'}
           action={'submit'}
-          loading={saveMutation.isLoading}
-          onPress={saveMutation.mutate}
+          disabled={Object.values(products).length === 0}
+          loading={cycleCountMutation.isLoading}
+          onPress={() =>
+            cycleCountMutation.mutate({
+              locationId,
+              productVariants: Object.entries(products).map(([productVariantId, quantity]) => ({
+                id: productVariantId as ID,
+                quantity: quantity as Int,
+              })),
+            })
+          }
         />
       </ResponsiveStack>
     </Form>
   );
+}
+
+function useProductRows(products: Record<ID, number>, setProducts: Dispatch<SetStateAction<Record<ID, number>>>) {
+  const fetch = useAuthenticatedFetch();
+  const ids = Object.keys(products) as ID[];
+  const productVariantQueries = useProductVariantQueries({ fetch, ids });
+
+  const router = useRouter();
+
+  return ids.map<ListRow>(id => {
+    const productVariantQuery = productVariantQueries[id]!;
+
+    const productVariant = productVariantQuery.data;
+    const name = productVariantQuery.isLoading
+      ? 'Loading...'
+      : getProductVariantName(productVariant) ?? 'Unknown Product';
+
+    const quantity = products[id] ?? 0;
+
+    return {
+      id,
+      onPress: () => {
+        router.push('ProductConfig', {
+          productVariantId: id,
+          quantity,
+          onRemove: () =>
+            setProducts(products => {
+              const newProducts = { ...products };
+              delete newProducts[id];
+              return newProducts;
+            }),
+          onSave: quantity => {
+            setProducts(products => {
+              const newProducts = { ...products };
+              newProducts[id] = quantity;
+              return newProducts;
+            });
+          },
+        });
+      },
+      leftSide: {
+        label: name,
+        image: {
+          source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
+          badge: quantity,
+        },
+      },
+      rightSide: {
+        showChevron: true,
+      },
+    };
+  });
 }

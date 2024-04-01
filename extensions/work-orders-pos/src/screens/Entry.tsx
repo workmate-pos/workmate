@@ -16,7 +16,7 @@ import { ID } from '@web/services/gql/queries/generated/schema.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useRouter } from '../routes.js';
 import { useWorkOrderQueries } from '@work-orders/common/queries/use-work-order-query.js';

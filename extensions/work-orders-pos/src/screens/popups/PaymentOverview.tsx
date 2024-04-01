@@ -5,7 +5,7 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { useState } from 'react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { getTotalPriceForCharges } from '../../create-work-order/charges.js';

@@ -3,9 +3,9 @@ import { useLocationsQuery } from '@work-orders/common/queries/use-locations-que
 import type { Location } from '@work-orders/common/queries/use-locations-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { UseRouter } from './router.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
 export type LocationSelectorProps = {
   onSelect: (location: Location) => void;

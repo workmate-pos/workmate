@@ -3,7 +3,7 @@ import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
 /**
  * Wrapper component that only renders children if the user has the required permissions.

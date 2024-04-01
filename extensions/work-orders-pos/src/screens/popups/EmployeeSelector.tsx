@@ -3,7 +3,7 @@ import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-emp
 import { ID } from '@web/schemas/generated/ids.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useState } from 'react';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 

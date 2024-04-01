@@ -5,7 +5,7 @@ import { Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { OrderLineItem, useOrderLineItemsQuery } from '@work-orders/common/queries/use-order-line-items-query.js';
 import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';

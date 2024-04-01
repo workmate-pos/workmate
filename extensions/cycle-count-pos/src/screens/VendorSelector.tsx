@@ -1,13 +1,16 @@
-import { useVendorsQuery, Vendor } from '@work-orders/common/queries/use-vendors-query.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useState } from 'react';
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { getFormattedAddressSubtitle } from '../../util/formatted-address-subtitle.js';
-import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { useRouter } from '../routes.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { useRouter } from '../../routes.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useVendorsQuery, Vendor } from '@work-orders/common/queries/use-vendors-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
+import { Int } from '@web/schemas/generated/create-product.js';
 
-export function VendorSelector({ onSelect }: { onSelect: (vendor: { vendorName: string }) => void }) {
+export function VendorSelector({ onSelect }: { onSelect: (vendorName: string, productVariantIds: ID[]) => void }) {
   const [query, setQuery] = useState('');
 
   const fetch = useAuthenticatedFetch();
@@ -55,7 +58,11 @@ export function VendorSelector({ onSelect }: { onSelect: (vendor: { vendorName: 
   );
 }
 
-function useVendorRows(vendors: Vendor[], query: string, onSelect: (vendor: { vendorName: string }) => void) {
+function useVendorRows(
+  vendors: Vendor[],
+  query: string,
+  onSelect: (vendorName: string, productVariantIds: ID[]) => void,
+) {
   query = query.trim();
 
   const queryFilter = (vendor: Vendor) => {
@@ -63,20 +70,38 @@ function useVendorRows(vendors: Vendor[], query: string, onSelect: (vendor: { ve
   };
 
   const router = useRouter();
+  const fetch = useAuthenticatedFetch();
+  const screen = useScreen();
+
+  const { session } = useExtensionApi<'pos.home.modal.render'>();
+
+  const [vendorName, setVendorName] = useState<string>();
+  const productVariantsQuery = useProductVariantsQuery({
+    fetch,
+    params: { query: `vendor:"${vendorName}" AND location_id:${session.currentSession.locationId}`, first: 50 as Int },
+    options: { enabled: !!vendorName },
+  });
+
+  screen.setIsLoading(!!vendorName);
+
+  if (vendorName && !productVariantsQuery.isFetching) {
+    if (productVariantsQuery.hasNextPage || productVariantsQuery.isIdle) {
+      productVariantsQuery.fetchNextPage();
+    } else {
+      setVendorName(undefined);
+      screen.setIsLoading(false);
+      onSelect(vendorName, productVariantsQuery.data?.pages.flat().map(pv => pv.id) ?? []);
+      router.popCurrent();
+    }
+  }
 
   return vendors.filter(queryFilter).map<ListRow>(vendor => ({
     id: vendor.name,
     onPress: () => {
-      onSelect({
-        vendorName: vendor.name,
-      });
-      router.popCurrent();
+      setVendorName(vendor.name);
     },
     leftSide: {
       label: vendor.name,
-      subtitle: vendor.customer?.defaultAddress
-        ? getFormattedAddressSubtitle(vendor.customer.defaultAddress.formatted)
-        : undefined,
     },
     rightSide: {
       showChevron: true,

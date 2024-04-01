@@ -9,3 +9,15 @@ mutation adjust($input: InventoryAdjustQuantitiesInput!) {
     }
   }
 }
+
+mutation setOnHand($input: InventorySetOnHandQuantitiesInput!) {
+  inventorySetOnHandQuantities(input: $input) {
+    userErrors {
+      field
+      message
+    }
+    inventoryAdjustmentGroup {
+      id
+    }
+  }
+}

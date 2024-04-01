@@ -1,7 +1,6 @@
 import { Text, ScrollView, Stack, List, ListRow } from '@shopify/retail-ui-extensions-react';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useState } from 'react';
 import { Router, UseRouter } from '../router.js';
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
@@ -9,6 +8,7 @@ import {
   CustomFieldsPreset,
   useCustomFieldsPresetsQuery,
 } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
 export type ImportPresetProps = {
   onImport: (preset: { keys: string[] }) => void;

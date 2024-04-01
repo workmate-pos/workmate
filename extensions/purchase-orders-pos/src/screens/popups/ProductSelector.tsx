@@ -7,7 +7,7 @@ import { useInventoryItemQueries } from '@work-orders/common/queries/use-invento
 import { useRouter } from '../../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';

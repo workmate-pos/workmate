@@ -3,13 +3,13 @@ import { ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-ext
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { UseRouter } from '../router.js';
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useCustomFieldsPresetsMutation } from '@work-orders/common/queries/use-custom-fields-presets-mutation.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
 export type SavePresetProps = {
   keys: [string, ...string[]];

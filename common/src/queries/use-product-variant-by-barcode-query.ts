@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient, UseQueryOptions } from 'react-query';
+import { useQueries, useQuery, useQueryClient, UseQueryOptions } from 'react-query';
 import { Fetch } from './fetch.js';
 import type { FetchProductVariantResponse } from '@web/controllers/api/product-variant.js';
 import { UseQueryData } from './react-query.js';
@@ -20,12 +20,14 @@ export const useProductVariantByBarcodeQuery = (
     queryKey: ['product-variant-by-barcode', barcode],
     queryFn: async () => {
       const response = await fetch(`/api/product-variant/barcode/${encodeURIComponent(barcode)}`);
-      const { productVariant }: FetchProductVariantResponse = await response.json();
 
-      return productVariant;
-    },
-    onSuccess(...args) {
-      const [productVariant] = args;
+      let productVariant: FetchProductVariantResponse['productVariant'] | null = null;
+
+      if (response.ok) {
+        ({ productVariant } = await response.json());
+      } else if (response.status !== 404) {
+        throw new Error('Error fetching product variant by barcode');
+      }
 
       if (productVariant) {
         queryClient.setQueryData(
@@ -34,7 +36,48 @@ export const useProductVariantByBarcodeQuery = (
         );
       }
 
-      options?.onSuccess?.(...args);
+      return productVariant;
     },
   });
+};
+
+export const useProductVariantByBarcodeQueries = (
+  { fetch, barcodes }: { fetch: Fetch; barcodes: string[] },
+  options?: UseQueryOptions<
+    FetchProductVariantResponse['productVariant'],
+    unknown,
+    FetchProductVariantResponse['productVariant'],
+    string[]
+  >,
+) => {
+  const queryClient = useQueryClient();
+
+  const queries = useQueries(
+    barcodes.map(barcode => ({
+      ...options,
+      queryKey: ['product-variant-by-barcode', barcode],
+      queryFn: async () => {
+        const response = await fetch(`/api/product-variant/barcode/${encodeURIComponent(barcode)}`);
+
+        let productVariant: FetchProductVariantResponse['productVariant'] | null = null;
+
+        if (response.ok) {
+          ({ productVariant } = await response.json());
+        } else if (response.status !== 404) {
+          throw new Error('Error fetching product variant by barcode');
+        }
+
+        if (productVariant) {
+          queryClient.setQueryData(
+            ['product-variant', productVariant.id],
+            productVariant satisfies UseQueryData<typeof useProductVariantQuery>,
+          );
+        }
+
+        return productVariant;
+      },
+    })),
+  );
+
+  return Object.fromEntries(barcodes.map((barcode, i) => [barcode, queries[i]!]));
 };

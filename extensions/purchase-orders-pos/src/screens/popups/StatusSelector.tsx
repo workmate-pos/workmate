@@ -3,7 +3,7 @@ import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useRouter } from '../../routes.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 
 export function StatusSelector({ onSelect }: { onSelect: (status: string) => void }) {

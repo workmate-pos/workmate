@@ -30,7 +30,7 @@ import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js'
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { extractErrorMessage } from '@teifi-digital/pos-tools/utils/errors.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
 import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';
