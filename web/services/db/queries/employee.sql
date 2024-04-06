@@ -36,3 +36,9 @@ RETURNING *;
 DELETE FROM "Employee"
 WHERE shop = :shop!
 AND "employeeId" IN :employeeIds!;
+
+/* @name doEmployeesExist */
+SELECT EXISTS (
+  SELECT 1
+  FROM "Employee"
+) AS "exists";
