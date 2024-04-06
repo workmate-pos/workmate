@@ -6,6 +6,8 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import fetch from 'node-fetch';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { db } from '../db/db.js';
 
 export async function sendPurchaseOrderWebhook(session: Session, name: string) {
   const purchaseOrder = await getPurchaseOrder(session, name);
@@ -21,6 +23,8 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
   if (!endpointUrl) {
     return;
   }
+
+  const [{ id } = never()] = await db.purchaseOrder.get({ name });
 
   const url = new URL(endpointUrl);
 
@@ -41,6 +45,7 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
 
   const payload: PurchaseOrderWebhookBody = {
     purchaseOrder: {
+      id,
       customFields: purchaseOrder.customFields,
       name: purchaseOrder.name,
       deposited: purchaseOrder.deposited,

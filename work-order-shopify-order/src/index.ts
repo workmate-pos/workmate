@@ -119,6 +119,7 @@ export function getWorkOrderLineItems(
       }
     }
 
+    lineItem.quantity = Math.max(1, lineItem.quantity);
     lineItem.customAttributes[`${ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${uuid}`] = String(item.quantity);
 
     const linkedCharges = charges.filter(charge => charge.workOrderItemUuid === uuid);

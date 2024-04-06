@@ -60,7 +60,7 @@ export function EmployeeLabourConfig({
         <SegmentedLabourControl
           types={['hourly-labour', 'fixed-price-labour']}
           charge={labour}
-          onChange={labour => setLabour(current => ({ ...current, ...labour }))}
+          onChange={labour => setLabour(current => ({ employeeId: current.employeeId, ...labour }))}
           defaultHourlyRate={employeeQuery?.data?.rate}
         />
 

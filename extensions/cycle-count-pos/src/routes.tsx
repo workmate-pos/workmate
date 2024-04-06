@@ -5,6 +5,7 @@ import { Entry } from './screens/Entry.js';
 import { Camera } from './screens/Camera.js';
 import { VendorSelector } from './screens/VendorSelector.js';
 import { ProductConfig } from './screens/ProductConfig.js';
+import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -12,7 +13,9 @@ export const { Router, useRouter } = createRouter(
     Component: () => {
       return (
         <ScrollView>
-          <Entry />
+          <ScreenPermissionBoundary permissions={['cycle_count']}>
+            <Entry />
+          </ScreenPermissionBoundary>
         </ScrollView>
       );
     },

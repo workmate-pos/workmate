@@ -10,6 +10,10 @@ export type PurchaseOrderInfo = PurchaseOrder;
 
 export type PurchaseOrderWebhookBody = {
   purchaseOrder: {
+    /**
+     * Included to allow consumers to have a stable reference.
+     */
+    id: number;
     name: string;
     shipFrom: string;
     shipTo: string;
