@@ -14,12 +14,15 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldConfig.js';
 import { ImportPreset, ImportPresetProps } from '@work-orders/common-pos/screens/custom-fields/ImportPreset.js';
 import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
-import { CustomFieldFilterConfig } from './screens/popups/CustomFieldFilterConfig.js';
 import { PrintOverview } from './screens/PrintOverview.js';
 import { OrderProductSelector } from './screens/popups/OrderProductSelector.js';
 import { OrderSelector } from './screens/popups/OrderSelector.js';
 import { ScrollView } from '@shopify/retail-ui-extensions-react';
 import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
+import {
+  CustomFieldFilterConfig,
+  CustomFieldFilterConfigProps,
+} from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -96,7 +99,9 @@ export const { Router, useRouter } = createRouter(
     },
     CustomFieldFilterConfig: {
       title: 'Custom Field Filters',
-      Component: CustomFieldFilterConfig,
+      Component: (props: Omit<CustomFieldFilterConfigProps, 'useRouter'>) => (
+        <CustomFieldFilterConfig {...props} useRouter={useRouter} />
+      ),
     },
     PrintOverview: {
       title: 'Print Overview',

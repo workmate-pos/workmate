@@ -3,7 +3,7 @@ import { Fetch } from './fetch.js';
 import { useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
 import { FetchPurchaseOrderInfoPageResponse } from '@web/controllers/api/purchase-orders.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
-import { CustomFieldFilter } from '@web/services/purchase-orders/get.js';
+import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 
 export const usePurchaseOrderInfoPageQuery = (
   {

@@ -10,11 +10,11 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { getCustomFieldFilterText } from './popups/CustomFieldFilterConfig.js';
-import { CustomFieldFilter } from '@web/services/purchase-orders/get.js';
 import { defaultCreatePurchaseOrder } from '@work-orders/common/create-purchase-order/default.js';
 import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
+import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');

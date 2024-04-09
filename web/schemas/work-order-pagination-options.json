@@ -25,6 +25,12 @@
     },
     "customerId": {
       "$ref": "scalars.json#/definitions/ID"
+    },
+    "customFieldFilters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": ["limit", "offset"],

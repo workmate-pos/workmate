@@ -22,7 +22,12 @@ SELECT *
 FROM "WorkOrderCustomField"
 WHERE "workOrderId" = :workOrderId!;
 
-/* @name getPage */
+/*
+  @name getPage
+  @param requiredCustomFieldFilters -> ((key, value, inverse!)...)
+*/
+WITH "CustomFieldFilters" AS (SELECT row_number() over () as row, key, val, inverse
+                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS "CustomFieldFilters"(key, val, inverse))
 SELECT wo.*
 FROM "WorkOrder" wo
        LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
@@ -44,6 +49,14 @@ WHERE wo.shop = :shop!
               WHERE fpl."workOrderId" = wo.id
                 AND "employeeId" = ANY (:employeeIds)) OR :employeeIds IS NULL)
   AND wo."customerId" = COALESCE(:customerId, wo."customerId")
+  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
+       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
+             FROM (SELECT filter.row, ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse
+                   FROM "CustomFieldFilters" filter
+                          LEFT JOIN "WorkOrderCustomField" wocf
+                                    ON (wocf."workOrderId" = wo.id AND
+                                        wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)
+             GROUP BY row) b(row, match))
 ORDER BY wo.id DESC
 LIMIT :limit! OFFSET :offset;
 

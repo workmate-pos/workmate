@@ -23,6 +23,10 @@ import { ImportPreset, ImportPresetProps } from '@work-orders/common-pos/screens
 import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 import { ProductCreator, ProductCreatorProps } from '@work-orders/common-pos/screens/product-creator/ProductCreator.js';
 import { PrintOverview } from './screens/popups/PrintOverview.js';
+import {
+  CustomFieldFilterConfig,
+  CustomFieldFilterConfigProps,
+} from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -112,6 +116,12 @@ export const { Router, useRouter } = createRouter(
     ProductCreator: {
       title: 'Create Product',
       Component: (props: Omit<ProductCreatorProps, 'useRouter'>) => <ProductCreator {...props} useRouter={useRouter} />,
+    },
+    CustomFieldFilterConfig: {
+      title: 'Custom Field Filters',
+      Component: (props: Omit<CustomFieldFilterConfigProps, 'useRouter'>) => (
+        <CustomFieldFilterConfig {...props} useRouter={useRouter} />
+      ),
     },
     PrintOverview: {
       title: 'Print',

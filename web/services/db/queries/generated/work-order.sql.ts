@@ -152,6 +152,11 @@ export interface IGetPageParams {
   limit: NumberOrString;
   offset?: NumberOrString | null | void;
   query?: string | null | void;
+  requiredCustomFieldFilters: readonly ({
+    key: string | null | void,
+    value: string | null | void,
+    inverse: boolean
+  })[];
   shop: string;
   status?: string | null | void;
 }
@@ -176,11 +181,13 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"employeeIds":true,"customerId":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":119}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":148,"b":154}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":203,"b":208},{"a":246,"b":251},{"a":297,"b":302},{"a":340,"b":345},{"a":383,"b":388}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":560,"b":571},{"a":578,"b":589},{"a":766,"b":777},{"a":784,"b":795}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":839,"b":849}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":895,"b":901}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":910,"b":916}]}],"statement":"SELECT wo.*\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"Customer\" c ON wo.\"customerId\" = c.\"customerId\"\nWHERE wo.shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR c.phone ILIKE COALESCE(:query, '%')\n    OR c.email ILIKE COALESCE(:query, '%')\n  )\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderHourlyLabourCharge\" hl\n              WHERE hl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderFixedPriceLabourCharge\" fpl\n              WHERE fpl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND wo.\"customerId\" = COALESCE(:customerId, wo.\"customerId\")\nORDER BY wo.id DESC\nLIMIT :limit! OFFSET :offset"};
+const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"query":true,"employeeIds":true,"customerId":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":340,"b":345}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":374,"b":380}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":429,"b":434},{"a":472,"b":477},{"a":523,"b":528},{"a":566,"b":571},{"a":609,"b":614}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":786,"b":797},{"a":804,"b":815},{"a":992,"b":1003},{"a":1010,"b":1021}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":1065,"b":1075}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":1771,"b":1777}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":1786,"b":1792}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT wo.*\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"Customer\" c ON wo.\"customerId\" = c.\"customerId\"\nWHERE wo.shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR c.phone ILIKE COALESCE(:query, '%')\n    OR c.email ILIKE COALESCE(:query, '%')\n  )\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderHourlyLabourCharge\" hl\n              WHERE hl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderFixedPriceLabourCharge\" fpl\n              WHERE fpl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND wo.\"customerId\" = COALESCE(:customerId, wo.\"customerId\")\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row, ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"WorkOrderCustomField\" wocf\n                                    ON (wocf.\"workOrderId\" = wo.id AND\n                                        wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nORDER BY wo.id DESC\nLIMIT :limit! OFFSET :offset"};
 
 /**
  * Query generated from SQL:
  * ```
+ * WITH "CustomFieldFilters" AS (SELECT row_number() over () as row, key, val, inverse
+ *                               FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS "CustomFieldFilters"(key, val, inverse))
  * SELECT wo.*
  * FROM "WorkOrder" wo
  *        LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
@@ -202,6 +209,14 @@ const getPageIR: any = {"usedParamSet":{"shop":true,"status":true,"query":true,"
  *               WHERE fpl."workOrderId" = wo.id
  *                 AND "employeeId" = ANY (:employeeIds)) OR :employeeIds IS NULL)
  *   AND wo."customerId" = COALESCE(:customerId, wo."customerId")
+ *   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
+ *        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
+ *              FROM (SELECT filter.row, ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse
+ *                    FROM "CustomFieldFilters" filter
+ *                           LEFT JOIN "WorkOrderCustomField" wocf
+ *                                     ON (wocf."workOrderId" = wo.id AND
+ *                                         wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)
+ *              GROUP BY row) b(row, match))
  * ORDER BY wo.id DESC
  * LIMIT :limit! OFFSET :offset
  * ```

@@ -27,11 +27,14 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
+import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<ID | null>(null);
   const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
+  const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
@@ -42,6 +45,7 @@ export function Entry() {
     employeeIds,
     status: status ?? undefined,
     customerId: customerId ?? undefined,
+    customFieldFilters,
   });
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
   const customerQuery = useCustomerQuery({ fetch, id: customerId });
@@ -133,6 +137,16 @@ export function Entry() {
               })
             }
           />
+          <Button
+            title={'Filter custom fields'}
+            type={'plain'}
+            onPress={() =>
+              router.push('CustomFieldFilterConfig', {
+                onSave: setCustomFieldFilters,
+                initialFilters: customFieldFilters,
+              })
+            }
+          />
         </ResponsiveStack>
         <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
@@ -170,6 +184,21 @@ export function Entry() {
           </Text>
         ))}
       </Stack>
+
+      <ResponsiveStack direction={'vertical'} spacing={1} paddingVertical={'ExtraSmall'}>
+        {customFieldFilters.length > 0 && (
+          <>
+            <Text variant="body" color="TextSubdued">
+              Custom Fields:
+            </Text>
+            {customFieldFilters.map((filter, i) => (
+              <Text key={i} variant="body" color="TextSubdued">
+                • {getCustomFieldFilterText(filter)}
+              </Text>
+            ))}
+          </>
+        )}
+      </ResponsiveStack>
       <ControlledSearchBar
         value={query}
         onTextChange={(query: string) => setQuery(query, query === '')}
@@ -217,8 +246,6 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const router = useRouter();
   const screen = useScreen();
   screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isFetching));
-
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   return workOrderInfos.flatMap<ListRow>(({ name, status, dueDate, orders, customer }) => {
     const query = workOrderQueries[name];

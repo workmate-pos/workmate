@@ -4,6 +4,7 @@ import { Fetch } from './fetch.js';
 import { useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
 import { WorkOrderInfo } from '@web/services/work-orders/types.js';
 import { ID } from '@web/schemas/generated/ids.js';
+import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 
 export const useWorkOrderInfoQuery = (
   {
@@ -12,8 +13,13 @@ export const useWorkOrderInfoQuery = (
     status,
     employeeIds,
     customerId,
+    customFieldFilters,
     limit = 10,
-  }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset'> & { limit?: number; fetch: Fetch },
+  }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset' | 'customFieldFilters'> & {
+    limit?: number;
+    fetch: Fetch;
+    customFieldFilters: CustomFieldFilter[];
+  },
   options?: UseInfiniteQueryOptions<
     WorkOrderInfo[],
     unknown,
@@ -27,13 +33,14 @@ export const useWorkOrderInfoQuery = (
           limit: number;
           employeeIds: ID[] | undefined;
           customerId: ID | undefined;
+          customFieldFilters: CustomFieldFilter[];
         }
     )[]
   >,
 ) =>
   useInfiniteQuery({
     ...options,
-    queryKey: ['work-order-info', { query, status, limit, employeeIds, customerId }],
+    queryKey: ['work-order-info', { query, status, limit, employeeIds, customerId, customFieldFilters }],
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams({
         limit: String(limit),
@@ -43,6 +50,10 @@ export const useWorkOrderInfoQuery = (
       if (query) searchParams.set('query', query);
       if (status) searchParams.set('status', status);
       if (customerId) searchParams.set('customerId', customerId);
+
+      for (const filter of customFieldFilters) {
+        searchParams.append('customFieldFilters', JSON.stringify(filter));
+      }
 
       for (const employeeId of employeeIds ?? []) {
         searchParams.append('employeeIds', employeeId);

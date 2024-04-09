@@ -16,8 +16,11 @@ import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { groupByKey, indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { Value } from '@sinclair/typebox/value';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { CustomFieldFilterSchema } from '../custom-field-filters.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
@@ -217,6 +220,18 @@ export async function getWorkOrderInfoPage(
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
   }
 
+  const customFieldFilters =
+    paginationOptions.customFieldFilters?.map(json => {
+      const parsed = JSON.parse(json);
+      try {
+        return Value.Decode(CustomFieldFilterSchema, parsed);
+      } catch (e) {
+        throw new HttpError('Invalid custom field filter', 400);
+      }
+    }) ?? [];
+
+  const requireCustomFieldFilters = customFieldFilters.filter(hasPropertyValue('type', 'require-field')) ?? [];
+
   const page = await db.workOrder.getPage({
     shop: session.shop,
     status: paginationOptions.status,
@@ -225,6 +240,8 @@ export async function getWorkOrderInfoPage(
     query: paginationOptions.query,
     employeeIds: paginationOptions.employeeIds,
     customerId: paginationOptions.customerId,
+    // the first filter is always skipped by the sql to ensure we can run this query without running into the empty record error
+    requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
   });
 
   const customerIds = unique(page.map(workOrder => workOrder.customerId));
