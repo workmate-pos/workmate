@@ -48,8 +48,8 @@ export const fixedPriceLabourChargeMetaobject = {
       type: 'fixed-price-labour-charge',
       name: metaobject.name?.value ?? never(),
       amount: parseMoney(metaobject.amount?.value),
-      customizeAmount: parseBoolean(metaobject.customizeAmount?.value),
-      removable: parseBoolean(metaobject.removable?.value),
+      customizeAmount: parseBoolean(metaobject.customizeAmount?.value ?? 'true'),
+      removable: parseBoolean(metaobject.removable?.value ?? 'true'),
     } as const;
   },
 } as const satisfies MetaobjectDefinition;

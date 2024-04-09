@@ -61,9 +61,9 @@ export const hourlyLabourChargeMetaobject = {
       name: metaobject.name?.value ?? never(),
       rate: parseMoney(metaobject.rate?.value),
       hours: parseDecimal(metaobject.hours?.value),
-      customizeRate: parseBoolean(metaobject.customizeRate?.value),
-      customizeHours: parseBoolean(metaobject.customizeHours?.value),
-      removable: parseBoolean(metaobject.removable?.value),
+      customizeRate: parseBoolean(metaobject.customizeRate?.value ?? 'true'),
+      customizeHours: parseBoolean(metaobject.customizeHours?.value ?? 'true'),
+      removable: parseBoolean(metaobject.removable?.value ?? 'true'),
     } as const;
   },
 } as const satisfies MetaobjectDefinition;
