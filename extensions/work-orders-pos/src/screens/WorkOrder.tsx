@@ -1,4 +1,12 @@
-import { Banner, List, ListRow, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import {
+  BadgeProps,
+  Banner,
+  List,
+  ListRow,
+  ScrollView,
+  Text,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
@@ -16,7 +24,7 @@ import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
@@ -403,15 +411,13 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
 
   const { workOrderQuery, getItemOrdersIncludingCharges } = useWorkOrderOrders(createWorkOrder.name);
 
+  const isLoading = [workOrderQuery, ...Object.values(productVariantQueries)].some(query => query.isLoading);
+
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(
-    workOrderQuery.isLoading ||
-      Object.values(productVariantQueries).some(query => query.isLoading) ||
-      workOrderQuery.isLoading,
-  );
-
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
+
+  screen.setIsLoading(isLoading);
 
   function queryFilter(productVariant?: ProductVariant | null) {
     return (
@@ -420,12 +426,15 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
   }
 
   return createWorkOrder.items
-    .map(item => ({
-      item,
-      productVariant: productVariantQueries[item.productVariantId]?.data,
-    }))
+    .map(item => {
+      return {
+        item,
+        productVariant: productVariantQueries[item.productVariantId]?.data,
+        purchaseOrders: workOrderQuery.data?.workOrder?.items.find(i => i.uuid === item.uuid)?.purchaseOrders ?? [],
+      };
+    })
     .filter(({ productVariant }) => queryFilter(productVariant))
-    .map<ListRow>(({ item, productVariant }) => {
+    .map<ListRow>(({ item, productVariant, purchaseOrders }) => {
       const isMutableService = productVariant?.product.isMutableServiceItem ?? false;
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
       const hasCharges = charges.length > 0;
@@ -451,7 +460,19 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
             source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
             badge: (!isMutableService && !hasCharges) || item.quantity > 1 ? item.quantity : undefined,
           },
-          badges: unique(orders.map(order => order.name)).map(orderName => ({ text: orderName, variant: 'highlight' })),
+          badges: [
+            ...unique(orders.map(order => order.name)).map<BadgeProps>(orderName => ({
+              text: orderName,
+              variant: 'highlight',
+            })),
+            ...purchaseOrders.map<BadgeProps>(po => {
+              const availableQuantity = sum(po.items.map(item => item.availableQuantity));
+              const quantity = sum(po.items.map(item => item.quantity));
+              const status =
+                availableQuantity === quantity ? 'complete' : availableQuantity === 0 ? 'empty' : 'partial';
+              return { text: po.name, variant: 'highlight', status } as const;
+            }),
+          ],
         },
         rightSide: {
           label: currencyFormatter(totalPrice.toMoney()),

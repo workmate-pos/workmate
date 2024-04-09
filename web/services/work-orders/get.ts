@@ -15,7 +15,7 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { groupByKey, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { groupByKey, indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
@@ -76,13 +76,48 @@ async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> 
   );
   const lineItemById = await getLineItemsById(lineItemIds);
 
+  const purchaseOrderLineItems = lineItemIds.length
+    ? await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemIds({
+        shopifyOrderLineItemIds: lineItemIds,
+      })
+    : [];
+
+  const purchaseOrderIds = unique(purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId));
+
+  const purchaseOrders = purchaseOrderIds.length ? await db.purchaseOrder.getMany({ purchaseOrderIds }) : [];
+  const purchaseOrderById = indexBy(purchaseOrders, po => String(po.id));
+
   return items.map<WorkOrderItem>(item => {
     assertGidOrNull(item.shopifyOrderLineItemId);
     assertGid(item.productVariantId);
 
+    const itemPurchaseOrderLineItems = purchaseOrderLineItems.filter(
+      li => li.shopifyOrderLineItemId === item.shopifyOrderLineItemId && item.shopifyOrderLineItemId !== null,
+    );
+
+    const itemPurchaseOrders = itemPurchaseOrderLineItems.map(
+      poLineItem => purchaseOrderById[poLineItem.purchaseOrderId] ?? never('fk'),
+    );
+
     return {
       uuid: item.uuid,
-      shopifyOrderLineItem: item.shopifyOrderLineItemId ? lineItemById[item.shopifyOrderLineItemId] ?? never() : null,
+      shopifyOrderLineItem: item.shopifyOrderLineItemId
+        ? lineItemById[item.shopifyOrderLineItemId] ?? never('fk')
+        : null,
+      purchaseOrders: itemPurchaseOrders.map(po => ({
+        name: po.name,
+        items: itemPurchaseOrderLineItems
+          .filter(li => li.purchaseOrderId === po.id)
+          .map(li => {
+            assertMoney(li.unitCost);
+
+            return {
+              unitCost: li.unitCost,
+              quantity: li.quantity as Int,
+              availableQuantity: li.availableQuantity as Int,
+            };
+          }),
+      })),
       productVariantId: item.productVariantId,
       quantity: item.quantity as Int,
       absorbCharges: item.absorbCharges,

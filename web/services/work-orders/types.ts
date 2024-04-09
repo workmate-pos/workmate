@@ -21,6 +21,18 @@ export type WorkOrderItem = {
   productVariantId: ID;
   quantity: Int;
   absorbCharges: boolean;
+  purchaseOrders: WorkOrderPurchaseOrder[];
+};
+
+export type WorkOrderPurchaseOrder = {
+  name: string;
+  items: WorkOrderPurchaseOrderItem[];
+};
+
+export type WorkOrderPurchaseOrderItem = {
+  unitCost: Money;
+  quantity: Int;
+  availableQuantity: Int;
 };
 
 export type WorkOrderCharge = FixedPriceLabour | HourlyLabour;
