@@ -108,6 +108,11 @@ model WorkOrderFixedPriceLabourCharge {
   name   String
   amount String
 
+  // If locked, only superusers can change it
+
+  amountLocked Boolean
+  removeLocked Boolean
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
@@ -133,6 +138,12 @@ model WorkOrderHourlyLabourCharge {
   name  String
   rate  String
   hours String
+
+  // If locked, only superusers can change it
+
+  rateLocked  Boolean
+  hoursLocked Boolean
+  removeLocked Boolean
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
@@ -275,7 +286,7 @@ model AppPlanCustomAccess {
   shop      String
   type      AppPlanCustomAccessType
 
-  appPlan   AppPlan @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
+  appPlan AppPlan @relation(fields: [appPlanId], references: [id], onDelete: Cascade)
 
   @@id([appPlanId, shop])
 }
@@ -512,16 +523,15 @@ model Location {
   @@index([shop])
 }
 
-
 // Old schema stuff that needs to be re-synced into the new schema
 
 model OldWorkOrder {
-  id                 Int                @id @default(autoincrement())
+  id                 Int                   @id @default(autoincrement())
   shop               String
   name               String
   status             String
   dueDate            DateTime
-  createdAt          DateTime           @default(now())
+  createdAt          DateTime              @default(now())
   customerId         String
   derivedFromOrderId String?
   draftOrderId       String?
@@ -534,9 +544,8 @@ model OldWorkOrder {
   @@index([orderId])
 }
 
-
 model OldFixedPriceLabour {
-  id               Int       @id @default(autoincrement())
+  id               Int          @id @default(autoincrement())
   workOrderId      Int
   lineItemUuid     String?
   productVariantId String?
@@ -549,7 +558,7 @@ model OldFixedPriceLabour {
 }
 
 model OldHourlyLabour {
-  id               Int       @id @default(autoincrement())
+  id               Int          @id @default(autoincrement())
   workOrderId      Int
   lineItemUuid     String?
   productVariantId String?

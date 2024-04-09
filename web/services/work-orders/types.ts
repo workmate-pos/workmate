@@ -45,6 +45,8 @@ export type FixedPriceLabour = {
   employeeId: ID | null;
   name: string;
   amount: Money;
+  amountLocked: boolean;
+  removeLocked: boolean;
 };
 
 export type HourlyLabour = {
@@ -56,6 +58,9 @@ export type HourlyLabour = {
   name: string;
   rate: Money;
   hours: Decimal;
+  rateLocked: boolean;
+  hoursLocked: boolean;
+  removeLocked: boolean;
 };
 
 export type ShopifyOrderLineItem = {

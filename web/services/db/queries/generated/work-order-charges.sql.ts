@@ -5,8 +5,11 @@ import { PreparedQuery } from '@pgtyped/runtime';
 export interface IUpsertHourlyLabourChargeParams {
   employeeId?: string | null | void;
   hours: string;
+  hoursLocked: boolean;
   name: string;
   rate: string;
+  rateLocked: boolean;
+  removeLocked: boolean;
   shopifyOrderLineItemId?: string | null | void;
   uuid: string;
   workOrderId: number;
@@ -22,14 +25,15 @@ export interface IUpsertHourlyLabourChargeQuery {
   result: IUpsertHourlyLabourChargeResult;
 }
 
-const upsertHourlyLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"employeeId":true,"name":true,"rate":true,"hours":true,"workOrderItemUuid":true,"shopifyOrderLineItemId":true,"uuid":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":186,"b":198}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":201,"b":211},{"a":371,"b":381}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":214,"b":219},{"a":417,"b":422}]},{"name":"rate","required":true,"transform":{"type":"scalar"},"locs":[{"a":222,"b":227},{"a":458,"b":463}]},{"name":"hours","required":true,"transform":{"type":"scalar"},"locs":[{"a":230,"b":236},{"a":499,"b":505}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":239,"b":256},{"a":541,"b":558}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":259,"b":281},{"a":594,"b":616}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":284,"b":289}]}],"statement":"INSERT INTO \"WorkOrderHourlyLabourCharge\" (\"workOrderId\", \"employeeId\", name, rate, hours, \"workOrderItemUuid\",\n                                  \"shopifyOrderLineItemId\", uuid)\nVALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"             = :employeeId,\n      name                     = :name!,\n      rate                     = :rate!,\n      hours                    = :hours!,\n      \"workOrderItemUuid\"      = :workOrderItemUuid,\n      \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId"};
+const upsertHourlyLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"employeeId":true,"name":true,"rate":true,"hours":true,"workOrderItemUuid":true,"shopifyOrderLineItemId":true,"uuid":true,"rateLocked":true,"hoursLocked":true,"removeLocked":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":240,"b":252}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":255,"b":265},{"a":478,"b":488}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":268,"b":273},{"a":524,"b":529}]},{"name":"rate","required":true,"transform":{"type":"scalar"},"locs":[{"a":276,"b":281},{"a":565,"b":570}]},{"name":"hours","required":true,"transform":{"type":"scalar"},"locs":[{"a":284,"b":290},{"a":606,"b":612}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":293,"b":310},{"a":648,"b":665}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":313,"b":335},{"a":701,"b":723}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":338,"b":343}]},{"name":"rateLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":354,"b":365},{"a":759,"b":770}]},{"name":"hoursLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":368,"b":380},{"a":806,"b":818}]},{"name":"removeLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":383,"b":396},{"a":854,"b":867}]}],"statement":"INSERT INTO \"WorkOrderHourlyLabourCharge\" (\"workOrderId\", \"employeeId\", name, rate, hours, \"workOrderItemUuid\",\n                                           \"shopifyOrderLineItemId\", uuid, \"rateLocked\", \"hoursLocked\", \"removeLocked\")\nVALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,\n        :rateLocked!, :hoursLocked!, :removeLocked!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"             = :employeeId,\n      name                     = :name!,\n      rate                     = :rate!,\n      hours                    = :hours!,\n      \"workOrderItemUuid\"      = :workOrderItemUuid,\n      \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId,\n      \"rateLocked\"             = :rateLocked!,\n      \"hoursLocked\"            = :hoursLocked!,\n      \"removeLocked\"           = :removeLocked!"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderHourlyLabourCharge" ("workOrderId", "employeeId", name, rate, hours, "workOrderItemUuid",
- *                                   "shopifyOrderLineItemId", uuid)
- * VALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!)
+ *                                            "shopifyOrderLineItemId", uuid, "rateLocked", "hoursLocked", "removeLocked")
+ * VALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,
+ *         :rateLocked!, :hoursLocked!, :removeLocked!)
  * ON CONFLICT ("workOrderId", uuid)
  *   DO UPDATE
  *   SET "employeeId"             = :employeeId,
@@ -37,7 +41,10 @@ const upsertHourlyLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"emp
  *       rate                     = :rate!,
  *       hours                    = :hours!,
  *       "workOrderItemUuid"      = :workOrderItemUuid,
- *       "shopifyOrderLineItemId" = :shopifyOrderLineItemId
+ *       "shopifyOrderLineItemId" = :shopifyOrderLineItemId,
+ *       "rateLocked"             = :rateLocked!,
+ *       "hoursLocked"            = :hoursLocked!,
+ *       "removeLocked"           = :removeLocked!
  * ```
  */
 export const upsertHourlyLabourCharge = new PreparedQuery<IUpsertHourlyLabourChargeParams,IUpsertHourlyLabourChargeResult>(upsertHourlyLabourChargeIR);
@@ -46,8 +53,10 @@ export const upsertHourlyLabourCharge = new PreparedQuery<IUpsertHourlyLabourCha
 /** 'UpsertFixedPriceLabourCharge' parameters type */
 export interface IUpsertFixedPriceLabourChargeParams {
   amount: string;
+  amountLocked: boolean;
   employeeId?: string | null | void;
   name: string;
+  removeLocked: boolean;
   shopifyOrderLineItemId?: string | null | void;
   uuid: string;
   workOrderId: number;
@@ -63,21 +72,24 @@ export interface IUpsertFixedPriceLabourChargeQuery {
   result: IUpsertFixedPriceLabourChargeResult;
 }
 
-const upsertFixedPriceLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"employeeId":true,"name":true,"amount":true,"workOrderItemUuid":true,"shopifyOrderLineItemId":true,"uuid":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":189,"b":201}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":204,"b":214},{"a":367,"b":377}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":217,"b":222},{"a":413,"b":418}]},{"name":"amount","required":true,"transform":{"type":"scalar"},"locs":[{"a":225,"b":232},{"a":454,"b":461}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":235,"b":252},{"a":497,"b":514}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":255,"b":277},{"a":550,"b":572}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":280,"b":285}]}],"statement":"INSERT INTO \"WorkOrderFixedPriceLabourCharge\" (\"workOrderId\", \"employeeId\", name, amount, \"workOrderItemUuid\",\n                                      \"shopifyOrderLineItemId\", uuid)\nVALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"             = :employeeId,\n      name                     = :name!,\n      amount                   = :amount!,\n      \"workOrderItemUuid\"      = :workOrderItemUuid,\n      \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId"};
+const upsertFixedPriceLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"employeeId":true,"name":true,"amount":true,"workOrderItemUuid":true,"shopifyOrderLineItemId":true,"uuid":true,"amountLocked":true,"removeLocked":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":230,"b":242}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":245,"b":255},{"a":448,"b":458}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":258,"b":263},{"a":494,"b":499}]},{"name":"amount","required":true,"transform":{"type":"scalar"},"locs":[{"a":266,"b":273},{"a":535,"b":542}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":276,"b":293},{"a":578,"b":595}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":296,"b":318},{"a":631,"b":653}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":321,"b":326}]},{"name":"amountLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":337,"b":350},{"a":689,"b":702}]},{"name":"removeLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":353,"b":366},{"a":738,"b":751}]}],"statement":"INSERT INTO \"WorkOrderFixedPriceLabourCharge\" (\"workOrderId\", \"employeeId\", name, amount, \"workOrderItemUuid\",\n                                               \"shopifyOrderLineItemId\", uuid, \"amountLocked\", \"removeLocked\")\nVALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,\n        :amountLocked!, :removeLocked!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"             = :employeeId,\n      name                     = :name!,\n      amount                   = :amount!,\n      \"workOrderItemUuid\"      = :workOrderItemUuid,\n      \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId,\n      \"amountLocked\"           = :amountLocked!,\n      \"removeLocked\"           = :removeLocked!"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderFixedPriceLabourCharge" ("workOrderId", "employeeId", name, amount, "workOrderItemUuid",
- *                                       "shopifyOrderLineItemId", uuid)
- * VALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!)
+ *                                                "shopifyOrderLineItemId", uuid, "amountLocked", "removeLocked")
+ * VALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,
+ *         :amountLocked!, :removeLocked!)
  * ON CONFLICT ("workOrderId", uuid)
  *   DO UPDATE
  *   SET "employeeId"             = :employeeId,
  *       name                     = :name!,
  *       amount                   = :amount!,
  *       "workOrderItemUuid"      = :workOrderItemUuid,
- *       "shopifyOrderLineItemId" = :shopifyOrderLineItemId
+ *       "shopifyOrderLineItemId" = :shopifyOrderLineItemId,
+ *       "amountLocked"           = :amountLocked!,
+ *       "removeLocked"           = :removeLocked!
  * ```
  */
 export const upsertFixedPriceLabourCharge = new PreparedQuery<IUpsertFixedPriceLabourChargeParams,IUpsertFixedPriceLabourChargeResult>(upsertFixedPriceLabourChargeIR);
@@ -151,8 +163,11 @@ export interface IGetHourlyLabourChargesResult {
   createdAt: Date;
   employeeId: string | null;
   hours: string;
+  hoursLocked: boolean;
   name: string;
   rate: string;
+  rateLocked: boolean;
+  removeLocked: boolean;
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;
@@ -187,9 +202,11 @@ export interface IGetFixedPriceLabourChargesParams {
 /** 'GetFixedPriceLabourCharges' return type */
 export interface IGetFixedPriceLabourChargesResult {
   amount: string;
+  amountLocked: boolean;
   createdAt: Date;
   employeeId: string | null;
   name: string;
+  removeLocked: boolean;
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;
@@ -227,8 +244,11 @@ export interface IGetHourlyLabourChargesByUuidsResult {
   createdAt: Date;
   employeeId: string | null;
   hours: string;
+  hoursLocked: boolean;
   name: string;
   rate: string;
+  rateLocked: boolean;
+  removeLocked: boolean;
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;
@@ -265,9 +285,11 @@ export interface IGetFixedPriceLabourChargesByUuidsParams {
 /** 'GetFixedPriceLabourChargesByUuids' return type */
 export interface IGetFixedPriceLabourChargesByUuidsResult {
   amount: string;
+  amountLocked: boolean;
   createdAt: Date;
   employeeId: string | null;
   name: string;
+  removeLocked: boolean;
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;

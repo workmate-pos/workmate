@@ -334,8 +334,11 @@ export interface IGetUnlinkedHourlyLabourChargesResult {
   createdAt: Date;
   employeeId: string | null;
   hours: string;
+  hoursLocked: boolean;
   name: string;
   rate: string;
+  rateLocked: boolean;
+  removeLocked: boolean;
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;
@@ -371,9 +374,11 @@ export interface IGetUnlinkedFixedPriceLabourChargesParams {
 /** 'GetUnlinkedFixedPriceLabourCharges' return type */
 export interface IGetUnlinkedFixedPriceLabourChargesResult {
   amount: string;
+  amountLocked: boolean;
   createdAt: Date;
   employeeId: string | null;
   name: string;
+  removeLocked: boolean;
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;

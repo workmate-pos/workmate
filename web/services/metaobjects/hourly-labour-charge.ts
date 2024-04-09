@@ -1,7 +1,7 @@
 import type { MetaobjectDefinition } from './index.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { Decimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { gql } from '../gql/gql.js';
+import { parseBoolean, parseDecimal, parseMoney } from './parsers.js';
 
 export const hourlyLabourChargeMetaobject = {
   definition: {
@@ -27,9 +27,30 @@ export const hourlyLabourChargeMetaobject = {
         required: true,
       },
       {
+        name: 'Customize Hourly Rate',
+        key: 'customize-rate',
+        type: 'boolean',
+        description: 'Whether the rate can be changed by inside of POS',
+        required: true,
+      },
+      {
         name: 'Hours',
         key: 'hours',
         type: 'number_decimal',
+        required: true,
+      },
+      {
+        name: 'Customize Hours',
+        key: 'customize-hours',
+        type: 'boolean',
+        description: 'Whether the hours can be changed by inside of POS',
+        required: true,
+      },
+      {
+        name: 'Removable',
+        key: 'removable',
+        type: 'boolean',
+        description: 'Whether this charge can be removed',
         required: true,
       },
     ],
@@ -38,8 +59,11 @@ export const hourlyLabourChargeMetaobject = {
     return {
       type: 'hourly-labour-charge',
       name: metaobject.name?.value ?? never(),
-      rate: JSON.parse(metaobject.rate?.value ?? never()).amount as Money,
-      hours: JSON.parse(metaobject.hours?.value ?? never()) as Decimal,
+      rate: parseMoney(metaobject.rate?.value),
+      hours: parseDecimal(metaobject.hours?.value),
+      customizeRate: parseBoolean(metaobject.customizeRate?.value),
+      customizeHours: parseBoolean(metaobject.customizeHours?.value),
+      removable: parseBoolean(metaobject.removable?.value),
     } as const;
   },
 } as const satisfies MetaobjectDefinition;

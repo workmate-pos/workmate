@@ -35,6 +35,9 @@ function mapCharge(charge: WorkOrder['charges'][number]): CreateWorkOrderCharge 
       hours: charge.hours,
       rate: charge.rate,
       name: charge.name,
+      hoursLocked: charge.hoursLocked,
+      rateLocked: charge.rateLocked,
+      removeLocked: charge.removeLocked,
     };
   }
 
@@ -46,6 +49,8 @@ function mapCharge(charge: WorkOrder['charges'][number]): CreateWorkOrderCharge 
       amount: charge.amount,
       uuid: charge.uuid,
       name: charge.name,
+      amountLocked: charge.amountLocked,
+      removeLocked: charge.removeLocked,
     };
   }
 

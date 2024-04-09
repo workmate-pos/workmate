@@ -1,7 +1,8 @@
 /* @name upsertHourlyLabourCharge */
 INSERT INTO "WorkOrderHourlyLabourCharge" ("workOrderId", "employeeId", name, rate, hours, "workOrderItemUuid",
-                                  "shopifyOrderLineItemId", uuid)
-VALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!)
+                                           "shopifyOrderLineItemId", uuid, "rateLocked", "hoursLocked", "removeLocked")
+VALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,
+        :rateLocked!, :hoursLocked!, :removeLocked!)
 ON CONFLICT ("workOrderId", uuid)
   DO UPDATE
   SET "employeeId"             = :employeeId,
@@ -9,19 +10,25 @@ ON CONFLICT ("workOrderId", uuid)
       rate                     = :rate!,
       hours                    = :hours!,
       "workOrderItemUuid"      = :workOrderItemUuid,
-      "shopifyOrderLineItemId" = :shopifyOrderLineItemId;
+      "shopifyOrderLineItemId" = :shopifyOrderLineItemId,
+      "rateLocked"             = :rateLocked!,
+      "hoursLocked"            = :hoursLocked!,
+      "removeLocked"           = :removeLocked!;
 
 /* @name upsertFixedPriceLabourCharge */
 INSERT INTO "WorkOrderFixedPriceLabourCharge" ("workOrderId", "employeeId", name, amount, "workOrderItemUuid",
-                                      "shopifyOrderLineItemId", uuid)
-VALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!)
+                                               "shopifyOrderLineItemId", uuid, "amountLocked", "removeLocked")
+VALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,
+        :amountLocked!, :removeLocked!)
 ON CONFLICT ("workOrderId", uuid)
   DO UPDATE
   SET "employeeId"             = :employeeId,
       name                     = :name!,
       amount                   = :amount!,
       "workOrderItemUuid"      = :workOrderItemUuid,
-      "shopifyOrderLineItemId" = :shopifyOrderLineItemId;
+      "shopifyOrderLineItemId" = :shopifyOrderLineItemId,
+      "amountLocked"           = :amountLocked!,
+      "removeLocked"           = :removeLocked!;
 
 /* @name removeHourlyLabourCharge */
 DELETE

@@ -1,5 +1,4 @@
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
-import { uuid } from '../util/uuid.js';
 import { CreateWorkOrderCharge } from '../types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 
@@ -13,6 +12,8 @@ export function productVariantDefaultChargeToCreateWorkOrderCharge(
         name: charge.name,
         amount: charge.amount,
         employeeId: null,
+        amountLocked: !charge.customizeAmount,
+        removeLocked: !charge.removable,
       };
     }
 
@@ -23,6 +24,9 @@ export function productVariantDefaultChargeToCreateWorkOrderCharge(
         rate: charge.rate,
         hours: charge.hours,
         employeeId: null,
+        rateLocked: !charge.customizeRate,
+        hoursLocked: !charge.customizeHours,
+        removeLocked: !charge.removable,
       };
     }
 

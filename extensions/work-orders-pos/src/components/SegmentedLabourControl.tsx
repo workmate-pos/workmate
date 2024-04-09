@@ -52,6 +52,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
 
   const shouldShowSegment = (type: SegmentTypes[number]) => {
     if (type === charge?.type) return true;
+    if (charge?.removeLocked) return false;
     const toggleName = segmentToggleName[type];
     if (!toggleName) return true;
     return settings.chargeSettings[toggleName];
@@ -65,10 +66,11 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
 
   const selectedSegmentId = charge?.type ?? 'none';
 
-  const canResetLabour =
+  const canResetLabourRate =
     defaultHourlyRate &&
     charge?.type === 'hourly-labour' &&
-    !BigDecimal.fromMoney(defaultHourlyRate).equals(BigDecimal.fromMoney(charge.rate));
+    !BigDecimal.fromMoney(defaultHourlyRate).equals(BigDecimal.fromMoney(charge.rate)) &&
+    !charge.rateLocked;
 
   const onSelect = (id: SegmentTypes[number]) => {
     switch (id) {
@@ -82,6 +84,8 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
           type: 'fixed-price-labour',
           name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
           amount: getTotalPriceForCharges(charge ? [charge] : []),
+          amountLocked: false,
+          removeLocked: false,
         };
 
         onChange(fixedPriceLabour as any);
@@ -94,6 +98,9 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
           name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
           rate: getTotalPriceForCharges(charge ? [charge] : []),
           hours: BigDecimal.ONE.toDecimal(),
+          rateLocked: false,
+          hoursLocked: false,
+          removeLocked: false,
         };
 
         onChange(hourlyLabour as any);
@@ -131,15 +138,15 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
             </Text>
             {defaultHourlyRate && (
               <Selectable
-                disabled={disabled || !canResetLabour}
+                disabled={disabled || !canResetLabourRate}
                 onPress={() => onChange({ ...charge, rate: defaultHourlyRate })}
               >
-                <Text color={canResetLabour ? 'TextInteractive' : 'TextSubdued'}>Reset</Text>
+                <Text color={canResetLabourRate ? 'TextInteractive' : 'TextSubdued'}>Reset</Text>
               </Selectable>
             )}
           </Stack>
           <Stepper
-            disabled={disabled}
+            disabled={disabled || charge.rateLocked}
             initialValue={Number(charge.rate)}
             value={Number(charge.rate)}
             minimumValue={0}
@@ -159,7 +166,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
             </Text>
           </Stack>
           <Stepper
-            disabled={disabled}
+            disabled={disabled || charge.hoursLocked}
             initialValue={Number(charge.hours)}
             value={Number(charge.hours)}
             minimumValue={0}
@@ -191,7 +198,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
           </Stack>
           <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
             <Stepper
-              disabled={disabled}
+              disabled={disabled || charge.amountLocked}
               initialValue={Number(charge.amount)}
               value={Number(charge.amount)}
               minimumValue={0}

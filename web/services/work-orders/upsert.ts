@@ -8,7 +8,7 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { validateCreateWorkOrder } from './validate.js';
 import { syncWorkOrder } from './sync.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import {
   IGetFixedPriceLabourChargesResult,
@@ -62,6 +62,17 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
 async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: string }) {
   const [workOrder = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
 
+  if (!session.onlineAccessInfo?.associated_user?.id) {
+    throw new Error('Expected online access info to contain associated user');
+  }
+
+  const staffMemberId = createGid('StaffMember', session.onlineAccessInfo.associated_user.id);
+  const [staffMember] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
+
+  if (!staffMember) {
+    throw new HttpError('Staff member not found - try logging into WorkMate through Shopify Admin first.', 400);
+  }
+
   await cleanOrphanedDraftOrders(session, workOrder.id, async () => {
     const currentItems = await db.workOrder.getItems({ workOrderId: workOrder.id });
     const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId: workOrder.id });
@@ -69,10 +80,11 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       workOrderId: workOrder.id,
     });
 
-    // not all changes are allowed, e.g., once you create an order for some item it is no longer possible to change its price
+    // not all changes are allowed, e.g., once you create an order for some item it is no longer possible to change its price.
+    // additionally, locked fields can only be changed/unlocked by superusers
     assertNoIllegalItemChanges(createWorkOrder, currentItems);
-    assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges);
-    assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges);
+    assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges, staffMember.superuser);
+    assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges, staffMember.superuser);
 
     const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
     const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));
@@ -151,30 +163,60 @@ function assertNoIllegalItemChanges(createWorkOrder: CreateWorkOrder, currentIte
 function assertNoIllegalHourlyChargeChanges(
   createWorkOrder: CreateWorkOrder,
   currentHourlyCharges: IGetHourlyLabourChargesResult[],
+  superuser: boolean,
 ) {
   const newHourlyChargesByUuid = Object.fromEntries(
     createWorkOrder.charges.filter(hasPropertyValue('type', 'hourly-labour')).map(charge => [charge.uuid, charge]),
   );
 
-  for (const currentCharge of currentHourlyCharges) {
-    if (isLineItemId(currentCharge.shopifyOrderLineItemId)) {
-      if (!(currentCharge.uuid in newHourlyChargesByUuid)) {
-        throw new HttpError(`Cannot delete hourly charge ${currentCharge.uuid} as it is connected to an order`, 400);
-      }
+  // TODO: New permission for this?
+  const canUnlock = superuser;
 
-      const newCharge = newHourlyChargesByUuid[currentCharge.uuid] ?? never();
+  for (const oldCharge of currentHourlyCharges) {
+    const isLineItem = isLineItemId(oldCharge.shopifyOrderLineItemId);
 
-      if (newCharge.name !== currentCharge.name) {
-        throw new HttpError(`Cannot change name of hourly charge ${newCharge.uuid}`, 400);
-      }
+    if (isLineItem && !(oldCharge.uuid in newHourlyChargesByUuid)) {
+      throw new HttpError(`Cannot delete hourly charge ${oldCharge.uuid} as it is connected to an order`, 400);
+    }
 
-      if (newCharge.rate !== newCharge.rate) {
-        throw new HttpError(`Cannot change rate of hourly charge ${newCharge.uuid}`, 400);
-      }
+    if (oldCharge.removeLocked && !canUnlock && !(oldCharge.uuid in newHourlyChargesByUuid)) {
+      throw new HttpError(`Cannot remove hourly charge ${oldCharge.uuid} as it is locked`, 400);
+    }
 
-      if (newCharge.hours !== newCharge.hours) {
-        throw new HttpError(`Cannot change hours of hourly charge ${newCharge.uuid}`, 400);
-      }
+    const newCharge = newHourlyChargesByUuid[oldCharge.uuid] ?? never();
+
+    if (isLineItem && newCharge.name !== oldCharge.name) {
+      throw new HttpError(`Cannot change name of hourly charge ${newCharge.uuid}`, 400);
+    }
+
+    const rateIsLocked = oldCharge.rateLocked && !superuser;
+
+    if ((isLineItem || rateIsLocked) && newCharge.rate !== oldCharge.rate) {
+      throw new HttpError(`Cannot change rate of hourly charge ${newCharge.uuid}`, 400);
+    }
+
+    const hoursIsLocked = oldCharge.hoursLocked && !superuser;
+
+    if ((isLineItem || hoursIsLocked) && newCharge.hours !== oldCharge.hours) {
+      throw new HttpError(`Cannot change hours of hourly charge ${newCharge.uuid}`, 400);
+    }
+
+    const unlocksRateLock = oldCharge.rateLocked && !newCharge.rateLocked;
+
+    if ((isLineItem && newCharge.rateLocked !== oldCharge.rateLocked) || (!canUnlock && unlocksRateLock)) {
+      throw new HttpError(`Cannot change rate lock of hourly charge ${newCharge.uuid}`, 400);
+    }
+
+    const unlocksHoursLock = oldCharge.hoursLocked && !newCharge.hoursLocked;
+
+    if ((isLineItem && newCharge.hoursLocked !== oldCharge.hoursLocked) || (!canUnlock && unlocksHoursLock)) {
+      throw new HttpError(`Cannot change hours lock of hourly charge ${newCharge.uuid}`, 400);
+    }
+
+    const unlocksRemoveLock = oldCharge.removeLocked && !newCharge.removeLocked;
+
+    if ((isLineItem && newCharge.removeLocked !== oldCharge.removeLocked) || (!canUnlock && unlocksRemoveLock)) {
+      throw new HttpError(`Cannot change remove lock of hourly charge ${newCharge.uuid}`, 400);
     }
   }
 }
@@ -182,29 +224,47 @@ function assertNoIllegalHourlyChargeChanges(
 function assertNoIllegalFixedPriceChargeChanges(
   createWorkOrder: CreateWorkOrder,
   currentFixedPriceCharges: IGetFixedPriceLabourChargesResult[],
+  superuser: boolean,
 ) {
   const newFixedPriceChargesByUuid = Object.fromEntries(
     createWorkOrder.charges.filter(hasPropertyValue('type', 'fixed-price-labour')).map(charge => [charge.uuid, charge]),
   );
 
-  for (const currentCharge of currentFixedPriceCharges) {
-    if (isLineItemId(currentCharge.shopifyOrderLineItemId)) {
-      if (!(currentCharge.uuid in newFixedPriceChargesByUuid)) {
-        throw new HttpError(
-          `Cannot delete fixed price charge ${currentCharge.uuid} as it is connected to an order`,
-          400,
-        );
-      }
+  const canUnlock = superuser;
 
-      const newCharge = newFixedPriceChargesByUuid[currentCharge.uuid] ?? never();
+  for (const oldCharge of currentFixedPriceCharges) {
+    const isLineItem = isLineItemId(oldCharge.shopifyOrderLineItemId);
 
-      if (newCharge.name !== currentCharge.name) {
-        throw new HttpError(`Cannot change name of fixed price charge ${newCharge.uuid}`, 400);
-      }
+    if (isLineItem && !(oldCharge.uuid in newFixedPriceChargesByUuid)) {
+      throw new HttpError(`Cannot delete fixed price charge ${oldCharge.uuid} as it is connected to an order`, 400);
+    }
 
-      if (newCharge.amount !== newCharge.amount) {
-        throw new HttpError(`Cannot change amount of fixed price charge ${newCharge.uuid}`, 400);
-      }
+    if (oldCharge.removeLocked && !canUnlock && !(oldCharge.uuid in newFixedPriceChargesByUuid)) {
+      throw new HttpError(`Cannot remove fixed price charge ${oldCharge.uuid} as it is locked`, 400);
+    }
+
+    const newCharge = newFixedPriceChargesByUuid[oldCharge.uuid] ?? never();
+
+    if (isLineItem && newCharge.name !== oldCharge.name) {
+      throw new HttpError(`Cannot change name of fixed price charge ${newCharge.uuid}`, 400);
+    }
+
+    const amountIsLocked = oldCharge.amountLocked && !superuser;
+
+    if ((isLineItem || amountIsLocked) && newCharge.amount !== oldCharge.amount) {
+      throw new HttpError(`Cannot change amount of fixed price charge ${newCharge.uuid}`, 400);
+    }
+
+    const unlocksAmountLock = oldCharge.amountLocked && !newCharge.amountLocked;
+
+    if ((isLineItem && newCharge.amountLocked !== oldCharge.amountLocked) || (!canUnlock && unlocksAmountLock)) {
+      throw new HttpError(`Cannot change amount lock of fixed price charge ${newCharge.uuid}`, 400);
+    }
+
+    const unlocksRemoveLock = oldCharge.removeLocked && !newCharge.removeLocked;
+
+    if ((isLineItem && newCharge.removeLocked !== oldCharge.removeLocked) || (!canUnlock && unlocksRemoveLock)) {
+      throw new HttpError(`Cannot change remove lock of fixed price charge ${newCharge.uuid}`, 400);
     }
   }
 }
@@ -264,9 +324,11 @@ async function upsertCharges(
         name: charge.name,
         uuid: charge.uuid,
         amount: charge.amount,
-        workOrderItemUuid: charge.workOrderItemUuid,
-        employeeId: charge.employeeId,
         shopifyOrderLineItemId,
+        employeeId: charge.employeeId,
+        amountLocked: charge.amountLocked,
+        removeLocked: charge.removeLocked,
+        workOrderItemUuid: charge.workOrderItemUuid,
       });
     } else if (charge.type === 'hourly-labour') {
       const shopifyOrderLineItemId = currentHourlyChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null;
@@ -277,9 +339,12 @@ async function upsertCharges(
         uuid: charge.uuid,
         rate: charge.rate,
         hours: charge.hours,
-        workOrderItemUuid: charge.workOrderItemUuid,
-        employeeId: charge.employeeId,
         shopifyOrderLineItemId,
+        rateLocked: charge.rateLocked,
+        employeeId: charge.employeeId,
+        hoursLocked: charge.hoursLocked,
+        removeLocked: charge.removeLocked,
+        workOrderItemUuid: charge.workOrderItemUuid,
       });
     } else {
       return charge satisfies never;

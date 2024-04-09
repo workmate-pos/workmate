@@ -95,9 +95,29 @@
               },
               "hours": {
                 "$ref": "scalars.json#/definitions/Decimal"
+              },
+              "rateLocked": {
+                "type": "boolean"
+              },
+              "hoursLocked": {
+                "type": "boolean"
+              },
+              "removeLocked": {
+                "type": "boolean"
               }
             },
-            "required": ["type", "uuid", "workOrderItemUuid", "employeeId", "name", "rate", "hours"],
+            "required": [
+              "type",
+              "uuid",
+              "workOrderItemUuid",
+              "employeeId",
+              "name",
+              "rate",
+              "hours",
+              "rateLocked",
+              "hoursLocked",
+              "removeLocked"
+            ],
             "additionalProperties": false
           },
           {
@@ -137,9 +157,24 @@
               },
               "amount": {
                 "$ref": "scalars.json#/definitions/Money"
+              },
+              "amountLocked": {
+                "type": "boolean"
+              },
+              "removeLocked": {
+                "type": "boolean"
               }
             },
-            "required": ["type", "uuid", "workOrderItemUuid", "employeeId", "name", "amount"],
+            "required": [
+              "type",
+              "uuid",
+              "workOrderItemUuid",
+              "employeeId",
+              "name",
+              "amount",
+              "amountLocked",
+              "removeLocked"
+            ],
             "additionalProperties": false
           }
         ]

@@ -1,7 +1,7 @@
 import { gql } from '../gql/gql.js';
 import type { MetaobjectDefinition } from './index.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { parseBoolean, parseMoney } from './parsers.js';
 
 export const fixedPriceLabourChargeMetaobject = {
   definition: {
@@ -27,13 +27,29 @@ export const fixedPriceLabourChargeMetaobject = {
         description: 'The amount of this labour charge',
         required: true,
       },
+      {
+        name: 'Customize Amount',
+        key: 'customize-amount',
+        type: 'boolean',
+        description: 'Whether the amount can be changed by inside of POS',
+        required: true,
+      },
+      {
+        name: 'Removable',
+        key: 'removable',
+        type: 'boolean',
+        description: 'Whether this charge can be removed',
+        required: true,
+      },
     ],
   },
   parse(metaobject: gql.products.FixedPriceLabourChargeFragment.Result) {
     return {
       type: 'fixed-price-labour-charge',
       name: metaobject.name?.value ?? never(),
-      amount: JSON.parse(metaobject.amount?.value ?? never()).amount as Money,
+      amount: parseMoney(metaobject.amount?.value),
+      customizeAmount: parseBoolean(metaobject.customizeAmount?.value),
+      removable: parseBoolean(metaobject.removable?.value),
     } as const;
   },
 } as const satisfies MetaobjectDefinition;

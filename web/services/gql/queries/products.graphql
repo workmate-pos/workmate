@@ -122,6 +122,12 @@ fragment FixedPriceLabourChargeFragment on Metaobject {
   amount: field(key: "amount") {
     value
   }
+  customizeAmount: field(key: "customize-amount") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
+  }
 }
 
 fragment HourlyLabourChargeFragment on Metaobject {
@@ -133,6 +139,15 @@ fragment HourlyLabourChargeFragment on Metaobject {
     value
   }
   hours: field(key: "hours") {
+    value
+  }
+  customizeRate: field(key: "customize-rate") {
+    value
+  }
+  customizeHours: field(key: "customize-hours") {
+    value
+  }
+  removable: field(key: "removable") {
     value
   }
 }

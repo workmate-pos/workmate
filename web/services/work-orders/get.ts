@@ -157,6 +157,8 @@ async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge
         name: charge.name,
         amount: charge.amount,
         employeeId: charge.employeeId,
+        amountLocked: charge.amountLocked,
+        removeLocked: charge.removeLocked,
       };
     }),
     ...hourlyLabour.map<WorkOrderCharge>(charge => {
@@ -176,6 +178,9 @@ async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge
         rate: charge.rate,
         hours: charge.hours,
         employeeId: charge.employeeId,
+        rateLocked: charge.rateLocked,
+        hoursLocked: charge.hoursLocked,
+        removeLocked: charge.removeLocked,
       };
     }),
   ];

@@ -65,6 +65,8 @@ export function ItemChargeConfig({
   screen.setIsLoading(productVariantQuery.isLoading || settingsQuery.isLoading || workOrderQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
+  // TODO: Dont allow changing if locked
+
   if (!productVariant) {
     return null;
   }
@@ -129,6 +131,8 @@ export function ItemChargeConfig({
                         name: settings?.labourLineItemName || 'Labour',
                         amount: BigDecimal.ZERO.toMoney(),
                         workOrderItemUuid: item.uuid,
+                        amountLocked: false,
+                        removeLocked: false,
                       } as const;
 
                       setEmployeeLabour(current => [...current, defaultLabourCharge]);
@@ -223,6 +227,8 @@ function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOr
       employeeId: null,
       name: generalLabours[0]!.name,
       amount: getTotalPriceForCharges(generalLabours),
+      amountLocked: false,
+      removeLocked: false,
     } as const;
   }
 
