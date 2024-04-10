@@ -48,6 +48,12 @@ model WorkOrder {
   derivedFromOrder   ShopifyOrder? @relation(fields: [derivedFromOrderId], references: [orderId])
   derivedFromOrderId String?
 
+  // The discount that is applied to every FUTURE order
+
+  discountType   DiscountType?
+  // Either an absolute amount, or a percentage (range 0-100)
+  discountAmount String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
@@ -57,6 +63,11 @@ model WorkOrder {
   customFields            WorkOrderCustomField[]
 
   @@unique([shop, name])
+}
+
+enum DiscountType {
+  FIXED_AMOUNT
+  PERCENTAGE
 }
 
 model WorkOrderItem {
@@ -141,8 +152,8 @@ model WorkOrderHourlyLabourCharge {
 
   // If locked, only superusers can change it
 
-  rateLocked  Boolean
-  hoursLocked Boolean
+  rateLocked   Boolean
+  hoursLocked  Boolean
   removeLocked Boolean
 
   createdAt DateTime @default(now())

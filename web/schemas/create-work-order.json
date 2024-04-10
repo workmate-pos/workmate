@@ -179,6 +179,41 @@
           }
         ]
       }
+    },
+    "discount": {
+      "title": "discount",
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "object",
+          "anyOf": [
+            {
+              "properties": {
+                "type": {
+                  "const": "FIXED_AMOUNT"
+                },
+                "value": {
+                  "$ref": "scalars.json#/definitions/Money"
+                }
+              },
+              "required": ["value", "type"],
+              "additionalProperties": false
+            },
+            {
+              "properties": {
+                "type": {
+                  "const": "PERCENTAGE"
+                },
+                "value": {
+                  "$ref": "scalars.json#/definitions/Decimal"
+                }
+              },
+              "required": ["value", "type"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      ]
     }
   },
   "required": [

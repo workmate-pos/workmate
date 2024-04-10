@@ -101,7 +101,7 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
                 onChange={(value: string) => dispatch.setPartial({ note: value })}
               />
               <WorkOrderEmployees createWorkOrder={createWorkOrder} />
-              <WorkOrderMoneySummary createWorkOrder={createWorkOrder} />
+              <WorkOrderMoneySummary createWorkOrder={createWorkOrder} dispatch={dispatch} />
             </ResponsiveGrid>
           </ResponsiveGrid>
 
@@ -338,7 +338,13 @@ function WorkOrderEmployees({ createWorkOrder }: { createWorkOrder: WIPCreateWor
   );
 }
 
-function WorkOrderMoneySummary({ createWorkOrder }: { createWorkOrder: WIPCreateWorkOrder }) {
+function WorkOrderMoneySummary({
+  createWorkOrder,
+  dispatch,
+}: {
+  createWorkOrder: WIPCreateWorkOrder;
+  dispatch: CreateWorkOrderDispatchProxy;
+}) {
   const fetch = useAuthenticatedFetch();
   const currencyFormatter = useCurrencyFormatter();
   const formatter = (value: Money | null) => (value !== null ? currencyFormatter(value) : '-');
@@ -356,6 +362,8 @@ function WorkOrderMoneySummary({ createWorkOrder }: { createWorkOrder: WIPCreate
   );
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
+  const router = useRouter();
+
   return (
     <ResponsiveGrid columns={1}>
       {calculatedDraftOrderQuery.error && (
@@ -366,11 +374,28 @@ function WorkOrderMoneySummary({ createWorkOrder }: { createWorkOrder: WIPCreate
         />
       )}
 
-      <ResponsiveGrid columns={2}>
+      <ResponsiveGrid columns={2} grow>
+        <FormStringField
+          label={'Discount'}
+          value={(() => {
+            if (!createWorkOrder.discount) return '';
+
+            if (createWorkOrder.discount.type === 'FIXED_AMOUNT') {
+              return currencyFormatter(createWorkOrder.discount.value);
+            }
+
+            if (createWorkOrder.discount.type === 'PERCENTAGE') {
+              return `${createWorkOrder.discount.value}%`;
+            }
+
+            return createWorkOrder.discount satisfies never;
+          })()}
+          onFocus={() => router.push('DiscountSelector', { onSelect: discount => dispatch.setPartial({ discount }) })}
+        />
         {!!calculatedDraftOrder?.discount &&
           BigDecimal.fromMoney(calculatedDraftOrder?.discount).compare(BigDecimal.ZERO) > 0 && (
             <FormMoneyField
-              label={'Discount'}
+              label={'Applied Discount'}
               disabled
               value={calculatedDraftOrder?.discount ?? null}
               formatter={formatter}

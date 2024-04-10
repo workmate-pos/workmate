@@ -13,6 +13,7 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
     items: workOrder.items.map(mapItem),
     charges: workOrder.charges.map(mapCharge),
     customFields: workOrder.customFields,
+    discount: workOrder.discount,
   };
 }
 

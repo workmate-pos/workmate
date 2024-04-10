@@ -13,7 +13,18 @@ export type WorkOrder = {
   charges: WorkOrderCharge[];
   orders: WorkOrderOrder[];
   customFields: Record<string, string>;
+  discount: WorkOrderDiscount | null;
 };
+
+export type WorkOrderDiscount =
+  | {
+      type: 'FIXED_AMOUNT';
+      value: Money;
+    }
+  | {
+      type: 'PERCENTAGE';
+      value: Decimal;
+    };
 
 export type WorkOrderItem = {
   uuid: string;

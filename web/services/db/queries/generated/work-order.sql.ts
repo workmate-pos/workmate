@@ -1,6 +1,8 @@
 /** Types generated for queries found in "services/db/queries/work-order.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
+export type DiscountType = 'FIXED_AMOUNT' | 'PERCENTAGE';
+
 export type DateOrString = Date | string;
 
 export type NumberOrString = number | string;
@@ -11,6 +13,8 @@ export type stringArray = (string)[];
 export interface IUpsertParams {
   customerId: string;
   derivedFromOrderId?: string | null | void;
+  discountAmount?: string | null | void;
+  discountType?: DiscountType | null | void;
   dueDate: DateOrString;
   name: string;
   note: string;
@@ -23,6 +27,8 @@ export interface IUpsertResult {
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
+  discountAmount: string | null;
+  discountType: DiscountType | null;
   dueDate: Date;
   id: number;
   name: string;
@@ -38,18 +44,20 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"note":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":111}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":119}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":122,"b":129}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":132,"b":140}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":143,"b":154}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":157,"b":175}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":178,"b":183}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", note)\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"note":true,"discountAmount":true,"discountType":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":140,"b":145}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":148,"b":153}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":156,"b":163}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":166,"b":174}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":177,"b":188}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":191,"b":209}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":212,"b":217}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":220,"b":234}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":237,"b":249}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", note, \"discountAmount\", \"discountType\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note,\n                                           \"discountAmount\"     = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"       = EXCLUDED.\"discountType\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note)
- * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!)
+ * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount", "discountType")
+ * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)
  * ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
  *                                            "dueDate"            = EXCLUDED."dueDate",
  *                                            "customerId"         = EXCLUDED."customerId",
  *                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
- *                                            note                 = EXCLUDED.note
+ *                                            note                 = EXCLUDED.note,
+ *                                            "discountAmount"     = EXCLUDED."discountAmount",
+ *                                            "discountType"       = EXCLUDED."discountType"
  * RETURNING *
  * ```
  */
@@ -166,6 +174,8 @@ export interface IGetPageResult {
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
+  discountAmount: string | null;
+  discountType: DiscountType | null;
   dueDate: Date;
   id: number;
   name: string;
@@ -236,6 +246,8 @@ export interface IGetResult {
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
+  discountAmount: string | null;
+  discountType: DiscountType | null;
   dueDate: Date;
   id: number;
   name: string;

@@ -28,12 +28,17 @@ export const usePaymentHandler = () => {
     charges,
     customerId,
     labourSku,
+    discount,
   }: {
     workOrderName: string;
     items: WorkOrderItem[];
     charges: DiscriminatedUnionOmit<WorkOrderCharge, 'shopifyOrderLineItem'>[];
     customerId: ID;
     labourSku: string;
+    discount: {
+      type: 'FIXED_AMOUNT' | 'PERCENTAGE';
+      value: string;
+    } | null;
   }) => {
     setIsLoading(true);
 
@@ -75,6 +80,11 @@ export const usePaymentHandler = () => {
     }
 
     await cart.bulkAddLineItemProperties(bulkAddLineItemProperties);
+
+    if (discount) {
+      const discountType = ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[discount.type];
+      await cart.applyCartDiscount(discountType, 'Discount', discount.value);
+    }
 
     navigation.dismiss();
     setIsLoading(false);

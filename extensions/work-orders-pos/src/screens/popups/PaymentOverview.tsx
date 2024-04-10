@@ -78,6 +78,7 @@ export function PaymentOverview({ name }: { name: string }) {
       charges: selectedCharges,
       customerId: workOrder.customerId,
       labourSku: settings.labourLineItemSKU,
+      discount: workOrder.discount,
     });
   };
 
@@ -102,9 +103,8 @@ export function PaymentOverview({ name }: { name: string }) {
       {selectedItems.length === selectableItems.length && selectedCharges.length === selectableCharges.length ? (
         <Button
           title={'Deselect all items'}
-          isDisabled={paymentHandler.isLoading}
+          isDisabled={paymentHandler.isLoading || !canSelectItems}
           type={'plain'}
-          disabled={!canSelectItems}
           onPress={() => {
             setSelectedItems([]);
             setSelectedCharges([]);
@@ -113,9 +113,8 @@ export function PaymentOverview({ name }: { name: string }) {
       ) : (
         <Button
           title={'Select all items'}
-          isDisabled={paymentHandler.isLoading}
+          isDisabled={paymentHandler.isLoading || !canSelectItems}
           type={'plain'}
-          disabled={!canSelectItems}
           onPress={() => {
             setSelectedItems(selectableItems);
             setSelectedCharges(selectableCharges);

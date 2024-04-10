@@ -7,6 +7,7 @@ import {
   ShopifyOrderLineItem,
   WorkOrder,
   WorkOrderCharge,
+  WorkOrderDiscount,
   WorkOrderInfo,
   WorkOrderItem,
   WorkOrderOrder,
@@ -21,6 +22,8 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
+import { evaluate } from '../../util/evaluate.js';
+import { IGetResult } from '../db/queries/generated/work-order.sql.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
@@ -43,6 +46,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     charges: getWorkOrderCharges(workOrder.id),
     orders: getWorkOrderOrders(workOrder.id),
     customFields: getWorkOrderCustomFields(workOrder.id),
+    discount: getWorkOrderDiscount(workOrder),
   });
 }
 
@@ -206,6 +210,31 @@ async function getWorkOrderOrders(workOrderId: number): Promise<WorkOrderOrder[]
 async function getWorkOrderCustomFields(workOrderId: number): Promise<Record<string, string>> {
   const customFields = await db.workOrder.getCustomFields({ workOrderId });
   return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
+}
+
+function getWorkOrderDiscount(
+  workOrder: Pick<IGetResult, 'discountType' | 'discountAmount'>,
+): WorkOrderDiscount | null {
+  if (!workOrder.discountAmount) return null;
+  if (!workOrder.discountType) return null;
+
+  if (workOrder.discountType === 'FIXED_AMOUNT') {
+    assertMoney(workOrder.discountAmount);
+    return {
+      type: 'FIXED_AMOUNT',
+      value: workOrder.discountAmount,
+    };
+  }
+
+  if (workOrder.discountType === 'PERCENTAGE') {
+    assertDecimal(workOrder.discountAmount);
+    return {
+      type: 'PERCENTAGE',
+      value: workOrder.discountAmount,
+    };
+  }
+
+  return workOrder.discountType satisfies never;
 }
 
 /**

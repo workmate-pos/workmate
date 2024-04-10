@@ -1,11 +1,13 @@
 /* @name upsert */
-INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note)
-VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!)
+INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount", "discountType")
+VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)
 ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
                                            "dueDate"            = EXCLUDED."dueDate",
                                            "customerId"         = EXCLUDED."customerId",
                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
-                                           note                 = EXCLUDED.note
+                                           note                 = EXCLUDED.note,
+                                           "discountAmount"     = EXCLUDED."discountAmount",
+                                           "discountType"       = EXCLUDED."discountType"
 RETURNING *;
 
 /* @name insertCustomField */

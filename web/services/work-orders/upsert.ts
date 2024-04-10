@@ -50,6 +50,8 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
     dueDate: new Date(createWorkOrder.dueDate),
     status: createWorkOrder.status,
     note: createWorkOrder.note,
+    discountAmount: createWorkOrder.discount?.value,
+    discountType: createWorkOrder.discount?.type,
   });
 
   for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
@@ -102,6 +104,8 @@ async function updateWorkOrder(
       dueDate: new Date(createWorkOrder.dueDate),
       derivedFromOrderId: createWorkOrder.derivedFromOrderId,
       note: createWorkOrder.note,
+      discountAmount: createWorkOrder.discount?.value,
+      discountType: createWorkOrder.discount?.type,
     });
 
     await db.workOrder.removeCustomFields({ workOrderId: workOrder.id });

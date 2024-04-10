@@ -27,6 +27,7 @@ import {
   CustomFieldFilterConfig,
   CustomFieldFilterConfigProps,
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
+import { DiscountSelector } from './screens/popups/DiscountSelector.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -62,11 +63,10 @@ export const { Router, useRouter } = createRouter(
       title: 'Select Customer',
       Component: CustomerSelector,
     },
-    // TODO: Re-add if possible, though difficult when using multiple orders.
-    // DiscountSelector: {
-    //   title: 'Select Discount',
-    //   Component: DiscountSelector,
-    // },
+    DiscountSelector: {
+      title: 'Select Discount',
+      Component: DiscountSelector,
+    },
     WorkOrderSaved: {
       title: 'Work order saved',
       Component: WorkOrderSaved,
