@@ -465,7 +465,8 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
               const quantity = sum(po.items.map(item => item.quantity));
               const status =
                 availableQuantity === quantity ? 'complete' : availableQuantity === 0 ? 'empty' : 'partial';
-              return { text: po.name, variant: 'highlight', status } as const;
+              const variant = availableQuantity === quantity ? 'success' : 'warning';
+              return { text: `${availableQuantity}/${quantity} • ${po.name}`, variant, status } as const;
             }),
           ],
         },
