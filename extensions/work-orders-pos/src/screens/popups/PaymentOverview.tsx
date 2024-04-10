@@ -8,14 +8,16 @@ import { WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
-import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
+import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
+import { workOrderToCreateWorkOrder } from '../../dto/work-order-to-create-work-order.js';
+import { defaultCreateWorkOrder } from '../../create-work-order/default.js';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 /**
  * Page that allows initializing payments for line items.
@@ -154,6 +156,39 @@ function useItemRows(
   const employeeIds = unique(workOrder?.charges.map(charge => charge.employeeId).filter(isNonNullable) ?? []);
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
 
+  const { customerId, items, charges } = workOrder
+    ? workOrderToCreateWorkOrder(workOrder)
+    : defaultCreateWorkOrder({ status: 'N/A' });
+
+  const calculateAllQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      name: workOrderName,
+      items,
+      charges,
+      customerId: customerId ?? createGid('Customer', '0'),
+    },
+    {
+      enabled: !!workOrder,
+    },
+  );
+  const calculateAll = calculateAllQuery.data;
+
+  // we need a separate calculation for the current selection to properly deal with absorbed charges
+  const calculateSelectionQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      name: workOrderName,
+      items: items.filter(item => selectedItems.some(hasPropertyValue('uuid', item.uuid))),
+      charges: charges.filter(charge => selectedCharges.some(hasPropertyValue('uuid', charge.uuid))),
+      customerId: customerId ?? createGid('Customer', '0'),
+    },
+    {
+      enabled: !!workOrder,
+    },
+  );
+  const calculateSelection = calculateSelectionQuery.data;
+
   const screen = useScreen();
   screen.setIsLoading(workOrderQuery.isLoading || Object.values(employeeQueries).some(q => q.isLoading));
 
@@ -170,9 +205,8 @@ function useItemRows(
     const itemProductVariantQuery = productVariantQueries[item.productVariantId];
     const productVariant = itemProductVariantQuery?.data;
 
-    const isMutableService = productVariant?.product?.isMutableServiceItem;
-    const basePrice = isMutableService ? BigDecimal.ZERO.toMoney() : productVariant?.price ?? BigDecimal.ZERO.toMoney();
-    const totalPrice = BigDecimal.fromMoney(basePrice).multiply(BigDecimal.fromString(item.quantity.toFixed(0)));
+    const price = calculateSelection?.itemPrices?.[item.uuid] ?? calculateAll?.itemPrices?.[item.uuid];
+    const formattedPrice = price ? currencyFormatter(price) : '⟳';
 
     rows.push({
       id: `item-${item.uuid}`,
@@ -180,19 +214,19 @@ function useItemRows(
         label: getProductVariantName(productVariant) ?? 'Unknown item',
         image: {
           source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
-          badge: (!isMutableService && !hasCharges) || item.quantity > 1 ? item.quantity : undefined,
+          badge: hasCharges ? undefined : item.quantity,
         },
         badges: [getItemOrder(item)]
           .filter(isNonNullable)
           .filter(order => order?.type === 'ORDER')
           .map(order => ({ text: order.name, variant: 'highlight' })),
+        subtitle: [formattedPrice],
       },
       rightSide: {
         toggleSwitch: {
           value: selectedItems.includes(item),
           disabled: isLoadingPayment || getItemOrder(item)?.type === 'ORDER',
         },
-        label: currencyFormatter(totalPrice.toMoney()),
       },
       onPress() {
         if (selectedItems.includes(item)) {
@@ -216,11 +250,27 @@ function useItemRows(
     const employeeQuery = charge.employeeId ? employeeQueries[charge.employeeId] : undefined;
     const employee = employeeQuery?.data;
 
+    const selectionChargePricesKey = (
+      { 'hourly-labour': 'hourlyLabourChargePrices', 'fixed-price-labour': 'fixedPriceLabourChargePrices' } as const
+    )[charge.type];
+
+    const price =
+      calculateSelection?.[selectionChargePricesKey]?.[charge.uuid] ??
+      calculateAll?.[selectionChargePricesKey]?.[charge.uuid];
+
+    const formattedPrice = price ? currencyFormatter(price) : '⟳';
+
+    let label = charge.name;
+
+    if (charge.workOrderItemUuid) {
+      label = `⮑ ${label}`;
+    }
+
     return {
       id: `charge-${charge.type}-${charge.uuid}`,
       leftSide: {
-        label: charge.name,
-        subtitle: charge.employeeId ? [employee?.name ?? 'Unknown employee'] : undefined,
+        label,
+        subtitle: charge.employeeId ? [formattedPrice, employee?.name ?? 'Unnamed employee'] : [formattedPrice],
         badges: [getChargeOrder(charge)]
           .filter(isNonNullable)
           .filter(order => order?.type === 'ORDER')
@@ -231,7 +281,6 @@ function useItemRows(
           value: selectedCharges.includes(charge),
           disabled: isLoadingPayment || getChargeOrder(charge)?.type === 'ORDER',
         },
-        label: currencyFormatter(getTotalPriceForCharges([charge])),
       },
       onPress() {
         if (selectedCharges.includes(charge)) {

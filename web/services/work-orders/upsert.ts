@@ -8,7 +8,7 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { validateCreateWorkOrder } from './validate.js';
 import { syncWorkOrder } from './sync.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { createGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import {
   IGetFixedPriceLabourChargesResult,
@@ -21,8 +21,13 @@ import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureEmployeesExist } from '../employee/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
-export async function upsertWorkOrder(session: Session, createWorkOrder: CreateWorkOrder) {
+export async function upsertWorkOrder(
+  session: Session,
+  user: LocalsTeifiUser | null,
+  createWorkOrder: CreateWorkOrder,
+) {
   return await unit(async () => {
     await validateCreateWorkOrder(session.shop, createWorkOrder);
 
@@ -30,7 +35,7 @@ export async function upsertWorkOrder(session: Session, createWorkOrder: CreateW
       return await createNewWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
     }
 
-    return await updateWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
+    return await updateWorkOrder(session, user, { ...createWorkOrder, name: createWorkOrder.name });
   });
 }
 
@@ -59,19 +64,12 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
   return workOrder;
 }
 
-async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: string }) {
+async function updateWorkOrder(
+  session: Session,
+  user: LocalsTeifiUser | null,
+  createWorkOrder: CreateWorkOrder & { name: string },
+) {
   const [workOrder = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
-
-  if (!session.onlineAccessInfo?.associated_user?.id) {
-    throw new Error('Expected online access info to contain associated user');
-  }
-
-  const staffMemberId = createGid('StaffMember', session.onlineAccessInfo.associated_user.id);
-  const [staffMember] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
-
-  if (!staffMember) {
-    throw new HttpError('Staff member not found - try logging into WorkMate through Shopify Admin first.', 400);
-  }
 
   await cleanOrphanedDraftOrders(session, workOrder.id, async () => {
     const currentItems = await db.workOrder.getItems({ workOrderId: workOrder.id });
@@ -83,8 +81,8 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
     // not all changes are allowed, e.g., once you create an order for some item it is no longer possible to change its price.
     // additionally, locked fields can only be changed/unlocked by superusers
     assertNoIllegalItemChanges(createWorkOrder, currentItems);
-    assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges, staffMember.superuser);
-    assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges, staffMember.superuser);
+    assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges, user?.user.superuser ?? false);
+    assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges, user?.user.superuser ?? false);
 
     const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
     const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));

@@ -9,10 +9,10 @@ import { getShopSettings } from '../../services/settings.js';
 import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { sessionStorage } from '../../index.js';
-import { calculateDraftOrder } from '../../services/work-orders/calculate.js';
+import { calculateWorkOrder } from '../../services/work-orders/calculate.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Permission } from '../../decorators/permission.js';
+import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { mg } from '../../services/mail/mailgun.js';
 import { renderHtmlToPdfCustomFile } from '../../services/mail/html-pdf/renderer.js';
@@ -29,9 +29,8 @@ export default class WorkOrderController {
     res: Response<CalculateDraftOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
-    const calculateWorkOrder = req.body;
 
-    const calculatedDraft = await calculateDraftOrder(session, calculateWorkOrder);
+    const calculatedDraft = await calculateWorkOrder(session, req.body);
 
     return res.json(calculatedDraft);
   }
@@ -44,7 +43,9 @@ export default class WorkOrderController {
     const session: Session = res.locals.shopify.session;
     const createWorkOrder = req.body;
 
-    const { name } = await upsertWorkOrder(session, createWorkOrder);
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+
+    const { name } = await upsertWorkOrder(session, user, createWorkOrder);
     const workOrder = await getWorkOrder(session, name);
 
     return res.json(workOrder ?? never());
@@ -82,7 +83,7 @@ export default class WorkOrderController {
       throw new HttpError('Shop is not installed', 400);
     }
 
-    const { name } = await upsertWorkOrder(session, {
+    const { name } = await upsertWorkOrder(session, null, {
       status: settings.workOrderRequests.status,
       dueDate: createWorkOrderRequest.dueDate,
       customerId: createGid('Customer', customerId),
@@ -170,7 +171,7 @@ export default class WorkOrderController {
   }
 }
 
-export type CalculateDraftOrderResponse = Awaited<ReturnType<typeof calculateDraftOrder>>;
+export type CalculateDraftOrderResponse = Awaited<ReturnType<typeof calculateWorkOrder>>;
 
 export type CreateWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
 

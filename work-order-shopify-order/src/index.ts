@@ -5,6 +5,7 @@ import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-tool
 import { groupByKey } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export type WorkOrderItem = {
   uuid: string;
@@ -57,6 +58,7 @@ export type CustomSale = {
  * - A unique title for each custom sale.
  *
  * Also allows including custom sales inside product line items by adjusting the quantity.
+ * Includes a bunch of custom attributes to be able to identify line items.
  */
 export function getWorkOrderLineItems(
   items: WorkOrderItem[],
@@ -120,7 +122,7 @@ export function getWorkOrderLineItems(
     }
 
     lineItem.quantity = Math.max(1, lineItem.quantity);
-    lineItem.customAttributes[`${ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${uuid}`] = String(item.quantity);
+    lineItem.customAttributes[getItemUuidCustomAttributeKey({ uuid })] = String(item.quantity);
 
     const linkedCharges = charges.filter(charge => charge.workOrderItemUuid === uuid);
 
@@ -160,7 +162,7 @@ export function getWorkOrderLineItems(
   };
 }
 
-function getChargeUnitPrice(charge: HourlyLabourCharge | FixedPriceLabourCharge): Money {
+export function getChargeUnitPrice(charge: HourlyLabourCharge | FixedPriceLabourCharge): Money {
   if ('amount' in charge) {
     return BigDecimal.fromString(charge.amount).round(2, RoundingMode.CEILING).toMoney();
   }
@@ -171,9 +173,9 @@ function getChargeUnitPrice(charge: HourlyLabourCharge | FixedPriceLabourCharge)
     .toMoney();
 }
 
-export const ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_item_uuid:';
-export const HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_hourly_charge_uuid:';
-export const FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_fixed_charge_uuid:';
+const ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_item_uuid:';
+const HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_hourly_charge_uuid:';
+const FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_fixed_charge_uuid:';
 export const WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = 'Work Order';
 
 export function getWorkOrderOrderCustomAttributes(workOrder: { name: string }) {
@@ -211,7 +213,11 @@ function getChargeCustomAttributes(
   };
 }
 
-function getChargeUuidCustomAttributeKey(charge: { uuid: string; type: 'hourly' | 'fixed' }) {
+export function getItemUuidCustomAttributeKey(item: { uuid: string }) {
+  return `${ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${item.uuid}`;
+}
+
+export function getChargeUuidCustomAttributeKey(charge: { uuid: string; type: 'hourly' | 'fixed' }) {
   const prefix = {
     hourly: HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
     fixed: FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
@@ -219,6 +225,8 @@ function getChargeUuidCustomAttributeKey(charge: { uuid: string; type: 'hourly' 
 
   return `${prefix}${charge.uuid}`;
 }
+
+const ABSORBED_CHARGE_SEPARATOR = ':';
 
 /**
  * When charges are absorbed, their custom attribute keys are prefixed by the charge uuid key.
@@ -229,7 +237,7 @@ function getAbsorbedChargeCustomAttributeKey(charge: { uuid: string; type: 'hour
     return key;
   }
 
-  return `${getChargeUuidCustomAttributeKey(charge)}:${key}`;
+  return `${getChargeUuidCustomAttributeKey(charge)}${ABSORBED_CHARGE_SEPARATOR}${key}`;
 }
 
 export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
@@ -255,4 +263,48 @@ export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
   }
 
   return null;
+}
+
+export function getAbsorbedUuidFromCustomAttributeKey(customAttributeKey: string) {
+  const prefixes = [
+    ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+  ];
+
+  for (const prefix of prefixes) {
+    if (
+      customAttributeKey.startsWith(prefix) &&
+      customAttributeKey.includes(ABSORBED_CHARGE_SEPARATOR, prefix.length)
+    ) {
+      const [base = never(), absorbed = never()] = customAttributeKey
+        .slice(ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX.length)
+        .split(ABSORBED_CHARGE_SEPARATOR);
+
+      const baseUuid = getUuidFromCustomAttributeKey(base);
+      const absorbedUuid = getUuidFromCustomAttributeKey(absorbed);
+
+      if (!baseUuid || !absorbedUuid) {
+        return null;
+      }
+
+      return {
+        baseUuid,
+        absorbedUuid,
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Utility to extract all uuids from a Shopify Line Item
+ */
+export function getUuidsFromCustomAttributes(customAttributes: { key: string }[]) {
+  return customAttributes.map(({ key }) => getUuidFromCustomAttributeKey(key)).filter(isNonNullable);
+}
+
+export function getAbsorbedUuidsFromCustomAttributes(customAttributes: { key: string }[]) {
+  return customAttributes.map(({ key }) => getAbsorbedUuidFromCustomAttributeKey(key)).filter(isNonNullable);
 }

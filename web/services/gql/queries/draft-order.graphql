@@ -13,6 +13,19 @@ fragment CalculatedDraftOrderFragment on CalculatedDraftOrder {
   totalTax
   totalPrice
   subtotalPrice
+  lineItems {
+    custom
+    discountedTotal {
+      amount
+    }
+    originalTotal {
+      amount
+    }
+    customAttributes {
+      key
+      value
+    }
+  }
 }
 
 mutation create($input: DraftOrderInput!) {

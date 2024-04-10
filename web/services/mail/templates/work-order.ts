@@ -12,7 +12,7 @@ import {
 } from '../../db/queries/generated/work-order-charges.sql.js';
 import { ShopSettings } from '../../../schemas/generated/shop-settings.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
-import { calculateDraftOrder } from '../../work-orders/calculate.js';
+import { calculateWorkOrder } from '../../work-orders/calculate.js';
 import { Session } from '@shopify/shopify-api';
 
 export async function getRenderedWorkOrderTemplate(
@@ -35,7 +35,7 @@ export async function getWorkOrderTemplateData(
   clientDate: string,
 ): Promise<WorkOrderTemplateData> {
   // TODO: Let calculatedraftorder carry the majority of this function. Make it support individual item/charge prices and just fetch the remaining details here
-  const { paid, outstanding } = await calculateDraftOrder(session, {
+  const { paid, outstanding } = await calculateWorkOrder(session, {
     name: workOrderName,
     charges: [],
     items: [],

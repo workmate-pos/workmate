@@ -379,16 +379,11 @@ function WorkOrderMoneySummary({ createWorkOrder }: { createWorkOrder: WIPCreate
         <FormMoneyField
           label={'Subtotal'}
           disabled
-          value={calculatedDraftOrder?.subtotalPrice ?? null}
+          value={calculatedDraftOrder?.subtotal ?? null}
           formatter={formatter}
         />
-        <FormMoneyField label={'Tax'} disabled value={calculatedDraftOrder?.totalTax ?? null} formatter={formatter} />
-        <FormMoneyField
-          label={'Total'}
-          disabled
-          value={calculatedDraftOrder?.totalPrice ?? null}
-          formatter={formatter}
-        />
+        <FormMoneyField label={'Tax'} disabled value={calculatedDraftOrder?.tax ?? null} formatter={formatter} />
+        <FormMoneyField label={'Total'} disabled value={calculatedDraftOrder?.total ?? null} formatter={formatter} />
 
         <FormMoneyField label={'Paid'} disabled value={calculatedDraftOrder?.paid ?? null} formatter={formatter} />
         <FormMoneyField

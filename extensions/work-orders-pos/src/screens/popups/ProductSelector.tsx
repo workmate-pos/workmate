@@ -14,6 +14,8 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 // TODO: Share this screen too + more
 
@@ -132,6 +134,12 @@ function getProductVariantRows(
 
     const defaultCharges = variant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
 
+    const label = currencyFormatter(
+      BigDecimal.fromMoney(variant.price)
+        .add(BigDecimal.fromMoney(getTotalPriceForCharges(defaultCharges)))
+        .toMoney(),
+    );
+
     return {
       id: variant.id,
       onPress: () => {
@@ -154,7 +162,7 @@ function getProductVariantRows(
       },
       rightSide: {
         showChevron: true,
-        label: currencyFormatter(variant.price),
+        label,
       },
     };
   });
