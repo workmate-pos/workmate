@@ -76,6 +76,7 @@ export function ProductSelector({
                   orderId,
                   onSave: products => {
                     selectProducts(products);
+                    router.popCurrent();
                   },
                 });
               },

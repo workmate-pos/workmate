@@ -83,8 +83,8 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
         title={'Add selection to Purchase Order'}
         type={'primary'}
         isDisabled={selectedLineItemIds.length === 0}
-        onPress={() => {
-          router.popCurrent();
+        onPress={async () => {
+          await router.popCurrent();
           onSave(
             lineItems
               .filter(li => selectedLineItemIds.includes(li.id))
