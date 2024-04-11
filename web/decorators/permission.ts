@@ -77,7 +77,7 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
 
     // ensure that every store has at least one superuser
     if (!doesSuperuserExist) {
-      await db.employee.upsertMany({
+      [employee = never()] = await db.employee.upsertMany({
         shop: session.shop,
         employees: [
           {
@@ -90,8 +90,6 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
           },
         ],
       });
-
-      employee.superuser = true;
     }
 
     const user: LocalsTeifiUser = {
