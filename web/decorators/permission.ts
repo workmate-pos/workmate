@@ -51,11 +51,12 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     const employeeId = associatedUser.id;
     let [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [employeeId] });
 
+    let [{ exists: doesSuperuserExist } = never('cannot be empty')] = await db.employee.doesSuperuserExist({
+      shop: session.shop,
+    });
+
     if (!employee) {
-      const [{ exists: doEmployeesExist } = never('cannot be empty')] = await db.employee.doEmployeesExist({
-        shop: session.shop,
-      });
-      const superuser = associatedUser.isShopOwner || !doEmployeesExist;
+      const superuser = associatedUser.isShopOwner || !doesSuperuserExist;
 
       [employee = never()] = await db.employee.upsertMany({
         shop: session.shop,
@@ -70,6 +71,27 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
           },
         ],
       });
+
+      doesSuperuserExist ||= superuser;
+    }
+
+    // ensure that every store has at least one superuser
+    if (!doesSuperuserExist) {
+      await db.employee.upsertMany({
+        shop: session.shop,
+        employees: [
+          {
+            employeeId: employee.employeeId,
+            permissions: employee.permissions ?? [],
+            isShopOwner: employee.isShopOwner,
+            name: employee.name,
+            rate: employee.rate,
+            superuser: true,
+          },
+        ],
+      });
+
+      employee.superuser = true;
     }
 
     const user: LocalsTeifiUser = {
