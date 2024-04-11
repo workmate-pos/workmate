@@ -177,7 +177,9 @@ function EmployeePermissions() {
                   label={'superuser'}
                   labelHidden
                   checked={e?.superuser}
-                  disabled={!e}
+                  disabled={
+                    !e || (e.superuser && Object.values(employeePermissions).filter(e => e.superuser).length === 1)
+                  }
                   onChange={value =>
                     setEmployeePermissions(ep => ({
                       ...ep,

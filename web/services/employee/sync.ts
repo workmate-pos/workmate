@@ -69,11 +69,7 @@ async function upsertEmployees(shop: string, employees: gql.staffMember.Database
   }
 
   await unit(async () => {
-    const [{ exists: doEmployeesExist } = never()] = await db.employee.doEmployeesExist({ shop });
-
     for (const { id: staffMemberId, name, isShopOwner } of employees) {
-      const superuser = isShopOwner || (employees.length === 1 && !doEmployeesExist);
-
       await db.employee.upsert({
         shop,
         name,
@@ -81,7 +77,7 @@ async function upsertEmployees(shop: string, employees: gql.staffMember.Database
         rate: null,
         isShopOwner,
         permissions: [],
-        superuser,
+        superuser: isShopOwner,
       });
     }
   });

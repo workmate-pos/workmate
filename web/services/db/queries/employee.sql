@@ -31,9 +31,10 @@ DELETE
 FROM "Employee"
 WHERE "staffMemberId" IN :employeeIds!;
 
-/* @name doEmployeesExist */
+/* @name doesSuperuserExist */
 SELECT EXISTS (
   SELECT 1
   FROM "Employee"
   WHERE shop = :shop!
+  AND superuser = TRUE
 ) AS "exists";
