@@ -163,21 +163,23 @@ const deleteManyIR: any = {"usedParamSet":{"shop":true,"employeeIds":true},"para
 export const deleteMany = new PreparedQuery<IDeleteManyParams,IDeleteManyResult>(deleteManyIR);
 
 
-/** 'DoEmployeesExist' parameters type */
-export type IDoEmployeesExistParams = void;
+/** 'DoesSuperuserExist' parameters type */
+export interface IDoesSuperuserExistParams {
+  shop: string;
+}
 
-/** 'DoEmployeesExist' return type */
-export interface IDoEmployeesExistResult {
+/** 'DoesSuperuserExist' return type */
+export interface IDoesSuperuserExistResult {
   exists: boolean | null;
 }
 
-/** 'DoEmployeesExist' query type */
-export interface IDoEmployeesExistQuery {
-  params: IDoEmployeesExistParams;
-  result: IDoEmployeesExistResult;
+/** 'DoesSuperuserExist' query type */
+export interface IDoesSuperuserExistQuery {
+  params: IDoesSuperuserExistParams;
+  result: IDoesSuperuserExistResult;
 }
 
-const doEmployeesExistIR: any = {"usedParamSet":{},"params":[],"statement":"SELECT EXISTS (\n  SELECT 1\n  FROM \"Employee\"\n) AS \"exists\""};
+const doesSuperuserExistIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":60,"b":65}]}],"statement":"SELECT EXISTS (\n  SELECT 1\n  FROM \"Employee\"\n  WHERE shop = :shop!\n  AND superuser = TRUE\n) AS \"exists\""};
 
 /**
  * Query generated from SQL:
@@ -185,9 +187,11 @@ const doEmployeesExistIR: any = {"usedParamSet":{},"params":[],"statement":"SELE
  * SELECT EXISTS (
  *   SELECT 1
  *   FROM "Employee"
+ *   WHERE shop = :shop!
+ *   AND superuser = TRUE
  * ) AS "exists"
  * ```
  */
-export const doEmployeesExist = new PreparedQuery<IDoEmployeesExistParams,IDoEmployeesExistResult>(doEmployeesExistIR);
+export const doesSuperuserExist = new PreparedQuery<IDoesSuperuserExistParams,IDoesSuperuserExistResult>(doesSuperuserExistIR);
 
 
