@@ -164,7 +164,9 @@ export const deleteMany = new PreparedQuery<IDeleteManyParams,IDeleteManyResult>
 
 
 /** 'DoEmployeesExist' parameters type */
-export type IDoEmployeesExistParams = void;
+export interface IDoEmployeesExistParams {
+  shop: string;
+}
 
 /** 'DoEmployeesExist' return type */
 export interface IDoEmployeesExistResult {
@@ -177,7 +179,7 @@ export interface IDoEmployeesExistQuery {
   result: IDoEmployeesExistResult;
 }
 
-const doEmployeesExistIR: any = {"usedParamSet":{},"params":[],"statement":"SELECT EXISTS (\n  SELECT 1\n  FROM \"Employee\"\n) AS \"exists\""};
+const doEmployeesExistIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":60,"b":65}]}],"statement":"SELECT EXISTS (\n  SELECT 1\n  FROM \"Employee\"\n  WHERE shop = :shop!\n) AS \"exists\""};
 
 /**
  * Query generated from SQL:
@@ -185,6 +187,7 @@ const doEmployeesExistIR: any = {"usedParamSet":{},"params":[],"statement":"SELE
  * SELECT EXISTS (
  *   SELECT 1
  *   FROM "Employee"
+ *   WHERE shop = :shop!
  * ) AS "exists"
  * ```
  */
