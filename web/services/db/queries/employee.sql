@@ -35,4 +35,5 @@ WHERE "staffMemberId" IN :employeeIds!;
 SELECT EXISTS (
   SELECT 1
   FROM "Employee"
+  WHERE shop = :shop!
 ) AS "exists";

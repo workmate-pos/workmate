@@ -52,7 +52,9 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     let [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [employeeId] });
 
     if (!employee) {
-      const [{ exists: doEmployeesExist } = never('cannot be empty')] = await db.employee.doEmployeesExist();
+      const [{ exists: doEmployeesExist } = never('cannot be empty')] = await db.employee.doEmployeesExist({
+        shop: session.shop,
+      });
       const superuser = associatedUser.isShopOwner || !doEmployeesExist;
 
       [employee = never('just made it')] = await db.employee.upsert({
