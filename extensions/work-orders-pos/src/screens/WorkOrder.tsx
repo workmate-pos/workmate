@@ -1,6 +1,7 @@
 import {
   BadgeProps,
   Banner,
+  DateField,
   List,
   ListRow,
   ScrollView,
@@ -42,6 +43,7 @@ import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveS
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
+import { DateTime } from '@web/schemas/generated/create-work-order.js';
 
 export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
@@ -101,6 +103,17 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
                 onChange={(value: string) => dispatch.setPartial({ note: value })}
               />
               <WorkOrderEmployees createWorkOrder={createWorkOrder} />
+              <DateField
+                label={'Due Date'}
+                value={createWorkOrder.dueDate}
+                onChange={(date: string) => {
+                  // TODO: Do we actually want to convert everything to UTC? (for display we need utc, but we can just do that in value)
+                  const dueDate = new Date(date);
+                  const dueDateUtc = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60 * 1000);
+                  dispatch.setPartial({ dueDate: dueDateUtc.toISOString() as DateTime });
+                }}
+                disabled={saveWorkOrderMutation.isLoading}
+              />
               <WorkOrderMoneySummary createWorkOrder={createWorkOrder} dispatch={dispatch} />
             </ResponsiveGrid>
           </ResponsiveGrid>

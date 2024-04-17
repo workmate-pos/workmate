@@ -354,11 +354,11 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
             variant: 'warning',
             text: `Due ${dueDateString}`,
           },
+          ...(isOverdue ? ([{ variant: 'critical', text: 'Overdue' }] as const) : []),
           {
             variant: 'highlight',
             text: financialStatus,
           },
-          ...(isOverdue ? ([{ variant: 'critical', text: 'Overdue' }] as const) : []),
         ],
       },
       rightSide: {
