@@ -48,6 +48,8 @@ FROM "WorkOrder" wo
          )
 WHERE wo.shop = :shop!
   AND wo.status = COALESCE(:status, wo.status)
+  AND wo."dueDate" >= COALESCE(:afterDueDate, wo."dueDate")
+  AND wo."dueDate" <= COALESCE(:beforeDueDate, wo."dueDate")
   AND (
   wo.status ILIKE COALESCE(:query, '%')
     OR wo.name ILIKE COALESCE(:query, '%')

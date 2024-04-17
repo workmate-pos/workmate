@@ -264,7 +264,7 @@ export async function getWorkOrderInfoPage(
     ? {
         UNPAID: { minimumOrderCount: 0, allPaid: false },
         PARTIALLY_PAID: { minimumOrderCount: 1, allPaid: false },
-        // TODO: Proper support for this - i.e. actualy check if we only have a deposit order
+        // TODO: Proper support for this - i.e. actually check if we only have a deposit order
         HAS_DEPOSIT: { minimumOrderCount: 1, allPaid: false },
         FULLY_PAID: { minimumOrderCount: 1, allPaid: true },
       }[paginationOptions.paymentStatus]
@@ -280,6 +280,8 @@ export async function getWorkOrderInfoPage(
     customerId: paginationOptions.customerId,
     // the first filter is always skipped by the sql to ensure we can run this query without running into the empty record error
     requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
+    afterDueDate: paginationOptions.afterDueDate,
+    beforeDueDate: paginationOptions.beforeDueDate,
     minimumOrderCount,
     allPaid,
   });

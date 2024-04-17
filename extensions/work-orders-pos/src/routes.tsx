@@ -29,6 +29,7 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 import { DiscountSelector } from './screens/popups/DiscountSelector.js';
 import { PaymentStatusSelector } from './screens/popups/PaymentStatusSelector.js';
+import { OverdueStatusSelector } from './screens/popups/OverdueStatusSelector.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -63,6 +64,10 @@ export const { Router, useRouter } = createRouter(
     PaymentStatusSelector: {
       title: 'Select Payment Status',
       Component: PaymentStatusSelector,
+    },
+    OverdueStatusSelector: {
+      title: 'Select Overdue Status',
+      Component: OverdueStatusSelector,
     },
     CustomerSelector: {
       title: 'Select Customer',

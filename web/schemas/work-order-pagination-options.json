@@ -35,6 +35,12 @@
     "paymentStatus": {
       "title": "payment-status",
       "enum": ["UNPAID", "PARTIALLY_PAID", "HAS_DEPOSIT", "FULLY_PAID"]
+    },
+    "afterDueDate": {
+      "$ref": "scalars.json#/definitions/DateTime"
+    },
+    "beforeDueDate": {
+      "$ref": "scalars.json#/definitions/DateTime"
     }
   },
   "required": ["limit", "offset"],

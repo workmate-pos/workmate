@@ -7,7 +7,7 @@ import {
   useCartSubscription,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
+import { OverdueStatus, useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useState } from 'react';
@@ -38,6 +38,7 @@ export function Entry() {
   const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
   const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
+  const [overdueStatus, setOverdueStatus] = useState<OverdueStatus | null>(null);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
@@ -49,6 +50,7 @@ export function Entry() {
     status: status ?? undefined,
     customerId: customerId ?? undefined,
     paymentStatus: paymentStatus ?? undefined,
+    overdueStatus: overdueStatus ?? undefined,
     customFieldFilters,
   });
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
@@ -131,6 +133,15 @@ export function Entry() {
             }
           />
           <Button
+            title={'Filter overdue status'}
+            type={'plain'}
+            onPress={() =>
+              router.push('OverdueStatusSelector', {
+                onSelect: status => setOverdueStatus(status),
+              })
+            }
+          />
+          <Button
             title={'Filter customer'}
             type={'plain'}
             onPress={() =>
@@ -166,6 +177,9 @@ export function Entry() {
           {paymentStatus && (
             <Button title={'Clear payment status'} type={'plain'} onPress={() => setPaymentStatus(null)} />
           )}
+          {overdueStatus && (
+            <Button title={'Clear overdue status'} type={'plain'} onPress={() => setOverdueStatus(null)} />
+          )}
           {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
           {employeeIds.length > 0 && (
             <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
@@ -191,6 +205,16 @@ export function Entry() {
             <Text variant={'sectionHeader'}>Payment Status:</Text>
             <Text variant={'captionRegular'} color={'TextSubdued'}>
               {titleCase(paymentStatus)}
+            </Text>
+          </>
+        )}
+      </Stack>
+      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+        {overdueStatus && (
+          <>
+            <Text variant={'sectionHeader'}>Overdue Status:</Text>
+            <Text variant={'captionRegular'} color={'TextSubdued'}>
+              {titleCase(overdueStatus)}
             </Text>
           </>
         )}
@@ -298,6 +322,12 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
       financialStatus = 'Unpaid';
     }
 
+    let parsedDueDate = new Date(dueDate);
+    // convert from UTC to local time
+    parsedDueDate = new Date(parsedDueDate.getTime() + parsedDueDate.getTimezoneOffset() * 60000);
+
+    const isOverdue = new Date() > parsedDueDate;
+
     return {
       id: name,
       onPress: async () => {
@@ -328,6 +358,7 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
             variant: 'highlight',
             text: financialStatus,
           },
+          ...(isOverdue ? ([{ variant: 'critical', text: 'Overdue' }] as const) : []),
         ],
       },
       rightSide: {

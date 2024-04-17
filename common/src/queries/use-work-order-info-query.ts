@@ -9,6 +9,8 @@ import { WorkOrderInfo } from '@web/services/work-orders/types.js';
 import { ID } from '@web/schemas/generated/ids.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 
+export type OverdueStatus = 'OVERDUE' | 'NOT_OVERDUE';
+
 export const useWorkOrderInfoQuery = (
   {
     fetch,
@@ -18,11 +20,13 @@ export const useWorkOrderInfoQuery = (
     customerId,
     customFieldFilters,
     paymentStatus,
+    overdueStatus,
     limit = 10,
-  }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset' | 'customFieldFilters'> & {
+  }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset' | 'customFieldFilters' | 'afterDueDate' | 'beforeDueDate'> & {
     limit?: number;
     fetch: Fetch;
     customFieldFilters: CustomFieldFilter[];
+    overdueStatus?: OverdueStatus;
   },
   options?: UseInfiniteQueryOptions<
     WorkOrderInfo[],
@@ -39,13 +43,17 @@ export const useWorkOrderInfoQuery = (
           customerId: ID | undefined;
           customFieldFilters: CustomFieldFilter[];
           paymentStatus: PaymentStatus | undefined;
+          overdueStatus: OverdueStatus | undefined;
         }
     )[]
   >,
 ) =>
   useInfiniteQuery({
     ...options,
-    queryKey: ['work-order-info', { query, status, limit, employeeIds, customerId, customFieldFilters, paymentStatus }],
+    queryKey: [
+      'work-order-info',
+      { query, status, limit, employeeIds, customerId, customFieldFilters, paymentStatus, overdueStatus },
+    ],
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams({
         limit: String(limit),
@@ -56,6 +64,15 @@ export const useWorkOrderInfoQuery = (
       if (status) searchParams.set('status', status);
       if (customerId) searchParams.set('customerId', customerId);
       if (paymentStatus) searchParams.set('paymentStatus', paymentStatus);
+
+      const now = new Date();
+      if (overdueStatus === 'OVERDUE') {
+        const beforeDueDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0));
+        searchParams.set('beforeDueDate', beforeDueDate.toISOString());
+      } else if (overdueStatus === 'NOT_OVERDUE') {
+        const afterDueDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59));
+        searchParams.set('afterDueDate', afterDueDate.toISOString());
+      }
 
       for (const filter of customFieldFilters) {
         searchParams.append('customFieldFilters', JSON.stringify(filter));
