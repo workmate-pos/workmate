@@ -28,6 +28,7 @@ import {
   CustomFieldFilterConfigProps,
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 import { DiscountSelector } from './screens/popups/DiscountSelector.js';
+import { PaymentStatusSelector } from './screens/popups/PaymentStatusSelector.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -58,6 +59,10 @@ export const { Router, useRouter } = createRouter(
     StatusSelector: {
       title: 'Select Status',
       Component: StatusSelector,
+    },
+    PaymentStatusSelector: {
+      title: 'Select Payment Status',
+      Component: PaymentStatusSelector,
     },
     CustomerSelector: {
       title: 'Select Customer',

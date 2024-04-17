@@ -22,7 +22,6 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
-import { evaluate } from '../../util/evaluate.js';
 import { IGetResult } from '../db/queries/generated/work-order.sql.js';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
@@ -261,6 +260,16 @@ export async function getWorkOrderInfoPage(
 
   const requireCustomFieldFilters = customFieldFilters.filter(hasPropertyValue('type', 'require-field')) ?? [];
 
+  const { minimumOrderCount = undefined, allPaid = undefined } = paginationOptions.paymentStatus
+    ? {
+        UNPAID: { minimumOrderCount: 0, allPaid: false },
+        PARTIALLY_PAID: { minimumOrderCount: 1, allPaid: false },
+        // TODO: Proper support for this - i.e. actualy check if we only have a deposit order
+        HAS_DEPOSIT: { minimumOrderCount: 1, allPaid: false },
+        FULLY_PAID: { minimumOrderCount: 1, allPaid: true },
+      }[paginationOptions.paymentStatus]
+    : {};
+
   const page = await db.workOrder.getPage({
     shop: session.shop,
     status: paginationOptions.status,
@@ -271,6 +280,8 @@ export async function getWorkOrderInfoPage(
     customerId: paginationOptions.customerId,
     // the first filter is always skipped by the sql to ensure we can run this query without running into the empty record error
     requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
+    minimumOrderCount,
+    allPaid,
   });
 
   const customerIds = unique(page.map(workOrder => workOrder.customerId));

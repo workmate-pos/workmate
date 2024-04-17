@@ -1,4 +1,7 @@
-import type { WorkOrderPaginationOptions } from '@web/schemas/generated/work-order-pagination-options.js';
+import type {
+  PaymentStatus,
+  WorkOrderPaginationOptions,
+} from '@web/schemas/generated/work-order-pagination-options.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { Fetch } from './fetch.js';
 import { useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
@@ -14,6 +17,7 @@ export const useWorkOrderInfoQuery = (
     employeeIds,
     customerId,
     customFieldFilters,
+    paymentStatus,
     limit = 10,
   }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset' | 'customFieldFilters'> & {
     limit?: number;
@@ -34,13 +38,14 @@ export const useWorkOrderInfoQuery = (
           employeeIds: ID[] | undefined;
           customerId: ID | undefined;
           customFieldFilters: CustomFieldFilter[];
+          paymentStatus: PaymentStatus | undefined;
         }
     )[]
   >,
 ) =>
   useInfiniteQuery({
     ...options,
-    queryKey: ['work-order-info', { query, status, limit, employeeIds, customerId, customFieldFilters }],
+    queryKey: ['work-order-info', { query, status, limit, employeeIds, customerId, customFieldFilters, paymentStatus }],
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams({
         limit: String(limit),
@@ -50,6 +55,7 @@ export const useWorkOrderInfoQuery = (
       if (query) searchParams.set('query', query);
       if (status) searchParams.set('status', status);
       if (customerId) searchParams.set('customerId', customerId);
+      if (paymentStatus) searchParams.set('paymentStatus', paymentStatus);
 
       for (const filter of customFieldFilters) {
         searchParams.append('customFieldFilters', JSON.stringify(filter));

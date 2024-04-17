@@ -44,12 +44,13 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"note":true,"discountAmount":true,"discountType":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":140,"b":145}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":148,"b":153}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":156,"b":163}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":166,"b":174}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":177,"b":188}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":191,"b":209}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":212,"b":217}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":220,"b":234}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":237,"b":249}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", note, \"discountAmount\", \"discountType\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note,\n                                           \"discountAmount\"     = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"       = EXCLUDED.\"discountType\"\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"note":true,"discountAmount":true,"discountType":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":165,"b":170}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":173,"b":178}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":181,"b":188}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":191,"b":199}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":202,"b":213}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":216,"b":234}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":237,"b":242}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":245,"b":259}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":262,"b":274}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", note, \"discountAmount\",\n                         \"discountType\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note,\n                                           \"discountAmount\"     = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"       = EXCLUDED.\"discountType\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount", "discountType")
+ * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount",
+ *                          "discountType")
  * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)
  * ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
  *                                            "dueDate"            = EXCLUDED."dueDate",
@@ -155,9 +156,11 @@ export const getCustomFields = new PreparedQuery<IGetCustomFieldsParams,IGetCust
 
 /** 'GetPage' parameters type */
 export interface IGetPageParams {
+  allPaid?: boolean | null | void;
   customerId?: string | null | void;
   employeeIds?: stringArray | null | void;
   limit: NumberOrString;
+  minimumOrderCount?: number | null | void;
   offset?: NumberOrString | null | void;
   query?: string | null | void;
   requiredCustomFieldFilters: readonly ({
@@ -191,7 +194,7 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"query":true,"employeeIds":true,"customerId":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":340,"b":345}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":374,"b":380}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":429,"b":434},{"a":472,"b":477},{"a":523,"b":528},{"a":566,"b":571},{"a":609,"b":614}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":786,"b":797},{"a":804,"b":815},{"a":992,"b":1003},{"a":1010,"b":1021}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":1065,"b":1075}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":1771,"b":1777}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":1786,"b":1792}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT wo.*\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"Customer\" c ON wo.\"customerId\" = c.\"customerId\"\nWHERE wo.shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR c.phone ILIKE COALESCE(:query, '%')\n    OR c.email ILIKE COALESCE(:query, '%')\n  )\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderHourlyLabourCharge\" hl\n              WHERE hl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderFixedPriceLabourCharge\" fpl\n              WHERE fpl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND wo.\"customerId\" = COALESCE(:customerId, wo.\"customerId\")\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row, ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"WorkOrderCustomField\" wocf\n                                    ON (wocf.\"workOrderId\" = wo.id AND\n                                        wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nORDER BY wo.id DESC\nLIMIT :limit! OFFSET :offset"};
+const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"query":true,"employeeIds":true,"customerId":true,"minimumOrderCount":true,"allPaid":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":930,"b":935}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":964,"b":970}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":1019,"b":1024},{"a":1062,"b":1067},{"a":1113,"b":1118},{"a":1156,"b":1161},{"a":1199,"b":1204}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":1376,"b":1387},{"a":1394,"b":1405},{"a":1582,"b":1593},{"a":1600,"b":1611}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":1655,"b":1665}]},{"name":"minimumOrderCount","required":false,"transform":{"type":"scalar"},"locs":[{"a":2476,"b":2493}]},{"name":"allPaid","required":false,"transform":{"type":"scalar"},"locs":[{"a":2534,"b":2541},{"a":2546,"b":2553}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":2590,"b":2596}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":2605,"b":2611}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT wo.*\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"Customer\" c ON wo.\"customerId\" = c.\"customerId\"\n       LEFT JOIN \"WorkOrderItem\" woi ON wo.id = woi.\"workOrderId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\" wohlc ON wo.id = wohlc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\" wofplc ON wo.id = wofplc.\"workOrderId\"\n       LEFT JOIN \"ShopifyOrderLineItem\" soli ON (\n  woi.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR wohlc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR wofplc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n  )\n       LEFT JOIN \"ShopifyOrder\" so ON (\n         so.\"orderType\" = 'ORDER' AND\n         soli.\"orderId\" = so.\"orderId\"\n         )\nWHERE wo.shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND (\n  wo.status ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR c.phone ILIKE COALESCE(:query, '%')\n    OR c.email ILIKE COALESCE(:query, '%')\n  )\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderHourlyLabourCharge\" hl\n              WHERE hl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderFixedPriceLabourCharge\" fpl\n              WHERE fpl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND wo.\"customerId\" = COALESCE(:customerId, wo.\"customerId\")\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row,\n                          ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND\n                          (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=\n                          filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"WorkOrderCustomField\" wocf\n                                    ON (wocf.\"workOrderId\" = wo.id AND\n                                        wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nGROUP BY wo.id\nHAVING COUNT(DISTINCT so.\"orderId\") >= COALESCE(:minimumOrderCount, 0)\n   AND (BOOL_AND(so.\"fullyPaid\") = :allPaid OR :allPaid IS NULL)\nORDER BY wo.id DESC\nLIMIT :limit! OFFSET :offset"};
 
 /**
  * Query generated from SQL:
@@ -201,6 +204,18 @@ const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop"
  * SELECT wo.*
  * FROM "WorkOrder" wo
  *        LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
+ *        LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
+ *        LEFT JOIN "WorkOrderHourlyLabourCharge" wohlc ON wo.id = wohlc."workOrderId"
+ *        LEFT JOIN "WorkOrderFixedPriceLabourCharge" wofplc ON wo.id = wofplc."workOrderId"
+ *        LEFT JOIN "ShopifyOrderLineItem" soli ON (
+ *   woi."shopifyOrderLineItemId" = soli."lineItemId"
+ *     OR wohlc."shopifyOrderLineItemId" = soli."lineItemId"
+ *     OR wofplc."shopifyOrderLineItemId" = soli."lineItemId"
+ *   )
+ *        LEFT JOIN "ShopifyOrder" so ON (
+ *          so."orderType" = 'ORDER' AND
+ *          soli."orderId" = so."orderId"
+ *          )
  * WHERE wo.shop = :shop!
  *   AND wo.status = COALESCE(:status, wo.status)
  *   AND (
@@ -221,12 +236,18 @@ const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop"
  *   AND wo."customerId" = COALESCE(:customerId, wo."customerId")
  *   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
  *        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
- *              FROM (SELECT filter.row, ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse
+ *              FROM (SELECT filter.row,
+ *                           ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND
+ *                           (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=
+ *                           filter.inverse
  *                    FROM "CustomFieldFilters" filter
  *                           LEFT JOIN "WorkOrderCustomField" wocf
  *                                     ON (wocf."workOrderId" = wo.id AND
  *                                         wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)
  *              GROUP BY row) b(row, match))
+ * GROUP BY wo.id
+ * HAVING COUNT(DISTINCT so."orderId") >= COALESCE(:minimumOrderCount, 0)
+ *    AND (BOOL_AND(so."fullyPaid") = :allPaid OR :allPaid IS NULL)
  * ORDER BY wo.id DESC
  * LIMIT :limit! OFFSET :offset
  * ```

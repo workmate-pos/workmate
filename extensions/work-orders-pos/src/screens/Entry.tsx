@@ -29,12 +29,15 @@ import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
+import { PaymentStatus } from '@web/schemas/generated/work-order-pagination-options.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
   const [customerId, setCustomerId] = useState<ID | null>(null);
   const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
   const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
@@ -45,6 +48,7 @@ export function Entry() {
     employeeIds,
     status: status ?? undefined,
     customerId: customerId ?? undefined,
+    paymentStatus: paymentStatus ?? undefined,
     customFieldFilters,
   });
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
@@ -118,6 +122,15 @@ export function Entry() {
             }
           />
           <Button
+            title={'Filter payment status'}
+            type={'plain'}
+            onPress={() =>
+              router.push('PaymentStatusSelector', {
+                onSelect: status => setPaymentStatus(status),
+              })
+            }
+          />
+          <Button
             title={'Filter customer'}
             type={'plain'}
             onPress={() =>
@@ -150,9 +163,15 @@ export function Entry() {
         </ResponsiveStack>
         <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
+          {paymentStatus && (
+            <Button title={'Clear payment status'} type={'plain'} onPress={() => setPaymentStatus(null)} />
+          )}
           {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
           {employeeIds.length > 0 && (
             <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
+          )}
+          {customFieldFilters.length > 0 && (
+            <Button title={'Clear custom fields'} type={'plain'} onPress={() => setCustomFieldFilters([])} />
           )}
         </ResponsiveStack>
       </ResponsiveStack>
@@ -162,6 +181,16 @@ export function Entry() {
             <Text variant={'sectionHeader'}>Status:</Text>
             <Text variant={'captionRegular'} color={'TextSubdued'}>
               {status}
+            </Text>
+          </>
+        )}
+      </Stack>
+      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+        {paymentStatus && (
+          <>
+            <Text variant={'sectionHeader'}>Payment Status:</Text>
+            <Text variant={'captionRegular'} color={'TextSubdued'}>
+              {titleCase(paymentStatus)}
             </Text>
           </>
         )}
@@ -258,10 +287,11 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     const total = BigDecimal.sum(...orders.map(order => BigDecimal.fromMoney(order.total)));
     const moneySubtitle = [outstanding.toMoney(), total.toMoney()].map(currencyFormatter).join(' • ');
 
+    // TODO: Add deposit captured
     let financialStatus;
 
     if (outstanding.compare(BigDecimal.ZERO) <= 0) {
-      financialStatus = 'Paid';
+      financialStatus = 'Fully Paid';
     } else if (outstanding.compare(total) < 0) {
       financialStatus = 'Partially paid';
     } else {

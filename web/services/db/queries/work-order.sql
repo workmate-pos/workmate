@@ -1,5 +1,6 @@
 /* @name upsert */
-INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount", "discountType")
+INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount",
+                         "discountType")
 VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)
 ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
                                            "dueDate"            = EXCLUDED."dueDate",
@@ -33,6 +34,18 @@ WITH "CustomFieldFilters" AS (SELECT row_number() over () as row, key, val, inve
 SELECT wo.*
 FROM "WorkOrder" wo
        LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
+       LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
+       LEFT JOIN "WorkOrderHourlyLabourCharge" wohlc ON wo.id = wohlc."workOrderId"
+       LEFT JOIN "WorkOrderFixedPriceLabourCharge" wofplc ON wo.id = wofplc."workOrderId"
+       LEFT JOIN "ShopifyOrderLineItem" soli ON (
+  woi."shopifyOrderLineItemId" = soli."lineItemId"
+    OR wohlc."shopifyOrderLineItemId" = soli."lineItemId"
+    OR wofplc."shopifyOrderLineItemId" = soli."lineItemId"
+  )
+       LEFT JOIN "ShopifyOrder" so ON (
+         so."orderType" = 'ORDER' AND
+         soli."orderId" = so."orderId"
+         )
 WHERE wo.shop = :shop!
   AND wo.status = COALESCE(:status, wo.status)
   AND (
@@ -53,12 +66,18 @@ WHERE wo.shop = :shop!
   AND wo."customerId" = COALESCE(:customerId, wo."customerId")
   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
-             FROM (SELECT filter.row, ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse
+             FROM (SELECT filter.row,
+                          ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND
+                          (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=
+                          filter.inverse
                    FROM "CustomFieldFilters" filter
                           LEFT JOIN "WorkOrderCustomField" wocf
                                     ON (wocf."workOrderId" = wo.id AND
                                         wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)
              GROUP BY row) b(row, match))
+GROUP BY wo.id
+HAVING COUNT(DISTINCT so."orderId") >= COALESCE(:minimumOrderCount, 0)
+   AND (BOOL_AND(so."fullyPaid") = :allPaid OR :allPaid IS NULL)
 ORDER BY wo.id DESC
 LIMIT :limit! OFFSET :offset;
 
