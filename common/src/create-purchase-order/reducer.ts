@@ -1,6 +1,7 @@
 import type { useReducer, useRef, useState } from 'react';
 import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { DiscriminatedUnionOmit } from '../types/DiscriminatedUnionOmit.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type CreatePurchaseOrderAction =
   | ({
@@ -128,8 +129,20 @@ function mergeProducts(...products: Product[]) {
 
     for (const existing of merged) {
       if (shouldMergeProducts(product, existing)) {
+        const productQuantityBigDecimal = BigDecimal.fromString(product.quantity.toFixed(0));
+        const existingQuantityBigDecimal = BigDecimal.fromString(existing.quantity.toFixed(0));
+
+        const unitCost = BigDecimal.sum(
+          BigDecimal.fromMoney(product.unitCost).multiply(productQuantityBigDecimal),
+          BigDecimal.fromMoney(existing.unitCost).multiply(existingQuantityBigDecimal),
+        )
+          .divide(productQuantityBigDecimal.add(existingQuantityBigDecimal))
+          .round(2)
+          .toMoney();
+
         existing.quantity = (existing.quantity + product.quantity) as Int;
         existing.availableQuantity = (existing.availableQuantity + product.availableQuantity) as Int;
+        existing.unitCost = unitCost;
         found = true;
         break;
       }

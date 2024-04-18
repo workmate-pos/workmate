@@ -35,8 +35,6 @@ import { getPurchaseOrderBadges } from '../util/badges.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
-import { draftOrder } from '@web/services/gql/queries/generated/queries.js';
-import create = draftOrder.create;
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
@@ -322,7 +320,10 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
 
-  const workOrderQueries = useWorkOrderQueries({ fetch, names: workOrderInfos.map(({ name }) => name) });
+  const workOrderQueries = useWorkOrderQueries(
+    { fetch, names: workOrderInfos.map(({ name }) => name) },
+    { staleTime: 1000 * 30 },
+  );
 
   const workOrders = Object.values(workOrderQueries)
     .map(query => query.data?.workOrder)
@@ -340,6 +341,8 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
 
   const router = useRouter();
+  const screen = useScreen();
+  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isFetching));
 
   return workOrders.flatMap<ListRow>(workOrder => {
     const workOrderQuery = workOrderQueries[workOrder.name];

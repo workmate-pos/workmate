@@ -33,12 +33,18 @@ export function ProductCreator({ initialProduct, onCreate, useRouter }: ProductC
     { fetch },
     {
       onSuccess: ({ product }) => {
+        let unitCost = BigDecimal.ZERO.toMoney();
+
+        if (product.variant.inventoryItem.unitCost) {
+          unitCost = BigDecimal.fromDecimal(product.variant.inventoryItem.unitCost.amount).toMoney();
+        }
+
         onCreate({
           shopifyOrderLineItem: null,
           productVariantId: product.variant.id,
           availableQuantity: 0 as Int,
           quantity,
-          unitCost: BigDecimal.ZERO.toMoney(),
+          unitCost,
         });
         router.popCurrent();
       },

@@ -115,7 +115,10 @@ export function ProductSelector({
                 locationId,
                 vendor: vendorName,
               },
-              onCreate: (product: Product) => selectProducts([product]),
+              onCreate: (product: Product) => {
+                selectProducts([product]);
+                router.popCurrent();
+              },
             });
           }}
         />

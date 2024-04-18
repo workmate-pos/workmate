@@ -45,6 +45,7 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { getPurchaseOrderBadge } from '../util/badges.js';
+import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 
 export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
@@ -178,6 +179,9 @@ function WorkOrderProperties({
 }) {
   const fetch = useAuthenticatedFetch();
 
+  const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
+  const { workOrder } = workOrderQuery.data ?? {};
+
   const derivedFromOrderQuery = useOrderQuery({ fetch, id: createWorkOrder.derivedFromOrderId });
   const derivedFromOrder = derivedFromOrderQuery.data?.order;
 
@@ -215,6 +219,7 @@ function WorkOrderProperties({
         label={'Customer'}
         required
         onFocus={() => router.push('CustomerSelector', { onSelect: customerId => dispatch.setPartial({ customerId }) })}
+        disabled={!workOrder || workOrder.orders.some(order => order.type === 'ORDER')}
         value={
           createWorkOrder.customerId === null
             ? ''

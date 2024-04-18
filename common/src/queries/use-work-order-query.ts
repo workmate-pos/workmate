@@ -24,7 +24,7 @@ export const useWorkOrderQuery = (
 
 export const useWorkOrderQueries = (
   { fetch, names }: { fetch: Fetch; names: string[] },
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean; staleTime?: number },
 ) => {
   const queries = useQueries(
     names.map(name => ({
