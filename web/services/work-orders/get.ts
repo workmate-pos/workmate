@@ -270,6 +270,8 @@ export async function getWorkOrderInfoPage(
       }[paginationOptions.paymentStatus]
     : {};
 
+  const inverseOrderConditions = paginationOptions.excludePaymentStatus ?? false;
+
   const page = await db.workOrder.getPage({
     shop: session.shop,
     status: paginationOptions.status,
@@ -284,6 +286,7 @@ export async function getWorkOrderInfoPage(
     beforeDueDate: paginationOptions.beforeDueDate,
     minimumOrderCount,
     allPaid,
+    inverseOrderConditions,
   });
 
   const customerIds = unique(page.map(workOrder => workOrder.customerId));

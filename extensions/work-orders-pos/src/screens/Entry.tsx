@@ -327,7 +327,7 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     // convert from UTC to local time
     parsedDueDate = new Date(parsedDueDate.getTime() + parsedDueDate.getTimezoneOffset() * 60000);
 
-    const isOverdue = new Date() > parsedDueDate;
+    const isOverdue = new Date() > parsedDueDate && outstanding.compare(BigDecimal.ZERO) > 0;
 
     return {
       id: name,

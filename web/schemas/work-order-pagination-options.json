@@ -36,6 +36,10 @@
       "title": "payment-status",
       "enum": ["UNPAID", "PARTIALLY_PAID", "HAS_DEPOSIT", "FULLY_PAID"]
     },
+    "excludePaymentStatus": {
+      "description": "If true, excludes the payment status rather than including it",
+      "type": "boolean"
+    },
     "afterDueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
     },

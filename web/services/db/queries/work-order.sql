@@ -43,9 +43,9 @@ FROM "WorkOrder" wo
     OR wofplc."shopifyOrderLineItemId" = soli."lineItemId"
   )
        LEFT JOIN "ShopifyOrder" so ON (
-         so."orderType" = 'ORDER' AND
-         soli."orderId" = so."orderId"
-         )
+  so."orderType" = 'ORDER' AND
+  soli."orderId" = so."orderId"
+  )
 WHERE wo.shop = :shop!
   AND wo.status = COALESCE(:status, wo.status)
   AND wo."dueDate" >= COALESCE(:afterDueDate, wo."dueDate")
@@ -78,8 +78,8 @@ WHERE wo.shop = :shop!
                                         wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)
              GROUP BY row) b(row, match))
 GROUP BY wo.id
-HAVING COUNT(DISTINCT so."orderId") >= COALESCE(:minimumOrderCount, 0)
-   AND (BOOL_AND(so."fullyPaid") = :allPaid OR :allPaid IS NULL)
+HAVING (COUNT(DISTINCT so."orderId") >= COALESCE(:minimumOrderCount, 0)
+  AND (BOOL_AND(so."fullyPaid") = :allPaid OR :allPaid IS NULL)) != COALESCE(:inverseOrderConditions, FALSE)
 ORDER BY wo.id DESC
 LIMIT :limit! OFFSET :offset;
 
