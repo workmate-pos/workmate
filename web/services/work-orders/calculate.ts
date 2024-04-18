@@ -14,7 +14,7 @@ import {
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
 import { db } from '../db/db.js';
-import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { indexBy, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertMoney, BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
@@ -394,6 +394,7 @@ async function calculateDatabaseOrders(
       return discountedTotal.divide(originalTotal);
     });
 
+    // to determine the item price, we subtract the price of all absorbed charges and distribute the rest over the remaining quantity
     let itemPrice = discountedTotal;
 
     for (const [charges, chargePrice] of [
@@ -414,17 +415,20 @@ async function calculateDatabaseOrders(
       itemPrice = BigDecimal.max(BigDecimal.ZERO, itemPrice);
     }
 
-    if (lineItemItems.length > 1) {
-      // TODO: Fix - this is not the case because product varaints get stacked
-      throw new Error('A line item can have at most one associated item');
-    }
+    // we will now distribute the remaining item price over all line item items
+    const lineItemQuantity = sum(lineItemItems.map(li => li.quantity));
 
-    const [lineItemItem] = lineItemItems;
+    for (const [i, lineItemItem] of lineItemItems.entries()) {
+      let divideQuantity = lineItemQuantity - i; // we divide the remaining item price by the remaining qty. this ensures we round the last item to the remaining balance, leaving no trailing cents
 
-    if (lineItemItem) {
-      itemPrices[lineItemItem.uuid] = itemPrice.toMoney();
-    } else {
-      // this line item must have been a single custom sale
+      if (divideQuantity <= 0) {
+        // if this is a service, the quantity of each line item item will be zero, so handle that by distributing uniformly
+        divideQuantity = 1;
+      }
+
+      const lineItemItemPrice = itemPrice.divide(BigDecimal.fromString(divideQuantity.toFixed(0)));
+      itemPrices[lineItemItem.uuid] = lineItemItemPrice.toMoney();
+      itemPrice = itemPrice.subtract(lineItemItemPrice);
     }
   }
 

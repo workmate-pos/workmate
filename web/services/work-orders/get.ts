@@ -272,6 +272,12 @@ export async function getWorkOrderInfoPage(
 
   const inverseOrderConditions = paginationOptions.excludePaymentStatus ?? false;
 
+  const purchaseOrdersFulfilled = {
+    FULFILLED: true,
+    PENDING: false,
+    UNDEFINED: undefined,
+  }[paginationOptions.purchaseOrderStatus ?? 'UNDEFINED'];
+
   const page = await db.workOrder.getPage({
     shop: session.shop,
     status: paginationOptions.status,
@@ -287,40 +293,8 @@ export async function getWorkOrderInfoPage(
     minimumOrderCount,
     allPaid,
     inverseOrderConditions,
+    purchaseOrdersFulfilled,
   });
 
-  const customerIds = unique(page.map(workOrder => workOrder.customerId));
-  const customers = customerIds.length ? await db.customers.getMany({ customerIds }) : [];
-  const customersById = groupByKey(customers, 'customerId');
-
-  return await Promise.all(
-    page.map<Promise<WorkOrderInfo>>(async workOrder => {
-      const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
-
-      assertGid(workOrder.customerId);
-
-      return {
-        name: workOrder.name,
-        status: workOrder.status,
-        dueDate: workOrder.dueDate.toISOString() as DateTime,
-        customer: {
-          id: workOrder.customerId,
-          name: customersById[workOrder.customerId]?.[0]?.displayName ?? 'Unknown customer',
-        },
-        orders: linkedOrders.map(order => {
-          assertGid(order.orderId);
-          assertMoney(order.total);
-          assertMoney(order.outstanding);
-
-          return {
-            id: order.orderId,
-            name: order.name,
-            type: order.orderType,
-            total: order.total,
-            outstanding: order.outstanding,
-          };
-        }),
-      };
-    }),
-  );
+  return await Promise.all(page.map(workOrder => getWorkOrder(session, workOrder.name).then(wo => wo ?? never())));
 }

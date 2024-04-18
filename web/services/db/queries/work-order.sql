@@ -31,7 +31,7 @@ WHERE "workOrderId" = :workOrderId!;
 */
 WITH "CustomFieldFilters" AS (SELECT row_number() over () as row, key, val, inverse
                               FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS "CustomFieldFilters"(key, val, inverse))
-SELECT wo.*
+SELECT wo.name
 FROM "WorkOrder" wo
        LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
        LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
@@ -46,6 +46,7 @@ FROM "WorkOrder" wo
   so."orderType" = 'ORDER' AND
   soli."orderId" = so."orderId"
   )
+LEFT JOIN "PurchaseOrderLineItem" poli ON soli."lineItemId" = poli."shopifyOrderLineItemId"
 WHERE wo.shop = :shop!
   AND wo.status = COALESCE(:status, wo.status)
   AND wo."dueDate" >= COALESCE(:afterDueDate, wo."dueDate")
@@ -80,6 +81,7 @@ WHERE wo.shop = :shop!
 GROUP BY wo.id
 HAVING (COUNT(DISTINCT so."orderId") >= COALESCE(:minimumOrderCount, 0)
   AND (BOOL_AND(so."fullyPaid") = :allPaid OR :allPaid IS NULL)) != COALESCE(:inverseOrderConditions, FALSE)
+AND (SUM(poli."availableQuantity") IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled OR :purchaseOrdersFulfilled IS NULL
 ORDER BY wo.id DESC
 LIMIT :limit! OFFSET :offset;
 

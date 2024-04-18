@@ -9,7 +9,7 @@ import {
 } from '@shopify/retail-ui-extensions-react';
 import { OverdueStatus, useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
-import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
+import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useState } from 'react';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/services/gql/queries/generated/schema.js';
@@ -29,8 +29,14 @@ import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
-import { PaymentStatus } from '@web/schemas/generated/work-order-pagination-options.js';
+import { PaymentStatus, PurchaseOrderStatus } from '@web/schemas/generated/work-order-pagination-options.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { getPurchaseOrderBadges } from '../util/badges.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
+import { draftOrder } from '@web/services/gql/queries/generated/queries.js';
+import create = draftOrder.create;
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
@@ -39,6 +45,7 @@ export function Entry() {
   const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
   const [overdueStatus, setOverdueStatus] = useState<OverdueStatus | null>(null);
+  const [purchaseOrderStatus, setPurchaseOrderStatus] = useState<PurchaseOrderStatus | null>(null);
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
@@ -51,6 +58,7 @@ export function Entry() {
     customerId: customerId ?? undefined,
     paymentStatus: paymentStatus ?? undefined,
     overdueStatus: overdueStatus ?? undefined,
+    purchaseOrderStatus: purchaseOrderStatus ?? undefined,
     customFieldFilters,
   });
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
@@ -142,6 +150,15 @@ export function Entry() {
             }
           />
           <Button
+            title={'Filter purchase order status'}
+            type={'plain'}
+            onPress={() =>
+              router.push('PurchaseOrderStatusSelector', {
+                onSelect: status => setPurchaseOrderStatus(status),
+              })
+            }
+          />
+          <Button
             title={'Filter customer'}
             type={'plain'}
             onPress={() =>
@@ -180,6 +197,9 @@ export function Entry() {
           {overdueStatus && (
             <Button title={'Clear overdue status'} type={'plain'} onPress={() => setOverdueStatus(null)} />
           )}
+          {purchaseOrderStatus && (
+            <Button title={'Clear purchase order status'} type={'plain'} onPress={() => setPurchaseOrderStatus(null)} />
+          )}
           {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
           {employeeIds.length > 0 && (
             <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
@@ -215,6 +235,16 @@ export function Entry() {
             <Text variant={'sectionHeader'}>Overdue Status:</Text>
             <Text variant={'captionRegular'} color={'TextSubdued'}>
               {titleCase(overdueStatus)}
+            </Text>
+          </>
+        )}
+      </Stack>
+      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
+        {purchaseOrderStatus && (
+          <>
+            <Text variant={'sectionHeader'}>Purchase Order Status:</Text>
+            <Text variant={'captionRegular'} color={'TextSubdued'}>
+              {titleCase(purchaseOrderStatus)}
             </Text>
           </>
         )}
@@ -288,51 +318,77 @@ export function Entry() {
   );
 }
 
-// TODO: Fix this not updating after saving a work order
 function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number][]): ListRow[] {
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
-  const workOrderQueries = useWorkOrderQueries(
-    { fetch, names: workOrderInfos.map(({ name }) => name) },
-    { enabled: false },
-  );
+
+  const workOrderQueries = useWorkOrderQueries({ fetch, names: workOrderInfos.map(({ name }) => name) });
+
+  const workOrders = Object.values(workOrderQueries)
+    .map(query => query.data?.workOrder)
+    .filter(isNonNullable);
+
+  const calculateWorkOrderQueries = useCalculateWorkOrderQueries({
+    fetch,
+    workOrders: workOrders.map(wo => {
+      const { items, charges, customerId } = workOrderToCreateWorkOrder(wo);
+      return { name: wo.name, items, charges, customerId };
+    }),
+  });
+
+  const customerIds = unique(workOrderInfos.map(info => info.customerId));
+  const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
 
   const router = useRouter();
-  const screen = useScreen();
-  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isFetching));
 
-  return workOrderInfos.flatMap<ListRow>(({ name, status, dueDate, orders, customer }) => {
-    const query = workOrderQueries[name];
-    if (!query) return [];
+  return workOrders.flatMap<ListRow>(workOrder => {
+    const workOrderQuery = workOrderQueries[workOrder.name];
+    const customerQuery = customerQueries[workOrder.customerId];
+    const calculateWorkOrderQuery = calculateWorkOrderQueries[workOrder.name];
 
-    const dueDateString = new Date(dueDate).toLocaleDateString();
-    const orderNamesSubtitle = orders.map(order => order.name).join(' • ');
+    if (!workOrderQuery || !customerQuery || !calculateWorkOrderQuery) return [];
 
-    const outstanding = BigDecimal.sum(...orders.map(order => BigDecimal.fromMoney(order.outstanding)));
-    const total = BigDecimal.sum(...orders.map(order => BigDecimal.fromMoney(order.total)));
-    const moneySubtitle = [outstanding.toMoney(), total.toMoney()].map(currencyFormatter).join(' • ');
+    const customer = customerQuery.data;
+    const calculation = calculateWorkOrderQuery.data;
 
-    // TODO: Add deposit captured
-    let financialStatus;
+    let parsedDueDate = new Date(workOrder.dueDate);
+    // convert from UTC to local time
+    parsedDueDate = new Date(parsedDueDate.getTime() + parsedDueDate.getTimezoneOffset() * 60 * 1000);
 
-    if (outstanding.compare(BigDecimal.ZERO) <= 0) {
-      financialStatus = 'Fully Paid';
-    } else if (outstanding.compare(total) < 0) {
-      financialStatus = 'Partially paid';
-    } else {
-      financialStatus = 'Unpaid';
+    const dueDateString = parsedDueDate.toLocaleDateString();
+    const orderNamesSubtitle = workOrder.orders.map(order => order.name).join(' • ');
+
+    let moneySubtitle = extractErrorMessage(calculateWorkOrderQuery.error, 'Loading...');
+    let financialStatus = undefined;
+
+    if (calculation) {
+      const { outstanding, paid, total } = calculation;
+
+      moneySubtitle = `${currencyFormatter(paid)} paid of ${currencyFormatter(total)}`;
+
+      const outstandingBigDecimal = BigDecimal.fromMoney(outstanding);
+      const totalBigDecimal = BigDecimal.fromMoney(total);
+
+      if (outstandingBigDecimal.compare(BigDecimal.ZERO) <= 0) {
+        financialStatus = 'Fully Paid';
+      } else if (outstandingBigDecimal.compare(totalBigDecimal) < 0) {
+        financialStatus = 'Partially paid';
+      } else {
+        financialStatus = 'Unpaid';
+      }
     }
 
-    let parsedDueDate = new Date(dueDate);
-    // convert from UTC to local time
-    parsedDueDate = new Date(parsedDueDate.getTime() + parsedDueDate.getTimezoneOffset() * 60000);
+    const isOverdue =
+      new Date() > parsedDueDate &&
+      calculation &&
+      BigDecimal.fromMoney(calculation.outstanding).compare(BigDecimal.ZERO) > 0;
 
-    const isOverdue = new Date() > parsedDueDate && outstanding.compare(BigDecimal.ZERO) > 0;
+    const purchaseOrders = workOrder.items.flatMap(item => item.purchaseOrders);
 
     return {
-      id: name,
+      id: workOrder.name,
       onPress: async () => {
-        const result = await query.refetch();
+        const result = await workOrderQuery.refetch();
         const workOrder = result.data?.workOrder;
 
         if (!workOrder) return;
@@ -340,27 +396,18 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
         router.push('WorkOrder', { initial: workOrderToCreateWorkOrder(workOrder) });
       },
       leftSide: {
-        label: name,
+        label: workOrder.name,
         subtitle: orderNamesSubtitle ? [moneySubtitle, orderNamesSubtitle] : [moneySubtitle],
-        badges: [
-          {
-            variant: 'neutral',
-            text: customer.name,
-          },
-          {
-            variant: 'highlight',
-            text: status,
-          },
-          {
-            variant: 'warning',
-            text: `Due ${dueDateString}`,
-          },
-          ...(isOverdue ? ([{ variant: 'critical', text: 'Overdue' }] as const) : []),
-          {
-            variant: 'highlight',
-            text: financialStatus,
-          },
-        ],
+        badges: (
+          [
+            customer ? ({ variant: 'neutral', text: customer.displayName } as const) : undefined,
+            { variant: 'highlight', text: workOrder.status },
+            { variant: 'warning', text: `Due ${dueDateString}` },
+            isOverdue ? ({ variant: 'critical', text: 'Overdue' } as const) : undefined,
+            financialStatus ? ({ variant: 'highlight', text: financialStatus } as const) : undefined,
+            ...getPurchaseOrderBadges(purchaseOrders, false),
+          ] as const
+        ).filter(isNonNullable),
       },
       rightSide: {
         showChevron: true,

@@ -90,22 +90,4 @@ export type WorkOrderOrder = {
   type: ShopifyOrderType;
 };
 
-/**
- * Similar to {@link WorkOrder}, but only shows aggregate information.
- */
-export type WorkOrderInfo = {
-  name: string;
-  status: string;
-  dueDate: DateTime;
-  customer: {
-    id: ID;
-    name: string;
-  };
-  orders: {
-    id: ID;
-    name: string;
-    type: 'DRAFT_ORDER' | 'ORDER';
-    total: Money;
-    outstanding: Money;
-  }[];
-};
+export type WorkOrderInfo = WorkOrder;

@@ -44,6 +44,7 @@ import { ProductVariant } from '@work-orders/common/queries/use-product-variants
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { getPurchaseOrderBadge } from '../util/badges.js';
 
 export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
@@ -498,14 +499,7 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
               text: orderName,
               variant: 'highlight',
             })),
-            ...purchaseOrders.map<BadgeProps>(po => {
-              const availableQuantity = sum(po.items.map(item => item.availableQuantity));
-              const quantity = sum(po.items.map(item => item.quantity));
-              const status =
-                availableQuantity === quantity ? 'complete' : availableQuantity === 0 ? 'empty' : 'partial';
-              const variant = availableQuantity === quantity ? 'success' : 'warning';
-              return { text: `${availableQuantity}/${quantity} • ${po.name}`, variant, status } as const;
-            }),
+            ...purchaseOrders.map<BadgeProps>(po => getPurchaseOrderBadge(po, true)),
           ],
         },
         rightSide: {

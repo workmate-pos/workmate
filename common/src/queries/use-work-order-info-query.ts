@@ -1,13 +1,16 @@
 import type {
   PaymentStatus,
+  PurchaseOrderStatus,
   WorkOrderPaginationOptions,
 } from '@web/schemas/generated/work-order-pagination-options.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
+import { useInfiniteQuery, UseInfiniteQueryOptions, useQueryClient } from 'react-query';
 import { WorkOrderInfo } from '@web/services/work-orders/types.js';
 import { ID } from '@web/schemas/generated/ids.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
+import { UseQueryData } from './react-query.js';
+import { useWorkOrderQuery } from './use-work-order-query.js';
 
 export type OverdueStatus = 'OVERDUE' | 'NOT_OVERDUE';
 
@@ -21,6 +24,7 @@ export const useWorkOrderInfoQuery = (
     customFieldFilters,
     paymentStatus,
     overdueStatus,
+    purchaseOrderStatus,
     limit = 10,
   }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset' | 'customFieldFilters' | 'afterDueDate' | 'beforeDueDate'> & {
     limit?: number;
@@ -44,15 +48,28 @@ export const useWorkOrderInfoQuery = (
           customFieldFilters: CustomFieldFilter[];
           paymentStatus: PaymentStatus | undefined;
           overdueStatus: OverdueStatus | undefined;
+          purchaseOrderStatus: PurchaseOrderStatus | undefined;
         }
     )[]
   >,
-) =>
-  useInfiniteQuery({
+) => {
+  const queryClient = useQueryClient();
+
+  return useInfiniteQuery({
     ...options,
     queryKey: [
       'work-order-info',
-      { query, status, limit, employeeIds, customerId, customFieldFilters, paymentStatus, overdueStatus },
+      {
+        query,
+        status,
+        limit,
+        employeeIds,
+        customerId,
+        customFieldFilters,
+        paymentStatus,
+        overdueStatus,
+        purchaseOrderStatus,
+      },
     ],
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams({
@@ -64,6 +81,7 @@ export const useWorkOrderInfoQuery = (
       if (status) searchParams.set('status', status);
       if (customerId) searchParams.set('customerId', customerId);
       if (paymentStatus) searchParams.set('paymentStatus', paymentStatus);
+      if (purchaseOrderStatus) searchParams.set('purchaseOrderStatus', purchaseOrderStatus);
 
       const now = new Date();
       if (overdueStatus === 'OVERDUE') {
@@ -103,4 +121,12 @@ export const useWorkOrderInfoQuery = (
       pages: pages.flat(1),
       pageParams,
     }),
+    onSuccess(workOrders) {
+      for (const workOrder of workOrders.pages) {
+        queryClient.setQueryData(['work-order', workOrder.name], { workOrder } satisfies UseQueryData<
+          typeof useWorkOrderQuery
+        >);
+      }
+    },
   });
+};

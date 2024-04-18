@@ -45,6 +45,10 @@
     },
     "beforeDueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
+    },
+    "purchaseOrderStatus": {
+      "title": "purchase-order-status",
+      "enum": ["FULFILLED", "PENDING"]
     }
   },
   "required": ["limit", "offset"],
