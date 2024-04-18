@@ -16,6 +16,8 @@ import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { useState } from 'react';
+import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 
 // TODO: Share this screen too + more
 
@@ -35,6 +37,7 @@ export function ProductSelector({
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
+      first: 50 as Int,
       query: [query, ...collectionQueries]
         .filter(Boolean)
         .map(q => `(${q})`)
@@ -42,7 +45,6 @@ export function ProductSelector({
     },
   });
 
-  const productVariants = productVariantsQuery.data?.pages.flat() ?? [];
   const currencyFormatter = useCurrencyFormatter();
 
   const internalOnSelect = (
@@ -55,8 +57,25 @@ export function ProductSelector({
     toast.show(`${name} added to cart`, { duration: 750 });
   };
 
-  const rows = getProductVariantRows(productVariants, internalOnSelect, currencyFormatter);
   const router = useRouter();
+
+  const [page, setPage] = useState(1);
+  const pagination = (
+    <PaginationControls
+      page={page}
+      pageCount={productVariantsQuery.data?.pages?.length ?? 0}
+      onPageChange={setPage}
+      hasNextPage={productVariantsQuery.hasNextPage ?? false}
+      isLoadingNextPage={productVariantsQuery.isFetchingNextPage}
+      onFetchNextPage={productVariantsQuery.fetchNextPage}
+    />
+  );
+
+  const rows = getProductVariantRows(
+    productVariantsQuery.data?.pages?.[page - 1] ?? [],
+    internalOnSelect,
+    currencyFormatter,
+  );
 
   return (
     <ScrollView>
@@ -91,20 +110,16 @@ export function ProductSelector({
         onSearch={() => {}}
         placeholder={'Search products'}
       />
-      <List
-        data={rows}
-        onEndReached={() => productVariantsQuery.fetchNextPage()}
-        isLoadingMore={productVariantsQuery.isLoading}
-        imageDisplayStrategy={'always'}
-      />
-      {productVariantsQuery.isLoading && (
+      {pagination}
+      <List data={rows} imageDisplayStrategy={'always'} />
+      {productVariantsQuery.isFetching && (
         <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
             Loading products...
           </Text>
         </Stack>
       )}
-      {productVariantsQuery.isSuccess && rows.length === 0 && (
+      {!productVariantsQuery.isFetching && productVariantsQuery.isSuccess && rows.length === 0 && (
         <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
             No products found
@@ -118,6 +133,7 @@ export function ProductSelector({
           </Text>
         </Stack>
       )}
+      {pagination}
     </ScrollView>
   );
 }

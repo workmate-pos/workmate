@@ -415,6 +415,7 @@ async function calculateDatabaseOrders(
     }
 
     if (lineItemItems.length > 1) {
+      // TODO: Fix - this is not the case because product varaints get stacked
       throw new Error('A line item can have at most one associated item');
     }
 

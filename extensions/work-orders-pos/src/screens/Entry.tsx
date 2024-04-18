@@ -288,6 +288,7 @@ export function Entry() {
   );
 }
 
+// TODO: Fix this not updating after saving a work order
 function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number][]): ListRow[] {
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();

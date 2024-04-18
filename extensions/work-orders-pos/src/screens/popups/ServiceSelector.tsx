@@ -15,6 +15,8 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { useState } from 'react';
+import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 
 type OnSelect = (arg: {
   type: 'mutable-service' | 'fixed-service';
@@ -30,6 +32,7 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
+      first: 50 as Int,
       query: serviceCollectionIds
         ? `${query} AND (${serviceCollectionIds.map(id => `collection:${parseGid(id).id}`).join(' OR ')})`
         : query,
@@ -37,7 +40,19 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
   });
   const currencyFormatter = useCurrencyFormatter();
 
-  const rows = getProductVariantRows(productVariantsQuery?.data?.pages.flat() ?? [], onSelect, currencyFormatter);
+  const [page, setPage] = useState(1);
+  const pagination = (
+    <PaginationControls
+      page={page}
+      pageCount={productVariantsQuery.data?.pages?.length ?? 0}
+      onPageChange={setPage}
+      hasNextPage={productVariantsQuery.hasNextPage ?? false}
+      isLoadingNextPage={productVariantsQuery.isFetchingNextPage}
+      onFetchNextPage={productVariantsQuery.fetchNextPage}
+    />
+  );
+
+  const rows = getProductVariantRows(productVariantsQuery?.data?.pages?.[page - 1] ?? [], onSelect, currencyFormatter);
 
   return (
     <ScrollView>
@@ -52,15 +67,16 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
         onSearch={() => {}}
         placeholder={'Search services'}
       />
+      {pagination}
       <List data={rows} imageDisplayStrategy={'always'} />
-      {productVariantsQuery.isLoading && (
+      {productVariantsQuery.isFetching && (
         <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
             Loading services...
           </Text>
         </Stack>
       )}
-      {productVariantsQuery.isSuccess && rows.length === 0 && (
+      {!productVariantsQuery.isFetching && productVariantsQuery.isSuccess && rows.length === 0 && (
         <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
             No services found
@@ -74,6 +90,7 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
           </Text>
         </Stack>
       )}
+      {pagination}
     </ScrollView>
   );
 }
