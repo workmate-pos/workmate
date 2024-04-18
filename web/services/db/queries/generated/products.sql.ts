@@ -13,6 +13,7 @@ export interface IGetResult {
   description: string;
   handle: string;
   productId: string;
+  productType: string;
   shop: string;
   title: string;
   updatedAt: Date;
@@ -49,6 +50,7 @@ export interface IGetManyResult {
   description: string;
   handle: string;
   productId: string;
+  productType: string;
   productVariantCount: number;
   shop: string;
   title: string;
@@ -81,6 +83,7 @@ export interface IUpsertParams {
   description: string;
   handle: string;
   productId: string;
+  productType: string;
   shop: string;
   title: string;
 }
@@ -94,18 +97,19 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"productId":true,"handle":true,"title":true,"shop":true,"description":true},"params":[{"name":"productId","required":true,"transform":{"type":"scalar"},"locs":[{"a":78,"b":88}]},{"name":"handle","required":true,"transform":{"type":"scalar"},"locs":[{"a":91,"b":98},{"a":184,"b":191}]},{"name":"title","required":true,"transform":{"type":"scalar"},"locs":[{"a":101,"b":107},{"a":209,"b":215}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":110,"b":115},{"a":233,"b":238}]},{"name":"description","required":true,"transform":{"type":"scalar"},"locs":[{"a":118,"b":130},{"a":261,"b":273}]}],"statement":"INSERT INTO \"Product\" (\"productId\", handle, title, shop, description)\nVALUES (:productId!, :handle!, :title!, :shop!, :description!)\nON CONFLICT (\"productId\") DO UPDATE\n  SET handle = :handle!,\n      title  = :title!,\n      shop   = :shop!,\n      description = :description!"};
+const upsertIR: any = {"usedParamSet":{"productId":true,"handle":true,"title":true,"shop":true,"description":true,"productType":true},"params":[{"name":"productId","required":true,"transform":{"type":"scalar"},"locs":[{"a":93,"b":103}]},{"name":"handle","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":113},{"a":214,"b":221}]},{"name":"title","required":true,"transform":{"type":"scalar"},"locs":[{"a":116,"b":122},{"a":239,"b":245}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":125,"b":130},{"a":263,"b":268}]},{"name":"description","required":true,"transform":{"type":"scalar"},"locs":[{"a":133,"b":145},{"a":291,"b":303}]},{"name":"productType","required":true,"transform":{"type":"scalar"},"locs":[{"a":148,"b":160},{"a":328,"b":340}]}],"statement":"INSERT INTO \"Product\" (\"productId\", handle, title, shop, description, \"productType\")\nVALUES (:productId!, :handle!, :title!, :shop!, :description!, :productType!)\nON CONFLICT (\"productId\") DO UPDATE\n  SET handle = :handle!,\n      title  = :title!,\n      shop   = :shop!,\n      description = :description!,\n      \"productType\" = :productType!"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "Product" ("productId", handle, title, shop, description)
- * VALUES (:productId!, :handle!, :title!, :shop!, :description!)
+ * INSERT INTO "Product" ("productId", handle, title, shop, description, "productType")
+ * VALUES (:productId!, :handle!, :title!, :shop!, :description!, :productType!)
  * ON CONFLICT ("productId") DO UPDATE
  *   SET handle = :handle!,
  *       title  = :title!,
  *       shop   = :shop!,
- *       description = :description!
+ *       description = :description!,
+ *       "productType" = :productType!
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);

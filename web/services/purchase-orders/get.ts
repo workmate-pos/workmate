@@ -168,6 +168,7 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
           handle: product.handle,
           hasOnlyDefaultVariant: product.productVariantCount === 1,
           description: product.description,
+          productType: product.productType,
         },
       },
       shopifyOrderLineItem: evaluate(() => {

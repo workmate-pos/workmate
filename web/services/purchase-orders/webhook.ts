@@ -95,6 +95,7 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
                 description: productVariant.product.description,
                 handle: productVariant.product.handle,
                 title: productVariant.product.title,
+                productType: productVariant.product.productType,
               },
               id: productVariant.id,
               inventoryItemId: productVariant.inventoryItemId,

@@ -61,8 +61,8 @@ export async function upsertProducts(shop: string, products: gql.products.Databa
   }
 
   await unit(async () => {
-    for (const { id: productId, title, handle, description } of products) {
-      await db.products.upsert({ shop, productId, title, handle, description });
+    for (const { id: productId, title, handle, description, productType } of products) {
+      await db.products.upsert({ shop, productId, title, handle, description, productType });
     }
   });
 }

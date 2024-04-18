@@ -78,6 +78,7 @@ fragment ProductVariantFragment on ProductVariant {
       url
     }
     description
+    productType
     isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
     isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
   }
@@ -182,6 +183,7 @@ fragment DatabaseProductFragment on Product {
   handle
   title
   description
+  productType
 }
 
 

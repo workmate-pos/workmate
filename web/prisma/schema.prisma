@@ -486,6 +486,7 @@ model Product {
   handle      String
   title       String
   description String
+  productType String
 
   productVariants ProductVariant[]
 
