@@ -56,14 +56,10 @@ export function DepositSelector({ createWorkOrder }: { createWorkOrder: CreateWo
   const handleDeposit = (amount: Money) => {
     if (!createWorkOrder.name) throw new Error('No work order name set');
 
-    paymentHandler.handlePayment({
+    paymentHandler.handleDeposit({
       workOrderName: createWorkOrder.name,
       deposit: amount,
-      items: [],
-      charges: [],
-      customerId: null,
-      labourSku: '',
-      discount: null,
+      customerId: createWorkOrder.customerId,
     });
   };
 
@@ -88,14 +84,14 @@ export function DepositSelector({ createWorkOrder }: { createWorkOrder: CreateWo
 
   return (
     <ScrollView>
-      <Text>{JSON.stringify(calculatedWorkOrder, null, 2)}</Text>
       <Stack direction="vertical" spacing={8}>
         <Text variant="headingLarge">Shortcuts</Text>
         <ResponsiveGrid columns={3}>
           {depositShortcuts.map(shortcut => {
             const disabled =
-              settings.depositRules.onlyAllowHighestAbsoluteShortcut &&
-              BigDecimal.fromMoney(shortcut.money).compare(highestDepositShortcutMoney) < 0;
+              BigDecimal.fromMoney(shortcut.money).compare(BigDecimal.ZERO) <= 0 ||
+              (settings.depositRules.onlyAllowHighestAbsoluteShortcut &&
+                BigDecimal.fromMoney(shortcut.money).compare(highestDepositShortcutMoney) < 0);
 
             if (shortcut.unit === 'currency') {
               return (
@@ -135,6 +131,7 @@ export function DepositSelector({ createWorkOrder }: { createWorkOrder: CreateWo
               <Button
                 title={currencyFormatter(customAmountValue)}
                 onPress={() => handleDeposit(BigDecimal.fromString(customAmountValue.toFixed(2)).toMoney())}
+                isDisabled={customAmountValue <= 0}
               />
             </Stack>
 
@@ -149,9 +146,8 @@ export function DepositSelector({ createWorkOrder }: { createWorkOrder: CreateWo
               />
               <Button
                 title={`${customPercentageValue}% (${currencyFormatter(percentageToMoney(customPercentageValue))})`}
-                onPress={() => {
-                  handleDeposit(percentageToMoney(customPercentageValue));
-                }}
+                onPress={() => handleDeposit(percentageToMoney(customPercentageValue))}
+                isDisabled={customPercentageValue <= 0}
               />
             </Stack>
           </>

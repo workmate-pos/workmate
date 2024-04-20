@@ -1,16 +1,14 @@
 /* @name upsert */
 INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount",
-                         "discountType", "depositedAmount", "depositedReconciledAmount")
-VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType, :depositedAmount!, :depositedReconciledAmount!)
+                         "discountType")
+VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)
 ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
                                            "dueDate"            = EXCLUDED."dueDate",
                                            "customerId"         = EXCLUDED."customerId",
                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
                                            note                 = EXCLUDED.note,
                                            "discountAmount"     = EXCLUDED."discountAmount",
-                                           "discountType"       = EXCLUDED."discountType",
-                                           "depositedAmount"    = EXCLUDED."depositedAmount",
-                                           "depositedReconciledAmount" = EXCLUDED."depositedReconciledAmount"
+                                           "discountType"       = EXCLUDED."discountType"
 RETURNING *;
 
 /* @name insertCustomField */
@@ -36,19 +34,22 @@ WITH "CustomFieldFilters" AS (SELECT row_number() over () as row, key, val, inve
 SELECT wo.name
 FROM "WorkOrder" wo
        LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
+
        LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
        LEFT JOIN "WorkOrderHourlyLabourCharge" wohlc ON wo.id = wohlc."workOrderId"
        LEFT JOIN "WorkOrderFixedPriceLabourCharge" wofplc ON wo.id = wofplc."workOrderId"
+
        LEFT JOIN "ShopifyOrderLineItem" soli ON (
-  woi."shopifyOrderLineItemId" = soli."lineItemId"
-    OR wohlc."shopifyOrderLineItemId" = soli."lineItemId"
-    OR wofplc."shopifyOrderLineItemId" = soli."lineItemId"
+  woi."shopifyOrderLineItemId" = soli."lineItemId" OR
+  wohlc."shopifyOrderLineItemId" = soli."lineItemId" OR
+  wofplc."shopifyOrderLineItemId" = soli."lineItemId"
   )
-       LEFT JOIN "ShopifyOrder" so ON (
-  so."orderType" = 'ORDER' AND
-  soli."orderId" = so."orderId"
-  )
-LEFT JOIN "PurchaseOrderLineItem" poli ON soli."lineItemId" = poli."shopifyOrderLineItemId"
+       LEFT JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+       LEFT JOIN "PurchaseOrderLineItem" poli ON soli."lineItemId" = poli."shopifyOrderLineItemId"
+
+       LEFT JOIN "WorkOrderDeposit" wod ON wo.id = wod."workOrderId"
+       LEFT JOIN "ShopifyOrderLineItem" solid ON wod."shopifyOrderLineItemId" = solid."lineItemId"
+       LEFT JOIN "ShopifyOrder" sod ON solid."orderId" = sod."orderId"
 WHERE wo.shop = :shop!
   AND wo.status = COALESCE(:status, wo.status)
   AND wo."dueDate" >= COALESCE(:afterDueDate, wo."dueDate")
@@ -72,7 +73,6 @@ WHERE wo.shop = :shop!
   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
              FROM (SELECT filter.row,
-                          ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND
                           (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=
                           filter.inverse
                    FROM "CustomFieldFilters" filter
@@ -81,9 +81,17 @@ WHERE wo.shop = :shop!
                                         wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)
              GROUP BY row) b(row, match))
 GROUP BY wo.id
-HAVING (COUNT(DISTINCT so."orderId") >= COALESCE(:minimumOrderCount, 0)
-  AND (BOOL_AND(so."fullyPaid") = :allPaid OR :allPaid IS NULL)) != COALESCE(:inverseOrderConditions, FALSE)
-AND (SUM(poli."availableQuantity") IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled OR :purchaseOrdersFulfilled IS NULL
+HAVING (
+         (((NOT COALESCE(BOOL_OR(so."fullyPaid"), FALSE) AND NOT COALESCE(BOOL_OR(sod."fullyPaid"), FALSE))) OR
+          NOT :unpaid!) AND
+         (((COALESCE(BOOL_OR(so."fullyPaid"), FALSE) OR COALESCE(BOOL_OR(sod."fullyPaid"), FALSE)) AND
+           NOT COALESCE(BOOL_AND(so."fullyPaid"), FALSE)) OR NOT :partiallyPaid!) AND
+         (COALESCE(BOOL_AND(so."fullyPaid"), FALSE) OR NOT :fullyPaid!) AND
+         ((NOT COALESCE(BOOL_OR(so."fullyPaid"), FALSE) AND COALESCE(BOOL_OR(sod."fullyPaid"), FALSE)) OR
+          NOT :hasPaidDeposit!)
+         ) != :inverseOrderConditions!
+   AND ((SUM(poli."availableQuantity") IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled
+  OR :purchaseOrdersFulfilled IS NULL)
 ORDER BY wo.id DESC
 LIMIT :limit! OFFSET :offset;
 
@@ -99,34 +107,16 @@ SELECT *
 FROM "WorkOrderItem"
 WHERE "workOrderId" = :workOrderId!;
 
-/* @name getUnlinkedItems */
-SELECT *
-FROM "WorkOrderItem"
-WHERE "workOrderId" = :workOrderId!
-  AND "shopifyOrderLineItemId" IS NULL;
-
-/* @name getUnlinkedHourlyLabourCharges */
-SELECT *
-FROM "WorkOrderHourlyLabourCharge"
-WHERE "workOrderId" = :workOrderId!
-  AND "shopifyOrderLineItemId" IS NULL;
-
-/* @name getUnlinkedFixedPriceLabourCharges */
-SELECT *
-FROM "WorkOrderFixedPriceLabourCharge"
-WHERE "workOrderId" = :workOrderId!
-  AND "shopifyOrderLineItemId" IS NULL;
-
 /*
   @name getItemsByUuids
   @param uuids -> (...)
 */
 SELECT *
 FROM "WorkOrderItem"
-WHERE uuid in :uuids!
+WHERE uuid IN :uuids!
   AND "workOrderId" = :workOrderId!;
 
-/* @name setLineItemShopifyOrderLineItemId */
+/* @name setItemShopifyOrderLineItemId */
 UPDATE "WorkOrderItem"
 SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
 WHERE uuid = :uuid!
@@ -148,3 +138,58 @@ DELETE
 FROM "WorkOrderItem"
 WHERE uuid = :uuid!
   AND "workOrderId" = :workOrderId!;
+
+
+/* @name getDeposits */
+SELECT *
+FROM "WorkOrderDeposit"
+WHERE "workOrderId" = :workOrderId!;
+
+/*
+  @name getDepositsByUuids
+  @param uuids -> (...)
+*/
+SELECT *
+FROM "WorkOrderDeposit"
+WHERE uuid IN :uuids!
+  AND "workOrderId" = :workOrderId!;
+
+/* @name upsertDeposit */
+INSERT INTO "WorkOrderDeposit" ("workOrderId", uuid, "shopifyOrderLineItemId", amount)
+VALUES (:workOrderId!, :uuid!, :shopifyOrderLineItemId, :amount!)
+ON CONFLICT ("workOrderId", uuid)
+  DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+                amount                   = EXCLUDED.amount;
+
+/* @name removeDeposit */
+DELETE
+FROM "WorkOrderDeposit"
+WHERE uuid = :uuid!
+  AND "workOrderId" = :workOrderId!;
+
+/* @name getPaidDeposits */
+SELECT wod.*
+FROM "WorkOrderDeposit" wod
+       INNER JOIN "ShopifyOrderLineItem" soli ON "shopifyOrderLineItemId" = soli."lineItemId"
+       INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+WHERE so."fullyPaid" = TRUE
+  AND wod."workOrderId" = :workOrderId!
+  AND so."orderType" = 'ORDER';
+
+/* @name getAppliedDiscounts */
+SELECT DISTINCT sod.*
+FROM "WorkOrder" wo
+       LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
+       LEFT JOIN "WorkOrderFixedPriceLabourCharge" wfplc ON wo.id = wfplc."workOrderId"
+       LEFT JOIN "WorkOrderHourlyLabourCharge" whlc ON wo.id = whlc."workOrderId"
+       LEFT JOIN "WorkOrderDeposit" wod ON wo.id = wod."workOrderId"
+       INNER JOIN "ShopifyOrderLineItem" soli ON (
+  woi."shopifyOrderLineItemId" = soli."lineItemId"
+    OR wfplc."shopifyOrderLineItemId" = soli."lineItemId"
+    OR whlc."shopifyOrderLineItemId" = soli."lineItemId"
+    OR wod."shopifyOrderLineItemId" = soli."lineItemId"
+  )
+       INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+       INNER JOIN "ShopifyOrderDiscount" sod ON sod."orderId" = so."orderId"
+WHERE wo.id = :workOrderId!
+  AND so."orderType" = 'ORDER';

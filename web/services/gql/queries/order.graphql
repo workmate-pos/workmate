@@ -200,7 +200,7 @@ fragment DatabaseShopifyOrderLineItemFragment on LineItem {
       amount
     }
   }
-  discountedPriceSet: discountedUnitPriceAfterAllDiscountsSet {
+  discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet {
     shopMoney {
       amount
     }

@@ -9,8 +9,7 @@ import { syncProductsIfExists } from './products/sync.js';
 import { syncProductVariantsIfExists } from './product-variants/sync.js';
 import { syncShopifyOrders, syncShopifyOrdersIfExists } from './shopify-order/sync.js';
 import { syncWorkOrders } from './work-orders/sync.js';
-import { isDepositDiscountCode, WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
-import { assertMoney, BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
 
 export default {
   APP_UNINSTALLED: {
@@ -60,34 +59,6 @@ export default {
     },
   },
 
-  // 15:32:55 │ web-backend  │ [
-  // 15:32:55 │ web-backend  │   {
-  // 15:32:55 │ web-backend  │     target_type: 'line_item',
-  // 15:32:55 │ web-backend  │     type: 'manual',
-  // 15:32:55 │ web-backend  │     value: '1.0',
-  // 15:32:55 │ web-backend  │     value_type: 'fixed_amount',
-  // 15:32:55 │ web-backend  │     allocation_method: 'across',
-  // 15:32:55 │ web-backend  │     target_selection: 'all',
-  // 15:32:55 │ web-backend  │     title: 'asd',
-  // 15:32:55 │ web-backend  │     description: 'asd'
-  // 15:32:55 │ web-backend  │   }
-  // 15:32:55 │ web-backend  │ ]
-  // 15:32:55 │ web-backend  │ [ { code: 'asd', amount: '1.00', type: 'fixed_amount' } ]
-
-  // 15:34:22 │ web-backend  │ [
-  // 15:34:22 │ web-backend  │   {
-  // 15:34:22 │ web-backend  │     target_type: 'line_item',
-  // 15:34:22 │ web-backend  │     type: 'manual',
-  // 15:34:22 │ web-backend  │     value: '12.0',
-  // 15:34:22 │ web-backend  │     value_type: 'percentage',
-  // 15:34:22 │ web-backend  │     allocation_method: 'across',
-  // 15:34:22 │ web-backend  │     target_selection: 'all',
-  // 15:34:22 │ web-backend  │     title: 'asdaasdad',
-  // 15:34:22 │ web-backend  │     description: 'asdaasdad'
-  // 15:34:22 │ web-backend  │   }
-  // 15:34:22 │ web-backend  │ ]
-  // 15:34:22 │ web-backend  │ [ { code: 'asdaasdad', amount: '107.99', type: 'percentage' } ]
-
   ORDERS_CREATE: {
     async handler(
       session,
@@ -96,40 +67,11 @@ export default {
       body: {
         admin_graphql_api_id: ID;
         note_attributes: { name: string; value: string }[];
-        discount_codes: { code: string; amount: Money; type: 'fixed_amount' | 'percentage' }[];
-        line_items: { properties: { name: string; value: string | null }[] }[];
       },
     ) {
       const isWorkOrder = body.note_attributes.some(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
 
-      console.log(body.line_items.map(li => li.properties));
-
       if (isWorkOrder) {
-        // TODO: Just use some special line item for deposits so we can easily track them
-        // TODO: Then also store discounts in the db so we can easily calculate the reconciled amount?
-
-        const [workOrder] = await db.workOrder.get({ name: body.admin_graphql_api_id });
-
-        if (workOrder) {
-          let { depositedAmount, depositedReconciledAmount } = workOrder;
-
-          assertMoney(depositedAmount);
-          assertMoney(depositedReconciledAmount);
-
-          const depositDiscountAmount = BigDecimal.sum(
-            ...body.discount_codes
-              .filter(isDepositDiscountCode)
-              .map(discountCode => BigDecimal.fromMoney(discountCode.amount)),
-          );
-
-          if (depositDiscountAmount.compare(BigDecimal.ZERO) > 0) {
-            depositedReconciledAmount = BigDecimal.sum(
-              BigDecimal.fromMoney(depositedReconciledAmount),
-              depositDiscountAmount,
-            ).toMoney();
-          }
-        }
-
         await syncShopifyOrders(session, [body.admin_graphql_api_id]);
       }
     },
@@ -217,8 +159,22 @@ export default {
   },
 
   ORDERS_UPDATED: {
-    async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
-      await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: ID;
+        note_attributes: { name: string; value: string }[];
+      },
+    ) {
+      const isWorkOrder = body.note_attributes.some(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
+
+      if (isWorkOrder) {
+        await syncShopifyOrders(session, [body.admin_graphql_api_id]);
+      } else {
+        await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
+      }
     },
   },
 

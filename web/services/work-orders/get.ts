@@ -15,7 +15,7 @@ import {
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
-import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { assertDecimal, assertMoney, BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
@@ -23,6 +23,7 @@ import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
 import { IGetResult } from '../db/queries/generated/work-order.sql.js';
+import { isDepositDiscount } from '@work-orders/work-order-shopify-order';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
@@ -33,9 +34,6 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
 
   assertGid(workOrder.customerId);
   assertGidOrNull(workOrder.derivedFromOrderId);
-
-  assertMoney(workOrder.depositedAmount);
-  assertMoney(workOrder.depositedReconciledAmount);
 
   return await awaitNested({
     name: workOrder.name,
@@ -49,8 +47,8 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     orders: getWorkOrderOrders(workOrder.id),
     customFields: getWorkOrderCustomFields(workOrder.id),
     discount: getWorkOrderDiscount(workOrder),
-    depositedAmount: workOrder.depositedAmount,
-    depositedReconciledAmount: workOrder.depositedReconciledAmount,
+    depositedAmount: getWorkOrderDepositedAmount(workOrder.id),
+    depositedReconciledAmount: getWorkOrderDepositedReconciledAmount(workOrder.id),
   });
 }
 
@@ -216,7 +214,7 @@ async function getWorkOrderCustomFields(workOrderId: number): Promise<Record<str
   return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
 }
 
-function getWorkOrderDiscount(
+export function getWorkOrderDiscount(
   workOrder: Pick<IGetResult, 'discountType' | 'discountAmount'>,
 ): WorkOrderDiscount | null {
   if (!workOrder.discountAmount) return null;
@@ -239,6 +237,17 @@ function getWorkOrderDiscount(
   }
 
   return workOrder.discountType satisfies never;
+}
+
+export async function getWorkOrderDepositedAmount(workOrderId: number): Promise<Money> {
+  const deposits = await db.workOrder.getPaidDeposits({ workOrderId });
+  return BigDecimal.sum(...deposits.map(deposit => BigDecimal.fromString(deposit.amount))).toMoney();
+}
+
+export async function getWorkOrderDepositedReconciledAmount(workOrderId: number): Promise<Money> {
+  const discounts = await db.workOrder.getAppliedDiscounts({ workOrderId });
+  const depositDiscounts = discounts.filter(isDepositDiscount);
+  return BigDecimal.sum(...depositDiscounts.map(discount => BigDecimal.fromString(discount.amount))).toMoney();
 }
 
 /**
@@ -265,16 +274,6 @@ export async function getWorkOrderInfoPage(
 
   const requireCustomFieldFilters = customFieldFilters.filter(hasPropertyValue('type', 'require-field')) ?? [];
 
-  const { minimumOrderCount = undefined, allPaid = undefined } = paginationOptions.paymentStatus
-    ? {
-        UNPAID: { minimumOrderCount: 0, allPaid: false },
-        PARTIALLY_PAID: { minimumOrderCount: 1, allPaid: false },
-        // TODO: Proper support for this - i.e. actually check if we only have a deposit order
-        HAS_DEPOSIT: { minimumOrderCount: 1, allPaid: false },
-        FULLY_PAID: { minimumOrderCount: 1, allPaid: true },
-      }[paginationOptions.paymentStatus]
-    : {};
-
   const inverseOrderConditions = paginationOptions.excludePaymentStatus ?? false;
 
   const purchaseOrdersFulfilled = {
@@ -295,10 +294,12 @@ export async function getWorkOrderInfoPage(
     requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
     afterDueDate: paginationOptions.afterDueDate,
     beforeDueDate: paginationOptions.beforeDueDate,
-    minimumOrderCount,
-    allPaid,
-    inverseOrderConditions,
     purchaseOrdersFulfilled,
+    inverseOrderConditions,
+    unpaid: paginationOptions.paymentStatus === 'UNPAID',
+    partiallyPaid: paginationOptions.paymentStatus === 'PARTIALLY_PAID',
+    fullyPaid: paginationOptions.paymentStatus === 'FULLY_PAID',
+    hasPaidDeposit: paginationOptions.paymentStatus === 'HAS_DEPOSIT',
   });
 
   return await Promise.all(page.map(workOrder => getWorkOrder(session, workOrder.name).then(wo => wo ?? never())));

@@ -6,7 +6,7 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { syncWorkOrders } from '../work-orders/sync.js';
-import { linkWorkOrderItemsAndCharges } from '../work-orders/link-order-items.js';
+import { linkWorkOrderItemsAndChargesAndDeposits } from '../work-orders/link-order-items.js';
 import { ensureCustomersExist } from '../customer/sync.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unit } from '../db/unit-of-work.js';
@@ -135,6 +135,7 @@ async function syncShopifyOrderLineItems(
     return lineItemId;
   });
 
+  // TODO: Unify the way discounts are taken into account - currently order line items take into account order level discounts, while draft order line items dont
   const lineItems =
     order.type === 'order'
       ? await getOrderLineItems(session, order.order.id)
@@ -156,7 +157,7 @@ async function syncShopifyOrderLineItems(
     variant,
     unfulfilledQuantity,
     taxLines,
-    discountedPriceSet,
+    discountedUnitPriceSet,
     originalUnitPriceSet,
   } of lineItems) {
     if (variant) {
@@ -175,7 +176,7 @@ async function syncShopifyOrderLineItems(
       title,
       unfulfilledQuantity,
       unitPrice: originalUnitPriceSet.shopMoney.amount,
-      discountedUnitPrice: discountedPriceSet.shopMoney.amount,
+      discountedUnitPrice: discountedUnitPriceSet.shopMoney.amount,
       totalTax,
     });
   }
@@ -183,8 +184,8 @@ async function syncShopifyOrderLineItems(
   // We should link work order items and work order charges if referenced
   try {
     // this can fail if the merchant messes with order attributes
-    // TODO: Copy all attributes over to metafields on create to prevent this
-    await linkWorkOrderItemsAndCharges(session, order.order, lineItems);
+    // TODO: Copy all attributes over to metafields on create to prevent this ^^^
+    await linkWorkOrderItemsAndChargesAndDeposits(session, order.order, lineItems);
   } catch (error) {
     console.error('Error linking work order items and charges', error);
   }

@@ -13,6 +13,11 @@ fragment CalculatedDraftOrderFragment on CalculatedDraftOrder {
   totalTax
   totalPrice
   subtotalPrice
+  totalDiscountsSet {
+    shopMoney {
+      amount
+    }
+  }
   lineItems {
     custom
     discountedTotal {
@@ -220,7 +225,7 @@ fragment DatabaseShopifyOrderLineItemFragment on DraftOrderLineItem {
       amount
     }
   }
-  discountedPriceSet: discountedUnitPriceSet {
+  discountedUnitPriceSet: discountedUnitPriceSet {
     shopMoney {
       amount
     }

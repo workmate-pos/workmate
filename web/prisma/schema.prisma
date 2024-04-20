@@ -48,11 +48,6 @@ model WorkOrder {
   derivedFromOrder   ShopifyOrder? @relation(fields: [derivedFromOrderId], references: [orderId])
   derivedFromOrderId String?
 
-  // The amount that has been deposited by the customer
-  depositedAmount           String
-  // The amount of discount given to the customer to account for the amount that has been deposited
-  depositedReconciledAmount String
-
   // The discount that is applied to every FUTURE order
 
   discountType   DiscountType?
@@ -65,6 +60,7 @@ model WorkOrder {
   items                   WorkOrderItem[]
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
   hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
+  deposits                WorkOrderDeposit[]
   customFields            WorkOrderCustomField[]
 
   @@unique([shop, name])
@@ -167,6 +163,23 @@ model WorkOrderHourlyLabourCharge {
   @@id([workOrderId, uuid])
 }
 
+model WorkOrderDeposit {
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+
+  uuid String @db.Uuid
+
+  shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
+  shopifyOrderLineItemId String?
+
+  amount String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@id([workOrderId, uuid])
+}
+
 model ShopifyOrder {
   orderId String @id
 
@@ -187,8 +200,22 @@ model ShopifyOrder {
   updatedAt DateTime @default(now())
 
   workOrders WorkOrder[]
+  discounts  ShopifyOrderDiscount[]
 
   @@index([shop])
+}
+
+model ShopifyOrderDiscount {
+  id Int @id @default(autoincrement())
+
+  orderId String
+  order   ShopifyOrder @relation(fields: [orderId], references: [orderId])
+
+  code   String
+  amount String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 }
 
 model ShopifyOrderLineItem {
@@ -214,6 +241,7 @@ model ShopifyOrderLineItem {
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
   workOrderItems          WorkOrderItem[]
   purchaseOrderLineItems  PurchaseOrderLineItem[]
+  WorkOrderDeposit        WorkOrderDeposit[]
 
   @@index([orderId])
 }

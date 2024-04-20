@@ -5,11 +5,13 @@ import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shop
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import {
   getCustomAttributeArrayFromObject,
+  getWorkOrderAppliedDiscount,
   getWorkOrderLineItems,
   getWorkOrderOrderCustomAttributes,
 } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
+import { getWorkOrderDepositedAmount, getWorkOrderDepositedReconciledAmount, getWorkOrderDiscount } from './get.js';
 
 export async function syncWorkOrders(session: Session, workOrderIds: number[], workOrderHasChanged: boolean) {
   if (workOrderIds.length === 0) {
@@ -40,7 +42,8 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
   const hourlyLabourCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
   const fixedPriceLabourCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
 
-  const staleLineItemIdFilter = (el: { shopifyOrderLineItemId: string | null }) => {
+  // a filter to get line items that should be re-linked to a draft order
+  const draftLineItemFilter = (el: { shopifyOrderLineItemId: string | null }) => {
     if (isLineItemId(el.shopifyOrderLineItemId)) {
       return false;
     }
@@ -59,9 +62,9 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
     return false;
   };
 
-  const draftItems = items.filter(staleLineItemIdFilter);
-  const draftHourlyLabourCharges = hourlyLabourCharges.filter(staleLineItemIdFilter);
-  const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(staleLineItemIdFilter);
+  const draftItems = items.filter(draftLineItemFilter);
+  const draftHourlyLabourCharges = hourlyLabourCharges.filter(draftLineItemFilter);
+  const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(draftLineItemFilter);
 
   if (draftItems.length === 0 && draftHourlyLabourCharges.length === 0 && draftFixedPriceLabourCharges.length === 0) {
     return;
@@ -73,18 +76,26 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
     return orderId;
   });
 
-  const graphql = new Graphql(session);
-  await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
-
   const { lineItems, customSales } = getWorkOrderLineItems(
     draftItems,
     draftHourlyLabourCharges,
     draftFixedPriceLabourCharges,
-    null,
     { labourSku: labourLineItemSKU },
   );
 
+  const workOrderDiscount = getWorkOrderDiscount(workOrder);
+  const depositedAmount = await getWorkOrderDepositedAmount(workOrderId);
+  const depositedReconciledAmount = await getWorkOrderDepositedReconciledAmount(workOrderId);
+
+  const appliedDiscount = getWorkOrderAppliedDiscount(workOrderDiscount, {
+    depositedAmount,
+    depositedReconciledAmount,
+  });
+
   assertGid(workOrder.customerId);
+
+  const graphql = new Graphql(session);
+  await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
 
   await gql.draftOrder.create.run(graphql, {
     input: {
@@ -105,6 +116,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
       ],
       note: workOrder.note,
       purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
+      appliedDiscount,
     },
   });
 }

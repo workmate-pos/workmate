@@ -20,6 +20,10 @@ export async function cleanOrphanedDraftOrders<T>(
       ({ orderId }) => !newLinkedDraftOrders.some(({ orderId: id }) => id === orderId),
     );
 
+    if (orphanedDraftOrders.length === 0) {
+      return;
+    }
+
     const graphql = new Graphql(session);
     await gql.draftOrder.removeMany.run(graphql, {
       ids: orphanedDraftOrders.map(({ orderId }) => {

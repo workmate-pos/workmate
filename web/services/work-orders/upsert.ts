@@ -22,7 +22,6 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureEmployeesExist } from '../employee/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export async function upsertWorkOrder(
   session: Session,
@@ -53,8 +52,6 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
     note: createWorkOrder.note,
     discountAmount: createWorkOrder.discount?.value,
     discountType: createWorkOrder.discount?.type,
-    depositedAmount: BigDecimal.ZERO.toMoney(),
-    depositedReconciledAmount: BigDecimal.ZERO.toMoney(),
   });
 
   for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
@@ -92,7 +89,7 @@ async function updateWorkOrder(
     const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
     const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));
     if (createWorkOrder.customerId !== workOrder.customerId && hasOrder) {
-      throw new HttpError('Cannot change customer after the order has been created', 400);
+      throw new HttpError('Cannot change customer after an order has been created', 400);
     }
 
     // nothing illegal, so we can upsert and delete items/charges safely
@@ -109,8 +106,6 @@ async function updateWorkOrder(
       note: createWorkOrder.note,
       discountAmount: createWorkOrder.discount?.value,
       discountType: createWorkOrder.discount?.type,
-      depositedAmount: workOrder.depositedAmount,
-      depositedReconciledAmount: workOrder.depositedReconciledAmount,
     });
 
     await db.workOrder.removeCustomFields({ workOrderId: workOrder.id });

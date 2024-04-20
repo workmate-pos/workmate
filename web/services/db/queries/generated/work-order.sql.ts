@@ -12,8 +12,6 @@ export type stringArray = (string)[];
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
   customerId: string;
-  depositedAmount: string;
-  depositedReconciledAmount: string;
   derivedFromOrderId?: string | null | void;
   discountAmount?: string | null | void;
   discountType?: DiscountType | null | void;
@@ -28,8 +26,6 @@ export interface IUpsertParams {
 export interface IUpsertResult {
   createdAt: Date;
   customerId: string;
-  depositedAmount: string;
-  depositedReconciledAmount: string;
   derivedFromOrderId: string | null;
   discountAmount: string | null;
   discountType: DiscountType | null;
@@ -48,23 +44,21 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"note":true,"discountAmount":true,"discountType":true,"depositedAmount":true,"depositedReconciledAmount":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":213,"b":218}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":221,"b":226}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":229,"b":236}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":239,"b":247}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":250,"b":261}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":264,"b":282}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":285,"b":290}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":293,"b":307}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":310,"b":322}]},{"name":"depositedAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":325,"b":341}]},{"name":"depositedReconciledAmount","required":true,"transform":{"type":"scalar"},"locs":[{"a":344,"b":370}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", note, \"discountAmount\",\n                         \"discountType\", \"depositedAmount\", \"depositedReconciledAmount\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType, :depositedAmount!, :depositedReconciledAmount!)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note,\n                                           \"discountAmount\"     = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"       = EXCLUDED.\"discountType\",\n                                           \"depositedAmount\"    = EXCLUDED.\"depositedAmount\",\n                                           \"depositedReconciledAmount\" = EXCLUDED.\"depositedReconciledAmount\"\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"note":true,"discountAmount":true,"discountType":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":165,"b":170}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":173,"b":178}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":181,"b":188}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":191,"b":199}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":202,"b":213}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":216,"b":234}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":237,"b":242}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":245,"b":259}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":262,"b":274}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", note, \"discountAmount\",\n                         \"discountType\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note,\n                                           \"discountAmount\"     = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"       = EXCLUDED.\"discountType\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount",
- *                          "discountType", "depositedAmount", "depositedReconciledAmount")
- * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType, :depositedAmount!, :depositedReconciledAmount!)
+ *                          "discountType")
+ * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)
  * ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
  *                                            "dueDate"            = EXCLUDED."dueDate",
  *                                            "customerId"         = EXCLUDED."customerId",
  *                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
  *                                            note                 = EXCLUDED.note,
  *                                            "discountAmount"     = EXCLUDED."discountAmount",
- *                                            "discountType"       = EXCLUDED."discountType",
- *                                            "depositedAmount"    = EXCLUDED."depositedAmount",
- *                                            "depositedReconciledAmount" = EXCLUDED."depositedReconciledAmount"
+ *                                            "discountType"       = EXCLUDED."discountType"
  * RETURNING *
  * ```
  */
@@ -163,14 +157,15 @@ export const getCustomFields = new PreparedQuery<IGetCustomFieldsParams,IGetCust
 /** 'GetPage' parameters type */
 export interface IGetPageParams {
   afterDueDate?: DateOrString | null | void;
-  allPaid?: boolean | null | void;
   beforeDueDate?: DateOrString | null | void;
   customerId?: string | null | void;
   employeeIds?: stringArray | null | void;
-  inverseOrderConditions?: boolean | null | void;
+  fullyPaid: boolean;
+  hasPaidDeposit: boolean;
+  inverseOrderConditions: boolean;
   limit: NumberOrString;
-  minimumOrderCount?: number | null | void;
   offset?: NumberOrString | null | void;
+  partiallyPaid: boolean;
   purchaseOrdersFulfilled?: boolean | null | void;
   query?: string | null | void;
   requiredCustomFieldFilters: readonly ({
@@ -180,6 +175,7 @@ export interface IGetPageParams {
   })[];
   shop: string;
   status?: string | null | void;
+  unpaid: boolean;
 }
 
 /** 'GetPage' return type */
@@ -193,7 +189,7 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"afterDueDate":true,"beforeDueDate":true,"query":true,"employeeIds":true,"customerId":true,"minimumOrderCount":true,"allPaid":true,"inverseOrderConditions":true,"purchaseOrdersFulfilled":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":1004,"b":1009}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":1038,"b":1044}]},{"name":"afterDueDate","required":false,"transform":{"type":"scalar"},"locs":[{"a":1089,"b":1101}]},{"name":"beforeDueDate","required":false,"transform":{"type":"scalar"},"locs":[{"a":1149,"b":1162}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":1214,"b":1219},{"a":1257,"b":1262},{"a":1308,"b":1313},{"a":1351,"b":1356},{"a":1394,"b":1399}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":1571,"b":1582},{"a":1589,"b":1600},{"a":1777,"b":1788},{"a":1795,"b":1806}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":1850,"b":1860}]},{"name":"minimumOrderCount","required":false,"transform":{"type":"scalar"},"locs":[{"a":2672,"b":2689}]},{"name":"allPaid","required":false,"transform":{"type":"scalar"},"locs":[{"a":2729,"b":2736},{"a":2741,"b":2748}]},{"name":"inverseOrderConditions","required":false,"transform":{"type":"scalar"},"locs":[{"a":2772,"b":2794}]},{"name":"purchaseOrdersFulfilled","required":false,"transform":{"type":"scalar"},"locs":[{"a":2884,"b":2907},{"a":2912,"b":2935}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":2971,"b":2977}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":2986,"b":2992}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT wo.name\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"Customer\" c ON wo.\"customerId\" = c.\"customerId\"\n       LEFT JOIN \"WorkOrderItem\" woi ON wo.id = woi.\"workOrderId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\" wohlc ON wo.id = wohlc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\" wofplc ON wo.id = wofplc.\"workOrderId\"\n       LEFT JOIN \"ShopifyOrderLineItem\" soli ON (\n  woi.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR wohlc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR wofplc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n  )\n       LEFT JOIN \"ShopifyOrder\" so ON (\n  so.\"orderType\" = 'ORDER' AND\n  soli.\"orderId\" = so.\"orderId\"\n  )\nLEFT JOIN \"PurchaseOrderLineItem\" poli ON soli.\"lineItemId\" = poli.\"shopifyOrderLineItemId\"\nWHERE wo.shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND wo.\"dueDate\" >= COALESCE(:afterDueDate, wo.\"dueDate\")\n  AND wo.\"dueDate\" <= COALESCE(:beforeDueDate, wo.\"dueDate\")\n  AND (\n  wo.status ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR c.phone ILIKE COALESCE(:query, '%')\n    OR c.email ILIKE COALESCE(:query, '%')\n  )\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderHourlyLabourCharge\" hl\n              WHERE hl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderFixedPriceLabourCharge\" fpl\n              WHERE fpl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND wo.\"customerId\" = COALESCE(:customerId, wo.\"customerId\")\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row,\n                          ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND\n                          (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=\n                          filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"WorkOrderCustomField\" wocf\n                                    ON (wocf.\"workOrderId\" = wo.id AND\n                                        wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nGROUP BY wo.id\nHAVING (COUNT(DISTINCT so.\"orderId\") >= COALESCE(:minimumOrderCount, 0)\n  AND (BOOL_AND(so.\"fullyPaid\") = :allPaid OR :allPaid IS NULL)) != COALESCE(:inverseOrderConditions, FALSE)\nAND (SUM(poli.\"availableQuantity\") IS NOT DISTINCT FROM SUM(poli.\"quantity\")) = :purchaseOrdersFulfilled OR :purchaseOrdersFulfilled IS NULL\nORDER BY wo.id DESC\nLIMIT :limit! OFFSET :offset"};
+const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"afterDueDate":true,"beforeDueDate":true,"query":true,"employeeIds":true,"customerId":true,"unpaid":true,"partiallyPaid":true,"fullyPaid":true,"hasPaidDeposit":true,"inverseOrderConditions":true,"purchaseOrdersFulfilled":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":1210,"b":1215}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":1244,"b":1250}]},{"name":"afterDueDate","required":false,"transform":{"type":"scalar"},"locs":[{"a":1295,"b":1307}]},{"name":"beforeDueDate","required":false,"transform":{"type":"scalar"},"locs":[{"a":1355,"b":1368}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":1420,"b":1425},{"a":1463,"b":1468},{"a":1514,"b":1519},{"a":1557,"b":1562},{"a":1600,"b":1605}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":1777,"b":1788},{"a":1795,"b":1806},{"a":1983,"b":1994},{"a":2001,"b":2012}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":2056,"b":2066}]},{"name":"unpaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":2883,"b":2890}]},{"name":"partiallyPaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":3065,"b":3079}]},{"name":"fullyPaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":3145,"b":3155}]},{"name":"hasPaidDeposit","required":true,"transform":{"type":"scalar"},"locs":[{"a":3282,"b":3297}]},{"name":"inverseOrderConditions","required":true,"transform":{"type":"scalar"},"locs":[{"a":3314,"b":3337}]},{"name":"purchaseOrdersFulfilled","required":false,"transform":{"type":"scalar"},"locs":[{"a":3423,"b":3446},{"a":3453,"b":3476}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":3513,"b":3519}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":3528,"b":3534}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT wo.name\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"Customer\" c ON wo.\"customerId\" = c.\"customerId\"\n\n       LEFT JOIN \"WorkOrderItem\" woi ON wo.id = woi.\"workOrderId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\" wohlc ON wo.id = wohlc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\" wofplc ON wo.id = wofplc.\"workOrderId\"\n\n       LEFT JOIN \"ShopifyOrderLineItem\" soli ON (\n  woi.\"shopifyOrderLineItemId\" = soli.\"lineItemId\" OR\n  wohlc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\" OR\n  wofplc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n  )\n       LEFT JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\n       LEFT JOIN \"PurchaseOrderLineItem\" poli ON soli.\"lineItemId\" = poli.\"shopifyOrderLineItemId\"\n\n       LEFT JOIN \"WorkOrderDeposit\" wod ON wo.id = wod.\"workOrderId\"\n       LEFT JOIN \"ShopifyOrderLineItem\" solid ON wod.\"shopifyOrderLineItemId\" = solid.\"lineItemId\"\n       LEFT JOIN \"ShopifyOrder\" sod ON solid.\"orderId\" = sod.\"orderId\"\nWHERE wo.shop = :shop!\n  AND wo.status = COALESCE(:status, wo.status)\n  AND wo.\"dueDate\" >= COALESCE(:afterDueDate, wo.\"dueDate\")\n  AND wo.\"dueDate\" <= COALESCE(:beforeDueDate, wo.\"dueDate\")\n  AND (\n  wo.status ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR c.phone ILIKE COALESCE(:query, '%')\n    OR c.email ILIKE COALESCE(:query, '%')\n  )\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderHourlyLabourCharge\" hl\n              WHERE hl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND (EXISTS(SELECT *\n              FROM \"WorkOrderFixedPriceLabourCharge\" fpl\n              WHERE fpl.\"workOrderId\" = wo.id\n                AND \"employeeId\" = ANY (:employeeIds)) OR :employeeIds IS NULL)\n  AND wo.\"customerId\" = COALESCE(:customerId, wo.\"customerId\")\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row,\n                          (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=\n                          filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"WorkOrderCustomField\" wocf\n                                    ON (wocf.\"workOrderId\" = wo.id AND\n                                        wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nGROUP BY wo.id\nHAVING (\n         (((NOT COALESCE(BOOL_OR(so.\"fullyPaid\"), FALSE) AND NOT COALESCE(BOOL_OR(sod.\"fullyPaid\"), FALSE))) OR\n          NOT :unpaid!) AND\n         (((COALESCE(BOOL_OR(so.\"fullyPaid\"), FALSE) OR COALESCE(BOOL_OR(sod.\"fullyPaid\"), FALSE)) AND\n           NOT COALESCE(BOOL_AND(so.\"fullyPaid\"), FALSE)) OR NOT :partiallyPaid!) AND\n         (COALESCE(BOOL_AND(so.\"fullyPaid\"), FALSE) OR NOT :fullyPaid!) AND\n         ((NOT COALESCE(BOOL_OR(so.\"fullyPaid\"), FALSE) AND COALESCE(BOOL_OR(sod.\"fullyPaid\"), FALSE)) OR\n          NOT :hasPaidDeposit!)\n         ) != :inverseOrderConditions!\n   AND ((SUM(poli.\"availableQuantity\") IS NOT DISTINCT FROM SUM(poli.\"quantity\")) = :purchaseOrdersFulfilled\n  OR :purchaseOrdersFulfilled IS NULL)\nORDER BY wo.id DESC\nLIMIT :limit! OFFSET :offset"};
 
 /**
  * Query generated from SQL:
@@ -203,19 +199,22 @@ const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop"
  * SELECT wo.name
  * FROM "WorkOrder" wo
  *        LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
+ * 
  *        LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
  *        LEFT JOIN "WorkOrderHourlyLabourCharge" wohlc ON wo.id = wohlc."workOrderId"
  *        LEFT JOIN "WorkOrderFixedPriceLabourCharge" wofplc ON wo.id = wofplc."workOrderId"
+ * 
  *        LEFT JOIN "ShopifyOrderLineItem" soli ON (
- *   woi."shopifyOrderLineItemId" = soli."lineItemId"
- *     OR wohlc."shopifyOrderLineItemId" = soli."lineItemId"
- *     OR wofplc."shopifyOrderLineItemId" = soli."lineItemId"
+ *   woi."shopifyOrderLineItemId" = soli."lineItemId" OR
+ *   wohlc."shopifyOrderLineItemId" = soli."lineItemId" OR
+ *   wofplc."shopifyOrderLineItemId" = soli."lineItemId"
  *   )
- *        LEFT JOIN "ShopifyOrder" so ON (
- *   so."orderType" = 'ORDER' AND
- *   soli."orderId" = so."orderId"
- *   )
- * LEFT JOIN "PurchaseOrderLineItem" poli ON soli."lineItemId" = poli."shopifyOrderLineItemId"
+ *        LEFT JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+ *        LEFT JOIN "PurchaseOrderLineItem" poli ON soli."lineItemId" = poli."shopifyOrderLineItemId"
+ * 
+ *        LEFT JOIN "WorkOrderDeposit" wod ON wo.id = wod."workOrderId"
+ *        LEFT JOIN "ShopifyOrderLineItem" solid ON wod."shopifyOrderLineItemId" = solid."lineItemId"
+ *        LEFT JOIN "ShopifyOrder" sod ON solid."orderId" = sod."orderId"
  * WHERE wo.shop = :shop!
  *   AND wo.status = COALESCE(:status, wo.status)
  *   AND wo."dueDate" >= COALESCE(:afterDueDate, wo."dueDate")
@@ -239,7 +238,6 @@ const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop"
  *   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
  *        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
  *              FROM (SELECT filter.row,
- *                           ((filter.key IS NOT NULL OR wocf.key IS NOT NULL)) AND
  *                           (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=
  *                           filter.inverse
  *                    FROM "CustomFieldFilters" filter
@@ -248,9 +246,17 @@ const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop"
  *                                         wocf.key ILIKE COALESCE(filter.key, wocf.key))) AS a(row, match)
  *              GROUP BY row) b(row, match))
  * GROUP BY wo.id
- * HAVING (COUNT(DISTINCT so."orderId") >= COALESCE(:minimumOrderCount, 0)
- *   AND (BOOL_AND(so."fullyPaid") = :allPaid OR :allPaid IS NULL)) != COALESCE(:inverseOrderConditions, FALSE)
- * AND (SUM(poli."availableQuantity") IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled OR :purchaseOrdersFulfilled IS NULL
+ * HAVING (
+ *          (((NOT COALESCE(BOOL_OR(so."fullyPaid"), FALSE) AND NOT COALESCE(BOOL_OR(sod."fullyPaid"), FALSE))) OR
+ *           NOT :unpaid!) AND
+ *          (((COALESCE(BOOL_OR(so."fullyPaid"), FALSE) OR COALESCE(BOOL_OR(sod."fullyPaid"), FALSE)) AND
+ *            NOT COALESCE(BOOL_AND(so."fullyPaid"), FALSE)) OR NOT :partiallyPaid!) AND
+ *          (COALESCE(BOOL_AND(so."fullyPaid"), FALSE) OR NOT :fullyPaid!) AND
+ *          ((NOT COALESCE(BOOL_OR(so."fullyPaid"), FALSE) AND COALESCE(BOOL_OR(sod."fullyPaid"), FALSE)) OR
+ *           NOT :hasPaidDeposit!)
+ *          ) != :inverseOrderConditions!
+ *    AND ((SUM(poli."availableQuantity") IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled
+ *   OR :purchaseOrdersFulfilled IS NULL)
  * ORDER BY wo.id DESC
  * LIMIT :limit! OFFSET :offset
  * ```
@@ -269,8 +275,6 @@ export interface IGetParams {
 export interface IGetResult {
   createdAt: Date;
   customerId: string;
-  depositedAmount: string;
-  depositedReconciledAmount: string;
   derivedFromOrderId: string | null;
   discountAmount: string | null;
   discountType: DiscountType | null;
@@ -340,125 +344,6 @@ const getItemsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"
 export const getItems = new PreparedQuery<IGetItemsParams,IGetItemsResult>(getItemsIR);
 
 
-/** 'GetUnlinkedItems' parameters type */
-export interface IGetUnlinkedItemsParams {
-  workOrderId: number;
-}
-
-/** 'GetUnlinkedItems' return type */
-export interface IGetUnlinkedItemsResult {
-  absorbCharges: boolean;
-  createdAt: Date;
-  productVariantId: string;
-  quantity: number;
-  shopifyOrderLineItemId: string | null;
-  updatedAt: Date;
-  uuid: string;
-  workOrderId: number;
-}
-
-/** 'GetUnlinkedItems' query type */
-export interface IGetUnlinkedItemsQuery {
-  params: IGetUnlinkedItemsParams;
-  result: IGetUnlinkedItemsResult;
-}
-
-const getUnlinkedItemsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":52,"b":64}]}],"statement":"SELECT *\nFROM \"WorkOrderItem\"\nWHERE \"workOrderId\" = :workOrderId!\n  AND \"shopifyOrderLineItemId\" IS NULL"};
-
-/**
- * Query generated from SQL:
- * ```
- * SELECT *
- * FROM "WorkOrderItem"
- * WHERE "workOrderId" = :workOrderId!
- *   AND "shopifyOrderLineItemId" IS NULL
- * ```
- */
-export const getUnlinkedItems = new PreparedQuery<IGetUnlinkedItemsParams,IGetUnlinkedItemsResult>(getUnlinkedItemsIR);
-
-
-/** 'GetUnlinkedHourlyLabourCharges' parameters type */
-export interface IGetUnlinkedHourlyLabourChargesParams {
-  workOrderId: number;
-}
-
-/** 'GetUnlinkedHourlyLabourCharges' return type */
-export interface IGetUnlinkedHourlyLabourChargesResult {
-  createdAt: Date;
-  employeeId: string | null;
-  hours: string;
-  hoursLocked: boolean;
-  name: string;
-  rate: string;
-  rateLocked: boolean;
-  removeLocked: boolean;
-  shopifyOrderLineItemId: string | null;
-  updatedAt: Date;
-  uuid: string;
-  workOrderId: number;
-  workOrderItemUuid: string | null;
-}
-
-/** 'GetUnlinkedHourlyLabourCharges' query type */
-export interface IGetUnlinkedHourlyLabourChargesQuery {
-  params: IGetUnlinkedHourlyLabourChargesParams;
-  result: IGetUnlinkedHourlyLabourChargesResult;
-}
-
-const getUnlinkedHourlyLabourChargesIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":66,"b":78}]}],"statement":"SELECT *\nFROM \"WorkOrderHourlyLabourCharge\"\nWHERE \"workOrderId\" = :workOrderId!\n  AND \"shopifyOrderLineItemId\" IS NULL"};
-
-/**
- * Query generated from SQL:
- * ```
- * SELECT *
- * FROM "WorkOrderHourlyLabourCharge"
- * WHERE "workOrderId" = :workOrderId!
- *   AND "shopifyOrderLineItemId" IS NULL
- * ```
- */
-export const getUnlinkedHourlyLabourCharges = new PreparedQuery<IGetUnlinkedHourlyLabourChargesParams,IGetUnlinkedHourlyLabourChargesResult>(getUnlinkedHourlyLabourChargesIR);
-
-
-/** 'GetUnlinkedFixedPriceLabourCharges' parameters type */
-export interface IGetUnlinkedFixedPriceLabourChargesParams {
-  workOrderId: number;
-}
-
-/** 'GetUnlinkedFixedPriceLabourCharges' return type */
-export interface IGetUnlinkedFixedPriceLabourChargesResult {
-  amount: string;
-  amountLocked: boolean;
-  createdAt: Date;
-  employeeId: string | null;
-  name: string;
-  removeLocked: boolean;
-  shopifyOrderLineItemId: string | null;
-  updatedAt: Date;
-  uuid: string;
-  workOrderId: number;
-  workOrderItemUuid: string | null;
-}
-
-/** 'GetUnlinkedFixedPriceLabourCharges' query type */
-export interface IGetUnlinkedFixedPriceLabourChargesQuery {
-  params: IGetUnlinkedFixedPriceLabourChargesParams;
-  result: IGetUnlinkedFixedPriceLabourChargesResult;
-}
-
-const getUnlinkedFixedPriceLabourChargesIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":70,"b":82}]}],"statement":"SELECT *\nFROM \"WorkOrderFixedPriceLabourCharge\"\nWHERE \"workOrderId\" = :workOrderId!\n  AND \"shopifyOrderLineItemId\" IS NULL"};
-
-/**
- * Query generated from SQL:
- * ```
- * SELECT *
- * FROM "WorkOrderFixedPriceLabourCharge"
- * WHERE "workOrderId" = :workOrderId!
- *   AND "shopifyOrderLineItemId" IS NULL
- * ```
- */
-export const getUnlinkedFixedPriceLabourCharges = new PreparedQuery<IGetUnlinkedFixedPriceLabourChargesParams,IGetUnlinkedFixedPriceLabourChargesResult>(getUnlinkedFixedPriceLabourChargesIR);
-
-
 /** 'GetItemsByUuids' parameters type */
 export interface IGetItemsByUuidsParams {
   uuids: readonly (string)[];
@@ -483,37 +368,37 @@ export interface IGetItemsByUuidsQuery {
   result: IGetItemsByUuidsResult;
 }
 
-const getItemsByUuidsIR: any = {"usedParamSet":{"uuids":true,"workOrderId":true},"params":[{"name":"uuids","required":true,"transform":{"type":"array_spread"},"locs":[{"a":44,"b":50}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":74,"b":86}]}],"statement":"SELECT *\nFROM \"WorkOrderItem\"\nWHERE uuid in :uuids!\n  AND \"workOrderId\" = :workOrderId!"};
+const getItemsByUuidsIR: any = {"usedParamSet":{"uuids":true,"workOrderId":true},"params":[{"name":"uuids","required":true,"transform":{"type":"array_spread"},"locs":[{"a":44,"b":50}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":74,"b":86}]}],"statement":"SELECT *\nFROM \"WorkOrderItem\"\nWHERE uuid IN :uuids!\n  AND \"workOrderId\" = :workOrderId!"};
 
 /**
  * Query generated from SQL:
  * ```
  * SELECT *
  * FROM "WorkOrderItem"
- * WHERE uuid in :uuids!
+ * WHERE uuid IN :uuids!
  *   AND "workOrderId" = :workOrderId!
  * ```
  */
 export const getItemsByUuids = new PreparedQuery<IGetItemsByUuidsParams,IGetItemsByUuidsResult>(getItemsByUuidsIR);
 
 
-/** 'SetLineItemShopifyOrderLineItemId' parameters type */
-export interface ISetLineItemShopifyOrderLineItemIdParams {
+/** 'SetItemShopifyOrderLineItemId' parameters type */
+export interface ISetItemShopifyOrderLineItemIdParams {
   shopifyOrderLineItemId: string;
   uuid: string;
   workOrderId: number;
 }
 
-/** 'SetLineItemShopifyOrderLineItemId' return type */
-export type ISetLineItemShopifyOrderLineItemIdResult = void;
+/** 'SetItemShopifyOrderLineItemId' return type */
+export type ISetItemShopifyOrderLineItemIdResult = void;
 
-/** 'SetLineItemShopifyOrderLineItemId' query type */
-export interface ISetLineItemShopifyOrderLineItemIdQuery {
-  params: ISetLineItemShopifyOrderLineItemIdParams;
-  result: ISetLineItemShopifyOrderLineItemIdResult;
+/** 'SetItemShopifyOrderLineItemId' query type */
+export interface ISetItemShopifyOrderLineItemIdQuery {
+  params: ISetItemShopifyOrderLineItemIdParams;
+  result: ISetItemShopifyOrderLineItemIdResult;
 }
 
-const setLineItemShopifyOrderLineItemIdIR: any = {"usedParamSet":{"shopifyOrderLineItemId":true,"uuid":true,"workOrderId":true},"params":[{"name":"shopifyOrderLineItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":54,"b":77}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":92,"b":97}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":121,"b":133}]}],"statement":"UPDATE \"WorkOrderItem\"\nSET \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId!\nWHERE uuid = :uuid!\n  AND \"workOrderId\" = :workOrderId!"};
+const setItemShopifyOrderLineItemIdIR: any = {"usedParamSet":{"shopifyOrderLineItemId":true,"uuid":true,"workOrderId":true},"params":[{"name":"shopifyOrderLineItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":54,"b":77}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":92,"b":97}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":121,"b":133}]}],"statement":"UPDATE \"WorkOrderItem\"\nSET \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId!\nWHERE uuid = :uuid!\n  AND \"workOrderId\" = :workOrderId!"};
 
 /**
  * Query generated from SQL:
@@ -524,7 +409,7 @@ const setLineItemShopifyOrderLineItemIdIR: any = {"usedParamSet":{"shopifyOrderL
  *   AND "workOrderId" = :workOrderId!
  * ```
  */
-export const setLineItemShopifyOrderLineItemId = new PreparedQuery<ISetLineItemShopifyOrderLineItemIdParams,ISetLineItemShopifyOrderLineItemIdResult>(setLineItemShopifyOrderLineItemIdIR);
+export const setItemShopifyOrderLineItemId = new PreparedQuery<ISetItemShopifyOrderLineItemIdParams,ISetItemShopifyOrderLineItemIdResult>(setItemShopifyOrderLineItemIdIR);
 
 
 /** 'UpsertItem' parameters type */
@@ -591,5 +476,221 @@ const removeItemIR: any = {"usedParamSet":{"uuid":true,"workOrderId":true},"para
  * ```
  */
 export const removeItem = new PreparedQuery<IRemoveItemParams,IRemoveItemResult>(removeItemIR);
+
+
+/** 'GetDeposits' parameters type */
+export interface IGetDepositsParams {
+  workOrderId: number;
+}
+
+/** 'GetDeposits' return type */
+export interface IGetDepositsResult {
+  amount: string;
+  createdAt: Date;
+  shopifyOrderLineItemId: string | null;
+  updatedAt: Date;
+  uuid: string;
+  workOrderId: number;
+}
+
+/** 'GetDeposits' query type */
+export interface IGetDepositsQuery {
+  params: IGetDepositsParams;
+  result: IGetDepositsResult;
+}
+
+const getDepositsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":55,"b":67}]}],"statement":"SELECT *\nFROM \"WorkOrderDeposit\"\nWHERE \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "WorkOrderDeposit"
+ * WHERE "workOrderId" = :workOrderId!
+ * ```
+ */
+export const getDeposits = new PreparedQuery<IGetDepositsParams,IGetDepositsResult>(getDepositsIR);
+
+
+/** 'GetDepositsByUuids' parameters type */
+export interface IGetDepositsByUuidsParams {
+  uuids: readonly (string)[];
+  workOrderId: number;
+}
+
+/** 'GetDepositsByUuids' return type */
+export interface IGetDepositsByUuidsResult {
+  amount: string;
+  createdAt: Date;
+  shopifyOrderLineItemId: string | null;
+  updatedAt: Date;
+  uuid: string;
+  workOrderId: number;
+}
+
+/** 'GetDepositsByUuids' query type */
+export interface IGetDepositsByUuidsQuery {
+  params: IGetDepositsByUuidsParams;
+  result: IGetDepositsByUuidsResult;
+}
+
+const getDepositsByUuidsIR: any = {"usedParamSet":{"uuids":true,"workOrderId":true},"params":[{"name":"uuids","required":true,"transform":{"type":"array_spread"},"locs":[{"a":47,"b":53}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":77,"b":89}]}],"statement":"SELECT *\nFROM \"WorkOrderDeposit\"\nWHERE uuid IN :uuids!\n  AND \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "WorkOrderDeposit"
+ * WHERE uuid IN :uuids!
+ *   AND "workOrderId" = :workOrderId!
+ * ```
+ */
+export const getDepositsByUuids = new PreparedQuery<IGetDepositsByUuidsParams,IGetDepositsByUuidsResult>(getDepositsByUuidsIR);
+
+
+/** 'UpsertDeposit' parameters type */
+export interface IUpsertDepositParams {
+  amount: string;
+  shopifyOrderLineItemId?: string | null | void;
+  uuid: string;
+  workOrderId: number;
+}
+
+/** 'UpsertDeposit' return type */
+export type IUpsertDepositResult = void;
+
+/** 'UpsertDeposit' query type */
+export interface IUpsertDepositQuery {
+  params: IUpsertDepositParams;
+  result: IUpsertDepositResult;
+}
+
+const upsertDepositIR: any = {"usedParamSet":{"workOrderId":true,"uuid":true,"shopifyOrderLineItemId":true,"amount":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":95,"b":107}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":110,"b":115}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":118,"b":140}]},{"name":"amount","required":true,"transform":{"type":"scalar"},"locs":[{"a":143,"b":150}]}],"statement":"INSERT INTO \"WorkOrderDeposit\" (\"workOrderId\", uuid, \"shopifyOrderLineItemId\", amount)\nVALUES (:workOrderId!, :uuid!, :shopifyOrderLineItemId, :amount!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n                amount                   = EXCLUDED.amount"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "WorkOrderDeposit" ("workOrderId", uuid, "shopifyOrderLineItemId", amount)
+ * VALUES (:workOrderId!, :uuid!, :shopifyOrderLineItemId, :amount!)
+ * ON CONFLICT ("workOrderId", uuid)
+ *   DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+ *                 amount                   = EXCLUDED.amount
+ * ```
+ */
+export const upsertDeposit = new PreparedQuery<IUpsertDepositParams,IUpsertDepositResult>(upsertDepositIR);
+
+
+/** 'RemoveDeposit' parameters type */
+export interface IRemoveDepositParams {
+  uuid: string;
+  workOrderId: number;
+}
+
+/** 'RemoveDeposit' return type */
+export type IRemoveDepositResult = void;
+
+/** 'RemoveDeposit' query type */
+export interface IRemoveDepositQuery {
+  params: IRemoveDepositParams;
+  result: IRemoveDepositResult;
+}
+
+const removeDepositIR: any = {"usedParamSet":{"uuid":true,"workOrderId":true},"params":[{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":44,"b":49}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":73,"b":85}]}],"statement":"DELETE\nFROM \"WorkOrderDeposit\"\nWHERE uuid = :uuid!\n  AND \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "WorkOrderDeposit"
+ * WHERE uuid = :uuid!
+ *   AND "workOrderId" = :workOrderId!
+ * ```
+ */
+export const removeDeposit = new PreparedQuery<IRemoveDepositParams,IRemoveDepositResult>(removeDepositIR);
+
+
+/** 'GetPaidDeposits' parameters type */
+export interface IGetPaidDepositsParams {
+  workOrderId: number;
+}
+
+/** 'GetPaidDeposits' return type */
+export interface IGetPaidDepositsResult {
+  amount: string;
+  createdAt: Date;
+  shopifyOrderLineItemId: string | null;
+  updatedAt: Date;
+  uuid: string;
+  workOrderId: number;
+}
+
+/** 'GetPaidDeposits' query type */
+export interface IGetPaidDepositsQuery {
+  params: IGetPaidDepositsParams;
+  result: IGetPaidDepositsResult;
+}
+
+const getPaidDepositsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":258,"b":270}]}],"statement":"SELECT wod.*\nFROM \"WorkOrderDeposit\" wod\n       INNER JOIN \"ShopifyOrderLineItem\" soli ON \"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n       INNER JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\nWHERE so.\"fullyPaid\" = TRUE\n  AND wod.\"workOrderId\" = :workOrderId!\n  AND so.\"orderType\" = 'ORDER'"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT wod.*
+ * FROM "WorkOrderDeposit" wod
+ *        INNER JOIN "ShopifyOrderLineItem" soli ON "shopifyOrderLineItemId" = soli."lineItemId"
+ *        INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+ * WHERE so."fullyPaid" = TRUE
+ *   AND wod."workOrderId" = :workOrderId!
+ *   AND so."orderType" = 'ORDER'
+ * ```
+ */
+export const getPaidDeposits = new PreparedQuery<IGetPaidDepositsParams,IGetPaidDepositsResult>(getPaidDepositsIR);
+
+
+/** 'GetAppliedDiscounts' parameters type */
+export interface IGetAppliedDiscountsParams {
+  workOrderId: number;
+}
+
+/** 'GetAppliedDiscounts' return type */
+export interface IGetAppliedDiscountsResult {
+  amount: string;
+  code: string;
+  createdAt: Date;
+  id: number;
+  orderId: string;
+  updatedAt: Date;
+}
+
+/** 'GetAppliedDiscounts' query type */
+export interface IGetAppliedDiscountsQuery {
+  params: IGetAppliedDiscountsParams;
+  result: IGetAppliedDiscountsResult;
+}
+
+const getAppliedDiscountsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":784,"b":796}]}],"statement":"SELECT DISTINCT sod.*\nFROM \"WorkOrder\" wo\n       LEFT JOIN \"WorkOrderItem\" woi ON wo.id = woi.\"workOrderId\"\n       LEFT JOIN \"WorkOrderFixedPriceLabourCharge\" wfplc ON wo.id = wfplc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderHourlyLabourCharge\" whlc ON wo.id = whlc.\"workOrderId\"\n       LEFT JOIN \"WorkOrderDeposit\" wod ON wo.id = wod.\"workOrderId\"\n       INNER JOIN \"ShopifyOrderLineItem\" soli ON (\n  woi.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR wfplc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR whlc.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n    OR wod.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n  )\n       INNER JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\n       INNER JOIN \"ShopifyOrderDiscount\" sod ON sod.\"orderId\" = so.\"orderId\"\nWHERE wo.id = :workOrderId!\n  AND so.\"orderType\" = 'ORDER'"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT DISTINCT sod.*
+ * FROM "WorkOrder" wo
+ *        LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
+ *        LEFT JOIN "WorkOrderFixedPriceLabourCharge" wfplc ON wo.id = wfplc."workOrderId"
+ *        LEFT JOIN "WorkOrderHourlyLabourCharge" whlc ON wo.id = whlc."workOrderId"
+ *        LEFT JOIN "WorkOrderDeposit" wod ON wo.id = wod."workOrderId"
+ *        INNER JOIN "ShopifyOrderLineItem" soli ON (
+ *   woi."shopifyOrderLineItemId" = soli."lineItemId"
+ *     OR wfplc."shopifyOrderLineItemId" = soli."lineItemId"
+ *     OR whlc."shopifyOrderLineItemId" = soli."lineItemId"
+ *     OR wod."shopifyOrderLineItemId" = soli."lineItemId"
+ *   )
+ *        INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
+ *        INNER JOIN "ShopifyOrderDiscount" sod ON sod."orderId" = so."orderId"
+ * WHERE wo.id = :workOrderId!
+ *   AND so."orderType" = 'ORDER'
+ * ```
+ */
+export const getAppliedDiscounts = new PreparedQuery<IGetAppliedDiscountsParams,IGetAppliedDiscountsResult>(getAppliedDiscountsIR);
 
 

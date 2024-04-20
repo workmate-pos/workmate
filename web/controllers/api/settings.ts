@@ -22,8 +22,6 @@ export default class SettingsController {
     const { shop }: Session = res.locals.shopify.session;
     const settings = req.body;
 
-    console.log('write', settings);
-
     await updateSettings(shop, settings);
 
     return res.json({ success: true });

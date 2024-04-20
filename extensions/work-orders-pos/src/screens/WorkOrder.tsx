@@ -420,19 +420,28 @@ function WorkOrderMoneySummary({
             }
 
             if (createWorkOrder.discount.type === 'PERCENTAGE') {
-              return `${createWorkOrder.discount.value}%`;
+              let value = `${createWorkOrder.discount.value}%`;
+
+              if (calculatedDraftOrder) {
+                const amount = BigDecimal.fromMoney(calculatedDraftOrder.discount)
+                  .subtract(BigDecimal.fromMoney(calculatedDraftOrder.appliedDiscount))
+                  .toMoney();
+                value += ` (${currencyFormatter(amount)})`;
+              }
+
+              return value;
             }
 
             return createWorkOrder.discount satisfies never;
           })()}
           onFocus={() => router.push('DiscountSelector', { onSelect: discount => dispatch.setPartial({ discount }) })}
         />
-        {!!calculatedDraftOrder?.discount &&
-          BigDecimal.fromMoney(calculatedDraftOrder?.discount).compare(BigDecimal.ZERO) > 0 && (
+        {!!calculatedDraftOrder?.appliedDiscount &&
+          BigDecimal.fromMoney(calculatedDraftOrder?.appliedDiscount).compare(BigDecimal.ZERO) > 0 && (
             <FormMoneyField
               label={'Applied Discount'}
               disabled
-              value={calculatedDraftOrder?.discount ?? null}
+              value={calculatedDraftOrder?.appliedDiscount ?? null}
               formatter={formatter}
             />
           )}

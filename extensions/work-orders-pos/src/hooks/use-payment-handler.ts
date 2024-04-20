@@ -4,6 +4,8 @@ import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { SetLineItemPropertiesInput } from '@shopify/retail-ui-extensions';
 import {
+  getDepositCustomSale,
+  getWorkOrderAppliedDiscount,
   getWorkOrderLineItems,
   getWorkOrderOrderCustomAttributes,
   WorkOrderItem,
@@ -11,6 +13,7 @@ import {
 import { WorkOrderCharge } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { uuid } from '../util/uuid.js';
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
@@ -23,6 +26,38 @@ export const usePaymentHandler = () => {
 
   const cartRef = useCartRef();
 
+  const handleDeposit = async ({
+    workOrderName,
+    customerId,
+    deposit,
+  }: {
+    workOrderName: string;
+    customerId: ID;
+    deposit: Money;
+  }) => {
+    setIsLoading(true);
+
+    await cart.clearCart();
+    await cart.addCartProperties(getWorkOrderOrderCustomAttributes({ name: workOrderName }));
+    await cart.setCustomer({ id: Number(parseGid(customerId).id) });
+
+    const { quantity, title, unitPrice, taxable, customAttributes } = getDepositCustomSale({
+      uuid: uuid(),
+      amount: deposit,
+    });
+
+    await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });
+
+    const lineItemUuid = cartRef.current.lineItems.find(li => !li.variantId && li.title === title)?.uuid;
+
+    if (lineItemUuid) {
+      await cart.addLineItemProperties(lineItemUuid, customAttributes);
+    }
+
+    navigation.dismiss();
+    setIsLoading(false);
+  };
+
   const handlePayment = async ({
     workOrderName,
     items,
@@ -30,18 +65,20 @@ export const usePaymentHandler = () => {
     customerId,
     labourSku,
     discount,
-    deposit,
+    depositedAmount,
+    depositedReconciledAmount,
   }: {
     workOrderName: string;
     items: WorkOrderItem[];
     charges: DiscriminatedUnionOmit<WorkOrderCharge, 'shopifyOrderLineItem'>[];
-    customerId: ID | null;
+    customerId: ID;
     labourSku: string;
     discount: {
       type: 'FIXED_AMOUNT' | 'PERCENTAGE';
       value: string;
     } | null;
-    deposit: Money | null;
+    depositedAmount: Money;
+    depositedReconciledAmount: Money;
   }) => {
     setIsLoading(true);
 
@@ -49,16 +86,14 @@ export const usePaymentHandler = () => {
       items,
       charges.filter(hasPropertyValue('type', 'hourly-labour')),
       charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
-      deposit,
+      // TODO: Include discount here as well
+      // TODO !!!
       { labourSku },
     );
 
     await cart.clearCart();
     await cart.addCartProperties(getWorkOrderOrderCustomAttributes({ name: workOrderName }));
-
-    if (customerId) {
-      await cart.setCustomer({ id: Number(parseGid(customerId).id) });
-    }
+    await cart.setCustomer({ id: Number(parseGid(customerId).id) });
 
     for (const { quantity, title, unitPrice, taxable } of customSales) {
       await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });
@@ -88,9 +123,13 @@ export const usePaymentHandler = () => {
 
     await cart.bulkAddLineItemProperties(bulkAddLineItemProperties);
 
-    if (discount) {
-      const discountType = ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[discount.type];
-      await cart.applyCartDiscount(discountType, 'Discount', discount.value);
+    const appliedDiscount = getWorkOrderAppliedDiscount(discount, { depositedAmount, depositedReconciledAmount });
+
+    if (appliedDiscount) {
+      const discountType = ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[
+        appliedDiscount.valueType
+      ];
+      await cart.applyCartDiscount(discountType, appliedDiscount.title ?? '', String(appliedDiscount.value));
     }
 
     navigation.dismiss();
@@ -99,6 +138,7 @@ export const usePaymentHandler = () => {
 
   return {
     handlePayment,
+    handleDeposit,
     isLoading,
   };
 };

@@ -10,6 +10,7 @@ import {
   getItemUuidCustomAttributeKey,
   getAbsorbedUuidsFromCustomAttributes,
   getChargeUuidCustomAttributeKey,
+  getWorkOrderAppliedDiscount,
 } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
@@ -20,18 +21,32 @@ import { assertMoney, BigDecimal, Money, RoundingMode } from '@teifi-digital/sho
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { decimalToMoney } from '../../util/decimal.js';
 import { evaluate } from '../../util/evaluate.js';
+import { getWorkOrderDepositedAmount, getWorkOrderDepositedReconciledAmount } from './get.js';
 
 type CalculateWorkOrderResult = {
   outstanding: Money;
   paid: Money;
+  /**
+   * The total discount, including draft orders.
+   */
   discount: Money;
+  /**
+   * The discount that has been applied so far.
+   */
+  appliedDiscount: Money;
   subtotal: Money;
   total: Money;
   tax: Money;
   itemPrices: Record<string, Money>;
   hourlyLabourChargePrices: Record<string, Money>;
   fixedPriceLabourChargePrices: Record<string, Money>;
+  depositPrices: Record<string, Money>;
 };
+
+type CalculateDraftOrderResult = Omit<
+  CalculateWorkOrderResult,
+  'appliedDiscount' | 'paid' | 'outstanding' | 'depositPrices'
+>;
 
 // TODO: Use this for templates
 
@@ -64,6 +79,7 @@ export async function calculateWorkOrder(
   });
 
   const newOrderCalculation = await calculateDraftOrder(session, {
+    name: calculateWorkOrder.name,
     items: draftItems,
     charges: draftCharges,
     discount: calculateWorkOrder.discount,
@@ -76,14 +92,13 @@ export async function calculateWorkOrder(
     tax: BigDecimal.fromMoney(existingOrderCalculation.tax)
       .add(BigDecimal.fromMoney(newOrderCalculation.tax))
       .toMoney(),
+    appliedDiscount: existingOrderCalculation.appliedDiscount,
     discount: BigDecimal.fromMoney(existingOrderCalculation.discount)
       .add(BigDecimal.fromMoney(newOrderCalculation.discount))
       .toMoney(),
-    paid: BigDecimal.fromMoney(existingOrderCalculation.paid)
-      .add(BigDecimal.fromMoney(newOrderCalculation.paid))
-      .toMoney(),
+    paid: BigDecimal.fromMoney(existingOrderCalculation.paid).toMoney(),
     outstanding: BigDecimal.fromMoney(existingOrderCalculation.outstanding)
-      .add(BigDecimal.fromMoney(newOrderCalculation.outstanding))
+      .add(BigDecimal.fromMoney(newOrderCalculation.total))
       .toMoney(),
     total: BigDecimal.fromMoney(existingOrderCalculation.total)
       .add(BigDecimal.fromMoney(newOrderCalculation.total))
@@ -100,33 +115,19 @@ export async function calculateWorkOrder(
       ...existingOrderCalculation.itemPrices,
       ...newOrderCalculation.itemPrices,
     },
+    depositPrices: existingOrderCalculation.depositPrices,
   };
 }
 
-type CalculateDraftOrderResult = {
-  tax: Money;
-  subtotal: Money;
-  total: Money;
-  paid: Money;
-  outstanding: Money;
-  discount: Money;
-
-  itemPrices: Record<string, Money>;
-  hourlyLabourChargePrices: Record<string, Money>;
-  fixedPriceLabourChargePrices: Record<string, Money>;
-};
-
 async function calculateDraftOrder(
   session: Session,
-  { items, charges, discount }: Pick<CalculateWorkOrder, 'items' | 'charges' | 'discount'>,
+  { name, items, charges, discount }: Pick<CalculateWorkOrder, 'name' | 'items' | 'charges' | 'discount'>,
 ): Promise<CalculateDraftOrderResult> {
   if (items.length === 0 && charges.length === 0) {
     return {
       total: BigDecimal.ZERO.toMoney(),
       tax: BigDecimal.ZERO.toMoney(),
       subtotal: BigDecimal.ZERO.toMoney(),
-      paid: BigDecimal.ZERO.toMoney(),
-      outstanding: BigDecimal.ZERO.toMoney(),
       discount: BigDecimal.ZERO.toMoney(),
       itemPrices: {},
       fixedPriceLabourChargePrices: {},
@@ -139,9 +140,20 @@ async function calculateDraftOrder(
 
   const hourlyLabourCharges = charges.filter(hasPropertyValue('type', 'hourly-labour'));
   const fixedPriceLabourCharges = charges.filter(hasPropertyValue('type', 'fixed-price-labour'));
-  const { lineItems, customSales } = getWorkOrderLineItems(items, hourlyLabourCharges, fixedPriceLabourCharges, null, {
+  const { lineItems, customSales } = getWorkOrderLineItems(items, hourlyLabourCharges, fixedPriceLabourCharges, {
     labourSku: labourLineItemSKU,
   });
+
+  const [workOrder] = name ? await db.workOrder.get({ name }) : [];
+
+  const deposit = workOrder
+    ? {
+        depositedAmount: await getWorkOrderDepositedAmount(workOrder.id),
+        depositedReconciledAmount: await getWorkOrderDepositedReconciledAmount(workOrder.id),
+      }
+    : { depositedAmount: BigDecimal.ZERO.toMoney(), depositedReconciledAmount: BigDecimal.ZERO.toMoney() };
+
+  const appliedDiscount = getWorkOrderAppliedDiscount(discount, deposit);
 
   const graphql = new Graphql(session);
 
@@ -162,13 +174,7 @@ async function calculateDraftOrder(
             taxable: customSale.taxable,
           })),
         ],
-        appliedDiscount: discount
-          ? {
-              valueType: discount.type,
-              // TODO: Ensure this works for percentages!
-              value: Number(discount.value),
-            }
-          : undefined,
+        appliedDiscount,
       },
     })
     .then(r => r.draftOrderCalculate);
@@ -193,6 +199,7 @@ async function calculateDraftOrder(
     totalTax: tax,
     subtotalPrice: subtotal,
     lineItems: calculatedLineItems,
+    totalDiscountsSet,
   } = result.calculatedDraftOrder;
 
   const itemPrices: Record<string, Money> = {};
@@ -213,6 +220,7 @@ async function calculateDraftOrder(
     const originalTotal = BigDecimal.fromDecimal(lineItem.originalTotal.amount);
     const discountedTotal = BigDecimal.fromDecimal(lineItem.discountedTotal.amount);
 
+    // we distribute the order-level discount over all line items. this is needed because lineItem.discountedTotal only takes line-item-level discounts into account
     const discountFactor = evaluate(() => {
       if (originalTotal.equals(BigDecimal.ZERO)) return BigDecimal.ONE;
       return discountedTotal.divide(originalTotal);
@@ -291,9 +299,7 @@ async function calculateDraftOrder(
     total,
     tax,
     subtotal,
-    paid: BigDecimal.ZERO.toMoney(),
-    discount: BigDecimal.ZERO.toMoney(),
-    outstanding: total,
+    discount: decimalToMoney(totalDiscountsSet.shopMoney.amount),
     itemPrices,
     hourlyLabourChargePrices,
     fixedPriceLabourChargePrices,
@@ -307,7 +313,7 @@ async function calculateDraftOrder(
 async function calculateDatabaseOrders(
   session: Session,
   calculateWorkOrder: CalculateWorkOrder,
-): Promise<CalculateDraftOrderResult> {
+): Promise<CalculateWorkOrderResult> {
   const { shop } = session;
   const { name } = calculateWorkOrder;
 
@@ -319,9 +325,11 @@ async function calculateDatabaseOrders(
       paid: BigDecimal.ZERO.toMoney(),
       outstanding: BigDecimal.ZERO.toMoney(),
       discount: BigDecimal.ZERO.toMoney(),
+      appliedDiscount: BigDecimal.ZERO.toMoney(),
       itemPrices: {},
       fixedPriceLabourChargePrices: {},
       hourlyLabourChargePrices: {},
+      depositPrices: {},
     };
   }
 
@@ -336,9 +344,10 @@ async function calculateDatabaseOrders(
   const databaseItems = await db.workOrder.getItems({ workOrderId });
   const databaseHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
   const databaseFixedCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
+  const databaseDeposits = await db.workOrder.getDeposits({ workOrderId });
 
   const lineItemIds = unique(
-    [...databaseItems, ...databaseHourlyCharges, ...databaseFixedCharges]
+    [...databaseItems, ...databaseHourlyCharges, ...databaseFixedCharges, ...databaseDeposits]
       .map(item => item.shopifyOrderLineItemId)
       .filter(isLineItemId),
   );
@@ -360,6 +369,7 @@ async function calculateDatabaseOrders(
   const itemPrices: Record<string, Money> = {};
   const hourlyLabourChargePrices: Record<string, Money> = {};
   const fixedPriceLabourChargePrices: Record<string, Money> = {};
+  const depositPrices: Record<string, Money> = {};
 
   for (const lineItem of lineItems) {
     assertMoney(lineItem.totalTax);
@@ -400,6 +410,25 @@ async function calculateDatabaseOrders(
     const lineItemFixedCharges = databaseFixedCharges.filter(
       hasPropertyValue('shopifyOrderLineItemId', lineItem.lineItemId),
     );
+    const lineItemDeposits = databaseDeposits.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.lineItemId));
+
+    if (lineItemDeposits.length > 1) {
+      throw new Error('Only 1 deposit may be associated with a single line item');
+    }
+
+    if (lineItemDeposits.length === 1) {
+      if ([lineItemItems, lineItemHourlyCharges, lineItemFixedCharges].some(l => l.length > 0)) {
+        throw new Error('Deposits cannot be on the same line item as other items/charges');
+      }
+
+      const [lineItemDeposit = never()] = lineItemDeposits;
+
+      assertMoney(lineItemDeposit.amount);
+
+      depositPrices[lineItemDeposit.uuid] = lineItemDeposit.amount;
+
+      continue;
+    }
 
     const discountFactor = evaluate(() => {
       if (originalTotal.equals(BigDecimal.ZERO)) return BigDecimal.ONE;
@@ -455,9 +484,11 @@ async function calculateDatabaseOrders(
     paid: paid.toMoney(),
     outstanding: outstanding.toMoney(),
     discount: discount.toMoney(),
+    appliedDiscount: discount.toMoney(),
     itemPrices,
     hourlyLabourChargePrices,
     fixedPriceLabourChargePrices,
+    depositPrices,
   };
 }
 

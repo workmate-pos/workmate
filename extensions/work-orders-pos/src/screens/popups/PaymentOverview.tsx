@@ -79,7 +79,8 @@ export function PaymentOverview({ name }: { name: string }) {
       customerId: workOrder.customerId,
       labourSku: settings.labourLineItemSKU,
       discount: workOrder.discount,
-      deposit: null,
+      depositedAmount: workOrder.depositedAmount,
+      depositedReconciledAmount: workOrder.depositedReconciledAmount,
     });
   };
 
