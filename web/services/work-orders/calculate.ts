@@ -63,7 +63,11 @@ export async function calculateWorkOrder(
     return charge satisfies never;
   });
 
-  const newOrderCalculation = await calculateDraftOrder(session, { items: draftItems, charges: draftCharges });
+  const newOrderCalculation = await calculateDraftOrder(session, {
+    items: draftItems,
+    charges: draftCharges,
+    discount: calculateWorkOrder.discount,
+  });
 
   return {
     subtotal: BigDecimal.fromMoney(existingOrderCalculation.subtotal)
@@ -114,7 +118,7 @@ type CalculateDraftOrderResult = {
 
 async function calculateDraftOrder(
   session: Session,
-  { items, charges }: Pick<CalculateWorkOrder, 'items' | 'charges'>,
+  { items, charges, discount }: Pick<CalculateWorkOrder, 'items' | 'charges' | 'discount'>,
 ): Promise<CalculateDraftOrderResult> {
   if (items.length === 0 && charges.length === 0) {
     return {
@@ -157,6 +161,13 @@ async function calculateDraftOrder(
             originalUnitPrice: customSale.unitPrice,
           })),
         ],
+        appliedDiscount: discount
+          ? {
+              valueType: discount.type,
+              // TODO: Ensure this works for percentages!
+              value: Number(discount.value),
+            }
+          : undefined,
       },
     })
     .then(r => r.draftOrderCalculate);
@@ -375,7 +386,7 @@ async function calculateDatabaseOrders(
     const orderPaid = orderTotal.subtract(orderOutstanding);
     const lineItemPaid = evaluate(() => {
       if (orderTotal.equals(BigDecimal.ZERO)) return BigDecimal.ZERO;
-      return orderPaid.multiply(discountedTaxedTotal).divide(orderTotal);
+      return orderPaid.divide(orderTotal).multiply(discountedTaxedTotal);
     });
 
     paid = paid.add(lineItemPaid);

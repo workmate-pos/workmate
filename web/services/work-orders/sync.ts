@@ -85,7 +85,6 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
 
   assertGid(workOrder.customerId);
 
-  // TODO: Make discount work again - absolute discount should be applied once, but percentage on all orders - maybe just let the merchant do it natively?
   await gql.draftOrder.create.run(graphql, {
     input: {
       customAttributes: getCustomAttributeArrayFromObject(getWorkOrderOrderCustomAttributes(workOrder)),

@@ -13,8 +13,11 @@
     },
     "items": {
       "$ref": "create-work-order.json#/properties/items"
+    },
+    "discount": {
+      "$ref": "create-work-order.json#/properties/discount"
     }
   },
-  "required": ["customerId", "charges", "items"],
+  "required": ["customerId", "charges", "items", "discount"],
   "additionalProperties": false
 }
