@@ -139,7 +139,7 @@ async function calculateDraftOrder(
 
   const hourlyLabourCharges = charges.filter(hasPropertyValue('type', 'hourly-labour'));
   const fixedPriceLabourCharges = charges.filter(hasPropertyValue('type', 'fixed-price-labour'));
-  const { lineItems, customSales } = getWorkOrderLineItems(items, hourlyLabourCharges, fixedPriceLabourCharges, {
+  const { lineItems, customSales } = getWorkOrderLineItems(items, hourlyLabourCharges, fixedPriceLabourCharges, null, {
     labourSku: labourLineItemSKU,
   });
 
@@ -159,6 +159,7 @@ async function calculateDraftOrder(
             customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
             quantity: customSale.quantity,
             originalUnitPrice: customSale.unitPrice,
+            taxable: customSale.taxable,
           })),
         ],
         appliedDiscount: discount

@@ -11,6 +11,8 @@
     "defaultPurchaseOrderStatus",
     "discountShortcuts",
     "discountRules",
+    "depositShortcuts",
+    "depositRules",
     "workOrderRequests",
     "mutableServiceCollectionId",
     "fixedServiceCollectionId",

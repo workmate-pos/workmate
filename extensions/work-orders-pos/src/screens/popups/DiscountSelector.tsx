@@ -31,7 +31,7 @@ export function DiscountSelector({ onSelect }: { onSelect: (discount: CreateWork
 
   const customInputAllowed = !rules?.onlyAllowShortcuts;
   const allowedCurrencyRange = rules?.allowedCurrencyRange
-    ? [rules.allowedCurrencyRange[0], rules.allowedCurrencyRange[1]]
+    ? ([rules.allowedCurrencyRange[0], rules.allowedCurrencyRange[1]] as const)
     : null;
   const allowedPercentageRange = rules?.allowedPercentageRange;
 
@@ -83,11 +83,11 @@ export function DiscountSelector({ onSelect }: { onSelect: (discount: CreateWork
 
             <Stack direction="horizontal" alignment="center" flexChildren paddingHorizontal="ExtraExtraLarge">
               <Stepper
-                minimumValue={allowedCurrencyRange?.[0] ?? 0}
-                maximumValue={allowedCurrencyRange?.[1]}
-                initialValue={currencyValue}
-                value={currencyValue}
-                onValueChanged={setCurrencyValue}
+                minimumValue={Number(allowedCurrencyRange?.[0] ?? 0)}
+                maximumValue={Number(allowedCurrencyRange?.[1] ?? Infinity)}
+                initialValue={Number(currencyValue)}
+                value={Number(currencyValue)}
+                onValueChanged={(value: number) => setCurrencyValue(BigDecimal.fromString(String(value)).toMoney())}
               />
               <Button
                 title={currencyFormatter(currencyValue)}

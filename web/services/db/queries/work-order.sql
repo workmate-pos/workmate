@@ -1,14 +1,16 @@
 /* @name upsert */
 INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount",
-                         "discountType")
-VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)
+                         "discountType", "depositedAmount", "depositedReconciledAmount")
+VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType, :depositedAmount!, :depositedReconciledAmount!)
 ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
                                            "dueDate"            = EXCLUDED."dueDate",
                                            "customerId"         = EXCLUDED."customerId",
                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
                                            note                 = EXCLUDED.note,
                                            "discountAmount"     = EXCLUDED."discountAmount",
-                                           "discountType"       = EXCLUDED."discountType"
+                                           "discountType"       = EXCLUDED."discountType",
+                                           "depositedAmount"    = EXCLUDED."depositedAmount",
+                                           "depositedReconciledAmount" = EXCLUDED."depositedReconciledAmount"
 RETURNING *;
 
 /* @name insertCustomField */

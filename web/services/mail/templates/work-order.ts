@@ -40,6 +40,7 @@ export async function getWorkOrderTemplateData(
     charges: [],
     items: [],
     customerId: null,
+    discount: null,
   });
 
   const {

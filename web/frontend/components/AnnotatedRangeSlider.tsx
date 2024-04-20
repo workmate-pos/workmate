@@ -6,6 +6,7 @@ import React from 'react';
  */
 export function AnnotatedRangeSlider({
   formatter = String,
+  output = true,
   ...props
 }: RangeSliderProps & { formatter?: (value: number) => string }) {
   const lower = Array.isArray(props.value) ? props.value[0] : props.value;
@@ -13,7 +14,7 @@ export function AnnotatedRangeSlider({
 
   return (
     <Box paddingBlockEnd="500" paddingBlockStart="500">
-      <RangeSlider {...props} />
+      <RangeSlider output={output} {...props} />
       <Text as="p" fontWeight="semibold" variant="bodyLg" alignment="center">
         {formatter(lower)} &mdash; {formatter(upper)}
       </Text>

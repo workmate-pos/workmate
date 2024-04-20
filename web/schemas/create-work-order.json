@@ -225,7 +225,8 @@
     "derivedFromOrderId",
     "items",
     "charges",
-    "customFields"
+    "customFields",
+    "discount"
   ],
   "additionalProperties": false
 }

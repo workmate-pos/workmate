@@ -48,6 +48,11 @@ model WorkOrder {
   derivedFromOrder   ShopifyOrder? @relation(fields: [derivedFromOrderId], references: [orderId])
   derivedFromOrderId String?
 
+  // The amount that has been deposited by the customer
+  depositedAmount           String
+  // The amount of discount given to the customer to account for the amount that has been deposited
+  depositedReconciledAmount String
+
   // The discount that is applied to every FUTURE order
 
   discountType   DiscountType?

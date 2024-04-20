@@ -56,6 +56,20 @@
         { "$ref": "#/definitions/discount-rule-do-not-allow-shortcuts" }
       ]
     },
+    "depositShortcuts": {
+      "type": "array",
+      "items": {
+        "title": "deposit-shortcut",
+        "$ref": "#/definitions/percentage-or-money"
+      }
+    },
+    "depositRules": {
+      "title": "deposit-rules",
+      "anyOf": [
+        { "$ref": "#/definitions/deposit-rule-only-allow-shortcuts" },
+        { "$ref": "#/definitions/deposit-rule-do-not-allow-shortcuts" }
+      ]
+    },
     "workOrderRequests": {
       "title": "work-order-requests",
       "description": "Settings related to work order requests, where customers can create a work order themselves.",
@@ -264,6 +278,55 @@
         }
       },
       "required": ["onlyAllowShortcuts", "allowedPercentageRange", "allowedCurrencyRange"],
+      "additionalProperties": false
+    },
+    "deposit-rule-only-allow-shortcuts": {
+      "type": "object",
+      "properties": {
+        "onlyAllowShortcuts": {
+          "const": true
+        },
+        "onlyAllowHighestAbsoluteShortcut": {
+          "type": "boolean",
+          "description": "If enabled, only the deposit shortcut that would result in the highest currency amount will be allowed.\n\nExamples with deposit shortcuts of 40% and 100$:\n- an order of 150$ would have a deposit of 100$\n- an order of 1000$ would have a deposit of 400$."
+        },
+        "allowedPercentageRange": {
+          "const": null
+        },
+        "allowedCurrencyRange": {
+          "const": null
+        }
+      },
+      "required": [
+        "onlyAllowShortcuts",
+        "onlyAllowHighestAbsoluteShortcut",
+        "allowedPercentageRange",
+        "allowedCurrencyRange"
+      ],
+      "additionalProperties": false
+    },
+    "deposit-rule-do-not-allow-shortcuts": {
+      "type": "object",
+      "properties": {
+        "onlyAllowShortcuts": {
+          "const": false
+        },
+        "onlyAllowHighestAbsoluteShortcut": {
+          "const": false
+        },
+        "allowedPercentageRange": {
+          "anyOf": [{ "const": null }, { "$ref": "#/definitions/percentage-range" }]
+        },
+        "allowedCurrencyRange": {
+          "anyOf": [{ "const": null }, { "$ref": "#/definitions/currency-range" }]
+        }
+      },
+      "required": [
+        "onlyAllowShortcuts",
+        "onlyAllowHighestAbsoluteShortcut",
+        "allowedPercentageRange",
+        "allowedCurrencyRange"
+      ],
       "additionalProperties": false
     }
   }

@@ -25,7 +25,7 @@ import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
@@ -120,7 +120,7 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
             </ResponsiveGrid>
           </ResponsiveGrid>
 
-          <ResponsiveGrid columns={3} grow>
+          <ResponsiveGrid columns={4} grow>
             <FormButton
               title={'Manage payments'}
               type={'basic'}
@@ -134,6 +134,21 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
                 }
               }}
             />
+
+            <FormButton
+              title={'Deposit'}
+              type={'basic'}
+              action={'button'}
+              disabled={!createWorkOrder.name || !createWorkOrder.customerId || hasUnsavedChanges}
+              onPress={() => {
+                const { name, customerId } = createWorkOrder;
+
+                if (name && customerId) {
+                  router.push('DepositSelector', { createWorkOrder: { ...createWorkOrder, name, customerId } });
+                }
+              }}
+            />
+
             <FormButton
               title={'Print'}
               type={'basic'}
@@ -161,7 +176,7 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
           {!createWorkOrder.name ||
             (hasUnsavedChanges && (
               <Text color="TextSubdued" variant="body">
-                You must save your work order before you can manage payments/print
+                You must save your work order before you can manage payments/deposit/print
               </Text>
             ))}
         </ResponsiveStack>
@@ -219,7 +234,7 @@ function WorkOrderProperties({
         label={'Customer'}
         required
         onFocus={() => router.push('CustomerSelector', { onSelect: customerId => dispatch.setPartial({ customerId }) })}
-        disabled={!workOrder || workOrder.orders.some(order => order.type === 'ORDER')}
+        disabled={workOrder?.orders.some(order => order.type === 'ORDER') ?? false}
         value={
           createWorkOrder.customerId === null
             ? ''
@@ -376,6 +391,7 @@ function WorkOrderMoneySummary({
       items: createWorkOrder.items,
       charges: createWorkOrder.charges,
       customerId: createWorkOrder.customerId ?? createGid('Customer', 'null'),
+      discount: createWorkOrder.discount,
     },
     { enabled: createWorkOrder.customerId !== null },
   );

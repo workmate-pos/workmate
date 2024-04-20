@@ -80,6 +80,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
     draftItems,
     draftHourlyLabourCharges,
     draftFixedPriceLabourCharges,
+    null,
     { labourSku: labourLineItemSKU },
   );
 
@@ -99,6 +100,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
           quantity: customSale.quantity,
           customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
           originalUnitPrice: customSale.unitPrice,
+          taxable: customSale.taxable,
         })),
       ],
       note: workOrder.note,

@@ -10,6 +10,7 @@ import {
 } from '@work-orders/work-order-shopify-order';
 import { WorkOrderCharge } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
@@ -29,16 +30,18 @@ export const usePaymentHandler = () => {
     customerId,
     labourSku,
     discount,
+    deposit,
   }: {
     workOrderName: string;
     items: WorkOrderItem[];
     charges: DiscriminatedUnionOmit<WorkOrderCharge, 'shopifyOrderLineItem'>[];
-    customerId: ID;
+    customerId: ID | null;
     labourSku: string;
     discount: {
       type: 'FIXED_AMOUNT' | 'PERCENTAGE';
       value: string;
     } | null;
+    deposit: Money | null;
   }) => {
     setIsLoading(true);
 
@@ -46,15 +49,19 @@ export const usePaymentHandler = () => {
       items,
       charges.filter(hasPropertyValue('type', 'hourly-labour')),
       charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
+      deposit,
       { labourSku },
     );
 
     await cart.clearCart();
     await cart.addCartProperties(getWorkOrderOrderCustomAttributes({ name: workOrderName }));
-    await cart.setCustomer({ id: Number(parseGid(customerId).id) });
 
-    for (const { quantity, title, unitPrice } of customSales) {
-      await cart.addCustomSale({ quantity, title, price: unitPrice, taxable: true });
+    if (customerId) {
+      await cart.setCustomer({ id: Number(parseGid(customerId).id) });
+    }
+
+    for (const { quantity, title, unitPrice, taxable } of customSales) {
+      await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });
     }
 
     for (const { productVariantId, quantity } of lineItems) {

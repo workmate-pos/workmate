@@ -14,11 +14,12 @@ export const useCalculateWorkOrderQueries = ({
     items: CreateWorkOrder['items'];
     customerId: CreateWorkOrder['customerId'];
     charges: CreateWorkOrder['charges'];
+    discount: CreateWorkOrder['discount'];
   }[];
 }) => {
   const queries = useQueries(
-    workOrders.map(({ name, items, customerId, charges }) => ({
-      queryKey: ['calculated-work-order', name, items, customerId, charges],
+    workOrders.map(({ name, items, customerId, charges, discount }) => ({
+      queryKey: ['calculated-work-order', name, items, customerId, charges, discount],
       queryFn: async () => {
         const response = await fetch('/api/work-order/calculate-draft-order', {
           method: 'POST',
@@ -27,6 +28,7 @@ export const useCalculateWorkOrderQueries = ({
             items,
             customerId,
             charges,
+            discount,
           } satisfies CalculateWorkOrder),
           headers: { 'Content-Type': 'application/json' },
         });

@@ -1,7 +1,7 @@
 // TODO: Move to common
 
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, Decimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { groupByKey } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
@@ -47,6 +47,7 @@ export type CustomSale = {
   quantity: number;
   unitPrice: Money;
   customAttributes: Record<string, string>;
+  taxable: boolean;
 };
 
 /**
@@ -64,6 +65,7 @@ export function getWorkOrderLineItems(
   items: WorkOrderItem[],
   hourlyLabourCharges: HourlyLabourCharge[],
   fixedPriceLabourCharges: FixedPriceLabourCharge[],
+  deposit: Money | null,
   options: { labourSku: string },
 ): { lineItems: LineItem[]; customSales: CustomSale[] } {
   const charges = [...fixedPriceLabourCharges, ...hourlyLabourCharges];
@@ -152,9 +154,23 @@ export function getWorkOrderLineItems(
         unitPrice: getChargeUnitPrice(charge),
         title: charge.name,
         quantity,
+        taxable: true,
       };
     })
     .filter(isNonNullable);
+
+  if (deposit) {
+    deposit = BigDecimal.fromMoney(deposit).round(2, RoundingMode.CEILING).toMoney();
+    if (BigDecimal.fromMoney(deposit).compare(BigDecimal.ZERO) > 0) {
+      customSales.push({
+        title: 'Deposit',
+        quantity: 1,
+        unitPrice: deposit,
+        customAttributes: getDepositCustomAttributes(deposit),
+        taxable: false,
+      });
+    }
+  }
 
   return {
     lineItems: Object.values(lineItemByVariantId),
@@ -176,16 +192,12 @@ export function getChargeUnitPrice(charge: HourlyLabourCharge | FixedPriceLabour
 const ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_item_uuid:';
 const HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_hourly_charge_uuid:';
 const FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_fixed_charge_uuid:';
+const DEPOSIT_CUSTOM_ATTRIBUTE_PREFIX = '_wm_deposit';
+const DEPOSIT_DISCOUNT_NAME = 'Deposit';
 export const WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = 'Work Order';
 
 export function getWorkOrderOrderCustomAttributes(workOrder: { name: string }) {
-  return {
-    [WORK_ORDER_CUSTOM_ATTRIBUTE_NAME]: workOrder.name,
-  };
-}
-
-export function getCustomAttributeArrayFromObject(obj: Record<string, string>): { key: string; value: string }[] {
-  return Object.entries(obj).map(([key, value]) => ({ key, value }));
+  return { [WORK_ORDER_CUSTOM_ATTRIBUTE_NAME]: workOrder.name };
 }
 
 function getChargeCustomAttributes(
@@ -211,6 +223,10 @@ function getChargeCustomAttributes(
         }
       : {}),
   };
+}
+
+function getDepositCustomAttributes(deposit: Money): Record<string, string> {
+  return { [DEPOSIT_CUSTOM_ATTRIBUTE_PREFIX]: deposit };
 }
 
 export function getItemUuidCustomAttributeKey(item: { uuid: string }) {
@@ -307,4 +323,22 @@ export function getUuidsFromCustomAttributes(customAttributes: { key: string }[]
 
 export function getAbsorbedUuidsFromCustomAttributes(customAttributes: { key: string }[]) {
   return customAttributes.map(({ key }) => getAbsorbedUuidFromCustomAttributeKey(key)).filter(isNonNullable);
+}
+
+export function getCustomAttributeArrayFromObject(obj: Record<string, string>): { key: string; value: string }[] {
+  return Object.entries(obj).map(([key, value]) => ({ key, value }));
+}
+
+/**
+ * Used to check whether some line item is a deposit.
+ */
+export function isDepositLineItem({ customAttributes }: { customAttributes: { key: string }[] }) {
+  return customAttributes.some(({ key }) => key === DEPOSIT_CUSTOM_ATTRIBUTE_PREFIX);
+}
+
+/**
+ * Used to check whether some applied discount was applied to account for a deposit.
+ */
+export function isDepositDiscountCode({ code }: { code: string }) {
+  return code === DEPOSIT_DISCOUNT_NAME;
 }

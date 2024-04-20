@@ -16,7 +16,7 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { groupByKey, indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Value } from '@sinclair/typebox/value';
@@ -34,6 +34,9 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
   assertGid(workOrder.customerId);
   assertGidOrNull(workOrder.derivedFromOrderId);
 
+  assertMoney(workOrder.depositedAmount);
+  assertMoney(workOrder.depositedReconciledAmount);
+
   return await awaitNested({
     name: workOrder.name,
     status: workOrder.status,
@@ -46,6 +49,8 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     orders: getWorkOrderOrders(workOrder.id),
     customFields: getWorkOrderCustomFields(workOrder.id),
     discount: getWorkOrderDiscount(workOrder),
+    depositedAmount: workOrder.depositedAmount,
+    depositedReconciledAmount: workOrder.depositedReconciledAmount,
   });
 }
 

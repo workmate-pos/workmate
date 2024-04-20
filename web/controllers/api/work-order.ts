@@ -93,6 +93,7 @@ export default class WorkOrderController {
       derivedFromOrderId: null,
       name: null,
       customFields: {},
+      discount: null,
     });
 
     return res.json({ name });

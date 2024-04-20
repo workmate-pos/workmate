@@ -31,6 +31,7 @@ import { DiscountSelector } from './screens/popups/DiscountSelector.js';
 import { PaymentStatusSelector } from './screens/popups/PaymentStatusSelector.js';
 import { OverdueStatusSelector } from './screens/popups/OverdueStatusSelector.js';
 import { PurchaseOrderStatusSelector } from './screens/popups/PurchaseOrderStatusSelector.js';
+import { DepositSelector } from './screens/popups/DepositSelector.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -81,6 +82,10 @@ export const { Router, useRouter } = createRouter(
     DiscountSelector: {
       title: 'Select Discount',
       Component: DiscountSelector,
+    },
+    DepositSelector: {
+      title: 'Select Deposit',
+      Component: DepositSelector,
     },
     WorkOrderSaved: {
       title: 'Work order saved',

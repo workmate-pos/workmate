@@ -79,6 +79,7 @@ export function PaymentOverview({ name }: { name: string }) {
       customerId: workOrder.customerId,
       labourSku: settings.labourLineItemSKU,
       discount: workOrder.discount,
+      deposit: null,
     });
   };
 
@@ -155,7 +156,7 @@ function useItemRows(
   const employeeIds = unique(workOrder?.charges.map(charge => charge.employeeId).filter(isNonNullable) ?? []);
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
 
-  const { customerId, items, charges } = workOrder
+  const { customerId, items, charges, discount } = workOrder
     ? workOrderToCreateWorkOrder(workOrder)
     : defaultCreateWorkOrder({ status: 'N/A' });
 
@@ -166,6 +167,8 @@ function useItemRows(
       items,
       charges,
       customerId: customerId ?? createGid('Customer', '0'),
+      // we only apply the discount to the selected items, as it will be applied to the future order only
+      discount: null,
     },
     {
       enabled: !!workOrder,
@@ -181,6 +184,7 @@ function useItemRows(
       items: items.filter(item => selectedItems.some(hasPropertyValue('uuid', item.uuid))),
       charges: charges.filter(charge => selectedCharges.some(hasPropertyValue('uuid', charge.uuid))),
       customerId: customerId ?? createGid('Customer', '0'),
+      discount,
     },
     {
       enabled: !!workOrder,

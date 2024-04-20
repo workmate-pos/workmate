@@ -332,8 +332,8 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const calculateWorkOrderQueries = useCalculateWorkOrderQueries({
     fetch,
     workOrders: workOrders.map(wo => {
-      const { items, charges, customerId } = workOrderToCreateWorkOrder(wo);
-      return { name: wo.name, items, charges, customerId };
+      const { items, charges, customerId, discount } = workOrderToCreateWorkOrder(wo);
+      return { name: wo.name, items, charges, customerId, discount };
     }),
   });
 

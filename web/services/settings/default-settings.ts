@@ -1,4 +1,4 @@
-import { Money, Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { Money, Decimal, BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 import { quoteTemplate } from '../mail/templates/defaults/work-order/quote.js';
 import { workOrderInstallationOverviewTemplate } from '../mail/templates/defaults/work-order/work-order.js';
@@ -18,6 +18,16 @@ const defaultShopSettings: ShopSettings = {
     onlyAllowShortcuts: true,
     allowedPercentageRange: null,
     allowedCurrencyRange: null,
+  },
+  depositShortcuts: [
+    { percentage: BigDecimal.fromString('40.00').toDecimal(), unit: 'percentage' },
+    { money: BigDecimal.fromString('100.00').toMoney(), unit: 'currency' },
+  ],
+  depositRules: {
+    onlyAllowShortcuts: true,
+    onlyAllowHighestAbsoluteShortcut: true,
+    allowedCurrencyRange: null,
+    allowedPercentageRange: null,
   },
   workOrderRequests: {
     enabled: false,

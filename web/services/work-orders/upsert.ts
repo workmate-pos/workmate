@@ -22,6 +22,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureEmployeesExist } from '../employee/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export async function upsertWorkOrder(
   session: Session,
@@ -52,6 +53,8 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
     note: createWorkOrder.note,
     discountAmount: createWorkOrder.discount?.value,
     discountType: createWorkOrder.discount?.type,
+    depositedAmount: BigDecimal.ZERO.toMoney(),
+    depositedReconciledAmount: BigDecimal.ZERO.toMoney(),
   });
 
   for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
@@ -106,6 +109,8 @@ async function updateWorkOrder(
       note: createWorkOrder.note,
       discountAmount: createWorkOrder.discount?.value,
       discountType: createWorkOrder.discount?.type,
+      depositedAmount: workOrder.depositedAmount,
+      depositedReconciledAmount: workOrder.depositedReconciledAmount,
     });
 
     await db.workOrder.removeCustomFields({ workOrderId: workOrder.id });

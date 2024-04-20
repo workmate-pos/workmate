@@ -33,7 +33,7 @@ import { AnnotatedRangeSlider } from '../components/AnnotatedRangeSlider.js';
 import { useSettingsMutation } from '../queries/use-settings-mutation.js';
 import { useCollectionsQuery } from '../queries/use-collections-query.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
-import { Money, Decimal, BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { Money, Decimal, BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { string } from '@teifi-digital/shopify-app-toolbox';
@@ -42,6 +42,7 @@ import { useDebouncedState } from '../hooks/use-debounced-state.js';
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
 const CURRENCY_RANGE = 'CURRENCY_RANGE';
 const PERCENTAGE_RANGE = 'PERCENTAGE_RANGE';
+const ONLY_HIGHEST_SHORTCUT = 'ONLY_HIGHEST_SHORTCUT';
 
 export default function () {
   return (
@@ -133,6 +134,7 @@ function Settings() {
       <BlockStack gap={{ xs: '800', sm: '400' }}>
         <InlineGrid columns={{ xs: '1fr', md: '2fr 5fr' }} gap="400">
           <DiscountSettings settings={settings} setSettings={setSettings} />
+          <DepositSettings settings={settings} setSettings={setSettings} />
           <WorkOrderSettings
             settings={settings}
             setSettings={setSettings}
@@ -189,6 +191,7 @@ function DiscountSettings({
       <Card roundedAbove="sm">
         <BlockStack gap="400">
           <CurrencyOrPercentageInput
+            label={'Discount Shortcuts'}
             value={discountShortcutValue}
             setValue={setDiscountShortcutValue}
             onSelect={unit => {
@@ -222,6 +225,75 @@ function DiscountSettings({
             ))}
           </InlineStack>
           <RuleSet title="Discount Rules" rules={discountRules} activeRules={activeDiscountRules} />
+        </BlockStack>
+      </Card>
+      {toast}
+    </>
+  );
+}
+
+function DepositSettings({
+  settings,
+  setSettings,
+}: {
+  settings: ShopSettings;
+  setSettings: Dispatch<SetStateAction<ShopSettings>>;
+}) {
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const currencyFormatter = useCurrencyFormatter({ fetch });
+
+  const [depositShortcutValue, setDepositShortcutValue] = useState('');
+
+  const depositRules = useDepositRules(settings, setSettings, currencyFormatter);
+  const activeDepositRules = getActiveDepositRules(settings);
+
+  return (
+    <>
+      <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
+        <BlockStack gap="400">
+          <Text as="h3" variant="headingMd">
+            Deposits
+          </Text>
+        </BlockStack>
+      </Box>
+      <Card roundedAbove="sm">
+        <BlockStack gap="400">
+          <CurrencyOrPercentageInput
+            label={'Deposit Shortcuts'}
+            value={depositShortcutValue}
+            setValue={setDepositShortcutValue}
+            onSelect={unit => {
+              setSettings({
+                ...settings,
+                depositShortcuts: [
+                  ...settings.depositShortcuts,
+                  {
+                    currency: { unit: 'currency', money: depositShortcutValue as Money } as const,
+                    percentage: { unit: 'percentage', percentage: depositShortcutValue as Decimal } as const,
+                  }[unit],
+                ],
+              });
+              setDepositShortcutValue('');
+            }}
+          />
+          <InlineStack gap="200">
+            {settings.depositShortcuts.map((shortcut, i) => (
+              <Tag
+                key={i}
+                onRemove={() =>
+                  setSettings({
+                    ...settings,
+                    depositShortcuts: settings.depositShortcuts.filter((_, j) => i !== j),
+                  })
+                }
+              >
+                {shortcut.unit === 'currency' && currencyFormatter(shortcut.money)}
+                {shortcut.unit === 'percentage' && `${shortcut.percentage}%`}
+              </Tag>
+            ))}
+          </InlineStack>
+          <RuleSet title="Deposit Rules" rules={depositRules} activeRules={activeDepositRules} />
         </BlockStack>
       </Card>
       {toast}
@@ -1011,21 +1083,20 @@ function PurchaseOrderWebhookSettings({
   );
 }
 
-const useCurrencyRangeBounds = (initialCurrencyRangeBounds: [number, number] = [100, 100]) => {
+const useCurrencyRangeBounds = (min: Money, initialMax: Money) => {
   const CURRENCY_RANGE_MAX_GROWTH_RATE = 1.25;
 
-  const [min, initialMax] = initialCurrencyRangeBounds;
-
-  const getMaxBound = (currentUpperBound: number) =>
-    Math.round(Math.max(currentUpperBound * CURRENCY_RANGE_MAX_GROWTH_RATE, initialMax));
+  const getMaxBound = (currentUpperBound: Money) =>
+    BigDecimal.fromString(String(CURRENCY_RANGE_MAX_GROWTH_RATE))
+      .multiply(BigDecimal.fromMoney(currentUpperBound))
+      .round(0, RoundingMode.CEILING)
+      .toMoney();
 
   const [max, setMax] = useDebouncedState(getMaxBound(initialMax));
 
-  const update = ([, upper]: [number, number]) => {
-    setMax(getMaxBound(upper));
-  };
+  const updateMax = (max: Money) => setMax(getMaxBound(max));
 
-  return { min, max, update };
+  return { min, max, updateMax };
 };
 
 function useDiscountRules(
@@ -1033,8 +1104,8 @@ function useDiscountRules(
   setSettings: (settings: ShopSettings) => void,
   currencyFormatter: CurrencyFormatter,
 ): Rule[] {
-  const initialCurrencyRangeBounds = [0, 100] as [number, number];
-  const currencyRangeBounds = useCurrencyRangeBounds(initialCurrencyRangeBounds);
+  const initialCurrencyRangeBounds = [BigDecimal.ZERO.toMoney(), BigDecimal.fromString('100').toMoney()] as const;
+  const currencyRangeBounds = useCurrencyRangeBounds(initialCurrencyRangeBounds[0], initialCurrencyRangeBounds[1]);
 
   if (!settings) {
     return [];
@@ -1076,10 +1147,7 @@ function useDiscountRules(
           discountRules: {
             ...settings.discountRules,
             onlyAllowShortcuts: false,
-            allowedCurrencyRange: [
-              initialCurrencyRangeBounds[0].toFixed(2) as Money,
-              initialCurrencyRangeBounds[1].toFixed(2) as Money,
-            ],
+            allowedCurrencyRange: [...initialCurrencyRangeBounds],
           },
         });
       },
@@ -1099,30 +1167,28 @@ function useDiscountRules(
           <AnnotatedRangeSlider
             label="Allowed discount range"
             labelHidden
-            min={currencyRangeBounds.min}
-            max={currencyRangeBounds.max}
+            min={Number(currencyRangeBounds.min)}
+            max={Number(currencyRangeBounds.max)}
             step={1}
             formatter={currencyFormatter}
-            value={
-              [
-                Number(settings.discountRules.allowedCurrencyRange[0]),
-                Number(settings.discountRules.allowedCurrencyRange[1]),
-              ] as [number, number]
-            }
+            value={[
+              Number(settings.discountRules.allowedCurrencyRange[0]),
+              Number(settings.discountRules.allowedCurrencyRange[1]),
+            ]}
             onChange={(allowedCurrencyRange: [number, number]) => {
+              const min = BigDecimal.fromString(allowedCurrencyRange[0].toFixed(2)).toMoney();
+              const max = BigDecimal.fromString(allowedCurrencyRange[1].toFixed(2)).toMoney();
+
               setSettings({
                 ...settings,
                 discountRules: {
                   ...settings.discountRules,
                   onlyAllowShortcuts: false,
-                  allowedCurrencyRange: [
-                    allowedCurrencyRange[0].toFixed(2) as Money,
-                    allowedCurrencyRange[1].toFixed(2) as Money,
-                  ],
+                  allowedCurrencyRange: [min, max],
                 },
               });
 
-              currencyRangeBounds.update(allowedCurrencyRange);
+              currencyRangeBounds.updateMax(max);
             }}
           />
         );
@@ -1186,6 +1252,189 @@ function useDiscountRules(
   ];
 }
 
+function useDepositRules(
+  settings: ShopSettings | null,
+  setSettings: (settings: ShopSettings) => void,
+  currencyFormatter: CurrencyFormatter,
+): Rule[] {
+  const initialCurrencyRangeBounds = [BigDecimal.ZERO.toMoney(), BigDecimal.fromString('100').toMoney()] as const;
+  const currencyRangeBounds = useCurrencyRangeBounds(initialCurrencyRangeBounds[0], initialCurrencyRangeBounds[1]);
+
+  if (!settings) {
+    return [];
+  }
+
+  return [
+    {
+      value: ONLY_SHORTCUTS,
+      title: 'Only allow deposit shortcuts',
+      conflictingRules: [CURRENCY_RANGE, PERCENTAGE_RANGE],
+      onSelect() {
+        setSettings({
+          ...settings,
+          depositRules: {
+            ...settings.depositRules,
+            onlyAllowShortcuts: true,
+            allowedCurrencyRange: null,
+            allowedPercentageRange: null,
+          },
+        });
+      },
+      onDeselect() {
+        setSettings({
+          ...settings,
+          depositRules: {
+            ...settings.depositRules,
+            onlyAllowShortcuts: false,
+            onlyAllowHighestAbsoluteShortcut: false,
+          },
+        });
+      },
+    },
+    {
+      value: ONLY_HIGHEST_SHORTCUT,
+      title: 'Only allow the highest absolute deposit shortcut',
+      requiredRules: [ONLY_SHORTCUTS],
+      onSelect() {
+        invariant(settings.depositRules.onlyAllowShortcuts, 'Only allow shortcuts must be selected');
+
+        setSettings({
+          ...settings,
+          depositRules: {
+            ...settings.depositRules,
+            onlyAllowHighestAbsoluteShortcut: true,
+          },
+        });
+      },
+      onDeselect() {
+        setSettings({
+          ...settings,
+          depositRules: {
+            ...settings.depositRules,
+            onlyAllowHighestAbsoluteShortcut: false,
+          },
+        });
+      },
+    },
+    {
+      value: CURRENCY_RANGE,
+      title: 'Allow deposits within a range',
+      conflictingRules: [ONLY_SHORTCUTS],
+      onSelect() {
+        setSettings({
+          ...settings,
+          depositRules: {
+            ...settings.depositRules,
+            onlyAllowShortcuts: false,
+            onlyAllowHighestAbsoluteShortcut: false,
+            allowedCurrencyRange: [...initialCurrencyRangeBounds],
+          },
+        });
+      },
+      onDeselect() {
+        setSettings({
+          ...settings,
+          depositRules: {
+            ...settings.depositRules,
+            allowedCurrencyRange: null,
+          },
+        });
+      },
+      renderChildren() {
+        invariant(settings.depositRules.allowedCurrencyRange, 'No currency range set');
+
+        return (
+          <AnnotatedRangeSlider
+            label="Allowed deposit range"
+            labelHidden
+            min={Number(currencyRangeBounds.min)}
+            max={Number(currencyRangeBounds.max)}
+            step={1}
+            formatter={currencyFormatter}
+            value={[
+              Number(settings.depositRules.allowedCurrencyRange[0]),
+              Number(settings.depositRules.allowedCurrencyRange[1]),
+            ]}
+            onChange={(allowedCurrencyRange: [number, number]) => {
+              const min = BigDecimal.fromString(allowedCurrencyRange[0].toFixed(2)).toMoney();
+              const max = BigDecimal.fromString(allowedCurrencyRange[1].toFixed(2)).toMoney();
+
+              setSettings({
+                ...settings,
+                depositRules: {
+                  ...settings.depositRules,
+                  onlyAllowShortcuts: false,
+                  onlyAllowHighestAbsoluteShortcut: false,
+                  allowedCurrencyRange: [min, max],
+                },
+              });
+
+              currencyRangeBounds.updateMax(max);
+            }}
+          />
+        );
+      },
+    },
+    {
+      value: PERCENTAGE_RANGE,
+      title: 'Allow deposits within a percentage range',
+      conflictingRules: [ONLY_SHORTCUTS],
+      onSelect() {
+        setSettings({
+          ...settings,
+          depositRules: {
+            ...settings.depositRules,
+            onlyAllowShortcuts: false,
+            onlyAllowHighestAbsoluteShortcut: false,
+            allowedPercentageRange: [BigDecimal.ZERO.toDecimal(), BigDecimal.fromString('100').toDecimal()],
+          },
+        });
+      },
+      onDeselect() {
+        setSettings({
+          ...settings,
+          depositRules: {
+            ...settings.depositRules,
+            allowedPercentageRange: null,
+          },
+        });
+      },
+      renderChildren() {
+        invariant(settings.depositRules.allowedPercentageRange, 'No percentage range set');
+
+        return (
+          <AnnotatedRangeSlider
+            label="Allowed deposit percentage range"
+            labelHidden
+            min={0}
+            max={100}
+            step={1}
+            formatter={num => `${num}%`}
+            value={[
+              Number(settings.depositRules.allowedPercentageRange[0]),
+              Number(settings.depositRules.allowedPercentageRange[1]),
+            ]}
+            onChange={(allowedPercentageRange: [number, number]) =>
+              setSettings({
+                ...settings,
+                depositRules: {
+                  ...settings.depositRules,
+                  onlyAllowShortcuts: false,
+                  onlyAllowHighestAbsoluteShortcut: false,
+                  allowedPercentageRange: [
+                    BigDecimal.fromString(String(allowedPercentageRange[0])).toDecimal(),
+                    BigDecimal.fromString(String(allowedPercentageRange[1])).toDecimal(),
+                  ],
+                },
+              })
+            }
+          />
+        );
+      },
+    },
+  ];
+}
+
 function getActiveDiscountRules(settings: ShopSettings) {
   const activeRules: string[] = [];
 
@@ -1203,11 +1452,33 @@ function getActiveDiscountRules(settings: ShopSettings) {
   return activeRules;
 }
 
+function getActiveDepositRules(settings: ShopSettings) {
+  const activeRules: string[] = [];
+
+  if (settings.depositRules.onlyAllowShortcuts) {
+    activeRules.push(ONLY_SHORTCUTS);
+    if (settings.depositRules.onlyAllowHighestAbsoluteShortcut) {
+      activeRules.push(ONLY_HIGHEST_SHORTCUT);
+    }
+  } else {
+    if (settings.depositRules.allowedCurrencyRange) {
+      activeRules.push(CURRENCY_RANGE);
+    }
+    if (settings.depositRules.allowedPercentageRange) {
+      activeRules.push(PERCENTAGE_RANGE);
+    }
+  }
+
+  return activeRules;
+}
+
 function CurrencyOrPercentageInput({
+  label,
   value,
   setValue,
   onSelect,
 }: {
+  label: string;
   value: string;
   setValue: (value: string) => void;
   onSelect: (unit: 'percentage' | 'currency') => void;
@@ -1220,19 +1491,13 @@ function CurrencyOrPercentageInput({
     <>
       <Combobox
         activator={
-          <Combobox.TextField
-            type="number"
-            label="Discount Shortcuts"
-            autoComplete="off"
-            value={value}
-            onChange={setValue}
-          />
+          <Combobox.TextField type="number" label={label} autoComplete="off" value={value} onChange={setValue} />
         }
       >
-        {value.length > 0 ? (
+        {value.length > 0 && Number.isFinite(Number(value)) && Number(value) > 0 ? (
           <Listbox onSelect={onSelect}>
             <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
-            <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>
+            {Number(value) <= 100 && <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>}
           </Listbox>
         ) : null}
       </Combobox>
