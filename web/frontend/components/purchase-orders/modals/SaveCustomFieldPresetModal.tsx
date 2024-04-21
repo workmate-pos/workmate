@@ -22,6 +22,7 @@ export function SaveCustomFieldPresetModal({
 
   const [name, setName] = useState('');
   const [selectedFieldNames, setSelectedFieldNames] = useState(fieldNames);
+  const [isDefault, setIsDefault] = useState(false);
 
   const presetNameInUse = presetsQuery.data?.some(preset => preset.name === name) ?? false;
 
@@ -38,7 +39,11 @@ export function SaveCustomFieldPresetModal({
             return;
           }
 
-          await presetMutation.mutateAsync({ name, keys: selectedFieldNames as [string, ...string[]] });
+          await presetMutation.mutateAsync({
+            name,
+            keys: selectedFieldNames as [string, ...string[]],
+            default: isDefault,
+          });
           setToastAction({ content: 'Preset saved' });
           onClose();
         },
@@ -57,27 +62,35 @@ export function SaveCustomFieldPresetModal({
             onChange={(value: string) => setName(value)}
             error={presetNameInUse ? 'A preset with this name already exists' : undefined}
           />
-          <Label id={'selected-fields'}>Selected Fields</Label>
-          <InlineGrid gap={'400'} columns={2}>
-            {fieldNames.map(fieldName => (
-              <Checkbox
-                key={fieldName}
-                label={fieldName}
-                value={fieldName}
-                checked={selectedFieldNames.includes(fieldName)}
-                onChange={value => {
-                  if (value) {
-                    setSelectedFieldNames([...selectedFieldNames, fieldName]);
-                  } else {
-                    setSelectedFieldNames(selectedFieldNames.filter(f => f !== fieldName));
-                  }
-                }}
-              />
-            ))}
-          </InlineGrid>
-          {selectedFieldNames.length === 0 && (
-            <InlineError message={'You must select at least one field'} fieldID={'selected-fields'} />
-          )}
+          <BlockStack gap={'150'}>
+            <Label id={'selected-fields'}>Selected Fields</Label>
+            <InlineGrid gap={'400'} columns={2}>
+              {fieldNames.map(fieldName => (
+                <Checkbox
+                  key={fieldName}
+                  label={fieldName}
+                  value={fieldName}
+                  checked={selectedFieldNames.includes(fieldName)}
+                  onChange={value => {
+                    if (value) {
+                      setSelectedFieldNames([...selectedFieldNames, fieldName]);
+                    } else {
+                      setSelectedFieldNames(selectedFieldNames.filter(f => f !== fieldName));
+                    }
+                  }}
+                />
+              ))}
+            </InlineGrid>
+            {selectedFieldNames.length === 0 && (
+              <InlineError message={'You must select at least one field'} fieldID={'selected-fields'} />
+            )}
+          </BlockStack>
+          <Checkbox
+            label={'Default'}
+            helpText={'Default presets are automatically applied to new purchase orders'}
+            checked={isDefault}
+            onChange={setIsDefault}
+          />
         </BlockStack>
       </Modal.Section>
     </Modal>

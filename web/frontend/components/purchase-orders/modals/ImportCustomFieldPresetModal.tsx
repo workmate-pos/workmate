@@ -1,7 +1,7 @@
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
-import { Filters, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
+import { Filters, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 export function ImportCustomFieldPresetModal({
@@ -72,9 +72,16 @@ export function ImportCustomFieldPresetModal({
               },
             ]}
           >
-            <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
-              {preset.name}
-            </Text>
+            <InlineStack gap={'200'}>
+              <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
+                {preset.name}
+              </Text>
+              {preset.default && (
+                <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+                  Default
+                </Text>
+              )}
+            </InlineStack>
             <Text as={'p'} variant={'bodyMd'}>
               {preset.keys.join(', ')}
             </Text>
