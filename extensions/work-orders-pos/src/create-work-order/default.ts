@@ -14,6 +14,7 @@ export const defaultCreateWorkOrder = (base: CreateWorkOrderBase): WIPCreateWork
   ...base,
   name: null,
   note: '',
+  internalNote: '',
   derivedFromOrderId: null,
   dueDate: new Date(
     Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + WEEK_IN_MS,

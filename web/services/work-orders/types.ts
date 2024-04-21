@@ -7,6 +7,7 @@ export type WorkOrder = {
   status: string;
   dueDate: DateTime;
   note: string;
+  internalNote: string;
   customerId: ID;
   derivedFromOrderId: ID | null;
   items: WorkOrderItem[];

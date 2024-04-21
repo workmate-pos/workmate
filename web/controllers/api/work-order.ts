@@ -94,6 +94,7 @@ export default class WorkOrderController {
       name: null,
       customFields: {},
       discount: null,
+      internalNote: '',
     });
 
     return res.json({ name });

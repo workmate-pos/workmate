@@ -38,9 +38,10 @@ model WorkOrder {
   shop String
   name String // E.g. WO-#1
 
-  status  String
-  dueDate DateTime
-  note    String
+  status       String
+  dueDate      DateTime
+  note         String
+  internalNote String
 
   customer   Customer? @relation(fields: [customerId], references: [customerId])
   customerId String

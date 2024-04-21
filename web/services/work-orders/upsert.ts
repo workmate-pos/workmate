@@ -50,6 +50,7 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
     dueDate: new Date(createWorkOrder.dueDate),
     status: createWorkOrder.status,
     note: createWorkOrder.note,
+    internalNote: createWorkOrder.internalNote,
     discountAmount: createWorkOrder.discount?.value,
     discountType: createWorkOrder.discount?.type,
   });
@@ -104,6 +105,7 @@ async function updateWorkOrder(
       dueDate: new Date(createWorkOrder.dueDate),
       derivedFromOrderId: createWorkOrder.derivedFromOrderId,
       note: createWorkOrder.note,
+      internalNote: createWorkOrder.internalNote,
       discountAmount: createWorkOrder.discount?.value,
       discountType: createWorkOrder.discount?.type,
     });

@@ -16,6 +16,9 @@
     "note": {
       "type": "string"
     },
+    "internalNote": {
+      "type": "string"
+    },
     "customerId": {
       "$ref": "scalars.json#/definitions/ID"
     },
@@ -221,6 +224,7 @@
     "status",
     "dueDate",
     "note",
+    "internalNote",
     "customerId",
     "derivedFromOrderId",
     "items",

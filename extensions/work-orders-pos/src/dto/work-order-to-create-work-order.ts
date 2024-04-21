@@ -7,6 +7,7 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
     name: workOrder.name,
     derivedFromOrderId: workOrder.derivedFromOrderId,
     note: workOrder.note,
+    internalNote: workOrder.internalNote,
     dueDate: workOrder.dueDate,
     status: workOrder.status,
     customerId: workOrder.customerId,

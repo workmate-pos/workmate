@@ -1,12 +1,15 @@
 /* @name upsert */
-INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "discountAmount",
+INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "internalNote",
+                         "discountAmount",
                          "discountType")
-VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :discountAmount, :discountType)
+VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :internalNote!, :discountAmount,
+        :discountType)
 ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
                                            "dueDate"            = EXCLUDED."dueDate",
                                            "customerId"         = EXCLUDED."customerId",
                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
                                            note                 = EXCLUDED.note,
+                                           "internalNote"       = EXCLUDED."internalNote",
                                            "discountAmount"     = EXCLUDED."discountAmount",
                                            "discountType"       = EXCLUDED."discountType"
 RETURNING *;
@@ -73,7 +76,8 @@ WHERE wo.shop = :shop!
   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
              FROM (SELECT filter.row,
-                          (filter.key IS NOT NULL) AND (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=
+                          (filter.key IS NOT NULL) AND
+                          (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=
                           filter.inverse
                    FROM "CustomFieldFilters" filter
                           LEFT JOIN "WorkOrderCustomField" wocf

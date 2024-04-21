@@ -104,6 +104,12 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
                 value={createWorkOrder.note}
                 onChange={(value: string) => dispatch.setPartial({ note: value })}
               />
+              <FormStringField
+                label={'Hidden Note'}
+                type={'area'}
+                value={createWorkOrder.internalNote}
+                onChange={(value: string) => dispatch.setPartial({ internalNote: value })}
+              />
               <WorkOrderEmployees createWorkOrder={createWorkOrder} />
               <DateField
                 label={'Due Date'}

@@ -42,6 +42,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     dueDate: workOrder.dueDate.toISOString() as DateTime,
     derivedFromOrderId: workOrder.derivedFromOrderId,
     note: workOrder.note,
+    internalNote: workOrder.internalNote,
     items: getWorkOrderItems(workOrder.id),
     charges: getWorkOrderCharges(workOrder.id),
     orders: getWorkOrderOrders(workOrder.id),
