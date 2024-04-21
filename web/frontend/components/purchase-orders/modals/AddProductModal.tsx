@@ -50,7 +50,7 @@ export function AddProductModal({
   const locationQuery = useLocationQuery({ fetch, id: locationId });
 
   const vendorQuery = vendorName ? `vendor:"${vendorName}"` : undefined;
-  const locationIdQuery = locationId ? `locationId:${parseGid(locationId).id}` : undefined;
+  const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : undefined;
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {

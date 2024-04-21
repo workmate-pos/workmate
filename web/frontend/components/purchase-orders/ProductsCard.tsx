@@ -139,17 +139,15 @@ function ProductsList({
             quantityBadgeTone = undefined;
           }
 
+          // TODO: Make sure to sync with backend on whether this is possible (just use uuids) - same with "Mark as not received" -> should not go below whatever is on the backend
+          const canRemove = item.availableQuantity === 0;
+
           return (
             <ResourceItem
               id={id}
               onClick={() => onLineItemClick(item)}
               disabled={disabled}
-              shortcutActions={[
-                {
-                  content: 'Remove',
-                  onAction: () => onLineItemRemove(item),
-                },
-              ]}
+              shortcutActions={canRemove ? [{ content: 'Remove', onAction: () => onLineItemRemove(item) }] : []}
             >
               {(!productVariant || (orderQuery && !order)) && (
                 <InlineStack gap={'200'}>

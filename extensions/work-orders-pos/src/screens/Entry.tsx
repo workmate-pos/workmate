@@ -365,20 +365,18 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     let financialStatus = undefined;
 
     if (calculation) {
-      const { outstanding, paid, total, depositPrices } = calculation;
+      const { outstanding, paid, total } = calculation;
 
       moneySubtitle = `${currencyFormatter(paid)} paid of ${currencyFormatter(total)}`;
 
       const paidBigDecimal = BigDecimal.fromMoney(paid);
       const outstandingBigDecimal = BigDecimal.fromMoney(outstanding);
       const totalBigDecimal = BigDecimal.fromMoney(total);
-      const totalDepositBigDecimal = BigDecimal.sum(
-        ...Object.values(depositPrices).map(price => BigDecimal.fromMoney(price)),
-      );
+      const depositedBigDecimal = BigDecimal.fromMoney(workOrder.depositedAmount);
 
       if (outstandingBigDecimal.compare(BigDecimal.ZERO) <= 0) {
         financialStatus = 'Fully Paid';
-      } else if (paidBigDecimal.compare(BigDecimal.ZERO) > 0 && totalDepositBigDecimal.equals(paidBigDecimal)) {
+      } else if (depositedBigDecimal.compare(BigDecimal.ZERO) > 0 && depositedBigDecimal.equals(paidBigDecimal)) {
         financialStatus = 'Deposit';
       } else if (outstandingBigDecimal.compare(totalBigDecimal) < 0) {
         financialStatus = 'Partially paid';

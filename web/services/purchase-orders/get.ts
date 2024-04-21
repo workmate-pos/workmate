@@ -12,7 +12,6 @@ import { groupByKey, indexBy, unique, uniqueBy } from '@teifi-digital/shopify-ap
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { Static, Type } from '@sinclair/typebox';
 import { evaluate } from '../../util/evaluate.js';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
 

@@ -1,7 +1,7 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getNewPurchaseOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
 import { getPurchaseOrder } from './get.js';
@@ -20,6 +20,7 @@ import { ensureShopifyOrdersExist } from '../shopify-order/sync.js';
 import { ensureLocationsExist } from '../locations/sync.js';
 import { ensureEmployeesExist } from '../employee/sync.js';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -47,6 +48,10 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     );
 
     await ensureShopifyOrdersExist(session, orderIds);
+
+    assertNoIllegalPurchaseOrderChanges(createPurchaseOrder, existingPurchaseOrder);
+    assertNoIllegalLineItems(createPurchaseOrder);
+    assertNoIllegalLineItemChanges(createPurchaseOrder, existingPurchaseOrder?.lineItems ?? []);
 
     const [{ id: purchaseOrderId } = never()] = await db.purchaseOrder.upsert({
       shop,
@@ -102,6 +107,112 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
   });
 }
 
+function assertNoIllegalPurchaseOrderChanges(
+  createPurchaseOrder: CreatePurchaseOrder,
+  existingPurchaseOrder: PurchaseOrder | null,
+) {
+  if (!existingPurchaseOrder) {
+    return;
+  }
+
+  if (
+    existingPurchaseOrder.vendorName !== null &&
+    createPurchaseOrder.vendorName !== existingPurchaseOrder.vendorName
+  ) {
+    throw new HttpError('Vendor name cannot be changed', 400);
+  }
+
+  if (existingPurchaseOrder.location !== null && createPurchaseOrder.locationId !== existingPurchaseOrder.location.id) {
+    throw new HttpError('Location cannot be changed', 400);
+  }
+}
+
+function assertNoIllegalLineItems(createPurchaseOrder: CreatePurchaseOrder) {
+  for (const lineItem of createPurchaseOrder.lineItems) {
+    if (lineItem.availableQuantity < 0) {
+      throw new HttpError('Available quantity cannot be negative', 400);
+    }
+
+    if (lineItem.quantity < 0) {
+      throw new HttpError('Quantity cannot be negative', 400);
+    }
+
+    if (lineItem.availableQuantity > lineItem.quantity) {
+      throw new HttpError('Available quantity cannot be greater than quantity', 400);
+    }
+
+    if (BigDecimal.fromMoney(lineItem.unitCost).compare(BigDecimal.ZERO) < 0) {
+      throw new HttpError('Unit cost cannot be negative', 400);
+    }
+  }
+}
+
+/**
+ * Asserts constraints related to changing line items:
+ * - if #availableQuantity > 0: nothing can be changed except increasing quantity
+ * - if #availableQuantity > 0: line items cannot be removed
+ * - #availableQuantity cannot be lowered
+ */
+function assertNoIllegalLineItemChanges(
+  createPurchaseOrder: CreatePurchaseOrder,
+  oldLineItems: PurchaseOrder['lineItems'][number][],
+) {
+  // Find a mapping between new and old line items s.t. the old line item can be changed to the new line item without violating any constraints.
+  // If we cannot find a valid mapping changes are invalid.
+
+  const unmappedOldLineItems = [...oldLineItems];
+  const mapping = new Map<CreatePurchaseOrder['lineItems'][number], PurchaseOrder['lineItems'][number]>();
+
+  for (const newLineItem of createPurchaseOrder.lineItems) {
+    let mappedTo: PurchaseOrder['lineItems'][number] | null = null;
+
+    for (const oldLineItem of unmappedOldLineItems) {
+      if (oldLineItem.productVariant.id !== newLineItem.productVariantId) continue;
+      if (oldLineItem.shopifyOrderLineItem?.id !== newLineItem.shopifyOrderLineItem?.id) continue;
+      if (oldLineItem.availableQuantity > newLineItem.availableQuantity) continue;
+      if (oldLineItem.availableQuantity > 0) {
+        if (oldLineItem.unitCost !== newLineItem.unitCost) continue;
+        if (oldLineItem.quantity > newLineItem.quantity) continue;
+      }
+
+      // We always map to the highest possible availableQuantity. This is crucial:
+      // E.g.:
+      // New:
+      // - [0] availableQuantity: 5, quantity: 5
+      // - [1] availableQuantity: 4, quantity: 5
+      // Old:
+      // - [0] availableQuantity: 4, quantity: 5
+      // - [1] availableQuantity: 5, quantity: 5
+      // We could map [0] -> [0], after which [1] -> [1] is invalid as it would decrease the availableQuantity.
+      // By mapping to the highest possible availableQuantity, we instead map [0] -> [1], after which [1] -> [0] is valid.
+      if (!mappedTo || oldLineItem.availableQuantity > mappedTo.availableQuantity) {
+        mappedTo = oldLineItem;
+      }
+    }
+
+    if (mappedTo) {
+      mapping.set(newLineItem, mappedTo);
+      unmappedOldLineItems.splice(unmappedOldLineItems.indexOf(mappedTo), 1);
+    }
+  }
+
+  // If we were unable to find a valid mapping for all old items with available quantity, then something is wrong
+  for (const oldLineItem of unmappedOldLineItems) {
+    if (oldLineItem.availableQuantity > 0) {
+      sentryErr('Unexpected unmapped line items - should be prevented by the front end', {
+        createPurchaseOrderLineItems: createPurchaseOrder.lineItems,
+        currentLineItems: oldLineItems,
+      });
+      throw new HttpError(
+        'Line items with received quantity cannot be deleted or changed (except for increasing quantity)',
+        400,
+      );
+    }
+  }
+
+  // (if this algorithm is somehow wrong, use max-flow bipartite matching)
+}
+
 /**
  * Creates an inventory adjustment to reflect the change in inventory due to the purchase order.
  */
@@ -154,18 +265,23 @@ async function adjustShopifyInventory(
   }
 
   const graphql = new Graphql(session);
-  const { inventoryAdjustQuantities } = await gql.inventory.adjust.run(graphql, {
-    input: { name: 'available', reason: 'correction', changes },
-  });
 
-  if (!inventoryAdjustQuantities) {
-    throw new HttpError('Failed to adjust inventory', 500);
-  }
+  try {
+    // TODO: Perhaps enable inventory tracking first? Then show all vendor items in the product list rather than only tracked ones
+    const { inventoryAdjustQuantities } = await gql.inventory.adjust.run(graphql, {
+      input: { name: 'available', reason: 'correction', changes },
+    });
 
-  const { userErrors } = inventoryAdjustQuantities;
-  if (userErrors.length > 0) {
-    sentryErr('Failed to adjust inventory', { userErrors });
-    throw new HttpError('Failed to adjust inventory', 500);
+    if (!inventoryAdjustQuantities) {
+      throw new HttpError('Failed to adjust inventory', 500);
+    }
+  } catch (error) {
+    if (error instanceof GraphqlUserErrors) {
+      sentryErr('Failed to adjust inventory', { userErrors: error.userErrors });
+      throw new HttpError('Failed to adjust inventory', 500);
+    }
+
+    throw error;
   }
 }
 

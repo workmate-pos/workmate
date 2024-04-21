@@ -2,6 +2,9 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 import { CreatePurchaseOrderDispatchProxy } from '@work-orders/common/create-purchase-order/reducer.js';
 import { BlockStack, Card, Text, TextField } from '@shopify/polaris';
 import type { Location } from '@web/frontend/pages/purchase-orders/[name].js';
+import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
+import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
+import { useToast } from '@teifi-digital/shopify-app-react';
 
 export function GeneralCard({
   createPurchaseOrder,
@@ -33,7 +36,7 @@ export function GeneralCard({
           requiredIndicator
           value={createPurchaseOrder.vendorName ?? ''}
           onFocus={() => onVendorSelectorClick()}
-          disabled={disabled}
+          disabled={disabled || (!!createPurchaseOrder.name && createPurchaseOrder.vendorName !== null)}
           readOnly
         />
         <TextField
@@ -46,7 +49,7 @@ export function GeneralCard({
           }
           onFocus={() => onLocationSelectorClick()}
           multiline
-          disabled={disabled}
+          disabled={disabled || (!!createPurchaseOrder.name && createPurchaseOrder.locationId !== null)}
           readOnly
         />
         <TextField

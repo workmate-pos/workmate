@@ -220,6 +220,7 @@ async function calculateDraftOrder(
     const originalTotal = BigDecimal.fromDecimal(lineItem.originalTotal.amount);
     const discountedTotal = BigDecimal.fromDecimal(lineItem.discountedTotal.amount);
 
+    // TODO: Don't do distributing here - order-level should stay order-leve. Also fix this for order sync (make sure to capture order-level discount amount in db)
     // we distribute the order-level discount over all line items. this is needed because lineItem.discountedTotal only takes line-item-level discounts into account
     const discountFactor = evaluate(() => {
       if (originalTotal.equals(BigDecimal.ZERO)) return BigDecimal.ONE;
