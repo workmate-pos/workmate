@@ -10,14 +10,22 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { FormDecimalField, roundingPostProcessor } from '@teifi-digital/pos-tools/form/components/FormDecimalField.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useCreateProductReducer } from './reducer.js';
 import { UseRouter } from '../router.js';
-import { Product } from '@web/schemas/generated/create-purchase-order.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+
+export type CreatedProduct = {
+  shopifyOrderLineItem: null;
+  productVariantId: ID;
+  availableQuantity: Int;
+  quantity: Int;
+  unitCost: Money;
+};
 
 export type ProductCreatorProps = {
   initialProduct: Partial<CreateProduct>;
-  onCreate: (product: Product) => void;
+  onCreate: (product: CreatedProduct) => void;
   useRouter: UseRouter;
 };
 

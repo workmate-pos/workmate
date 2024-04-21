@@ -18,10 +18,6 @@ export type CreatePurchaseOrderAction =
   | ({
       type: 'set';
     } & CreatePurchaseOrder)
-  | {
-      type: 'setInventoryState';
-      inventoryState: 'available' | 'unavailable';
-    }
   | ({
       type: 'setVendor';
     } & Pick<CreatePurchaseOrder, 'vendorName'>)
@@ -96,19 +92,9 @@ function createPurchaseOrderReducer(
       return {
         ...createPurchaseOrder,
         lineItems: createPurchaseOrder.lineItems
-          .map(product => (shouldMergeProducts(product, action.product) ? action.product : product))
+          .map(product => (product.uuid === action.product.uuid ? action.product : product))
           .filter(product => product.quantity > 0),
       };
-    }
-
-    case 'setInventoryState': {
-      const lineItems = createPurchaseOrder.lineItems.map(product => ({
-        ...product,
-        // for now we only support having the full quantity available or none
-        availableQuantity: action.inventoryState === 'available' ? product.quantity : (0 as Int),
-      }));
-
-      return { ...createPurchaseOrder, lineItems };
     }
 
     default:
@@ -116,8 +102,17 @@ function createPurchaseOrderReducer(
   }
 }
 
+/**
+ * Whether a and b should be merged into a. Merges into a (i.e. keeps the uuid of a)
+ */
 function shouldMergeProducts(a: Product, b: Product) {
-  return a.productVariantId === b.productVariantId && a.shopifyOrderLineItem?.id === b.shopifyOrderLineItem?.id;
+  // we only merge into a if a and b both have not been received yet. if a has received the unit price is locked, which we don't want after merging
+  return (
+    a.productVariantId === b.productVariantId &&
+    a.shopifyOrderLineItem?.id === b.shopifyOrderLineItem?.id &&
+    a.availableQuantity === 0 &&
+    b.availableQuantity === 0
+  );
 }
 
 function mergeProducts(...products: Product[]) {
@@ -128,7 +123,7 @@ function mergeProducts(...products: Product[]) {
     let found = false;
 
     for (const existing of merged) {
-      if (shouldMergeProducts(product, existing)) {
+      if (shouldMergeProducts(existing, product)) {
         const productQuantityBigDecimal = BigDecimal.fromString(product.quantity.toFixed(0));
         const existingQuantityBigDecimal = BigDecimal.fromString(existing.quantity.toFixed(0));
 
@@ -137,7 +132,6 @@ function mergeProducts(...products: Product[]) {
           BigDecimal.fromMoney(existing.unitCost).multiply(existingQuantityBigDecimal),
         )
           .divide(productQuantityBigDecimal.add(existingQuantityBigDecimal))
-          .round(2)
           .toMoney();
 
         existing.quantity = (existing.quantity + product.quantity) as Int;

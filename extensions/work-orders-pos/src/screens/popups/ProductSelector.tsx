@@ -11,15 +11,12 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
-
-// TODO: Share this screen too + more
 
 export function ProductSelector({
   onSelect,
@@ -85,7 +82,7 @@ export function ProductSelector({
         onPress={() => {
           router.push('ProductCreator', {
             initialProduct: {},
-            onCreate: (product: Product) =>
+            onCreate: product =>
               internalOnSelect(
                 {
                   quantity: product.quantity,

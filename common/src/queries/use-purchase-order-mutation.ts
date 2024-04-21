@@ -27,7 +27,6 @@ export const usePurchaseOrderMutation = (
     onSuccess(...args) {
       const [{ purchaseOrder }] = args;
 
-      queryClient.invalidateQueries(['purchase-order', purchaseOrder.name]);
       queryClient.invalidateQueries(['purchase-order-info']);
 
       // we don't know if any items were removed so we must invalidate all inventory items

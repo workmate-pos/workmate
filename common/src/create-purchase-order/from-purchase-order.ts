@@ -4,6 +4,7 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: PurchaseOrder): CreatePurchaseOrder {
   return {
     lineItems: purchaseOrder.lineItems.map(lineItem => ({
+      uuid: lineItem.uuid,
       shopifyOrderLineItem: lineItem.shopifyOrderLineItem
         ? {
             id: lineItem.shopifyOrderLineItem.id,
