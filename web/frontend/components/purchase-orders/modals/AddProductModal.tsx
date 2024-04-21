@@ -22,6 +22,7 @@ import { useInventoryItemQueries } from '@work-orders/common/queries/use-invento
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
+import { v4 as uuid } from 'uuid';
 
 /**
  * Simple list of products to select from
@@ -137,6 +138,7 @@ export function AddProductModal({
             const unitCost = inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
 
             return {
+              uuid: uuid(),
               shopifyOrderLineItem: null,
               unitCost: BigDecimal.fromString(unitCost ?? '0.00')
                 .round(2)

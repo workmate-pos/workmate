@@ -17,17 +17,23 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
+import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 
 export function ProductConfig({
   product: initialProduct,
+  purchaseOrder,
   locationId,
   onSave,
 }: NonNullableValues<Pick<CreatePurchaseOrder, 'locationId'>> & {
   product: Product;
+  purchaseOrder: PurchaseOrder | null;
   onSave: (product: Product) => void;
 }) {
   const [product, setProduct] = useState<Product>(initialProduct);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  const savedProduct = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
+  const isImmutable = savedProduct && savedProduct.availableQuantity > 0;
 
   const fetch = useAuthenticatedFetch();
 
@@ -144,12 +150,39 @@ export function ProductConfig({
                 Quantity
               </Text>
             </Stack>
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="body" color="TextSubdued">
+                The quantity that has been ordered
+              </Text>
+            </Stack>
             <Stepper
-              minimumValue={1}
+              minimumValue={isImmutable ? savedProduct.quantity : 1}
               initialValue={product.quantity}
               value={product.quantity}
               onValueChanged={(quantity: Int) => {
                 setProduct({ ...product, quantity });
+                setHasUnsavedChanges(true);
+              }}
+            />
+          </Stack>
+
+          <Stack direction="vertical" spacing={2}>
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="headingSmall" color="TextSubdued">
+                Available Quantity
+              </Text>
+            </Stack>
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="body" color="TextSubdued">
+                The quantity that has been delivered
+              </Text>
+            </Stack>
+            <Stepper
+              minimumValue={isImmutable ? savedProduct.availableQuantity : 0}
+              initialValue={product.availableQuantity}
+              value={product.availableQuantity}
+              onValueChanged={(availableQuantity: Int) => {
+                setProduct({ ...product, availableQuantity });
                 setHasUnsavedChanges(true);
               }}
             />
@@ -165,6 +198,7 @@ export function ProductConfig({
               label={'Unit Cost'}
               value={product.unitCost}
               min={0}
+              disabled={isImmutable}
               formatter={test => (test === null ? '' : currencyFormatter(test))}
               onChange={unitCost => {
                 setProduct({ ...product, unitCost: unitCost ?? product.unitCost });
@@ -177,6 +211,7 @@ export function ProductConfig({
             <Button
               title="Remove"
               type="destructive"
+              isDisabled={isImmutable}
               onPress={() => {
                 onSave({ ...product, quantity: 0 as Int });
                 router.popCurrent();

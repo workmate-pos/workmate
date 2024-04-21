@@ -30,7 +30,7 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"customerId":true,"query":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":1139,"b":1144}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":1177,"b":1183}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":1248,"b":1258}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":1310,"b":1315},{"a":1353,"b":1358},{"a":1404,"b":1409},{"a":1455,"b":1460},{"a":1497,"b":1502},{"a":1540,"b":1545},{"a":1587,"b":1592},{"a":1636,"b":1641},{"a":1679,"b":1684},{"a":1721,"b":1726},{"a":1767,"b":1772},{"a":1812,"b":1817},{"a":1854,"b":1859}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":2555,"b":2561}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":2570,"b":2576}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT DISTINCT po.id, po.name\nFROM \"PurchaseOrder\" po\n       LEFT JOIN \"PurchaseOrderLineItem\" poli ON po.id = poli.\"purchaseOrderId\"\n       LEFT JOIN \"ProductVariant\" pv ON poli.\"productVariantId\" = pv.\"productVariantId\"\n       LEFT JOIN \"Product\" p ON pv.\"productId\" = p.\"productId\"\n       LEFT JOIN \"PurchaseOrderEmployeeAssignment\" poea ON po.id = poea.\"purchaseOrderId\"\n       LEFT JOIN \"Employee\" e ON poea.\"employeeId\" = e.\"staffMemberId\"\n       LEFT JOIN \"Location\" l ON po.\"locationId\" = l.\"locationId\"\n       LEFT JOIN \"ShopifyOrderLineItem\" soli ON poli.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n       LEFT JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\n       LEFT JOIN \"Customer\" c ON so.\"customerId\" = c.\"customerId\"\n       LEFT JOIN \"WorkOrderItem\" woi ON soli.\"lineItemId\" = woi.\"shopifyOrderLineItemId\"\n       LEFT JOIN \"WorkOrder\" wo ON woi.\"workOrderId\" = wo.\"id\"\nWHERE po.shop = :shop!\n  AND po.status ILIKE COALESCE(:status, po.status)\n  AND c.\"customerId\" IS NOT DISTINCT FROM COALESCE(:customerId, c.\"customerId\")\n  AND (\n  po.name ILIKE COALESCE(:query, '%')\n    OR po.note ILIKE COALESCE(:query, '%')\n    OR po.\"vendorName\" ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR l.name ILIKE COALESCE(:query, '%')\n    OR so.name ILIKE COALESCE(:query, '%')\n    OR po.\"shipTo\" ILIKE COALESCE(:query, '%')\n    OR po.\"shipFrom\" ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR pv.sku ILIKE COALESCE(:query, '%')\n    OR pv.\"title\" ILIKE COALESCE(:query, '%')\n    OR p.\"title\" ILIKE COALESCE(:query, '%')\n    OR e.name ILIKE COALESCE(:query, '%')\n  )\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row, ((filter.key IS NOT NULL OR pocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"PurchaseOrderCustomField\" pocf\n                                    ON (pocf.\"purchaseOrderId\" = po.id AND\n                                        pocf.key ILIKE COALESCE(filter.key, pocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nORDER BY po.id DESC\nLIMIT :limit! OFFSET :offset"};
+const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"customerId":true,"query":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":1139,"b":1144}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":1177,"b":1183}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":1248,"b":1258}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":1310,"b":1315},{"a":1353,"b":1358},{"a":1404,"b":1409},{"a":1455,"b":1460},{"a":1497,"b":1502},{"a":1540,"b":1545},{"a":1587,"b":1592},{"a":1636,"b":1641},{"a":1679,"b":1684},{"a":1721,"b":1726},{"a":1767,"b":1772},{"a":1812,"b":1817},{"a":1854,"b":1859}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":2607,"b":2613}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":2622,"b":2628}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT DISTINCT po.id, po.name\nFROM \"PurchaseOrder\" po\n       LEFT JOIN \"PurchaseOrderLineItem\" poli ON po.id = poli.\"purchaseOrderId\"\n       LEFT JOIN \"ProductVariant\" pv ON poli.\"productVariantId\" = pv.\"productVariantId\"\n       LEFT JOIN \"Product\" p ON pv.\"productId\" = p.\"productId\"\n       LEFT JOIN \"PurchaseOrderEmployeeAssignment\" poea ON po.id = poea.\"purchaseOrderId\"\n       LEFT JOIN \"Employee\" e ON poea.\"employeeId\" = e.\"staffMemberId\"\n       LEFT JOIN \"Location\" l ON po.\"locationId\" = l.\"locationId\"\n       LEFT JOIN \"ShopifyOrderLineItem\" soli ON poli.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n       LEFT JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\n       LEFT JOIN \"Customer\" c ON so.\"customerId\" = c.\"customerId\"\n       LEFT JOIN \"WorkOrderItem\" woi ON soli.\"lineItemId\" = woi.\"shopifyOrderLineItemId\"\n       LEFT JOIN \"WorkOrder\" wo ON woi.\"workOrderId\" = wo.\"id\"\nWHERE po.shop = :shop!\n  AND po.status ILIKE COALESCE(:status, po.status)\n  AND c.\"customerId\" IS NOT DISTINCT FROM COALESCE(:customerId, c.\"customerId\")\n  AND (\n  po.name ILIKE COALESCE(:query, '%')\n    OR po.note ILIKE COALESCE(:query, '%')\n    OR po.\"vendorName\" ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR l.name ILIKE COALESCE(:query, '%')\n    OR so.name ILIKE COALESCE(:query, '%')\n    OR po.\"shipTo\" ILIKE COALESCE(:query, '%')\n    OR po.\"shipFrom\" ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR pv.sku ILIKE COALESCE(:query, '%')\n    OR pv.\"title\" ILIKE COALESCE(:query, '%')\n    OR p.\"title\" ILIKE COALESCE(:query, '%')\n    OR e.name ILIKE COALESCE(:query, '%')\n  )\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row,\n                          (filter.key IS NOT NULL) AND\n                          (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) !=\n                          filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"PurchaseOrderCustomField\" pocf\n                                    ON (pocf.\"purchaseOrderId\" = po.id AND\n                                        pocf.key ILIKE COALESCE(filter.key, pocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nORDER BY po.id DESC\nLIMIT :limit! OFFSET :offset"};
 
 /**
  * Query generated from SQL:
@@ -70,7 +70,10 @@ const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop"
  *   )
  *   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
  *        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
- *              FROM (SELECT filter.row, ((filter.key IS NOT NULL OR pocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse
+ *              FROM (SELECT filter.row,
+ *                           (filter.key IS NOT NULL) AND
+ *                           (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) !=
+ *                           filter.inverse
  *                    FROM "CustomFieldFilters" filter
  *                           LEFT JOIN "PurchaseOrderCustomField" pocf
  *                                     ON (pocf."purchaseOrderId" = po.id AND
@@ -239,13 +242,13 @@ export interface IGetLineItemsParams {
 export interface IGetLineItemsResult {
   availableQuantity: number;
   createdAt: Date;
-  id: number;
   productVariantId: string;
   purchaseOrderId: number;
   quantity: number;
   shopifyOrderLineItemId: string | null;
   unitCost: string;
   updatedAt: Date;
+  uuid: string;
 }
 
 /** 'GetLineItems' query type */
@@ -265,6 +268,45 @@ const getLineItemsIR: any = {"usedParamSet":{"purchaseOrderId":true},"params":[{
  * ```
  */
 export const getLineItems = new PreparedQuery<IGetLineItemsParams,IGetLineItemsResult>(getLineItemsIR);
+
+
+/** 'GetLineItemsByUuids' parameters type */
+export interface IGetLineItemsByUuidsParams {
+  purchaseOrderId: number;
+  uuids: readonly (string)[];
+}
+
+/** 'GetLineItemsByUuids' return type */
+export interface IGetLineItemsByUuidsResult {
+  availableQuantity: number;
+  createdAt: Date;
+  productVariantId: string;
+  purchaseOrderId: number;
+  quantity: number;
+  shopifyOrderLineItemId: string | null;
+  unitCost: string;
+  updatedAt: Date;
+  uuid: string;
+}
+
+/** 'GetLineItemsByUuids' query type */
+export interface IGetLineItemsByUuidsQuery {
+  params: IGetLineItemsByUuidsParams;
+  result: IGetLineItemsByUuidsResult;
+}
+
+const getLineItemsByUuidsIR: any = {"usedParamSet":{"uuids":true,"purchaseOrderId":true},"params":[{"name":"uuids","required":true,"transform":{"type":"array_spread"},"locs":[{"a":52,"b":58}]},{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":86,"b":102}]}],"statement":"SELECT *\nFROM \"PurchaseOrderLineItem\"\nWHERE uuid IN :uuids!\n  AND \"purchaseOrderId\" = :purchaseOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "PurchaseOrderLineItem"
+ * WHERE uuid IN :uuids!
+ *   AND "purchaseOrderId" = :purchaseOrderId!
+ * ```
+ */
+export const getLineItemsByUuids = new PreparedQuery<IGetLineItemsByUuidsParams,IGetLineItemsByUuidsResult>(getLineItemsByUuidsIR);
 
 
 /** 'GetCustomFields' parameters type */
@@ -399,6 +441,35 @@ const removeLineItemsIR: any = {"usedParamSet":{"purchaseOrderId":true},"params"
 export const removeLineItems = new PreparedQuery<IRemoveLineItemsParams,IRemoveLineItemsResult>(removeLineItemsIR);
 
 
+/** 'RemoveLineItem' parameters type */
+export interface IRemoveLineItemParams {
+  purchaseOrderId: number;
+  uuid: string;
+}
+
+/** 'RemoveLineItem' return type */
+export type IRemoveLineItemResult = void;
+
+/** 'RemoveLineItem' query type */
+export interface IRemoveLineItemQuery {
+  params: IRemoveLineItemParams;
+  result: IRemoveLineItemResult;
+}
+
+const removeLineItemIR: any = {"usedParamSet":{"uuid":true,"purchaseOrderId":true},"params":[{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":49,"b":54}]},{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":82,"b":98}]}],"statement":"DELETE\nFROM \"PurchaseOrderLineItem\"\nWHERE uuid = :uuid!\n  AND \"purchaseOrderId\" = :purchaseOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "PurchaseOrderLineItem"
+ * WHERE uuid = :uuid!
+ *   AND "purchaseOrderId" = :purchaseOrderId!
+ * ```
+ */
+export const removeLineItem = new PreparedQuery<IRemoveLineItemParams,IRemoveLineItemResult>(removeLineItemIR);
+
+
 /** 'RemoveCustomFields' parameters type */
 export interface IRemoveCustomFieldsParams {
   purchaseOrderId: number;
@@ -453,65 +524,75 @@ const removeAssignedEmployeesIR: any = {"usedParamSet":{"purchaseOrderId":true},
 export const removeAssignedEmployees = new PreparedQuery<IRemoveAssignedEmployeesParams,IRemoveAssignedEmployeesResult>(removeAssignedEmployeesIR);
 
 
-/** 'InsertLineItem' parameters type */
-export interface IInsertLineItemParams {
+/** 'UpsertLineItem' parameters type */
+export interface IUpsertLineItemParams {
   availableQuantity: number;
   productVariantId: string;
   purchaseOrderId: number;
   quantity: number;
   shopifyOrderLineItemId?: string | null | void;
   unitCost: string;
+  uuid: string;
 }
 
-/** 'InsertLineItem' return type */
-export type IInsertLineItemResult = void;
+/** 'UpsertLineItem' return type */
+export type IUpsertLineItemResult = void;
 
-/** 'InsertLineItem' query type */
-export interface IInsertLineItemQuery {
-  params: IInsertLineItemParams;
-  result: IInsertLineItemResult;
+/** 'UpsertLineItem' query type */
+export interface IUpsertLineItemQuery {
+  params: IUpsertLineItemParams;
+  result: IUpsertLineItemResult;
 }
 
-const insertLineItemIR: any = {"usedParamSet":{"purchaseOrderId":true,"productVariantId":true,"shopifyOrderLineItemId":true,"quantity":true,"availableQuantity":true,"unitCost":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":190,"b":206}]},{"name":"productVariantId","required":true,"transform":{"type":"scalar"},"locs":[{"a":209,"b":226}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":229,"b":251}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":254,"b":263}]},{"name":"availableQuantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":266,"b":284}]},{"name":"unitCost","required":true,"transform":{"type":"scalar"},"locs":[{"a":295,"b":304}]}],"statement":"INSERT INTO \"PurchaseOrderLineItem\" (\"purchaseOrderId\", \"productVariantId\", \"shopifyOrderLineItemId\", quantity,\n                                     \"availableQuantity\", \"unitCost\")\nVALUES (:purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,\n        :unitCost!)"};
+const upsertLineItemIR: any = {"usedParamSet":{"uuid":true,"purchaseOrderId":true,"productVariantId":true,"shopifyOrderLineItemId":true,"quantity":true,"availableQuantity":true,"unitCost":true},"params":[{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":196,"b":201}]},{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":204,"b":220}]},{"name":"productVariantId","required":true,"transform":{"type":"scalar"},"locs":[{"a":223,"b":240}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":243,"b":265}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":268,"b":277}]},{"name":"availableQuantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":280,"b":298}]},{"name":"unitCost","required":true,"transform":{"type":"scalar"},"locs":[{"a":309,"b":318}]}],"statement":"INSERT INTO \"PurchaseOrderLineItem\" (uuid, \"purchaseOrderId\", \"productVariantId\", \"shopifyOrderLineItemId\", quantity,\n                                     \"availableQuantity\", \"unitCost\")\nVALUES (:uuid!, :purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,\n        :unitCost!)\nON CONFLICT (\"purchaseOrderId\", uuid)\n  DO UPDATE\n  SET \"productVariantId\"       = EXCLUDED.\"productVariantId\",\n      \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n      quantity                 = EXCLUDED.quantity,\n      \"availableQuantity\"      = EXCLUDED.\"availableQuantity\",\n      \"unitCost\"               = EXCLUDED.\"unitCost\""};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", "shopifyOrderLineItemId", quantity,
+ * INSERT INTO "PurchaseOrderLineItem" (uuid, "purchaseOrderId", "productVariantId", "shopifyOrderLineItemId", quantity,
  *                                      "availableQuantity", "unitCost")
- * VALUES (:purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,
+ * VALUES (:uuid!, :purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,
  *         :unitCost!)
+ * ON CONFLICT ("purchaseOrderId", uuid)
+ *   DO UPDATE
+ *   SET "productVariantId"       = EXCLUDED."productVariantId",
+ *       "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+ *       quantity                 = EXCLUDED.quantity,
+ *       "availableQuantity"      = EXCLUDED."availableQuantity",
+ *       "unitCost"               = EXCLUDED."unitCost"
  * ```
  */
-export const insertLineItem = new PreparedQuery<IInsertLineItemParams,IInsertLineItemResult>(insertLineItemIR);
+export const upsertLineItem = new PreparedQuery<IUpsertLineItemParams,IUpsertLineItemResult>(upsertLineItemIR);
 
 
-/** 'UpdateLineItem' parameters type */
-export interface IUpdateLineItemParams {
-  id: number;
+/** 'SetLineItemShopifyOrderLineItemId' parameters type */
+export interface ISetLineItemShopifyOrderLineItemIdParams {
+  purchaseOrderId: number;
   shopifyOrderLineItemId?: string | null | void;
+  uuid: string;
 }
 
-/** 'UpdateLineItem' return type */
-export type IUpdateLineItemResult = void;
+/** 'SetLineItemShopifyOrderLineItemId' return type */
+export type ISetLineItemShopifyOrderLineItemIdResult = void;
 
-/** 'UpdateLineItem' query type */
-export interface IUpdateLineItemQuery {
-  params: IUpdateLineItemParams;
-  result: IUpdateLineItemResult;
+/** 'SetLineItemShopifyOrderLineItemId' query type */
+export interface ISetLineItemShopifyOrderLineItemIdQuery {
+  params: ISetLineItemShopifyOrderLineItemIdParams;
+  result: ISetLineItemShopifyOrderLineItemIdResult;
 }
 
-const updateLineItemIR: any = {"usedParamSet":{"shopifyOrderLineItemId":true,"id":true},"params":[{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":62,"b":84}]},{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":97,"b":100}]}],"statement":"UPDATE \"PurchaseOrderLineItem\"\nSET \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId\nWHERE id = :id!"};
+const setLineItemShopifyOrderLineItemIdIR: any = {"usedParamSet":{"shopifyOrderLineItemId":true,"uuid":true,"purchaseOrderId":true},"params":[{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":62,"b":84}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":99,"b":104}]},{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":130,"b":146}]}],"statement":"UPDATE \"PurchaseOrderLineItem\"\nSET \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId\nWHERE uuid = :uuid!\nAND \"purchaseOrderId\" = :purchaseOrderId!"};
 
 /**
  * Query generated from SQL:
  * ```
  * UPDATE "PurchaseOrderLineItem"
  * SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId
- * WHERE id = :id!
+ * WHERE uuid = :uuid!
+ * AND "purchaseOrderId" = :purchaseOrderId!
  * ```
  */
-export const updateLineItem = new PreparedQuery<IUpdateLineItemParams,IUpdateLineItemResult>(updateLineItemIR);
+export const setLineItemShopifyOrderLineItemId = new PreparedQuery<ISetLineItemShopifyOrderLineItemIdParams,ISetLineItemShopifyOrderLineItemIdResult>(setLineItemShopifyOrderLineItemIdIR);
 
 
 /** 'InsertCustomField' parameters type */
@@ -611,13 +692,13 @@ export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdParams {
 export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdResult {
   availableQuantity: number;
   createdAt: Date;
-  id: number;
   productVariantId: string;
   purchaseOrderId: number;
   quantity: number;
   shopifyOrderLineItemId: string | null;
   unitCost: string;
   updatedAt: Date;
+  uuid: string;
 }
 
 /** 'GetPurchaseOrderLineItemsByShopifyOrderLineItemId' query type */
@@ -648,13 +729,13 @@ export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsParams {
 export interface IGetPurchaseOrderLineItemsByShopifyOrderLineItemIdsResult {
   availableQuantity: number;
   createdAt: Date;
-  id: number;
   productVariantId: string;
   purchaseOrderId: number;
   quantity: number;
   shopifyOrderLineItemId: string | null;
   unitCost: string;
   updatedAt: Date;
+  uuid: string;
 }
 
 /** 'GetPurchaseOrderLineItemsByShopifyOrderLineItemIds' query type */

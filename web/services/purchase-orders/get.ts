@@ -137,7 +137,7 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
   const orders = orderIds.length ? await db.shopifyOrder.getMany({ orderIds }) : [];
   const orderById = indexBy(orders, o => o.orderId);
 
-  return lineItems.map(({ quantity, availableQuantity, productVariantId, shopifyOrderLineItemId, unitCost }) => {
+  return lineItems.map(({ uuid, quantity, availableQuantity, productVariantId, shopifyOrderLineItemId, unitCost }) => {
     const productVariant = productVariantById[productVariantId] ?? never('fk');
     const product = productById[productVariant.productId] ?? never('fk');
 
@@ -156,6 +156,7 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
     assertMoney(unitCost);
 
     return {
+      uuid,
       productVariant: {
         id: productVariant.productVariantId,
         title: productVariant.title,

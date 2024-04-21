@@ -1,4 +1,4 @@
-import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { CreatePurchaseOrder, Int } from '@web/schemas/generated/create-purchase-order.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
@@ -13,6 +13,7 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
+import { v4 as uuid } from 'uuid';
 
 /**
  * List of line items in an order to select from.
@@ -78,6 +79,7 @@ export function SelectOrderProductModal({
               const unitCost = inventoryItem?.unitCost?.amount;
 
               return {
+                uuid: uuid(),
                 availableQuantity: 0 as Int,
                 productVariantId: li.variant.id,
                 quantity: li.quantity,

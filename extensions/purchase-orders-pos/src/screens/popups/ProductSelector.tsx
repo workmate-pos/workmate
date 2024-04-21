@@ -17,6 +17,7 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
+import { v4 as uuid } from 'uuid';
 
 export function ProductSelector({
   filters: { vendorName, locationId },
@@ -115,8 +116,8 @@ export function ProductSelector({
                 locationId,
                 vendor: vendorName,
               },
-              onCreate: (product: Product) => {
-                selectProducts([product]);
+              onCreate: product => {
+                selectProducts([{ ...product, uuid: uuid() }]);
                 router.popCurrent();
               },
             });
@@ -221,6 +222,7 @@ function useProductVariantRows(
         if (!variant.requiresComponents) {
           selectProducts([
             {
+              uuid: uuid(),
               shopifyOrderLineItem: null,
               productVariantId: variant.id,
               availableQuantity: 0 as Int,
@@ -238,6 +240,7 @@ function useProductVariantRows(
             const inventoryItem = inventoryItemQueries[productVariant.inventoryItem.id]?.data;
 
             return Array.from({ length: quantity }, () => ({
+              uuid: uuid(),
               shopifyOrderLineItem: null,
               handle: productVariant.product.handle,
               productVariantId: productVariant.id,

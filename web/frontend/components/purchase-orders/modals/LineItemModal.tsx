@@ -14,10 +14,11 @@ import { Int } from '@web/schemas/generated/create-product.js';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 
-// TODO: Changing price
 export function LineItemModal({
   initialProduct,
+  purchaseOrder,
   locationId,
   open,
   onClose,
@@ -25,6 +26,7 @@ export function LineItemModal({
   onSave,
 }: {
   initialProduct: CreatePurchaseOrder['lineItems'][number];
+  purchaseOrder: PurchaseOrder | null;
   locationId: ID | null;
   open: boolean;
   onClose: () => void;
@@ -32,6 +34,7 @@ export function LineItemModal({
   onSave: (product: CreatePurchaseOrder['lineItems'][number]) => void;
 }) {
   const [product, setProduct] = useState(initialProduct);
+  const savedProduct = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const locationQuery = useLocationQuery({ fetch, id: locationId });
@@ -51,6 +54,8 @@ export function LineItemModal({
   const name = getProductVariantName(productVariant) ?? 'Product';
 
   const isLoading = inventoryItemQuery.isLoading || locationQuery.isLoading || orderQuery.isLoading;
+
+  const isImmutable = savedProduct && savedProduct.availableQuantity > 0;
 
   return (
     <Modal
@@ -78,6 +83,7 @@ export function LineItemModal({
             setToastAction({ content: 'Removed product' });
             onClose();
           },
+          disabled: isImmutable,
           destructive: true,
         },
       ]}
@@ -114,6 +120,7 @@ export function LineItemModal({
             onChange={value => setProduct(product => ({ ...product, unitCost: value as Money }))}
             min={0}
             requiredIndicator
+            readOnly={isImmutable}
           />
           <IntegerField
             label={'Quantity'}
@@ -121,7 +128,7 @@ export function LineItemModal({
             value={product.quantity.toString()}
             onChange={value => setProduct(product => ({ ...product, quantity: Number(value) as Int }))}
             helpText={'The quantity that has been ordered'}
-            min={1}
+            min={isImmutable ? savedProduct.quantity : 1}
             requiredIndicator
           />
           <IntegerField
@@ -129,7 +136,7 @@ export function LineItemModal({
             autoComplete={'off'}
             value={product.availableQuantity.toString()}
             onChange={value => setProduct(product => ({ ...product, availableQuantity: Number(value) as Int }))}
-            min={0}
+            min={savedProduct ? savedProduct.availableQuantity : 0}
             max={product.quantity}
             helpText={'The quantity that has been delivered'}
             requiredIndicator

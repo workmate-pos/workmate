@@ -27,9 +27,11 @@ import { LineItemModal } from '@web/frontend/components/purchase-orders/modals/L
 import { Tone } from '@shopify/polaris/build/ts/src/components/Badge/index.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 
 export function ProductsCard({
   createPurchaseOrder,
+  purchaseOrder,
   dispatch,
   disabled,
   onAddProductClick,
@@ -38,6 +40,7 @@ export function ProductsCard({
   onMarkAllAsNotReceivedClick,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
+  purchaseOrder: PurchaseOrder | null;
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
   onAddProductClick: () => void;
@@ -46,7 +49,12 @@ export function ProductsCard({
   onMarkAllAsNotReceivedClick: () => void;
 }) {
   const noLineItems = createPurchaseOrder.lineItems.length === 0;
-  const allAreReceived = !noLineItems && createPurchaseOrder.lineItems.every(li => li.availableQuantity >= li.quantity);
+  const allAreReceived = createPurchaseOrder.lineItems.every(li => li.availableQuantity === li.quantity);
+  const noneAreReceived = createPurchaseOrder.lineItems.every(li => {
+    const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === li.uuid);
+    const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
+    return li.availableQuantity === minimumAvailableQuantity;
+  });
 
   return (
     <Card>
@@ -54,7 +62,12 @@ export function ProductsCard({
         <Text as={'h2'} variant={'headingMd'} fontWeight={'bold'}>
           Products
         </Text>
-        <ProductsList createPurchaseOrder={createPurchaseOrder} dispatch={dispatch} disabled={disabled} />
+        <ProductsList
+          createPurchaseOrder={createPurchaseOrder}
+          purchaseOrder={purchaseOrder}
+          dispatch={dispatch}
+          disabled={disabled}
+        />
         <ButtonGroup fullWidth>
           <Button onClick={() => onAddProductClick()} disabled={disabled}>
             Add Product
@@ -62,12 +75,16 @@ export function ProductsCard({
           <Button onClick={() => onAddOrderProductClick()} disabled={disabled}>
             Select from Order
           </Button>
-          {allAreReceived ? (
-            <Button onClick={() => onMarkAllAsNotReceivedClick()} disabled={disabled || noLineItems} tone={'critical'}>
+          {noLineItems || allAreReceived ? (
+            <Button
+              onClick={() => onMarkAllAsNotReceivedClick()}
+              disabled={disabled || noLineItems || noneAreReceived}
+              tone={'critical'}
+            >
               Mark all as not received
             </Button>
           ) : (
-            <Button onClick={() => onMarkAllAsReceivedClick()} disabled={disabled || noLineItems}>
+            <Button onClick={() => onMarkAllAsReceivedClick()} disabled={disabled || noLineItems || allAreReceived}>
               Mark all as received
             </Button>
           )}
@@ -79,10 +96,12 @@ export function ProductsCard({
 
 function ProductsList({
   createPurchaseOrder,
+  purchaseOrder,
   dispatch,
   disabled,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
+  purchaseOrder: PurchaseOrder | null;
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
 }) {
@@ -139,8 +158,8 @@ function ProductsList({
             quantityBadgeTone = undefined;
           }
 
-          // TODO: Make sure to sync with backend on whether this is possible (just use uuids) - same with "Mark as not received" -> should not go below whatever is on the backend
-          const canRemove = item.availableQuantity === 0;
+          const canRemove =
+            purchaseOrder?.lineItems.some(li => li.uuid === item.uuid && item.availableQuantity === 0) ?? true;
 
           return (
             <ResourceItem
@@ -163,7 +182,9 @@ function ProductsList({
                 <BlockStack gap={'200'}>
                   <InlineStack align={'space-between'} blockAlign={'center'}>
                     <InlineStack gap={'400'}>
-                      <Badge tone={quantityBadgeTone}>{item.quantity.toString()}</Badge>
+                      <Badge tone={quantityBadgeTone}>
+                        {`${item.availableQuantity.toString()} / ${item.quantity.toString()}`}
+                      </Badge>
                       {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
                     </InlineStack>
                     <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
@@ -195,6 +216,7 @@ function ProductsList({
       {modalLineItem && (
         <LineItemModal
           initialProduct={modalLineItem}
+          purchaseOrder={purchaseOrder}
           locationId={createPurchaseOrder.locationId}
           open={!!modalLineItem}
           onClose={() => setModalLineItem(null)}

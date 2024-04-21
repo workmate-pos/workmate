@@ -69,21 +69,27 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
       shipping: createPurchaseOrder.shipping,
     });
 
+    const newLineItemUuids = new Set(createPurchaseOrder.lineItems.map(li => li.uuid));
+    const oldLineItemUuids = new Set(existingPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
+
     await Promise.all([
-      db.purchaseOrder.removeLineItems({ purchaseOrderId }),
+      ...[...oldLineItemUuids]
+        .filter(oldUuid => !newLineItemUuids.has(oldUuid))
+        .map(uuid => db.purchaseOrder.removeLineItem({ purchaseOrderId, uuid })),
       db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
       db.purchaseOrder.removeAssignedEmployees({ purchaseOrderId }),
     ]);
 
     await Promise.all([
-      ...createPurchaseOrder.lineItems.map(product =>
-        db.purchaseOrder.insertLineItem({
-          productVariantId: product.productVariantId,
+      ...createPurchaseOrder.lineItems.map(lineItem =>
+        db.purchaseOrder.upsertLineItem({
+          uuid: lineItem.uuid,
+          productVariantId: lineItem.productVariantId,
           purchaseOrderId: purchaseOrderId,
-          availableQuantity: product.availableQuantity,
-          quantity: product.quantity,
-          unitCost: product.unitCost,
-          shopifyOrderLineItemId: product.shopifyOrderLineItem?.id,
+          availableQuantity: lineItem.availableQuantity,
+          quantity: lineItem.quantity,
+          unitCost: lineItem.unitCost,
+          shopifyOrderLineItemId: lineItem.shopifyOrderLineItem?.id,
         }),
       ),
       ...Object.entries(createPurchaseOrder.customFields).map(([key, value]) =>
@@ -157,60 +163,40 @@ function assertNoIllegalLineItemChanges(
   createPurchaseOrder: CreatePurchaseOrder,
   oldLineItems: PurchaseOrder['lineItems'][number][],
 ) {
-  // Find a mapping between new and old line items s.t. the old line item can be changed to the new line item without violating any constraints.
-  // If we cannot find a valid mapping changes are invalid.
+  for (const oldLineItem of oldLineItems) {
+    const newLineItem = createPurchaseOrder.lineItems.find(newLineItem => newLineItem.uuid === oldLineItem.uuid);
 
-  const unmappedOldLineItems = [...oldLineItems];
-  const mapping = new Map<CreatePurchaseOrder['lineItems'][number], PurchaseOrder['lineItems'][number]>();
-
-  for (const newLineItem of createPurchaseOrder.lineItems) {
-    let mappedTo: PurchaseOrder['lineItems'][number] | null = null;
-
-    for (const oldLineItem of unmappedOldLineItems) {
-      if (oldLineItem.productVariant.id !== newLineItem.productVariantId) continue;
-      if (oldLineItem.shopifyOrderLineItem?.id !== newLineItem.shopifyOrderLineItem?.id) continue;
-      if (oldLineItem.availableQuantity > newLineItem.availableQuantity) continue;
+    if (!newLineItem) {
       if (oldLineItem.availableQuantity > 0) {
-        if (oldLineItem.unitCost !== newLineItem.unitCost) continue;
-        if (oldLineItem.quantity > newLineItem.quantity) continue;
+        throw new HttpError('Cannot delete (partially) received line items', 400);
       }
 
-      // We always map to the highest possible availableQuantity. This is crucial:
-      // E.g.:
-      // New:
-      // - [0] availableQuantity: 5, quantity: 5
-      // - [1] availableQuantity: 4, quantity: 5
-      // Old:
-      // - [0] availableQuantity: 4, quantity: 5
-      // - [1] availableQuantity: 5, quantity: 5
-      // We could map [0] -> [0], after which [1] -> [1] is invalid as it would decrease the availableQuantity.
-      // By mapping to the highest possible availableQuantity, we instead map [0] -> [1], after which [1] -> [0] is valid.
-      if (!mappedTo || oldLineItem.availableQuantity > mappedTo.availableQuantity) {
-        mappedTo = oldLineItem;
-      }
+      continue;
     }
 
-    if (mappedTo) {
-      mapping.set(newLineItem, mappedTo);
-      unmappedOldLineItems.splice(unmappedOldLineItems.indexOf(mappedTo), 1);
+    if (newLineItem.availableQuantity < oldLineItem.availableQuantity) {
+      throw new HttpError('Cannot decrease available quantity', 400);
     }
-  }
 
-  // If we were unable to find a valid mapping for all old items with available quantity, then something is wrong
-  for (const oldLineItem of unmappedOldLineItems) {
     if (oldLineItem.availableQuantity > 0) {
-      sentryErr('Unexpected unmapped line items - should be prevented by the front end', {
-        createPurchaseOrderLineItems: createPurchaseOrder.lineItems,
-        currentLineItems: oldLineItems,
-      });
-      throw new HttpError(
-        'Line items with received quantity cannot be deleted or changed (except for increasing quantity)',
-        400,
-      );
+      if (!BigDecimal.fromMoney(newLineItem.unitCost).equals(BigDecimal.fromMoney(oldLineItem.unitCost))) {
+        throw new HttpError('Cannot change unit cost for (partially) received line items', 400);
+      }
+
+      if (newLineItem.quantity < oldLineItem.quantity) {
+        throw new HttpError('Cannot decrease quantity for (partially) received line items', 400);
+      }
+
+      if (newLineItem.productVariantId !== oldLineItem.productVariant.id) {
+        throw new HttpError('Cannot change product variant for (partially) received line items', 400);
+      }
+
+      if (newLineItem.shopifyOrderLineItem !== oldLineItem.shopifyOrderLineItem) {
+        // this may be fine
+        throw new HttpError('Cannot change linked order line item for (partially) received line items', 400);
+      }
     }
   }
-
-  // (if this algorithm is somehow wrong, use max-flow bipartite matching)
 }
 
 /**

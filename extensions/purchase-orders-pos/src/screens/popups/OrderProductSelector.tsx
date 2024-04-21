@@ -12,6 +12,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Int } from '@web/schemas/generated/create-product.js';
 import { useRouter } from '../../routes.js';
+import { v4 as uuid } from 'uuid';
 
 /**
  * Similar to ProductSelector, but shows line items of a specific order to be able to link to them.
@@ -90,6 +91,7 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
               .filter(li => selectedLineItemIds.includes(li.id))
               .map(li => {
                 return {
+                  uuid: uuid(),
                   quantity: li.quantity,
                   productVariantId: li.variant.id,
                   availableQuantity: 0 as Int,

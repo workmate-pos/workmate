@@ -56,6 +56,9 @@
         "type": "object",
         "title": "product",
         "properties": {
+          "uuid": {
+            "type": "string"
+          },
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
           },
@@ -89,7 +92,7 @@
             "$ref": "scalars.json#/definitions/Money"
           }
         },
-        "required": ["productVariantId", "shopifyOrderLineItem", "quantity", "availableQuantity", "unitCost"],
+        "required": ["uuid", "productVariantId", "shopifyOrderLineItem", "quantity", "availableQuantity", "unitCost"],
         "additionalProperties": false
       }
     },

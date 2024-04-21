@@ -73,7 +73,7 @@ WHERE wo.shop = :shop!
   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
              FROM (SELECT filter.row,
-                          (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=
+                          (filter.key IS NOT NULL) AND (COALESCE(filter.val ILIKE wocf.value, wocf.value IS NOT DISTINCT FROM filter.val)) !=
                           filter.inverse
                    FROM "CustomFieldFilters" filter
                           LEFT JOIN "WorkOrderCustomField" wocf

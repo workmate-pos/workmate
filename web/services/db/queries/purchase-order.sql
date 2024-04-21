@@ -37,7 +37,10 @@ WHERE po.shop = :shop!
   )
   AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))
        FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match
-             FROM (SELECT filter.row, ((filter.key IS NOT NULL OR pocf.key IS NOT NULL)) AND (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) != filter.inverse
+             FROM (SELECT filter.row,
+                          (filter.key IS NOT NULL) AND
+                          (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) !=
+                          filter.inverse
                    FROM "CustomFieldFilters" filter
                           LEFT JOIN "PurchaseOrderCustomField" pocf
                                     ON (pocf."purchaseOrderId" = po.id AND
@@ -85,6 +88,15 @@ SELECT *
 FROM "PurchaseOrderLineItem"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
+/*
+  @name getLineItemsByUuids
+  @param uuids -> (...)
+*/
+SELECT *
+FROM "PurchaseOrderLineItem"
+WHERE uuid IN :uuids!
+  AND "purchaseOrderId" = :purchaseOrderId!;
+
 /* @name getCustomFields */
 SELECT *
 FROM "PurchaseOrderCustomField"
@@ -110,6 +122,12 @@ DELETE
 FROM "PurchaseOrderLineItem"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
+/* @name removeLineItem */
+DELETE
+FROM "PurchaseOrderLineItem"
+WHERE uuid = :uuid!
+  AND "purchaseOrderId" = :purchaseOrderId!;
+
 /* @name removeCustomFields */
 DELETE
 FROM "PurchaseOrderCustomField"
@@ -120,16 +138,24 @@ DELETE
 FROM "PurchaseOrderEmployeeAssignment"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
-/* @name insertLineItem */
-INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", "shopifyOrderLineItemId", quantity,
+/* @name upsertLineItem */
+INSERT INTO "PurchaseOrderLineItem" (uuid, "purchaseOrderId", "productVariantId", "shopifyOrderLineItemId", quantity,
                                      "availableQuantity", "unitCost")
-VALUES (:purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,
-        :unitCost!);
+VALUES (:uuid!, :purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,
+        :unitCost!)
+ON CONFLICT ("purchaseOrderId", uuid)
+  DO UPDATE
+  SET "productVariantId"       = EXCLUDED."productVariantId",
+      "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+      quantity                 = EXCLUDED.quantity,
+      "availableQuantity"      = EXCLUDED."availableQuantity",
+      "unitCost"               = EXCLUDED."unitCost";
 
-/* @name updateLineItem */
+/* @name setLineItemShopifyOrderLineItemId */
 UPDATE "PurchaseOrderLineItem"
 SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId
-WHERE id = :id!;
+WHERE uuid = :uuid!
+AND "purchaseOrderId" = :purchaseOrderId!;
 
 /* @name insertCustomField */
 INSERT INTO "PurchaseOrderCustomField" ("purchaseOrderId", key, value)

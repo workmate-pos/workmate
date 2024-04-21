@@ -53,10 +53,10 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
 
     // in case this line item is in some purchase order we transfer the line item id to the new order, make sure to update it there as well (e.g. when draft order becomes a real order).
     // we only support this behavior for work orders, and not for arbitrary draft orders since mapping from draft order line items to order line items is hard to do perfectly.
-    for (const { id } of await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemId({
+    for (const { purchaseOrderId, uuid } of await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemId({
       shopifyOrderLineItemId,
     })) {
-      await db.purchaseOrder.updateLineItem({ id, shopifyOrderLineItemId });
+      await db.purchaseOrder.setLineItemShopifyOrderLineItemId({ purchaseOrderId, uuid, shopifyOrderLineItemId });
     }
   }
 

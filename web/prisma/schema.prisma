@@ -403,7 +403,7 @@ model PurchaseOrder {
 }
 
 model PurchaseOrderLineItem {
-  id Int @id @default(autoincrement())
+  uuid String @db.Uuid
 
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId Int
@@ -422,6 +422,7 @@ model PurchaseOrderLineItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
+  @@id([purchaseOrderId, uuid])
   @@index([purchaseOrderId])
   @@index([shopifyOrderLineItemId])
 }

@@ -33,6 +33,7 @@ import { Summary } from '@web/frontend/components/purchase-orders/Summary.js';
 import { AddProductModal } from '@web/frontend/components/purchase-orders/modals/AddProductModal.js';
 import { AddOrderProductModal } from '@web/frontend/components/purchase-orders/modals/AddOrderProductModal.js';
 import { Int } from '@web/schemas/generated/create-product.js';
+import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 
 export default function () {
   return (
@@ -102,6 +103,7 @@ function PurchaseOrderLoader() {
           }),
           ...(purchaseOrderQuery.data ? createPurchaseOrderFromPurchaseOrder(purchaseOrderQuery.data) : {}),
         }}
+        purchaseOrder={purchaseOrderQuery.data ?? null}
       />
       {toast}
     </>
@@ -110,7 +112,13 @@ function PurchaseOrderLoader() {
 
 export type Location = ReturnType<typeof useLocationQuery>['data'];
 
-function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOrder: CreatePurchaseOrder }) {
+function PurchaseOrder({
+  initialCreatePurchaseOrder,
+  purchaseOrder,
+}: {
+  initialCreatePurchaseOrder: CreatePurchaseOrder;
+  purchaseOrder: PurchaseOrder | null;
+}) {
   const app = useAppBridge();
 
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
@@ -247,6 +255,7 @@ function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOr
 
           <ProductsCard
             createPurchaseOrder={createPurchaseOrder}
+            purchaseOrder={purchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isLoading}
             onAddProductClick={() => {
@@ -277,7 +286,9 @@ function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOr
             }}
             onMarkAllAsNotReceivedClick={() => {
               for (const product of createPurchaseOrder.lineItems) {
-                dispatch.updateProduct({ product: { ...product, availableQuantity: 0 as Int } });
+                const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
+                const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
+                dispatch.updateProduct({ product: { ...product, availableQuantity: minimumAvailableQuantity as Int } });
               }
             }}
             onMarkAllAsReceivedClick={() => {

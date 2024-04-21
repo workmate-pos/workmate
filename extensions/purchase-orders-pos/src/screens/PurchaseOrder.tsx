@@ -9,7 +9,7 @@ import {
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
+import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -38,10 +38,17 @@ import {
   CreatePurchaseOrderDispatchProxy,
   useCreatePurchaseOrderReducer,
 } from '@work-orders/common/create-purchase-order/reducer.js';
+import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 
 // TODO: A new screen to view linked orders/workorders
-// TODO: A way to link purchase order line items to SO line items
-export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePurchaseOrder: CreatePurchaseOrder }) {
+// TODO: A way to link purchase order line items to draft SO line items
+export function PurchaseOrder({
+  initialCreatePurchaseOrder,
+  purchaseOrder,
+}: {
+  initialCreatePurchaseOrder: CreatePurchaseOrder;
+  purchaseOrder: PurchaseOrder | null;
+}) {
   const [query, setQuery] = useState('');
   const { Form } = useForm();
 
@@ -98,7 +105,13 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
   const assignedEmployeeIds = createPurchaseOrder.employeeAssignments.map(({ employeeId }) => employeeId);
   const employeeQueries = useEmployeeQueries({ fetch, ids: assignedEmployeeIds });
 
-  const productRows = useProductRows(createPurchaseOrder, dispatch, query, purchaseOrderMutation.isLoading);
+  const productRows = useProductRows(
+    createPurchaseOrder,
+    purchaseOrder,
+    dispatch,
+    query,
+    purchaseOrderMutation.isLoading,
+  );
 
   const subtotal = BigDecimal.sum(
     ...createPurchaseOrder.lineItems.map(product =>
@@ -119,10 +132,13 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
     ),
   );
 
-  const hasProductQuantity = createPurchaseOrder.lineItems.some(product => product.quantity > 0);
-
-  // whether there is some product.availableQuantity > 0. used to determine whether we should show "Mark as received" or "Mark as not received" button
-  const productHasAvailableQuantity = createPurchaseOrder.lineItems.some(product => product.availableQuantity > 0);
+  const noLineItems = createPurchaseOrder.lineItems.length === 0;
+  const allAreReceived = createPurchaseOrder.lineItems.every(li => li.availableQuantity === li.quantity);
+  const noneAreReceived = createPurchaseOrder.lineItems.every(li => {
+    const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === li.uuid);
+    const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
+    return li.availableQuantity === minimumAvailableQuantity;
+  });
 
   useEffect(() => {
     screen.setTitle(createPurchaseOrder.name ?? 'New purchase order');
@@ -148,7 +164,10 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
               label={'Vendor'}
               onFocus={vendorSelectorWarningDialog.show}
               value={createPurchaseOrder.vendorName ?? ''}
-              disabled={vendorSelectorWarningDialog.isVisible}
+              disabled={
+                vendorSelectorWarningDialog.isVisible ||
+                (!!createPurchaseOrder.name && createPurchaseOrder.vendorName !== null)
+              }
             />
 
             <FormStringField
@@ -158,6 +177,7 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
                   onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
                 });
               }}
+              disabled={!!createPurchaseOrder.name && createPurchaseOrder.locationId !== null}
               value={selectedLocation?.name ?? ''}
             />
             <FormStringField
@@ -269,17 +289,30 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
             <ResponsiveGrid columns={1}>
               <FormButton title={'Add Product'} type={'primary'} onPress={addProductPrerequisitesDialog.show} />
 
-              {createPurchaseOrder.name && hasProductQuantity && productHasAvailableQuantity && (
+              {noLineItems || allAreReceived ? (
                 <FormButton
                   title={'Mark all as not received'}
                   type={'destructive'}
-                  onPress={() => dispatch.setInventoryState({ inventoryState: 'unavailable' })}
+                  disabled={noLineItems || noneAreReceived}
+                  onPress={() => {
+                    for (const product of createPurchaseOrder.lineItems) {
+                      const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
+                      const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
+                      dispatch.updateProduct({
+                        product: { ...product, availableQuantity: minimumAvailableQuantity as Int },
+                      });
+                    }
+                  }}
                 />
-              )}
-              {createPurchaseOrder.name && hasProductQuantity && !productHasAvailableQuantity && (
+              ) : (
                 <FormButton
                   title={'Mark all as received'}
-                  onPress={() => dispatch.setInventoryState({ inventoryState: 'available' })}
+                  disabled={noLineItems || allAreReceived}
+                  onPress={() => {
+                    for (const product of createPurchaseOrder.lineItems) {
+                      dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
+                    }
+                  }}
                 />
               )}
 
@@ -370,6 +403,7 @@ export function PurchaseOrder({ initialCreatePurchaseOrder }: { initialCreatePur
 
 function useProductRows(
   { lineItems, locationId }: Pick<CreatePurchaseOrder, 'lineItems' | 'locationId'>,
+  purchaseOrder: PurchaseOrder | null,
   dispatch: CreatePurchaseOrderDispatchProxy,
   query: string,
   disabled: boolean,
@@ -419,6 +453,7 @@ function useProductRows(
           product,
           locationId,
           onSave: product => dispatch.updateProduct({ product }),
+          purchaseOrder,
         });
       },
       leftSide: {
@@ -427,6 +462,7 @@ function useProductRows(
           source: imageUrl,
           badge: product.quantity,
         },
+        subtitle: [`${product.availableQuantity} received`],
         badges: [order].filter(isNonNullable).map(order => ({ variant: 'highlight', text: order.name })),
       },
       rightSide: {

@@ -61,6 +61,7 @@ export function Entry() {
             if (status) {
               router.push('PurchaseOrder', {
                 initialCreatePurchaseOrder: defaultCreatePurchaseOrder({ status }),
+                purchaseOrder: null,
               });
             }
           }}
@@ -149,6 +150,7 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
     onPress: () => {
       router.push('PurchaseOrder', {
         initialCreatePurchaseOrder: createPurchaseOrderFromPurchaseOrder(purchaseOrder),
+        purchaseOrder,
       });
     },
     leftSide: {
