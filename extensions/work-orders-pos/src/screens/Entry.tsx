@@ -35,6 +35,7 @@ import { getPurchaseOrderBadges } from '../util/badges.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
@@ -62,8 +63,12 @@ export function Entry() {
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
   const customerQuery = useCustomerQuery({ fetch, id: customerId });
   const settingsQuery = useSettingsQuery({ fetch });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'WORK_ORDER' });
 
   const rows = useWorkOrderRows(workOrderInfoQuery.data?.pages ?? []);
+
+  const screen = useScreen();
+  screen.setIsLoading(settingsQuery.isLoading || customFieldsPresetsQuery.isLoading);
 
   const router = useRouter();
   const cart = useCartSubscription();
@@ -87,7 +92,10 @@ export function Entry() {
             type={'primary'}
             onPress={() => {
               if (!settingsQuery.data) {
-                toast.show('Settings not loaded');
+                return;
+              }
+
+              if (!customFieldsPresetsQuery.data) {
                 return;
               }
 
@@ -98,9 +106,18 @@ export function Entry() {
                 toast.show('Imported customer from cart');
               }
 
+              const createWorkOrder = defaultCreateWorkOrder({ status: settingsQuery.data.settings.defaultStatus });
+
+              const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
+              const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
+
               router.push('WorkOrder', {
                 initial: {
-                  ...defaultCreateWorkOrder({ status: settingsQuery.data.settings.defaultStatus }),
+                  ...createWorkOrder,
+                  customFields: {
+                    ...Object.fromEntries(defaultCustomFieldKeys.map(key => [key, ''])),
+                    ...createWorkOrder.customFields,
+                  },
                   customerId,
                 },
               });

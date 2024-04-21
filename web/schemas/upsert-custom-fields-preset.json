@@ -8,8 +8,11 @@
         "type": "string"
       },
       "minItems": 1
+    },
+    "default": {
+      "type": "boolean"
     }
   },
-  "required": ["keys"],
+  "required": ["keys", "default"],
   "additionalProperties": false
 }

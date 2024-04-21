@@ -482,6 +482,9 @@ model CustomFieldsPreset {
 
   keys String[]
 
+  // If default, all keys will automatically be added to a work order/purchase order (depending on the type)
+  default Boolean
+
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 

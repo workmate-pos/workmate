@@ -14,6 +14,7 @@ export interface IGetCustomFieldsPresetsParams {
 /** 'GetCustomFieldsPresets' return type */
 export interface IGetCustomFieldsPresetsResult {
   createdAt: Date;
+  default: boolean;
   id: number;
   keys: stringArray | null;
   name: string;
@@ -44,6 +45,7 @@ export const getCustomFieldsPresets = new PreparedQuery<IGetCustomFieldsPresetsP
 
 /** 'UpsertCustomFieldsPreset' parameters type */
 export interface IUpsertCustomFieldsPresetParams {
+  default: boolean;
   keys: stringArray;
   name: string;
   shop: string;
@@ -59,15 +61,16 @@ export interface IUpsertCustomFieldsPresetQuery {
   result: IUpsertCustomFieldsPresetResult;
 }
 
-const upsertCustomFieldsPresetIR: any = {"usedParamSet":{"shop":true,"name":true,"type":true,"keys":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":66,"b":71}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":74,"b":79}]},{"name":"type","required":true,"transform":{"type":"scalar"},"locs":[{"a":82,"b":87}]},{"name":"keys","required":true,"transform":{"type":"scalar"},"locs":[{"a":90,"b":95},{"a":152,"b":157}]}],"statement":"INSERT INTO \"CustomFieldsPreset\" (shop, name, type, keys)\nVALUES (:shop!, :name!, :type!, :keys!)\nON CONFLICT (shop, type, name) DO UPDATE\n  SET keys = :keys!"};
+const upsertCustomFieldsPresetIR: any = {"usedParamSet":{"shop":true,"name":true,"type":true,"keys":true,"default":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":77,"b":82}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":85,"b":90}]},{"name":"type","required":true,"transform":{"type":"scalar"},"locs":[{"a":93,"b":98}]},{"name":"keys","required":true,"transform":{"type":"scalar"},"locs":[{"a":101,"b":106}]},{"name":"default","required":true,"transform":{"type":"scalar"},"locs":[{"a":109,"b":117}]}],"statement":"INSERT INTO \"CustomFieldsPreset\" (shop, name, type, keys, \"default\")\nVALUES (:shop!, :name!, :type!, :keys!, :default!)\nON CONFLICT (shop, type, name) DO UPDATE\n  SET keys      = EXCLUDED.keys,\n      \"default\" = EXCLUDED.default"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "CustomFieldsPreset" (shop, name, type, keys)
- * VALUES (:shop!, :name!, :type!, :keys!)
+ * INSERT INTO "CustomFieldsPreset" (shop, name, type, keys, "default")
+ * VALUES (:shop!, :name!, :type!, :keys!, :default!)
  * ON CONFLICT (shop, type, name) DO UPDATE
- *   SET keys = :keys!
+ *   SET keys      = EXCLUDED.keys,
+ *       "default" = EXCLUDED.default
  * ```
  */
 export const upsertCustomFieldsPreset = new PreparedQuery<IUpsertCustomFieldsPresetParams,IUpsertCustomFieldsPresetResult>(upsertCustomFieldsPresetIR);

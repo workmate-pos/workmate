@@ -22,6 +22,7 @@ export default class CustomFieldsPresetsController {
       presets: presets.map(preset => ({
         name: preset.name,
         keys: preset.keys ?? never(),
+        default: preset.default,
       })),
     });
   }
@@ -34,7 +35,7 @@ export default class CustomFieldsPresetsController {
   ) {
     const { shop }: Session = res.locals.shopify.session;
     const { type, name } = req.params;
-    const { keys } = req.body;
+    const { keys, default: isDefault } = req.body;
 
     assertValidPresetType(type);
 
@@ -42,7 +43,7 @@ export default class CustomFieldsPresetsController {
       throw new HttpError('Custom fields cannot be empty', 400);
     }
 
-    await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type });
+    await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type, default: isDefault });
 
     return res.json({ name });
   }
@@ -52,6 +53,7 @@ export type FetchCustomFieldsPresetsResponse = {
   presets: {
     name: string;
     keys: string[];
+    default: boolean;
   }[];
 };
 

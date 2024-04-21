@@ -19,6 +19,7 @@ export type SavePresetProps = {
 
 export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
   const [name, setName] = useState<string>('');
+  const [isDefault, setIsDefault] = useState(false);
 
   const { Form } = useForm();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
@@ -38,7 +39,7 @@ export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
 
   const presets = presetsQuery.data ?? [];
   const mutate = () => {
-    presetMutation.mutate({ name, keys });
+    presetMutation.mutate({ name, keys, default: isDefault });
   };
 
   const presetNameInUse = presets.some(preset => preset.name === name);
@@ -57,6 +58,11 @@ export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
       <Form disabled={presetMutation.isLoading}>
         <Stack direction={'vertical'} paddingHorizontal={'ExtraExtraLarge'}>
           <FormStringField label={'Preset Name'} value={name} onChange={setName} required />
+          <FormButton
+            title={isDefault ? 'Is Default' : 'Is Not Default'}
+            type={'basic'}
+            onPress={() => setIsDefault(isDefault => !isDefault)}
+          />
 
           <FormButton
             title={'Save Preset'}

@@ -5,10 +5,11 @@ WHERE shop = :shop!
   AND type = COALESCE(:type, type);
 
 /* @name upsertCustomFieldsPreset */
-INSERT INTO "CustomFieldsPreset" (shop, name, type, keys)
-VALUES (:shop!, :name!, :type!, :keys!)
+INSERT INTO "CustomFieldsPreset" (shop, name, type, keys, "default")
+VALUES (:shop!, :name!, :type!, :keys!, :default!)
 ON CONFLICT (shop, type, name) DO UPDATE
-  SET keys = :keys!;
+  SET keys      = EXCLUDED.keys,
+      "default" = EXCLUDED.default;
 
 /* @name removeCustomFieldsPreset */
 DELETE

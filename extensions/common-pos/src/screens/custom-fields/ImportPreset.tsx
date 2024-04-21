@@ -80,6 +80,12 @@ function getPresetRows(
     const subtitle =
       preset.keys.slice(0, FIELD_PREVIEW_COUNT).join(', ') + (preset.keys.length > FIELD_PREVIEW_COUNT ? '...' : '');
 
+    let label = preset.name;
+
+    if (preset.default) {
+      label = `${label} (Default)`;
+    }
+
     return {
       id: preset.name,
       onPress: () => {
@@ -87,7 +93,7 @@ function getPresetRows(
         router.popCurrent();
       },
       leftSide: {
-        label: preset.name,
+        label,
         subtitle: [subtitle],
       },
     };

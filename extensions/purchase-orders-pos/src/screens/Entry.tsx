@@ -15,6 +15,7 @@ import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
@@ -29,11 +30,12 @@ export function Entry() {
   const purchaseOrders = purchaseOrderInfoQuery.data?.pages ?? [];
 
   const settingsQuery = useSettingsQuery({ fetch });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
 
   const purchaseOrderRows = usePurchaseOrderRows(purchaseOrders);
 
   const screen = useScreen();
-  screen.setIsLoading(settingsQuery.isLoading);
+  screen.setIsLoading(settingsQuery.isLoading || customFieldsPresetsQuery.isLoading);
 
   const router = useRouter();
 
@@ -57,13 +59,30 @@ export function Entry() {
           title={'New Purchase Order'}
           type={'primary'}
           onPress={() => {
-            const status = settingsQuery.data?.settings?.defaultPurchaseOrderStatus;
-            if (status) {
-              router.push('PurchaseOrder', {
-                initialCreatePurchaseOrder: defaultCreatePurchaseOrder({ status }),
-                purchaseOrder: null,
-              });
+            if (!settingsQuery.data) {
+              return;
             }
+
+            if (!customFieldsPresetsQuery.data) {
+              return;
+            }
+
+            const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
+            const createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
+
+            const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
+            const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
+
+            router.push('PurchaseOrder', {
+              initialCreatePurchaseOrder: {
+                ...createPurchaseOrder,
+                customFields: {
+                  ...Object.fromEntries(defaultCustomFieldKeys.map(key => [key, ''])),
+                  ...createPurchaseOrder.customFields,
+                },
+              },
+              purchaseOrder: null,
+            });
           }}
         />
       </ResponsiveStack>
