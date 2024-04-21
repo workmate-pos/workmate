@@ -100,7 +100,7 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":true,"name":true,"customerId":true,"total":true,"outstanding":true,"fullyPaid":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":119,"b":127}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":130,"b":135},{"a":264,"b":269}]},{"name":"orderType","required":true,"transform":{"type":"scalar"},"locs":[{"a":138,"b":148},{"a":293,"b":303}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":151,"b":156},{"a":327,"b":332}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":159,"b":169},{"a":356,"b":366}]},{"name":"total","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":178},{"a":390,"b":396}]},{"name":"outstanding","required":true,"transform":{"type":"scalar"},"locs":[{"a":181,"b":193},{"a":420,"b":432}]},{"name":"fullyPaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":196,"b":206},{"a":456,"b":466}]}],"statement":"INSERT INTO \"ShopifyOrder\" (\"orderId\", shop, \"orderType\", name, \"customerId\", total, outstanding, \"fullyPaid\")\nVALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)\nON CONFLICT (\"orderId\") DO UPDATE\n  SET shop         = :shop!,\n      \"orderType\"  = :orderType!,\n      name         = :name!,\n      \"customerId\" = :customerId,\n      total        = :total!,\n      outstanding  = :outstanding!,\n      \"fullyPaid\"  = :fullyPaid!"};
+const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":true,"name":true,"customerId":true,"total":true,"outstanding":true,"fullyPaid":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":119,"b":127}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":130,"b":135}]},{"name":"orderType","required":true,"transform":{"type":"scalar"},"locs":[{"a":138,"b":148}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":151,"b":156}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":159,"b":169}]},{"name":"total","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":178}]},{"name":"outstanding","required":true,"transform":{"type":"scalar"},"locs":[{"a":181,"b":193}]},{"name":"fullyPaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":196,"b":206}]}],"statement":"INSERT INTO \"ShopifyOrder\" (\"orderId\", shop, \"orderType\", name, \"customerId\", total, outstanding, \"fullyPaid\")\nVALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)\nON CONFLICT (\"orderId\") DO UPDATE\n  SET shop         = EXCLUDED.shop,\n      \"orderType\"  = EXCLUDED.\"orderType\",\n      name         = EXCLUDED.name,\n      \"customerId\" = EXCLUDED.\"customerId\",\n      total        = EXCLUDED.total,\n      outstanding  = EXCLUDED.outstanding,\n      \"fullyPaid\"  = EXCLUDED.\"fullyPaid\""};
 
 /**
  * Query generated from SQL:
@@ -108,13 +108,13 @@ const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":tr
  * INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding, "fullyPaid")
  * VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)
  * ON CONFLICT ("orderId") DO UPDATE
- *   SET shop         = :shop!,
- *       "orderType"  = :orderType!,
- *       name         = :name!,
- *       "customerId" = :customerId,
- *       total        = :total!,
- *       outstanding  = :outstanding!,
- *       "fullyPaid"  = :fullyPaid!
+ *   SET shop         = EXCLUDED.shop,
+ *       "orderType"  = EXCLUDED."orderType",
+ *       name         = EXCLUDED.name,
+ *       "customerId" = EXCLUDED."customerId",
+ *       total        = EXCLUDED.total,
+ *       outstanding  = EXCLUDED.outstanding,
+ *       "fullyPaid"  = EXCLUDED."fullyPaid"
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);

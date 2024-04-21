@@ -111,8 +111,12 @@ query getInfo($id: ID!) {
 fragment OrderInfoFragment on Order {
   id
   name
-  totalReceived
-  totalPrice
+  totalReceivedSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentTotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
   totalOutstandingSet {
     ...ShopMoneyAmountFragment
   }
@@ -144,26 +148,6 @@ fragment UserErrorFragment on UserError {
   message
 }
 
-query getManyOrderInfoDraftOrderInfo($ids: [ID!]!) {
-  nodes(ids: $ids) {
-    __typename
-    ... on Order {
-      name
-      totalPrice
-      totalOutstandingSet {
-        ...ShopMoneyAmountFragment
-      }
-      displayFinancialStatus
-      # TODO
-      # displayFulfillmentStatus
-    }
-    ... on DraftOrder {
-      name
-      totalPrice
-    }
-  }
-}
-
 fragment DatabaseShopifyOrderFragment on Order {
   id
   name
@@ -171,14 +155,10 @@ fragment DatabaseShopifyOrderFragment on Order {
     id
   }
   currentTotalPriceSet {
-    shopMoney {
-      amount
-    }
+    ...ShopMoneyAmountFragment
   }
   totalOutstandingSet {
-    shopMoney {
-      amount
-    }
+    ...ShopMoneyAmountFragment
   }
   customAttributes {
     key
@@ -196,20 +176,14 @@ fragment DatabaseShopifyOrderLineItemFragment on LineItem {
   quantity: currentQuantity
   unfulfilledQuantity
   originalUnitPriceSet {
-    shopMoney {
-      amount
-    }
+    ...ShopMoneyAmountFragment
   }
   discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet {
-    shopMoney {
-      amount
-    }
+    ...ShopMoneyAmountFragment
   }
   taxLines {
     priceSet {
-      shopMoney {
-        amount
-      }
+      ...ShopMoneyAmountFragment
     }
   }
   customAttributes {

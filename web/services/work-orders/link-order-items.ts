@@ -124,8 +124,8 @@ async function linkDeposits(lineItems: LineItem[], workOrderId: number) {
   }
 }
 
-function getLineItemIdsByUuids(
-  lineItems: LineItem[],
+export function getLineItemIdsByUuids(
+  lineItems: Pick<LineItem, 'id' | 'customAttributes'>[],
   type: NonNullable<ReturnType<typeof getUuidFromCustomAttributeKey>>['type'],
 ): Record<string, ID> {
   const lineItemIdByUuid: Record<string, ID> = {};

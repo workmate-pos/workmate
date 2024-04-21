@@ -15,13 +15,13 @@ WHERE "orderId" IN :orderIds!;
 INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding, "fullyPaid")
 VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)
 ON CONFLICT ("orderId") DO UPDATE
-  SET shop         = :shop!,
-      "orderType"  = :orderType!,
-      name         = :name!,
-      "customerId" = :customerId,
-      total        = :total!,
-      outstanding  = :outstanding!,
-      "fullyPaid"  = :fullyPaid!;
+  SET shop         = EXCLUDED.shop,
+      "orderType"  = EXCLUDED."orderType",
+      name         = EXCLUDED.name,
+      "customerId" = EXCLUDED."customerId",
+      total        = EXCLUDED.total,
+      outstanding  = EXCLUDED.outstanding,
+      "fullyPaid"  = EXCLUDED."fullyPaid";
 
 /* @name getLineItems */
 SELECT *

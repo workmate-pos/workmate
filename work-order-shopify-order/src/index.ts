@@ -182,7 +182,9 @@ export function getDepositCustomSale(deposit: { uuid: string; amount: Money }): 
   };
 }
 
-export function getChargeUnitPrice(charge: HourlyLabourCharge | FixedPriceLabourCharge): Money {
+export function getChargeUnitPrice(
+  charge: Pick<HourlyLabourCharge, 'hours' | 'rate'> | Pick<FixedPriceLabourCharge, 'amount'>,
+): Money {
   if ('amount' in charge) {
     return BigDecimal.fromString(charge.amount).round(2, RoundingMode.CEILING).toMoney();
   }
