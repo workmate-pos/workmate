@@ -9,5 +9,7 @@
 -- AlterTable
 ALTER TABLE "PurchaseOrderLineItem" DROP CONSTRAINT "PurchaseOrderLineItem_pkey",
 DROP COLUMN "id",
-ADD COLUMN     "uuid" UUID NOT NULL,
+ADD COLUMN     "uuid" UUID NOT NULL DEFAULT gen_random_uuid(),
 ADD CONSTRAINT "PurchaseOrderLineItem_pkey" PRIMARY KEY ("purchaseOrderId", "uuid");
+
+ALTER TABLE "PurchaseOrderLineItem" ALTER COLUMN "uuid" DROP DEFAULT;;
