@@ -403,6 +403,14 @@ function WorkOrderMoneySummary({
   );
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
+  let appliedDiscount = BigDecimal.ZERO;
+
+  if (calculatedDraftOrder) {
+    appliedDiscount = BigDecimal.fromMoney(calculatedDraftOrder.orderDiscount.applied).add(
+      BigDecimal.fromMoney(calculatedDraftOrder.lineItemDiscount.applied),
+    );
+  }
+
   const router = useRouter();
 
   return (
@@ -429,10 +437,13 @@ function WorkOrderMoneySummary({
               let value = `${createWorkOrder.discount.value}%`;
 
               if (calculatedDraftOrder) {
-                const amount = BigDecimal.fromMoney(calculatedDraftOrder.discount)
-                  .subtract(BigDecimal.fromMoney(calculatedDraftOrder.appliedDiscount))
-                  .toMoney();
-                value += ` (${currencyFormatter(amount)})`;
+                const discount = BigDecimal.fromMoney(calculatedDraftOrder.orderDiscount.total).add(
+                  BigDecimal.fromMoney(calculatedDraftOrder.lineItemDiscount.total),
+                );
+
+                const amount = discount.subtract(appliedDiscount);
+
+                value += ` (${currencyFormatter(amount.round(2).toMoney())})`;
               }
 
               return value;
@@ -442,15 +453,14 @@ function WorkOrderMoneySummary({
           })()}
           onFocus={() => router.push('DiscountSelector', { onSelect: discount => dispatch.setPartial({ discount }) })}
         />
-        {!!calculatedDraftOrder?.appliedDiscount &&
-          BigDecimal.fromMoney(calculatedDraftOrder?.appliedDiscount).compare(BigDecimal.ZERO) > 0 && (
-            <FormMoneyField
-              label={'Applied Discount'}
-              disabled
-              value={calculatedDraftOrder?.appliedDiscount ?? null}
-              formatter={formatter}
-            />
-          )}
+        {appliedDiscount.compare(BigDecimal.ZERO) > 0 && (
+          <FormMoneyField
+            label={'Applied Discount'}
+            disabled
+            value={appliedDiscount.round(2).toMoney()}
+            formatter={formatter}
+          />
+        )}
         <FormMoneyField
           label={'Subtotal'}
           disabled

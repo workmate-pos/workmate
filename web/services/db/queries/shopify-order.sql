@@ -12,13 +12,17 @@ FROM "ShopifyOrder"
 WHERE "orderId" IN :orderIds!;
 
 /* @name upsert */
-INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding, "fullyPaid")
-VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)
+INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", subtotal, discount, total, outstanding,
+                            "fullyPaid")
+VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :subtotal!, :discount!, :total!, :outstanding!,
+        :fullyPaid!)
 ON CONFLICT ("orderId") DO UPDATE
   SET shop         = EXCLUDED.shop,
       "orderType"  = EXCLUDED."orderType",
       name         = EXCLUDED.name,
       "customerId" = EXCLUDED."customerId",
+      subtotal     = EXCLUDED.subtotal,
+      discount     = EXCLUDED.discount,
       total        = EXCLUDED.total,
       outstanding  = EXCLUDED.outstanding,
       "fullyPaid"  = EXCLUDED."fullyPaid";

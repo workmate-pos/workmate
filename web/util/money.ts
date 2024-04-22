@@ -1,7 +1,7 @@
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 type BinaryBigDecimalOperation = {
-  [K in keyof BigDecimal]: BigDecimal[K] extends (b: BigDecimal) => BigDecimal ? K : never;
+  [K in keyof BigDecimal]: ((b: BigDecimal) => BigDecimal) extends BigDecimal[K] ? K : never;
 }[keyof BigDecimal];
 
 function binaryBigDecimalOperation<const O extends BinaryBigDecimalOperation>(operation: O) {

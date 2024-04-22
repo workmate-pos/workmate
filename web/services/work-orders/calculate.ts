@@ -4,10 +4,10 @@ import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services'
 import { gql } from '../gql/gql.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import {
-  getWorkOrderLineItems,
-  getCustomAttributeArrayFromObject,
   getChargeUnitPrice,
+  getCustomAttributeArrayFromObject,
   getWorkOrderAppliedDiscount,
+  getWorkOrderLineItems,
 } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
@@ -19,7 +19,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { decimalToMoney } from '../../util/decimal.js';
 import { evaluate } from '../../util/evaluate.js';
 import { getWorkOrderDepositedAmount, getWorkOrderDepositedReconciledAmount } from './get.js';
-import { addMoney, subtractMoney, ZERO_MONEY } from '../../util/money.js';
+import { addMoney, ZERO_MONEY } from '../../util/money.js';
 import { IGetDepositsResult, IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import {
   IGetFixedPriceLabourChargesResult,
@@ -30,14 +30,14 @@ import { getLineItemIdsByUuids } from './link-order-items.js';
 type CalculateWorkOrderResult = {
   outstanding: Money;
   paid: Money;
-  /**
-   * The total discount, including draft orders.
-   */
-  discount: Money;
-  /**
-   * The discount that has been applied so far.
-   */
-  appliedDiscount: Money;
+  orderDiscount: {
+    applied: Money;
+    total: Money;
+  };
+  lineItemDiscount: {
+    applied: Money;
+    total: Money;
+  };
   subtotal: Money;
   total: Money;
   tax: Money;
@@ -65,7 +65,8 @@ export async function calculateWorkOrder(
   const {
     hourlyLabourChargePrices: existingHourlyLabourChargePrices,
     fixedPriceLabourChargePrices: existingFixedPriceLabourChargePrices,
-    discount: existingDiscount,
+    orderDiscount: existingOrderDiscount,
+    lineItemDiscount: existingLineItemDiscount,
     tax: existingTax,
     total: existingTotal,
     paid: existingPaid,
@@ -91,7 +92,8 @@ export async function calculateWorkOrder(
   const {
     tax: newTax,
     subtotal: newSubtotal,
-    discount: newDiscount,
+    orderDiscount: newOrderDiscount,
+    lineItemDiscount: newLineItemDiscount,
     hourlyLabourChargePrices: newHourlyLabourChargePrices,
     fixedPriceLabourChargePrices: newFixedPriceLabourChargePrices,
     itemPrices: newItemPrices,
@@ -103,13 +105,17 @@ export async function calculateWorkOrder(
     discount: calculateWorkOrder.discount,
   });
 
-  console.log(calculateWorkOrder.discount, newDiscount);
-
   return {
     subtotal: addMoney(existingSubtotal, newSubtotal),
     tax: addMoney(existingTax, newTax),
-    discount: addMoney(existingDiscount, newDiscount),
-    appliedDiscount: existingDiscount,
+    orderDiscount: {
+      total: addMoney(existingOrderDiscount, newOrderDiscount),
+      applied: existingOrderDiscount,
+    },
+    lineItemDiscount: {
+      total: addMoney(existingLineItemDiscount, newLineItemDiscount),
+      applied: existingLineItemDiscount,
+    },
     paid: existingPaid,
     outstanding: addMoney(existingOutstanding, newTotal),
     total: addMoney(existingTotal, newTotal),
@@ -135,8 +141,8 @@ async function calculateDatabaseOrders(session: Session, calculateWorkOrder: Cal
       subtotal: ZERO_MONEY,
       paid: ZERO_MONEY,
       outstanding: ZERO_MONEY,
-      discount: ZERO_MONEY,
-      appliedDiscount: ZERO_MONEY,
+      orderDiscount: ZERO_MONEY,
+      lineItemDiscount: ZERO_MONEY,
       itemPrices: {},
       fixedPriceLabourChargePrices: {},
       hourlyLabourChargePrices: {},
@@ -183,10 +189,10 @@ async function calculateDatabaseOrders(session: Session, calculateWorkOrder: Cal
         unitPrice: lineItem.unitPrice,
         discountedUnitPrice: lineItem.discountedUnitPrice,
         order: {
+          subtotal: order.subtotal,
+          discount: order.discount,
           total: order.total,
           outstanding: order.outstanding,
-          // TODO: Include discount here xd
-          discount: ZERO_MONEY,
         },
       };
     }),
@@ -209,7 +215,8 @@ async function calculateDraftOrder(
       total: ZERO_MONEY,
       tax: ZERO_MONEY,
       subtotal: ZERO_MONEY,
-      discount: ZERO_MONEY,
+      orderDiscount: ZERO_MONEY,
+      lineItemDiscount: ZERO_MONEY,
       itemPrices: {},
       fixedPriceLabourChargePrices: {},
       hourlyLabourChargePrices: {},
@@ -234,8 +241,6 @@ async function calculateDraftOrder(
       }
     : { depositedAmount: ZERO_MONEY, depositedReconciledAmount: ZERO_MONEY };
 
-  const appliedDiscount = getWorkOrderAppliedDiscount(discount, deposit);
-
   const graphql = new Graphql(session);
 
   const result = await gql.draftOrder.calculate
@@ -255,7 +260,7 @@ async function calculateDraftOrder(
             taxable: customSale.taxable,
           })),
         ],
-        appliedDiscount,
+        appliedDiscount: getWorkOrderAppliedDiscount(discount, deposit),
       },
     })
     .then(r => r.draftOrderCalculate);
@@ -270,12 +275,9 @@ async function calculateDraftOrder(
     lineItems: baseCalculatedLineItems,
     totalTaxSet,
     totalPriceSet,
-    appliedDiscount: calculatedAppliedDiscount,
+    subtotalPriceSet,
+    appliedDiscount,
   } = result.calculatedDraftOrder;
-
-  console.log('calculated', calculatedAppliedDiscount);
-
-  const total = decimalToMoney(totalPriceSet.shopMoney.amount);
 
   // calculateDraftOrder does not do line-item-level tax, so we just divide the total tax uniformly over all taxable line items
   let totalTaxable = BigDecimal.sum(
@@ -310,11 +312,10 @@ async function calculateDraftOrder(
     unitPrice: decimalToMoney(li.originalUnitPriceSet.shopMoney.amount),
     discountedUnitPrice: decimalToMoney(li.discountedUnitPriceSet.shopMoney.amount),
     order: {
-      outstanding: total,
-      total,
-      discount: calculatedAppliedDiscount
-        ? decimalToMoney(calculatedAppliedDiscount.amountSet.shopMoney.amount)
-        : ZERO_MONEY,
+      subtotal: subtotalPriceSet.shopMoney.amount,
+      discount: appliedDiscount?.amountSet?.shopMoney?.amount ?? ZERO_MONEY,
+      outstanding: totalPriceSet.shopMoney.amount,
+      total: totalPriceSet.shopMoney.amount,
     },
     customAttributes: li.customAttributes,
   }));
@@ -323,7 +324,7 @@ async function calculateDraftOrder(
   const lineItemIdByHourlyChargeUuid = getLineItemIdsByUuids(calculatedLineItems, 'hourly');
   const lineItemIdByFixedPriceChargeUuid = getLineItemIdsByUuids(calculatedLineItems, 'fixed');
 
-  const calculation = calculateLineItems({
+  return calculateLineItems({
     lineItems: calculatedLineItems,
     items: items.map(item => ({
       uuid: item.uuid,
@@ -340,14 +341,6 @@ async function calculateDraftOrder(
     })),
     deposits: [],
   });
-
-  const appliedDiscountAmount = calculatedAppliedDiscount?.amountSet.shopMoney.amount;
-  if (appliedDiscountAmount) {
-    calculation.discount = addMoney(calculation.discount, decimalToMoney(appliedDiscountAmount));
-    calculation.total = subtractMoney(calculation.total, decimalToMoney(appliedDiscountAmount));
-  }
-
-  return calculation;
 }
 
 type LineItem = {
@@ -357,9 +350,10 @@ type LineItem = {
   discountedUnitPrice: string;
   quantity: number;
   order: {
+    subtotal: string;
+    discount: string;
     total: string;
     outstanding: string;
-    discount: string;
   };
 };
 
@@ -367,9 +361,6 @@ type LineItem = {
  * Central logic for calculating work order price information.
  * Expects to receive a list of all work order items/charges/deposits, as well as a list of line items to use for computation.
  * These line items can be from real orders, calculated draft orders, or from the database.
- *
- * Does not handle order-level discounts unless they are already calculated into the discountedUnitPriceSet.
- * This is currently only the case for orders (not draft orders nor calculated draft orders).
  */
 function calculateLineItems({
   items,
@@ -388,7 +379,8 @@ function calculateLineItems({
   let tax = BigDecimal.ZERO;
   let total = BigDecimal.ZERO;
   let paid = BigDecimal.ZERO;
-  let discount = BigDecimal.ZERO;
+  let orderLevelDiscount = BigDecimal.ZERO;
+  let lineItemLevelDiscount = BigDecimal.ZERO;
 
   const itemPrices: Record<string, Money> = {};
   const hourlyLabourChargePrices: Record<string, Money> = {};
@@ -406,21 +398,40 @@ function calculateLineItems({
     const discountedTaxedTotal = BigDecimal.fromMoney(lineItem.totalTax).add(discountedTotal);
     const lineItemDiscount = discountedTotal.subtract(originalTotal);
 
-    discount = discount.add(lineItemDiscount);
+    lineItemLevelDiscount = lineItemLevelDiscount.add(lineItemDiscount);
     subtotal = subtotal.add(discountedTotal);
     tax = tax.add(BigDecimal.fromMoney(lineItem.totalTax));
     total = total.add(discountedTaxedTotal);
 
     // to compute how much of this line item has been paid, we simply take the % of the order paid, and multiply it by the % of the order's total that is this line item's price
     const { order } = lineItem;
+    assertMoney(order.subtotal);
+    assertMoney(order.discount);
     assertMoney(order.total);
     assertMoney(order.outstanding);
-    assertMoney(order.discount);
 
+    const orderSubtotal = BigDecimal.fromMoney(order.subtotal);
+    const orderDiscount = BigDecimal.fromMoney(order.discount);
     const orderOutstanding = BigDecimal.fromMoney(order.outstanding);
     const orderTotal = BigDecimal.fromMoney(order.total);
 
-    // line item paid = (line item $ / order $) * order % paid
+    // if the order has an order-level discount, we want to account for that here
+    // order level discount applying to this line item = (line item $ / order subtotal) * order discount
+    const orderDiscountFactor = evaluate(() => {
+      // order-level discounts are applied on the subtotal (important for tax reasons)
+      if (orderSubtotal.equals(BigDecimal.ZERO)) return BigDecimal.ZERO;
+      return discountedTotal.divide(orderSubtotal.add(orderDiscount));
+    });
+    console.log(
+      orderLevelDiscount.toMoney(),
+      orderDiscount.toMoney(),
+      orderDiscountFactor.toMoney(),
+      discountedTotal.toMoney(),
+      orderSubtotal.toMoney(),
+    );
+    orderLevelDiscount = orderLevelDiscount.add(orderDiscount.multiply(orderDiscountFactor));
+
+    // line item paid = (line item $ / order total) * order % paid
     const orderPaid = orderTotal.subtract(orderOutstanding);
     const orderPaidFactor = evaluate(() => {
       if (orderTotal.equals(BigDecimal.ZERO)) return BigDecimal.ONE;
@@ -507,12 +518,14 @@ function calculateLineItems({
     }
   }
 
+  total = total.subtract(orderLevelDiscount);
   const outstanding = total.subtract(paid);
 
-  console.log(discount);
+  console.log(orderLevelDiscount, lineItemLevelDiscount);
 
   return {
-    discount: discount.toMoney(),
+    orderDiscount: orderLevelDiscount.toMoney(),
+    lineItemDiscount: lineItemLevelDiscount.toMoney(),
     subtotal: subtotal.toMoney(),
     tax: tax.toMoney(),
     total: total.toMoney(),

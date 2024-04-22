@@ -12,12 +12,14 @@ export interface IGetParams {
 export interface IGetResult {
   createdAt: Date;
   customerId: string | null;
+  discount: string;
   fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
   outstanding: string;
   shop: string;
+  subtotal: string;
   total: string;
   updatedAt: Date;
 }
@@ -50,12 +52,14 @@ export interface IGetManyParams {
 export interface IGetManyResult {
   createdAt: Date;
   customerId: string | null;
+  discount: string;
   fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
   outstanding: string;
   shop: string;
+  subtotal: string;
   total: string;
   updatedAt: Date;
 }
@@ -82,12 +86,14 @@ export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyI
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
   customerId?: string | null | void;
+  discount: string;
   fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
   outstanding: string;
   shop: string;
+  subtotal: string;
   total: string;
 }
 
@@ -100,18 +106,22 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":true,"name":true,"customerId":true,"total":true,"outstanding":true,"fullyPaid":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":119,"b":127}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":130,"b":135}]},{"name":"orderType","required":true,"transform":{"type":"scalar"},"locs":[{"a":138,"b":148}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":151,"b":156}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":159,"b":169}]},{"name":"total","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":178}]},{"name":"outstanding","required":true,"transform":{"type":"scalar"},"locs":[{"a":181,"b":193}]},{"name":"fullyPaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":196,"b":206}]}],"statement":"INSERT INTO \"ShopifyOrder\" (\"orderId\", shop, \"orderType\", name, \"customerId\", total, outstanding, \"fullyPaid\")\nVALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)\nON CONFLICT (\"orderId\") DO UPDATE\n  SET shop         = EXCLUDED.shop,\n      \"orderType\"  = EXCLUDED.\"orderType\",\n      name         = EXCLUDED.name,\n      \"customerId\" = EXCLUDED.\"customerId\",\n      total        = EXCLUDED.total,\n      outstanding  = EXCLUDED.outstanding,\n      \"fullyPaid\"  = EXCLUDED.\"fullyPaid\""};
+const upsertIR: any = {"usedParamSet":{"orderId":true,"shop":true,"orderType":true,"name":true,"customerId":true,"subtotal":true,"discount":true,"total":true,"outstanding":true,"fullyPaid":true},"params":[{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":167,"b":175}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":178,"b":183}]},{"name":"orderType","required":true,"transform":{"type":"scalar"},"locs":[{"a":186,"b":196}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":199,"b":204}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":207,"b":217}]},{"name":"subtotal","required":true,"transform":{"type":"scalar"},"locs":[{"a":220,"b":229}]},{"name":"discount","required":true,"transform":{"type":"scalar"},"locs":[{"a":232,"b":241}]},{"name":"total","required":true,"transform":{"type":"scalar"},"locs":[{"a":244,"b":250}]},{"name":"outstanding","required":true,"transform":{"type":"scalar"},"locs":[{"a":253,"b":265}]},{"name":"fullyPaid","required":true,"transform":{"type":"scalar"},"locs":[{"a":276,"b":286}]}],"statement":"INSERT INTO \"ShopifyOrder\" (\"orderId\", shop, \"orderType\", name, \"customerId\", subtotal, discount, total, outstanding,\n                            \"fullyPaid\")\nVALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :subtotal!, :discount!, :total!, :outstanding!,\n        :fullyPaid!)\nON CONFLICT (\"orderId\") DO UPDATE\n  SET shop         = EXCLUDED.shop,\n      \"orderType\"  = EXCLUDED.\"orderType\",\n      name         = EXCLUDED.name,\n      \"customerId\" = EXCLUDED.\"customerId\",\n      subtotal     = EXCLUDED.subtotal,\n      discount     = EXCLUDED.discount,\n      total        = EXCLUDED.total,\n      outstanding  = EXCLUDED.outstanding,\n      \"fullyPaid\"  = EXCLUDED.\"fullyPaid\""};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", total, outstanding, "fullyPaid")
- * VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :total!, :outstanding!, :fullyPaid!)
+ * INSERT INTO "ShopifyOrder" ("orderId", shop, "orderType", name, "customerId", subtotal, discount, total, outstanding,
+ *                             "fullyPaid")
+ * VALUES (:orderId!, :shop!, :orderType!, :name!, :customerId, :subtotal!, :discount!, :total!, :outstanding!,
+ *         :fullyPaid!)
  * ON CONFLICT ("orderId") DO UPDATE
  *   SET shop         = EXCLUDED.shop,
  *       "orderType"  = EXCLUDED."orderType",
  *       name         = EXCLUDED.name,
  *       "customerId" = EXCLUDED."customerId",
+ *       subtotal     = EXCLUDED.subtotal,
+ *       discount     = EXCLUDED.discount,
  *       total        = EXCLUDED.total,
  *       outstanding  = EXCLUDED.outstanding,
  *       "fullyPaid"  = EXCLUDED."fullyPaid"
@@ -322,12 +332,14 @@ export interface IGetLinkedOrdersByWorkOrderIdParams {
 export interface IGetLinkedOrdersByWorkOrderIdResult {
   createdAt: Date;
   customerId: string | null;
+  discount: string;
   fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
   outstanding: string;
   shop: string;
+  subtotal: string;
   total: string;
   updatedAt: Date;
 }
@@ -371,12 +383,14 @@ export interface IGetLinkedOrdersByPurchaseOrderIdParams {
 export interface IGetLinkedOrdersByPurchaseOrderIdResult {
   createdAt: Date;
   customerId: string | null;
+  discount: string;
   fullyPaid: boolean;
   name: string;
   orderId: string;
   orderType: ShopifyOrderType;
   outstanding: string;
   shop: string;
+  subtotal: string;
   total: string;
   updatedAt: Date;
 }

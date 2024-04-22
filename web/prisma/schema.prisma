@@ -194,6 +194,10 @@ model ShopifyOrder {
   customerId String?
 
   total       String
+  // Before taxes and discounts
+  subtotal    String
+  // Order-level discount amount
+  discount    String
   outstanding String
   fullyPaid   Boolean
 

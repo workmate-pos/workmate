@@ -154,6 +154,12 @@ fragment DatabaseShopifyOrderFragment on Order {
   customer {
     id
   }
+  currentSubtotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentCartDiscountAmountSet {
+    ...ShopMoneyAmountFragment
+  }
   currentTotalPriceSet {
     ...ShopMoneyAmountFragment
   }
@@ -178,7 +184,7 @@ fragment DatabaseShopifyOrderLineItemFragment on LineItem {
   originalUnitPriceSet {
     ...ShopMoneyAmountFragment
   }
-  discountedUnitPriceSet: discountedUnitPriceAfterAllDiscountsSet {
+  discountedUnitPriceSet {
     ...ShopMoneyAmountFragment
   }
   taxLines {

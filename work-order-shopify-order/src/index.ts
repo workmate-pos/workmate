@@ -347,7 +347,7 @@ type DiscountType = 'FIXED_AMOUNT' | 'PERCENTAGE';
 type Discount = { type: DiscountType; value: string };
 type AppliedDiscount = { title: string | null; valueType: DiscountType; value: number };
 
-// TODO: Get shopify to allow 2 order-level discounts (!!!) Currently when you apply a discount, the deposit will no longer work
+// TODO: Get shopify to allow 2 order-level discounts (!!!) Currently when you apply a deposit, the discount will no longer work
 export function getWorkOrderAppliedDiscount(
   discount: Discount | null,
   { depositedAmount, depositedReconciledAmount }: { depositedAmount: Money; depositedReconciledAmount: Money },

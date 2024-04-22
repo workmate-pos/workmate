@@ -34,14 +34,15 @@ export async function getWorkOrderTemplateData(
   workOrderName: string,
   clientDate: string,
 ): Promise<WorkOrderTemplateData> {
-  // TODO: Let calculatedraftorder carry the majority of this function. Make it support individual item/charge prices and just fetch the remaining details here
-  const { paid, outstanding } = await calculateWorkOrder(session, {
-    name: workOrderName,
-    charges: [],
-    items: [],
-    customerId: null,
-    discount: null,
-  });
+  // TODO: Let calculatedraftorder carry the majority of this function. Make it support individual item/charge prices and just fetch the remaining details here - dont do fullyPaid etc anymore
+  const { paid, outstanding, hourlyLabourChargePrices, fixedPriceLabourChargePrices, itemPrices } =
+    await calculateWorkOrder(session, {
+      name: workOrderName,
+      charges: [],
+      items: [],
+      customerId: null,
+      discount: null,
+    });
 
   const {
     shopifyOrderLineItemsByLineItemId,

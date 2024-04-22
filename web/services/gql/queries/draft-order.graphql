@@ -13,13 +13,16 @@ fragment CalculatedDraftOrderFragment on CalculatedDraftOrder {
   totalTaxSet {
     ...ShopMoneyAmountFragment
   }
-  totalPriceSet {
+  subtotalPriceSet {
     ...ShopMoneyAmountFragment
   }
   appliedDiscount {
     amountSet {
       ...ShopMoneyAmountFragment
     }
+  }
+  totalPriceSet {
+    ...ShopMoneyAmountFragment
   }
   lineItems {
     quantity
@@ -209,6 +212,14 @@ fragment DatabaseShopifyOrderFragment on DraftOrder {
   customAttributes {
     key
     value
+  }
+  subtotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  appliedDiscount {
+    amountSet {
+      ...ShopMoneyAmountFragment
+    }
   }
   totalPriceSet {
     ...ShopMoneyAmountFragment

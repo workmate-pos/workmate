@@ -10,6 +10,7 @@ import { linkWorkOrderItemsAndChargesAndDeposits } from '../work-orders/link-ord
 import { ensureCustomersExist } from '../customer/sync.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unit } from '../db/unit-of-work.js';
+import { ZERO_MONEY } from '../../util/money.js';
 
 export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[]) {
   if (orderIds.length === 0) {
@@ -79,7 +80,15 @@ export async function syncShopifyOrders(session: Session, ids: ID[]) {
 }
 
 async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrderFragment.Result) {
-  const { id: orderId, name, currentTotalPriceSet, totalOutstandingSet, fullyPaid } = order;
+  const {
+    id: orderId,
+    name,
+    currentTotalPriceSet,
+    currentSubtotalPriceSet,
+    currentCartDiscountAmountSet,
+    totalOutstandingSet,
+    fullyPaid,
+  } = order;
 
   if (order.customer) {
     await ensureCustomersExist(session, [order.customer.id]);
@@ -93,6 +102,8 @@ async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrd
       orderType: 'ORDER',
       customerId: order.customer?.id ?? null,
       outstanding: totalOutstandingSet.shopMoney.amount,
+      subtotal: currentSubtotalPriceSet.shopMoney.amount,
+      discount: currentCartDiscountAmountSet.shopMoney.amount,
       total: currentTotalPriceSet.shopMoney.amount,
       fullyPaid,
     });
@@ -101,7 +112,7 @@ async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrd
 }
 
 async function upsertDraftOrder(session: Session, draftOrder: gql.draftOrder.DatabaseShopifyOrderFragment.Result) {
-  const { id: orderId, name, totalPriceSet } = draftOrder;
+  const { id: orderId, name, subtotalPriceSet, appliedDiscount, totalPriceSet } = draftOrder;
 
   if (draftOrder.customer) {
     await ensureCustomersExist(session, [draftOrder.customer.id]);
@@ -115,6 +126,8 @@ async function upsertDraftOrder(session: Session, draftOrder: gql.draftOrder.Dat
       orderType: 'DRAFT_ORDER',
       customerId: draftOrder.customer?.id ?? null,
       outstanding: totalPriceSet.shopMoney.amount,
+      subtotal: subtotalPriceSet.shopMoney.amount,
+      discount: appliedDiscount?.amountSet?.shopMoney?.amount ?? ZERO_MONEY,
       total: totalPriceSet.shopMoney.amount,
       fullyPaid: false,
     });
