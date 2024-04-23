@@ -202,8 +202,11 @@ const DEPOSIT_UUID_CUSTOM_ATTRIBUTE_PREFIX = '_wm_deposit:';
 const DEPOSIT_DISCOUNT_NAME = 'Deposit';
 export const WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = 'Work Order';
 
-export function getWorkOrderOrderCustomAttributes(workOrder: { name: string }) {
-  return { [WORK_ORDER_CUSTOM_ATTRIBUTE_NAME]: workOrder.name };
+export function getWorkOrderOrderCustomAttributes(workOrder: { name: string; customFields: Record<string, string> }) {
+  return {
+    ...workOrder.customFields,
+    [WORK_ORDER_CUSTOM_ATTRIBUTE_NAME]: workOrder.name,
+  };
 }
 
 function getChargeCustomAttributes(

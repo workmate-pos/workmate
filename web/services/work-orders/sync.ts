@@ -39,6 +39,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
     throw new Error(`Work order with id ${workOrderId} not found`);
   }
 
+  const customFields = await db.workOrder.getCustomFields({ workOrderId });
   const items = await db.workOrder.getItems({ workOrderId });
   const hourlyLabourCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
   const fixedPriceLabourCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
@@ -63,63 +64,91 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
     return false;
   };
 
+  const graphql = new Graphql(session);
+
   const draftItems = items.filter(draftLineItemFilter);
   const draftHourlyLabourCharges = hourlyLabourCharges.filter(draftLineItemFilter);
   const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(draftLineItemFilter);
 
-  if (draftItems.length === 0 && draftHourlyLabourCharges.length === 0 && draftFixedPriceLabourCharges.length === 0) {
-    return;
+  const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
+
+  const shouldRecreateDraftOrder =
+    draftItems.length !== 0 || draftHourlyLabourCharges.length !== 0 || draftFixedPriceLabourCharges.length !== 0;
+
+  if (shouldRecreateDraftOrder) {
+    const { lineItems, customSales } = getWorkOrderLineItems(
+      draftItems,
+      draftHourlyLabourCharges,
+      draftFixedPriceLabourCharges,
+      { labourSku: labourLineItemSKU },
+    );
+
+    const workOrderDiscount = getWorkOrderDiscount(workOrder);
+    const depositedAmount = await getWorkOrderDepositedAmount(workOrderId);
+    const depositedReconciledAmount = await getWorkOrderDepositedReconciledAmount(workOrderId);
+
+    const appliedDiscount = getWorkOrderAppliedDiscount(workOrderDiscount, {
+      depositedAmount,
+      depositedReconciledAmount,
+    });
+
+    assertGid(workOrder.customerId);
+
+    const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(({ orderId }) => {
+      assertGid(orderId);
+      return orderId;
+    });
+
+    if (draftOrderIds.length > 0) {
+      await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
+    }
+
+    await gql.draftOrder.create.run(graphql, {
+      input: {
+        customAttributes: getCustomAttributeArrayFromObject(
+          getWorkOrderOrderCustomAttributes({
+            name: workOrder.name,
+            customFields: Object.fromEntries(customFields.map(({ key, value }) => [key, value])),
+          }),
+        ),
+        lineItems: [
+          ...lineItems.map(lineItem => ({
+            variantId: lineItem.productVariantId,
+            quantity: lineItem.quantity,
+            customAttributes: getCustomAttributeArrayFromObject(lineItem.customAttributes),
+          })),
+          ...customSales.map(customSale => ({
+            title: customSale.title,
+            quantity: customSale.quantity,
+            customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
+            originalUnitPrice: customSale.unitPrice,
+            taxable: customSale.taxable,
+          })),
+        ],
+        note: workOrder.note,
+        purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
+        appliedDiscount,
+      },
+    });
   }
 
-  const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
-  const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(({ orderId }) => {
-    assertGid(orderId);
-    return orderId;
-  });
+  if (workOrderHasChanged) {
+    await Promise.all(
+      linkedOrders.filter(hasPropertyValue('orderType', 'ORDER')).map(order => {
+        assertGid(order.orderId);
 
-  const { lineItems, customSales } = getWorkOrderLineItems(
-    draftItems,
-    draftHourlyLabourCharges,
-    draftFixedPriceLabourCharges,
-    { labourSku: labourLineItemSKU },
-  );
-
-  const workOrderDiscount = getWorkOrderDiscount(workOrder);
-  const depositedAmount = await getWorkOrderDepositedAmount(workOrderId);
-  const depositedReconciledAmount = await getWorkOrderDepositedReconciledAmount(workOrderId);
-
-  const appliedDiscount = getWorkOrderAppliedDiscount(workOrderDiscount, {
-    depositedAmount,
-    depositedReconciledAmount,
-  });
-
-  assertGid(workOrder.customerId);
-
-  const graphql = new Graphql(session);
-  await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
-
-  await gql.draftOrder.create.run(graphql, {
-    input: {
-      customAttributes: getCustomAttributeArrayFromObject(getWorkOrderOrderCustomAttributes(workOrder)),
-      lineItems: [
-        ...lineItems.map(lineItem => ({
-          variantId: lineItem.productVariantId,
-          quantity: lineItem.quantity,
-          customAttributes: getCustomAttributeArrayFromObject(lineItem.customAttributes),
-        })),
-        ...customSales.map(customSale => ({
-          title: customSale.title,
-          quantity: customSale.quantity,
-          customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
-          originalUnitPrice: customSale.unitPrice,
-          taxable: customSale.taxable,
-        })),
-      ],
-      note: workOrder.note,
-      purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
-      appliedDiscount,
-    },
-  });
+        return gql.order.updateCustomAttributes.run(graphql, {
+          id: order.orderId,
+          customAttributes: getCustomAttributeArrayFromObject(
+            getWorkOrderOrderCustomAttributes({
+              name: workOrder.name,
+              customFields: Object.fromEntries(customFields.map(({ key, value }) => [key, value])),
+            }),
+          ),
+        });
+      }),
+    );
+  }
 }
 
 function isLineItemId(id: string | null): id is ID {

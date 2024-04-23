@@ -83,6 +83,7 @@ export function PaymentOverview({ name }: { name: string }) {
 
     paymentHandler.handlePayment({
       workOrderName: workOrder.name,
+      customFields: workOrder.customFields,
       items: selectedItems,
       charges: selectedCharges,
       customerId: workOrder.customerId,

@@ -38,7 +38,12 @@ export const usePaymentHandler = () => {
     setIsLoading(true);
 
     await cart.clearCart();
-    await cart.addCartProperties(getWorkOrderOrderCustomAttributes({ name: workOrderName }));
+    await cart.addCartProperties(
+      getWorkOrderOrderCustomAttributes({
+        name: workOrderName,
+        customFields: {},
+      }),
+    );
     await cart.setCustomer({ id: Number(parseGid(customerId).id) });
 
     const { quantity, title, unitPrice, taxable, customAttributes } = getDepositCustomSale({
@@ -60,6 +65,7 @@ export const usePaymentHandler = () => {
 
   const handlePayment = async ({
     workOrderName,
+    customFields,
     items,
     charges,
     customerId,
@@ -69,6 +75,8 @@ export const usePaymentHandler = () => {
     depositedReconciledAmount,
   }: {
     workOrderName: string;
+    // TODO: Maybe fetch the work order directly in here?
+    customFields: Record<string, string>;
     items: WorkOrderItem[];
     charges: DiscriminatedUnionOmit<WorkOrderCharge, 'shopifyOrderLineItem'>[];
     customerId: ID;
@@ -86,13 +94,16 @@ export const usePaymentHandler = () => {
       items,
       charges.filter(hasPropertyValue('type', 'hourly-labour')),
       charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
-      // TODO: Include discount here as well
-      // TODO !!!
       { labourSku },
     );
 
     await cart.clearCart();
-    await cart.addCartProperties(getWorkOrderOrderCustomAttributes({ name: workOrderName }));
+    await cart.addCartProperties(
+      getWorkOrderOrderCustomAttributes({
+        name: workOrderName,
+        customFields,
+      }),
+    );
     await cart.setCustomer({ id: Number(parseGid(customerId).id) });
 
     for (const { quantity, title, unitPrice, taxable } of customSales) {

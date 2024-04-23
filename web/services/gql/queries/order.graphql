@@ -197,3 +197,12 @@ fragment DatabaseShopifyOrderLineItemFragment on LineItem {
     value
   }
 }
+
+mutation updateCustomAttributes($id: ID!, $customAttributes: [AttributeInput!]!) {
+  orderUpdate(input: {id: $id, customAttributes: $customAttributes}) {
+    userErrors {
+      field
+      message
+    }
+  }
+}
