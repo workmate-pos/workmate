@@ -34,6 +34,7 @@ import { AddProductModal } from '@web/frontend/components/purchase-orders/modals
 import { AddOrderProductModal } from '@web/frontend/components/purchase-orders/modals/AddOrderProductModal.js';
 import { Int } from '@web/schemas/generated/create-product.js';
 import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 export default function () {
   return (
@@ -63,6 +64,7 @@ function PurchaseOrderLoader() {
   );
 
   const settingsQuery = useSettingsQuery({ fetch });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
 
   const app = useAppBridge();
   if (!name) {
@@ -85,7 +87,7 @@ function PurchaseOrderLoader() {
     );
   }
 
-  if ((name !== 'new' && !purchaseOrderQuery.data) || !settingsQuery.data) {
+  if ((name !== 'new' && !purchaseOrderQuery.data) || !settingsQuery.data || !customFieldsPresetsQuery.data) {
     return (
       <>
         <Loading />
@@ -94,17 +96,26 @@ function PurchaseOrderLoader() {
     );
   }
 
+  let createPurchaseOrder;
+
+  if (purchaseOrderQuery.data) {
+    createPurchaseOrder = createPurchaseOrderFromPurchaseOrder(purchaseOrderQuery.data);
+  } else {
+    const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
+    createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
+
+    const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
+    const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
+
+    createPurchaseOrder.customFields = {
+      ...Object.fromEntries(defaultCustomFieldKeys.map(key => [key, ''])),
+      ...createPurchaseOrder.customFields,
+    };
+  }
+
   return (
     <>
-      <PurchaseOrder
-        initialCreatePurchaseOrder={{
-          ...defaultCreatePurchaseOrder({
-            status: settingsQuery.data.settings.defaultPurchaseOrderStatus,
-          }),
-          ...(purchaseOrderQuery.data ? createPurchaseOrderFromPurchaseOrder(purchaseOrderQuery.data) : {}),
-        }}
-        purchaseOrder={purchaseOrderQuery.data ?? null}
-      />
+      <PurchaseOrder initialCreatePurchaseOrder={createPurchaseOrder} purchaseOrder={purchaseOrderQuery.data ?? null} />
       {toast}
     </>
   );

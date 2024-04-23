@@ -41,6 +41,7 @@ type CalculateWorkOrderResult = {
   subtotal: Money;
   total: Money;
   tax: Money;
+  // TODO: Need unit price for items, and discounted and original prices
   itemPrices: Record<string, Money>;
   hourlyLabourChargePrices: Record<string, Money>;
   fixedPriceLabourChargePrices: Record<string, Money>;
@@ -422,13 +423,6 @@ function calculateLineItems({
       if (orderSubtotal.equals(BigDecimal.ZERO)) return BigDecimal.ZERO;
       return discountedTotal.divide(orderSubtotal.add(orderDiscount));
     });
-    console.log(
-      orderLevelDiscount.toMoney(),
-      orderDiscount.toMoney(),
-      orderDiscountFactor.toMoney(),
-      discountedTotal.toMoney(),
-      orderSubtotal.toMoney(),
-    );
     orderLevelDiscount = orderLevelDiscount.add(orderDiscount.multiply(orderDiscountFactor));
 
     // line item paid = (line item $ / order total) * order % paid
@@ -520,8 +514,6 @@ function calculateLineItems({
 
   total = total.subtract(orderLevelDiscount);
   const outstanding = total.subtract(paid);
-
-  console.log(orderLevelDiscount, lineItemLevelDiscount);
 
   return {
     orderDiscount: orderLevelDiscount.toMoney(),
