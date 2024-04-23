@@ -2,7 +2,6 @@ import {
   Badge,
   Card,
   EmptyState,
-  FiltersProps,
   Frame,
   IndexFilters,
   IndexFiltersMode,

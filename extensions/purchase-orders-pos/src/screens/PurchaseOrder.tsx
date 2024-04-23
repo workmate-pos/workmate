@@ -260,7 +260,7 @@ export function PurchaseOrder({
               }}
             />
 
-            {Object.entries(createPurchaseOrder.customFields).map(([key, value], i) => (
+            {Object.entries(createPurchaseOrder.customFields).map(([key, value]) => (
               <FormStringField
                 key={key}
                 label={key}

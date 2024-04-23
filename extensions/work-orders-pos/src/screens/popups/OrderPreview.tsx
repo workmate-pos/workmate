@@ -122,14 +122,13 @@ export function OrderPreview({
         </Stack>
         <Grid columns={4}>
           {orderInfo.map(
-            ({ label, value, large }, i) =>
+            ({ label, value, large }) =>
               !large && <TextField key={label} label={label} disabled={true} value={value} />,
           )}
         </Grid>
         <Grid columns={1}>
           {orderInfo.map(
-            ({ label, value, large }, i) =>
-              large && <TextArea key={label} label={label} disabled={true} value={value} />,
+            ({ label, value, large }) => large && <TextArea key={label} label={label} disabled={true} value={value} />,
           )}
         </Grid>
         <List

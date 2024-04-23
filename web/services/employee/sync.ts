@@ -5,7 +5,6 @@ import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unit } from '../db/unit-of-work.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { hasReadUsersScope } from '../shop.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 

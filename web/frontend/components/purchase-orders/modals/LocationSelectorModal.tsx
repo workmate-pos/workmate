@@ -4,7 +4,7 @@ import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
-import { Box, Filters, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
+import { Filters, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 
 export function LocationSelectorModal({
   open,

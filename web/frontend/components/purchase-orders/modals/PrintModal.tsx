@@ -3,7 +3,7 @@ import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { usePurchaseOrderPrintJobMutation } from '@work-orders/common/queries/use-purchase-order-print-job-mutation.js';
-import { Box, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
+import { Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 
 export function PrintModal({
   createPurchaseOrder,

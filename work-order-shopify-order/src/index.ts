@@ -1,7 +1,7 @@
 // TODO: Move to common
 
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { BigDecimal, Decimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { groupByKey } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
