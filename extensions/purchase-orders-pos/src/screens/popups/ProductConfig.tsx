@@ -129,12 +129,12 @@ export function ProductConfig({
             <Stack direction={'horizontal'} flex={1} flexChildren paddingVertical={'Medium'}>
               <ResponsiveGrid columns={2}>
                 {inventoryLevel?.quantities?.flatMap(({ name, quantity }) => [
-                  <Stack direction={'horizontal'} alignment={'center'}>
+                  <Stack key={`${name}-title`} direction={'horizontal'} alignment={'center'}>
                     <Text variant="body" color="TextSubdued">
                       {titleCase(name)}
                     </Text>
                   </Stack>,
-                  <Stack direction={'horizontal'} alignment={'center'}>
+                  <Stack key={`${name}-quantity`} direction={'horizontal'} alignment={'center'}>
                     <Text variant="body" color="TextSubdued">
                       {quantity}
                     </Text>

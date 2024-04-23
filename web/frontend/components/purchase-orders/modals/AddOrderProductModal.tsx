@@ -102,7 +102,9 @@ export function AddOrderProductModal({
                   )}
                   <InlineStack gap={'200'}>
                     {order.workOrders.map(wo => (
-                      <Badge tone={'info'}>{wo.name}</Badge>
+                      <Badge key={wo.name} tone={'info'}>
+                        {wo.name}
+                      </Badge>
                     ))}
                   </InlineStack>
                 </BlockStack>

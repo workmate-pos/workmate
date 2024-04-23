@@ -56,9 +56,9 @@ export async function syncProductVariants(session: Session, productVariantIds: I
     await upsertProductVariants(productVariants).catch(error => errors.push(error));
   });
 
-  if (productVariants.length !== productVariants.length) {
+  if (productVariants.length !== productVariantIds.length) {
     errors.push(
-      new Error(`Some product variants were not found (${productVariants.length}/${productVariants.length})`),
+      new Error(`Some product variants were not found (${productVariants.length}/${productVariantIds.length})`),
     );
   }
 

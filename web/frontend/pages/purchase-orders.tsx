@@ -40,8 +40,6 @@ function PurchaseOrders() {
 
   const [query, setQuery, internalQuery] = useDebouncedState('');
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
-  const [filters, setFilters] = useState<FiltersProps['filters']>([]);
-  const [appliedFilters, setAppliedFilters] = useState<FiltersProps['appliedFilters']>([]);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -72,8 +70,8 @@ function PurchaseOrders() {
       <IndexFilters
         mode={mode}
         setMode={setMode}
-        filters={filters}
-        appliedFilters={appliedFilters}
+        filters={[]}
+        appliedFilters={[]}
         onQueryChange={query => setQuery(query)}
         onQueryClear={() => setQuery('', true)}
         queryValue={internalQuery}

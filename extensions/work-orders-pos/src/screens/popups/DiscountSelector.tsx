@@ -53,7 +53,7 @@ export function DiscountSelector({ onSelect }: { onSelect: (discount: CreateWork
           </Stack>
 
           <ResponsiveGrid columns={3}>
-            {shortcutButtons.map(shortcut => {
+            {shortcutButtons.map((shortcut, i) => {
               let title = '';
 
               if (shortcut.type === 'PERCENTAGE') {
@@ -64,6 +64,7 @@ export function DiscountSelector({ onSelect }: { onSelect: (discount: CreateWork
 
               return (
                 <Button
+                  key={i}
                   title={title}
                   onPress={() => {
                     router.popCurrent();

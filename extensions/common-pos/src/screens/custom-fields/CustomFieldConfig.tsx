@@ -101,9 +101,9 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
         <ResponsiveGrid columns={2}>
-          {Object.entries(customFields).flatMap(([key, value], i) => [
+          {Object.entries(customFields).flatMap(([key, value]) => [
             <TextField
-              key={i}
+              key={`${key}-value`}
               label={key}
               value={value}
               onChange={(value: string) => {
@@ -115,6 +115,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
               }}
             />,
             <Button
+              key={`${key}-remove-button`}
               title={'Remove'}
               type={'destructive'}
               onPress={() => {

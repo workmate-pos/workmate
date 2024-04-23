@@ -96,7 +96,7 @@ export function LineItemModal({
         </Modal.Section>
       )}
 
-      {location && inventoryItem && inventoryItem.inventoryLevel && (
+      {location && inventoryItem?.inventoryLevel && (
         <Modal.Section>
           <InlineStack align={'center'}>
             <Text as={'h3'} fontWeight={'semibold'}>

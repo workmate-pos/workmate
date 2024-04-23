@@ -51,7 +51,7 @@ export function PermissionBoundary({
   const superuser = currentEmployeeQuery.data.superuser ?? false;
   const missingEmployeePermissions = superuser
     ? []
-    : permissions.filter(permission => !currentEmployeeQuery.data?.permissions?.includes(permission) ?? false);
+    : permissions.filter(permission => !currentEmployeeQuery.data?.permissions?.includes(permission));
 
   if (missingEmployeePermissions.length > 0) {
     return (

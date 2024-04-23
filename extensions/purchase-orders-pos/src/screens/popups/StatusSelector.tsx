@@ -29,6 +29,7 @@ export function StatusSelector({ onSelect }: { onSelect: (status: string) => voi
       <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
         {settingsQuery.data.settings.purchaseOrderStatuses.map(status => (
           <Button
+            key={status}
             title={titleCase(status)}
             onPress={() => {
               onSelect(status);

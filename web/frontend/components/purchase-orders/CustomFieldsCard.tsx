@@ -38,9 +38,9 @@ export function CustomFieldsCard({
           </ButtonGroup>
         </InlineStack>
 
-        {Object.entries(createPurchaseOrder.customFields).map(([key, value], i) => (
+        {Object.entries(createPurchaseOrder.customFields).map(([key, value]) => (
           <TextField
-            key={i}
+            key={key}
             autoComplete={'off'}
             label={key}
             value={value}

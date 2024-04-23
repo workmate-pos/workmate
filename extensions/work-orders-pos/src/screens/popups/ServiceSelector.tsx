@@ -29,13 +29,12 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
 
   const fetch = useAuthenticatedFetch();
   const serviceCollectionIds = useServiceCollectionIds();
+  const serviceCollectionIdQueries = serviceCollectionIds?.map(id => `collection:${parseGid(id).id}`) ?? [];
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
       first: 50 as Int,
-      query: serviceCollectionIds
-        ? `${query} AND (${serviceCollectionIds.map(id => `collection:${parseGid(id).id}`).join(' OR ')})`
-        : query,
+      query: [query, `(${serviceCollectionIdQueries.join(' OR ')})`].join(' AND '),
     },
   });
   const currencyFormatter = useCurrencyFormatter();
@@ -52,7 +51,7 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
     />
   );
 
-  const rows = getProductVariantRows(productVariantsQuery?.data?.pages?.[page - 1] ?? [], onSelect, currencyFormatter);
+  const rows = useProductVariantRows(productVariantsQuery?.data?.pages?.[page - 1] ?? [], onSelect, currencyFormatter);
 
   return (
     <ScrollView>
@@ -95,7 +94,7 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
   );
 }
 
-function getProductVariantRows(
+function useProductVariantRows(
   productVariants: ProductVariant[],
   onSelect: OnSelect,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,

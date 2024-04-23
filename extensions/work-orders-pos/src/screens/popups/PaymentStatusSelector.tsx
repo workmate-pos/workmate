@@ -12,6 +12,7 @@ export function PaymentStatusSelector({ onSelect }: { onSelect: (status: Payment
     <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
       {statuses.map(status => (
         <Button
+          key={status}
           title={titleCase(status)}
           onPress={() => {
             onSelect(status);

@@ -87,7 +87,7 @@ export function DepositSelector({ createWorkOrder }: { createWorkOrder: CreateWo
       <Stack direction="vertical" spacing={8}>
         <Text variant="headingLarge">Shortcuts</Text>
         <ResponsiveGrid columns={3}>
-          {depositShortcuts.map(shortcut => {
+          {depositShortcuts.map((shortcut, i) => {
             const disabled =
               BigDecimal.fromMoney(shortcut.money).compare(BigDecimal.ZERO) <= 0 ||
               (settings.depositRules.onlyAllowHighestAbsoluteShortcut &&
@@ -96,6 +96,7 @@ export function DepositSelector({ createWorkOrder }: { createWorkOrder: CreateWo
             if (shortcut.unit === 'currency') {
               return (
                 <Button
+                  key={i}
                   title={currencyFormatter(shortcut.money)}
                   onPress={() => handleDeposit(shortcut.money)}
                   isDisabled={disabled}
@@ -106,6 +107,7 @@ export function DepositSelector({ createWorkOrder }: { createWorkOrder: CreateWo
             if (shortcut.unit === 'percentage') {
               return (
                 <Button
+                  key={i}
                   title={`${shortcut.percentage}% (${currencyFormatter(shortcut.money)})`}
                   onPress={() => handleDeposit(shortcut.money)}
                   isDisabled={disabled}

@@ -31,7 +31,7 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
 import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';
 import {
@@ -135,7 +135,7 @@ export function PurchaseOrder({
   const noLineItems = createPurchaseOrder.lineItems.length === 0;
   const allAreReceived = createPurchaseOrder.lineItems.every(li => li.availableQuantity === li.quantity);
   const noneAreReceived = createPurchaseOrder.lineItems.every(li => {
-    const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === li.uuid);
+    const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', li.uuid));
     const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
     return li.availableQuantity === minimumAvailableQuantity;
   });
@@ -262,7 +262,7 @@ export function PurchaseOrder({
 
             {Object.entries(createPurchaseOrder.customFields).map(([key, value], i) => (
               <FormStringField
-                key={i}
+                key={key}
                 label={key}
                 value={value}
                 onChange={(value: string) =>

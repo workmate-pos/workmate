@@ -19,7 +19,7 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
 import { useState } from 'react';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -51,7 +51,7 @@ export function ProductsCard({
   const noLineItems = createPurchaseOrder.lineItems.length === 0;
   const allAreReceived = createPurchaseOrder.lineItems.every(li => li.availableQuantity === li.quantity);
   const noneAreReceived = createPurchaseOrder.lineItems.every(li => {
-    const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === li.uuid);
+    const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', li.uuid));
     const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
     return li.availableQuantity === minimumAvailableQuantity;
   });

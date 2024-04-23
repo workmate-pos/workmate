@@ -13,6 +13,7 @@ export function StatusSelector({ onSelect }: { onSelect: (status: string) => voi
     <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
       {settings?.statuses.map(status => (
         <Button
+          key={status}
           title={status}
           onPress={() => {
             onSelect(status);

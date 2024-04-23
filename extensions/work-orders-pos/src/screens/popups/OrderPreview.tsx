@@ -104,7 +104,7 @@ export function OrderPreview({
       <Stack direction={'vertical'} spacing={2}>
         <Stack direction={'vertical'} spacing={1}>
           <Text variant="headingLarge">Order {order.name}</Text>
-          {order.workOrders.length && <Text variant="body">{workOrderNames}</Text>}
+          {order.workOrders.length > 0 && <Text variant="body">{workOrderNames}</Text>}
         </Stack>
         <Stack direction={'horizontal'} spacing={2}>
           {order.displayFinancialStatus && (
@@ -122,12 +122,14 @@ export function OrderPreview({
         </Stack>
         <Grid columns={4}>
           {orderInfo.map(
-            ({ label, value, large }) => !large && <TextField label={label} disabled={true} value={value} />,
+            ({ label, value, large }, i) =>
+              !large && <TextField key={label} label={label} disabled={true} value={value} />,
           )}
         </Grid>
         <Grid columns={1}>
           {orderInfo.map(
-            ({ label, value, large }) => large && <TextArea label={label} disabled={true} value={value} />,
+            ({ label, value, large }, i) =>
+              large && <TextArea key={label} label={label} disabled={true} value={value} />,
           )}
         </Grid>
         <List

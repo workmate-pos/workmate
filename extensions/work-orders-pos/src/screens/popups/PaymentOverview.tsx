@@ -42,6 +42,15 @@ export function PaymentOverview({ name }: { name: string }) {
   screen.setTitle(`Payment Overview - ${name}`);
   screen.setIsLoading(workOrderQuery.isLoading || settingsQuery.isLoading);
 
+  const rows = useItemRows(
+    workOrder?.name ?? null,
+    selectedItems,
+    selectedCharges,
+    setSelectedItems,
+    setSelectedCharges,
+    paymentHandler.isLoading,
+  );
+
   if (workOrderQuery.isError) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
@@ -83,15 +92,6 @@ export function PaymentOverview({ name }: { name: string }) {
       depositedReconciledAmount: workOrder.depositedReconciledAmount,
     });
   };
-
-  const rows = useItemRows(
-    workOrder.name,
-    selectedItems,
-    selectedCharges,
-    setSelectedItems,
-    setSelectedCharges,
-    paymentHandler.isLoading,
-  );
 
   const selectableItems = workOrder.items.filter(item => getItemOrder(item)?.type !== 'ORDER');
   const selectableCharges = workOrder.charges.filter(charge => getChargeOrder(charge)?.type !== 'ORDER');
@@ -138,7 +138,7 @@ export function PaymentOverview({ name }: { name: string }) {
 }
 
 function useItemRows(
-  workOrderName: string,
+  workOrderName: string | null,
   selectedItems: WorkOrderItem[],
   selectedCharges: WorkOrderCharge[],
   setSelectedItems: (items: WorkOrderItem[]) => void,

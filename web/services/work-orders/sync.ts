@@ -29,6 +29,7 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], w
   }
 }
 
+// TODO: Don't wait for webhooks here - just directly ensure that (draft) orders are synced
 export async function syncWorkOrder(session: Session, workOrderId: number, workOrderHasChanged: boolean) {
   const { labourLineItemSKU } = await getShopSettings(session.shop);
 
