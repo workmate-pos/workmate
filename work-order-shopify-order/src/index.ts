@@ -69,21 +69,7 @@ export function getWorkOrderLineItems(
     labourSku: string;
   },
 ): { lineItems: LineItem[]; customSales: CustomSale[] } {
-  const charges = [...fixedPriceLabourCharges, ...hourlyLabourCharges];
-
-  // ensure charge names are unique by adding "(count)" to every duplicate name
-  const chargesByName = groupByKey(charges, 'name');
-
-  for (const charges of Object.values(chargesByName)) {
-    if (charges.length === 1) {
-      // no duplicates
-      continue;
-    }
-
-    for (const [index, charge] of charges.entries()) {
-      charge.name = `${charge.name} (${index + 1})`;
-    }
-  }
+  const charges = getUniquelyNamedCharges([...fixedPriceLabourCharges, ...hourlyLabourCharges]);
 
   // create line items
   const lineItemByVariantId: Record<ID, LineItem> = {};
@@ -166,6 +152,19 @@ export function getWorkOrderLineItems(
   };
 }
 
+function getUniquelyNamedCharges(charges: (HourlyLabourCharge | FixedPriceLabourCharge)[]) {
+  // ensure charge names are unique by adding "(count)" to every duplicate name
+  const chargesByName = groupByKey(charges, 'name');
+
+  return Object.values(chargesByName).flatMap(charges => {
+    if (charges.length === 1) return charges;
+    return charges.map((charge, i) => ({
+      ...charge,
+      name: `${charge.name} (${i + 1})`,
+    }));
+  });
+}
+
 export function getDepositCustomSale(deposit: { uuid: string; amount: Money }): CustomSale {
   const amount = BigDecimal.fromMoney(deposit.amount).round(2, RoundingMode.CEILING).toMoney();
 
@@ -226,7 +225,7 @@ function getChargeCustomAttributes(
           _wm_linked_to_item_uuid: charge.workOrderItemUuid,
         }
       : {}),
-    ...(!!skuCustomAttribute
+    ...(skuCustomAttribute
       ? {
           _wm_sku: skuCustomAttribute,
         }

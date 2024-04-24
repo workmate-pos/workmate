@@ -155,7 +155,7 @@ function EmployeeRates() {
                   inputMode={'decimal'}
                   label={'Rate'}
                   labelHidden={true}
-                  value={employeeRates[employee.id] ? String(employeeRates[employee.id]!) : undefined}
+                  value={employeeRates[employee.id] ? String(employeeRates[employee.id]) : undefined}
                   onChange={value => {
                     if (value.trim().length === 0) {
                       setEmployeeRates({ ...employeeRates, [employee.id]: null });
@@ -164,7 +164,6 @@ function EmployeeRates() {
 
                     if (BigDecimal.isValid(value)) {
                       setEmployeeRates({ ...employeeRates, [employee.id]: BigDecimal.fromString(value).toMoney() });
-                      return;
                     }
                   }}
                   prefix={currencyFormatter.prefix}

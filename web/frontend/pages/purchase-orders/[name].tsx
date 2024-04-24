@@ -144,7 +144,7 @@ function PurchaseOrder({
     { fetch },
     {
       onSuccess: ({ purchaseOrder }) => {
-        const message = !!createPurchaseOrder.name ? 'Purchase order updated' : 'Purchase order created';
+        const message = createPurchaseOrder.name ? 'Purchase order updated' : 'Purchase order created';
         setToastAction({ content: message });
         dispatch.set(createPurchaseOrderFromPurchaseOrder(purchaseOrder));
         setHasUnsavedChanges(false);

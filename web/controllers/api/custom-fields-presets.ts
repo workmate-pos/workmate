@@ -1,5 +1,4 @@
-import { Authenticated } from '@teifi-digital/shopify-app-express/decorators';
-import { BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators';
+import { Authenticated, BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
 import { db } from '../../services/db/db.js';

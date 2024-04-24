@@ -336,7 +336,7 @@ function WorkOrderCustomFields({
     <ResponsiveGrid columns={4}>
       {Object.entries(createWorkOrder.customFields).map(([key, value], i) => (
         <FormStringField
-          key={i}
+          key={key}
           label={key}
           value={value}
           onChange={(value: string) =>

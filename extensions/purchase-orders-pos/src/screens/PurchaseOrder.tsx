@@ -74,7 +74,7 @@ export function PurchaseOrder({
     { fetch },
     {
       onSuccess: ({ purchaseOrder }) => {
-        const message = !!createPurchaseOrder.name ? 'Purchase order updated' : 'Purchase order created';
+        const message = createPurchaseOrder.name ? 'Purchase order updated' : 'Purchase order created';
         toast.show(message);
         dispatch.set(createPurchaseOrderFromPurchaseOrder(purchaseOrder));
         setHasUnsavedChanges(false);
@@ -389,7 +389,7 @@ export function PurchaseOrder({
           </ResponsiveGrid>
 
           <FormButton
-            title={!!createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
+            title={createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
             type={'primary'}
             onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
             loading={purchaseOrderMutation.isLoading}

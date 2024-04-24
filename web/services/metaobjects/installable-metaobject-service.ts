@@ -4,8 +4,7 @@ import type {
   MetaobjectDefinitionCreateInput,
   MetaobjectFieldDefinitionOperationInput,
 } from '../gql/queries/generated/schema.js';
-import { sentryErr } from '@teifi-digital/shopify-app-express/services';
-import { InstallableService } from '@teifi-digital/shopify-app-express/services';
+import { sentryErr, InstallableService } from '@teifi-digital/shopify-app-express/services';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 // TODO: Include in shopify-app-express (first move it to genql)

@@ -297,6 +297,7 @@ async function calculateDraftOrder(
     id: createGid('CalculateDraftOrderLineItem', i),
     totalTax: (() => {
       if (!li.taxable) return ZERO_MONEY;
+      if (totalTaxable.equals(BigDecimal.ZERO)) return ZERO_MONEY;
 
       const lineItemPrice = BigDecimal.fromDecimal(li.discountedUnitPriceSet.shopMoney.amount).multiply(
         BigDecimal.fromString(li.quantity.toFixed(0)),
@@ -503,7 +504,7 @@ function calculateLineItems({
 
       if (divideQuantity <= 0) {
         // if this is a service, the quantity of each line item item will be zero, so handle that by distributing uniformly
-        divideQuantity = 1;
+        divideQuantity = lineItemItems.length - i;
       }
 
       const lineItemItemPrice = itemPrice.divide(BigDecimal.fromString(divideQuantity.toFixed(0)));
