@@ -117,7 +117,6 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
   const session = shopifySessionToSession(shopifySession);
   const settings = await getShopSettings(session.shop);
   const mutableServiceCollectionId = settings.mutableServiceCollectionId ?? createGid('Collection', '0');
-  const includeIsMutableServiceItem = !!settings?.mutableServiceCollectionId;
 
   await transaction(async () => {
     const hourlyLabourCharges = await db.workOrderMigration.getOldHourlyLabours({ workOrderId: oldWorkOrder.id });
@@ -137,7 +136,6 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
       const { order } = await gql.workOrderMigration.getOrder.run(graphql, {
         id: oldWorkOrder.orderId as ID,
         mutableServiceCollectionId,
-        includeIsMutableServiceItem,
       });
 
       if (order) {
@@ -154,7 +152,6 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
       const { draftOrder } = await gql.workOrderMigration.getDraftOrder.run(graphql, {
         id: oldWorkOrder.draftOrderId as ID,
         mutableServiceCollectionId,
-        includeIsMutableServiceItem,
       });
 
       if (draftOrder) {
@@ -202,10 +199,22 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
         });
 
         if (isMutableServiceItem) {
+          const uuids = lineItem.customAttributes.find(ca => ca.key === '_UUIDS')?.value;
+
           const linkedHourlyLabourCharges = hourlyLabourCharges.filter(hlc => hlc.productVariantId === variantId);
           const linkedFixedPriceLabourCharges = fixedPriceLabourCharges.filter(
             fplc => fplc.productVariantId === variantId,
           );
+
+          if (uuids && JSON.stringify(uuids).length > 1) {
+            // we only support one stacked service item (fine for all the things that need migrating)
+            throw new Error('Only mutable service items with qty 1 are supported');
+          } else if (!uuids) {
+            // without a uuid we cannot know the service qty unless there is just one charge (then its guaranteed to be qty 1, which we support)
+            if (linkedHourlyLabourCharges.length + linkedFixedPriceLabourCharges.length > 1) {
+              throw new Error('Mutable services without UUIDs must have just one linked charge');
+            }
+          }
 
           for (const linkedHourlyLabourCharge of linkedHourlyLabourCharges) {
             hourlyLabourCharges.splice(hourlyLabourCharges.indexOf(linkedHourlyLabourCharge), 1);
