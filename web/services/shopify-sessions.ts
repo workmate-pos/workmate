@@ -91,7 +91,7 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
   }
 }
 
-function shopifySessionToSession(session: ShopifySession): Session {
+export function shopifySessionToSession(session: ShopifySession): Session {
   return new Session({
     id: session.id,
     shop: session.shop,

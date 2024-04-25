@@ -1,0 +1,65 @@
+query getOrder($id: ID!, $mutableServiceCollectionId: ID!) {
+  order(id: $id) {
+    lineItems(first: 250) {
+      nodes {
+        ...OrderLineItemFragment
+      }
+      pageInfo {
+        hasNextPage
+      }
+    }
+  }
+}
+
+fragment OrderLineItemFragment on LineItem {
+  id
+  name
+  variant {
+    id
+    product {
+      isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
+    }
+  }
+  customAttributes {
+    key
+    value
+  }
+  originalTotalSet {
+    shopMoney {
+      amount
+    }
+  }
+}
+
+query getDraftOrder($id: ID!, $mutableServiceCollectionId: ID!) {
+  draftOrder(id: $id) {
+    lineItems(first: 250) {
+      nodes {
+        ...DraftOrderLineItemFragment
+      }
+      pageInfo {
+        hasNextPage
+      }
+    }
+  }
+}
+
+fragment DraftOrderLineItemFragment on DraftOrderLineItem {
+  id
+  name
+  variant {
+    id
+    product {
+      isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
+    }
+  }
+  customAttributes {
+    key
+    value
+  }
+  originalTotalSet {
+    shopMoney {
+      amount
+    }
+  }
+}
