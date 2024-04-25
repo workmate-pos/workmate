@@ -8,6 +8,7 @@ import { Permission } from '../../decorators/permission.js';
 import { getAppPlan, getAppPlanSubscription, getAvailableAppPlans } from '../../services/app-plans/app-plans.js';
 import { Session } from '@shopify/shopify-api';
 import { IGetSubscriptionResult } from '../../services/db/queries/generated/app-plan.sql.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type AppSubscriptionCreate = gql.appSubscriptions.appSubscriptionCreate.Result['appSubscriptionCreate'];
 

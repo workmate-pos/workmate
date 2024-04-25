@@ -1,8 +1,8 @@
 /* @name getMany */
 SELECT *
 FROM "Employee"
-WHERE "staffMemberId" = ANY(:employeeIds)
-AND shop = COALESCE(:shop, shop);
+WHERE shop = :shop!
+AND "employeeId" IN :employeeIds!;
 
 /* @name getPage */
 SELECT *

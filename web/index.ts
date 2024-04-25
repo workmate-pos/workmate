@@ -11,6 +11,7 @@ import { permissionHandler, PermissionKey } from './decorators/permission.js';
 import { registerEnumTypes } from './services/db/types.js';
 import { installableAppPlansService } from './services/app-plans/index.js';
 import { installableSegmentService } from './services/segments/index.js';
+import { migrateWorkOrders } from './migrate/migrate.js';
 
 await registerEnumTypes();
 
@@ -31,4 +32,5 @@ createServer({
   registerWebhooksOnStart: false,
 }).then(async app => {
   console.log(`Configured Shopify API Key: '${process.env.SHOPIFY_API_KEY}'`);
+  migrateWorkOrders();
 });

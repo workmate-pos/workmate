@@ -13,6 +13,7 @@ import * as products from './queries/generated/products.sql.js';
 import * as productVariants from './queries/generated/product-variants.sql.js';
 import * as shopifyOrder from './queries/generated/shopify-order.sql.js';
 import * as customFieldPresets from './queries/generated/custom-field-presets.sql.js';
+import * as workOrderMigration from './queries/generated/work-order-migration.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
 
@@ -35,6 +36,7 @@ export const db = {
   productVariants: wrapPreparedQueries(productVariants),
   shopifyOrder: wrapPreparedQueries(shopifyOrder),
   customFieldPresets: wrapPreparedQueries(customFieldPresets),
+  workOrderMigration: wrapPreparedQueries(workOrderMigration),
 };
 
 /**
