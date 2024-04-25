@@ -58,14 +58,33 @@ ALTER TABLE "PurchaseOrder" DROP CONSTRAINT "PurchaseOrder_shop_workOrderName_fk
 ALTER TABLE "PurchaseOrderProduct" DROP CONSTRAINT "PurchaseOrderProduct_purchaseOrderId_fkey";
 
 -- AlterTable
-ALTER TABLE "Employee" DROP CONSTRAINT "Employee_pkey",
-DROP COLUMN "employeeId",
-ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN     "staffMemberId" TEXT NOT NULL,
-ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ALTER TABLE "Employee"
+DROP CONSTRAINT "Employee_pkey";
+
+ALTER TABLE "Employee"
+RENAME COLUMN "employeeId" TO "staffMemberId";
+
+ALTER TABLE "Employee"
 ADD CONSTRAINT "Employee_pkey" PRIMARY KEY ("staffMemberId");
 
+ALTER TABLE "Employee"
+ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+
 -- AlterTable
+UPDATE "PurchaseOrder"
+  SET "note" = ''
+WHERE "note" IS NULL;
+
+UPDATE "PurchaseOrder"
+  SET "shipFrom" = ''
+WHERE "shipFrom" IS NULL;
+
+UPDATE "PurchaseOrder"
+  SET "shipTo" = ''
+WHERE "shipTo" IS NULL;
+
 ALTER TABLE "PurchaseOrder" DROP COLUMN "customerId",
 DROP COLUMN "customerName",
 DROP COLUMN "locationName",
@@ -74,8 +93,7 @@ DROP COLUMN "orderName",
 DROP COLUMN "vendorCustomerId",
 DROP COLUMN "workOrderName",
 ADD COLUMN     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-DROP COLUMN "status",
-ADD COLUMN     "status" TEXT NOT NULL,
+ALTER COLUMN "status" TYPE TEXT,
 ALTER COLUMN "shipFrom" SET NOT NULL,
 ALTER COLUMN "shipTo" SET NOT NULL,
 ALTER COLUMN "note" SET NOT NULL;
@@ -356,6 +374,12 @@ ALTER TABLE "ShopifyOrderLineItem" ADD CONSTRAINT "ShopifyOrderLineItem_orderId_
 ALTER TABLE "ShopifyOrderLineItem" ADD CONSTRAINT "ShopifyOrderLineItem_productVariantId_fkey" FOREIGN KEY ("productVariantId") REFERENCES "ProductVariant"("productVariantId") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+
+INSERT INTO "Location" ("locationId", shop, name)
+SELECT DISTINCT po."locationId", po.shop, 'Unknown location'
+FROM "PurchaseOrder" po
+WHERE po."locationId" IS NOT NULL;
+
 ALTER TABLE "PurchaseOrder" ADD CONSTRAINT "PurchaseOrder_locationId_fkey" FOREIGN KEY ("locationId") REFERENCES "Location"("locationId") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -374,6 +398,14 @@ FROM "PurchaseOrderCustomFieldsPreset";
 
 -- DropTable
 DROP TABLE "PurchaseOrderCustomFieldsPreset";
+
+-- during this migration we cannot yet fetch the product id, so just link them all to this one and sync afterwards
+INSERT INTO "Product" ("productId", shop, handle, title, description)
+VALUES ('gid://shopify/Product/placeholder', 'placeholder', 'placeholder', 'placeholder', 'placeholder');
+
+INSERT INTO "ProductVariant" ("productVariantId", "productId", "inventoryItemId", sku, title)
+SELECT DISTINCT pop."productVariantId", 'gid://shopify/Product/placeholder', 'gid://shopify/InventoryItem/placeholder', pop.sku, pop.name
+FROM "PurchaseOrderProduct" pop;
 
 
 ALTER TABLE "PurchaseOrderProduct" RENAME TO "PurchaseOrderLineItem";
