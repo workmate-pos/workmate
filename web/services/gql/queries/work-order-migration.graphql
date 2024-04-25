@@ -1,5 +1,6 @@
 query getOrder($id: ID!, $mutableServiceCollectionId: ID!) {
   order(id: $id) {
+    note
     lineItems(first: 250) {
       nodes {
         ...OrderLineItemFragment
@@ -14,6 +15,7 @@ query getOrder($id: ID!, $mutableServiceCollectionId: ID!) {
 fragment OrderLineItemFragment on LineItem {
   id
   name
+  quantity
   variant {
     id
     product {
@@ -33,6 +35,7 @@ fragment OrderLineItemFragment on LineItem {
 
 query getDraftOrder($id: ID!, $mutableServiceCollectionId: ID!) {
   draftOrder(id: $id) {
+    note: note2
     lineItems(first: 250) {
       nodes {
         ...DraftOrderLineItemFragment
@@ -47,6 +50,7 @@ query getDraftOrder($id: ID!, $mutableServiceCollectionId: ID!) {
 fragment DraftOrderLineItemFragment on DraftOrderLineItem {
   id
   name
+  quantity
   variant {
     id
     product {

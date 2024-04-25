@@ -1,8 +1,8 @@
 /* @name getMany */
 SELECT *
 FROM "Employee"
-WHERE shop = :shop!
-AND "employeeId" IN :employeeIds!;
+WHERE "staffMemberId" = ANY(:employeeIds)
+  AND shop = COALESCE(:shop, shop);
 
 /* @name getPage */
 SELECT *
@@ -36,5 +36,5 @@ SELECT EXISTS (
   SELECT 1
   FROM "Employee"
   WHERE shop = :shop!
-  AND superuser = TRUE
+    AND superuser = TRUE
 ) AS "exists";

@@ -32,7 +32,7 @@ export interface IGetManyQuery {
   result: IGetManyResult;
 }
 
-const getManyIR: any = {"usedParamSet":{"employeeIds":true,"shop":true},"params":[{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":53,"b":64}]},{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":87,"b":91}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE \"staffMemberId\" = ANY(:employeeIds)\nAND shop = COALESCE(:shop, shop)"};
+const getManyIR: any = {"usedParamSet":{"employeeIds":true,"shop":true},"params":[{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":53,"b":64}]},{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":89,"b":93}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE \"staffMemberId\" = ANY(:employeeIds)\n  AND shop = COALESCE(:shop, shop)"};
 
 /**
  * Query generated from SQL:
@@ -40,7 +40,7 @@ const getManyIR: any = {"usedParamSet":{"employeeIds":true,"shop":true},"params"
  * SELECT *
  * FROM "Employee"
  * WHERE "staffMemberId" = ANY(:employeeIds)
- * AND shop = COALESCE(:shop, shop)
+ *   AND shop = COALESCE(:shop, shop)
  * ```
  */
 export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyIR);
@@ -179,7 +179,7 @@ export interface IDoesSuperuserExistQuery {
   result: IDoesSuperuserExistResult;
 }
 
-const doesSuperuserExistIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":60,"b":65}]}],"statement":"SELECT EXISTS (\n  SELECT 1\n  FROM \"Employee\"\n  WHERE shop = :shop!\n  AND superuser = TRUE\n) AS \"exists\""};
+const doesSuperuserExistIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":60,"b":65}]}],"statement":"SELECT EXISTS (\n  SELECT 1\n  FROM \"Employee\"\n  WHERE shop = :shop!\n    AND superuser = TRUE\n) AS \"exists\""};
 
 /**
  * Query generated from SQL:
@@ -188,7 +188,7 @@ const doesSuperuserExistIR: any = {"usedParamSet":{"shop":true},"params":[{"name
  *   SELECT 1
  *   FROM "Employee"
  *   WHERE shop = :shop!
- *   AND superuser = TRUE
+ *     AND superuser = TRUE
  * ) AS "exists"
  * ```
  */

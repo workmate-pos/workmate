@@ -5,7 +5,7 @@ import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { ensureProductsExist } from '../products/sync.js';
+import { syncProducts } from '../products/sync.js';
 import { unit } from '../db/unit-of-work.js';
 
 export async function ensureProductVariantsExist(session: Session, productVariantIds: ID[]) {
@@ -52,7 +52,7 @@ export async function syncProductVariants(session: Session, productVariantIds: I
   const errors: unknown[] = [];
 
   await unit(async () => {
-    await ensureProductsExist(session, productIds).catch(error => errors.push(error));
+    await syncProducts(session, productIds).catch(error => errors.push(error));
     await upsertProductVariants(productVariants).catch(error => errors.push(error));
   });
 

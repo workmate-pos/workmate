@@ -63,12 +63,10 @@ function wrapPreparedQueries<const T extends PreparedQueries>(queries: T): Wrapp
 function wrapPreparedQuery<Param, Result>(query: PreparedQuery<Param, Result>): (param: Param) => Promise<Result[]> {
   return async param => {
     using client = await useClient();
-    const stackTrace = new Error().stack;
+    const _error = new Error();
     return await query.run(param, client).catch(error => {
-      if (error instanceof Error) {
-        error.stack = stackTrace;
-      }
-      throw error;
+      _error.message = error.message;
+      throw _error;
     });
   };
 }

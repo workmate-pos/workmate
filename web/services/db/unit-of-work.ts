@@ -7,10 +7,10 @@ import { transaction } from './transaction.js';
  *
  * Should be preferred over {@link transaction} as this supports nesting.
  */
-export function unit<T>(unit: () => Promise<T>) {
+export async function unit<T>(unit: () => Promise<T>) {
   if (inTransaction()) {
-    return unit();
+    return await unit();
   }
 
-  return transaction(unit);
+  return await transaction(unit);
 }

@@ -5,30 +5,95 @@
  */
 
 import { db } from '../services/db/db.js';
-import { IGetAllResult } from '../services/db/queries/generated/work-order-migration.sql.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import {
+  IGetAllOldResult,
+  IGetPurchaseOrdersResult,
+} from '../services/db/queries/generated/work-order-migration.sql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../services/gql/gql.js';
 import { shopifySessionToSession } from '../services/shopify-sessions.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { transaction } from '../services/db/transaction.js';
 import { getShopSettings } from '../services/settings.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { ensureShopifyOrdersExist } from '../services/shopify-order/sync.js';
+import { v4 as uuid } from 'uuid';
+import { syncProductVariants } from '../services/product-variants/sync.js';
+import { ensureCustomersExist } from '../services/customer/sync.js';
 
-export async function migrateWorkOrders() {
-  const TEST_STORE = 'work-orders-pos.myshopify.com';
-  const REVIEW_STORE = '62d6a1-2.myshopify.com';
-  const DELETED_STORE = '50d18c.myshopify.com';
+const WOPOS_TEST_STORE = 'work-orders-pos.myshopify.com';
+const SHOPIFY_MARKETPLACE_REVIEW_STORE = '62d6a1-2.myshopify.com';
+const DELETED_STORE = '50d18c.myshopify.com';
+const GOLFHQ = 'mygolfhq.myshopify.com';
 
-  const workOrders = await db.workOrderMigration
-    .getAll()
-    .then(wos => wos.filter(wo => ![TEST_STORE, REVIEW_STORE, DELETED_STORE].includes(wo.shop)));
+const STORES_TO_YEET = [WOPOS_TEST_STORE, SHOPIFY_MARKETPLACE_REVIEW_STORE, DELETED_STORE, GOLFHQ];
 
-  console.log(`Migrating ${workOrders.length} work orders`);
+export async function migratePurchaseOrders() {
+  // We only had partial product data in the db before. The prisma migration just added placeholder info, so we need to resync product (variants) for all purchase order items.
+
+  for (const shop of STORES_TO_YEET) {
+    await db.workOrderMigration.removeShopPurchaseOrderLineItems({ shop });
+    await db.workOrderMigration.removeShopPurchaseOrders({ shop });
+  }
+
+  const purchaseOrders = await db.workOrderMigration.getPurchaseOrders();
+
+  console.log(`Migrating ${purchaseOrders.length} purchase orders`);
 
   let successCount = 0;
 
-  for (const [i, workOrder] of workOrders.entries()) {
-    const prefix = `[${i + 1} / ${workOrders.length}] [${workOrder.id}] [${workOrder.shop}] [${workOrder.name}]`;
+  for (const [i, purchaseOrder] of purchaseOrders.entries()) {
+    const prefix = `[${i + 1} / ${purchaseOrders.length}] [${purchaseOrder.id}] [${purchaseOrder.shop}] [${purchaseOrder.name}]`;
+
+    await migratePurchaseOrder(purchaseOrder)
+      .then(() => {
+        successCount++;
+      })
+      .catch(e => console.error(prefix, 'Migration failed:', e.message));
+  }
+
+  await db.workOrderMigration.removePlaceholderProductVariants();
+  await db.workOrderMigration.removePlaceholderProduct();
+
+  console.log(
+    `Purchase order migration completed. Successfully migrated ${successCount} / ${purchaseOrders.length} purchase orders`,
+  );
+}
+
+async function migratePurchaseOrder(purchaseOrder: IGetPurchaseOrdersResult) {
+  const [shopifySession] = await db.shopifySession.get({ shop: purchaseOrder.shop, isOnline: false });
+
+  if (!shopifySession) {
+    throw new Error('No session available');
+  }
+
+  const session = shopifySessionToSession(shopifySession);
+
+  const lineItems = await db.workOrderMigration.getPurchaseOrderLineItems({ purchaseOrderId: purchaseOrder.id });
+
+  // this will also sync products
+  await syncProductVariants(
+    session,
+    lineItems.map(li => li.productVariantId as ID),
+  );
+}
+
+export async function migrateWorkOrders() {
+  for (const shop of STORES_TO_YEET) {
+    await db.workOrderMigration.removeShopOldHourlyLabour({ shop });
+    await db.workOrderMigration.removeShopOldFixedPriceLabour({ shop });
+    await db.workOrderMigration.removeShopOldWorkOrders({ shop });
+  }
+
+  const oldWorkOrders = await db.workOrderMigration.getAllOld();
+
+  console.log(`Migrating ${oldWorkOrders.length} work orders`);
+
+  let successCount = 0;
+
+  for (const [i, workOrder] of oldWorkOrders.entries()) {
+    const prefix = `[${i + 1} / ${oldWorkOrders.length}] [${workOrder.id}] [${workOrder.shop}] [${workOrder.name}]`;
 
     await migrateWorkOrder(workOrder)
       .then(() => {
@@ -37,89 +102,138 @@ export async function migrateWorkOrders() {
       .catch(e => console.error(prefix, 'Migration failed:', e.message));
   }
 
-  console.log(`Migrations completed. Successfully migrated ${successCount} / ${workOrders.length} work orders`);
+  console.log(
+    `Work order migration completed. Successfully migrated ${successCount} / ${oldWorkOrders.length} work orders`,
+  );
 }
 
-async function migrateWorkOrder(workOrder: IGetAllResult) {
-  const [session] = await db.shopifySession.get({ shop: workOrder.shop, isOnline: false });
+async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
+  const [shopifySession] = await db.shopifySession.get({ shop: oldWorkOrder.shop, isOnline: false });
 
-  if (!session) {
+  if (!shopifySession) {
     throw new Error('No session available');
   }
 
+  const session = shopifySessionToSession(shopifySession);
   const settings = await getShopSettings(session.shop);
   const mutableServiceCollectionId = settings.mutableServiceCollectionId ?? createGid('Collection', '0');
   const includeIsMutableServiceItem = !!settings?.mutableServiceCollectionId;
 
   await transaction(async () => {
-    // TODO: Create new work order
+    const hourlyLabourCharges = await db.workOrderMigration.getOldHourlyLabours({ workOrderId: oldWorkOrder.id });
+    const fixedPriceLabourCharges = await db.workOrderMigration.getOldFixedPriceLabours({
+      workOrderId: oldWorkOrder.id,
+    });
 
-    const hourlyLabourCharges = await db.workOrderMigration.getHourlyLabours({ workOrderId: workOrder.id });
-    const fixedPriceLabourCharges = await db.workOrderMigration.getFixedPriceLabours({ workOrderId: workOrder.id });
+    const graphql = new Graphql(session);
 
-    const graphql = new Graphql(shopifySessionToSession(session));
-
+    let note = '';
     let lineItems: (
       | gql.workOrderMigration.OrderLineItemFragment.Result
       | gql.workOrderMigration.DraftOrderLineItemFragment.Result
     )[] = [];
 
-    if (workOrder.orderId) {
+    if (oldWorkOrder.orderId) {
       const { order } = await gql.workOrderMigration.getOrder.run(graphql, {
-        id: workOrder.orderId as ID,
+        id: oldWorkOrder.orderId as ID,
         mutableServiceCollectionId,
         includeIsMutableServiceItem,
       });
 
-      if (!order) return;
+      if (order) {
+        if (order.lineItems.pageInfo.hasNextPage) {
+          throw new Error('Didnt fetch all line items. Increase the limit');
+        }
 
-      if (order.lineItems.pageInfo.hasNextPage) {
-        throw new Error('Didnt fetch all line items. Increase the limit');
+        lineItems = order.lineItems.nodes;
+        note = order.note ?? '';
+
+        await ensureShopifyOrdersExist(session, [oldWorkOrder.orderId as ID]).catch(() => {});
       }
-
-      lineItems = order.lineItems.nodes;
-    } else if (workOrder.draftOrderId) {
+    } else if (oldWorkOrder.draftOrderId) {
       const { draftOrder } = await gql.workOrderMigration.getDraftOrder.run(graphql, {
-        id: workOrder.draftOrderId as ID,
+        id: oldWorkOrder.draftOrderId as ID,
         mutableServiceCollectionId,
         includeIsMutableServiceItem,
       });
 
-      if (!draftOrder) return;
+      if (draftOrder) {
+        if (draftOrder.lineItems.pageInfo.hasNextPage) {
+          throw new Error('Didnt fetch all line items. Increase the limit');
+        }
 
-      if (draftOrder.lineItems.pageInfo.hasNextPage) {
-        throw new Error('Didnt fetch all line items. Increase the limit');
+        lineItems = draftOrder.lineItems.nodes;
+        note = draftOrder.note ?? '';
+
+        await ensureShopifyOrdersExist(session, [oldWorkOrder.draftOrderId as ID]);
       }
-
-      lineItems = draftOrder.lineItems.nodes;
     }
 
-    // TODO: Create order in database
+    await ensureCustomersExist(session, [oldWorkOrder.customerId as ID]);
+
+    if (oldWorkOrder.derivedFromOrderId) {
+      await ensureShopifyOrdersExist(session, [oldWorkOrder.derivedFromOrderId as ID]);
+    }
+
+    const [newWorkOrder = never()] = await db.workOrderMigration.createNewWorkOrder({
+      shop: oldWorkOrder.shop,
+      name: oldWorkOrder.name,
+      customerId: oldWorkOrder.customerId,
+      derivedFromOrderId: oldWorkOrder.derivedFromOrderId,
+      dueDate: oldWorkOrder.dueDate,
+      status: oldWorkOrder.status,
+      note,
+    });
 
     for (const lineItem of lineItems) {
       if (lineItem.variant) {
         // A product or a mutable line item.
 
         const variantId = lineItem.variant.id;
+        const { isMutableServiceItem } = lineItem.variant.product;
 
-        // TODO: Create a new WorkOrderItem (copy quantity, but qty=0 if mutable)
+        const [newWorkOrderItem = never()] = await db.workOrderMigration.createNewWorkOrderItem({
+          workOrderId: newWorkOrder.id,
+          uuid: uuid(),
+          quantity: isMutableServiceItem ? 0 : lineItem.quantity,
+          shopifyOrderLineItemId: lineItem.id,
+          absorbCharges: isMutableServiceItem,
+          productVariantId: variantId,
+        });
 
-        if (lineItem.variant.product.isMutableServiceItem) {
+        if (isMutableServiceItem) {
           const linkedHourlyLabourCharges = hourlyLabourCharges.filter(hlc => hlc.productVariantId === variantId);
           const linkedFixedPriceLabourCharges = fixedPriceLabourCharges.filter(
             fplc => fplc.productVariantId === variantId,
           );
 
-          // TODO: Link these to the line item
-
           for (const linkedHourlyLabourCharge of linkedHourlyLabourCharges) {
-            // TODO: link
             hourlyLabourCharges.splice(hourlyLabourCharges.indexOf(linkedHourlyLabourCharge), 1);
+
+            await db.workOrderMigration.createNewWorkOrderHourlyLabourCharge({
+              workOrderId: newWorkOrder.id,
+              uuid: uuid(),
+              workOrderItemUuid: newWorkOrderItem.uuid,
+              shopifyOrderLineItemId: lineItem.id,
+              employeeId: linkedHourlyLabourCharge.employeeId,
+              name: linkedHourlyLabourCharge.name,
+              rate: linkedHourlyLabourCharge.rate,
+              hours: linkedHourlyLabourCharge.hours,
+            });
           }
 
           for (const linkedFixedPriceLabourCharge of linkedFixedPriceLabourCharges) {
-            // TODO: link
             fixedPriceLabourCharges.splice(fixedPriceLabourCharges.indexOf(linkedFixedPriceLabourCharge), 1);
+
+            await db.workOrderMigration.createNewWorkOrderFixedPriceLabourCharge({
+              workOrderId: newWorkOrder.id,
+              uuid: uuid(),
+              workOrderItemUuid: newWorkOrderItem.uuid,
+              shopifyOrderLineItemId: lineItem.id,
+              employeeId: linkedFixedPriceLabourCharge.employeeId,
+              name: linkedFixedPriceLabourCharge.name,
+              amount: linkedFixedPriceLabourCharge.amount,
+            });
           }
         }
       } else {
@@ -138,7 +252,7 @@ async function migrateWorkOrder(workOrder: IGetAllResult) {
         const hourlyLabourCharge = hourlyLabourCharges.find(hlc => {
           return (
             hlc.lineItemUuid === chargeLineItemUuid &&
-            hlc.name === lineItem.name &&
+            chargeNameMatchesLineItemName(hlc.name, lineItem.name) &&
             BigDecimal.fromString(hlc.hours)
               .multiply(BigDecimal.fromString(hlc.rate))
               .equals(BigDecimal.fromDecimal(lineItem.originalTotalSet.shopMoney.amount))
@@ -148,21 +262,40 @@ async function migrateWorkOrder(workOrder: IGetAllResult) {
         const fixedPriceLabourCharge = fixedPriceLabourCharges.find(
           fplc =>
             fplc.lineItemUuid === chargeLineItemUuid &&
-            fplc.name === lineItem.name &&
+            chargeNameMatchesLineItemName(fplc.name, lineItem.name) &&
             BigDecimal.fromString(fplc.amount).equals(
               BigDecimal.fromDecimal(lineItem.originalTotalSet.shopMoney.amount),
             ),
         );
 
         if (hourlyLabourCharge) {
-          // TODO: link
           hourlyLabourCharges.splice(hourlyLabourCharges.indexOf(hourlyLabourCharge), 1);
+
+          await db.workOrderMigration.createNewWorkOrderHourlyLabourCharge({
+            workOrderId: newWorkOrder.id,
+            uuid: uuid(),
+            workOrderItemUuid: null,
+            shopifyOrderLineItemId: lineItem.id,
+            employeeId: hourlyLabourCharge.employeeId,
+            name: hourlyLabourCharge.name,
+            rate: hourlyLabourCharge.rate,
+            hours: hourlyLabourCharge.hours,
+          });
         } else if (fixedPriceLabourCharge) {
-          // TODO: link
           fixedPriceLabourCharges.splice(fixedPriceLabourCharges.indexOf(fixedPriceLabourCharge), 1);
+
+          await db.workOrderMigration.createNewWorkOrderFixedPriceLabourCharge({
+            workOrderId: newWorkOrder.id,
+            uuid: uuid(),
+            workOrderItemUuid: null,
+            shopifyOrderLineItemId: lineItem.id,
+            employeeId: fixedPriceLabourCharge.employeeId,
+            name: fixedPriceLabourCharge.name,
+            amount: fixedPriceLabourCharge.amount,
+          });
         } else {
           throw new Error(
-            `Migration failed - charge line item not found - ${lineItem.name} - ${chargeLineItemUuid} - ${lineItem.customAttributes.map(ca => ca.key)}`,
+            `Migration failed - charge line item not found - ${lineItem.id} - ${lineItem.name} - ${chargeLineItemUuid} - ${lineItem.originalTotalSet.shopMoney.amount}`,
           );
         }
       }
@@ -176,9 +309,12 @@ async function migrateWorkOrder(workOrder: IGetAllResult) {
       throw new Error('Trailing fixed price charges');
     }
 
-    // TODO: Delete old work order/charges/etc
-    await db.workOrderMigration.removeHourlyLabour({ workOrderId: workOrder.id });
-    await db.workOrderMigration.removeFixedPriceLabour({ workOrderId: workOrder.id });
-    await db.workOrderMigration.removeWorkOrder({ workOrderId: workOrder.id });
+    await db.workOrderMigration.removeOldHourlyLabour({ workOrderId: oldWorkOrder.id });
+    await db.workOrderMigration.removeOldFixedPriceLabour({ workOrderId: oldWorkOrder.id });
+    await db.workOrderMigration.removeOldWorkOrder({ workOrderId: oldWorkOrder.id });
   });
+}
+
+function chargeNameMatchesLineItemName(chargeName: string, lineItemName: string) {
+  return lineItemName.startsWith(chargeName) && /^\d*$/.test(lineItemName.slice(chargeName.length).trim());
 }

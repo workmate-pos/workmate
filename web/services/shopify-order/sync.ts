@@ -2,7 +2,7 @@ import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shop
 import { db } from '../db/db.js';
 import { fetchAllPages, gql } from '../gql/gql.js';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { syncWorkOrders } from '../work-orders/sync.js';
@@ -148,7 +148,6 @@ async function syncShopifyOrderLineItems(
     return lineItemId;
   });
 
-  // TODO: Unify the way discounts are taken into account - currently order line items take into account order level discounts, while draft order line items dont
   const lineItems =
     order.type === 'order'
       ? await getOrderLineItems(session, order.order.id)
@@ -200,7 +199,7 @@ async function syncShopifyOrderLineItems(
     // TODO: Copy all attributes over to metafields on create to prevent this ^^^
     await linkWorkOrderItemsAndChargesAndDeposits(session, order.order, lineItems);
   } catch (error) {
-    console.error('Error linking work order items and charges', error);
+    sentryErr('Error linking work order items and charges', { error });
   }
 
   // sync work orders in case any line items now don't have a related line item anymore
