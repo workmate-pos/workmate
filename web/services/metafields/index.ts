@@ -4,6 +4,7 @@ import { MetafieldDefinitionInput } from '../gql/queries/generated/schema.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { customerIsVendorMetafield } from './customer-is-vendor-metafield.js';
 import { WithRequired } from '../../util/types.js';
+import { productServiceTypeMetafield } from './product-service-type-metafield.js';
 
 export type MetafieldDefinitionInputWithNamespace = WithRequired<MetafieldDefinitionInput, 'namespace'>;
 
@@ -14,6 +15,7 @@ export type MetafieldDefinition =
 const metafieldDefinitions: MetafieldDefinition[] = [
   getProductVariantDefaultChargesMetafield,
   customerIsVendorMetafield,
+  productServiceTypeMetafield,
 ];
 
 export const installableMetafieldService = new InstallableMetafieldService(metafieldDefinitions);

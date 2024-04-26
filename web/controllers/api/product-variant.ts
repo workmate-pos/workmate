@@ -5,7 +5,6 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { gql } from '../../services/gql/gql.js';
 import type { Ids } from '../../schemas/generated/ids.js';
-import { getShopSettings } from '../../services/settings.js';
 import {
   addProductVariantComponents,
   parseProductVariantMetafields,
@@ -34,12 +33,7 @@ export default class ProductVariantController {
     }
 
     return res.json({
-      productVariant: await addProductVariantComponents(
-        graphql,
-        parseProductVariantMetafields(productVariant),
-        null,
-        null,
-      ),
+      productVariant: await addProductVariantComponents(graphql, parseProductVariantMetafields(productVariant)),
     });
   }
 
@@ -52,14 +46,8 @@ export default class ProductVariantController {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    const { fixedServiceCollectionId, mutableServiceCollectionId } = await getShopSettings(session.shop);
-
     const graphql = new Graphql(session);
-    const response = await gql.products.getPage.run(graphql, {
-      ...paginationOptions,
-      fixedServiceCollectionId,
-      mutableServiceCollectionId,
-    });
+    const response = await gql.products.getPage.run(graphql, paginationOptions);
 
     const { nodes: productVariants, pageInfo } = response.productVariants;
 
@@ -67,9 +55,7 @@ export default class ProductVariantController {
       productVariants: await Promise.all(
         productVariants
           .map(parseProductVariantMetafields)
-          .map(productVariant =>
-            addProductVariantComponents(graphql, productVariant, fixedServiceCollectionId, mutableServiceCollectionId),
-          ),
+          .map(productVariant => addProductVariantComponents(graphql, productVariant)),
       ),
       pageInfo,
     });
@@ -84,14 +70,8 @@ export default class ProductVariantController {
     const session: Session = res.locals.shopify.session;
     const { ids } = req.query;
 
-    const { fixedServiceCollectionId, mutableServiceCollectionId } = await getShopSettings(session.shop);
-
     const graphql = new Graphql(session);
-    const { nodes } = await gql.products.getMany.run(graphql, {
-      ids,
-      fixedServiceCollectionId,
-      mutableServiceCollectionId,
-    });
+    const { nodes } = await gql.products.getMany.run(graphql, { ids });
 
     const productVariants = nodes.filter(
       (node): node is null | (gql.products.ProductVariantFragment.Result & { __typename: 'ProductVariant' }) =>
@@ -102,9 +82,7 @@ export default class ProductVariantController {
       productVariants: await Promise.all(
         productVariants
           .map(pv => (pv ? parseProductVariantMetafields(pv) : pv))
-          .map(pv =>
-            pv ? addProductVariantComponents(graphql, pv, fixedServiceCollectionId, mutableServiceCollectionId) : pv,
-          ),
+          .map(pv => (pv ? addProductVariantComponents(graphql, pv) : pv)),
       ),
     });
   }

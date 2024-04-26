@@ -1,9 +1,13 @@
+query getProduct($id: ID!) {
+  product(id: $id) {
+    ...ProductFragment
+  }
+}
+
 query getPage(
   $first: Int = 10,
   $after: String,
   $query: String,
-  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
-  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
 ) {
   productVariants(first: $first, after: $after, query: $query, sortKey: POPULAR) {
     nodes {
@@ -16,11 +20,7 @@ query getPage(
   }
 }
 
-query getMany(
-  $ids: [ID!]!,
-  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
-  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
-) {
+query getMany($ids: [ID!]!) {
   nodes(ids: $ids) {
     __typename
     ...ProductVariantFragment
@@ -70,17 +70,7 @@ fragment ProductVariantFragment on ProductVariant {
     }
   }
   product {
-    id
-    title
-    handle
-    hasOnlyDefaultVariant
-    featuredImage {
-      url
-    }
-    description
-    productType
-    isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
-    isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
+    ...ProductFragment
   }
   requiresComponents
   defaultCharges: metafield(namespace: "$app", key: "default-charges") {
@@ -98,11 +88,22 @@ fragment ProductVariantFragment on ProductVariant {
   }
 }
 
-query getProductVariantComponents(
-  $id: ID!,
-  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
-  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
-) {
+fragment ProductFragment on Product {
+  id
+  title
+  handle
+  hasOnlyDefaultVariant
+  featuredImage {
+    url
+  }
+  description
+  productType
+  serviceType: metafield(namespace: "$app", key: "service-type") {
+    value
+  }
+}
+
+query getProductVariantComponents($id: ID!) {
   productVariant(id: $id) {
     productVariantComponents(first: 25) {
       nodes {
@@ -157,11 +158,7 @@ fragment HourlyLabourChargeFragment on Metaobject {
   }
 }
 
-mutation create(
-  $input: ProductInput!,
-  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
-  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
-) {
+mutation create($input: ProductInput!) {
   productCreate(input: $input) {
     userErrors {
       message
@@ -184,6 +181,7 @@ fragment DatabaseProductFragment on Product {
   title
   description
   productType
+  updatedAt
 }
 
 

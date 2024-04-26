@@ -7,20 +7,27 @@
 import { db } from '../services/db/db.js';
 import {
   IGetAllOldResult,
+  IGetFixedServiceCollectionIdSettingsResult,
+  IGetMutableServiceCollectionIdSettingsResult,
   IGetPurchaseOrdersResult,
 } from '../services/db/queries/generated/work-order-migration.sql.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../services/gql/gql.js';
 import { shopifySessionToSession } from '../services/shopify-sessions.js';
-import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { transaction } from '../services/db/transaction.js';
-import { getShopSettings } from '../services/settings.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { ensureShopifyOrdersExist } from '../services/shopify-order/sync.js';
 import { v4 as uuid } from 'uuid';
 import { syncProductVariants } from '../services/product-variants/sync.js';
 import { ensureCustomersExist } from '../services/customer/sync.js';
+import { productServiceTypeMetafield } from '../services/metafields/product-service-type-metafield.js';
+import {
+  getProductServiceType,
+  ProductServiceType,
+  QUANTITY_ADJUSTING_SERVICE,
+} from '@work-orders/common/metafields/product-service-type.js';
 
 const WOPOS_TEST_STORE = 'work-orders-pos.myshopify.com';
 const SHOPIFY_MARKETPLACE_REVIEW_STORE = '62d6a1-2.myshopify.com';
@@ -28,6 +35,102 @@ const DELETED_STORE = '50d18c.myshopify.com';
 const GOLFHQ = 'mygolfhq.myshopify.com';
 
 const STORES_TO_YEET = [WOPOS_TEST_STORE, SHOPIFY_MARKETPLACE_REVIEW_STORE, DELETED_STORE, GOLFHQ];
+
+export async function migrateServiceItems() {
+  // We have moved away from Service collections to metafields + tags.
+  // So we should go through the collections for each shop and add the metafield value
+
+  const mutableServiceCollectionIdSettings = await db.workOrderMigration.getMutableServiceCollectionIdSettings();
+  const fixedServiceCollectionIdSettings = await db.workOrderMigration.getFixedServiceCollectionIdSettings();
+
+  const tasks: [
+    serviceType: ProductServiceType,
+    settings: (IGetMutableServiceCollectionIdSettingsResult | IGetFixedServiceCollectionIdSettingsResult)[],
+  ][] = [
+    ['Quantity-Adjusting Service', mutableServiceCollectionIdSettings],
+    ['Fixed-Price Service', fixedServiceCollectionIdSettings],
+  ];
+
+  for (const [serviceType, settings] of tasks) {
+    console.log(`Migrating ${settings.length} ${serviceType} collections`);
+
+    let successCount = 0;
+
+    for (const [i, collectionSetting] of settings.entries()) {
+      if (collectionSetting.shop !== 'work-orders-pos.myshopify.com') {
+        // TODO: Remove before merge
+        continue;
+      }
+
+      const prefix = `[${i + 1} / ${settings.length}] [${collectionSetting.shop}]`;
+
+      await migrateServiceCollection(
+        collectionSetting.shop,
+        JSON.parse(collectionSetting.value) as ID,
+        serviceType,
+      ).then(
+        () => successCount++,
+        error => console.error(prefix, 'Migration failed:', error.message),
+      );
+    }
+
+    console.log(`Migrated ${successCount} / ${settings.length} ${serviceType} collections`);
+  }
+}
+
+async function migrateServiceCollection(shop: string, collectionId: ID, serviceType: ProductServiceType) {
+  const [shopifySession] = await db.shopifySession.get({ shop, isOnline: false });
+
+  if (!shopifySession) {
+    throw new Error('No session available');
+  }
+
+  const session = shopifySessionToSession(shopifySession);
+  const graphql = new Graphql(session);
+
+  const { collection } = await gql.workOrderMigration.getCollectionProducts.run(graphql, { id: collectionId });
+
+  if (!collection) {
+    return;
+  }
+
+  if (collection.products.pageInfo.hasNextPage) {
+    throw new Error('More than 250 products in collection - increase limit!');
+  }
+
+  // fetch the metafield id or create it if it hasn't been created yet
+  const { metafieldDefinitions } = await gql.workOrderMigration.getServiceTypeMetafieldDefinition.run(graphql, {});
+
+  if (metafieldDefinitions.nodes.length === 0) {
+    const { metafieldDefinitionCreate } = await gql.metafields.createDefinition.run(graphql, {
+      definition: productServiceTypeMetafield,
+    });
+
+    if (!metafieldDefinitionCreate?.createdDefinition) {
+      throw new Error('Failed to create service type metafield');
+    }
+  }
+
+  for (const { id, serviceTypeMetafield } of collection.products.nodes) {
+    // after setting metafield the webhook will automatically add the tag 💪
+    await gql.workOrderMigration.setProductServiceTypeMetafield.run(graphql, {
+      id,
+      value: serviceType,
+      ...(serviceTypeMetafield
+        ? { metafieldId: serviceTypeMetafield.id }
+        : { key: productServiceTypeMetafield.key, namespace: productServiceTypeMetafield.namespace }),
+    });
+  }
+
+  // TODO: Re-add before merge
+  // if (serviceType === 'Quantity-Adjusting Service') {
+  //   await db.workOrderMigration.deleteShopMutableServiceCollectionIdSetting({ shop });
+  // } else if (serviceType === 'Fixed-Price Service') {
+  //   await db.workOrderMigration.deleteShopFixedServiceCollectionIdSetting({ shop });
+  // } else {
+  //   return serviceType satisfies never;
+  // }
+}
 
 export async function migratePurchaseOrders() {
   // We only had partial product data in the db before. The prisma migration just added placeholder info, so we need to resync product (variants) for all purchase order items.
@@ -46,11 +149,10 @@ export async function migratePurchaseOrders() {
   for (const [i, purchaseOrder] of purchaseOrders.entries()) {
     const prefix = `[${i + 1} / ${purchaseOrders.length}] [${purchaseOrder.id}] [${purchaseOrder.shop}] [${purchaseOrder.name}]`;
 
-    await migratePurchaseOrder(purchaseOrder)
-      .then(() => {
-        successCount++;
-      })
-      .catch(e => console.error(prefix, 'Migration failed:', e.message));
+    await migratePurchaseOrder(purchaseOrder).then(
+      () => successCount++,
+      e => console.error(prefix, 'Migration failed:', e.message),
+    );
   }
 
   await db.workOrderMigration.removePlaceholderProductVariants();
@@ -95,11 +197,10 @@ export async function migrateWorkOrders() {
   for (const [i, workOrder] of oldWorkOrders.entries()) {
     const prefix = `[${i + 1} / ${oldWorkOrders.length}] [${workOrder.id}] [${workOrder.shop}] [${workOrder.name}]`;
 
-    await migrateWorkOrder(workOrder)
-      .then(() => {
-        successCount++;
-      })
-      .catch(e => console.error(prefix, 'Migration failed:', e.message));
+    await migrateWorkOrder(workOrder).then(
+      () => successCount++,
+      e => console.error(prefix, 'Migration failed:', e.message),
+    );
   }
 
   console.log(
@@ -115,8 +216,6 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
   }
 
   const session = shopifySessionToSession(shopifySession);
-  const settings = await getShopSettings(session.shop);
-  const mutableServiceCollectionId = settings.mutableServiceCollectionId ?? createGid('Collection', '0');
 
   await transaction(async () => {
     const hourlyLabourCharges = await db.workOrderMigration.getOldHourlyLabours({ workOrderId: oldWorkOrder.id });
@@ -133,10 +232,7 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
     )[] = [];
 
     if (oldWorkOrder.orderId) {
-      const { order } = await gql.workOrderMigration.getOrder.run(graphql, {
-        id: oldWorkOrder.orderId as ID,
-        mutableServiceCollectionId,
-      });
+      const { order } = await gql.workOrderMigration.getOrder.run(graphql, { id: oldWorkOrder.orderId as ID });
 
       if (order) {
         if (order.lineItems.pageInfo.hasNextPage) {
@@ -151,7 +247,6 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
     } else if (oldWorkOrder.draftOrderId) {
       const { draftOrder } = await gql.workOrderMigration.getDraftOrder.run(graphql, {
         id: oldWorkOrder.draftOrderId as ID,
-        mutableServiceCollectionId,
       });
 
       if (draftOrder) {
@@ -187,7 +282,8 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
         // A product or a mutable line item.
 
         const variantId = lineItem.variant.id;
-        const { isMutableServiceItem } = lineItem.variant.product;
+        const isMutableServiceItem =
+          getProductServiceType(lineItem.variant.product.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
 
         const [newWorkOrderItem = never()] = await db.workOrderMigration.createNewWorkOrderItem({
           workOrderId: newWorkOrder.id,

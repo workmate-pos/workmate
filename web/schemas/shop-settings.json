@@ -14,8 +14,6 @@
     "depositShortcuts",
     "depositRules",
     "workOrderRequests",
-    "mutableServiceCollectionId",
-    "fixedServiceCollectionId",
     "defaultRate",
     "labourLineItemName",
     "labourLineItemSKU",

@@ -4,6 +4,9 @@ mutation createDefinition($definition: MetafieldDefinitionInput!) {
       field
       message
     }
+    createdDefinition {
+      id
+    }
   }
 }
 
@@ -12,6 +15,9 @@ mutation updateDefinition($definition: MetafieldDefinitionUpdateInput!) {
     userErrors {
       field
       message
+    }
+    updatedDefinition {
+      id
     }
   }
 }

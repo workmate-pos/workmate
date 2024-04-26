@@ -98,3 +98,25 @@ WHERE woflc."workOrderId" = wo."id"
 DELETE
 FROM "OldWorkOrder" wo
 WHERE wo."shop" = :shop!;
+
+/* @name getMutableServiceCollectionIdSettings */
+SELECT *
+FROM "Settings"
+WHERE key = 'mutableServiceCollectionId';
+
+/* @name getFixedServiceCollectionIdSettings */
+SELECT *
+FROM "Settings"
+WHERE key = 'fixedServiceCollectionId';
+
+/* @name deleteShopMutableServiceCollectionIdSetting */
+DELETE
+FROM "Settings"
+WHERE key = 'mutableServiceCollectionId'
+AND shop = :shop!;
+
+/* @name deleteShopFixedServiceCollectionIdSetting */
+DELETE
+FROM "Settings"
+WHERE key = 'fixedServiceCollectionId'
+AND shop = :shop!;

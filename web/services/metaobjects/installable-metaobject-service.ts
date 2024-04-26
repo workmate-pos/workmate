@@ -17,79 +17,81 @@ export class InstallableMetaobjectService extends InstallableService {
   }
 
   override async initStore(graphql: Graphql): Promise<void> {
-    for (const definition of this.metaobjectDefinitions) {
-      const { metaobjectDefinitionByType: existingMetaobjectDefinition } =
-        await gql.metaobjects.getDefinitionByType.run(graphql, { type: definition.type });
+    await Promise.all(
+      this.metaobjectDefinitions.map(async definition => {
+        const { metaobjectDefinitionByType: existingMetaobjectDefinition } =
+          await gql.metaobjects.getDefinitionByType.run(graphql, { type: definition.type });
 
-      let result;
+        let result;
 
-      if (existingMetaobjectDefinition) {
-        const oldKeys = existingMetaobjectDefinition.fieldDefinitions.map(fd => fd.key);
-        const newKeys = definition.fieldDefinitions.map(fd => fd.key);
+        if (existingMetaobjectDefinition) {
+          const oldKeys = existingMetaobjectDefinition.fieldDefinitions.map(fd => fd.key);
+          const newKeys = definition.fieldDefinitions.map(fd => fd.key);
 
-        const deletedKeys = oldKeys.filter(key => !newKeys.includes(key));
-        const createdKeys = newKeys.filter(key => !oldKeys.includes(key));
-        const updatedKeys = newKeys.filter(key => oldKeys.includes(key));
+          const deletedKeys = oldKeys.filter(key => !newKeys.includes(key));
+          const createdKeys = newKeys.filter(key => !oldKeys.includes(key));
+          const updatedKeys = newKeys.filter(key => oldKeys.includes(key));
 
-        const deleteFieldDefinitions: MetaobjectFieldDefinitionOperationInput[] = deletedKeys.map(key => ({
-          delete: {
-            key,
-          },
-        }));
-
-        const updateFieldDefinitions: MetaobjectFieldDefinitionOperationInput[] = updatedKeys.map(key => {
-          const fieldDefinition = definition.fieldDefinitions.find(fd => fd.key === key) ?? never();
-
-          return {
-            update: {
+          const deleteFieldDefinitions: MetaobjectFieldDefinitionOperationInput[] = deletedKeys.map(key => ({
+            delete: {
               key,
-              name: fieldDefinition.name,
-              description: fieldDefinition.description,
-              required: fieldDefinition.required,
-              validations: fieldDefinition.validations,
             },
-          };
-        });
+          }));
 
-        const createFieldDefinitions: MetaobjectFieldDefinitionOperationInput[] = createdKeys.map(key => {
-          const fieldDefinition = definition.fieldDefinitions.find(fd => fd.key === key) ?? never();
+          const updateFieldDefinitions: MetaobjectFieldDefinitionOperationInput[] = updatedKeys.map(key => {
+            const fieldDefinition = definition.fieldDefinitions.find(fd => fd.key === key) ?? never();
 
-          return {
-            create: {
-              key,
-              type: fieldDefinition.type,
-              name: fieldDefinition.name,
-              description: fieldDefinition.description,
-              required: fieldDefinition.required,
-              validations: fieldDefinition.validations,
+            return {
+              update: {
+                key,
+                name: fieldDefinition.name,
+                description: fieldDefinition.description,
+                required: fieldDefinition.required,
+                validations: fieldDefinition.validations,
+              },
+            };
+          });
+
+          const createFieldDefinitions: MetaobjectFieldDefinitionOperationInput[] = createdKeys.map(key => {
+            const fieldDefinition = definition.fieldDefinitions.find(fd => fd.key === key) ?? never();
+
+            return {
+              create: {
+                key,
+                type: fieldDefinition.type,
+                name: fieldDefinition.name,
+                description: fieldDefinition.description,
+                required: fieldDefinition.required,
+                validations: fieldDefinition.validations,
+              },
+            };
+          });
+
+          const updateResult = await gql.metaobjects.updateDefinition.run(graphql, {
+            id: existingMetaobjectDefinition.id,
+            definition: {
+              description: definition.description,
+              fieldDefinitions: [...deleteFieldDefinitions, ...updateFieldDefinitions, ...createFieldDefinitions],
+              access: definition.access,
+              capabilities: definition.capabilities,
+              name: definition.name,
+              displayNameKey: definition.displayNameKey,
+              resetFieldOrder: true,
             },
-          };
-        });
+          });
 
-        const updateResult = await gql.metaobjects.updateDefinition.run(graphql, {
-          id: existingMetaobjectDefinition.id,
-          definition: {
-            description: definition.description,
-            fieldDefinitions: [...deleteFieldDefinitions, ...updateFieldDefinitions, ...createFieldDefinitions],
-            access: definition.access,
-            capabilities: definition.capabilities,
-            name: definition.name,
-            displayNameKey: definition.displayNameKey,
-            resetFieldOrder: true,
-          },
-        });
+          result = updateResult.metaobjectDefinitionUpdate;
+        } else {
+          const createResult = await gql.metaobjects.createDefinition.run(graphql, { definition });
+          result = createResult.metaobjectDefinitionCreate;
+        }
 
-        result = updateResult.metaobjectDefinitionUpdate;
-      } else {
-        const createResult = await gql.metaobjects.createDefinition.run(graphql, { definition });
-        result = createResult.metaobjectDefinitionCreate;
-      }
-
-      if (result?.userErrors?.length) {
-        sentryErr(`Failed to create metaobject definition '${definition.type}'`, result.userErrors);
-      } else {
-        console.log(`Created metaobject definition '${definition.type}'`);
-      }
-    }
+        if (result?.userErrors?.length) {
+          sentryErr(`Failed to create metaobject definition '${definition.type}'`, result.userErrors);
+        } else {
+          console.log(`Created metaobject definition '${definition.type}'`);
+        }
+      }),
+    );
   }
 }

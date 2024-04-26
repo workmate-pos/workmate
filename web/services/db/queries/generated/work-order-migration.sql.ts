@@ -647,3 +647,121 @@ const removeShopOldWorkOrdersIR: any = {"usedParamSet":{"shop":true},"params":[{
 export const removeShopOldWorkOrders = new PreparedQuery<IRemoveShopOldWorkOrdersParams,IRemoveShopOldWorkOrdersResult>(removeShopOldWorkOrdersIR);
 
 
+/** 'GetMutableServiceCollectionIdSettings' parameters type */
+export type IGetMutableServiceCollectionIdSettingsParams = void;
+
+/** 'GetMutableServiceCollectionIdSettings' return type */
+export interface IGetMutableServiceCollectionIdSettingsResult {
+  createdAt: Date;
+  key: string;
+  shop: string;
+  updatedAt: Date;
+  value: string;
+}
+
+/** 'GetMutableServiceCollectionIdSettings' query type */
+export interface IGetMutableServiceCollectionIdSettingsQuery {
+  params: IGetMutableServiceCollectionIdSettingsParams;
+  result: IGetMutableServiceCollectionIdSettingsResult;
+}
+
+const getMutableServiceCollectionIdSettingsIR: any = {"usedParamSet":{},"params":[],"statement":"SELECT *\nFROM \"Settings\"\nWHERE key = 'mutableServiceCollectionId'"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "Settings"
+ * WHERE key = 'mutableServiceCollectionId'
+ * ```
+ */
+export const getMutableServiceCollectionIdSettings = new PreparedQuery<IGetMutableServiceCollectionIdSettingsParams,IGetMutableServiceCollectionIdSettingsResult>(getMutableServiceCollectionIdSettingsIR);
+
+
+/** 'GetFixedServiceCollectionIdSettings' parameters type */
+export type IGetFixedServiceCollectionIdSettingsParams = void;
+
+/** 'GetFixedServiceCollectionIdSettings' return type */
+export interface IGetFixedServiceCollectionIdSettingsResult {
+  createdAt: Date;
+  key: string;
+  shop: string;
+  updatedAt: Date;
+  value: string;
+}
+
+/** 'GetFixedServiceCollectionIdSettings' query type */
+export interface IGetFixedServiceCollectionIdSettingsQuery {
+  params: IGetFixedServiceCollectionIdSettingsParams;
+  result: IGetFixedServiceCollectionIdSettingsResult;
+}
+
+const getFixedServiceCollectionIdSettingsIR: any = {"usedParamSet":{},"params":[],"statement":"SELECT *\nFROM \"Settings\"\nWHERE key = 'fixedServiceCollectionId'"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "Settings"
+ * WHERE key = 'fixedServiceCollectionId'
+ * ```
+ */
+export const getFixedServiceCollectionIdSettings = new PreparedQuery<IGetFixedServiceCollectionIdSettingsParams,IGetFixedServiceCollectionIdSettingsResult>(getFixedServiceCollectionIdSettingsIR);
+
+
+/** 'DeleteShopMutableServiceCollectionIdSetting' parameters type */
+export interface IDeleteShopMutableServiceCollectionIdSettingParams {
+  shop: string;
+}
+
+/** 'DeleteShopMutableServiceCollectionIdSetting' return type */
+export type IDeleteShopMutableServiceCollectionIdSettingResult = void;
+
+/** 'DeleteShopMutableServiceCollectionIdSetting' query type */
+export interface IDeleteShopMutableServiceCollectionIdSettingQuery {
+  params: IDeleteShopMutableServiceCollectionIdSettingParams;
+  result: IDeleteShopMutableServiceCollectionIdSettingResult;
+}
+
+const deleteShopMutableServiceCollectionIdSettingIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":75,"b":80}]}],"statement":"DELETE\nFROM \"Settings\"\nWHERE key = 'mutableServiceCollectionId'\nAND shop = :shop!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "Settings"
+ * WHERE key = 'mutableServiceCollectionId'
+ * AND shop = :shop!
+ * ```
+ */
+export const deleteShopMutableServiceCollectionIdSetting = new PreparedQuery<IDeleteShopMutableServiceCollectionIdSettingParams,IDeleteShopMutableServiceCollectionIdSettingResult>(deleteShopMutableServiceCollectionIdSettingIR);
+
+
+/** 'DeleteShopFixedServiceCollectionIdSetting' parameters type */
+export interface IDeleteShopFixedServiceCollectionIdSettingParams {
+  shop: string;
+}
+
+/** 'DeleteShopFixedServiceCollectionIdSetting' return type */
+export type IDeleteShopFixedServiceCollectionIdSettingResult = void;
+
+/** 'DeleteShopFixedServiceCollectionIdSetting' query type */
+export interface IDeleteShopFixedServiceCollectionIdSettingQuery {
+  params: IDeleteShopFixedServiceCollectionIdSettingParams;
+  result: IDeleteShopFixedServiceCollectionIdSettingResult;
+}
+
+const deleteShopFixedServiceCollectionIdSettingIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":73,"b":78}]}],"statement":"DELETE\nFROM \"Settings\"\nWHERE key = 'fixedServiceCollectionId'\nAND shop = :shop!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "Settings"
+ * WHERE key = 'fixedServiceCollectionId'
+ * AND shop = :shop!
+ * ```
+ */
+export const deleteShopFixedServiceCollectionIdSetting = new PreparedQuery<IDeleteShopFixedServiceCollectionIdSettingParams,IDeleteShopFixedServiceCollectionIdSettingResult>(deleteShopFixedServiceCollectionIdSettingIR);
+
+

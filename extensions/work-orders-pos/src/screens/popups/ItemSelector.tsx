@@ -7,6 +7,11 @@ import { useRouter } from '../../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import {
+  FIXED_PRICE_SERVICE,
+  getProductServiceType,
+  QUANTITY_ADJUSTING_SERVICE,
+} from '@work-orders/common/metafields/product-service-type.js';
 
 export type ItemFilter = 'can-add-labour';
 type Item = WIPCreateWorkOrder['items'][number];
@@ -32,7 +37,9 @@ export function ItemSelector({
     }
 
     if (filter === 'can-add-labour') {
-      return (li: Item) => !productVariantQueries[li.productVariantId]?.data?.product.isFixedServiceItem;
+      return (li: Item) =>
+        getProductServiceType(productVariantQueries[li.productVariantId]?.data?.product?.serviceType?.value) !==
+        FIXED_PRICE_SERVICE;
     }
 
     return filter satisfies never;
@@ -71,7 +78,8 @@ function useItemRows(items: Item[], onSelect: (item: Item) => void): ListRow[] {
       const variant = query.data;
       const displayName = getProductVariantName(variant) ?? 'Unknown item';
       const imageUrl = variant?.image?.url ?? variant?.product?.featuredImage?.url;
-      const isMutableService = variant?.product.isMutableServiceItem;
+      const isMutableService =
+        getProductServiceType(variant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
 
       return {
         id: item.uuid,

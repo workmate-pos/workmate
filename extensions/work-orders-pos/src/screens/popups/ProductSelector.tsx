@@ -4,7 +4,6 @@ import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
@@ -17,6 +16,7 @@ import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
+import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 
 export function ProductSelector({
   onSelect,
@@ -28,14 +28,11 @@ export function ProductSelector({
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
-  const serviceCollectionIds = useServiceCollectionIds();
-  const collectionQueries =
-    serviceCollectionIds?.map(collectionId => `NOT collection:${parseGid(collectionId).id}`) ?? [];
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
       first: 50 as Int,
-      query: [query, ...collectionQueries]
+      query: [query, ...Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).map(tag => `tag_not:"${tag}"`)]
         .filter(Boolean)
         .map(q => `(${q})`)
         .join(' AND '),

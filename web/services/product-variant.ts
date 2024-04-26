@@ -21,8 +21,6 @@ export function parseProductVariantMetafields<const T extends gql.products.Produ
 export async function addProductVariantComponents<const T extends gql.products.ProductVariantFragment.Result>(
   graphql: Graphql,
   productVariant: T,
-  fixedServiceCollectionId: ID | null,
-  mutableServiceCollectionId: ID | null,
 ) {
   if (!productVariant.requiresComponents) {
     return { ...productVariant, productVariantComponents: [] };
@@ -34,8 +32,6 @@ export async function addProductVariantComponents<const T extends gql.products.P
       gql.products.getProductVariantComponents.run(graphql, {
         ...variables,
         id: productVariant.id,
-        mutableServiceCollectionId,
-        fixedServiceCollectionId,
       }),
     result =>
       result.productVariant?.productVariantComponents ?? {

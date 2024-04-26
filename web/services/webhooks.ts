@@ -10,6 +10,7 @@ import { syncProductVariantsIfExists } from './product-variants/sync.js';
 import { syncShopifyOrders, syncShopifyOrdersIfExists } from './shopify-order/sync.js';
 import { syncWorkOrders } from './work-orders/sync.js';
 import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
+import { syncProductServiceTypeTag } from './metafields/product-service-type-metafield.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -103,6 +104,15 @@ export default {
 
   PRODUCTS_UPDATE: {
     async handler(session, topic, shop, body: { admin_graphql_api_id: ID; variant_ids: { id: number }[] }) {
+      // shopify sends this webhook whenever the product is ordered, so we throttle a bit here
+      // (we cannot use shopify's product.updatedAt because it updates even if the inventory item changes...)
+      const FIVE_MINUTES = 5 * 60 * 1000;
+      const [databaseProduct] = await db.products.get({ productId: body.admin_graphql_api_id });
+      if (databaseProduct && databaseProduct.updatedAt.getTime() - Date.now() < FIVE_MINUTES) {
+        return;
+      }
+
+      await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
       await syncProductsIfExists(session, [body.admin_graphql_api_id]);
 
       const variantIds = body.variant_ids.map(({ id }) => createGid('ProductVariant', id));

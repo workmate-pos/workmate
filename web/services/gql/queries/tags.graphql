@@ -1,0 +1,44 @@
+mutation removeTags($id: ID!, $tags: [String!]!) {
+  tagsRemove(id: $id, tags: $tags) {
+    userErrors {
+      field
+      message
+    }
+    node {
+      id
+    }
+  }
+}
+
+mutation addTags($id: ID!, $tags: [String!]!) {
+  tagsRemove(id: $id, tags: $tags) {
+    userErrors {
+      field
+      message
+    }
+    node {
+      id
+    }
+  }
+}
+
+mutation removeAndAddTags($id: ID!, $addTags: [String!]!, $removeTags: [String!]!) {
+  tagsRemove(id: $id, tags: $removeTags) {
+    userErrors {
+      field
+      message
+    }
+    node {
+      id
+    }
+  }
+  tagsAdd(id: $id, tags: $addTags) {
+    userErrors {
+      field
+      message
+    }
+    node {
+      id
+    }
+  }
+}

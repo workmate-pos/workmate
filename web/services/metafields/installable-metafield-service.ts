@@ -17,30 +17,32 @@ export class InstallableMetafieldService extends InstallableService {
   }
 
   override async initStore(graphql: Graphql): Promise<void> {
-    for (const definitionOrFn of this.metafieldDefinitions) {
-      const definition = typeof definitionOrFn === 'function' ? await definitionOrFn(graphql) : definitionOrFn;
+    await Promise.all(
+      this.metafieldDefinitions.map(async definitionOrFn => {
+        const definition = typeof definitionOrFn === 'function' ? await definitionOrFn(graphql) : definitionOrFn;
 
-      const {
-        metafieldDefinitions: { nodes: [existingMetafieldDefinition = undefined] = [] },
-      } = await gql.metafields.getDefinition.run(graphql, {
-        key: definition.key,
-        namespace: definition.namespace,
-        ownerType: definition.ownerType,
-      });
+        const {
+          metafieldDefinitions: { nodes: [existingMetafieldDefinition = undefined] = [] },
+        } = await gql.metafields.getDefinition.run(graphql, {
+          key: definition.key,
+          namespace: definition.namespace,
+          ownerType: definition.ownerType,
+        });
 
-      if (existingMetafieldDefinition) {
-        continue;
-      }
+        if (existingMetafieldDefinition) {
+          return;
+        }
 
-      const result = await gql.metafields.createDefinition.run(graphql, { definition });
-      if (result?.metafieldDefinitionCreate?.userErrors.length) {
-        sentryErr(
-          `Failed to create metafield definition '${definition.key}' on ${definition.ownerType}`,
-          result.metafieldDefinitionCreate.userErrors,
-        );
-      } else {
-        console.log(`Created metafield definition '${definition.key}' on ${definition.ownerType}`);
-      }
-    }
+        const result = await gql.metafields.createDefinition.run(graphql, { definition });
+        if (result?.metafieldDefinitionCreate?.userErrors.length) {
+          sentryErr(
+            `Failed to create metafield definition '${definition.key}' on ${definition.ownerType}`,
+            result.metafieldDefinitionCreate.userErrors,
+          );
+        } else {
+          console.log(`Created metafield definition '${definition.key}' on ${definition.ownerType}`);
+        }
+      }),
+    );
   }
 }

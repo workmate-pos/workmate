@@ -19,6 +19,10 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
 import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
+import {
+  getProductServiceType,
+  QUANTITY_ADJUSTING_SERVICE,
+} from '@work-orders/common/metafields/product-service-type.js';
 
 export function ItemChargeConfig({
   item,
@@ -76,7 +80,7 @@ export function ItemChargeConfig({
     return null;
   }
 
-  const hasBasePrice = !productVariant.product.isMutableServiceItem;
+  const hasBasePrice = getProductServiceType(productVariant.product.serviceType?.value) !== QUANTITY_ADJUSTING_SERVICE;
 
   const charges = [
     ...employeeLabour,

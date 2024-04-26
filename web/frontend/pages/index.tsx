@@ -9,16 +9,16 @@ export default function HomePage() {
 
   return (
     <Frame>
-      <Page narrowWidth title={'WorkMate'}>
+      <Page narrowWidth>
         <Layout>
           <Layout.Section>
-            <AppInfoCard setToastAction={setToastAction} />
+            <WelcomeSection />
           </Layout.Section>
           <Layout.Section>
             <AppPlanCard setToastAction={setToastAction} />
           </Layout.Section>
           <Layout.Section>
-            <WelcomeSection />
+            <AppInfoCard setToastAction={setToastAction} />
           </Layout.Section>
         </Layout>
       </Page>

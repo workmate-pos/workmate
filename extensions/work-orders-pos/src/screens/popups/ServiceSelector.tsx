@@ -2,8 +2,6 @@ import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
-import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
@@ -18,9 +16,15 @@ import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-s
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
+import {
+  getProductServiceType,
+  ProductServiceType,
+  QUANTITY_ADJUSTING_SERVICE,
+  SERVICE_METAFIELD_VALUE_TAG_NAME,
+} from '@work-orders/common/metafields/product-service-type.js';
 
 type OnSelect = (arg: {
-  type: 'mutable-service' | 'fixed-service';
+  type: ProductServiceType;
   item: CreateWorkOrderItem;
   charges: CreateWorkOrderCharge[];
 }) => void;
@@ -37,13 +41,16 @@ export function ServiceSelector({
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
-  const serviceCollectionIds = useServiceCollectionIds();
-  const serviceCollectionIdQueries = serviceCollectionIds?.map(id => `collection:${parseGid(id).id}`) ?? [];
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
       first: 50 as Int,
-      query: [query, `(${serviceCollectionIdQueries.join(' OR ')})`].join(' AND '),
+      query: [
+        query,
+        Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
+          .map(tag => `tag:"${tag}"`)
+          .join(' OR '),
+      ].join(' AND '),
     },
   });
   const currencyFormatter = useCurrencyFormatter();
@@ -133,11 +140,7 @@ function useProductVariantRows(
 
       const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
 
-      const type = variant.product.isFixedServiceItem
-        ? 'fixed-service'
-        : variant.product.isMutableServiceItem
-          ? 'mutable-service'
-          : null;
+      const type = getProductServiceType(variant.product.serviceType?.value);
 
       if (type === null) {
         return null;
@@ -147,7 +150,7 @@ function useProductVariantRows(
 
       let label: string | undefined = undefined;
 
-      if (variant.product.isMutableServiceItem) {
+      if (type === QUANTITY_ADJUSTING_SERVICE) {
         if (defaultCharges) {
           label = currencyFormatter(getTotalPriceForCharges(defaultCharges));
         }
@@ -168,7 +171,7 @@ function useProductVariantRows(
               uuid: itemUuid,
               productVariantId: variant.id,
               quantity: 1 as Int,
-              absorbCharges: variant.product.isMutableServiceItem,
+              absorbCharges: type === QUANTITY_ADJUSTING_SERVICE,
             },
             charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
               ...charge,

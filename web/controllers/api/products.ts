@@ -7,7 +7,6 @@ import { gql } from '../../services/gql/gql.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { getShopSettings } from '../../services/settings.js';
 import {
   parseProductVariantMetafields,
   ProductVariantFragmentWithComponents,
@@ -34,12 +33,8 @@ export default class ProductsController {
       allowOutOfStockPurchases,
     } = req.body;
 
-    const { fixedServiceCollectionId, mutableServiceCollectionId } = await getShopSettings(session.shop);
-
     const graphql = new Graphql(session);
     const { productCreate } = await gql.products.create.run(graphql, {
-      fixedServiceCollectionId,
-      mutableServiceCollectionId,
       input: {
         title,
         vendor,

@@ -1,4 +1,4 @@
-query getOrder($id: ID!, $mutableServiceCollectionId: ID!) {
+query getOrder($id: ID!) {
   order(id: $id) {
     note
     lineItems(first: 250) {
@@ -19,7 +19,9 @@ fragment OrderLineItemFragment on LineItem {
   variant {
     id
     product {
-      isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
+      serviceType: metafield(namespace: "$app", key: "service-type") {
+        value
+      }
     }
   }
   customAttributes {
@@ -33,7 +35,7 @@ fragment OrderLineItemFragment on LineItem {
   }
 }
 
-query getDraftOrder($id: ID!, $mutableServiceCollectionId: ID!) {
+query getDraftOrder($id: ID!) {
   draftOrder(id: $id) {
     note: note2
     lineItems(first: 250) {
@@ -54,7 +56,9 @@ fragment DraftOrderLineItemFragment on DraftOrderLineItem {
   variant {
     id
     product {
-      isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
+      serviceType: metafield(namespace: "$app", key: "service-type") {
+        value
+      }
     }
   }
   customAttributes {
@@ -67,3 +71,45 @@ fragment DraftOrderLineItemFragment on DraftOrderLineItem {
     }
   }
 }
+
+query getCollectionProducts($id: ID!) {
+  collection(id: $id) {
+    products(first: 250) {
+      nodes {
+        id
+        serviceTypeMetafield: metafield(namespace: "$app", key: "service-type") {
+          id
+        }
+      }
+      pageInfo {
+        hasNextPage
+      }
+    }
+  }
+}
+
+mutation setProductServiceTypeMetafield($id: ID!, $metafieldId: ID, $key: String, $namespace: String, $value: String!) {
+  productUpdate(input: {
+    id: $id,
+    metafields: [{
+      id: $metafieldId,
+      key: $key,
+      namespace: $namespace,
+      value: $value,
+    }]
+  }) {
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+query getServiceTypeMetafieldDefinition {
+  metafieldDefinitions(first: 1, namespace: "$app", key: "service-type", ownerType: PRODUCT) {
+    nodes {
+      id
+    }
+  }
+}
+

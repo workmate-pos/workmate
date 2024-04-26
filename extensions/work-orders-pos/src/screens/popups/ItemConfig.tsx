@@ -10,6 +10,7 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
 import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
+import { getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 
 export function ItemConfig({
   workOrderName,
@@ -95,7 +96,7 @@ export function ItemConfig({
                   router.popCurrent();
                 }}
               />
-              {!productVariant.product.isFixedServiceItem && (
+              {getProductServiceType(productVariant.product.serviceType?.value) !== 'Fixed-Price Service' && (
                 <Button
                   title="Add Labour"
                   onPress={async () => {

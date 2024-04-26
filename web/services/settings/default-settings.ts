@@ -33,8 +33,6 @@ const defaultShopSettings: ShopSettings = {
     enabled: false,
     status: null,
   },
-  mutableServiceCollectionId: null,
-  fixedServiceCollectionId: null,
   defaultRate: '15.00' as Money,
   labourLineItemName: 'Labour',
   labourLineItemSKU: '',

@@ -47,6 +47,10 @@ import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { getPurchaseOrderBadge } from '../util/badges.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
+import {
+  getProductServiceType,
+  QUANTITY_ADJUSTING_SERVICE,
+} from '@work-orders/common/metafields/product-service-type.js';
 
 export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
@@ -281,7 +285,7 @@ function WorkOrderItems({
                 dispatch.updateItemCharges({ item, charges: createWorkOrderCharges });
                 dispatch.addItems({ items: [item] });
 
-                if (type === 'mutable-service') {
+                if (type === QUANTITY_ADJUSTING_SERVICE) {
                   router.push('ItemChargeConfig', {
                     item,
                     createWorkOrder,
@@ -517,7 +521,8 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
     })
     .filter(({ productVariant }) => queryFilter(productVariant))
     .map<ListRow>(({ item, productVariant, purchaseOrders }) => {
-      const isMutableService = productVariant?.product.isMutableServiceItem ?? false;
+      const isMutableService =
+        getProductServiceType(productVariant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
       const hasCharges = charges.length > 0;
 
