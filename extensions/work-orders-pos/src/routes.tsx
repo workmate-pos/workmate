@@ -32,6 +32,7 @@ import { PaymentStatusSelector } from './screens/popups/PaymentStatusSelector.js
 import { OverdueStatusSelector } from './screens/popups/OverdueStatusSelector.js';
 import { PurchaseOrderStatusSelector } from './screens/popups/PurchaseOrderStatusSelector.js';
 import { DepositSelector } from './screens/popups/DepositSelector.js';
+import { ItemSelector } from './screens/popups/ItemSelector.js';
 
 export const { Router, useRouter } = createRouter(
   {
@@ -146,6 +147,10 @@ export const { Router, useRouter } = createRouter(
     PrintOverview: {
       title: 'Print',
       Component: PrintOverview,
+    },
+    ItemSelector: {
+      title: 'Select item',
+      Component: ItemSelector,
     },
   },
 );

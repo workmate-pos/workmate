@@ -18,15 +18,16 @@ import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
+import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
 
 export function ItemChargeConfig({
   item,
+  createWorkOrder,
   initialCharges,
-  workOrderName,
   onRemove,
   onUpdate,
 }: {
-  workOrderName: string | null;
+  createWorkOrder: WIPCreateWorkOrder;
   item: CreateWorkOrderItem;
   initialCharges: CreateWorkOrderCharge[];
   /**
@@ -50,7 +51,7 @@ export function ItemChargeConfig({
 
   const settingsQuery = useSettingsQuery({ fetch });
   const productVariantQuery = useProductVariantQuery({ fetch, id: item?.productVariantId ?? null });
-  const { workOrderQuery, getChargeOrder, getItemOrder } = useWorkOrderOrders(workOrderName);
+  const { workOrderQuery, getChargeOrder, getItemOrder } = useWorkOrderOrders(createWorkOrder.name);
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
@@ -148,7 +149,7 @@ export function ItemChargeConfig({
 
               <EmployeeLabourList
                 charges={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
-                workOrderName={workOrderName}
+                workOrderName={createWorkOrder.name}
                 onClick={labour =>
                   router.push('EmployeeLabourConfig', {
                     labour,

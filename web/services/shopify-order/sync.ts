@@ -195,11 +195,9 @@ async function syncShopifyOrderLineItems(
 
   // We should link work order items and work order charges if referenced
   try {
-    // this can fail if the merchant messes with order attributes
-    // TODO: Copy all attributes over to metafields on create to prevent this ^^^
     await linkWorkOrderItemsAndChargesAndDeposits(session, order.order, lineItems);
   } catch (error) {
-    sentryErr('Error linking work order items and charges', error);
+    sentryErr('Error linking work order items and charges', { error });
   }
 
   // sync work orders in case any line items now don't have a related line item anymore

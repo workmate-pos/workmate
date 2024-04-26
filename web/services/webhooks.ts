@@ -168,13 +168,7 @@ export default {
         note_attributes: { name: string; value: string }[];
       },
     ) {
-      const isWorkOrder = body.note_attributes.some(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
-
-      if (isWorkOrder) {
-        await syncShopifyOrders(session, [body.admin_graphql_api_id]);
-      } else {
-        await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
-      }
+      await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
     },
   },
 

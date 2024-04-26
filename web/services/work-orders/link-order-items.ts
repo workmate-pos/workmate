@@ -27,6 +27,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
 
   const errors: unknown[] = [];
 
+  // TODO: Perhaps remove the custom attribute after linking is done (for orders, not for drafts)? Should not hurt as linking is only required once
   await cleanOrphanedDraftOrders(session, workOrder.id, () =>
     Promise.all([
       linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
@@ -47,16 +48,23 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
   const uuids = Object.keys(lineItemIdByItemUuid);
 
   const items = uuids.length ? await db.workOrder.getItemsByUuids({ workOrderId, uuids }) : [];
-  for (const { uuid } of items) {
+  for (const { uuid, shopifyOrderLineItemId: previousShopifyOrderLineItemId } of items) {
     const shopifyOrderLineItemId = lineItemIdByItemUuid[uuid] ?? never();
     await db.workOrder.setItemShopifyOrderLineItemId({ workOrderId, uuid, shopifyOrderLineItemId });
 
-    // in case this line item is in some purchase order we transfer the line item id to the new order, make sure to update it there as well (e.g. when draft order becomes a real order).
-    // we only support this behavior for work orders, and not for arbitrary draft orders since mapping from draft order line items to order line items is hard to do perfectly.
-    for (const { purchaseOrderId, uuid } of await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemId({
-      shopifyOrderLineItemId,
-    })) {
-      await db.purchaseOrder.setLineItemShopifyOrderLineItemId({ purchaseOrderId, uuid, shopifyOrderLineItemId });
+    if (previousShopifyOrderLineItemId) {
+      // if this work order item was previously linked to a different line item, we should also re-link purchase order line items.
+      // this is handy when a draft order is converted to a real order.
+
+      for (const { purchaseOrderId, uuid } of await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemId({
+        shopifyOrderLineItemId: previousShopifyOrderLineItemId,
+      })) {
+        await db.purchaseOrder.setLineItemShopifyOrderLineItemId({
+          purchaseOrderId,
+          uuid,
+          shopifyOrderLineItemId,
+        });
+      }
     }
   }
 

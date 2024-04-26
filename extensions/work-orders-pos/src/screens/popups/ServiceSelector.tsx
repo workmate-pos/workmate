@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
@@ -17,6 +17,7 @@ import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
+import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
 
 type OnSelect = (arg: {
   type: 'mutable-service' | 'fixed-service';
@@ -24,7 +25,15 @@ type OnSelect = (arg: {
   charges: CreateWorkOrderCharge[];
 }) => void;
 
-export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
+export function ServiceSelector({
+  onSelect,
+  createWorkOrder,
+  onAddLabourToItem,
+}: {
+  onSelect: OnSelect;
+  onAddLabourToItem: (item: CreateWorkOrderItem) => void;
+  createWorkOrder: WIPCreateWorkOrder;
+}) {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
@@ -53,8 +62,25 @@ export function ServiceSelector({ onSelect }: { onSelect: OnSelect }) {
 
   const rows = useProductVariantRows(productVariantsQuery?.data?.pages?.[page - 1] ?? [], onSelect, currencyFormatter);
 
+  const router = useRouter();
+
   return (
     <ScrollView>
+      <Button
+        title={'Add labour to line item'}
+        variant={'primary'}
+        onPress={() =>
+          router.push('ItemSelector', {
+            filter: 'can-add-labour',
+            onSelect: async item => {
+              await router.popCurrent();
+              onAddLabourToItem(item);
+            },
+            items: createWorkOrder.items,
+          })
+        }
+      />
+
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">
           {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}

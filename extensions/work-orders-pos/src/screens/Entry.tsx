@@ -136,7 +136,7 @@ export function Entry() {
         alignment={'space-between'}
         sm={{ direction: 'vertical', alignment: 'flex-start' }}
       >
-        <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
+        <ResponsiveStack direction={'horizontal'} flexWrap={'wrap'} sm={{ direction: 'vertical', flexWrap: undefined }}>
           <Button
             title={'Filter status'}
             type={'plain'}
@@ -204,7 +204,7 @@ export function Entry() {
             }
           />
         </ResponsiveStack>
-        <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
+        <ResponsiveStack direction={'horizontal'} flexWrap={'wrap'} sm={{ direction: 'vertical', flexWrap: undefined }}>
           {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
           {paymentStatus && (
             <Button title={'Clear payment status'} type={'plain'} onPress={() => setPaymentStatus(null)} />

@@ -5,6 +5,7 @@ import {
   List,
   ListRow,
   ScrollView,
+  Stack,
   Text,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
@@ -94,7 +95,7 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
           <WorkOrderProperties createWorkOrder={createWorkOrder} dispatch={dispatch} />
           <WorkOrderCustomFields createWorkOrder={createWorkOrder} dispatch={dispatch} />
 
-          <ResponsiveGrid columns={2}>
+          <ResponsiveGrid columns={1}>
             <WorkOrderItems createWorkOrder={createWorkOrder} dispatch={dispatch} />
 
             <ResponsiveGrid columns={1}>
@@ -110,7 +111,6 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
                 value={createWorkOrder.internalNote}
                 onChange={(value: string) => dispatch.setPartial({ internalNote: value })}
               />
-              <WorkOrderEmployees createWorkOrder={createWorkOrder} />
               <DateField
                 label={'Due Date'}
                 value={createWorkOrder.dueDate}
@@ -137,20 +137,6 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
                   router.push('PaymentOverview', {
                     name: createWorkOrder.name,
                   });
-                }
-              }}
-            />
-
-            <FormButton
-              title={'Deposit'}
-              type={'basic'}
-              action={'button'}
-              disabled={!createWorkOrder.name || !createWorkOrder.customerId || hasUnsavedChanges}
-              onPress={() => {
-                const { name, customerId } = createWorkOrder;
-
-                if (name && customerId) {
-                  router.push('DepositSelector', { createWorkOrder: { ...createWorkOrder, name, customerId } });
                 }
               }}
             />
@@ -288,6 +274,7 @@ function WorkOrderItems({
           action={'button'}
           onPress={() =>
             router.push('ServiceSelector', {
+              createWorkOrder,
               onSelect: ({ type, item, charges }) => {
                 const createWorkOrderCharges = [...(createWorkOrder.charges ?? []), ...charges];
 
@@ -297,12 +284,21 @@ function WorkOrderItems({
                 if (type === 'mutable-service') {
                   router.push('ItemChargeConfig', {
                     item,
+                    createWorkOrder,
                     initialCharges: createWorkOrderCharges,
-                    workOrderName: createWorkOrder.name,
                     onRemove: () => dispatch.removeItems({ items: [item] }),
                     onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
                   });
                 }
+              },
+              onAddLabourToItem: item => {
+                router.push('ItemChargeConfig', {
+                  item,
+                  createWorkOrder,
+                  initialCharges: createWorkOrder.charges,
+                  onRemove: () => dispatch.removeItems({ items: [item] }),
+                  onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
+                });
               },
             })
           }
@@ -334,7 +330,7 @@ function WorkOrderCustomFields({
 
   return (
     <ResponsiveGrid columns={4}>
-      {Object.entries(createWorkOrder.customFields).map(([key, value], i) => (
+      {Object.entries(createWorkOrder.customFields).map(([key, value]) => (
         <FormStringField
           key={key}
           label={key}
@@ -415,6 +411,10 @@ function WorkOrderMoneySummary({
 
   return (
     <ResponsiveGrid columns={1}>
+      <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+        <Text variant={'headingLarge'}>Summary</Text>
+      </Stack>
+
       {calculatedDraftOrderQuery.error && (
         <Banner
           title={`Error calculating work order: ${extractErrorMessage(calculatedDraftOrderQuery.error)}`}
@@ -422,6 +422,8 @@ function WorkOrderMoneySummary({
           visible
         />
       )}
+
+      <WorkOrderEmployees createWorkOrder={createWorkOrder} />
 
       <ResponsiveGrid columns={2} grow>
         <FormStringField
@@ -561,8 +563,8 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
           if (hasCharges || isMutableService) {
             router.push('ItemChargeConfig', {
               item,
+              createWorkOrder,
               initialCharges: charges,
-              workOrderName: createWorkOrder.name,
               onRemove: () => dispatch.removeItems({ items: [item] }),
               onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
             });
@@ -579,7 +581,7 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
               router.push('ItemChargeConfig', {
                 item,
                 initialCharges: charges,
-                workOrderName: createWorkOrder.name,
+                createWorkOrder,
                 onRemove: () => dispatch.removeItems({ items: [item] }),
                 onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
               });
