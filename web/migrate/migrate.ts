@@ -36,6 +36,8 @@ const GOLFHQ = 'mygolfhq.myshopify.com';
 
 const STORES_TO_YEET = [WOPOS_TEST_STORE, SHOPIFY_MARKETPLACE_REVIEW_STORE, DELETED_STORE, GOLFHQ];
 
+const DRY_RUN = true;
+
 export async function migrateServiceItems() {
   // We have moved away from Service collections to metafields + tags.
   // So we should go through the collections for each shop and add the metafield value
@@ -43,12 +45,23 @@ export async function migrateServiceItems() {
   const mutableServiceCollectionIdSettings = await db.workOrderMigration.getMutableServiceCollectionIdSettings();
   const fixedServiceCollectionIdSettings = await db.workOrderMigration.getFixedServiceCollectionIdSettings();
 
+  const collectionIdSettingFilter = (
+    setting: IGetMutableServiceCollectionIdSettingsResult | IGetFixedServiceCollectionIdSettingsResult,
+  ) => {
+    return (
+      !STORES_TO_YEET.includes(setting.shop) &&
+      !!JSON.parse(setting.value) &&
+      typeof JSON.parse(setting.value) === 'string' &&
+      JSON.parse(setting.value).trim().length > 0
+    );
+  };
+
   const tasks: [
     serviceType: ProductServiceType,
     settings: (IGetMutableServiceCollectionIdSettingsResult | IGetFixedServiceCollectionIdSettingsResult)[],
   ][] = [
-    ['Quantity-Adjusting Service', mutableServiceCollectionIdSettings],
-    ['Fixed-Price Service', fixedServiceCollectionIdSettings],
+    ['Quantity-Adjusting Service', mutableServiceCollectionIdSettings.filter(collectionIdSettingFilter)],
+    ['Fixed-Price Service', fixedServiceCollectionIdSettings.filter(collectionIdSettingFilter)],
   ];
 
   for (const [serviceType, settings] of tasks) {
@@ -57,18 +70,11 @@ export async function migrateServiceItems() {
     let successCount = 0;
 
     for (const [i, collectionSetting] of settings.entries()) {
-      if (collectionSetting.shop !== 'work-orders-pos.myshopify.com') {
-        // TODO: Remove before merge
-        continue;
-      }
-
       const prefix = `[${i + 1} / ${settings.length}] [${collectionSetting.shop}]`;
 
-      await migrateServiceCollection(
-        collectionSetting.shop,
-        JSON.parse(collectionSetting.value) as ID,
-        serviceType,
-      ).then(
+      const collectionId = JSON.parse(collectionSetting.value) as ID;
+
+      await migrateServiceCollection(collectionSetting.shop, collectionId, serviceType).then(
         () => successCount++,
         error => console.error(prefix, 'Migration failed:', error.message),
       );
@@ -96,6 +102,10 @@ async function migrateServiceCollection(shop: string, collectionId: ID, serviceT
 
   if (collection.products.pageInfo.hasNextPage) {
     throw new Error('More than 250 products in collection - increase limit!');
+  }
+
+  if (DRY_RUN) {
+    return;
   }
 
   // fetch the metafield id or create it if it hasn't been created yet
@@ -137,6 +147,8 @@ export async function migratePurchaseOrders() {
 
   for (const shop of STORES_TO_YEET) {
     await db.workOrderMigration.removeShopPurchaseOrderLineItems({ shop });
+    await db.workOrderMigration.removePurchaseOrderEmployeeAssignments({ shop });
+    await db.workOrderMigration.removeShopPurchaseOrderCustomFields({ shop });
     await db.workOrderMigration.removeShopPurchaseOrders({ shop });
   }
 

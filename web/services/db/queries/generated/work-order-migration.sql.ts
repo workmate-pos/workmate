@@ -535,6 +535,64 @@ const removeShopPurchaseOrderLineItemsIR: any = {"usedParamSet":{"shop":true},"p
 export const removeShopPurchaseOrderLineItems = new PreparedQuery<IRemoveShopPurchaseOrderLineItemsParams,IRemoveShopPurchaseOrderLineItemsResult>(removeShopPurchaseOrderLineItemsIR);
 
 
+/** 'RemovePurchaseOrderEmployeeAssignments' parameters type */
+export interface IRemovePurchaseOrderEmployeeAssignmentsParams {
+  shop: string;
+}
+
+/** 'RemovePurchaseOrderEmployeeAssignments' return type */
+export type IRemovePurchaseOrderEmployeeAssignmentsResult = void;
+
+/** 'RemovePurchaseOrderEmployeeAssignments' query type */
+export interface IRemovePurchaseOrderEmployeeAssignmentsQuery {
+  params: IRemovePurchaseOrderEmployeeAssignmentsParams;
+  result: IRemovePurchaseOrderEmployeeAssignmentsResult;
+}
+
+const removePurchaseOrderEmployeeAssignmentsIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":133,"b":138}]}],"statement":"DELETE\nFROM \"PurchaseOrderEmployeeAssignment\" poea\nUSING \"PurchaseOrder\" po\nWHERE poea.\"purchaseOrderId\" = po.\"id\"\n  AND po.\"shop\" = :shop!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "PurchaseOrderEmployeeAssignment" poea
+ * USING "PurchaseOrder" po
+ * WHERE poea."purchaseOrderId" = po."id"
+ *   AND po."shop" = :shop!
+ * ```
+ */
+export const removePurchaseOrderEmployeeAssignments = new PreparedQuery<IRemovePurchaseOrderEmployeeAssignmentsParams,IRemovePurchaseOrderEmployeeAssignmentsResult>(removePurchaseOrderEmployeeAssignmentsIR);
+
+
+/** 'RemoveShopPurchaseOrderCustomFields' parameters type */
+export interface IRemoveShopPurchaseOrderCustomFieldsParams {
+  shop: string;
+}
+
+/** 'RemoveShopPurchaseOrderCustomFields' return type */
+export type IRemoveShopPurchaseOrderCustomFieldsResult = void;
+
+/** 'RemoveShopPurchaseOrderCustomFields' query type */
+export interface IRemoveShopPurchaseOrderCustomFieldsQuery {
+  params: IRemoveShopPurchaseOrderCustomFieldsParams;
+  result: IRemoveShopPurchaseOrderCustomFieldsResult;
+}
+
+const removeShopPurchaseOrderCustomFieldsIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":128,"b":133}]}],"statement":"DELETE\nFROM \"PurchaseOrderCustomField\" polcf\nUSING \"PurchaseOrder\" po\nWHERE polcf.\"purchaseOrderId\" = po.\"id\"\n  AND po.\"shop\" = :shop!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "PurchaseOrderCustomField" polcf
+ * USING "PurchaseOrder" po
+ * WHERE polcf."purchaseOrderId" = po."id"
+ *   AND po."shop" = :shop!
+ * ```
+ */
+export const removeShopPurchaseOrderCustomFields = new PreparedQuery<IRemoveShopPurchaseOrderCustomFieldsParams,IRemoveShopPurchaseOrderCustomFieldsResult>(removeShopPurchaseOrderCustomFieldsIR);
+
+
 /** 'RemoveShopPurchaseOrders' parameters type */
 export interface IRemoveShopPurchaseOrdersParams {
   shop: string;

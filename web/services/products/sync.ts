@@ -61,7 +61,7 @@ export async function upsertProducts(shop: string, products: gql.products.Databa
   }
 
   await unit(async () => {
-    for (const { id: productId, title, handle, description, productType, updatedAt } of products) {
+    for (const { id: productId, title, handle, description, productType } of products) {
       await db.products.upsert({
         shop,
         productId,
@@ -69,7 +69,6 @@ export async function upsertProducts(shop: string, products: gql.products.Databa
         handle,
         description,
         productType,
-        shopifyUpdatedAt: new Date(updatedAt),
       });
     }
   });

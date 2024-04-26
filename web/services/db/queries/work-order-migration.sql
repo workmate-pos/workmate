@@ -75,6 +75,20 @@ USING "PurchaseOrder" po
 WHERE poli."purchaseOrderId" = po."id"
   AND po."shop" = :shop!;
 
+/* @name removePurchaseOrderEmployeeAssignments */
+DELETE
+FROM "PurchaseOrderEmployeeAssignment" poea
+USING "PurchaseOrder" po
+WHERE poea."purchaseOrderId" = po."id"
+  AND po."shop" = :shop!;
+
+/* @name removeShopPurchaseOrderCustomFields */
+DELETE
+FROM "PurchaseOrderCustomField" polcf
+USING "PurchaseOrder" po
+WHERE polcf."purchaseOrderId" = po."id"
+  AND po."shop" = :shop!;
+
 /* @name removeShopPurchaseOrders */
 DELETE
 FROM "PurchaseOrder"

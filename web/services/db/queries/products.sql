@@ -14,15 +14,14 @@ WHERE "Product"."productId" IN :productIds!
 GROUP BY "Product"."productId";
 
 /* @name upsert */
-INSERT INTO "Product" ("productId", handle, title, shop, description, "productType", "shopifyUpdatedAt")
-VALUES (:productId!, :handle!, :title!, :shop!, :description!, :productType!, :shopifyUpdatedAt!)
+INSERT INTO "Product" ("productId", handle, title, shop, description, "productType")
+VALUES (:productId!, :handle!, :title!, :shop!, :description!, :productType!)
 ON CONFLICT ("productId") DO UPDATE
   SET handle = EXCLUDED.handle,
       title  = EXCLUDED.title,
       shop   = EXCLUDED.shop,
       description = EXCLUDED.description,
-      "productType" = EXCLUDED."productType",
-      "shopifyUpdatedAt" = EXCLUDED."shopifyUpdatedAt";
+      "productType" = EXCLUDED."productType";
 
 /*
   @name softDeleteProducts

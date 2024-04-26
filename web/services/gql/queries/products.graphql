@@ -181,7 +181,6 @@ fragment DatabaseProductFragment on Product {
   title
   description
   productType
-  updatedAt
 }
 
 
