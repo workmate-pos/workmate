@@ -17,7 +17,6 @@ import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { workOrderToCreateWorkOrder } from '../../dto/work-order-to-create-work-order.js';
 import { defaultCreateWorkOrder } from '../../create-work-order/default.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 /**
  * Page that allows initializing payments for line items.
@@ -89,8 +88,6 @@ export function PaymentOverview({ name }: { name: string }) {
       customerId: workOrder.customerId,
       labourSku: settings.labourLineItemSKU,
       discount: workOrder.discount,
-      depositedAmount: workOrder.depositedAmount,
-      depositedReconciledAmount: workOrder.depositedReconciledAmount,
     });
   };
 

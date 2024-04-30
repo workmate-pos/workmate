@@ -5,13 +5,12 @@ import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shop
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import {
   getCustomAttributeArrayFromObject,
-  getWorkOrderAppliedDiscount,
   getWorkOrderLineItems,
   getWorkOrderOrderCustomAttributes,
 } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
-import { getWorkOrderDepositedAmount, getWorkOrderDepositedReconciledAmount, getWorkOrderDiscount } from './get.js';
+import { getWorkOrderDiscount } from './get.js';
 
 export async function syncWorkOrders(session: Session, workOrderIds: number[], workOrderHasChanged: boolean) {
   if (workOrderIds.length === 0) {
@@ -83,14 +82,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
       { labourSku: labourLineItemSKU },
     );
 
-    const workOrderDiscount = getWorkOrderDiscount(workOrder);
-    const depositedAmount = await getWorkOrderDepositedAmount(workOrderId);
-    const depositedReconciledAmount = await getWorkOrderDepositedReconciledAmount(workOrderId);
-
-    const appliedDiscount = getWorkOrderAppliedDiscount(workOrderDiscount, {
-      depositedAmount,
-      depositedReconciledAmount,
-    });
+    const discount = getWorkOrderDiscount(workOrder);
 
     assertGid(workOrder.customerId);
 
@@ -127,7 +119,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
         ],
         note: workOrder.note,
         purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
-        appliedDiscount,
+        appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
       },
     });
   }

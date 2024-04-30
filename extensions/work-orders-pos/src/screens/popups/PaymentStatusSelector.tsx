@@ -4,7 +4,7 @@ import { useRouter } from '../../routes.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function PaymentStatusSelector({ onSelect }: { onSelect: (status: PaymentStatus) => void }) {
-  const statuses: PaymentStatus[] = ['UNPAID', 'HAS_DEPOSIT', 'PARTIALLY_PAID', 'FULLY_PAID'];
+  const statuses: PaymentStatus[] = ['UNPAID', 'PARTIALLY_PAID', 'FULLY_PAID'];
 
   const router = useRouter();
 

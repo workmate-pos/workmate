@@ -165,22 +165,6 @@ function getUniquelyNamedCharges(charges: (HourlyLabourCharge | FixedPriceLabour
   });
 }
 
-export function getDepositCustomSale(deposit: { uuid: string; amount: Money }): CustomSale {
-  const amount = BigDecimal.fromMoney(deposit.amount).round(2, RoundingMode.CEILING).toMoney();
-
-  if (BigDecimal.fromMoney(amount).compare(BigDecimal.ZERO) <= 0) {
-    throw new Error('Cannot deposit a negative amount');
-  }
-
-  return {
-    title: 'Deposit',
-    quantity: 1,
-    unitPrice: amount,
-    customAttributes: { [getDepositUuidCustomAttributeKey(deposit)]: deposit.amount },
-    taxable: false,
-  };
-}
-
 export function getChargeUnitPrice(
   charge: Pick<HourlyLabourCharge, 'hours' | 'rate'> | Pick<FixedPriceLabourCharge, 'amount'>,
 ): Money {
@@ -197,8 +181,6 @@ export function getChargeUnitPrice(
 const ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_item_uuid:';
 const HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_hourly_charge_uuid:';
 const FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_fixed_charge_uuid:';
-const DEPOSIT_UUID_CUSTOM_ATTRIBUTE_PREFIX = '_wm_deposit:';
-const DEPOSIT_DISCOUNT_NAME = 'Deposit';
 export const WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = 'Work Order';
 
 export function getWorkOrderOrderCustomAttributes(workOrder: { name: string; customFields: Record<string, string> }) {
@@ -246,10 +228,6 @@ export function getChargeUuidCustomAttributeKey(charge: { uuid: string; type: 'h
   return `${prefix}${charge.uuid}`;
 }
 
-export function getDepositUuidCustomAttributeKey(deposit: { uuid: string }) {
-  return `${DEPOSIT_UUID_CUSTOM_ATTRIBUTE_PREFIX}${deposit.uuid}`;
-}
-
 const ABSORBED_CHARGE_SEPARATOR = ':';
 
 /**
@@ -269,7 +247,6 @@ export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
     item: ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
     hourly: HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
     fixed: FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    deposit: DEPOSIT_UUID_CUSTOM_ATTRIBUTE_PREFIX,
   } as const;
 
   for (const [type, prefix] of entries(prefixes)) {
@@ -336,39 +313,4 @@ export function getAbsorbedUuidsFromCustomAttributes(customAttributes: { key: st
 
 export function getCustomAttributeArrayFromObject(obj: Record<string, string>): { key: string; value: string }[] {
   return Object.entries(obj).map(([key, value]) => ({ key, value }));
-}
-
-/**
- * Used to check whether some applied discount was applied to account for a deposit.
- */
-export function isDepositDiscount({ code }: { code: string }) {
-  return code === DEPOSIT_DISCOUNT_NAME;
-}
-
-type DiscountType = 'FIXED_AMOUNT' | 'PERCENTAGE';
-type Discount = { type: DiscountType; value: string };
-type AppliedDiscount = { title: string | null; valueType: DiscountType; value: number };
-
-// TODO: Get shopify to allow 2 order-level discounts (!!!) Currently when you apply a deposit, the discount will no longer work
-export function getWorkOrderAppliedDiscount(
-  discount: Discount | null,
-  { depositedAmount, depositedReconciledAmount }: { depositedAmount: Money; depositedReconciledAmount: Money },
-): AppliedDiscount | null {
-  const remainingDepositedAmount = BigDecimal.fromMoney(depositedAmount).subtract(
-    BigDecimal.fromMoney(depositedReconciledAmount),
-  );
-
-  if (remainingDepositedAmount.compare(BigDecimal.ZERO) > 0) {
-    return {
-      title: DEPOSIT_DISCOUNT_NAME,
-      valueType: 'FIXED_AMOUNT',
-      value: Number(remainingDepositedAmount.toMoney()),
-    };
-  }
-
-  if (discount) {
-    return { title: null, valueType: discount.type, value: Number(discount.value) };
-  }
-
-  return null;
 }

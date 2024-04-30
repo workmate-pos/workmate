@@ -172,7 +172,7 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
           {!createWorkOrder.name ||
             (hasUnsavedChanges && (
               <Text color="TextSubdued" variant="body">
-                You must save your work order before you can manage payments/deposit/print
+                You must save your work order before you can manage payments/print
               </Text>
             ))}
         </ResponsiveStack>

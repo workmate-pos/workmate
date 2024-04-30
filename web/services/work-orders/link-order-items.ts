@@ -5,7 +5,6 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Session } from '@shopify/shopify-api';
 import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 import { gql } from '../gql/gql.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 type Order = { id: ID; customAttributes: { key: string; value: string | null }[] };
 type LineItem =
@@ -33,7 +32,6 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
       linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
       linkHourlyLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
       linkFixedPriceLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
-      linkDeposits(lineItems, workOrder.id).catch(error => errors.push(error)),
     ]),
   );
 
@@ -113,22 +111,6 @@ async function linkFixedPriceLabourCharges(lineItems: LineItem[], workOrderId: n
 
   if (charges.length !== uuids.length) {
     throw new Error('Did not find all fixed price labour charge uuids from a Shopify Order in the database');
-  }
-}
-
-async function linkDeposits(lineItems: LineItem[], workOrderId: number) {
-  const lineItemIdByDepositUuid = getLineItemIdsByUuids(lineItems, 'deposit');
-
-  for (const [uuid, shopifyOrderLineItemId] of Object.entries(lineItemIdByDepositUuid)) {
-    const lineItem = lineItems.find(li => li.id === shopifyOrderLineItemId) ?? never();
-    await db.workOrder.upsertDeposit({
-      workOrderId,
-      uuid,
-      shopifyOrderLineItemId,
-      amount: BigDecimal.fromDecimal(lineItem.discountedUnitPriceSet.shopMoney.amount)
-        .multiply(BigDecimal.fromString(lineItem.quantity.toFixed(0)))
-        .toMoney(),
-    });
   }
 }
 

@@ -61,7 +61,6 @@ model WorkOrder {
   items                   WorkOrderItem[]
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
   hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
-  deposits                WorkOrderDeposit[]
   customFields            WorkOrderCustomField[]
 
   @@unique([shop, name])
@@ -164,23 +163,6 @@ model WorkOrderHourlyLabourCharge {
   @@id([workOrderId, uuid])
 }
 
-model WorkOrderDeposit {
-  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
-  workOrderId Int
-
-  uuid String @db.Uuid
-
-  shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
-  shopifyOrderLineItemId String?
-
-  amount String
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
-
-  @@id([workOrderId, uuid])
-}
-
 model ShopifyOrder {
   orderId String @id
 
@@ -246,7 +228,6 @@ model ShopifyOrderLineItem {
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
   workOrderItems          WorkOrderItem[]
   purchaseOrderLineItems  PurchaseOrderLineItem[]
-  WorkOrderDeposit        WorkOrderDeposit[]
 
   @@index([orderId])
 }

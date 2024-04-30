@@ -387,15 +387,11 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
 
       moneySubtitle = `${currencyFormatter(paid)} paid of ${currencyFormatter(total)}`;
 
-      const paidBigDecimal = BigDecimal.fromMoney(paid);
       const outstandingBigDecimal = BigDecimal.fromMoney(outstanding);
       const totalBigDecimal = BigDecimal.fromMoney(total);
-      const depositedBigDecimal = BigDecimal.fromMoney(workOrder.depositedAmount);
 
       if (outstandingBigDecimal.compare(BigDecimal.ZERO) <= 0) {
         financialStatus = 'Fully Paid';
-      } else if (depositedBigDecimal.compare(BigDecimal.ZERO) > 0 && depositedBigDecimal.equals(paidBigDecimal)) {
-        financialStatus = 'Deposit';
       } else if (outstandingBigDecimal.compare(totalBigDecimal) < 0) {
         financialStatus = 'Partially paid';
       } else {

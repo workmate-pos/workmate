@@ -4,16 +4,12 @@ import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { SetLineItemPropertiesInput } from '@shopify/retail-ui-extensions';
 import {
-  getDepositCustomSale,
-  getWorkOrderAppliedDiscount,
   getWorkOrderLineItems,
   getWorkOrderOrderCustomAttributes,
   WorkOrderItem,
 } from '@work-orders/work-order-shopify-order';
 import { WorkOrderCharge } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { uuid } from '../util/uuid.js';
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
@@ -26,43 +22,6 @@ export const usePaymentHandler = () => {
 
   const cartRef = useCartRef();
 
-  const handleDeposit = async ({
-    workOrderName,
-    customerId,
-    deposit,
-  }: {
-    workOrderName: string;
-    customerId: ID;
-    deposit: Money;
-  }) => {
-    setIsLoading(true);
-
-    await cart.clearCart();
-    await cart.addCartProperties(
-      getWorkOrderOrderCustomAttributes({
-        name: workOrderName,
-        customFields: {},
-      }),
-    );
-    await cart.setCustomer({ id: Number(parseGid(customerId).id) });
-
-    const { quantity, title, unitPrice, taxable, customAttributes } = getDepositCustomSale({
-      uuid: uuid(),
-      amount: deposit,
-    });
-
-    await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });
-
-    const lineItemUuid = cartRef.current.lineItems.find(li => !li.variantId && li.title === title)?.uuid;
-
-    if (lineItemUuid) {
-      await cart.addLineItemProperties(lineItemUuid, customAttributes);
-    }
-
-    navigation.dismiss();
-    setIsLoading(false);
-  };
-
   const handlePayment = async ({
     workOrderName,
     customFields,
@@ -71,8 +30,6 @@ export const usePaymentHandler = () => {
     customerId,
     labourSku,
     discount,
-    depositedAmount,
-    depositedReconciledAmount,
   }: {
     workOrderName: string;
     // TODO: Maybe fetch the work order directly in here?
@@ -85,8 +42,6 @@ export const usePaymentHandler = () => {
       type: 'FIXED_AMOUNT' | 'PERCENTAGE';
       value: string;
     } | null;
-    depositedAmount: Money;
-    depositedReconciledAmount: Money;
   }) => {
     setIsLoading(true);
 
@@ -134,13 +89,9 @@ export const usePaymentHandler = () => {
 
     await cart.bulkAddLineItemProperties(bulkAddLineItemProperties);
 
-    const appliedDiscount = getWorkOrderAppliedDiscount(discount, { depositedAmount, depositedReconciledAmount });
-
-    if (appliedDiscount) {
-      const discountType = ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[
-        appliedDiscount.valueType
-      ];
-      await cart.applyCartDiscount(discountType, appliedDiscount.title ?? '', String(appliedDiscount.value));
+    if (discount) {
+      const discountType = ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[discount.type];
+      await cart.applyCartDiscount(discountType, '', discount.value);
     }
 
     navigation.dismiss();
@@ -149,7 +100,6 @@ export const usePaymentHandler = () => {
 
   return {
     handlePayment,
-    handleDeposit,
     isLoading,
   };
 };

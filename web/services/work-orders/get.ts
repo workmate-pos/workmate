@@ -15,7 +15,7 @@ import {
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
-import { assertDecimal, assertMoney, BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
@@ -23,7 +23,6 @@ import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
 import { IGetResult } from '../db/queries/generated/work-order.sql.js';
-import { isDepositDiscount } from '@work-orders/work-order-shopify-order';
 
 export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
   const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
@@ -48,8 +47,6 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     orders: getWorkOrderOrders(workOrder.id),
     customFields: getWorkOrderCustomFields(workOrder.id),
     discount: getWorkOrderDiscount(workOrder),
-    depositedAmount: getWorkOrderDepositedAmount(workOrder.id),
-    depositedReconciledAmount: getWorkOrderDepositedReconciledAmount(workOrder.id),
   });
 }
 
@@ -240,17 +237,6 @@ export function getWorkOrderDiscount(
   return workOrder.discountType satisfies never;
 }
 
-export async function getWorkOrderDepositedAmount(workOrderId: number): Promise<Money> {
-  const deposits = await db.workOrder.getPaidDeposits({ workOrderId });
-  return BigDecimal.sum(...deposits.map(deposit => BigDecimal.fromString(deposit.amount))).toMoney();
-}
-
-export async function getWorkOrderDepositedReconciledAmount(workOrderId: number): Promise<Money> {
-  const discounts = await db.workOrder.getAppliedDiscounts({ workOrderId });
-  const depositDiscounts = discounts.filter(isDepositDiscount);
-  return BigDecimal.sum(...depositDiscounts.map(discount => BigDecimal.fromString(discount.amount))).toMoney();
-}
-
 /**
  * Fetches a page of work orders from the database.
  * Loads only basic data to display in a list, such as the price and status.
@@ -300,7 +286,6 @@ export async function getWorkOrderInfoPage(
     unpaid: paginationOptions.paymentStatus === 'UNPAID',
     partiallyPaid: paginationOptions.paymentStatus === 'PARTIALLY_PAID',
     fullyPaid: paginationOptions.paymentStatus === 'FULLY_PAID',
-    hasPaidDeposit: paginationOptions.paymentStatus === 'HAS_DEPOSIT',
   });
 
   return await Promise.all(page.map(workOrder => getWorkOrder(session, workOrder.name).then(wo => wo ?? never())));

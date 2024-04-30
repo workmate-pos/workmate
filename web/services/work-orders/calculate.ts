@@ -1,12 +1,11 @@
 import { Session } from '@shopify/shopify-api';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
-import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import {
   getChargeUnitPrice,
   getCustomAttributeArrayFromObject,
-  getWorkOrderAppliedDiscount,
   getWorkOrderLineItems,
 } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -17,9 +16,8 @@ import { assertGid, createGid, ID, parseGid } from '@teifi-digital/shopify-app-t
 import { assertMoney, BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { decimalToMoney } from '../../util/decimal.js';
-import { getWorkOrderDepositedAmount, getWorkOrderDepositedReconciledAmount } from './get.js';
 import { addMoney, ZERO_MONEY } from '../../util/money.js';
-import { IGetDepositsResult, IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
+import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import {
   IGetFixedPriceLabourChargesResult,
   IGetHourlyLabourChargesResult,
@@ -161,10 +159,9 @@ async function calculateDatabaseOrders(session: Session, calculateWorkOrder: Cal
   const databaseItems = await db.workOrder.getItems({ workOrderId });
   const databaseHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
   const databaseFixedCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
-  const databaseDeposits = await db.workOrder.getDeposits({ workOrderId });
 
   const lineItemIds = unique(
-    [...databaseItems, ...databaseHourlyCharges, ...databaseFixedCharges, ...databaseDeposits]
+    [...databaseItems, ...databaseHourlyCharges, ...databaseFixedCharges]
       .map(item => item.shopifyOrderLineItemId)
       .filter(isLineItemId),
   );
@@ -198,7 +195,6 @@ async function calculateDatabaseOrders(session: Session, calculateWorkOrder: Cal
     }),
     hourlyCharges: databaseHourlyCharges,
     fixedPriceLabourCharges: databaseFixedCharges,
-    deposits: databaseDeposits,
   });
 }
 
@@ -208,7 +204,7 @@ async function calculateDatabaseOrders(session: Session, calculateWorkOrder: Cal
  */
 async function calculateDraftOrder(
   session: Session,
-  { name, items, charges, discount }: Pick<CalculateWorkOrder, 'name' | 'items' | 'charges' | 'discount'>,
+  { items, charges, discount }: Pick<CalculateWorkOrder, 'name' | 'items' | 'charges' | 'discount'>,
 ) {
   if (items.length === 0 && charges.length === 0) {
     return {
@@ -232,15 +228,6 @@ async function calculateDraftOrder(
     labourSku: labourLineItemSKU,
   });
 
-  const [workOrder] = name ? await db.workOrder.get({ name }) : [];
-
-  const deposit = workOrder
-    ? {
-        depositedAmount: await getWorkOrderDepositedAmount(workOrder.id),
-        depositedReconciledAmount: await getWorkOrderDepositedReconciledAmount(workOrder.id),
-      }
-    : { depositedAmount: ZERO_MONEY, depositedReconciledAmount: ZERO_MONEY };
-
   const graphql = new Graphql(session);
 
   const result = await gql.draftOrder.calculate
@@ -260,7 +247,7 @@ async function calculateDraftOrder(
             taxable: customSale.taxable,
           })),
         ],
-        appliedDiscount: getWorkOrderAppliedDiscount(discount, deposit),
+        appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
       },
     })
     .then(r => r.draftOrderCalculate);
@@ -340,7 +327,6 @@ async function calculateDraftOrder(
       ...charge,
       shopifyOrderLineItemId: lineItemIdByHourlyChargeUuid[charge.uuid] ?? never('hourly charge is in calc'),
     })),
-    deposits: [],
   });
 }
 
@@ -368,13 +354,11 @@ function calculateLineItems({
   lineItems,
   hourlyCharges,
   fixedPriceLabourCharges,
-  deposits,
 }: {
   lineItems: LineItem[];
   items: Pick<IGetItemsResult, 'shopifyOrderLineItemId' | 'uuid' | 'quantity'>[];
   hourlyCharges: Pick<IGetHourlyLabourChargesResult, 'shopifyOrderLineItemId' | 'uuid' | 'hours' | 'rate'>[];
   fixedPriceLabourCharges: Pick<IGetFixedPriceLabourChargesResult, 'shopifyOrderLineItemId' | 'uuid' | 'amount'>[];
-  deposits: Pick<IGetDepositsResult, 'shopifyOrderLineItemId' | 'uuid' | 'amount'>[];
 }) {
   let subtotal = BigDecimal.ZERO;
   let tax = BigDecimal.ZERO;
@@ -441,32 +425,6 @@ function calculateLineItems({
     const lineItemFixedCharges = fixedPriceLabourCharges.filter(
       hasPropertyValue('shopifyOrderLineItemId', lineItem.id),
     );
-    const lineItemDeposits = deposits.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
-
-    if (lineItemDeposits.length > 1) {
-      throw new Error('Only 1 deposit may be associated with a single line item');
-    }
-
-    if (lineItemDeposits.length === 1) {
-      if ([lineItemItems, lineItemHourlyCharges, lineItemFixedCharges].some(l => l.length > 0)) {
-        throw new Error('Deposits cannot be on the same line item as other items/charges');
-      }
-
-      const [lineItemDeposit = never('just checked xd')] = lineItemDeposits;
-
-      assertMoney(lineItemDeposit.amount);
-
-      depositPrices[lineItemDeposit.uuid] = lineItemPaid.toMoney();
-
-      if (!discountedTotal.equals(BigDecimal.fromString(lineItemDeposit.amount))) {
-        sentryErr('Deposit DB amount does not match the line item amount - hmm', {
-          discountedTotal: discountedTotal.toMoney(),
-          lineItemDepositAmount: lineItemDeposit.amount,
-        });
-      }
-
-      continue;
-    }
 
     // if the line item is discounted, we uniformly distribute this discount over all its items/charges
     const discountFactor = (() => {

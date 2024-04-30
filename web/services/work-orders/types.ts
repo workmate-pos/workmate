@@ -15,8 +15,6 @@ export type WorkOrder = {
   orders: WorkOrderOrder[];
   customFields: Record<string, string>;
   discount: WorkOrderDiscount | null;
-  depositedAmount: Money;
-  depositedReconciledAmount: Money;
 };
 
 export type WorkOrderDiscount =
