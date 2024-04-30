@@ -115,6 +115,45 @@ const upsertIR: any = {"usedParamSet":{"productId":true,"handle":true,"title":tr
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
 
 
+/** 'UpsertMany' parameters type */
+export interface IUpsertManyParams {
+  products: readonly ({
+    productId: string,
+    handle: string,
+    title: string,
+    shop: string,
+    description: string,
+    productType: string
+  })[];
+}
+
+/** 'UpsertMany' return type */
+export type IUpsertManyResult = void;
+
+/** 'UpsertMany' query type */
+export interface IUpsertManyQuery {
+  params: IUpsertManyParams;
+  result: IUpsertManyResult;
+}
+
+const upsertManyIR: any = {"usedParamSet":{"products":true},"params":[{"name":"products","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"productId","required":true},{"name":"handle","required":true},{"name":"title","required":true},{"name":"shop","required":true},{"name":"description","required":true},{"name":"productType","required":true}]},"locs":[{"a":118,"b":126}]}],"statement":"INSERT INTO \"Product\" (\"productId\", handle, title, shop, description, \"productType\")\nVALUES ('', '', '', '', '', ''), :products OFFSET 1\nON CONFLICT (\"productId\") DO UPDATE\n  SET handle = EXCLUDED.handle,\n      title  = EXCLUDED.title,\n      shop   = EXCLUDED.shop,\n      description = EXCLUDED.description,\n      \"productType\" = EXCLUDED.\"productType\""};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "Product" ("productId", handle, title, shop, description, "productType")
+ * VALUES ('', '', '', '', '', ''), :products OFFSET 1
+ * ON CONFLICT ("productId") DO UPDATE
+ *   SET handle = EXCLUDED.handle,
+ *       title  = EXCLUDED.title,
+ *       shop   = EXCLUDED.shop,
+ *       description = EXCLUDED.description,
+ *       "productType" = EXCLUDED."productType"
+ * ```
+ */
+export const upsertMany = new PreparedQuery<IUpsertManyParams,IUpsertManyResult>(upsertManyIR);
+
+
 /** 'SoftDeleteProducts' parameters type */
 export interface ISoftDeleteProductsParams {
   productIds: readonly (string)[];

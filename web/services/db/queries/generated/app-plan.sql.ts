@@ -79,7 +79,7 @@ export interface IUpsertSubscriptionQuery {
   result: IUpsertSubscriptionResult;
 }
 
-const upsertSubscriptionIR: any = {"usedParamSet":{"shop":true,"appSubscriptionShopifyId":true,"appSubscriptionStatus":true,"appPlanId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":97,"b":102},{"a":300,"b":305}]},{"name":"appSubscriptionShopifyId","required":true,"transform":{"type":"scalar"},"locs":[{"a":272,"b":297},{"a":443,"b":468}]},{"name":"appSubscriptionStatus","required":true,"transform":{"type":"scalar"},"locs":[{"a":308,"b":330},{"a":530,"b":552}]},{"name":"appPlanId","required":true,"transform":{"type":"scalar"},"locs":[{"a":333,"b":343},{"a":602,"b":612}]}],"statement":"WITH insertedSubscriptionTrial AS (\n  INSERT INTO \"AppPlanSubscriptionTrials\" (shop)\n    VALUES (:shop!)\n    ON CONFLICT (shop) DO NOTHING\n    RETURNING *\n)\nINSERT INTO \"AppPlanSubscription\" (\"appSubscriptionShopifyId\", shop, \"appSubscriptionStatus\", \"appPlanId\")\nVALUES (:appSubscriptionShopifyId!, :shop!, :appSubscriptionStatus!, :appPlanId!)\nON CONFLICT (\"shop\") DO UPDATE SET\n                                 \"appSubscriptionShopifyId\" = :appSubscriptionShopifyId!,\n                                 \"appSubscriptionStatus\" = :appSubscriptionStatus!,\n                                 \"appPlanId\" = :appPlanId!\nRETURNING *"};
+const upsertSubscriptionIR: any = {"usedParamSet":{"shop":true,"appSubscriptionShopifyId":true,"appSubscriptionStatus":true,"appPlanId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":97,"b":102},{"a":300,"b":305}]},{"name":"appSubscriptionShopifyId","required":true,"transform":{"type":"scalar"},"locs":[{"a":272,"b":297}]},{"name":"appSubscriptionStatus","required":true,"transform":{"type":"scalar"},"locs":[{"a":308,"b":330}]},{"name":"appPlanId","required":true,"transform":{"type":"scalar"},"locs":[{"a":333,"b":343}]}],"statement":"WITH insertedSubscriptionTrial AS (\n  INSERT INTO \"AppPlanSubscriptionTrials\" (shop)\n    VALUES (:shop!)\n    ON CONFLICT (shop) DO NOTHING\n    RETURNING *\n)\nINSERT INTO \"AppPlanSubscription\" (\"appSubscriptionShopifyId\", shop, \"appSubscriptionStatus\", \"appPlanId\")\nVALUES (:appSubscriptionShopifyId!, :shop!, :appSubscriptionStatus!, :appPlanId!)\nON CONFLICT (\"shop\") DO UPDATE SET\n                                 \"appSubscriptionShopifyId\" = EXCLUDED.\"appSubscriptionShopifyId\",\n                                 \"appSubscriptionStatus\" = EXCLUDED.\"appSubscriptionStatus\",\n                                 \"appPlanId\" = EXCLUDED.\"appPlanId\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
@@ -93,9 +93,9 @@ const upsertSubscriptionIR: any = {"usedParamSet":{"shop":true,"appSubscriptionS
  * INSERT INTO "AppPlanSubscription" ("appSubscriptionShopifyId", shop, "appSubscriptionStatus", "appPlanId")
  * VALUES (:appSubscriptionShopifyId!, :shop!, :appSubscriptionStatus!, :appPlanId!)
  * ON CONFLICT ("shop") DO UPDATE SET
- *                                  "appSubscriptionShopifyId" = :appSubscriptionShopifyId!,
- *                                  "appSubscriptionStatus" = :appSubscriptionStatus!,
- *                                  "appPlanId" = :appPlanId!
+ *                                  "appSubscriptionShopifyId" = EXCLUDED."appSubscriptionShopifyId",
+ *                                  "appSubscriptionStatus" = EXCLUDED."appSubscriptionStatus",
+ *                                  "appPlanId" = EXCLUDED."appPlanId"
  * RETURNING *
  * ```
  */

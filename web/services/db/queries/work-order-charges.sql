@@ -5,15 +5,34 @@ VALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid,
         :rateLocked!, :hoursLocked!, :removeLocked!)
 ON CONFLICT ("workOrderId", uuid)
   DO UPDATE
-  SET "employeeId"             = :employeeId,
-      name                     = :name!,
-      rate                     = :rate!,
-      hours                    = :hours!,
-      "workOrderItemUuid"      = :workOrderItemUuid,
-      "shopifyOrderLineItemId" = :shopifyOrderLineItemId,
-      "rateLocked"             = :rateLocked!,
-      "hoursLocked"            = :hoursLocked!,
-      "removeLocked"           = :removeLocked!;
+  SET "employeeId"             = EXCLUDED."employeeId",
+      name                     = EXCLUDED.name,
+      rate                     = EXCLUDED.rate,
+      hours                    = EXCLUDED.hours,
+      "workOrderItemUuid"      = EXCLUDED."workOrderItemUuid",
+      "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+      "rateLocked"             = EXCLUDED."rateLocked",
+      "hoursLocked"            = EXCLUDED."hoursLocked",
+      "removeLocked"           = EXCLUDED."removeLocked";
+
+/*
+  @name upsertHourlyLabourCharges
+  @param charges -> ((workOrderId!, employeeId, name!, rate!, hours!, workOrderItemUuid, shopifyOrderLineItemId, uuid!, rateLocked!, hoursLocked!, removeLocked!)...)
+*/
+INSERT INTO "WorkOrderHourlyLabourCharge" ("workOrderId", "employeeId", name, rate, hours, "workOrderItemUuid",
+                                           "shopifyOrderLineItemId", uuid, "rateLocked", "hoursLocked", "removeLocked")
+VALUES (0, NULL, '', '', '', gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE, FALSE), :charges OFFSET 1
+ON CONFLICT ("workOrderId", uuid)
+  DO UPDATE
+  SET "employeeId"             = EXCLUDED."employeeId",
+      name                     = EXCLUDED.name,
+      rate                     = EXCLUDED.rate,
+      hours                    = EXCLUDED.hours,
+      "workOrderItemUuid"      = EXCLUDED."workOrderItemUuid",
+      "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+      "rateLocked"             = EXCLUDED."rateLocked",
+      "hoursLocked"            = EXCLUDED."hoursLocked",
+      "removeLocked"           = EXCLUDED."removeLocked";
 
 /* @name upsertFixedPriceLabourCharge */
 INSERT INTO "WorkOrderFixedPriceLabourCharge" ("workOrderId", "employeeId", name, amount, "workOrderItemUuid",
@@ -22,13 +41,30 @@ VALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopi
         :amountLocked!, :removeLocked!)
 ON CONFLICT ("workOrderId", uuid)
   DO UPDATE
-  SET "employeeId"             = :employeeId,
-      name                     = :name!,
-      amount                   = :amount!,
-      "workOrderItemUuid"      = :workOrderItemUuid,
-      "shopifyOrderLineItemId" = :shopifyOrderLineItemId,
-      "amountLocked"           = :amountLocked!,
-      "removeLocked"           = :removeLocked!;
+  SET "employeeId"             = EXCLUDED."employeeId",
+      name                     = EXCLUDED.name,
+      amount                   = EXCLUDED.amount,
+      "workOrderItemUuid"      = EXCLUDED."workOrderItemUuid",
+      "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+      "amountLocked"           = EXCLUDED."amountLocked",
+      "removeLocked"           = EXCLUDED."removeLocked";
+
+/*
+  @name upsertFixedPriceLabourCharges
+  @param charges -> ((workOrderId!, employeeId, name!, amount!, workOrderItemUuid, shopifyOrderLineItemId, uuid!, amountLocked!, removeLocked!)...)
+*/
+INSERT INTO "WorkOrderFixedPriceLabourCharge" ("workOrderId", "employeeId", name, amount, "workOrderItemUuid",
+                                               "shopifyOrderLineItemId", uuid, "amountLocked", "removeLocked")
+VALUES (0, NULL, '', '', gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE), :charges OFFSET 1
+ON CONFLICT ("workOrderId", uuid)
+  DO UPDATE
+  SET "employeeId"             = EXCLUDED."employeeId",
+      name                     = EXCLUDED.name,
+      amount                   = EXCLUDED.amount,
+      "workOrderItemUuid"      = EXCLUDED."workOrderItemUuid",
+      "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+      "amountLocked"           = EXCLUDED."amountLocked",
+      "removeLocked"           = EXCLUDED."removeLocked";
 
 /* @name removeHourlyLabourCharge */
 DELETE

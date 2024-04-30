@@ -123,7 +123,7 @@ export default class PurchaseOrdersController {
         to: printEmail,
         attachment: [file],
         subject,
-        text: 'WorkMate Print Job',
+        text: 'WorkMate Purchase Order',
       },
     );
 

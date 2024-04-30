@@ -35,6 +35,10 @@
     "./metafields/*": {
       "default": "./dist/metafields/*",
       "types": "./src/metafields/*"
+    },
+    "./time/*": {
+      "default": "./dist/time/*",
+      "types": "./src/time/*"
     }
   },
   "scripts": {

@@ -15,12 +15,28 @@ INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner",
 VALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)
 ON CONFLICT ("staffMemberId")
   DO UPDATE
-  SET shop          = :shop!,
-      superuser     = :superuser!,
-      permissions   = :permissions!,
-      rate          = :rate,
-      name          = :name!,
-      "isShopOwner" = :isShopOwner!
+  SET shop          = EXCLUDED.shop,
+      superuser     = EXCLUDED.superuser,
+      permissions   = EXCLUDED.permissions,
+      rate          = EXCLUDED.rate,
+      name          = EXCLUDED.name,
+      "isShopOwner" = EXCLUDED."isShopOwner"
+RETURNING *;
+
+/*
+  @name upsertMany
+  @param employees -> ((shop!, superuser!, permissions!, rate, name!, isShopOwner!, staffMemberId!)...)
+*/
+INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")
+VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', '', FALSE, ''), :employees OFFSET 1
+ON CONFLICT ("staffMemberId")
+  DO UPDATE
+  SET shop          = EXCLUDED.shop,
+      superuser     = EXCLUDED.superuser,
+      permissions   = EXCLUDED.permissions,
+      rate          = EXCLUDED.rate,
+      name          = EXCLUDED.name,
+      "isShopOwner" = EXCLUDED."isShopOwner"
 RETURNING *;
 
 /*

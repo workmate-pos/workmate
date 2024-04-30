@@ -13,6 +13,7 @@ import {
 } from '../../services/product-variant.js';
 import { Int } from '../../services/gql/queries/generated/schema.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 
 @Authenticated()
 export default class ProductVariantController {
@@ -24,7 +25,10 @@ export default class ProductVariantController {
     const graphql = new Graphql(session);
     const {
       productVariants: { nodes },
-    } = await gql.products.getPage.run(graphql, { first: 10 as Int, query: `barcode:"${barcode}"` });
+    } = await gql.products.getPage.run(graphql, {
+      first: 10 as Int,
+      query: `barcode:"${escapeQuotationMarks(barcode)}"`,
+    });
 
     const productVariant = nodes.find(node => node.barcode === barcode);
 

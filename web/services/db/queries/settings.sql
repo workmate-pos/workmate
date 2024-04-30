@@ -1,7 +1,7 @@
 /* @name upsertSetting */
 INSERT INTO "Settings" (shop, key, value)
 VALUES (:shop!, :key!, :value!)
-ON CONFLICT (shop, key) DO UPDATE SET value = :value!
+ON CONFLICT (shop, key) DO UPDATE SET value = EXCLUDED.value
 RETURNING *;
 
 /* @name get */

@@ -456,6 +456,45 @@ const upsertItemIR: any = {"usedParamSet":{"uuid":true,"workOrderId":true,"shopi
 export const upsertItem = new PreparedQuery<IUpsertItemParams,IUpsertItemResult>(upsertItemIR);
 
 
+/** 'UpsertItems' parameters type */
+export interface IUpsertItemsParams {
+  items: readonly ({
+    uuid: string,
+    workOrderId: number,
+    shopifyOrderLineItemId: string | null | void,
+    quantity: number,
+    productVariantId: string,
+    absorbCharges: boolean
+  })[];
+}
+
+/** 'UpsertItems' return type */
+export type IUpsertItemsResult = void;
+
+/** 'UpsertItems' query type */
+export interface IUpsertItemsQuery {
+  params: IUpsertItemsParams;
+  result: IUpsertItemsResult;
+}
+
+const upsertItemsIR: any = {"usedParamSet":{"items":true},"params":[{"name":"items","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"uuid","required":true},{"name":"workOrderId","required":true},{"name":"shopifyOrderLineItemId","required":false},{"name":"quantity","required":true},{"name":"productVariantId","required":true},{"name":"absorbCharges","required":true}]},"locs":[{"a":203,"b":208}]}],"statement":"INSERT INTO \"WorkOrderItem\" (uuid, \"workOrderId\", \"shopifyOrderLineItemId\", quantity, \"productVariantId\",\n                             \"absorbCharges\")\nVALUES (gen_random_uuid(), 0, NULL, 0, '', FALSE), :items OFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n                quantity                 = EXCLUDED.quantity,\n                \"productVariantId\"       = EXCLUDED.\"productVariantId\",\n                \"absorbCharges\"          = EXCLUDED.\"absorbCharges\""};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "WorkOrderItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, "productVariantId",
+ *                              "absorbCharges")
+ * VALUES (gen_random_uuid(), 0, NULL, 0, '', FALSE), :items OFFSET 1
+ * ON CONFLICT ("workOrderId", uuid)
+ *   DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+ *                 quantity                 = EXCLUDED.quantity,
+ *                 "productVariantId"       = EXCLUDED."productVariantId",
+ *                 "absorbCharges"          = EXCLUDED."absorbCharges"
+ * ```
+ */
+export const upsertItems = new PreparedQuery<IUpsertItemsParams,IUpsertItemsResult>(upsertItemsIR);
+
+
 /** 'RemoveItem' parameters type */
 export interface IRemoveItemParams {
   uuid: string;

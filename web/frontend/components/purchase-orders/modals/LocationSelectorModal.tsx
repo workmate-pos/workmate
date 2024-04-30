@@ -1,7 +1,7 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import { Filters, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
@@ -19,6 +19,10 @@ export function LocationSelectorModal({
 }) {
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
   const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    setPage(0);
+  }, [optimisticQuery]);
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const locationsQuery = useLocationsQuery({ fetch, params: { query } });

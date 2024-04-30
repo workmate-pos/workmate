@@ -12,7 +12,6 @@ import { groupByKey, indexBy, unique, uniqueBy } from '@teifi-digital/shopify-ap
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { evaluate } from '../../util/evaluate.js';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
 
 export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
@@ -171,7 +170,7 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
           productType: product.productType,
         },
       },
-      shopifyOrderLineItem: evaluate(() => {
+      shopifyOrderLineItem: (() => {
         if (shopifyOrderLineItem == null) {
           return null;
         }
@@ -188,7 +187,7 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
             name: order.name,
           },
         };
-      }),
+      })(),
       unitCost,
       quantity,
       availableQuantity,

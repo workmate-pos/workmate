@@ -115,7 +115,7 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"superuser":true,"permissions":true,"rate":true,"name":true,"isShopOwner":true,"staffMemberId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":111},{"a":253,"b":258}]},{"name":"superuser","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":124},{"a":283,"b":293}]},{"name":"permissions","required":true,"transform":{"type":"scalar"},"locs":[{"a":127,"b":139},{"a":318,"b":330}]},{"name":"rate","required":false,"transform":{"type":"scalar"},"locs":[{"a":142,"b":146},{"a":355,"b":359}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":149,"b":154},{"a":384,"b":389}]},{"name":"isShopOwner","required":true,"transform":{"type":"scalar"},"locs":[{"a":157,"b":169},{"a":414,"b":426}]},{"name":"staffMemberId","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":186}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = :shop!,\n      superuser     = :superuser!,\n      permissions   = :permissions!,\n      rate          = :rate,\n      name          = :name!,\n      \"isShopOwner\" = :isShopOwner!\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"superuser":true,"permissions":true,"rate":true,"name":true,"isShopOwner":true,"staffMemberId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":111}]},{"name":"superuser","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":124}]},{"name":"permissions","required":true,"transform":{"type":"scalar"},"locs":[{"a":127,"b":139}]},{"name":"rate","required":false,"transform":{"type":"scalar"},"locs":[{"a":142,"b":146}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":149,"b":154}]},{"name":"isShopOwner","required":true,"transform":{"type":"scalar"},"locs":[{"a":157,"b":169}]},{"name":"staffMemberId","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":186}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = EXCLUDED.shop,\n      superuser     = EXCLUDED.superuser,\n      permissions   = EXCLUDED.permissions,\n      rate          = EXCLUDED.rate,\n      name          = EXCLUDED.name,\n      \"isShopOwner\" = EXCLUDED.\"isShopOwner\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
@@ -124,16 +124,69 @@ const upsertIR: any = {"usedParamSet":{"shop":true,"superuser":true,"permissions
  * VALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)
  * ON CONFLICT ("staffMemberId")
  *   DO UPDATE
- *   SET shop          = :shop!,
- *       superuser     = :superuser!,
- *       permissions   = :permissions!,
- *       rate          = :rate,
- *       name          = :name!,
- *       "isShopOwner" = :isShopOwner!
+ *   SET shop          = EXCLUDED.shop,
+ *       superuser     = EXCLUDED.superuser,
+ *       permissions   = EXCLUDED.permissions,
+ *       rate          = EXCLUDED.rate,
+ *       name          = EXCLUDED.name,
+ *       "isShopOwner" = EXCLUDED."isShopOwner"
  * RETURNING *
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
+
+
+/** 'UpsertMany' parameters type */
+export interface IUpsertManyParams {
+  employees: readonly ({
+    shop: string,
+    superuser: boolean,
+    permissions: PermissionNodeArray,
+    rate: string | null | void,
+    name: string,
+    isShopOwner: boolean,
+    staffMemberId: string
+  })[];
+}
+
+/** 'UpsertMany' return type */
+export interface IUpsertManyResult {
+  createdAt: Date;
+  isShopOwner: boolean;
+  name: string;
+  permissions: PermissionNodeArray | null;
+  rate: string | null;
+  shop: string;
+  staffMemberId: string;
+  superuser: boolean;
+  updatedAt: Date;
+}
+
+/** 'UpsertMany' query type */
+export interface IUpsertManyQuery {
+  params: IUpsertManyParams;
+  result: IUpsertManyResult;
+}
+
+const upsertManyIR: any = {"usedParamSet":{"employees":true},"params":[{"name":"employees","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"shop","required":true},{"name":"superuser","required":true},{"name":"permissions","required":true},{"name":"rate","required":false},{"name":"name","required":true},{"name":"isShopOwner","required":true},{"name":"staffMemberId","required":true}]},"locs":[{"a":168,"b":177}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES ('', FALSE, ARRAY[] :: \"PermissionNode\"[], '', '', FALSE, ''), :employees OFFSET 1\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = EXCLUDED.shop,\n      superuser     = EXCLUDED.superuser,\n      permissions   = EXCLUDED.permissions,\n      rate          = EXCLUDED.rate,\n      name          = EXCLUDED.name,\n      \"isShopOwner\" = EXCLUDED.\"isShopOwner\"\nRETURNING *"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")
+ * VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', '', FALSE, ''), :employees OFFSET 1
+ * ON CONFLICT ("staffMemberId")
+ *   DO UPDATE
+ *   SET shop          = EXCLUDED.shop,
+ *       superuser     = EXCLUDED.superuser,
+ *       permissions   = EXCLUDED.permissions,
+ *       rate          = EXCLUDED.rate,
+ *       name          = EXCLUDED.name,
+ *       "isShopOwner" = EXCLUDED."isShopOwner"
+ * RETURNING *
+ * ```
+ */
+export const upsertMany = new PreparedQuery<IUpsertManyParams,IUpsertManyResult>(upsertManyIR);
 
 
 /** 'DeleteMany' parameters type */

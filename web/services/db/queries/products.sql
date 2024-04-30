@@ -24,6 +24,19 @@ ON CONFLICT ("productId") DO UPDATE
       "productType" = EXCLUDED."productType";
 
 /*
+  @name upsertMany
+  @param products -> ((productId!, handle!, title!, shop!, description!, productType!)...)
+*/
+INSERT INTO "Product" ("productId", handle, title, shop, description, "productType")
+VALUES ('', '', '', '', '', ''), :products OFFSET 1
+ON CONFLICT ("productId") DO UPDATE
+  SET handle = EXCLUDED.handle,
+      title  = EXCLUDED.title,
+      shop   = EXCLUDED.shop,
+      description = EXCLUDED.description,
+      "productType" = EXCLUDED."productType";
+
+/*
   @name softDeleteProducts
   @param productIds -> (...)
 */

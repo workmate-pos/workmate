@@ -17,7 +17,6 @@ import { assertGid, createGid, ID, parseGid } from '@teifi-digital/shopify-app-t
 import { assertMoney, BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { decimalToMoney } from '../../util/decimal.js';
-import { evaluate } from '../../util/evaluate.js';
 import { getWorkOrderDepositedAmount, getWorkOrderDepositedReconciledAmount } from './get.js';
 import { addMoney, ZERO_MONEY } from '../../util/money.js';
 import { IGetDepositsResult, IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
@@ -419,19 +418,19 @@ function calculateLineItems({
 
     // if the order has an order-level discount, we want to account for that here
     // order level discount applying to this line item = (line item $ / order subtotal) * order discount
-    const orderDiscountFactor = evaluate(() => {
+    const orderDiscountFactor = (() => {
       // order-level discounts are applied on the subtotal (important for tax reasons)
       if (orderSubtotal.equals(BigDecimal.ZERO)) return BigDecimal.ZERO;
       return discountedTotal.divide(orderSubtotal.add(orderDiscount));
-    });
+    })();
     orderLevelDiscount = orderLevelDiscount.add(orderDiscount.multiply(orderDiscountFactor));
 
     // line item paid = (line item $ / order total) * order % paid
     const orderPaid = orderTotal.subtract(orderOutstanding);
-    const orderPaidFactor = evaluate(() => {
+    const orderPaidFactor = (() => {
       if (orderTotal.equals(BigDecimal.ZERO)) return BigDecimal.ONE;
       return orderPaid.divide(orderTotal);
-    });
+    })();
     const lineItemPaid = discountedTaxedTotal.multiply(orderPaidFactor);
 
     paid = paid.add(lineItemPaid);
@@ -470,10 +469,10 @@ function calculateLineItems({
     }
 
     // if the line item is discounted, we uniformly distribute this discount over all its items/charges
-    const discountFactor = evaluate(() => {
+    const discountFactor = (() => {
       if (originalTotal.equals(BigDecimal.ZERO)) return BigDecimal.ONE;
       return discountedTotal.divide(originalTotal);
-    });
+    })();
 
     // to determine the item price, we subtract the price of all absorbed charges and distribute the rest over the remaining item quantity
     let itemPrice = discountedTotal;
@@ -492,7 +491,6 @@ function calculateLineItems({
       }
 
       itemPrice = itemPrice.round(2, RoundingMode.CEILING);
-
       itemPrice = BigDecimal.max(BigDecimal.ZERO, itemPrice);
     }
 

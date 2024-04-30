@@ -21,11 +21,14 @@ import { ensureLocationsExist } from '../locations/sync.js';
 import { ensureEmployeesExist } from '../employee/sync.js';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { validateCreatePurchaseOrder } from './validate.js';
 
 export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
 
   return await unit(async () => {
+    validateCreatePurchaseOrder(createPurchaseOrder);
+
     const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
 
     const isNew = createPurchaseOrder.name === null;

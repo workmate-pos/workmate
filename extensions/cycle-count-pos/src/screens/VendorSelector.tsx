@@ -9,6 +9,7 @@ import { useVendorsQuery, Vendor } from '@work-orders/common/queries/use-vendors
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { Int } from '@web/schemas/generated/create-product.js';
+import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 
 export function VendorSelector({ onSelect }: { onSelect: (vendorName: string, productVariantIds: ID[]) => void }) {
   const [query, setQuery] = useState('');
@@ -76,9 +77,15 @@ function useVendorRows(
   const { session } = useExtensionApi<'pos.home.modal.render'>();
 
   const [vendorName, setVendorName] = useState<string>();
+
+  const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
+  const locationIdQuery = `location_id:${session.currentSession.locationId}`;
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
-    params: { query: `vendor:"${vendorName}" AND location_id:${session.currentSession.locationId}`, first: 50 as Int },
+    params: {
+      query: [vendorQuery, locationIdQuery].filter(Boolean).join(' AND '),
+      first: 50 as Int,
+    },
     options: { enabled: !!vendorName },
   });
 

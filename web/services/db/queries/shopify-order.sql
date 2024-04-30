@@ -46,14 +46,14 @@ INSERT INTO "ShopifyOrderLineItem" ("lineItemId", "orderId", "productVariantId",
 VALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!, :totalTax!,
         :discountedUnitPrice!)
 ON CONFLICT ("lineItemId") DO UPDATE
-  SET "orderId"             = :orderId!,
-      "productVariantId"    = :productVariantId,
-      quantity              = :quantity!,
-      "unitPrice"           = :unitPrice!,
-      "unfulfilledQuantity" = :unfulfilledQuantity!,
-      "title"               = :title!,
-      "totalTax"            = :totalTax!,
-      "discountedUnitPrice" = :discountedUnitPrice!;
+  SET "orderId"             = EXCLUDED."orderId",
+      "productVariantId"    = EXCLUDED."productVariantId",
+      quantity              = EXCLUDED.quantity,
+      "unitPrice"           = EXCLUDED."unitPrice",
+      "unfulfilledQuantity" = EXCLUDED."unfulfilledQuantity",
+      "title"               = EXCLUDED.title,
+      "totalTax"            = EXCLUDED."totalTax",
+      "discountedUnitPrice" = EXCLUDED."discountedUnitPrice";
 
 /*
   @name removeLineItemsByIds

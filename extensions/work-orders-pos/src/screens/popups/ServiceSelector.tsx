@@ -22,6 +22,7 @@ import {
   QUANTITY_ADJUSTING_SERVICE,
   SERVICE_METAFIELD_VALUE_TAG_NAME,
 } from '@work-orders/common/metafields/product-service-type.js';
+import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 
 type OnSelect = (arg: {
   type: ProductServiceType;
@@ -48,7 +49,7 @@ export function ServiceSelector({
       query: [
         query,
         Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
-          .map(tag => `tag:"${tag}"`)
+          .map(tag => `tag:"${escapeQuotationMarks(tag)}"`)
           .join(' OR '),
       ].join(' AND '),
     },

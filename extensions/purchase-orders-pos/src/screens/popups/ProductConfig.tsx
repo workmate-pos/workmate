@@ -199,7 +199,7 @@ export function ProductConfig({
               value={product.unitCost}
               min={0}
               disabled={isImmutable}
-              formatter={test => (test === null ? '' : currencyFormatter(test))}
+              formatter={text => (text === null ? '' : currencyFormatter(text))}
               onChange={unitCost => {
                 setProduct({ ...product, unitCost: unitCost ?? product.unitCost });
                 setHasUnsavedChanges(true);

@@ -57,12 +57,6 @@ export default class CycleCountController {
       throw new HttpError('Failed to adjust inventory', 500);
     }
 
-    const { userErrors } = inventorySetOnHandQuantities;
-    if (userErrors.length > 0) {
-      sentryErr('Failed to adjust inventory', { userErrors });
-      throw new HttpError('Failed to adjust inventory', 500);
-    }
-
     return res.json({ success: true });
   }
 }

@@ -67,17 +67,15 @@ async function upsertEmployees(shop: string, employees: gql.staffMember.Database
     return;
   }
 
-  await unit(async () => {
-    for (const { id: staffMemberId, name, isShopOwner } of employees) {
-      await db.employee.upsert({
-        shop,
-        name,
-        staffMemberId,
-        rate: null,
-        isShopOwner,
-        permissions: [],
-        superuser: isShopOwner,
-      });
-    }
+  await db.employee.upsertMany({
+    employees: employees.map(({ id: staffMemberId, name, isShopOwner }) => ({
+      shop,
+      name,
+      staffMemberId,
+      rate: null,
+      isShopOwner,
+      permissions: [],
+      superuser: isShopOwner,
+    })),
   });
 }

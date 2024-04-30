@@ -92,7 +92,7 @@ function useItemRows(items: Item[], onSelect: (item: Item) => void): ListRow[] {
           subtitle: variant?.sku ? [variant.sku] : undefined,
           image: {
             source: imageUrl,
-            badge: !isMutableService ? item.quantity : undefined,
+            badge: isMutableService ? undefined : item.quantity,
           },
         },
         rightSide: {

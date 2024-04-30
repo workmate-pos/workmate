@@ -15,13 +15,28 @@ WHERE "customerId" IN :customerIds!;
 INSERT INTO "Customer" ("customerId", shop, "displayName", "firstName", "lastName", email, phone, address)
 VALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone, :address)
 ON CONFLICT ("customerId") DO UPDATE
-  SET shop          = :shop!,
-      "displayName" = :displayName!,
-      "firstName"   = :firstName,
-      "lastName"    = :lastName,
-      email         = :email,
-      phone         = :phone,
-      address       = :address;
+  SET shop          = EXCLUDED.shop,
+      "displayName" = EXCLUDED."displayName",
+      "firstName"   = EXCLUDED."firstName",
+      "lastName"    = EXCLUDED."lastName",
+      email         = EXCLUDED.email,
+      phone         = EXCLUDED.phone,
+      address       = EXCLUDED.address;
+
+/*
+  @name upsertMany
+  @param customers -> ((customerId!, shop!, displayName!, firstName, lastName, email, phone, address)...)
+*/
+INSERT INTO "Customer" ("customerId", shop, "displayName", "firstName", "lastName", email, phone, address)
+VALUES ('', '', '', '', '', '', '', ''), :customers OFFSET 1
+ON CONFLICT ("customerId") DO UPDATE
+  SET shop          = EXCLUDED.shop,
+      "displayName" = EXCLUDED."displayName",
+      "firstName"   = EXCLUDED."firstName",
+      "lastName"    = EXCLUDED."lastName",
+      email         = EXCLUDED.email,
+      phone         = EXCLUDED.phone,
+      address       = EXCLUDED.address;
 
 /*
   @name softDeleteCustomers

@@ -17,6 +17,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
+import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 
 export function ProductSelector({
   onSelect,
@@ -32,7 +33,10 @@ export function ProductSelector({
     fetch,
     params: {
       first: 50 as Int,
-      query: [query, ...Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).map(tag => `tag_not:"${tag}"`)]
+      query: [
+        query,
+        ...Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).map(tag => `tag_not:"${escapeQuotationMarks(tag)}"`),
+      ]
         .filter(Boolean)
         .map(q => `(${q})`)
         .join(' AND '),

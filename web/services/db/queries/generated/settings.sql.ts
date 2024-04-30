@@ -23,14 +23,14 @@ export interface IUpsertSettingQuery {
   result: IUpsertSettingResult;
 }
 
-const upsertSettingIR: any = {"usedParamSet":{"shop":true,"key":true,"value":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":50,"b":55}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":58,"b":62}]},{"name":"value","required":true,"transform":{"type":"scalar"},"locs":[{"a":65,"b":71},{"a":120,"b":126}]}],"statement":"INSERT INTO \"Settings\" (shop, key, value)\nVALUES (:shop!, :key!, :value!)\nON CONFLICT (shop, key) DO UPDATE SET value = :value!\nRETURNING *"};
+const upsertSettingIR: any = {"usedParamSet":{"shop":true,"key":true,"value":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":50,"b":55}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":58,"b":62}]},{"name":"value","required":true,"transform":{"type":"scalar"},"locs":[{"a":65,"b":71}]}],"statement":"INSERT INTO \"Settings\" (shop, key, value)\nVALUES (:shop!, :key!, :value!)\nON CONFLICT (shop, key) DO UPDATE SET value = EXCLUDED.value\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "Settings" (shop, key, value)
  * VALUES (:shop!, :key!, :value!)
- * ON CONFLICT (shop, key) DO UPDATE SET value = :value!
+ * ON CONFLICT (shop, key) DO UPDATE SET value = EXCLUDED.value
  * RETURNING *
  * ```
  */

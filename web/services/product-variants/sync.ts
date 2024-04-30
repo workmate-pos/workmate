@@ -72,21 +72,15 @@ export async function upsertProductVariants(productVariants: gql.products.Databa
     return;
   }
 
-  await unit(async () => {
-    for (const {
-      id: productVariantId,
-      product: { id: productId },
-      inventoryItem: { id: inventoryItemId },
-      title,
-      sku,
-    } of productVariants) {
-      await db.productVariants.upsert({
+  await db.productVariants.upsertMany({
+    productVariants: productVariants.map(
+      ({ id: productVariantId, product: { id: productId }, inventoryItem: { id: inventoryItemId }, title, sku }) => ({
         productVariantId,
         productId,
         sku,
         title,
         inventoryItemId,
-      });
-    }
+      }),
+    ),
   });
 }

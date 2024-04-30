@@ -61,15 +61,15 @@ export async function upsertProducts(shop: string, products: gql.products.Databa
   }
 
   await unit(async () => {
-    for (const { id: productId, title, handle, description, productType } of products) {
-      await db.products.upsert({
+    await db.products.upsertMany({
+      products: products.map(product => ({
+        description: product.description,
+        productType: product.productType,
+        handle: product.handle,
+        productId: product.id,
+        title: product.title,
         shop,
-        productId,
-        title,
-        handle,
-        description,
-        productType,
-      });
-    }
+      })),
+    });
   });
 }

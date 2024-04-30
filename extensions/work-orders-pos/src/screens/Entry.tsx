@@ -36,6 +36,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { MINUTE_IN_MS, SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
@@ -339,7 +340,7 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
 
   const workOrderQueries = useWorkOrderQueries(
     { fetch, names: workOrderInfos.map(({ name }) => name) },
-    { staleTime: 1000 * 30 },
+    { staleTime: 30 * SECOND_IN_MS },
   );
 
   const workOrders = Object.values(workOrderQueries)
@@ -373,7 +374,7 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
 
     let parsedDueDate = new Date(workOrder.dueDate);
     // convert from UTC to local time
-    parsedDueDate = new Date(parsedDueDate.getTime() + parsedDueDate.getTimezoneOffset() * 60 * 1000);
+    parsedDueDate = new Date(parsedDueDate.getTime() + parsedDueDate.getTimezoneOffset() * MINUTE_IN_MS);
 
     const dueDateString = parsedDueDate.toLocaleDateString();
     const orderNamesSubtitle = workOrder.orders.map(order => order.name).join(' • ');

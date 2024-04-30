@@ -56,13 +56,17 @@ function PurchaseOrders() {
     return <Loading />;
   }
 
+  const redirectToPurchaseOrder = (purchaseOrderName: 'new' | string) => {
+    Redirect.create(app).dispatch(Redirect.Action.APP, `/purchase-orders/${encodeURIComponent(purchaseOrderName)}`);
+  };
+
   return (
     <>
       <TitleBar
         title="Purchase Orders"
         primaryAction={{
           content: 'New Purchase Order',
-          onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/purchase-orders/new'),
+          onAction: () => redirectToPurchaseOrder('new'),
         }}
       />
 
@@ -97,9 +101,7 @@ function PurchaseOrders() {
               image={emptyState}
               action={{
                 content: 'Create purchase order',
-                onAction() {
-                  Redirect.create(app).dispatch(Redirect.Action.APP, '/purchase-orders/new');
-                },
+                onAction: () => redirectToPurchaseOrder('new'),
               }}
             >
               Track and manage your inventory.
@@ -112,12 +114,7 @@ function PurchaseOrders() {
             key={purchaseOrder.name}
             id={purchaseOrder.name}
             position={i}
-            onClick={() =>
-              Redirect.create(app).dispatch(
-                Redirect.Action.APP,
-                `/purchase-orders/${encodeURIComponent(purchaseOrder.name)}`,
-              )
-            }
+            onClick={() => redirectToPurchaseOrder(purchaseOrder.name)}
           >
             <IndexTable.Cell>
               <Text as={'p'} fontWeight={'bold'} variant="bodyMd">

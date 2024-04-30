@@ -16,10 +16,23 @@ INSERT INTO "ProductVariant" ("productVariantId", "productId", "inventoryItemId"
 VALUES (:productVariantId!, :productId!, :inventoryItemId!, :sku, :title)
 ON CONFLICT ("productVariantId")
   DO UPDATE
-  SET "productId"       = :productId!,
-      "inventoryItemId" = :inventoryItemId!,
-      sku               = :sku,
-      title             = :title;
+  SET "productId"       = EXCLUDED."productId",
+      "inventoryItemId" = EXCLUDED."inventoryItemId",
+      sku               = EXCLUDED.sku,
+      title             = EXCLUDED.title;
+
+/*
+  @name upsertMany
+  @param productVariants -> ((productVariantId!, productId!, inventoryItemId!, sku, title)...)
+*/
+INSERT INTO "ProductVariant" ("productVariantId", "productId", "inventoryItemId", sku, title)
+VALUES ('', '', '', '', ''), :productVariants OFFSET 1
+ON CONFLICT ("productVariantId")
+  DO UPDATE
+  SET "productId"       = EXCLUDED."productId",
+      "inventoryItemId" = EXCLUDED."inventoryItemId",
+      sku               = EXCLUDED.sku,
+      title             = EXCLUDED.title;
 
 /*
   @name softDeleteProductVariants

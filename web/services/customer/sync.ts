@@ -60,18 +60,16 @@ export async function upsertCustomers(shop: string, customers: gql.customer.Data
     return;
   }
 
-  await unit(async () => {
-    for (const { id: customerId, email, phone, lastName, firstName, displayName, defaultAddress } of customers) {
-      await db.customers.upsert({
-        shop,
-        customerId,
-        email,
-        phone,
-        lastName,
-        firstName,
-        displayName,
-        address: defaultAddress?.formatted?.join('\n') ?? null,
-      });
-    }
+  await db.customers.upsertMany({
+    customers: customers.map(({ id: customerId, email, phone, lastName, firstName, displayName, defaultAddress }) => ({
+      shop,
+      email,
+      phone,
+      lastName,
+      firstName,
+      customerId,
+      displayName,
+      address: defaultAddress?.formatted?.join('\n') ?? null,
+    })),
   });
 }

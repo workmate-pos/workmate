@@ -1,17 +1,10 @@
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
-import { getShopSettings } from '../settings.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { validate, version } from 'uuid';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { assertValidUuid } from '../../util/uuid.js';
 
-export async function validateCreateWorkOrder(shop: string, createWorkOrder: CreateWorkOrder) {
-  const settings = await getShopSettings(shop);
-
-  if (!settings.statuses.includes(createWorkOrder.status)) {
-    throw new HttpError(`Invalid status, must be one of [${settings.statuses.join(', ')}]`, 400);
-  }
-
+export function validateCreateWorkOrder(createWorkOrder: CreateWorkOrder) {
   for (const item of createWorkOrder.items) {
     assertValidUuid(item.uuid);
 
@@ -20,7 +13,8 @@ export async function validateCreateWorkOrder(shop: string, createWorkOrder: Cre
     }
   }
 
-  const itemUuidsSet = new Set(createWorkOrder.items.map(item => item.uuid));
+  const itemUuids = createWorkOrder.items.map(item => item.uuid);
+  const itemUuidsSet = new Set(itemUuids);
 
   for (const charge of createWorkOrder.charges) {
     assertValidUuid(charge.uuid);
@@ -50,7 +44,6 @@ export async function validateCreateWorkOrder(shop: string, createWorkOrder: Cre
     }
   }
 
-  const itemUuids = createWorkOrder.items.map(item => item.uuid);
   const hourlyLabourChargeUuids = createWorkOrder.charges
     .filter(hasPropertyValue('type', 'hourly-labour'))
     .map(charge => charge.uuid);
@@ -58,7 +51,7 @@ export async function validateCreateWorkOrder(shop: string, createWorkOrder: Cre
     .filter(hasPropertyValue('type', 'fixed-price-labour'))
     .map(charge => charge.uuid);
 
-  if (new Set(itemUuids).size !== itemUuids.length) {
+  if (itemUuidsSet.size !== itemUuids.length) {
     throw new HttpError('Work order items must have unique uuids', 400);
   }
 
@@ -68,15 +61,5 @@ export async function validateCreateWorkOrder(shop: string, createWorkOrder: Cre
 
   if (new Set(fixedPriceLabourChargeUuids).size !== fixedPriceLabourChargeUuids.length) {
     throw new HttpError('Fixed price labour charges must have unique uuids', 400);
-  }
-}
-
-function assertValidUuid(uuid: string) {
-  if (!validate(uuid)) {
-    throw new HttpError(`Invalid uuid ${uuid}`, 400);
-  }
-
-  if (version(uuid) !== 4) {
-    throw new HttpError(`Invalid uuid version ${uuid}`, 400);
   }
 }

@@ -165,7 +165,7 @@ export default class WorkOrderController {
         to: printEmail,
         attachment: [file],
         subject,
-        text: 'WorkMate Print Job',
+        text: 'WorkMate Work Order',
       },
     );
 

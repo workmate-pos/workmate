@@ -100,7 +100,7 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"customerId":true,"shop":true,"displayName":true,"firstName":true,"lastName":true,"email":true,"phone":true,"address":true},"params":[{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":115,"b":126}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":129,"b":134},{"a":260,"b":265}]},{"name":"displayName","required":true,"transform":{"type":"scalar"},"locs":[{"a":137,"b":149},{"a":290,"b":302}]},{"name":"firstName","required":false,"transform":{"type":"scalar"},"locs":[{"a":152,"b":161},{"a":327,"b":336}]},{"name":"lastName","required":false,"transform":{"type":"scalar"},"locs":[{"a":164,"b":172},{"a":361,"b":369}]},{"name":"email","required":false,"transform":{"type":"scalar"},"locs":[{"a":175,"b":180},{"a":394,"b":399}]},{"name":"phone","required":false,"transform":{"type":"scalar"},"locs":[{"a":183,"b":188},{"a":424,"b":429}]},{"name":"address","required":false,"transform":{"type":"scalar"},"locs":[{"a":191,"b":198},{"a":454,"b":461}]}],"statement":"INSERT INTO \"Customer\" (\"customerId\", shop, \"displayName\", \"firstName\", \"lastName\", email, phone, address)\nVALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone, :address)\nON CONFLICT (\"customerId\") DO UPDATE\n  SET shop          = :shop!,\n      \"displayName\" = :displayName!,\n      \"firstName\"   = :firstName,\n      \"lastName\"    = :lastName,\n      email         = :email,\n      phone         = :phone,\n      address       = :address"};
+const upsertIR: any = {"usedParamSet":{"customerId":true,"shop":true,"displayName":true,"firstName":true,"lastName":true,"email":true,"phone":true,"address":true},"params":[{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":115,"b":126}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":129,"b":134}]},{"name":"displayName","required":true,"transform":{"type":"scalar"},"locs":[{"a":137,"b":149}]},{"name":"firstName","required":false,"transform":{"type":"scalar"},"locs":[{"a":152,"b":161}]},{"name":"lastName","required":false,"transform":{"type":"scalar"},"locs":[{"a":164,"b":172}]},{"name":"email","required":false,"transform":{"type":"scalar"},"locs":[{"a":175,"b":180}]},{"name":"phone","required":false,"transform":{"type":"scalar"},"locs":[{"a":183,"b":188}]},{"name":"address","required":false,"transform":{"type":"scalar"},"locs":[{"a":191,"b":198}]}],"statement":"INSERT INTO \"Customer\" (\"customerId\", shop, \"displayName\", \"firstName\", \"lastName\", email, phone, address)\nVALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone, :address)\nON CONFLICT (\"customerId\") DO UPDATE\n  SET shop          = EXCLUDED.shop,\n      \"displayName\" = EXCLUDED.\"displayName\",\n      \"firstName\"   = EXCLUDED.\"firstName\",\n      \"lastName\"    = EXCLUDED.\"lastName\",\n      email         = EXCLUDED.email,\n      phone         = EXCLUDED.phone,\n      address       = EXCLUDED.address"};
 
 /**
  * Query generated from SQL:
@@ -108,16 +108,59 @@ const upsertIR: any = {"usedParamSet":{"customerId":true,"shop":true,"displayNam
  * INSERT INTO "Customer" ("customerId", shop, "displayName", "firstName", "lastName", email, phone, address)
  * VALUES (:customerId!, :shop!, :displayName!, :firstName, :lastName, :email, :phone, :address)
  * ON CONFLICT ("customerId") DO UPDATE
- *   SET shop          = :shop!,
- *       "displayName" = :displayName!,
- *       "firstName"   = :firstName,
- *       "lastName"    = :lastName,
- *       email         = :email,
- *       phone         = :phone,
- *       address       = :address
+ *   SET shop          = EXCLUDED.shop,
+ *       "displayName" = EXCLUDED."displayName",
+ *       "firstName"   = EXCLUDED."firstName",
+ *       "lastName"    = EXCLUDED."lastName",
+ *       email         = EXCLUDED.email,
+ *       phone         = EXCLUDED.phone,
+ *       address       = EXCLUDED.address
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
+
+
+/** 'UpsertMany' parameters type */
+export interface IUpsertManyParams {
+  customers: readonly ({
+    customerId: string,
+    shop: string,
+    displayName: string,
+    firstName: string | null | void,
+    lastName: string | null | void,
+    email: string | null | void,
+    phone: string | null | void,
+    address: string | null | void
+  })[];
+}
+
+/** 'UpsertMany' return type */
+export type IUpsertManyResult = void;
+
+/** 'UpsertMany' query type */
+export interface IUpsertManyQuery {
+  params: IUpsertManyParams;
+  result: IUpsertManyResult;
+}
+
+const upsertManyIR: any = {"usedParamSet":{"customers":true},"params":[{"name":"customers","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"customerId","required":true},{"name":"shop","required":true},{"name":"displayName","required":true},{"name":"firstName","required":false},{"name":"lastName","required":false},{"name":"email","required":false},{"name":"phone","required":false},{"name":"address","required":false}]},"locs":[{"a":148,"b":157}]}],"statement":"INSERT INTO \"Customer\" (\"customerId\", shop, \"displayName\", \"firstName\", \"lastName\", email, phone, address)\nVALUES ('', '', '', '', '', '', '', ''), :customers OFFSET 1\nON CONFLICT (\"customerId\") DO UPDATE\n  SET shop          = EXCLUDED.shop,\n      \"displayName\" = EXCLUDED.\"displayName\",\n      \"firstName\"   = EXCLUDED.\"firstName\",\n      \"lastName\"    = EXCLUDED.\"lastName\",\n      email         = EXCLUDED.email,\n      phone         = EXCLUDED.phone,\n      address       = EXCLUDED.address"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "Customer" ("customerId", shop, "displayName", "firstName", "lastName", email, phone, address)
+ * VALUES ('', '', '', '', '', '', '', ''), :customers OFFSET 1
+ * ON CONFLICT ("customerId") DO UPDATE
+ *   SET shop          = EXCLUDED.shop,
+ *       "displayName" = EXCLUDED."displayName",
+ *       "firstName"   = EXCLUDED."firstName",
+ *       "lastName"    = EXCLUDED."lastName",
+ *       email         = EXCLUDED.email,
+ *       phone         = EXCLUDED.phone,
+ *       address       = EXCLUDED.address
+ * ```
+ */
+export const upsertMany = new PreparedQuery<IUpsertManyParams,IUpsertManyResult>(upsertManyIR);
 
 
 /** 'SoftDeleteCustomers' parameters type */

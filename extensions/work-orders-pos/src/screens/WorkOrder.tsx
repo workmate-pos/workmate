@@ -396,7 +396,7 @@ function WorkOrderMoneySummary({
       name: createWorkOrder.name,
       items: createWorkOrder.items,
       charges: createWorkOrder.charges,
-      customerId: createWorkOrder.customerId ?? createGid('Customer', 'null'),
+      customerId: createWorkOrder.customerId ?? createGid('Customer', '0'),
       discount: createWorkOrder.discount,
     },
     { enabled: createWorkOrder.customerId !== null },

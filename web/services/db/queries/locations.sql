@@ -16,8 +16,19 @@ INSERT INTO "Location" ("locationId", shop, name)
 VALUES (:locationId!, :shop!, :name!)
 ON CONFLICT ("locationId")
   DO UPDATE
-  SET shop = :shop!,
-      name = :name!;
+  SET shop = EXCLUDED.shop,
+      name = EXCLUDED.name;
+
+/*
+  @name upsertMany
+  @param locations -> ((locationId!, shop!, name!)...)
+*/
+INSERT INTO "Location" ("locationId", shop, name)
+VALUES ('', '', ''), :locations OFFSET 1
+ON CONFLICT ("locationId")
+  DO UPDATE
+  SET shop = EXCLUDED.shop,
+      name = EXCLUDED.name;
 
 /*
   @name softDeleteLocations

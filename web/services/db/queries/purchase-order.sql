@@ -70,17 +70,17 @@ INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposi
 VALUES (:shop!, :locationId, :discount, :tax, :shipping, :deposited, :paid, :name!, :status!, :shipFrom!, :shipTo!,
         :note!, :vendorName)
 ON CONFLICT (shop, name) DO UPDATE
-  SET "shipFrom"   = :shipFrom,
-      "shipTo"     = :shipTo,
-      "locationId" = :locationId,
-      note         = :note,
-      discount     = :discount,
-      tax          = :tax,
-      shipping     = :shipping,
-      deposited    = :deposited,
-      paid         = :paid,
-      status       = :status!,
-      "vendorName" = :vendorName
+  SET "shipFrom"   = EXCLUDED."shipFrom",
+      "shipTo"     = EXCLUDED."shipTo",
+      "locationId" = EXCLUDED."locationId",
+      note         = EXCLUDED.note,
+      discount     = EXCLUDED.discount,
+      tax          = EXCLUDED.tax,
+      shipping     = EXCLUDED.shipping,
+      deposited    = EXCLUDED.deposited,
+      paid         = EXCLUDED.paid,
+      status       = EXCLUDED.status,
+      "vendorName" = EXCLUDED."vendorName";
 RETURNING id;
 
 /* @name getLineItems */

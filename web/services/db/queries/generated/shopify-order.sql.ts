@@ -230,7 +230,7 @@ export interface IUpsertLineItemQuery {
   result: IUpsertLineItemResult;
 }
 
-const upsertLineItemIR: any = {"usedParamSet":{"lineItemId":true,"orderId":true,"productVariantId":true,"quantity":true,"unitPrice":true,"unfulfilledQuantity":true,"title":true,"totalTax":true,"discountedUnitPrice":true},"params":[{"name":"lineItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":215,"b":226}]},{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":229,"b":237},{"a":426,"b":434}]},{"name":"productVariantId","required":false,"transform":{"type":"scalar"},"locs":[{"a":240,"b":256},{"a":467,"b":483}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":259,"b":268},{"a":516,"b":525}]},{"name":"unitPrice","required":true,"transform":{"type":"scalar"},"locs":[{"a":271,"b":281},{"a":558,"b":568}]},{"name":"unfulfilledQuantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":284,"b":304},{"a":601,"b":621}]},{"name":"title","required":true,"transform":{"type":"scalar"},"locs":[{"a":307,"b":313},{"a":654,"b":660}]},{"name":"totalTax","required":true,"transform":{"type":"scalar"},"locs":[{"a":316,"b":325},{"a":693,"b":702}]},{"name":"discountedUnitPrice","required":true,"transform":{"type":"scalar"},"locs":[{"a":336,"b":356},{"a":735,"b":755}]}],"statement":"INSERT INTO \"ShopifyOrderLineItem\" (\"lineItemId\", \"orderId\", \"productVariantId\", quantity, \"unitPrice\",\n                                    \"unfulfilledQuantity\", \"title\", \"totalTax\", \"discountedUnitPrice\")\nVALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!, :totalTax!,\n        :discountedUnitPrice!)\nON CONFLICT (\"lineItemId\") DO UPDATE\n  SET \"orderId\"             = :orderId!,\n      \"productVariantId\"    = :productVariantId,\n      quantity              = :quantity!,\n      \"unitPrice\"           = :unitPrice!,\n      \"unfulfilledQuantity\" = :unfulfilledQuantity!,\n      \"title\"               = :title!,\n      \"totalTax\"            = :totalTax!,\n      \"discountedUnitPrice\" = :discountedUnitPrice!"};
+const upsertLineItemIR: any = {"usedParamSet":{"lineItemId":true,"orderId":true,"productVariantId":true,"quantity":true,"unitPrice":true,"unfulfilledQuantity":true,"title":true,"totalTax":true,"discountedUnitPrice":true},"params":[{"name":"lineItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":215,"b":226}]},{"name":"orderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":229,"b":237}]},{"name":"productVariantId","required":false,"transform":{"type":"scalar"},"locs":[{"a":240,"b":256}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":259,"b":268}]},{"name":"unitPrice","required":true,"transform":{"type":"scalar"},"locs":[{"a":271,"b":281}]},{"name":"unfulfilledQuantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":284,"b":304}]},{"name":"title","required":true,"transform":{"type":"scalar"},"locs":[{"a":307,"b":313}]},{"name":"totalTax","required":true,"transform":{"type":"scalar"},"locs":[{"a":316,"b":325}]},{"name":"discountedUnitPrice","required":true,"transform":{"type":"scalar"},"locs":[{"a":336,"b":356}]}],"statement":"INSERT INTO \"ShopifyOrderLineItem\" (\"lineItemId\", \"orderId\", \"productVariantId\", quantity, \"unitPrice\",\n                                    \"unfulfilledQuantity\", \"title\", \"totalTax\", \"discountedUnitPrice\")\nVALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!, :totalTax!,\n        :discountedUnitPrice!)\nON CONFLICT (\"lineItemId\") DO UPDATE\n  SET \"orderId\"             = EXCLUDED.\"orderId\",\n      \"productVariantId\"    = EXCLUDED.\"productVariantId\",\n      quantity              = EXCLUDED.quantity,\n      \"unitPrice\"           = EXCLUDED.\"unitPrice\",\n      \"unfulfilledQuantity\" = EXCLUDED.\"unfulfilledQuantity\",\n      \"title\"               = EXCLUDED.title,\n      \"totalTax\"            = EXCLUDED.\"totalTax\",\n      \"discountedUnitPrice\" = EXCLUDED.\"discountedUnitPrice\""};
 
 /**
  * Query generated from SQL:
@@ -240,14 +240,14 @@ const upsertLineItemIR: any = {"usedParamSet":{"lineItemId":true,"orderId":true,
  * VALUES (:lineItemId!, :orderId!, :productVariantId, :quantity!, :unitPrice!, :unfulfilledQuantity!, :title!, :totalTax!,
  *         :discountedUnitPrice!)
  * ON CONFLICT ("lineItemId") DO UPDATE
- *   SET "orderId"             = :orderId!,
- *       "productVariantId"    = :productVariantId,
- *       quantity              = :quantity!,
- *       "unitPrice"           = :unitPrice!,
- *       "unfulfilledQuantity" = :unfulfilledQuantity!,
- *       "title"               = :title!,
- *       "totalTax"            = :totalTax!,
- *       "discountedUnitPrice" = :discountedUnitPrice!
+ *   SET "orderId"             = EXCLUDED."orderId",
+ *       "productVariantId"    = EXCLUDED."productVariantId",
+ *       quantity              = EXCLUDED.quantity,
+ *       "unitPrice"           = EXCLUDED."unitPrice",
+ *       "unfulfilledQuantity" = EXCLUDED."unfulfilledQuantity",
+ *       "title"               = EXCLUDED.title,
+ *       "totalTax"            = EXCLUDED."totalTax",
+ *       "discountedUnitPrice" = EXCLUDED."discountedUnitPrice"
  * ```
  */
 export const upsertLineItem = new PreparedQuery<IUpsertLineItemParams,IUpsertLineItemResult>(upsertLineItemIR);

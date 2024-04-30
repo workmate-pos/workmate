@@ -62,7 +62,6 @@ export function OrderPreview({
       if (!order) return;
       if (!settingsQuery.data) return;
 
-      // ToDO: Also import the customer???
       router.push('WorkOrder', {
         initial: {
           ...defaultCreateWorkOrder({

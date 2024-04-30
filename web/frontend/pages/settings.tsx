@@ -37,6 +37,7 @@ import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { string } from '@teifi-digital/shopify-app-toolbox';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
+import { isNumber } from '@teifi-digital/shopify-app-toolbox/numbers';
 
 const ONLY_SHORTCUTS = 'ONLY_SHORTCUTS';
 const CURRENCY_RANGE = 'CURRENCY_RANGE';
@@ -742,27 +743,27 @@ function PrintTemplateGroup({
       '{{ customer.email }}': 'The email address of the customer',
       '{{ customer.phone }}': 'The phone number of the customer',
       '{{ customer.address }}': 'The address of the customer',
-      '{{ items[x].name }}': 'The name of the item at index x',
-      '{{ items[x].description }}': 'The description of the item at index x',
-      '{{ items[x].sku }}': 'The SKU of the item at index x',
-      '{{ items[x].shopifyOrderName }}': 'The name of the shopify order that the item is in at index x',
-      '{{ items[x].purchaseOrderNames }}': 'The name of the purchase orders that the item is in at index x',
-      '{{ items[x].quantity }}': 'The quantity of the item at index x',
-      '{{ items[x].originalUnitPrice }}': 'The original unit price of the item at index x',
-      '{{ items[x].discountedUnitPrice }}': 'The discounted unit price of the item at index x',
-      '{{ items[x].originalTotalPrice }}': 'The original total price of the item at index x',
-      '{{ items[x].discountedTotalPrice }}': 'The discounted total price of the item at index x',
-      '{{ items[x].fullyPaid }}': 'Whether the item at index x has been fully paid for',
-      '{{ items[x].purchaseOrderQuantities.orderedQuantity }}':
+      '{{ items[*].name }}': 'The name of the item at index x',
+      '{{ items[*].description }}': 'The description of the item at index x',
+      '{{ items[*].sku }}': 'The SKU of the item at index x',
+      '{{ items[*].shopifyOrderName }}': 'The name of the shopify order that the item is in at index x',
+      '{{ items[*].purchaseOrderNames }}': 'The name of the purchase orders that the item is in at index x',
+      '{{ items[*].quantity }}': 'The quantity of the item at index x',
+      '{{ items[*].originalUnitPrice }}': 'The original unit price of the item at index x',
+      '{{ items[*].discountedUnitPrice }}': 'The discounted unit price of the item at index x',
+      '{{ items[*].originalTotalPrice }}': 'The original total price of the item at index x',
+      '{{ items[*].discountedTotalPrice }}': 'The discounted total price of the item at index x',
+      '{{ items[*].fullyPaid }}': 'Whether the item at index x has been fully paid for',
+      '{{ items[*].purchaseOrderQuantities.orderedQuantity }}':
         'The quantity of this item that has been ordered in linked purchase orders',
-      '{{ items[x].purchaseOrderQuantities.availableQuantity }}':
+      '{{ items[*].purchaseOrderQuantities.availableQuantity }}':
         'The quantity of this item ordered in linked purchase orders that is now available',
-      '{{ items[x].charges[y].name }}': 'The name of the charge at index y of the item at index x',
-      '{{ items[x].charges[y].shopifyOrderName }}':
+      '{{ items[*].charges[y].name }}': 'The name of the charge at index y of the item at index x',
+      '{{ items[*].charges[y].shopifyOrderName }}':
         'The name of the shopify order that the charge is in at index y of the item at index x',
-      '{{ items[x].charges[y].details }}': 'Additional details about the charge at index y of the item at index x',
-      '{{ items[x].charges[y].totalPrice }}': 'The total price of the charge at index y of the item at index x',
-      '{{ items[x].charges[y].fullyPaid }}':
+      '{{ items[*].charges[y].details }}': 'Additional details about the charge at index y of the item at index x',
+      '{{ items[*].charges[y].totalPrice }}': 'The total price of the charge at index y of the item at index x',
+      '{{ items[*].charges[y].fullyPaid }}':
         'Whether the charge at index y of the item at index x has been fully paid for',
       '{{ tax }}': 'The total tax of the work order',
       '{{ subtotal }}': 'The total subtotal of the work order',
@@ -770,11 +771,11 @@ function PrintTemplateGroup({
       '{{ outstanding }}': 'The amount that still has to be paid',
       '{{ paid }}': 'The amount that has been paid already',
       '{{ customFields.x }}': 'The value of the custom field with key x',
-      '{{ charges[x].name }}': 'The name of the charge at index x',
-      '{{ charges[x].shopifyOrderName }}': 'The name of the shopify order that the charge is in at index x',
-      '{{ charges[x].details }}': 'Additional details about the charge at index x',
-      '{{ charges[x].totalPrice }}': 'The total price of the charge at index x',
-      '{{ charges[x].fullyPaid }}': 'Whether the charge at index x has been fully paid for',
+      '{{ charges[*].name }}': 'The name of the charge at index x',
+      '{{ charges[*].shopifyOrderName }}': 'The name of the shopify order that the charge is in at index x',
+      '{{ charges[*].details }}': 'Additional details about the charge at index x',
+      '{{ charges[*].totalPrice }}': 'The total price of the charge at index x',
+      '{{ charges[*].fullyPaid }}': 'Whether the charge at index x has been fully paid for',
     },
     purchaseOrderPrintTemplates: {
       '{{ name }}': 'The name of the purchase order',
@@ -791,10 +792,10 @@ function PrintTemplateGroup({
       '{{ paid }}': 'The amount paid for the purchase order',
       '{{ status }}': 'The status of the purchase order',
       '{{ customFields.x }}': 'The value of the custom field with key x',
-      '{{ lineItems[x].name }}': 'The name of the line item at index x',
-      '{{ lineItems[x].unitCost }}': 'The unit cost of the line item at index x',
-      '{{ lineItems[x].quantity }}': 'The quantity of the line item at index x',
-      '{{ lineItems[x].totalCost }}': 'The total cost of the line item at index x',
+      '{{ lineItems[*].name }}': 'The name of the line item at index x',
+      '{{ lineItems[*].unitCost }}': 'The unit cost of the line item at index x',
+      '{{ lineItems[*].quantity }}': 'The quantity of the line item at index x',
+      '{{ lineItems[*].totalCost }}': 'The total cost of the line item at index x',
     },
   }[templateType];
 
@@ -1209,7 +1210,7 @@ function CurrencyOrPercentageInput({
           <Combobox.TextField type="number" label={label} autoComplete="off" value={value} onChange={setValue} />
         }
       >
-        {value.length > 0 && Number.isFinite(Number(value)) && Number(value) > 0 ? (
+        {value.length > 0 && isNumber(value) && Number(value) > 0 ? (
           <Listbox onSelect={onSelect}>
             <Listbox.Option value={'currency'}>{currencyFormatter(Number(value))}</Listbox.Option>
             {Number(value) <= 100 && <Listbox.Option value={'percentage'}>{value + '%'}</Listbox.Option>}

@@ -18,6 +18,7 @@ import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-s
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { v4 as uuid } from 'uuid';
+import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 
 export function ProductSelector({
   filters: { vendorName, locationId },
@@ -34,7 +35,7 @@ export function ProductSelector({
 
   const locationQuery = useLocationQuery({ fetch, id: locationId });
 
-  const vendorQuery = vendorName ? `vendor:"${vendorName}"` : '';
+  const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
   const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : '';
   const productVariantsQuery = useProductVariantsQuery({
     fetch,

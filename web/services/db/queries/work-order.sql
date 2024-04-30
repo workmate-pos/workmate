@@ -136,6 +136,19 @@ ON CONFLICT ("workOrderId", uuid)
                 "productVariantId"       = EXCLUDED."productVariantId",
                 "absorbCharges"          = EXCLUDED."absorbCharges";
 
+/*
+  @name upsertItems
+  @param items -> ((uuid!, workOrderId!, shopifyOrderLineItemId, quantity!, productVariantId!, absorbCharges!)...)
+*/
+INSERT INTO "WorkOrderItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, "productVariantId",
+                             "absorbCharges")
+VALUES (gen_random_uuid(), 0, NULL, 0, '', FALSE), :items OFFSET 1
+ON CONFLICT ("workOrderId", uuid)
+  DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+                quantity                 = EXCLUDED.quantity,
+                "productVariantId"       = EXCLUDED."productVariantId",
+                "absorbCharges"          = EXCLUDED."absorbCharges";
+
 
 /* @name removeItem */
 DELETE

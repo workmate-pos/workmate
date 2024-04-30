@@ -61,8 +61,12 @@ export async function upsertLocations(shop: string, locations: gql.location.Data
   }
 
   await unit(async () => {
-    for (const { id: locationId, name } of locations) {
-      await db.locations.upsert({ shop, locationId, name });
-    }
+    await db.locations.upsertMany({
+      locations: locations.map(location => ({
+        locationId: location.id,
+        name: location.name,
+        shop,
+      })),
+    });
   });
 }

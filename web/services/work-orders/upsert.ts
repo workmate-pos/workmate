@@ -29,7 +29,7 @@ export async function upsertWorkOrder(
   createWorkOrder: CreateWorkOrder,
 ) {
   return await unit(async () => {
-    await validateCreateWorkOrder(session.shop, createWorkOrder);
+    validateCreateWorkOrder(createWorkOrder);
 
     if (createWorkOrder.name === null) {
       return await createNewWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
@@ -283,18 +283,16 @@ async function upsertItems(
 
   await ensureProductVariantsExist(session, unique(createWorkOrder.items.map(item => item.productVariantId)));
 
-  for (const item of createWorkOrder.items) {
-    const shopifyOrderLineItemId = itemsByUuid[item.uuid]?.shopifyOrderLineItemId ?? null;
-
-    await db.workOrder.upsertItem({
-      uuid: item.uuid,
+  await db.workOrder.upsertItems({
+    items: createWorkOrder.items.map(item => ({
+      shopifyOrderLineItemId: itemsByUuid[item.uuid]?.shopifyOrderLineItemId ?? null,
       productVariantId: item.productVariantId,
-      quantity: item.quantity,
-      workOrderId,
-      shopifyOrderLineItemId,
       absorbCharges: item.absorbCharges,
-    });
-  }
+      quantity: item.quantity,
+      uuid: item.uuid,
+      workOrderId,
+    })),
+  });
 }
 
 async function upsertCharges(
@@ -304,11 +302,6 @@ async function upsertCharges(
   currentHourlyCharges: IGetHourlyLabourChargesResult[],
   currentFixedPriceCharges: IGetFixedPriceLabourChargesResult[],
 ) {
-  const currentHourlyChargeByUuid = Object.fromEntries(currentHourlyCharges.map(charge => [charge.uuid, charge]));
-  const currentFixedPriceChargeByUuid = Object.fromEntries(
-    currentFixedPriceCharges.map(charge => [charge.uuid, charge]),
-  );
-
   const employeeIds = unique(
     createWorkOrder.charges
       .map(charge => {
@@ -319,41 +312,42 @@ async function upsertCharges(
   );
   await ensureEmployeesExist(session, employeeIds);
 
-  for (const charge of createWorkOrder.charges) {
-    if (charge.type === 'fixed-price-labour') {
-      const shopifyOrderLineItemId = currentFixedPriceChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null;
+  const currentHourlyChargeByUuid = Object.fromEntries(currentHourlyCharges.map(charge => [charge.uuid, charge]));
+  const currentFixedPriceChargeByUuid = Object.fromEntries(
+    currentFixedPriceCharges.map(charge => [charge.uuid, charge]),
+  );
 
-      await db.workOrderCharges.upsertFixedPriceLabourCharge({
+  await Promise.all([
+    db.workOrderCharges.upsertHourlyLabourCharges({
+      charges: createWorkOrder.charges.filter(hasPropertyValue('type', 'hourly-labour')).map(charge => ({
         workOrderId,
-        name: charge.name,
-        uuid: charge.uuid,
-        amount: charge.amount,
-        shopifyOrderLineItemId,
         employeeId: charge.employeeId,
-        amountLocked: charge.amountLocked,
-        removeLocked: charge.removeLocked,
-        workOrderItemUuid: charge.workOrderItemUuid,
-      });
-    } else if (charge.type === 'hourly-labour') {
-      const shopifyOrderLineItemId = currentHourlyChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null;
-
-      await db.workOrderCharges.upsertHourlyLabourCharge({
-        workOrderId,
         name: charge.name,
-        uuid: charge.uuid,
         rate: charge.rate,
         hours: charge.hours,
-        shopifyOrderLineItemId,
+        workOrderItemUuid: charge.workOrderItemUuid,
+        shopifyOrderLineItemId: currentHourlyChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null,
+        uuid: charge.uuid,
         rateLocked: charge.rateLocked,
-        employeeId: charge.employeeId,
         hoursLocked: charge.hoursLocked,
         removeLocked: charge.removeLocked,
+      })),
+    }),
+
+    db.workOrderCharges.upsertFixedPriceLabourCharges({
+      charges: createWorkOrder.charges.filter(hasPropertyValue('type', 'fixed-price-labour')).map(charge => ({
+        workOrderId,
+        employeeId: charge.employeeId,
+        name: charge.name,
+        amount: charge.amount,
         workOrderItemUuid: charge.workOrderItemUuid,
-      });
-    } else {
-      return charge satisfies never;
-    }
-  }
+        shopifyOrderLineItemId: currentFixedPriceChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null,
+        uuid: charge.uuid,
+        amountLocked: charge.amountLocked,
+        removeLocked: charge.removeLocked,
+      })),
+    }),
+  ]);
 }
 
 async function deleteItems(createWorkOrder: CreateWorkOrder, workOrderId: number, currentItems: IGetItemsResult[]) {

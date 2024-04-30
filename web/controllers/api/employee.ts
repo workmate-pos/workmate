@@ -90,27 +90,27 @@ export default class EmployeeController {
 
     const staffMemberById = indexBy(staffMembers.filter(isNonNullable), e => e.id);
 
-    await unit(async () => {
-      for (const { employeeId, rate, superuser, permissions } of req.body.employees) {
+    await db.employee.upsertMany({
+      employees: req.body.employees.map(({ employeeId, rate, superuser, permissions }) => {
         const staffMember = staffMemberById[employeeId];
 
         if (!staffMember) {
           throw new HttpError('Not all employees were found', 400);
         }
 
-        await db.employee.upsert({
-          name: staffMember.name,
-          shop,
+        return {
           permissions: permissions.map(p => {
             if (isPermissionNode(p)) return p;
             throw new Error(`Invalid permission node: ${p}`);
           }),
           isShopOwner: staffMember.isShopOwner,
-          rate,
-          superuser,
           staffMemberId: employeeId,
-        });
-      }
+          name: staffMember.name,
+          superuser,
+          shop,
+          rate,
+        };
+      }),
     });
 
     return res.json({ success: true });

@@ -91,7 +91,7 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"productVariantId":true,"productId":true,"inventoryItemId":true,"sku":true,"title":true},"params":[{"name":"productVariantId","required":true,"transform":{"type":"scalar"},"locs":[{"a":102,"b":119}]},{"name":"productId","required":true,"transform":{"type":"scalar"},"locs":[{"a":122,"b":132},{"a":239,"b":249}]},{"name":"inventoryItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":135,"b":151},{"a":278,"b":294}]},{"name":"sku","required":false,"transform":{"type":"scalar"},"locs":[{"a":154,"b":157},{"a":323,"b":326}]},{"name":"title","required":false,"transform":{"type":"scalar"},"locs":[{"a":160,"b":165},{"a":355,"b":360}]}],"statement":"INSERT INTO \"ProductVariant\" (\"productVariantId\", \"productId\", \"inventoryItemId\", sku, title)\nVALUES (:productVariantId!, :productId!, :inventoryItemId!, :sku, :title)\nON CONFLICT (\"productVariantId\")\n  DO UPDATE\n  SET \"productId\"       = :productId!,\n      \"inventoryItemId\" = :inventoryItemId!,\n      sku               = :sku,\n      title             = :title"};
+const upsertIR: any = {"usedParamSet":{"productVariantId":true,"productId":true,"inventoryItemId":true,"sku":true,"title":true},"params":[{"name":"productVariantId","required":true,"transform":{"type":"scalar"},"locs":[{"a":102,"b":119}]},{"name":"productId","required":true,"transform":{"type":"scalar"},"locs":[{"a":122,"b":132}]},{"name":"inventoryItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":135,"b":151}]},{"name":"sku","required":false,"transform":{"type":"scalar"},"locs":[{"a":154,"b":157}]},{"name":"title","required":false,"transform":{"type":"scalar"},"locs":[{"a":160,"b":165}]}],"statement":"INSERT INTO \"ProductVariant\" (\"productVariantId\", \"productId\", \"inventoryItemId\", sku, title)\nVALUES (:productVariantId!, :productId!, :inventoryItemId!, :sku, :title)\nON CONFLICT (\"productVariantId\")\n  DO UPDATE\n  SET \"productId\"       = EXCLUDED.\"productId\",\n      \"inventoryItemId\" = EXCLUDED.\"inventoryItemId\",\n      sku               = EXCLUDED.sku,\n      title             = EXCLUDED.title"};
 
 /**
  * Query generated from SQL:
@@ -100,13 +100,51 @@ const upsertIR: any = {"usedParamSet":{"productVariantId":true,"productId":true,
  * VALUES (:productVariantId!, :productId!, :inventoryItemId!, :sku, :title)
  * ON CONFLICT ("productVariantId")
  *   DO UPDATE
- *   SET "productId"       = :productId!,
- *       "inventoryItemId" = :inventoryItemId!,
- *       sku               = :sku,
- *       title             = :title
+ *   SET "productId"       = EXCLUDED."productId",
+ *       "inventoryItemId" = EXCLUDED."inventoryItemId",
+ *       sku               = EXCLUDED.sku,
+ *       title             = EXCLUDED.title
  * ```
  */
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
+
+
+/** 'UpsertMany' parameters type */
+export interface IUpsertManyParams {
+  productVariants: readonly ({
+    productVariantId: string,
+    productId: string,
+    inventoryItemId: string,
+    sku: string | null | void,
+    title: string | null | void
+  })[];
+}
+
+/** 'UpsertMany' return type */
+export type IUpsertManyResult = void;
+
+/** 'UpsertMany' query type */
+export interface IUpsertManyQuery {
+  params: IUpsertManyParams;
+  result: IUpsertManyResult;
+}
+
+const upsertManyIR: any = {"usedParamSet":{"productVariants":true},"params":[{"name":"productVariants","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"productVariantId","required":true},{"name":"productId","required":true},{"name":"inventoryItemId","required":true},{"name":"sku","required":false},{"name":"title","required":false}]},"locs":[{"a":123,"b":138}]}],"statement":"INSERT INTO \"ProductVariant\" (\"productVariantId\", \"productId\", \"inventoryItemId\", sku, title)\nVALUES ('', '', '', '', ''), :productVariants OFFSET 1\nON CONFLICT (\"productVariantId\")\n  DO UPDATE\n  SET \"productId\"       = EXCLUDED.\"productId\",\n      \"inventoryItemId\" = EXCLUDED.\"inventoryItemId\",\n      sku               = EXCLUDED.sku,\n      title             = EXCLUDED.title"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "ProductVariant" ("productVariantId", "productId", "inventoryItemId", sku, title)
+ * VALUES ('', '', '', '', ''), :productVariants OFFSET 1
+ * ON CONFLICT ("productVariantId")
+ *   DO UPDATE
+ *   SET "productId"       = EXCLUDED."productId",
+ *       "inventoryItemId" = EXCLUDED."inventoryItemId",
+ *       sku               = EXCLUDED.sku,
+ *       title             = EXCLUDED.title
+ * ```
+ */
+export const upsertMany = new PreparedQuery<IUpsertManyParams,IUpsertManyResult>(upsertManyIR);
 
 
 /** 'SoftDeleteProductVariants' parameters type */

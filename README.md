@@ -37,13 +37,6 @@ cd ../cycle-count-pos && ln -s ../../.npmrc .
 Do the same for the .env file:
 ```bash
 cd web && ln -s ../.env .
-cd frontend && ln -s ../../.env .
-cd ../../common && ln -s ../.env .
-cd ../extensions && ln -s ../.env .
-cd common-pos && ln -s ../../.env .
-cd ../work-orders-pos && ln -s ../../.env .
-cd ../purchase-orders-pos && ln -s ../../.env .
-cd ../cycle-count-pos && ln -s ../../.env .
 ```
 
 Then, you can install the dependencies for all subprojects:
