@@ -35,7 +35,6 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../routes.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
@@ -366,15 +365,60 @@ function WorkOrderEmployees({ createWorkOrder }: { createWorkOrder: WIPCreateWor
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
 
   const isLoading = Object.values(employeeQueries).some(query => query.isLoading);
-  const employeeNames = employeeIds.map(id => employeeQueries[id]?.data?.name ?? 'Unknown Employee');
+  const employeeNames = employeeIds.map(id => {
+    let label = employeeQueries[id]?.data?.name ?? 'Unknown Employee';
+
+    const employeeHours = BigDecimal.sum(
+      ...createWorkOrder.charges
+        .filter(hasPropertyValue('employeeId', id))
+        .filter(hasPropertyValue('type', 'hourly-labour'))
+        .map(charge => BigDecimal.fromDecimal(charge.hours)),
+    );
+
+    if (employeeHours.compare(BigDecimal.ZERO) > 0) {
+      label = `${label} (${employeeHours.round(2).trim().toDecimal()})`;
+    }
+
+    return label;
+  });
+
+  const totalHours = BigDecimal.sum(
+    ...createWorkOrder.charges
+      .filter(hasPropertyValue('type', 'hourly-labour'))
+      .map(charge => BigDecimal.fromDecimal(charge.hours)),
+  );
+
+  const nonEmployeeHours = BigDecimal.sum(
+    ...createWorkOrder.charges
+      .filter(hasPropertyValue('type', 'hourly-labour'))
+      .filter(hasPropertyValue('employeeId', null))
+      .map(charge => BigDecimal.fromDecimal(charge.hours)),
+  );
+
+  let totalHoursLabel = 'Total Hours';
+
+  if (nonEmployeeHours.compare(BigDecimal.ZERO) > 0) {
+    totalHoursLabel = `${totalHoursLabel} (${nonEmployeeHours.round(2).trim().toDecimal()} hours unassigned)`;
+  }
 
   return (
-    <FormStringField
-      label={'Assigned Employees'}
-      type={'area'}
-      disabled
-      value={isLoading ? 'Loading...' : employeeNames.join(', ')}
-    />
+    <ResponsiveGrid columns={2}>
+      <FormStringField
+        label={'Assigned Employees'}
+        type={'area'}
+        disabled
+        value={isLoading ? 'Loading...' : employeeNames.join(', ')}
+      />
+      {totalHours.compare(BigDecimal.ZERO) > 0 && (
+        <FormStringField
+          label={totalHoursLabel}
+          type={'decimal'}
+          disabled
+          value={totalHours.round(2).trim().toDecimal()}
+          formatter={hours => `${hours} hours`}
+        />
+      )}
+    </ResponsiveGrid>
   );
 }
 

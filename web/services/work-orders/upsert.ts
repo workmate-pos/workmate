@@ -187,7 +187,11 @@ function assertNoIllegalHourlyChargeChanges(
       throw new HttpError(`Cannot remove hourly charge ${oldCharge.uuid} as it is locked`, 400);
     }
 
-    const newCharge = newHourlyChargesByUuid[oldCharge.uuid] ?? never();
+    const newCharge = newHourlyChargesByUuid[oldCharge.uuid];
+
+    if (!newCharge) {
+      continue;
+    }
 
     if (isLineItem && newCharge.name !== oldCharge.name) {
       throw new HttpError(`Cannot change name of hourly charge ${newCharge.uuid}`, 400);
@@ -247,7 +251,11 @@ function assertNoIllegalFixedPriceChargeChanges(
       throw new HttpError(`Cannot remove fixed price charge ${oldCharge.uuid} as it is locked`, 400);
     }
 
-    const newCharge = newFixedPriceChargesByUuid[oldCharge.uuid] ?? never();
+    const newCharge = newFixedPriceChargesByUuid[oldCharge.uuid];
+
+    if (!newCharge) {
+      continue;
+    }
 
     if (isLineItem && newCharge.name !== oldCharge.name) {
       throw new HttpError(`Cannot change name of fixed price charge ${newCharge.uuid}`, 400);

@@ -70,8 +70,6 @@ export function ItemChargeConfig({
   screen.setIsLoading(productVariantQuery.isLoading || settingsQuery.isLoading || workOrderQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  // TODO: Dont allow changing if locked
-
   if (!productVariant) {
     return null;
   }
@@ -109,7 +107,7 @@ export function ItemChargeConfig({
           disabled={getChargeOrder(generalLabour)?.type === 'ORDER'}
           charge={generalLabour}
           onChange={charge =>
-            charge ? setGeneralLabour({ ...charge, uuid: uuid(), employeeId: null }) : setGeneralLabour(charge)
+            charge !== null ? setGeneralLabour({ ...charge, uuid: uuid(), employeeId: null }) : setGeneralLabour(null)
           }
         />
 
@@ -163,7 +161,17 @@ export function ItemChargeConfig({
                     },
                     onUpdate: updatedLabour => {
                       setHasUnsavedChanges(true);
-                      setEmployeeLabour(employeeLabour.map(l => (l === labour ? { ...l, ...updatedLabour } : l)));
+                      setEmployeeLabour(
+                        employeeLabour.map(l =>
+                          l === labour
+                            ? {
+                                uuid: l.uuid,
+                                workOrderItemUuid: l.workOrderItemUuid,
+                                ...updatedLabour,
+                              }
+                            : l,
+                        ),
+                      );
                     },
                   })
                 }

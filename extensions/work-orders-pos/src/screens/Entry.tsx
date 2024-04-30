@@ -2,6 +2,7 @@ import {
   Button,
   List,
   ListRow,
+  Selectable,
   Stack,
   Text,
   useCartSubscription,
@@ -206,22 +207,54 @@ export function Entry() {
           />
         </ResponsiveStack>
         <ResponsiveStack direction={'horizontal'} flexWrap={'wrap'} sm={{ direction: 'vertical', flexWrap: undefined }}>
-          {status && <Button title={'Clear status'} type={'plain'} onPress={() => setStatus(null)} />}
+          {status && (
+            <Selectable onPress={() => setStatus(null)}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text color={'TextCritical'}>Clear status</Text>
+              </Stack>
+            </Selectable>
+          )}
           {paymentStatus && (
-            <Button title={'Clear payment status'} type={'plain'} onPress={() => setPaymentStatus(null)} />
+            <Selectable onPress={() => setPaymentStatus(null)}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text color={'TextCritical'}>Clear payment status</Text>
+              </Stack>
+            </Selectable>
           )}
           {overdueStatus && (
-            <Button title={'Clear overdue status'} type={'plain'} onPress={() => setOverdueStatus(null)} />
+            <Selectable onPress={() => setOverdueStatus(null)}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text color={'TextCritical'}>Clear overdue status</Text>
+              </Stack>
+            </Selectable>
           )}
           {purchaseOrderStatus && (
-            <Button title={'Clear purchase order status'} type={'plain'} onPress={() => setPurchaseOrderStatus(null)} />
+            <Selectable onPress={() => setPurchaseOrderStatus(null)}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text color={'TextCritical'}>Clear purchase order status</Text>
+              </Stack>
+            </Selectable>
           )}
-          {customerId && <Button title={'Clear customer'} type={'plain'} onPress={() => setCustomerId(null)} />}
+          {customerId && (
+            <Selectable onPress={() => setCustomerId(null)}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text color={'TextCritical'}>Clear customer</Text>
+              </Stack>
+            </Selectable>
+          )}
           {employeeIds.length > 0 && (
-            <Button title={'Clear employees'} type={'plain'} onPress={() => setEmployeeIds([])} />
+            <Selectable onPress={() => setEmployeeIds([])}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text color={'TextCritical'}>Clear employees</Text>
+              </Stack>
+            </Selectable>
           )}
           {customFieldFilters.length > 0 && (
-            <Button title={'Clear custom fields'} type={'plain'} onPress={() => setCustomFieldFilters([])} />
+            <Selectable onPress={() => setCustomFieldFilters([])}>
+              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+                <Text color={'TextCritical'}>Clear custom fields</Text>
+              </Stack>
+            </Selectable>
           )}
         </ResponsiveStack>
       </ResponsiveStack>

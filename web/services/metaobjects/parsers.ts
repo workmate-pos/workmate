@@ -17,11 +17,9 @@ export function parseDecimal(value: string | null | undefined): Decimal {
     throw new Error('Decimal must be set');
   }
 
-  const amount = JSON.parse(value);
+  assertDecimal(value);
 
-  assertDecimal(amount);
-
-  return amount;
+  return value;
 }
 
 export function parseBoolean(value: string | null | undefined): boolean {
