@@ -94,13 +94,9 @@ export const workOrderInvoiceTemplate = `<!doctype html>
 
     <table>
       <tr>
-        <th>Rep</th>
-        <th>Tech</th>
         <th>P.O. No.</th>
       </tr>
       <tr>
-        <td>{{ customFields["Rep"] }}</td>
-        <td>{{ customFields["Tech"] }}</td>
         <td>{{ purchaseOrderNames | join: ", " }}</td>
       </tr>
     </table>
@@ -113,52 +109,10 @@ export const workOrderInvoiceTemplate = `<!doctype html>
       <tr>
         <th>Date</th>
         <th>W.O. No.</th>
-        <th>Invoice #</th>
       </tr>
       <tr>
         <td>{{ date }}</td>
         <td>{{ name }}</td>
-        <td>{{ customFields["Invoice #"] }}</td>
-      </tr>
-    </table>
-
-    <table>
-      <tr>
-        <th>VIN</th>
-        <td>{{ customFields["VIN"] }}</td>
-      </tr>
-    </table>
-
-    <table>
-      <tr>
-        <th>Year</th>
-        <th>Make</th>
-        <th>Model</th>
-      </tr>
-      <tr>
-        <td>{{ customFields["Year"] }}</td>
-        <td>{{ customFields["Make"] }}</td>
-        <td>{{ customFields["Model"] }}</td>
-      </tr>
-    </table>
-
-    <table>
-      <tr>
-        <th>License#</th>
-        <th>Miles In</th>
-        <th>Miles Out</th>
-      </tr>
-      <tr>
-        <td>{{ customFields["License#"] }}</td>
-        <td>{{ customFields["Miles In"] }}</td>
-        <td>{{ customFields["Miles Out"] }}</td>
-      </tr>
-    </table>
-
-    <table>
-      <tr>
-        <th>Color</th>
-        <td>{{ customFields["Color"] }}</td>
       </tr>
     </table>
   </div>
@@ -180,9 +134,15 @@ export const workOrderInvoiceTemplate = `<!doctype html>
   <tr>
     <td>{{ item.name }}</td>
     <td>{{ item.description | truncate: 150 }}</td>
+    {% if item.totalPrice != "0.00" %}
     <td>{{ item.quantity }}</td>
-    <td>\${{ item.discountedUnitPrice }}</td>
-    <td>\${{ item.discountedTotalPrice }}</td>
+    <td>\${{ item.unitPrice }}</td>
+    <td>\${{ item.totalPrice }}</td>
+    {% else %}
+    <td></td>
+    <td></td>
+    <td></td>
+    {% endif %}
   </tr>
   {% for charge in item.charges %}
   <tr>
@@ -199,8 +159,8 @@ export const workOrderInvoiceTemplate = `<!doctype html>
   <tr>
     <td>{{ charge.name }}</td>
     <td>{{ charge.details }}</td>
-    <td>1</td>
-    <td>\${{ charge.totalPrice }}</td>
+    <td></td>
+    <td></td>
     <td>\${{ charge.totalPrice }}</td>
   </tr>
   {% endfor %}
@@ -211,6 +171,14 @@ export const workOrderInvoiceTemplate = `<!doctype html>
     <td></td>
     <td></td>
     <td>\${{ tax }}</td>
+  </tr>
+
+  <tr>
+    <td>Discount</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td>\${{ discount }}</td>
   </tr>
 
   <tr>
@@ -238,34 +206,6 @@ export const workOrderInvoiceTemplate = `<!doctype html>
   </tr>
   </tbody>
 </table>
-
-<div style="border: 1px solid #aaa; margin: 1em auto; padding: 1em; font-size: 8pt">
-It is the buyer's responsibility to have all bolts/nuts checked after the first 100 miles on wheel
-adapters and new wheels and 500 miles on suspension components. Please contact us at
-801-395-2134 to schedule an inspection on your vehicle at that time.
-  <br />
-  <br />
-Wheel alignment, steering systems, suspension, and driveline system should be inspected by a
-qualified professional mechanic every 6-9 months. Fat Bob's Garage will re-align your vehicle
-to specification free of charge for a period of 30 days when an alignment is purchased and
-incorrect alignment is detected within this 30 day period.
-  <br />
-  <br />
-Buyer agrees to pay all collection costs including attorney's fees and a 1.5% interest (18% APR)
-on all past due amounts.
-  <br />
-  <br />
-  <span style="font-weight: bold; font-size: 1.5em">
-<strong>Signature</strong>
-  ____________________________________________________________________
-  </span>
-</div>
-
-<div style="margin: 1em auto; text-align: center; font-size: 8pt">
-  We do our best to stock popular items, however when items are not in stock at our warehouse they need to be ordered and brought in from
-  manufacturers or suppliers. In these instances the item is considered “Special Order” and may be subject to additional restocking fees if cancelled.
-  Shipping is not refundable. Deposits taken on Special Order items are Non-Refundable.
-</div>
 </body>
 </html>
 `.trim();

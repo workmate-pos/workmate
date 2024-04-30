@@ -18,5 +18,5 @@ export const addMoney = binaryBigDecimalOperation('add');
 export const multiplyMoney = binaryBigDecimalOperation('multiply');
 export const subtractMoney = binaryBigDecimalOperation('subtract');
 export const divideMoney = binaryBigDecimalOperation('divide');
-
+export const compareMoney = (a: Money, b: Money) => BigDecimal.fromMoney(a).compare(BigDecimal.fromMoney(b));
 export const ZERO_MONEY = BigDecimal.ZERO.round(2).toMoney();

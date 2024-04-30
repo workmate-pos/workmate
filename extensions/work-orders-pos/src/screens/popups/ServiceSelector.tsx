@@ -23,6 +23,7 @@ import {
   SERVICE_METAFIELD_VALUE_TAG_NAME,
 } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 type OnSelect = (arg: {
   type: ProductServiceType;
@@ -151,13 +152,12 @@ function useProductVariantRows(
 
       let label: string | undefined = undefined;
 
-      if (type === QUANTITY_ADJUSTING_SERVICE) {
-        if (defaultCharges) {
-          label = currencyFormatter(getTotalPriceForCharges(defaultCharges));
-        }
-      } else {
-        label = currencyFormatter(variant.price);
-      }
+      const defaultChargesPrice = getTotalPriceForCharges(defaultCharges);
+      const basePrice = type === QUANTITY_ADJUSTING_SERVICE ? BigDecimal.ZERO.toMoney() : variant.price;
+
+      label = currencyFormatter(
+        BigDecimal.fromMoney(basePrice).add(BigDecimal.fromMoney(defaultChargesPrice)).toMoney(),
+      );
 
       return {
         id: variant.id,

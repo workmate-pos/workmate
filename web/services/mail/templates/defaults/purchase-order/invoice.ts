@@ -70,15 +70,6 @@ export const purchaseOrderInvoiceTemplate = `
       <p>Company Phone</p>
       <p>Company Email</p>
     </div>
-
-    <table>
-      <tr>
-        <th>Bill To</th>
-      </tr>
-      <tr>
-        <td>{{ customFields["Bill To"] }}</td>
-      </tr>
-    </table>
   </div>
 
   <div id="right">
@@ -87,11 +78,9 @@ export const purchaseOrderInvoiceTemplate = `
     <table>
       <tr>
         <th>Date</th>
-        <th>Invoice #</th>
       </tr>
       <tr>
         <td>{{ date }}</td>
-        <td>{{ customFields["Invoice #"] }}</td>
       </tr>
     </table>
 
@@ -106,11 +95,9 @@ export const purchaseOrderInvoiceTemplate = `
 
     <table>
       <tr>
-        <th>Rep</th>
         <th>P.O. No.</th>
       </tr>
       <tr>
-        <td>{{ customFields["Rep"] }}</td>
         <td>{{ name }}</td>
       </tr>
     </table>
@@ -135,18 +122,6 @@ export const purchaseOrderInvoiceTemplate = `
   </tr>
   {% endfor %}
   </tbody>
-</table>
-
-<div style="width: 60%; border: 1px solid #aaa; margin: 1em 0; padding: 1em; font-size: 8pt; text-align: center">
-  Buyer agrees to pay all collection costs including attorney's fees and a 1.5% interest
-  (18% APR) on all past due amounts.
-</div>
-
-<table style="width: 20em; margin-top: 2em;">
-  <tr>
-    <th>Phone #</th>
-    <td>{{ customFields["Phone #"] }}</td>
-  </tr>
 </table>
 </body>
 </html>

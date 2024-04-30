@@ -112,14 +112,10 @@ export const quoteTemplate = `
 
     <table>
       <tr>
-        <th>Rep</th>
         <th>P.O. No.</th>
-        <th>Project</th>
       </tr>
       <tr>
-        <td>{{ customFields["Rep"] }}</td>
         <td>{{ purchaseOrderNames | join: ", " }}</td>
-        <td>{{ customFields["Project"] }}</td>
       </tr>
     </table>
   </div>
@@ -141,9 +137,15 @@ export const quoteTemplate = `
   <tr>
     <td>{{ item.name }}</td>
     <td>{{ item.description | truncate: 150 }}</td>
+    {% if item.totalPrice != "0.00" %}
     <td>{{ item.quantity }}</td>
-    <td>\${{ item.discountedUnitPrice }}</td>
-    <td>\${{ item.discountedTotalPrice }}</td>
+    <td>\${{ item.unitPrice }}</td>
+    <td>\${{ item.totalPrice }}</td>
+    {% else %}
+    <td></td>
+    <td></td>
+    <td></td>
+    {% endif %}
   </tr>
   {% for charge in item.charges %}
   <tr>
@@ -175,6 +177,14 @@ export const quoteTemplate = `
   </tr>
 
   <tr>
+    <td>Discount</td>
+    <td></td>
+    <td></td>
+    <td></td>
+    <td>\${{ discount }}</td>
+  </tr>
+
+  <tr>
     <td colspan="3"></td>
     <td colspan="2">
       <span style="float: left"><strong>Total</strong></span>
@@ -183,13 +193,6 @@ export const quoteTemplate = `
   </tr>
   </tbody>
 </table>
-
-<div style="margin: 1em auto; text-align: center; font-size: 8pt">
-  We do our best to stock popular items, however when items are not in stock at our warehouse they need to be ordered and brought in from
-  manufacturers or suppliers. In these instances the item is considered “Special Order” and may be subject to additional restocking fees if cancelled.
-
-  Shipping is not refundable. Deposits taken on Special Order items are Non-Refundable.
-</div>
 </body>
 </html>
 `.trim();

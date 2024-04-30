@@ -282,7 +282,7 @@ function WorkOrderItems({
               onSelect: ({ type, item, charges }) => {
                 const createWorkOrderCharges = [...(createWorkOrder.charges ?? []), ...charges];
 
-                dispatch.updateItemCharges({ item, charges: createWorkOrderCharges });
+                dispatch.updateItemCharges({ item, charges });
                 dispatch.addItems({ items: [item] });
 
                 if (type === QUANTITY_ADJUSTING_SERVICE) {

@@ -11,7 +11,7 @@ export function WelcomeSection({}: {}) {
         </Text>
       }
     >
-      <BlockStack gap="800">
+      <BlockStack gap="400">
         <Text variant="bodyLg" as={'p'}>
           WorkMate helps you manage work orders, inventory, and employee scheduling through Shopify Point of Sale and
           Shopify Admin.

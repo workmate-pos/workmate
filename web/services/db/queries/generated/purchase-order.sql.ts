@@ -165,14 +165,14 @@ export interface IGetManyQuery {
   result: IGetManyResult;
 }
 
-const getManyIR: any = {"usedParamSet":{"purchaseOrderIds":true},"params":[{"name":"purchaseOrderIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":42,"b":59}]}],"statement":"SELECT *\nFROM \"PurchaseOrder\"\nWHERE id in :purchaseOrderIds!"};
+const getManyIR: any = {"usedParamSet":{"purchaseOrderIds":true},"params":[{"name":"purchaseOrderIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":42,"b":59}]}],"statement":"SELECT *\nFROM \"PurchaseOrder\"\nWHERE id IN :purchaseOrderIds!"};
 
 /**
  * Query generated from SQL:
  * ```
  * SELECT *
  * FROM "PurchaseOrder"
- * WHERE id in :purchaseOrderIds!
+ * WHERE id IN :purchaseOrderIds!
  * ```
  */
 export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyIR);
@@ -206,7 +206,7 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"locationId":true,"discount":true,"tax":true,"shipping":true,"deposited":true,"paid":true,"name":true,"status":true,"shipFrom":true,"shipTo":true,"note":true,"vendorName":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":184,"b":189}]},{"name":"locationId","required":false,"transform":{"type":"scalar"},"locs":[{"a":192,"b":202},{"a":439,"b":449}]},{"name":"discount","required":false,"transform":{"type":"scalar"},"locs":[{"a":205,"b":213},{"a":501,"b":509}]},{"name":"tax","required":false,"transform":{"type":"scalar"},"locs":[{"a":216,"b":219},{"a":533,"b":536}]},{"name":"shipping","required":false,"transform":{"type":"scalar"},"locs":[{"a":222,"b":230},{"a":560,"b":568}]},{"name":"deposited","required":false,"transform":{"type":"scalar"},"locs":[{"a":233,"b":242},{"a":592,"b":601}]},{"name":"paid","required":false,"transform":{"type":"scalar"},"locs":[{"a":245,"b":249},{"a":625,"b":629}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":252,"b":257}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":260,"b":267},{"a":653,"b":660}]},{"name":"shipFrom","required":true,"transform":{"type":"scalar"},"locs":[{"a":270,"b":279},{"a":377,"b":385}]},{"name":"shipTo","required":true,"transform":{"type":"scalar"},"locs":[{"a":282,"b":289},{"a":409,"b":415}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":300,"b":305},{"a":473,"b":477}]},{"name":"vendorName","required":false,"transform":{"type":"scalar"},"locs":[{"a":308,"b":318},{"a":684,"b":694}]}],"statement":"INSERT INTO \"PurchaseOrder\" (shop, \"locationId\", discount, tax, shipping, deposited, paid, name, status, \"shipFrom\",\n                             \"shipTo\", note, \"vendorName\")\nVALUES (:shop!, :locationId, :discount, :tax, :shipping, :deposited, :paid, :name!, :status!, :shipFrom!, :shipTo!,\n        :note!, :vendorName)\nON CONFLICT (shop, name) DO UPDATE\n  SET \"shipFrom\"   = :shipFrom,\n      \"shipTo\"     = :shipTo,\n      \"locationId\" = :locationId,\n      note         = :note,\n      discount     = :discount,\n      tax          = :tax,\n      shipping     = :shipping,\n      deposited    = :deposited,\n      paid         = :paid,\n      status       = :status!,\n      \"vendorName\" = :vendorName\nRETURNING id"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"locationId":true,"discount":true,"tax":true,"shipping":true,"deposited":true,"paid":true,"name":true,"status":true,"shipFrom":true,"shipTo":true,"note":true,"vendorName":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":184,"b":189}]},{"name":"locationId","required":false,"transform":{"type":"scalar"},"locs":[{"a":192,"b":202}]},{"name":"discount","required":false,"transform":{"type":"scalar"},"locs":[{"a":205,"b":213}]},{"name":"tax","required":false,"transform":{"type":"scalar"},"locs":[{"a":216,"b":219}]},{"name":"shipping","required":false,"transform":{"type":"scalar"},"locs":[{"a":222,"b":230}]},{"name":"deposited","required":false,"transform":{"type":"scalar"},"locs":[{"a":233,"b":242}]},{"name":"paid","required":false,"transform":{"type":"scalar"},"locs":[{"a":245,"b":249}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":252,"b":257}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":260,"b":267}]},{"name":"shipFrom","required":true,"transform":{"type":"scalar"},"locs":[{"a":270,"b":279}]},{"name":"shipTo","required":true,"transform":{"type":"scalar"},"locs":[{"a":282,"b":289}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":300,"b":305}]},{"name":"vendorName","required":false,"transform":{"type":"scalar"},"locs":[{"a":308,"b":318}]}],"statement":"INSERT INTO \"PurchaseOrder\" (shop, \"locationId\", discount, tax, shipping, deposited, paid, name, status, \"shipFrom\",\n                             \"shipTo\", note, \"vendorName\")\nVALUES (:shop!, :locationId, :discount, :tax, :shipping, :deposited, :paid, :name!, :status!, :shipFrom!, :shipTo!,\n        :note!, :vendorName)\nON CONFLICT (shop, name) DO UPDATE\n  SET \"shipFrom\"   = EXCLUDED.\"shipFrom\",\n      \"shipTo\"     = EXCLUDED.\"shipTo\",\n      \"locationId\" = EXCLUDED.\"locationId\",\n      note         = EXCLUDED.note,\n      discount     = EXCLUDED.discount,\n      tax          = EXCLUDED.tax,\n      shipping     = EXCLUDED.shipping,\n      deposited    = EXCLUDED.deposited,\n      paid         = EXCLUDED.paid,\n      status       = EXCLUDED.status,\n      \"vendorName\" = EXCLUDED.\"vendorName\"\nRETURNING id"};
 
 /**
  * Query generated from SQL:
@@ -216,17 +216,17 @@ const upsertIR: any = {"usedParamSet":{"shop":true,"locationId":true,"discount":
  * VALUES (:shop!, :locationId, :discount, :tax, :shipping, :deposited, :paid, :name!, :status!, :shipFrom!, :shipTo!,
  *         :note!, :vendorName)
  * ON CONFLICT (shop, name) DO UPDATE
- *   SET "shipFrom"   = :shipFrom,
- *       "shipTo"     = :shipTo,
- *       "locationId" = :locationId,
- *       note         = :note,
- *       discount     = :discount,
- *       tax          = :tax,
- *       shipping     = :shipping,
- *       deposited    = :deposited,
- *       paid         = :paid,
- *       status       = :status!,
- *       "vendorName" = :vendorName
+ *   SET "shipFrom"   = EXCLUDED."shipFrom",
+ *       "shipTo"     = EXCLUDED."shipTo",
+ *       "locationId" = EXCLUDED."locationId",
+ *       note         = EXCLUDED.note,
+ *       discount     = EXCLUDED.discount,
+ *       tax          = EXCLUDED.tax,
+ *       shipping     = EXCLUDED.shipping,
+ *       deposited    = EXCLUDED.deposited,
+ *       paid         = EXCLUDED.paid,
+ *       status       = EXCLUDED.status,
+ *       "vendorName" = EXCLUDED."vendorName"
  * RETURNING id
  * ```
  */

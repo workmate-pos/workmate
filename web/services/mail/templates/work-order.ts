@@ -1,19 +1,17 @@
 import { Liquid } from 'liquidjs';
 import { db } from '../../db/db.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { groupBy, indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { indexBy, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import {
-  IGetFixedPriceLabourChargesResult,
-  IGetHourlyLabourChargesResult,
-} from '../../db/queries/generated/work-order-charges.sql.js';
 import { ShopSettings } from '../../../schemas/generated/shop-settings.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { calculateWorkOrder } from '../../work-orders/calculate.js';
 import { Session } from '@shopify/shopify-api';
+import { getWorkOrder } from '../../work-orders/get.js';
+import { WorkOrderCharge } from '../../work-orders/types.js';
 
 export async function getRenderedWorkOrderTemplate(
   printTemplate: ShopSettings['workOrderPrintTemplates'][string],
@@ -34,304 +32,147 @@ export async function getWorkOrderTemplateData(
   workOrderName: string,
   clientDate: string,
 ): Promise<WorkOrderTemplateData> {
-  // TODO: Let calculatedraftorder carry the majority of this function. Make it support individual item/charge prices and just fetch the remaining details here - dont do fullyPaid etc anymore
-  const { paid, outstanding, hourlyLabourChargePrices, fixedPriceLabourChargePrices, itemPrices } =
-    await calculateWorkOrder(session, {
-      name: workOrderName,
-      charges: [],
-      items: [],
-      customerId: null,
-      discount: null,
-    });
+  const workOrder = await getWorkOrder(session, workOrderName);
 
-  const {
-    shopifyOrderLineItemsByLineItemId,
-    shopifyOrdersByOrderId,
-    workOrderItems,
-    productVariantsById,
-    productsById,
-    purchaseOrderLineItemsByShopifyLineItemId,
-    purchaseOrderById,
-    workOrderHourlyLabourCharges,
-    workOrderFixedPriceLabourCharges,
-    workOrderCustomFields,
-    customer,
-    purchaseOrderNames,
-    shopifyOrderNames,
-    status,
-    shopifyOrderLineItemById,
-    employeeById,
-  } = await getWorkOrderInfo(session.shop, workOrderName);
-
-  function getHourlyLabourChargeData(hourlyCharge: IGetHourlyLabourChargesResult): WorkOrderTemplateCharge {
-    assertShopifyOrderLineItemIdIsSet(hourlyCharge);
-
-    const shopifyOrderLineItem =
-      shopifyOrderLineItemsByLineItemId[hourlyCharge.shopifyOrderLineItemId] ?? never('hlc no sli');
-    const shopifyOrder = shopifyOrdersByOrderId[shopifyOrderLineItem.orderId] ?? never('hlc sli no so');
-
-    // TODO: currency
-    let details = `${hourlyCharge.hours} hours × $${hourlyCharge.rate}`;
-
-    const employee = hourlyCharge.employeeId ? employeeById[hourlyCharge.employeeId] ?? never() : null;
-    if (employee) {
-      details = `${details} (${employee.name})`;
-    }
-
-    return {
-      name: hourlyCharge.name,
-      fullyPaid: shopifyOrder.fullyPaid,
-      totalPrice: getHourlyChargePrice(hourlyCharge),
-      details,
-      shopifyOrderName: shopifyOrder?.orderType === 'ORDER' ? shopifyOrder.name : null,
-    };
+  if (!workOrder) {
+    throw new HttpError(`Work order ${workOrderName} not found`, 404);
   }
 
-  function getFixedLabourChargeData(fixedPriceCharge: IGetFixedPriceLabourChargesResult): WorkOrderTemplateCharge {
-    assertShopifyOrderLineItemIdIsSet(fixedPriceCharge);
+  const productVariantIds = unique(workOrder.items.map(item => item.productVariantId));
+  const orderIds = unique(workOrder.items.map(item => item.shopifyOrderLineItem?.orderId).filter(isNonNullable));
 
-    const shopifyOrderLineItem =
-      shopifyOrderLineItemsByLineItemId[fixedPriceCharge.shopifyOrderLineItemId] ?? never('flc no sli');
-    const shopifyOrder = shopifyOrdersByOrderId[shopifyOrderLineItem.orderId] ?? never('flc no so');
-
-    let details = `${fixedPriceCharge.amount}`;
-
-    const employee = fixedPriceCharge.employeeId ? employeeById[fixedPriceCharge.employeeId] ?? never() : null;
-    if (employee) {
-      details = `${details} (${employee.name})`;
-    }
-
-    return {
-      name: fixedPriceCharge.name,
-      fullyPaid: shopifyOrder.fullyPaid,
-      totalPrice: getFixedPriceChargePrice(fixedPriceCharge),
-      details,
-      shopifyOrderName: shopifyOrder?.orderType === 'ORDER' ? shopifyOrder.name : null,
-    };
-  }
-
-  const items = workOrderItems.map<WorkOrderTemplateItem>(item => {
-    assertShopifyOrderLineItemIdIsSet(item);
-
-    const productVariant = productVariantsById[item.productVariantId] ?? never('no pv');
-    const product = productsById[productVariant.productId] ?? never('no p');
-    const name =
-      getProductVariantName({
-        title: productVariant.title,
-        product: { title: product.title, hasOnlyDefaultVariant: product.productVariantCount === 1 },
-      }) ?? never('no pv name');
-
-    const shopifyOrderLineItem = shopifyOrderLineItemById[item.shopifyOrderLineItemId] ?? never('item no sli');
-    const shopifyOrder = shopifyOrdersByOrderId[shopifyOrderLineItem.orderId] ?? never('item sli no so');
-
-    const purchaseOrderLineItems = purchaseOrderLineItemsByShopifyLineItemId[item.shopifyOrderLineItemId] ?? [];
-    const purchaseOrderIds = unique(purchaseOrderLineItems.map(poli => poli.purchaseOrderId));
-    const purchaseOrders = purchaseOrderIds.map(id => purchaseOrderById[id] ?? never('should have been fetched'));
-
-    const itemHourlyLabourCharges = workOrderHourlyLabourCharges.filter(
-      hasPropertyValue('workOrderItemUuid', item.uuid),
-    );
-
-    const itemFixedLabourCharges = workOrderFixedPriceLabourCharges.filter(
-      hasPropertyValue('workOrderItemUuid', item.uuid),
-    );
-
-    const charges = [
-      ...itemHourlyLabourCharges.map(getHourlyLabourChargeData),
-      ...itemFixedLabourCharges.map(getFixedLabourChargeData),
-    ];
-
-    const quantityBigDecimal = BigDecimal.fromString(item.quantity.toFixed(0));
-    const originalTotalPrice = quantityBigDecimal
-      .multiply(BigDecimal.fromString(shopifyOrderLineItem.unitPrice))
-      .toString();
-    const discountedTotalPrice = quantityBigDecimal
-      .multiply(BigDecimal.fromString(shopifyOrderLineItem.discountedUnitPrice))
-      .toString();
-
-    // Charges related to this item may have a different shopify line item. We should include them in this item's price.
-    const chargeShopifyLineItemIds = unique(
-      [...itemHourlyLabourCharges, ...itemFixedLabourCharges]
-        .map(charge => {
-          // TODO: Fix this - it is not correct since the line items may also include other stuff - instead, just use the charge price directly, and apply discount proportional to the line item discount
-          assertShopifyOrderLineItemIdIsSet(charge);
-
-          if (charge.shopifyOrderLineItemId === item.shopifyOrderLineItemId) {
-            return null;
-          }
-
-          return charge.shopifyOrderLineItemId;
+  const [
+    [customer = never('fk')],
+    [productVariants, products],
+    orders,
+    {
+      paid,
+      outstanding,
+      total,
+      subtotal,
+      tax,
+      orderDiscount,
+      itemPrices,
+      fixedPriceLabourChargePrices,
+      hourlyLabourChargePrices,
+    },
+  ] = await Promise.all([
+    db.customers.get({ customerId: workOrder.customerId }),
+    productVariantIds.length
+      ? db.productVariants.getMany({ productVariantIds }).then(productVariants => {
+          const productIds = unique(productVariants.map(pv => pv.productId));
+          return Promise.all([productVariants, productIds.length ? db.products.getMany({ productIds }) : []]);
         })
-        .filter(isNonNullable),
-    );
+      : [[], []],
+    orderIds.length ? db.shopifyOrder.getMany({ orderIds }) : [],
+    calculateWorkOrder(session, workOrder),
+  ]);
 
-    let chargesTotalPrice = BigDecimal.ZERO;
+  const productById = indexBy(products, p => p.productId);
+  const productVariantById = indexBy(productVariants, pv => pv.productVariantId);
+  const orderById = indexBy(orders, o => o.orderId);
 
-    for (const shopifyLineItemId of chargeShopifyLineItemIds) {
-      const shopifyLineItem = shopifyOrderLineItemsByLineItemId[shopifyLineItemId] ?? never();
-      chargesTotalPrice = chargesTotalPrice.add(
-        BigDecimal.fromString(shopifyLineItem.discountedUnitPrice).multiply(
-          BigDecimal.fromString(shopifyLineItem.quantity.toFixed(0)),
-        ),
-      );
+  function getChargeTemplateData(charge: WorkOrderCharge): WorkOrderTemplateCharge {
+    const orderId = charge.shopifyOrderLineItem?.orderId;
+    const order = orderId ? orderById[orderId] ?? never('fk') : null;
+
+    const priceRecord = {
+      'fixed-price-labour': fixedPriceLabourChargePrices,
+      'hourly-labour': hourlyLabourChargePrices,
+    }[charge.type];
+
+    const totalPrice = priceRecord[charge.uuid] ?? never('calculate wrong?');
+
+    let details = '';
+
+    if (charge.type === 'hourly-labour') {
+      details = `${charge.hours} hours × $${charge.rate}`;
+    } else if (charge.type === 'fixed-price-labour') {
+      details = `$${charge.amount}`;
+    } else {
+      return charge satisfies never;
     }
 
     return {
-      name,
-      charges,
-      sku: productVariant.sku,
-      paid: shopifyOrder?.fullyPaid ?? false,
-      description: product.description,
-      discountedTotalPrice: round(discountedTotalPrice),
-      originalTotalPrice: round(originalTotalPrice),
-      discountedUnitPrice: round(shopifyOrderLineItem.discountedUnitPrice),
-      originalUnitPrice: round(shopifyOrderLineItem.unitPrice),
-      purchaseOrderNames: purchaseOrders.map(po => po.name),
-      shopifyOrderName: shopifyOrder?.name ?? null,
-      quantity: item.quantity,
-      purchaseOrderQuantities: {
-        orderedQuantity: purchaseOrderLineItems.reduce((a, b) => a + b.quantity, 0),
-        availableQuantity: purchaseOrderLineItems.reduce((a, b) => a + b.availableQuantity, 0),
-      },
-      fullyPaid: shopifyOrder.fullyPaid && charges.every(charge => charge.fullyPaid),
+      name: charge.name,
+      fullyPaid: order?.fullyPaid ?? false,
+      shopifyOrderName: order?.name ?? null,
+      totalPrice: round(totalPrice),
+      details,
     };
-  });
-
-  const itemlessHourlyLabourCharges = workOrderHourlyLabourCharges.filter(hasPropertyValue('workOrderItemUuid', null));
-  const itemlessFixedPriceLabourCharges = workOrderFixedPriceLabourCharges.filter(
-    hasPropertyValue('workOrderItemUuid', null),
-  );
-
-  const charges = [
-    ...itemlessHourlyLabourCharges.map(getHourlyLabourChargeData),
-    ...itemlessFixedPriceLabourCharges.map(getFixedLabourChargeData),
-  ];
-
-  const subtotal = BigDecimal.sum(
-    ...Object.values(shopifyOrderLineItemsByLineItemId).map(li =>
-      BigDecimal.fromString(li.discountedUnitPrice).multiply(BigDecimal.fromString(li.quantity.toFixed(0))),
-    ),
-  );
-
-  const tax = BigDecimal.sum(
-    ...Object.values(shopifyOrderLineItemsByLineItemId).map(li => BigDecimal.fromString(li.totalTax)),
-  );
-
-  const total = subtotal.add(tax);
+  }
 
   return {
-    name: workOrderName,
-    status,
+    name: workOrder.name,
+    status: workOrder.status,
     date: clientDate,
-    shopifyOrderNames,
-    purchaseOrderNames,
+    shopifyOrderNames: workOrder.orders.filter(hasPropertyValue('type', 'ORDER')).map(order => order.name),
+    purchaseOrderNames: unique(workOrder.items.flatMap(item => item.purchaseOrders.map(po => po.name))),
     customer: {
       name: customer.displayName,
       address: customer.address,
       email: customer.email,
       phone: customer.phone,
     },
-    customFields: Object.fromEntries(workOrderCustomFields.map(({ key, value }) => [key, value])),
-    items,
-    charges,
-    tax: round(tax.toString()),
-    subtotal: round(subtotal.toString()),
-    total: round(total.toString()),
-    fullyPaid: BigDecimal.fromMoney(outstanding).compare(BigDecimal.ZERO) <= 0,
-    paid,
-    outstanding,
-  };
-}
+    note: workOrder.note,
+    hiddenNote: workOrder.internalNote,
+    customFields: workOrder.customFields,
+    items: workOrder.items.map<WorkOrderTemplateItem>(item => {
+      const productVariant = productVariantById[item.productVariantId] ?? never('product variant fk');
+      const product = productById[productVariant.productId] ?? never('product fk');
+      const name =
+        getProductVariantName({
+          title: productVariant.title,
+          product: { title: product.title, hasOnlyDefaultVariant: product.productVariantCount === 1 },
+        }) ?? never('no pv name');
 
-async function getWorkOrderInfo(shop: string, workOrderName: string) {
-  const [workOrder] = await db.workOrder.get({ shop, name: workOrderName });
+      const orderId = item.shopifyOrderLineItem?.orderId;
+      const order = orderId ? orderById[orderId] ?? never('fk') : null;
 
-  if (!workOrder) {
-    throw new HttpError('Work order not found', 404);
-  }
+      const purchaseOrderNames = item.purchaseOrders.map(po => po.name);
 
-  const [
-    workOrderCustomFields,
-    workOrderItems,
-    workOrderHourlyLabourCharges,
-    workOrderFixedPriceLabourCharges,
-    shopifyOrders,
-  ] = await Promise.all([
-    db.workOrder.getCustomFields({ workOrderId: workOrder.id }),
-    db.workOrder.getItems({ workOrderId: workOrder.id }),
-    db.workOrderCharges.getHourlyLabourCharges({ workOrderId: workOrder.id }),
-    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId: workOrder.id }),
-    db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id }),
-  ]);
+      const totalPrice = itemPrices[item.uuid] ?? never('smth wrong with calculate');
+      const unitPrice = (() => {
+        if (item.quantity === 0) return totalPrice;
+        return BigDecimal.fromMoney(totalPrice)
+          .divide(BigDecimal.fromString(item.quantity.toFixed(0)))
+          .round(2, RoundingMode.CEILING)
+          .toMoney();
+      })();
 
-  const employeeIds = unique([
-    ...workOrderHourlyLabourCharges.map(charge => charge.employeeId).filter(isNonNullable),
-    ...workOrderFixedPriceLabourCharges.map(charge => charge.employeeId).filter(isNonNullable),
-  ]);
-
-  const [shopifyOrderLineItems, [customer = never('no customer')], employees] = await Promise.all([
-    Promise.all(shopifyOrders.map(order => db.shopifyOrder.getLineItems({ orderId: order.orderId }))).then(result =>
-      result.flat(),
-    ),
-    db.customers.get({ customerId: workOrder.customerId }),
-    employeeIds.length ? db.employee.getMany({ employeeIds }) : [],
-  ]);
-
-  const employeeById = indexBy(employees, e => e.staffMemberId);
-
-  const shopifyOrderLineItemIds = shopifyOrderLineItems.map(lineItem => lineItem.lineItemId);
-  const productVariantIds = unique(workOrderItems.map(item => item.productVariantId));
-  const [purchaseOrderLineItems, productVariants] = await Promise.all([
-    shopifyOrderLineItemIds.length
-      ? db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemIds({ shopifyOrderLineItemIds })
-      : [],
-    productVariantIds.length ? db.productVariants.getMany({ productVariantIds }) : [],
-  ]);
-
-  const purchaseOrderIds = unique(purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId));
-  const productIds = unique(productVariants.map(pv => pv.productId));
-  const [purchaseOrders, products] = await Promise.all([
-    purchaseOrderIds.length ? db.purchaseOrder.getMany({ purchaseOrderIds }) : [],
-    productIds.length ? db.products.getMany({ productIds }) : [],
-  ]);
-
-  const shopifyOrderNames = shopifyOrders.filter(hasPropertyValue('orderType', 'ORDER')).map(order => order.name);
-  const purchaseOrderNames = purchaseOrders.map(order => order.name);
-
-  const shopifyOrderLineItemsByLineItemId = indexBy(shopifyOrderLineItems, so => so.lineItemId);
-  const purchaseOrderLineItemsByShopifyLineItemId = groupBy(
-    purchaseOrderLineItems.filter(hasNonNullableProperty('shopifyOrderLineItemId')),
-    li => li.shopifyOrderLineItemId?.toString() ?? never('just checked this'),
-  );
-  const shopifyOrderLineItemById = indexBy(shopifyOrderLineItems, so => so.lineItemId);
-  const purchaseOrderById = indexBy(purchaseOrders, po => po.id.toString());
-  const shopifyOrdersByOrderId = indexBy(shopifyOrders, so => so.orderId);
-  const productVariantsById = indexBy(productVariants, pv => pv.productVariantId);
-  const productsById = indexBy(products, p => p.productId);
-
-  return {
-    shopifyOrderNames,
-    purchaseOrderNames,
-    employeeById,
-    customer,
-    shopifyOrderLineItemsByLineItemId,
-    purchaseOrderLineItemsByShopifyLineItemId,
-    purchaseOrderById,
-    shopifyOrdersByOrderId,
-    productVariantsById,
-    productsById,
-    workOrderCustomFields,
-    workOrderItems,
-    workOrderHourlyLabourCharges,
-    workOrderFixedPriceLabourCharges,
-    status: workOrder.status,
-    shopifyOrderLineItemById,
+      return {
+        name,
+        charges: workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid)).map(getChargeTemplateData),
+        sku: productVariant.sku,
+        fullyPaid: order?.fullyPaid ?? false,
+        shopifyOrderName: order?.name ?? null,
+        purchaseOrderNames,
+        purchaseOrderQuantities: {
+          orderedQuantity: sum(item.purchaseOrders.flatMap(po => po.items.map(item => item.quantity))),
+          availableQuantity: sum(item.purchaseOrders.flatMap(po => po.items.map(item => item.availableQuantity))),
+        },
+        quantity: item.quantity,
+        description: product.description,
+        totalPrice: round(totalPrice),
+        unitPrice: round(unitPrice),
+      };
+    }),
+    charges: workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null)).map(getChargeTemplateData),
+    fullyPaid: orders.every(order => order.fullyPaid),
+    outstanding: round(outstanding),
+    paid: round(paid),
+    total: round(total),
+    subtotal: round(subtotal),
+    tax: round(tax),
+    discount: round(orderDiscount.total),
   };
 }
 
 export type WorkOrderTemplateData = {
   name: string;
   status: string;
+  note: string;
+  hiddenNote: string;
   /**
    * Date provided/formatted by clients.
    */
@@ -355,6 +196,7 @@ export type WorkOrderTemplateData = {
   outstanding: string;
   paid: string;
   tax: string;
+  discount: string;
   fullyPaid: boolean;
 };
 
@@ -369,24 +211,10 @@ type WorkOrderTemplateItem = {
     orderedQuantity: number;
     availableQuantity: number;
   };
+  unitPrice: string;
+  totalPrice: string;
   /**
-   * Includes charges
-   */
-  originalUnitPrice: string;
-  /**
-   * Includes charges
-   */
-  discountedUnitPrice: string;
-  /**
-   * Includes charges
-   */
-  originalTotalPrice: string;
-  /**
-   * Includes charges
-   */
-  discountedTotalPrice: string;
-  /**
-   * Includes charges
+   * Does not include charges
    */
   fullyPaid: boolean;
   charges: WorkOrderTemplateCharge[];
@@ -403,29 +231,6 @@ type WorkOrderTemplateCharge = {
   fullyPaid: boolean;
 };
 
-function assertShopifyOrderLineItemIdIsSet(thing: {
-  shopifyOrderLineItemId: string | null;
-}): asserts thing is { shopifyOrderLineItemId: string } {
-  if (!thing.shopifyOrderLineItemId) {
-    // this should always be set, either to an order line item or a draft order line item.
-    // this is required to be able to fetch the price.
-    // it is possible for it to be undefined when the merchant manually deletes a (draft) order.
-    // a webhook will automatically re-create a draft order, but there is a small window where the order is not yet created.
-    throw new HttpError(`This work order is not ready to be printed. Try again or re-save the work order.`, 500);
-  }
-}
-
-function getHourlyChargePrice(hourlyCharge: IGetHourlyLabourChargesResult) {
-  const rate = BigDecimal.fromString(hourlyCharge.rate);
-  const hours = BigDecimal.fromString(hourlyCharge.hours);
-
-  return round(rate.multiply(hours).toString());
-}
-
-function getFixedPriceChargePrice(fixedPriceCharge: IGetFixedPriceLabourChargesResult) {
-  return round(fixedPriceCharge.amount);
-}
-
 function round(amount: string) {
-  return BigDecimal.fromString(amount).round(2, RoundingMode.CEILING).toString();
+  return BigDecimal.fromString(amount).round(2, RoundingMode.CEILING).toMoney();
 }

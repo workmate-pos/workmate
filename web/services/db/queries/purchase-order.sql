@@ -62,7 +62,7 @@ WHERE id = COALESCE(:id, id)
 */
 SELECT *
 FROM "PurchaseOrder"
-WHERE id in :purchaseOrderIds!;
+WHERE id IN :purchaseOrderIds!;
 
 /* @name upsert */
 INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
@@ -80,7 +80,7 @@ ON CONFLICT (shop, name) DO UPDATE
       deposited    = EXCLUDED.deposited,
       paid         = EXCLUDED.paid,
       status       = EXCLUDED.status,
-      "vendorName" = EXCLUDED."vendorName";
+      "vendorName" = EXCLUDED."vendorName"
 RETURNING id;
 
 /* @name getLineItems */

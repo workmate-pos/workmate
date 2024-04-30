@@ -283,6 +283,10 @@ async function upsertItems(
 
   await ensureProductVariantsExist(session, unique(createWorkOrder.items.map(item => item.productVariantId)));
 
+  if (!createWorkOrder.items.length) {
+    return;
+  }
+
   await db.workOrder.upsertItems({
     items: createWorkOrder.items.map(item => ({
       shopifyOrderLineItemId: itemsByUuid[item.uuid]?.shopifyOrderLineItemId ?? null,
@@ -317,36 +321,40 @@ async function upsertCharges(
     currentFixedPriceCharges.map(charge => [charge.uuid, charge]),
   );
 
-  await Promise.all([
-    db.workOrderCharges.upsertHourlyLabourCharges({
-      charges: createWorkOrder.charges.filter(hasPropertyValue('type', 'hourly-labour')).map(charge => ({
-        workOrderId,
-        employeeId: charge.employeeId,
-        name: charge.name,
-        rate: charge.rate,
-        hours: charge.hours,
-        workOrderItemUuid: charge.workOrderItemUuid,
-        shopifyOrderLineItemId: currentHourlyChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null,
-        uuid: charge.uuid,
-        rateLocked: charge.rateLocked,
-        hoursLocked: charge.hoursLocked,
-        removeLocked: charge.removeLocked,
-      })),
-    }),
+  const hourlyLabourCharges = createWorkOrder.charges.filter(hasPropertyValue('type', 'hourly-labour')).map(charge => ({
+    workOrderId,
+    employeeId: charge.employeeId,
+    name: charge.name,
+    rate: charge.rate,
+    hours: charge.hours,
+    workOrderItemUuid: charge.workOrderItemUuid,
+    shopifyOrderLineItemId: currentHourlyChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null,
+    uuid: charge.uuid,
+    rateLocked: charge.rateLocked,
+    hoursLocked: charge.hoursLocked,
+    removeLocked: charge.removeLocked,
+  }));
 
-    db.workOrderCharges.upsertFixedPriceLabourCharges({
-      charges: createWorkOrder.charges.filter(hasPropertyValue('type', 'fixed-price-labour')).map(charge => ({
-        workOrderId,
-        employeeId: charge.employeeId,
-        name: charge.name,
-        amount: charge.amount,
-        workOrderItemUuid: charge.workOrderItemUuid,
-        shopifyOrderLineItemId: currentFixedPriceChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null,
-        uuid: charge.uuid,
-        amountLocked: charge.amountLocked,
-        removeLocked: charge.removeLocked,
-      })),
-    }),
+  const fixedPriceLabourCharges = createWorkOrder.charges
+    .filter(hasPropertyValue('type', 'fixed-price-labour'))
+    .map(charge => ({
+      workOrderId,
+      employeeId: charge.employeeId,
+      name: charge.name,
+      amount: charge.amount,
+      workOrderItemUuid: charge.workOrderItemUuid,
+      shopifyOrderLineItemId: currentFixedPriceChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null,
+      uuid: charge.uuid,
+      amountLocked: charge.amountLocked,
+      removeLocked: charge.removeLocked,
+    }));
+
+  await Promise.all([
+    hourlyLabourCharges.length ? db.workOrderCharges.upsertHourlyLabourCharges({ charges: hourlyLabourCharges }) : null,
+
+    fixedPriceLabourCharges.length
+      ? db.workOrderCharges.upsertFixedPriceLabourCharges({ charges: fixedPriceLabourCharges })
+      : null,
   ]);
 }
 

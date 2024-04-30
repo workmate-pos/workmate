@@ -42,7 +42,6 @@ type CalculateWorkOrderResult = {
   itemPrices: Record<string, Money>;
   hourlyLabourChargePrices: Record<string, Money>;
   fixedPriceLabourChargePrices: Record<string, Money>;
-  depositPrices: Record<string, Money>;
 };
 
 // TODO: Use this for templates
@@ -71,7 +70,6 @@ export async function calculateWorkOrder(
     itemPrices: existingItemPrices,
     subtotal: existingSubtotal,
     outstanding: existingOutstanding,
-    depositPrices: existingDepositPrices,
   } = await calculateDatabaseOrders(session, calculateWorkOrder);
 
   const draftItems = calculateWorkOrder.items.filter(item => !(item.uuid in existingItemPrices));
@@ -120,7 +118,6 @@ export async function calculateWorkOrder(
     itemPrices: { ...existingItemPrices, ...newItemPrices },
     hourlyLabourChargePrices: { ...existingHourlyLabourChargePrices, ...newHourlyLabourChargePrices },
     fixedPriceLabourChargePrices: { ...existingFixedPriceLabourChargePrices, ...newFixedPriceLabourChargePrices },
-    depositPrices: existingDepositPrices,
   };
 }
 
@@ -144,7 +141,6 @@ async function calculateDatabaseOrders(session: Session, calculateWorkOrder: Cal
       itemPrices: {},
       fixedPriceLabourChargePrices: {},
       hourlyLabourChargePrices: {},
-      depositPrices: {},
     };
   }
 
@@ -346,7 +342,7 @@ type LineItem = {
 
 /**
  * Central logic for calculating work order price information.
- * Expects to receive a list of all work order items/charges/deposits, as well as a list of line items to use for computation.
+ * Expects to receive a list of all work order items/charges, as well as a list of line items to use for computation.
  * These line items can be from real orders, calculated draft orders, or from the database.
  */
 function calculateLineItems({
@@ -370,7 +366,6 @@ function calculateLineItems({
   const itemPrices: Record<string, Money> = {};
   const hourlyLabourChargePrices: Record<string, Money> = {};
   const fixedPriceLabourChargePrices: Record<string, Money> = {};
-  const depositPrices: Record<string, Money> = {};
 
   for (const lineItem of lineItems) {
     assertMoney(lineItem.totalTax);
@@ -483,7 +478,6 @@ function calculateLineItems({
     itemPrices,
     hourlyLabourChargePrices,
     fixedPriceLabourChargePrices,
-    depositPrices,
   };
 }
 
