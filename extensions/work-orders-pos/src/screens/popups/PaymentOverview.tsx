@@ -168,7 +168,7 @@ function useItemRows(
       name: workOrderName,
       items,
       charges,
-      customerId: customerId ?? createGid('Customer', '0'),
+      customerId: customerId!,
       // we only apply the discount to the selected items, as it will be applied to the future order only
       discount: null,
     },
@@ -185,7 +185,7 @@ function useItemRows(
       name: workOrderName,
       items: items.filter(item => selectedItems.some(hasPropertyValue('uuid', item.uuid))),
       charges: charges.filter(charge => selectedCharges.some(hasPropertyValue('uuid', charge.uuid))),
-      customerId: customerId ?? createGid('Customer', '0'),
+      customerId: customerId!,
       discount,
     },
     {

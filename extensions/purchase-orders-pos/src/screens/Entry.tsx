@@ -16,6 +16,7 @@ import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-s
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
@@ -194,7 +195,7 @@ function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
     purchaseOrder.location?.name,
     purchaseOrder.linkedOrders.map(order => order.name).join(', '),
     purchaseOrder.linkedCustomers.map(customer => customer.displayName).join(', '),
-  ].filter(Boolean);
+  ].filter(isNonNullable);
 
   if (possibilities.length === 0) {
     return undefined;

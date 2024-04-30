@@ -224,7 +224,7 @@ function WorkOrderProperties({
         label={'Status'}
         required
         onFocus={() => router.push('StatusSelector', { onSelect: status => dispatch.setPartial({ status }) })}
-        value={createWorkOrder.status ?? ''}
+        value={createWorkOrder.status}
       />
       <FormStringField
         label={'Customer'}
@@ -396,7 +396,7 @@ function WorkOrderMoneySummary({
       name: createWorkOrder.name,
       items: createWorkOrder.items,
       charges: createWorkOrder.charges,
-      customerId: createWorkOrder.customerId ?? createGid('Customer', '0'),
+      customerId: createWorkOrder.customerId!,
       discount: createWorkOrder.discount,
     },
     { enabled: createWorkOrder.customerId !== null },
@@ -467,20 +467,15 @@ function WorkOrderMoneySummary({
             formatter={formatter}
           />
         )}
-        <FormMoneyField
-          label={'Subtotal'}
-          disabled
-          value={calculatedDraftOrder?.subtotal ?? null}
-          formatter={formatter}
-        />
-        <FormMoneyField label={'Tax'} disabled value={calculatedDraftOrder?.tax ?? null} formatter={formatter} />
-        <FormMoneyField label={'Total'} disabled value={calculatedDraftOrder?.total ?? null} formatter={formatter} />
+        <FormMoneyField label={'Subtotal'} disabled value={calculatedDraftOrder?.subtotal} formatter={formatter} />
+        <FormMoneyField label={'Tax'} disabled value={calculatedDraftOrder?.tax} formatter={formatter} />
+        <FormMoneyField label={'Total'} disabled value={calculatedDraftOrder?.total} formatter={formatter} />
 
-        <FormMoneyField label={'Paid'} disabled value={calculatedDraftOrder?.paid ?? null} formatter={formatter} />
+        <FormMoneyField label={'Paid'} disabled value={calculatedDraftOrder?.paid} formatter={formatter} />
         <FormMoneyField
           label={'Balance Due'}
           disabled
-          value={calculatedDraftOrder?.outstanding ?? null}
+          value={calculatedDraftOrder?.outstanding}
           formatter={formatter}
         />
       </ResponsiveGrid>
