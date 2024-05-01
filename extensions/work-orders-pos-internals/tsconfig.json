@@ -5,7 +5,7 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "rootDir": "./src",
-    "noEmit": true,
+    "outDir": "./dist",
     "skipLibCheck": true,
     "jsx": "react-native",
     "strict": true,

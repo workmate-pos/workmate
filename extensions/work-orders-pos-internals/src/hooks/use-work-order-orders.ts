@@ -3,18 +3,19 @@ import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-qu
 import { CreateWorkOrderCharge } from '../types.js';
 import { DiscriminatedUnionPick } from '@work-orders/common/types/DiscriminatedUnionPick.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { WorkOrderOrder } from '@web/services/work-orders/types.js';
 
 export function useWorkOrderOrders(workOrderName: string | null) {
   const fetch = useAuthenticatedFetch();
   const workOrderQuery = useWorkOrderQuery({ fetch, name: workOrderName });
   const workOrder = workOrderQuery.data?.workOrder;
 
-  function getItemOrder(item?: { uuid: string }) {
+  function getItemOrder(item?: { uuid: string }): WorkOrderOrder | null {
     const workOrderItem = workOrder?.items.find(i => i.uuid === item?.uuid);
     return workOrder?.orders.find(order => order.id === workOrderItem?.shopifyOrderLineItem?.orderId) ?? null;
   }
 
-  function getItemOrdersIncludingCharges(item?: { uuid: string }) {
+  function getItemOrdersIncludingCharges(item?: { uuid: string }): WorkOrderOrder[] {
     const workOrderItem = workOrder?.items.find(i => i.uuid === item?.uuid);
     const itemOrders =
       workOrder?.orders.filter(order => order.id === workOrderItem?.shopifyOrderLineItem?.orderId) ?? [];
@@ -28,17 +29,19 @@ export function useWorkOrderOrders(workOrderName: string | null) {
     return [...itemOrders, ...chargeOrders];
   }
 
-  function getHourlyLabourOrder(charge?: { uuid: string }) {
+  function getHourlyLabourOrder(charge?: { uuid: string }): WorkOrderOrder | null {
     const hourlyLabour = workOrder?.charges.find(c => c.uuid === charge?.uuid);
     return workOrder?.orders.find(order => order.id === hourlyLabour?.shopifyOrderLineItem?.orderId) ?? null;
   }
 
-  function getFixedPriceLabourOrder(charge?: { uuid: string }) {
+  function getFixedPriceLabourOrder(charge?: { uuid: string }): WorkOrderOrder | null {
     const fixedPriceLabour = workOrder?.charges.find(c => c.uuid === charge?.uuid);
     return workOrder?.orders.find(order => order.id === fixedPriceLabour?.shopifyOrderLineItem?.orderId) ?? null;
   }
 
-  function getChargeOrder(charge?: DiscriminatedUnionPick<CreateWorkOrderCharge, 'type' | 'uuid'> | null) {
+  function getChargeOrder(
+    charge?: DiscriminatedUnionPick<CreateWorkOrderCharge, 'type' | 'uuid'> | null,
+  ): WorkOrderOrder | null {
     if (!charge) return null;
 
     if (charge.type === 'hourly-labour') {

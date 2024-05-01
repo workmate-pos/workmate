@@ -4,13 +4,13 @@ import { WorkOrdersApp, Router } from '@work-orders/work-orders-pos-internals';
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
 
-  return <Tile title={'Work Orders'} subtitle={'WorkMate'} onPress={() => api.smartGrid.presentModal()} enabled />;
+  return <Tile title={'New Work Order'} subtitle={'WorkMate'} onPress={() => api.smartGrid.presentModal()} enabled />;
 }
 
 function SmartGridModal() {
   return (
     <WorkOrdersApp>
-      <Router mainRoute={'Entry'} />
+      <Router mainRoute={'NewWorkOrder'} />
     </WorkOrdersApp>
   );
 }
