@@ -1,4 +1,4 @@
-import { Button, List, ListRow, Selectable, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Selectable, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { OverdueStatus, useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
@@ -64,7 +64,7 @@ export function Entry() {
   const router = useRouter();
 
   return (
-    <Stack direction={'vertical'}>
+    <ScrollView>
       <ResponsiveStack
         direction={'horizontal'}
         alignment={'space-between'}
@@ -315,7 +315,7 @@ export function Entry() {
           </Text>
         </Stack>
       )}
-    </Stack>
+    </ScrollView>
   );
 }
 

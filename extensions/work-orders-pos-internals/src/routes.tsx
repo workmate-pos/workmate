@@ -14,7 +14,7 @@ import { ItemChargeConfig } from './screens/popups/ItemChargeConfig.js';
 import { WorkOrder, WorkOrderProps } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { PaymentOverview } from './screens/popups/PaymentOverview.js';
-import { ScrollView } from '@shopify/retail-ui-extensions-react';
+import { ScrollView, Stack } from '@shopify/retail-ui-extensions-react';
 import {
   CustomFieldConfig,
   CustomFieldConfigProps,
@@ -41,31 +41,21 @@ export const { Router, useRouter } = createRouter({
   Entry: {
     title: 'Work Orders',
     Component: () => (
-      <ScrollView>
-        <ScreenPermissionBoundary permissions={requiredPermissions}>
-          <Entry />
-        </ScreenPermissionBoundary>
-      </ScrollView>
+      <ScreenPermissionBoundary permissions={requiredPermissions}>
+        <Entry />
+      </ScreenPermissionBoundary>
     ),
   },
   WorkOrder: {
     title: 'Work order',
-    Component: (props: WorkOrderProps) => {
-      return (
-        <ScrollView>
-          <WorkOrder {...props} />
-        </ScrollView>
-      );
-    },
+    Component: (props: WorkOrderProps) => <WorkOrder {...props} />,
   },
   NewWorkOrder: {
     title: 'New Work Order',
     Component: () => (
-      <ScrollView>
-        <ScreenPermissionBoundary permissions={requiredPermissions}>
-          <NewWorkOrder />
-        </ScreenPermissionBoundary>
-      </ScrollView>
+      <ScreenPermissionBoundary permissions={requiredPermissions}>
+        <NewWorkOrder />
+      </ScreenPermissionBoundary>
     ),
   },
   EmployeeSelector: {

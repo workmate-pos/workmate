@@ -1,9 +1,6 @@
 query get($id: ID!) {
   order(id: $id) {
     __typename
-    note
-    totalDiscounts
-    totalTax
     ...OrderInfoFragment
   }
 }
@@ -66,11 +63,11 @@ query getLineItems(
               id
               title
               hasOnlyDefaultVariant
-              isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
-              isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
               featuredImage {
                 url
               }
+              isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
+              isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
             }
           }
           quantity
@@ -102,15 +99,16 @@ query getPage($first: Int = 10, $after: String, $query: String) {
   }
 }
 
-query getInfo($id: ID!) {
-  order(id: $id) {
-    ...OrderInfoFragment
-  }
-}
-
 fragment OrderInfoFragment on Order {
   id
   name
+  note
+  totalDiscountsSet {
+    ...ShopMoneyAmountFragment
+  }
+  totalTaxSet {
+    ...ShopMoneyAmountFragment
+  }
   totalReceivedSet {
     ...ShopMoneyAmountFragment
   }

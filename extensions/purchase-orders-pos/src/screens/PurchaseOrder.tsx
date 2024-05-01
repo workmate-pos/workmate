@@ -39,6 +39,8 @@ import {
   useCreatePurchaseOrderReducer,
 } from '@work-orders/common/create-purchase-order/reducer.js';
 import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to draft SO line items
@@ -417,8 +419,24 @@ function useProductRows(
   const productVariantIds = unique(lineItems.map(product => product.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  const orderIds = unique(lineItems.map(lineItem => lineItem.shopifyOrderLineItem?.orderId).filter(isNonNullable));
-  const orderQueries = useOrderQueries({ fetch, ids: orderIds });
+  const orderIds = unique(
+    lineItems
+      .map(lineItem => lineItem.shopifyOrderLineItem?.orderId)
+      .filter(isNonNullable)
+      .filter(id => parseGid(id).objectName === 'Order'),
+  );
+
+  const draftOrderIds = unique(
+    lineItems
+      .map(lineItem => lineItem.shopifyOrderLineItem?.orderId)
+      .filter(isNonNullable)
+      .filter(id => parseGid(id).objectName === 'DraftOrder'),
+  );
+
+  const orderQueries = {
+    ...useOrderQueries({ fetch, ids: orderIds }),
+    ...useDraftOrderQueries({ fetch, ids: draftOrderIds }),
+  };
 
   const getDisplayName = (product: Product) => {
     const variant = productVariantQueries[product.productVariantId]?.data ?? null;

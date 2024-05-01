@@ -18,7 +18,7 @@ const SmartGridModal = () => {
       <ScreenSizeProvider>
         <QueryClientProvider client={queryClient}>
           <DialogProvider>
-            <Router />
+            <Router mainRoute={'Entry'} />
           </DialogProvider>
         </QueryClientProvider>
       </ScreenSizeProvider>

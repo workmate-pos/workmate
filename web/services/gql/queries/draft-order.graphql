@@ -104,19 +104,18 @@ query getAttributes($id: ID!) {
 query get($id: ID!) {
   order: draftOrder(id: $id) {
     __typename
-    name
-    note: note2
-    totalPrice
-    totalShippingPrice
-    totalTax
-    subtotalPrice
-    appliedDiscount {
-      value
-      valueType
+    ...DraftOrderInfoFragment
+  }
+}
+
+query getPage($first: Int = 10, $after: String, $query: String) {
+  draftOrders(first: $first, after: $after, query: $query, sortKey: UPDATED_AT, reverse: true) {
+    nodes {
+      ...DraftOrderInfoFragment
     }
-    customAttributes {
-      key
-      value
+    pageInfo {
+      hasNextPage
+      endCursor
     }
   }
 }
@@ -170,6 +169,10 @@ query getLineItems(
             product {
               id
               title
+              hasOnlyDefaultVariant
+              featuredImage {
+                url
+              }
               isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
               isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
             }
@@ -194,9 +197,20 @@ query getLineItems(
 fragment DraftOrderInfoFragment on DraftOrder {
   id
   name
-  draftTotalTax: totalTax
-  totalPrice
-  totalShippingPrice
+  note: note2
+  totalDiscountsSet {
+    ...ShopMoneyAmountFragment
+  }
+  totalTaxSet {
+    ...ShopMoneyAmountFragment
+  }
+  totalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  customer {
+    id
+    displayName
+  }
   customAttributes {
     key
     value
