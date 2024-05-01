@@ -6,6 +6,7 @@ import { unit } from './db/unit-of-work.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { assertValidFormatString } from './id-formatting.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 function serialize(value: ShopSettings[keyof ShopSettings]) {
   return JSON.stringify(value);
@@ -15,10 +16,15 @@ function deserialize(value: string): ShopSettings[keyof ShopSettings] {
   return JSON.parse(value);
 }
 
-export async function getShopSettings(shop: string) {
+export async function getShopSettings(shop: string): Promise<ShopSettings> {
   await insertDefaultSettingsIfNotExists(shop);
   const rows = await db.settings.get({ shop });
-  return Object.fromEntries(rows.map(({ key, value }) => [key, deserialize(value)])) as unknown as ShopSettings;
+  return Object.fromEntries(
+    getShopSettingKeys().map(key => {
+      const row = rows.find(row => row.key === key) ?? never('just inserted!');
+      return [key, deserialize(row.value)];
+    }),
+  ) as unknown as ShopSettings;
 }
 
 export function upsertSetting<const K extends keyof ShopSettings>(shop: string, key: K, value: ShopSettings[K]) {
