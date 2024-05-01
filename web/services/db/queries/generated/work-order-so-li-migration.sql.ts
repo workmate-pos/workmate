@@ -1,4 +1,4 @@
-/** Types generated for queries found in "services/db/queries/work-order-migration.sql" */
+/** Types generated for queries found in "services/db/queries/work-order-so-li-migration.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
 export type DiscountType = 'FIXED_AMOUNT' | 'PERCENTAGE';

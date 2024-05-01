@@ -605,3 +605,18 @@ model OldHourlyLabour {
 
   @@index([workOrderId])
 }
+
+
+model AppMigration {
+  name      String             @id
+  checksum  String
+  status    AppMigrationStatus
+  createdAt DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime           @default(now()) @db.Timestamptz(3)
+}
+
+enum AppMigrationStatus {
+  PENDING
+  SUCCESS
+  FAILURE
+}

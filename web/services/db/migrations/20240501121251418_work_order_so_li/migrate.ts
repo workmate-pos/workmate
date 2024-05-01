@@ -4,30 +4,36 @@
  * This means that we must go through all old work orders, fetch them, and create line item relations.
  */
 
-import { db } from '../services/db/db.js';
+import { db } from '../../db.js';
 import {
   IGetAllOldResult,
   IGetFixedServiceCollectionIdSettingsResult,
   IGetMutableServiceCollectionIdSettingsResult,
   IGetPurchaseOrdersResult,
-} from '../services/db/queries/generated/work-order-migration.sql.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services';
-import { gql } from '../services/gql/gql.js';
-import { shopifySessionToSession } from '../services/shopify-sessions.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { transaction } from '../services/db/transaction.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { ensureShopifyOrdersExist } from '../services/shopify-order/sync.js';
-import { v4 as uuid } from 'uuid';
-import { syncProductVariants } from '../services/product-variants/sync.js';
-import { ensureCustomersExist } from '../services/customer/sync.js';
-import { productServiceTypeMetafield } from '../services/metafields/product-service-type-metafield.js';
+} from '../../queries/generated/work-order-so-li-migration.sql.js';
 import {
   getProductServiceType,
   ProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { shopifySessionToSession } from '../../../shopify-sessions.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { productServiceTypeMetafield } from '../../../metafields/product-service-type-metafield.js';
+import { syncProductVariants } from '../../../product-variants/sync.js';
+import { transaction } from '../../transaction.js';
+import { ensureShopifyOrdersExist } from '../../../shopify-order/sync.js';
+import { ensureCustomersExist } from '../../../customer/sync.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { v4 as uuid } from 'uuid';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { gql } from '../../../gql/gql.js';
+
+export default async function migrate() {
+  await migrateServiceItems();
+  await migratePurchaseOrders();
+  await migrateWorkOrders();
+}
 
 const WOPOS_TEST_STORE = 'work-orders-pos.myshopify.com';
 const SHOPIFY_MARKETPLACE_REVIEW_STORE = '62d6a1-2.myshopify.com';
@@ -40,8 +46,8 @@ export async function migrateServiceItems() {
   // We have moved away from Service collections to metafields + tags.
   // So we should go through the collections for each shop and add the metafield value
 
-  const mutableServiceCollectionIdSettings = await db.workOrderMigration.getMutableServiceCollectionIdSettings();
-  const fixedServiceCollectionIdSettings = await db.workOrderMigration.getFixedServiceCollectionIdSettings();
+  const mutableServiceCollectionIdSettings = await db.migrations.workOrderSoLi.getMutableServiceCollectionIdSettings();
+  const fixedServiceCollectionIdSettings = await db.migrations.workOrderSoLi.getFixedServiceCollectionIdSettings();
 
   const collectionIdSettingFilter = (
     setting: IGetMutableServiceCollectionIdSettingsResult | IGetFixedServiceCollectionIdSettingsResult,
@@ -128,9 +134,9 @@ async function migrateServiceCollection(shop: string, collectionId: ID, serviceT
 
   // Keep this just in case
   // if (serviceType === 'Quantity-Adjusting Service') {
-  //   await db.workOrderMigration.deleteShopMutableServiceCollectionIdSetting({ shop });
+  //   await db.migrations.workOrderSoLi.deleteShopMutableServiceCollectionIdSetting({ shop });
   // } else if (serviceType === 'Fixed-Price Service') {
-  //   await db.workOrderMigration.deleteShopFixedServiceCollectionIdSetting({ shop });
+  //   await db.migrations.workOrderSoLi.deleteShopFixedServiceCollectionIdSetting({ shop });
   // } else {
   //   return serviceType satisfies never;
   // }
@@ -140,13 +146,13 @@ export async function migratePurchaseOrders() {
   // We only had partial product data in the db before. The prisma migration just added placeholder info, so we need to resync product (variants) for all purchase order items.
 
   for (const shop of STORES_TO_YEET) {
-    await db.workOrderMigration.removeShopPurchaseOrderLineItems({ shop });
-    await db.workOrderMigration.removePurchaseOrderEmployeeAssignments({ shop });
-    await db.workOrderMigration.removeShopPurchaseOrderCustomFields({ shop });
-    await db.workOrderMigration.removeShopPurchaseOrders({ shop });
+    await db.migrations.workOrderSoLi.removeShopPurchaseOrderLineItems({ shop });
+    await db.migrations.workOrderSoLi.removePurchaseOrderEmployeeAssignments({ shop });
+    await db.migrations.workOrderSoLi.removeShopPurchaseOrderCustomFields({ shop });
+    await db.migrations.workOrderSoLi.removeShopPurchaseOrders({ shop });
   }
 
-  const purchaseOrders = await db.workOrderMigration.getPurchaseOrders();
+  const purchaseOrders = await db.migrations.workOrderSoLi.getPurchaseOrders();
 
   console.log(`Migrating ${purchaseOrders.length} purchase orders`);
 
@@ -161,8 +167,8 @@ export async function migratePurchaseOrders() {
     );
   }
 
-  await db.workOrderMigration.removePlaceholderProductVariants();
-  await db.workOrderMigration.removePlaceholderProduct();
+  await db.migrations.workOrderSoLi.removePlaceholderProductVariants();
+  await db.migrations.workOrderSoLi.removePlaceholderProduct();
 
   console.log(
     `Purchase order migration completed. Successfully migrated ${successCount} / ${purchaseOrders.length} purchase orders`,
@@ -178,7 +184,7 @@ async function migratePurchaseOrder(purchaseOrder: IGetPurchaseOrdersResult) {
 
   const session = shopifySessionToSession(shopifySession);
 
-  const lineItems = await db.workOrderMigration.getPurchaseOrderLineItems({ purchaseOrderId: purchaseOrder.id });
+  const lineItems = await db.migrations.workOrderSoLi.getPurchaseOrderLineItems({ purchaseOrderId: purchaseOrder.id });
 
   // this will also sync products
   await syncProductVariants(
@@ -189,12 +195,12 @@ async function migratePurchaseOrder(purchaseOrder: IGetPurchaseOrdersResult) {
 
 export async function migrateWorkOrders() {
   for (const shop of STORES_TO_YEET) {
-    await db.workOrderMigration.removeShopOldHourlyLabour({ shop });
-    await db.workOrderMigration.removeShopOldFixedPriceLabour({ shop });
-    await db.workOrderMigration.removeShopOldWorkOrders({ shop });
+    await db.migrations.workOrderSoLi.removeShopOldHourlyLabour({ shop });
+    await db.migrations.workOrderSoLi.removeShopOldFixedPriceLabour({ shop });
+    await db.migrations.workOrderSoLi.removeShopOldWorkOrders({ shop });
   }
 
-  const oldWorkOrders = await db.workOrderMigration.getAllOld();
+  const oldWorkOrders = await db.migrations.workOrderSoLi.getAllOld();
 
   console.log(`Migrating ${oldWorkOrders.length} work orders`);
 
@@ -224,8 +230,8 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
   const session = shopifySessionToSession(shopifySession);
 
   await transaction(async () => {
-    const hourlyLabourCharges = await db.workOrderMigration.getOldHourlyLabours({ workOrderId: oldWorkOrder.id });
-    const fixedPriceLabourCharges = await db.workOrderMigration.getOldFixedPriceLabours({
+    const hourlyLabourCharges = await db.migrations.workOrderSoLi.getOldHourlyLabours({ workOrderId: oldWorkOrder.id });
+    const fixedPriceLabourCharges = await db.migrations.workOrderSoLi.getOldFixedPriceLabours({
       workOrderId: oldWorkOrder.id,
     });
 
@@ -273,7 +279,7 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
       await ensureShopifyOrdersExist(session, [oldWorkOrder.derivedFromOrderId as ID]);
     }
 
-    const [newWorkOrder = never()] = await db.workOrderMigration.createNewWorkOrder({
+    const [newWorkOrder = never()] = await db.migrations.workOrderSoLi.createNewWorkOrder({
       shop: oldWorkOrder.shop,
       name: oldWorkOrder.name,
       customerId: oldWorkOrder.customerId,
@@ -291,7 +297,7 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
         const isMutableServiceItem =
           getProductServiceType(lineItem.variant.product.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
 
-        const [newWorkOrderItem = never()] = await db.workOrderMigration.createNewWorkOrderItem({
+        const [newWorkOrderItem = never()] = await db.migrations.workOrderSoLi.createNewWorkOrderItem({
           workOrderId: newWorkOrder.id,
           uuid: uuid(),
           quantity: isMutableServiceItem ? 0 : lineItem.quantity,
@@ -321,7 +327,7 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
           for (const linkedHourlyLabourCharge of linkedHourlyLabourCharges) {
             hourlyLabourCharges.splice(hourlyLabourCharges.indexOf(linkedHourlyLabourCharge), 1);
 
-            await db.workOrderMigration.createNewWorkOrderHourlyLabourCharge({
+            await db.migrations.workOrderSoLi.createNewWorkOrderHourlyLabourCharge({
               workOrderId: newWorkOrder.id,
               uuid: uuid(),
               workOrderItemUuid: newWorkOrderItem.uuid,
@@ -336,7 +342,7 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
           for (const linkedFixedPriceLabourCharge of linkedFixedPriceLabourCharges) {
             fixedPriceLabourCharges.splice(fixedPriceLabourCharges.indexOf(linkedFixedPriceLabourCharge), 1);
 
-            await db.workOrderMigration.createNewWorkOrderFixedPriceLabourCharge({
+            await db.migrations.workOrderSoLi.createNewWorkOrderFixedPriceLabourCharge({
               workOrderId: newWorkOrder.id,
               uuid: uuid(),
               workOrderItemUuid: newWorkOrderItem.uuid,
@@ -382,7 +388,7 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
         if (hourlyLabourCharge) {
           hourlyLabourCharges.splice(hourlyLabourCharges.indexOf(hourlyLabourCharge), 1);
 
-          await db.workOrderMigration.createNewWorkOrderHourlyLabourCharge({
+          await db.migrations.workOrderSoLi.createNewWorkOrderHourlyLabourCharge({
             workOrderId: newWorkOrder.id,
             uuid: uuid(),
             workOrderItemUuid: null,
@@ -395,7 +401,7 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
         } else if (fixedPriceLabourCharge) {
           fixedPriceLabourCharges.splice(fixedPriceLabourCharges.indexOf(fixedPriceLabourCharge), 1);
 
-          await db.workOrderMigration.createNewWorkOrderFixedPriceLabourCharge({
+          await db.migrations.workOrderSoLi.createNewWorkOrderFixedPriceLabourCharge({
             workOrderId: newWorkOrder.id,
             uuid: uuid(),
             workOrderItemUuid: null,
@@ -420,9 +426,9 @@ async function migrateWorkOrder(oldWorkOrder: IGetAllOldResult) {
       throw new Error('Trailing fixed price charges');
     }
 
-    await db.workOrderMigration.removeOldHourlyLabour({ workOrderId: oldWorkOrder.id });
-    await db.workOrderMigration.removeOldFixedPriceLabour({ workOrderId: oldWorkOrder.id });
-    await db.workOrderMigration.removeOldWorkOrder({ workOrderId: oldWorkOrder.id });
+    await db.migrations.workOrderSoLi.removeOldHourlyLabour({ workOrderId: oldWorkOrder.id });
+    await db.migrations.workOrderSoLi.removeOldFixedPriceLabour({ workOrderId: oldWorkOrder.id });
+    await db.migrations.workOrderSoLi.removeOldWorkOrder({ workOrderId: oldWorkOrder.id });
   });
 }
 
