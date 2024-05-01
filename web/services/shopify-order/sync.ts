@@ -196,8 +196,8 @@ async function syncShopifyOrderLineItems(
   // We should link work order items and work order charges if referenced
   try {
     await linkWorkOrderItemsAndChargesAndDeposits(session, order.order, lineItems);
-  } catch (error) {
-    sentryErr('Error linking work order items and charges', { error });
+  } catch (error: any) {
+    sentryErr('Error linking work order items and charges', error);
   }
 
   // sync work orders in case any line items now don't have a related line item anymore
