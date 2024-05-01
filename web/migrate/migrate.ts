@@ -36,8 +36,6 @@ const GOLFHQ = 'mygolfhq.myshopify.com';
 
 const STORES_TO_YEET = [WOPOS_TEST_STORE, SHOPIFY_MARKETPLACE_REVIEW_STORE, DELETED_STORE, GOLFHQ];
 
-const DRY_RUN = true;
-
 export async function migrateServiceItems() {
   // We have moved away from Service collections to metafields + tags.
   // So we should go through the collections for each shop and add the metafield value
@@ -104,10 +102,6 @@ async function migrateServiceCollection(shop: string, collectionId: ID, serviceT
     throw new Error('More than 250 products in collection - increase limit!');
   }
 
-  if (DRY_RUN) {
-    return;
-  }
-
   // fetch the metafield id or create it if it hasn't been created yet
   const { metafieldDefinitions } = await gql.workOrderMigration.getServiceTypeMetafieldDefinition.run(graphql, {});
 
@@ -132,7 +126,7 @@ async function migrateServiceCollection(shop: string, collectionId: ID, serviceT
     });
   }
 
-  // TODO: Re-add before merge
+  // Keep this just in case
   // if (serviceType === 'Quantity-Adjusting Service') {
   //   await db.workOrderMigration.deleteShopMutableServiceCollectionIdSetting({ shop });
   // } else if (serviceType === 'Fixed-Price Service') {
