@@ -103,6 +103,7 @@ function EmployeePermissions() {
     'write_app_plan',
     'read_purchase_orders',
     'write_purchase_orders',
+    'cycle_count',
   ] as const satisfies readonly PermissionNode[];
 
   return (
@@ -170,7 +171,7 @@ function EmployeePermissions() {
 
           return (
             <IndexTable.Row key={employee.id} id={employee.id} selected={false} position={i}>
-              <IndexTable.Cell>{employee.name}</IndexTable.Cell>
+              <IndexTable.Cell>{employee.name || 'Unnamed employee'}</IndexTable.Cell>
               <IndexTable.Cell>
                 <Checkbox
                   label={'superuser'}

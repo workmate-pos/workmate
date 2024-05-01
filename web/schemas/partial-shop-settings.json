@@ -27,6 +27,21 @@
       "type": "string",
       "minLength": 1
     },
+    "purchaseOrderIdFormat": {
+      "type": "string",
+      "minLength": 1
+    },
+    "purchaseOrderStatuses": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "defaultPurchaseOrderStatus": {
+      "type": "string",
+      "minLength": 1
+    },
     "discountShortcuts": {
       "type": "array",
       "items": {
@@ -39,6 +54,20 @@
       "anyOf": [
         { "$ref": "#/definitions/discount-rule-only-allow-shortcuts" },
         { "$ref": "#/definitions/discount-rule-do-not-allow-shortcuts" }
+      ]
+    },
+    "depositShortcuts": {
+      "type": "array",
+      "items": {
+        "title": "deposit-shortcut",
+        "$ref": "#/definitions/percentage-or-money"
+      }
+    },
+    "depositRules": {
+      "title": "deposit-rules",
+      "anyOf": [
+        { "$ref": "#/definitions/deposit-rule-only-allow-shortcuts" },
+        { "$ref": "#/definitions/deposit-rule-do-not-allow-shortcuts" }
       ]
     },
     "workOrderRequests": {
@@ -74,28 +103,6 @@
         }
       ]
     },
-    "mutableServiceCollectionId": {
-      "description": "A collection name that is used to identify mutable service products within Shopify",
-      "anyOf": [
-        {
-          "const": null
-        },
-        {
-          "$ref": "scalars.json#/definitions/ID"
-        }
-      ]
-    },
-    "fixedServiceCollectionId": {
-      "description": "A collection name that is used to identify fixed service products within Shopify",
-      "anyOf": [
-        {
-          "const": null
-        },
-        {
-          "$ref": "scalars.json#/definitions/ID"
-        }
-      ]
-    },
     "defaultRate": {
       "description": "The default rate used for employees when no rate is specified",
       "$ref": "scalars.json#/definitions/Money"
@@ -126,6 +133,53 @@
       },
       "required": ["employeeAssignments", "hourlyLabour", "fixedPriceLabour"],
       "additionalProperties": false
+    },
+    "emailFromTitle": {
+      "type": "string"
+    },
+    "emailReplyTo": {
+      "type": "string"
+    },
+    "printEmail": {
+      "type": "string"
+    },
+    "workOrderPrintTemplates": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "title": "work-order-print-template",
+        "properties": {
+          "template": {
+            "description": "Liquid template used to render a work order printout",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Subject used when sending print templates as email. Can include liquid variables.",
+            "type": "string"
+          }
+        },
+        "required": ["subject", "template"],
+        "additionalProperties": false
+      }
+    },
+    "purchaseOrderPrintTemplates": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "title": "purchase-order-print-template",
+        "properties": {
+          "template": {
+            "description": "Liquid template used to render a work order printout",
+            "type": "string"
+          },
+          "subject": {
+            "description": "Subject used when sending print templates as email. Can include liquid variables.",
+            "type": "string"
+          }
+        },
+        "required": ["subject", "template"],
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false,
@@ -202,6 +256,55 @@
         }
       },
       "required": ["onlyAllowShortcuts", "allowedPercentageRange", "allowedCurrencyRange"],
+      "additionalProperties": false
+    },
+    "deposit-rule-only-allow-shortcuts": {
+      "type": "object",
+      "properties": {
+        "onlyAllowShortcuts": {
+          "const": true
+        },
+        "onlyAllowHighestAbsoluteShortcut": {
+          "type": "boolean",
+          "description": "If enabled, only the deposit shortcut that would result in the highest currency amount will be allowed.\n\nExamples with deposit shortcuts of 40% and 100$:\n- an order of 150$ would have a deposit of 100$\n- an order of 1000$ would have a deposit of 400$."
+        },
+        "allowedPercentageRange": {
+          "const": null
+        },
+        "allowedCurrencyRange": {
+          "const": null
+        }
+      },
+      "required": [
+        "onlyAllowShortcuts",
+        "onlyAllowHighestAbsoluteShortcut",
+        "allowedPercentageRange",
+        "allowedCurrencyRange"
+      ],
+      "additionalProperties": false
+    },
+    "deposit-rule-do-not-allow-shortcuts": {
+      "type": "object",
+      "properties": {
+        "onlyAllowShortcuts": {
+          "const": false
+        },
+        "onlyAllowHighestAbsoluteShortcut": {
+          "const": false
+        },
+        "allowedPercentageRange": {
+          "anyOf": [{ "const": null }, { "$ref": "#/definitions/percentage-range" }]
+        },
+        "allowedCurrencyRange": {
+          "anyOf": [{ "const": null }, { "$ref": "#/definitions/currency-range" }]
+        }
+      },
+      "required": [
+        "onlyAllowShortcuts",
+        "onlyAllowHighestAbsoluteShortcut",
+        "allowedPercentageRange",
+        "allowedCurrencyRange"
+      ],
       "additionalProperties": false
     }
   }

@@ -1,16 +1,19 @@
-import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
-import { WithNonNullable } from '../../util/types.js';
+import type { getPurchaseOrder } from './get.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Int } from '../gql/queries/generated/schema.js';
 
-export type PurchaseOrder = WithNonNullable<CreatePurchaseOrder, 'name'>;
+export type PurchaseOrder = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>;
 
 // purchase orders exist entirely in our own database, so we can afford to fetch the full object for lower latency on the front end -> better UX
-export type PurchaseOrderInfo = WithNonNullable<CreatePurchaseOrder, 'name'>;
+export type PurchaseOrderInfo = PurchaseOrder;
 
 export type PurchaseOrderWebhookBody = {
   purchaseOrder: {
+    /**
+     * Included to allow consumers to have a stable reference.
+     */
+    id: number;
     name: string;
     shipFrom: string;
     shipTo: string;

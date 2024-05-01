@@ -1,0 +1,19 @@
+{
+  "name": "cycle-count-pos",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "author": "Tim van Dam",
+  "dependencies": {
+    "@teifi-digital/shopify-app-toolbox": "^0.0.42",
+    "@work-orders/common": "file:../../common",
+    "@work-orders/common-pos": "file:../common-pos"
+  },
+  "scripts": {
+    "build:web": "cd ../../web && npm install && npm run build",
+    "build:common": "cd ../../common && npm install && npm run build",
+    "build:common-pos": "cd ../common-pos && npm install && npm run build",
+    "postinstall": "npm run build:common-pos && npm run build:web && npm run build:common"
+  }
+}

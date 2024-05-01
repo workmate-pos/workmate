@@ -1,5 +1,9 @@
+.scannerwork/
+
 NPM_GITHUB_TOKEN
 SHOPIFY_ACCESS_TOKEN
+
+dump.sql
 
 # Logs
 logs
@@ -121,6 +125,7 @@ dist
 
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
+.vscode
 
 # yarn v2
 .yarn/cache

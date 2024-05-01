@@ -1,6 +1,5 @@
-import { InstallableService } from '@teifi-digital/shopify-app-express/services/installable-service.js';
 import { gql } from '../gql/gql.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql, InstallableService } from '@teifi-digital/shopify-app-express/services';
 
 export type SegmentDefinition =
   | gql.segments.createSegment.Variables

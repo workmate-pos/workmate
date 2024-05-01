@@ -1,132 +1,184 @@
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { ClosePopupFn, useScreen } from '../../hooks/use-screen.js';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
 import { uuid } from '../../util/uuid.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { CreateWorkOrderCharge } from '../routes.js';
+import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useDynamicRef } from '@work-orders/common-pos/hooks/use-dynamic-ref.js';
-import { getChargesPrice } from '../../create-work-order/charges.js';
+import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { useRouter } from '../../routes.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { useState } from 'react';
+import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
+import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
+import {
+  getProductServiceType,
+  ProductServiceType,
+  QUANTITY_ADJUSTING_SERVICE,
+  SERVICE_METAFIELD_VALUE_TAG_NAME,
+} from '@work-orders/common/metafields/product-service-type.js';
+import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
-export function ServiceSelector() {
+type OnSelect = (arg: {
+  type: ProductServiceType;
+  item: CreateWorkOrderItem;
+  charges: CreateWorkOrderCharge[];
+}) => void;
+
+export function ServiceSelector({
+  onSelect,
+  createWorkOrder,
+  onAddLabourToItem,
+}: {
+  onSelect: OnSelect;
+  onAddLabourToItem: (item: CreateWorkOrderItem) => void;
+  createWorkOrder: WIPCreateWorkOrder;
+}) {
   const [query, setQuery] = useDebouncedState('');
-  const { Screen, closePopup } = useScreen('ServiceSelector', () => {
-    setQuery('', true);
-  });
 
   const fetch = useAuthenticatedFetch();
-  const serviceCollectionIds = useServiceCollectionIds();
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
-      query: serviceCollectionIds
-        ? `${query} AND (${serviceCollectionIds.map(id => `collection:${parseGid(id).id}`).join(' OR ')})`
-        : query,
+      first: 50 as Int,
+      query: [
+        query,
+        Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
+          .map(tag => `tag:"${escapeQuotationMarks(tag)}"`)
+          .join(' OR '),
+      ].join(' AND '),
     },
   });
   const currencyFormatter = useCurrencyFormatter();
 
-  const closeRef = useDynamicRef(() => closePopup, [closePopup]);
-  const rows = getProductVariantRows(productVariantsQuery?.data?.pages.flat() ?? [], closeRef, currencyFormatter);
+  const [page, setPage] = useState(1);
+  const pagination = (
+    <PaginationControls
+      page={page}
+      pageCount={productVariantsQuery.data?.pages?.length ?? 0}
+      onPageChange={setPage}
+      hasNextPage={productVariantsQuery.hasNextPage ?? false}
+      isLoadingNextPage={productVariantsQuery.isFetchingNextPage}
+      onFetchNextPage={productVariantsQuery.fetchNextPage}
+    />
+  );
+
+  const rows = useProductVariantRows(productVariantsQuery?.data?.pages?.[page - 1] ?? [], onSelect, currencyFormatter);
+
+  const router = useRouter();
 
   return (
-    <Screen title={'Select service'} presentation={{ sheet: true }}>
-      <ScrollView>
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+    <ScrollView>
+      <Button
+        title={'Add labour to line item'}
+        variant={'primary'}
+        onPress={() =>
+          router.push('ItemSelector', {
+            filter: 'can-add-labour',
+            onSelect: async item => {
+              await router.popCurrent();
+              onAddLabourToItem(item);
+            },
+            items: createWorkOrder.items,
+          })
+        }
+      />
+
+      <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
+        </Text>
+      </Stack>
+      <ControlledSearchBar
+        value={query}
+        onTextChange={(query: string) => setQuery(query)}
+        onSearch={() => {}}
+        placeholder={'Search services'}
+      />
+      {pagination}
+      <List data={rows} imageDisplayStrategy={'always'} />
+      {productVariantsQuery.isFetching && (
+        <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
-            {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
+            Loading services...
           </Text>
         </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={(query: string) => setQuery(query)}
-          onSearch={() => {}}
-          placeholder={'Search services'}
-        />
-        <List data={rows} imageDisplayStrategy={'always'} />
-        {productVariantsQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading services...
-            </Text>
-          </Stack>
-        )}
-        {productVariantsQuery.isSuccess && rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No services found
-            </Text>
-          </Stack>
-        )}
-        {productVariantsQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(productVariantsQuery.error, 'Error loading services')}
-            </Text>
-          </Stack>
-        )}
-      </ScrollView>
-    </Screen>
+      )}
+      {!productVariantsQuery.isFetching && productVariantsQuery.isSuccess && rows.length === 0 && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No services found
+          </Text>
+        </Stack>
+      )}
+      {productVariantsQuery.isError && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(productVariantsQuery.error, 'Error loading services')}
+          </Text>
+        </Stack>
+      )}
+      {pagination}
+    </ScrollView>
   );
 }
 
-function getProductVariantRows(
+function useProductVariantRows(
   productVariants: ProductVariant[],
-  closePopupRef: { current: ClosePopupFn<'ServiceSelector'> },
+  onSelect: OnSelect,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
+  const router = useRouter();
+
   return productVariants
     .map<ListRow | null>(variant => {
       const displayName = getProductVariantName(variant) ?? 'Unknown service';
 
       const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
 
-      const type = variant.product.isFixedServiceItem
-        ? 'fixed-service'
-        : variant.product.isMutableServiceItem
-          ? 'mutable-service'
-          : null;
+      const type = getProductServiceType(variant.product.serviceType?.value);
 
       if (type === null) {
         return null;
       }
 
-      const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
-        productVariantDefaultChargeToCreateWorkOrderCharge(charge, 'placeholder'),
-      );
+      const defaultCharges = variant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
 
       let label: string | undefined = undefined;
 
-      if (variant.product.isMutableServiceItem) {
-        if (defaultCharges) {
-          label = currencyFormatter(getChargesPrice(defaultCharges));
-        }
-      } else {
-        label = currencyFormatter(variant.price);
-      }
+      const defaultChargesPrice = getTotalPriceForCharges(defaultCharges);
+      const basePrice = type === QUANTITY_ADJUSTING_SERVICE ? BigDecimal.ZERO.toMoney() : variant.price;
+
+      label = currencyFormatter(
+        BigDecimal.fromMoney(basePrice).add(BigDecimal.fromMoney(defaultChargesPrice)).toMoney(),
+      );
 
       return {
         id: variant.id,
-        onPress: () => {
-          const lineItemUuid = uuid();
+        onPress: async () => {
+          const itemUuid = uuid();
 
-          closePopupRef.current({
+          await router.popCurrent();
+
+          onSelect({
             type,
-            lineItem: {
-              uuid: lineItemUuid,
+            item: {
+              uuid: itemUuid,
               productVariantId: variant.id,
               quantity: 1 as Int,
+              absorbCharges: type === QUANTITY_ADJUSTING_SERVICE,
             },
-            charges: defaultCharges.map(charge => ({ ...charge, lineItemUuid })),
+            charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
+              ...charge,
+              uuid: uuid(),
+              workOrderItemUuid: itemUuid,
+            })),
           });
         },
         leftSide: {

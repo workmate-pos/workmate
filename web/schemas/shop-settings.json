@@ -6,14 +6,22 @@
     "idFormat",
     "statuses",
     "defaultStatus",
+    "purchaseOrderIdFormat",
+    "purchaseOrderStatuses",
+    "defaultPurchaseOrderStatus",
     "discountShortcuts",
     "discountRules",
+    "depositShortcuts",
+    "depositRules",
     "workOrderRequests",
-    "mutableServiceCollectionId",
-    "fixedServiceCollectionId",
     "defaultRate",
     "labourLineItemName",
     "labourLineItemSKU",
-    "chargeSettings"
+    "chargeSettings",
+    "emailFromTitle",
+    "emailReplyTo",
+    "printEmail",
+    "workOrderPrintTemplates",
+    "purchaseOrderPrintTemplates"
   ]
 }

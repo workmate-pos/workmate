@@ -1,90 +1,94 @@
 import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import type { ID, DateTime, Int, Money, OrderDisplayFinancialStatus } from '../gql/queries/generated/schema.js';
-import type { OrderInfo } from '../orders/types.js';
+import type { ID, DateTime, Int, Money } from '../gql/queries/generated/schema.js';
+import { ShopifyOrderType } from '../db/queries/generated/shopify-order.sql.js';
 
 export type WorkOrder = {
   name: string;
   status: string;
-  description: string;
   dueDate: DateTime;
+  note: string;
+  internalNote: string;
   customerId: ID;
-  derivedFromOrder: OrderInfo | null;
-  /**
-   * The order or draft order linked to this work order.
-   */
-  order: {
-    type: 'draft-order' | 'order';
-    id: ID;
-    name: string;
-    outstanding: Money;
-    received: Money;
-    total: Money;
-    discount: { valueType: 'PERCENTAGE'; value: Decimal } | { valueType: 'FIXED_AMOUNT'; value: Money } | null;
-    lineItems: LineItem[];
-    financialStatus: OrderDisplayFinancialStatus | null;
-  };
-  charges: (FixedPriceLabour | HourlyLabour)[];
+  derivedFromOrderId: ID | null;
+  items: WorkOrderItem[];
+  charges: WorkOrderCharge[];
+  orders: WorkOrderOrder[];
+  customFields: Record<string, string>;
+  discount: WorkOrderDiscount | null;
 };
 
-export type BaseLabour = {
+export type WorkOrderDiscount =
+  | {
+      type: 'FIXED_AMOUNT';
+      value: Money;
+    }
+  | {
+      type: 'PERCENTAGE';
+      value: Decimal;
+    };
+
+export type WorkOrderItem = {
+  uuid: string;
+  shopifyOrderLineItem: ShopifyOrderLineItem | null;
+  productVariantId: ID;
+  quantity: Int;
+  absorbCharges: boolean;
+  purchaseOrders: WorkOrderPurchaseOrder[];
+};
+
+export type WorkOrderPurchaseOrder = {
   name: string;
-  employeeId: ID | null;
-  /**
-   * A uuid that associates this employee assignment with a line item.
-   * Used to differentiate between assignments to different instances of the same productVariantId
-   */
-  lineItemUuid: string | null;
-  productVariantId: ID | null;
+  items: WorkOrderPurchaseOrderItem[];
 };
 
-export type FixedPriceLabour = BaseLabour & {
+export type WorkOrderPurchaseOrderItem = {
+  unitCost: Money;
+  quantity: Int;
+  availableQuantity: Int;
+};
+
+export type WorkOrderCharge = FixedPriceLabour | HourlyLabour;
+
+export type FixedPriceLabour = {
   type: 'fixed-price-labour';
+  uuid: string;
+  workOrderItemUuid: string | null;
+  shopifyOrderLineItem: ShopifyOrderLineItem | null;
+  employeeId: ID | null;
+  name: string;
   amount: Money;
+  amountLocked: boolean;
+  removeLocked: boolean;
 };
 
-export type HourlyLabour = BaseLabour & {
+export type HourlyLabour = {
   type: 'hourly-labour';
+  uuid: string;
+  workOrderItemUuid: string | null;
+  shopifyOrderLineItem: ShopifyOrderLineItem | null;
+  employeeId: ID | null;
+  name: string;
   rate: Money;
   hours: Decimal;
+  rateLocked: boolean;
+  hoursLocked: boolean;
+  removeLocked: boolean;
 };
 
-export type LineItem = {
+export type ShopifyOrderLineItem = {
   id: ID;
-  title: string;
-  taxable: boolean;
-  variant: {
-    id: ID;
-    image: {
-      url: string;
-    } | null;
-    title: string;
-    product: {
-      id: ID;
-      title: string;
-      isMutableServiceItem: boolean;
-      isFixedServiceItem: boolean;
-    };
-  } | null;
+  orderId: ID;
   quantity: Int;
-  unitPrice: Money;
-  sku: string | null;
+  /**
+   * Includes any discounts
+   */
+  discountedUnitPrice: Money;
 };
 
-/**
- * Similar to {@link WorkOrder}, but without details.
- * This is used to display a list of work orders.
- */
-export type WorkOrderInfo = {
+export type WorkOrderOrder = {
+  id: ID;
   name: string;
-  status: string;
-  dueDate: DateTime;
-  customerId: ID;
-  order: {
-    id: ID;
-    type: 'draft-order' | 'order';
-    name: string;
-    total: Money;
-    outstanding: Money;
-    financialStatus: OrderDisplayFinancialStatus | null;
-  };
+  type: ShopifyOrderType;
 };
+
+export type WorkOrderInfo = WorkOrder;

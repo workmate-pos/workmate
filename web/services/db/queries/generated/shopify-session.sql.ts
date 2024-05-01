@@ -141,20 +141,20 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"id":true,"shop":true,"state":true,"isOnline":true,"scope":true,"expires":true,"onlineAccessInfo":true,"accessToken":true},"params":[{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":118,"b":121}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":124,"b":129},{"a":256,"b":261}]},{"name":"state","required":true,"transform":{"type":"scalar"},"locs":[{"a":132,"b":138},{"a":316,"b":322}]},{"name":"isOnline","required":true,"transform":{"type":"scalar"},"locs":[{"a":141,"b":150},{"a":377,"b":386}]},{"name":"scope","required":false,"transform":{"type":"scalar"},"locs":[{"a":153,"b":158},{"a":441,"b":446}]},{"name":"expires","required":false,"transform":{"type":"scalar"},"locs":[{"a":161,"b":168},{"a":501,"b":508}]},{"name":"onlineAccessInfo","required":false,"transform":{"type":"scalar"},"locs":[{"a":171,"b":187},{"a":563,"b":579}]},{"name":"accessToken","required":false,"transform":{"type":"scalar"},"locs":[{"a":190,"b":201},{"a":634,"b":645}]}],"statement":"INSERT INTO \"ShopifySession\" (id, shop, state, \"isOnline\", scope, expires, \"onlineAccessInfo\", \"accessToken\")\nVALUES (:id!, :shop!, :state!, :isOnline!, :scope, :expires, :onlineAccessInfo, :accessToken)\nON CONFLICT (id) DO UPDATE SET shop               = :shop!,\n                               state              = :state!,\n                               \"isOnline\"         = :isOnline!,\n                               scope              = :scope,\n                               expires            = :expires,\n                               \"onlineAccessInfo\" = :onlineAccessInfo,\n                               \"accessToken\"      = :accessToken\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"id":true,"shop":true,"state":true,"isOnline":true,"scope":true,"expires":true,"onlineAccessInfo":true,"accessToken":true},"params":[{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":118,"b":121}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":124,"b":129}]},{"name":"state","required":true,"transform":{"type":"scalar"},"locs":[{"a":132,"b":138}]},{"name":"isOnline","required":true,"transform":{"type":"scalar"},"locs":[{"a":141,"b":150}]},{"name":"scope","required":false,"transform":{"type":"scalar"},"locs":[{"a":153,"b":158}]},{"name":"expires","required":false,"transform":{"type":"scalar"},"locs":[{"a":161,"b":168}]},{"name":"onlineAccessInfo","required":false,"transform":{"type":"scalar"},"locs":[{"a":171,"b":187}]},{"name":"accessToken","required":false,"transform":{"type":"scalar"},"locs":[{"a":190,"b":201}]}],"statement":"INSERT INTO \"ShopifySession\" (id, shop, state, \"isOnline\", scope, expires, \"onlineAccessInfo\", \"accessToken\")\nVALUES (:id!, :shop!, :state!, :isOnline!, :scope, :expires, :onlineAccessInfo, :accessToken)\nON CONFLICT (id) DO UPDATE SET shop               = EXCLUDED.shop,\n                               state              = EXCLUDED.state,\n                               \"isOnline\"         = EXCLUDED.\"isOnline\",\n                               scope              = EXCLUDED.scope,\n                               expires            = EXCLUDED.expires,\n                               \"onlineAccessInfo\" = EXCLUDED.\"onlineAccessInfo\",\n                               \"accessToken\"      = EXCLUDED.\"accessToken\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "ShopifySession" (id, shop, state, "isOnline", scope, expires, "onlineAccessInfo", "accessToken")
  * VALUES (:id!, :shop!, :state!, :isOnline!, :scope, :expires, :onlineAccessInfo, :accessToken)
- * ON CONFLICT (id) DO UPDATE SET shop               = :shop!,
- *                                state              = :state!,
- *                                "isOnline"         = :isOnline!,
- *                                scope              = :scope,
- *                                expires            = :expires,
- *                                "onlineAccessInfo" = :onlineAccessInfo,
- *                                "accessToken"      = :accessToken
+ * ON CONFLICT (id) DO UPDATE SET shop               = EXCLUDED.shop,
+ *                                state              = EXCLUDED.state,
+ *                                "isOnline"         = EXCLUDED."isOnline",
+ *                                scope              = EXCLUDED.scope,
+ *                                expires            = EXCLUDED.expires,
+ *                                "onlineAccessInfo" = EXCLUDED."onlineAccessInfo",
+ *                                "accessToken"      = EXCLUDED."accessToken"
  * RETURNING *
  * ```
  */

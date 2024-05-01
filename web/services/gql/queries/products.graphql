@@ -1,9 +1,13 @@
+query getProduct($id: ID!) {
+  product(id: $id) {
+    ...ProductFragment
+  }
+}
+
 query getPage(
   $first: Int = 10,
   $after: String,
   $query: String,
-  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
-  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
 ) {
   productVariants(first: $first, after: $after, query: $query, sortKey: POPULAR) {
     nodes {
@@ -16,14 +20,36 @@ query getPage(
   }
 }
 
-query getMany(
-  $ids: [ID!]!,
-  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
-  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
-) {
+query getMany($ids: [ID!]!) {
   nodes(ids: $ids) {
     __typename
     ...ProductVariantFragment
+  }
+}
+
+query getManyProductsForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseProductFragment
+  }
+}
+
+query getManyProductVariantsForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseProductVariantFragment
+  }
+}
+
+query getManyInventoryItems($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ... on ProductVariant {
+      id
+      inventoryItem {
+        id
+      }
+    }
   }
 }
 
@@ -32,30 +58,59 @@ fragment ProductVariantFragment on ProductVariant {
   title
   sku
   price
+  barcode
   image {
     url
   }
   inventoryItem {
     id
+    unitCost {
+      currencyCode
+      amount
+    }
   }
   product {
-    id
-    title
-    handle
-    hasOnlyDefaultVariant
-    featuredImage {
-      url
-    }
-    description
-    isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
-    isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
+    ...ProductFragment
   }
+  requiresComponents
   defaultCharges: metafield(namespace: "$app", key: "default-charges") {
     references(first: 10) {
       nodes {
         __typename
         ...FixedPriceLabourChargeFragment
         ...HourlyLabourChargeFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+fragment ProductFragment on Product {
+  id
+  title
+  handle
+  hasOnlyDefaultVariant
+  featuredImage {
+    url
+  }
+  description
+  productType
+  serviceType: metafield(namespace: "$app", key: "service-type") {
+    value
+  }
+}
+
+query getProductVariantComponents($id: ID!) {
+  productVariant(id: $id) {
+    productVariantComponents(first: 25) {
+      nodes {
+        quantity
+        productVariant {
+          ...ProductVariantFragment
+        }
       }
       pageInfo {
         hasNextPage
@@ -73,6 +128,12 @@ fragment FixedPriceLabourChargeFragment on Metaobject {
   amount: field(key: "amount") {
     value
   }
+  customizeAmount: field(key: "customize-amount") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
+  }
 }
 
 fragment HourlyLabourChargeFragment on Metaobject {
@@ -86,13 +147,18 @@ fragment HourlyLabourChargeFragment on Metaobject {
   hours: field(key: "hours") {
     value
   }
+  customizeRate: field(key: "customize-rate") {
+    value
+  }
+  customizeHours: field(key: "customize-hours") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
+  }
 }
 
-mutation create(
-  $input: ProductInput!,
-  $fixedServiceCollectionId: ID = "gid://shopify/Collection/null"
-  $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
-) {
+mutation create($input: ProductInput!) {
   productCreate(input: $input) {
     userErrors {
       message
@@ -106,5 +172,26 @@ mutation create(
         }
       }
     }
+  }
+}
+
+fragment DatabaseProductFragment on Product {
+  id
+  handle
+  title
+  description
+  productType
+}
+
+
+fragment DatabaseProductVariantFragment on ProductVariant {
+  id
+  sku
+  title
+  product {
+    id
+  }
+  inventoryItem {
+    id
   }
 }

@@ -1,28 +1,19 @@
 import { Session } from '@shopify/shopify-api';
-import {
-  Authenticated,
-  BodySchema,
-  Get,
-  Post,
-  QuerySchema,
-} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
 import { gql } from '../../services/gql/gql.js';
 import { db } from '../../services/db/db.js';
 import { getShopSettings } from '../../services/settings.js';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Permission, isPermissionNode, LocalsTeifiUser } from '../../decorators/permission.js';
 import { indexBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
-import { IUpsertManyParams } from '../../services/db/queries/generated/employee.sql.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
-import { hasReadUsersScope } from '../../services/shop.js';
-import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { escapeLike } from '../../services/db/like.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { unit } from '../../services/db/unit-of-work.js';
+import { getStaffMembersByIds, getStaffMembersPage } from '../../services/staff-members.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -54,33 +45,7 @@ export default class EmployeeController {
     const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    const graphql = new Graphql(session);
-
-    let response: gql.staffMember.getPage.Result;
-
-    if (!(await hasReadUsersScope(graphql))) {
-      const employees = await db.employee.getPage({
-        shop: session.shop,
-        query: paginationOptions.query ? `%${escapeLike(paginationOptions.query)}%` : undefined,
-      });
-
-      response = {
-        shop: {
-          staffMembers: {
-            nodes: employees.map(e => {
-              assertGid(e.employeeId);
-              return { isShopOwner: e.isShopOwner, name: e.name, id: e.employeeId };
-            }),
-            pageInfo: {
-              hasNextPage: false,
-              endCursor: null,
-            },
-          },
-        },
-      };
-    } else {
-      response = await gql.staffMember.getPage.run(graphql, paginationOptions);
-    }
+    const response = await getStaffMembersPage(session, paginationOptions);
 
     const employees = response.shop.staffMembers.nodes;
     const pageInfo = response.shop.staffMembers.pageInfo;
@@ -99,23 +64,9 @@ export default class EmployeeController {
     const { shop } = session;
     const { ids } = req.query;
 
-    const graphql = new Graphql(session);
+    const staffMembers = await getStaffMembersByIds(session, ids);
 
-    let staffMembers: gql.staffMember.StaffMemberFragment.Result[];
-
-    if (!(await hasReadUsersScope(graphql))) {
-      staffMembers = await db.employee.getMany({ shop, employeeIds: ids }).then(e =>
-        e.filter(isNonNullable).map(e => {
-          assertGid(e.employeeId);
-          return { id: e.employeeId, name: e.name, isShopOwner: e.isShopOwner };
-        }),
-      );
-    } else {
-      const { nodes } = await gql.staffMember.getMany.run(graphql, { ids });
-      staffMembers = nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember'));
-    }
-
-    const staffMembersWithDatabaseInfo = await attachDatabaseEmployees(shop, staffMembers);
+    const staffMembersWithDatabaseInfo = await attachDatabaseEmployees(shop, staffMembers.filter(isNonNullable));
 
     const staffMemberRecord = indexBy(staffMembersWithDatabaseInfo, e => e.id);
 
@@ -129,59 +80,53 @@ export default class EmployeeController {
     const session: Session = res.locals.shopify.session;
     const { shop } = session;
 
-    const employeeIds = req.body.employees.map(e => e.employeeId);
-
-    const graphql = new Graphql(session);
-
-    let staffMembers: gql.staffMember.StaffMemberFragment.Result[];
-
-    if (!(await hasReadUsersScope(graphql))) {
-      staffMembers = await db.employee.getMany({ shop, employeeIds: employeeIds }).then(e =>
-        e.filter(isNonNullable).map(e => {
-          assertGid(e.employeeId);
-          return { id: e.employeeId, name: e.name, isShopOwner: e.isShopOwner };
-        }),
-      );
-    } else {
-      staffMembers = await gql.staffMember.getMany
-        .run(graphql, { ids: employeeIds })
-        .then(({ nodes }) => nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
+    if (req.body.employees.length === 0) {
+      return res.json({ success: true });
     }
 
-    const staffMemberById = indexBy(staffMembers, e => e.id);
+    const employeeIds = req.body.employees.map(e => e.employeeId);
 
-    const employees: IUpsertManyParams['employees'] = req.body.employees.map(e => {
-      const staffMember = staffMemberById[e.employeeId];
+    const staffMembers = await getStaffMembersByIds(session, employeeIds);
 
-      if (!staffMember) {
-        throw new HttpError('Not all employees were found', 400);
-      }
+    const staffMemberById = indexBy(staffMembers.filter(isNonNullable), e => e.id);
 
-      return {
-        employeeId: e.employeeId,
-        rate: e.rate,
-        superuser: e.superuser,
-        permissions: e.permissions.map(p => {
-          if (isPermissionNode(p)) return p;
-          throw new Error(`Invalid permission node: ${p}`);
-        }),
-        name: staffMember.name,
-        isShopOwner: staffMember.isShopOwner,
-      };
+    await db.employee.upsertMany({
+      employees: req.body.employees.map(({ employeeId, rate, superuser, permissions }) => {
+        const staffMember = staffMemberById[employeeId];
+
+        if (!staffMember) {
+          throw new HttpError('Not all employees were found', 400);
+        }
+
+        return {
+          permissions: permissions.map(p => {
+            if (isPermissionNode(p)) return p;
+            throw new Error(`Invalid permission node: ${p}`);
+          }),
+          isShopOwner: staffMember.isShopOwner,
+          staffMemberId: employeeId,
+          name: staffMember.name,
+          superuser,
+          shop,
+          rate,
+        };
+      }),
     });
-
-    await db.employee.upsertMany({ shop, employees });
 
     return res.json({ success: true });
   }
 }
 
 async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMember.StaffMemberFragment.Result[]) {
-  const staffMemberIds = staffMembers.filter(isNonNullable).map(e => e.id);
-  const employees = await db.employee.getMany({ shop, employeeIds: staffMemberIds });
+  if (staffMembers.length === 0) {
+    return [];
+  }
+
+  const staffMemberIds = staffMembers.map(e => e.id);
+  const employees = await db.employee.getMany({ employeeIds: staffMemberIds });
   const { defaultRate } = await getShopSettings(shop);
 
-  const employeeRecord = indexBy(employees, e => e.employeeId);
+  const employeeRecord = indexBy(employees, e => e.staffMemberId);
 
   return staffMembers.map(staffMember => {
     const employee = staffMember && employeeRecord[staffMember.id];

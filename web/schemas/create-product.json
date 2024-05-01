@@ -49,14 +49,28 @@
       "description": "Whether or not to allow out of stock purchases"
     },
     "vendor": {
-      "type": "string",
-      "description": "The vendor of the product variant"
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
     },
     "availableQuantity": {
       "$ref": "scalars.json#/definitions/Int"
     },
     "locationId": {
-      "$ref": "scalars.json#/definitions/ID"
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     }
   },
   "required": [

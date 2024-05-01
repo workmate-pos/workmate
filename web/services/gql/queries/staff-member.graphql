@@ -19,7 +19,20 @@ query getMany($ids: [ID!]!) {
   }
 }
 
+query getManyForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseStaffMemberFragment
+  }
+}
+
 fragment StaffMemberFragment on StaffMember {
+  id
+  name
+  isShopOwner
+}
+
+fragment DatabaseStaffMemberFragment on StaffMember {
   id
   name
   isShopOwner

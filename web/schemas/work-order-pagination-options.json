@@ -25,6 +25,30 @@
     },
     "customerId": {
       "$ref": "scalars.json#/definitions/ID"
+    },
+    "customFieldFilters": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "paymentStatus": {
+      "title": "payment-status",
+      "enum": ["UNPAID", "PARTIALLY_PAID", "FULLY_PAID"]
+    },
+    "excludePaymentStatus": {
+      "description": "If true, excludes the payment status rather than including it",
+      "type": "boolean"
+    },
+    "afterDueDate": {
+      "$ref": "scalars.json#/definitions/DateTime"
+    },
+    "beforeDueDate": {
+      "$ref": "scalars.json#/definitions/DateTime"
+    },
+    "purchaseOrderStatus": {
+      "title": "purchase-order-status",
+      "enum": ["FULFILLED", "PENDING"]
     }
   },
   "required": ["limit", "offset"],

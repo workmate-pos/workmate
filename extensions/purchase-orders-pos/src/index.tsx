@@ -1,21 +1,9 @@
-import { Tile, Navigator, render, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { Entry } from './screens/Entry.js';
-import { ScreenSizeProvider } from '@work-orders/common-pos/providers/ScreenSizeProvider.js';
-import { StatusSelector } from './screens/popups/StatusSelector.js';
-import { ProductSelector } from './screens/popups/ProductSelector.js';
+import { Tile, render, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { QueryClient, QueryClientProvider } from '@work-orders/common/queries/react-query.js';
-import { LocationSelector } from './screens/popups/LocationSelector.js';
-import { ProductConfig } from './screens/popups/ProductConfig.js';
-import { VendorSelector } from './screens/popups/VendorSelector.js';
-import { DialogProvider } from '@work-orders/common-pos/providers/DialogProvider.js';
-import { CustomFieldConfig } from './screens/popups/CustomFieldConfig.js';
-import { PurchaseOrder } from './screens/PurchaseOrder.js';
-import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
-import { WorkOrderSelector } from './screens/popups/WorkOrderSelector.js';
-import { OrderSelector } from './screens/popups/OrderSelector.js';
-import { ProductCreator } from './screens/popups/ProductCreator.js';
-import { SavePreset } from './screens/popups/SavePreset.js';
-import { ImportPreset } from './screens/popups/ImportPreset.js';
+import { Router } from './routes.js';
+import { ScreenSizeProvider } from '@teifi-digital/pos-tools/providers/ScreenSizeProvider.js';
+import { DialogProvider } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
+import { AppProvider } from '@teifi-digital/pos-tools/providers/AppProvider.js';
 
 const SmartGridTile = () => {
   const { smartGrid } = useExtensionApi();
@@ -26,29 +14,15 @@ const SmartGridModal = () => {
   const queryClient = new QueryClient();
 
   return (
-    <ScreenSizeProvider>
-      <QueryClientProvider client={queryClient}>
-        <DialogProvider>
-          <Navigator>
-            <Entry />
-            <PurchaseOrder />
-
-            <CustomFieldConfig />
-            <EmployeeSelector />
-            <ImportPreset />
-            <LocationSelector />
-            <OrderSelector />
-            <ProductConfig />
-            <ProductCreator />
-            <ProductSelector />
-            <SavePreset />
-            <StatusSelector />
-            <VendorSelector />
-            <WorkOrderSelector />
-          </Navigator>
-        </DialogProvider>
-      </QueryClientProvider>
-    </ScreenSizeProvider>
+    <AppProvider appUrl={process.env.APP_URL!}>
+      <ScreenSizeProvider>
+        <QueryClientProvider client={queryClient}>
+          <DialogProvider>
+            <Router />
+          </DialogProvider>
+        </QueryClientProvider>
+      </ScreenSizeProvider>
+    </AppProvider>
   );
 };
 

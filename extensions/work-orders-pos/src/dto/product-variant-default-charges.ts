@@ -1,32 +1,32 @@
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
-import { uuid } from '../util/uuid.js';
-import { CreateWorkOrderCharge } from '../screens/routes.js';
+import { CreateWorkOrderCharge } from '../types.js';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 
 export function productVariantDefaultChargeToCreateWorkOrderCharge(
   charge: ProductVariant['defaultCharges'][number],
-  lineItemUuid: string,
-): CreateWorkOrderCharge {
+): DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid' | 'uuid'> {
   switch (charge.type) {
     case 'fixed-price-labour-charge': {
       return {
         type: 'fixed-price-labour',
-        chargeUuid: uuid(),
         name: charge.name,
         amount: charge.amount,
         employeeId: null,
-        lineItemUuid,
+        amountLocked: !charge.customizeAmount,
+        removeLocked: !charge.removable,
       };
     }
 
     case 'hourly-labour-charge': {
       return {
         type: 'hourly-labour',
-        chargeUuid: uuid(),
         name: charge.name,
         rate: charge.rate,
         hours: charge.hours,
         employeeId: null,
-        lineItemUuid,
+        rateLocked: !charge.customizeRate,
+        hoursLocked: !charge.customizeHours,
+        removeLocked: !charge.removable,
       };
     }
 

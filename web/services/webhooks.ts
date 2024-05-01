@@ -1,12 +1,16 @@
-import { WebhookHandlers } from '@teifi-digital/shopify-app-express/services/webhooks.js';
+import { WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
 import { db } from './db/db.js';
-import { WorkOrderAttribute } from '@work-orders/common/custom-attributes/attributes/WorkOrderAttribute.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { AppPlanName } from './db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
-import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { gql } from './gql/gql.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { syncLocationsIfExists } from './locations/sync.js';
+import { syncCustomersIfExists } from './customer/sync.js';
+import { syncProductsIfExists } from './products/sync.js';
+import { syncProductVariantsIfExists } from './product-variants/sync.js';
+import { syncShopifyOrders, syncShopifyOrdersIfExists } from './shopify-order/sync.js';
+import { syncWorkOrders } from './work-orders/sync.js';
+import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
+import { syncProductServiceTypeTag } from './metafields/product-service-type-metafield.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -62,31 +66,140 @@ export default {
       topic,
       shop,
       body: {
-        admin_graphql_api_id: string;
+        admin_graphql_api_id: ID;
         note_attributes: { name: string; value: string }[];
       },
     ) {
-      const rawWorkOrderName = body.note_attributes.find(({ name }) => name === WorkOrderAttribute.key)?.value;
+      const isWorkOrder = body.note_attributes.some(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
 
-      if (!rawWorkOrderName) {
+      if (isWorkOrder) {
+        await syncShopifyOrders(session, [body.admin_graphql_api_id]);
+      }
+    },
+  },
+
+  LOCATIONS_UPDATE: {
+    async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
+      await syncLocationsIfExists(session, [body.admin_graphql_api_id]);
+    },
+  },
+
+  LOCATIONS_DELETE: {
+    async handler(_session, _topic, _shop, body: { admin_graphql_api_id: ID }) {
+      await db.locations.softDeleteLocations({ locationIds: [body.admin_graphql_api_id] });
+    },
+  },
+
+  CUSTOMERS_UPDATE: {
+    async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
+      await syncCustomersIfExists(session, [body.admin_graphql_api_id]);
+    },
+  },
+
+  CUSTOMERS_DELETE: {
+    async handler(_session, _topic, _shop, body: { admin_graphql_api_id: ID }) {
+      await db.customers.softDeleteCustomers({ customerIds: [body.admin_graphql_api_id] });
+    },
+  },
+
+  PRODUCTS_UPDATE: {
+    async handler(session, topic, shop, body: { admin_graphql_api_id: ID; variant_ids: { id: number }[] }) {
+      // shopify sends this webhook whenever the product is ordered, so we throttle a bit here
+      // (we cannot use shopify's product.updatedAt because it updates even if the inventory item changes...)
+      const FIVE_MINUTES = 5 * 60 * 1000;
+      const [databaseProduct] = await db.products.get({ productId: body.admin_graphql_api_id });
+      if (databaseProduct && databaseProduct.updatedAt.getTime() - Date.now() < FIVE_MINUTES) {
         return;
       }
 
-      const workOrderName = WorkOrderAttribute.deserialize({ key: WorkOrderAttribute.key, value: rawWorkOrderName });
+      await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
+      await syncProductsIfExists(session, [body.admin_graphql_api_id]);
 
-      const [workOrder = never()] = await db.workOrder.get({ shop, name: workOrderName });
+      const variantIds = body.variant_ids.map(({ id }) => createGid('ProductVariant', id));
+      await syncProductVariantsIfExists(session, variantIds);
+    },
+  },
 
-      await db.workOrder.updateOrderIds({
-        id: workOrder.id,
+  PRODUCTS_DELETE: {
+    async handler(_session, _topic, _shop, body: { admin_graphql_api_id: ID }) {
+      await db.productVariants.softDeleteProductVariantsByProductId({ productId: body.admin_graphql_api_id });
+      await db.products.softDeleteProducts({ productIds: [body.admin_graphql_api_id] });
+    },
+  },
+
+  DRAFT_ORDERS_CREATE: {
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: ID;
+        note_attributes: { name: string; value: string }[];
+      },
+    ) {
+      const isWorkOrder = body.note_attributes.some(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
+
+      if (isWorkOrder) {
+        await syncShopifyOrders(session, [body.admin_graphql_api_id]);
+      }
+    },
+  },
+
+  DRAFT_ORDERS_UPDATE: {
+    async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
+      await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
+    },
+  },
+
+  DRAFT_ORDERS_DELETE: {
+    async handler(session, topic, shop, body: { id: number }) {
+      const orderId = createGid('DraftOrder', body.id);
+
+      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId });
+
+      await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
+      await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });
+
+      await syncWorkOrders(
+        session,
+        relatedWorkOrders.map(({ id }) => id),
+        false,
+      );
+    },
+  },
+
+  ORDERS_UPDATED: {
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: ID;
+        note_attributes: { name: string; value: string }[];
+      },
+    ) {
+      await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
+    },
+  },
+
+  ORDERS_DELETE: {
+    async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
+      // not sure how order deletion is even possible, but it will definitely lead to loss of payment data.
+      // soft delete is not a good option here either, because unpaid work order line items would remain linked to order line items in a deleted order, making them unpayable.
+      // tldr dont delete orders
+
+      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({
         orderId: body.admin_graphql_api_id,
-        draftOrderId: null,
       });
 
-      if (workOrder.draftOrderId) {
-        assertGid(workOrder.draftOrderId);
-        const graphql = new Graphql(session);
-        await gql.draftOrder.remove.run(graphql, { id: workOrder.draftOrderId });
-      }
+      await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [body.admin_graphql_api_id] });
+      await db.shopifyOrder.deleteOrders({ orderIds: [body.admin_graphql_api_id] });
+
+      await syncWorkOrders(
+        session,
+        relatedWorkOrders.map(({ id }) => id),
+        false,
+      );
     },
   },
 } as WebhookHandlers;

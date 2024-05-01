@@ -1,10 +1,10 @@
 import type { Request, Response } from 'express-serve-static-core';
 import type { Session } from '@shopify/shopify-api';
-import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { getOrder, getOrderInfos, getOrderLineItems } from '../../services/orders/get.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 @Authenticated()
 export default class OrderController {

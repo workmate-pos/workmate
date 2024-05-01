@@ -6,7 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "shopify app dev",
-    "deploy": "shopify app deploy"
+    "deploy": "shopify app deploy",
+    "extensions:install": "cd web && npm ci && cd ../common && npm ci && cd ../extensions && npm ci && cd ./common-pos && npm ci && cd ../purchase-orders-pos && npm ci && cd ../work-orders-pos && npm ci",
+    "extensions:build": "cd web && npm run build && cd ../common && npm run build && cd ../extensions/common-pos && npm run build && cd ../purchase-orders-pos && npm run check && cd ../work-orders-pos && npm run check",
+    "app:install": "cd common && npm ci && cd ../web && npm ci && cd frontend && npm ci",
+    "app:build": "cd common && npm run build && cd ../web && npm run build && cd frontend && npm run build"
   },
   "dependencies": {
     "@shopify/app": "^3.56.1",

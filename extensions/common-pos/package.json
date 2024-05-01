@@ -12,13 +12,13 @@
       "default": "./dist/components/*",
       "types": "./src/components/*"
     },
-    "./providers/*": {
-      "default": "./dist/providers/*",
-      "types": "./src/providers/*"
+    "./screens/*": {
+      "default": "./dist/screens/*",
+      "types": "./src/screens/*"
     },
-    "./util/*": {
-      "default": "./dist/util/*",
-      "types": "./src/util/*"
+    "./types/*": {
+      "default": "./dist/types/*",
+      "types": "./src/types/*"
     }
   },
   "scripts": {
@@ -27,8 +27,7 @@
     "build": "tsc",
     "build:watch": "tsc -w",
     "preinstall": "cd ../ && npm install",
-    "set-app-url": "node ./set-app-url.js",
-    "postinstall": "npm run set-app-url && npm run build:web && npm run build:common && npm run build"
+    "postinstall": "npm run build:web && npm run build:common && npm run build"
   },
   "author": "Tim van Dam",
   "devDependencies": {
@@ -36,7 +35,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.14",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.42",
     "@work-orders/common": "file:../../common"
   }
 }

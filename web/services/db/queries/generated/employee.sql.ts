@@ -1,7 +1,7 @@
 /** Types generated for queries found in "services/db/queries/employee.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
-export type PermissionNode = 'read_app_plan' | 'read_employees' | 'read_purchase_orders' | 'read_settings' | 'read_work_orders' | 'write_app_plan' | 'write_employees' | 'write_purchase_orders' | 'write_settings' | 'write_work_orders';
+export type PermissionNode = 'cycle_count' | 'read_app_plan' | 'read_employees' | 'read_purchase_orders' | 'read_settings' | 'read_work_orders' | 'write_app_plan' | 'write_employees' | 'write_purchase_orders' | 'write_settings' | 'write_work_orders';
 
 export type PermissionNodeArray = (PermissionNode)[];
 
@@ -15,13 +15,15 @@ export interface IGetManyParams {
 
 /** 'GetMany' return type */
 export interface IGetManyResult {
-  employeeId: string;
+  createdAt: Date;
   isShopOwner: boolean;
   name: string;
   permissions: PermissionNodeArray | null;
   rate: string | null;
   shop: string;
+  staffMemberId: string;
   superuser: boolean;
+  updatedAt: Date;
 }
 
 /** 'GetMany' query type */
@@ -30,15 +32,15 @@ export interface IGetManyQuery {
   result: IGetManyResult;
 }
 
-const getManyIR: any = {"usedParamSet":{"shop":true,"employeeIds":true},"params":[{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":38,"b":42}]},{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":67,"b":78}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE shop = :shop\nAND \"employeeId\" = ANY(:employeeIds)"};
+const getManyIR: any = {"usedParamSet":{"employeeIds":true,"shop":true},"params":[{"name":"employeeIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":53,"b":64}]},{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":89,"b":93}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE \"staffMemberId\" = ANY(:employeeIds)\n  AND shop = COALESCE(:shop, shop)"};
 
 /**
  * Query generated from SQL:
  * ```
  * SELECT *
  * FROM "Employee"
- * WHERE shop = :shop
- * AND "employeeId" = ANY(:employeeIds)
+ * WHERE "staffMemberId" = ANY(:employeeIds)
+ *   AND shop = COALESCE(:shop, shop)
  * ```
  */
 export const getMany = new PreparedQuery<IGetManyParams,IGetManyResult>(getManyIR);
@@ -52,13 +54,15 @@ export interface IGetPageParams {
 
 /** 'GetPage' return type */
 export interface IGetPageResult {
-  employeeId: string;
+  createdAt: Date;
   isShopOwner: boolean;
   name: string;
   permissions: PermissionNodeArray | null;
   rate: string | null;
   shop: string;
+  staffMemberId: string;
   superuser: boolean;
+  updatedAt: Date;
 }
 
 /** 'GetPage' query type */
@@ -67,7 +71,7 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"shop":true,"query":true},"params":[{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":47,"b":51}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":84,"b":89}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE shop = COALESCE(:shop, shop)\nAND name ILIKE COALESCE(:query, '%')"};
+const getPageIR: any = {"usedParamSet":{"shop":true,"query":true},"params":[{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":47,"b":51}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":86,"b":91}]}],"statement":"SELECT *\nFROM \"Employee\"\nWHERE shop = COALESCE(:shop, shop)\n  AND name ILIKE COALESCE(:query, '%')"};
 
 /**
  * Query generated from SQL:
@@ -75,34 +79,87 @@ const getPageIR: any = {"usedParamSet":{"shop":true,"query":true},"params":[{"na
  * SELECT *
  * FROM "Employee"
  * WHERE shop = COALESCE(:shop, shop)
- * AND name ILIKE COALESCE(:query, '%')
+ *   AND name ILIKE COALESCE(:query, '%')
  * ```
  */
 export const getPage = new PreparedQuery<IGetPageParams,IGetPageResult>(getPageIR);
 
 
-/** 'UpsertMany' parameters type */
-export interface IUpsertManyParams {
-  employees: readonly ({
-    employeeId: string,
-    superuser: boolean,
-    permissions: PermissionNodeArray,
-    rate: string | null | void,
-    isShopOwner: boolean,
-    name: string
-  })[];
+/** 'Upsert' parameters type */
+export interface IUpsertParams {
+  isShopOwner: boolean;
+  name: string;
+  permissions: PermissionNodeArray;
+  rate?: string | null | void;
   shop: string;
+  staffMemberId: string;
+  superuser: boolean;
 }
 
-/** 'UpsertMany' return type */
-export interface IUpsertManyResult {
-  employeeId: string;
+/** 'Upsert' return type */
+export interface IUpsertResult {
+  createdAt: Date;
   isShopOwner: boolean;
   name: string;
   permissions: PermissionNodeArray | null;
   rate: string | null;
   shop: string;
+  staffMemberId: string;
   superuser: boolean;
+  updatedAt: Date;
+}
+
+/** 'Upsert' query type */
+export interface IUpsertQuery {
+  params: IUpsertParams;
+  result: IUpsertResult;
+}
+
+const upsertIR: any = {"usedParamSet":{"shop":true,"superuser":true,"permissions":true,"rate":true,"name":true,"isShopOwner":true,"staffMemberId":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":106,"b":111}]},{"name":"superuser","required":true,"transform":{"type":"scalar"},"locs":[{"a":114,"b":124}]},{"name":"permissions","required":true,"transform":{"type":"scalar"},"locs":[{"a":127,"b":139}]},{"name":"rate","required":false,"transform":{"type":"scalar"},"locs":[{"a":142,"b":146}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":149,"b":154}]},{"name":"isShopOwner","required":true,"transform":{"type":"scalar"},"locs":[{"a":157,"b":169}]},{"name":"staffMemberId","required":true,"transform":{"type":"scalar"},"locs":[{"a":172,"b":186}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = EXCLUDED.shop,\n      superuser     = EXCLUDED.superuser,\n      permissions   = EXCLUDED.permissions,\n      rate          = EXCLUDED.rate,\n      name          = EXCLUDED.name,\n      \"isShopOwner\" = EXCLUDED.\"isShopOwner\"\nRETURNING *"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")
+ * VALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)
+ * ON CONFLICT ("staffMemberId")
+ *   DO UPDATE
+ *   SET shop          = EXCLUDED.shop,
+ *       superuser     = EXCLUDED.superuser,
+ *       permissions   = EXCLUDED.permissions,
+ *       rate          = EXCLUDED.rate,
+ *       name          = EXCLUDED.name,
+ *       "isShopOwner" = EXCLUDED."isShopOwner"
+ * RETURNING *
+ * ```
+ */
+export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
+
+
+/** 'UpsertMany' parameters type */
+export interface IUpsertManyParams {
+  employees: readonly ({
+    shop: string,
+    superuser: boolean,
+    permissions: PermissionNodeArray,
+    rate: string | null | void,
+    name: string,
+    isShopOwner: boolean,
+    staffMemberId: string
+  })[];
+}
+
+/** 'UpsertMany' return type */
+export interface IUpsertManyResult {
+  createdAt: Date;
+  isShopOwner: boolean;
+  name: string;
+  permissions: PermissionNodeArray | null;
+  rate: string | null;
+  shop: string;
+  staffMemberId: string;
+  superuser: boolean;
+  updatedAt: Date;
 }
 
 /** 'UpsertMany' query type */
@@ -111,24 +168,21 @@ export interface IUpsertManyQuery {
   result: IUpsertManyResult;
 }
 
-const upsertManyIR: any = {"usedParamSet":{"shop":true,"employees":true},"params":[{"name":"employees","required":true,"transform":{"type":"pick_array_spread","keys":[{"name":"employeeId","required":true},{"name":"superuser","required":true},{"name":"permissions","required":true},{"name":"rate","required":false},{"name":"isShopOwner","required":true},{"name":"name","required":true}]},"locs":[{"a":183,"b":193}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":41,"b":46}]}],"statement":"WITH Input AS (\n    SELECT \"employeeId\", :shop! AS shop, rate, superuser, permissions, \"isShopOwner\", name\n    FROM (VALUES ('', FALSE, ARRAY[] :: \"PermissionNode\"[], '', FALSE, ''), :employees! OFFSET 1) AS t (\"employeeId\", superuser, permissions, rate, \"isShopOwner\", name)\n)\nINSERT INTO \"Employee\" (\"employeeId\", shop, superuser, permissions, rate, \"isShopOwner\", name)\nSELECT \"employeeId\", shop, superuser, permissions, rate, \"isShopOwner\", name\nFROM Input\nON CONFLICT (\"employeeId\", \"shop\")\nDO UPDATE SET \"rate\" = EXCLUDED.\"rate\",\n              \"superuser\" = EXCLUDED.\"superuser\",\n              \"permissions\" = EXCLUDED.\"permissions\",\n              \"isShopOwner\" = EXCLUDED.\"isShopOwner\",\n              \"name\" = EXCLUDED.\"name\"\nRETURNING *"};
+const upsertManyIR: any = {"usedParamSet":{"employees":true},"params":[{"name":"employees","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"shop","required":true},{"name":"superuser","required":true},{"name":"permissions","required":true},{"name":"rate","required":false},{"name":"name","required":true},{"name":"isShopOwner","required":true},{"name":"staffMemberId","required":true}]},"locs":[{"a":168,"b":177}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES ('', FALSE, ARRAY[] :: \"PermissionNode\"[], '', '', FALSE, ''), :employees OFFSET 1\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = EXCLUDED.shop,\n      superuser     = EXCLUDED.superuser,\n      permissions   = EXCLUDED.permissions,\n      rate          = EXCLUDED.rate,\n      name          = EXCLUDED.name,\n      \"isShopOwner\" = EXCLUDED.\"isShopOwner\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
- * WITH Input AS (
- *     SELECT "employeeId", :shop! AS shop, rate, superuser, permissions, "isShopOwner", name
- *     FROM (VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', FALSE, ''), :employees! OFFSET 1) AS t ("employeeId", superuser, permissions, rate, "isShopOwner", name)
- * )
- * INSERT INTO "Employee" ("employeeId", shop, superuser, permissions, rate, "isShopOwner", name)
- * SELECT "employeeId", shop, superuser, permissions, rate, "isShopOwner", name
- * FROM Input
- * ON CONFLICT ("employeeId", "shop")
- * DO UPDATE SET "rate" = EXCLUDED."rate",
- *               "superuser" = EXCLUDED."superuser",
- *               "permissions" = EXCLUDED."permissions",
- *               "isShopOwner" = EXCLUDED."isShopOwner",
- *               "name" = EXCLUDED."name"
+ * INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")
+ * VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', '', FALSE, ''), :employees OFFSET 1
+ * ON CONFLICT ("staffMemberId")
+ *   DO UPDATE
+ *   SET shop          = EXCLUDED.shop,
+ *       superuser     = EXCLUDED.superuser,
+ *       permissions   = EXCLUDED.permissions,
+ *       rate          = EXCLUDED.rate,
+ *       name          = EXCLUDED.name,
+ *       "isShopOwner" = EXCLUDED."isShopOwner"
  * RETURNING *
  * ```
  */
@@ -138,7 +192,6 @@ export const upsertMany = new PreparedQuery<IUpsertManyParams,IUpsertManyResult>
 /** 'DeleteMany' parameters type */
 export interface IDeleteManyParams {
   employeeIds: readonly (string)[];
-  shop: string;
 }
 
 /** 'DeleteMany' return type */
@@ -150,14 +203,14 @@ export interface IDeleteManyQuery {
   result: IDeleteManyResult;
 }
 
-const deleteManyIR: any = {"usedParamSet":{"shop":true,"employeeIds":true},"params":[{"name":"employeeIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":63,"b":75}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":36,"b":41}]}],"statement":"DELETE FROM \"Employee\"\nWHERE shop = :shop!\nAND \"employeeId\" IN :employeeIds!"};
+const deleteManyIR: any = {"usedParamSet":{"employeeIds":true},"params":[{"name":"employeeIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":48,"b":60}]}],"statement":"DELETE\nFROM \"Employee\"\nWHERE \"staffMemberId\" IN :employeeIds!"};
 
 /**
  * Query generated from SQL:
  * ```
- * DELETE FROM "Employee"
- * WHERE shop = :shop!
- * AND "employeeId" IN :employeeIds!
+ * DELETE
+ * FROM "Employee"
+ * WHERE "staffMemberId" IN :employeeIds!
  * ```
  */
 export const deleteMany = new PreparedQuery<IDeleteManyParams,IDeleteManyResult>(deleteManyIR);
@@ -179,7 +232,7 @@ export interface IDoesSuperuserExistQuery {
   result: IDoesSuperuserExistResult;
 }
 
-const doesSuperuserExistIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":60,"b":65}]}],"statement":"SELECT EXISTS (\n  SELECT 1\n  FROM \"Employee\"\n  WHERE shop = :shop!\n  AND superuser = TRUE\n) AS \"exists\""};
+const doesSuperuserExistIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":60,"b":65}]}],"statement":"SELECT EXISTS (\n  SELECT 1\n  FROM \"Employee\"\n  WHERE shop = :shop!\n    AND superuser = TRUE\n) AS \"exists\""};
 
 /**
  * Query generated from SQL:
@@ -188,7 +241,7 @@ const doesSuperuserExistIR: any = {"usedParamSet":{"shop":true},"params":[{"name
  *   SELECT 1
  *   FROM "Employee"
  *   WHERE shop = :shop!
- *   AND superuser = TRUE
+ *     AND superuser = TRUE
  * ) AS "exists"
  * ```
  */

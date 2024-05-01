@@ -1,13 +1,15 @@
-import { CreateWorkOrderCharge } from '../screens/routes.js';
-import { SegmentedControl, Stepper, Text, TextField, Stack, Selectable } from '@shopify/retail-ui-extensions-react';
+import { SegmentedControl, Text, TextField, Stack, Selectable } from '@shopify/retail-ui-extensions-react';
 import { Segment } from '@shopify/retail-ui-extensions/src/components/SegmentedControl/SegmentedControl.js';
-import { getChargesPrice } from '../create-work-order/charges.js';
+import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { CreateWorkOrderCharge } from '../types.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { FormDecimalField } from '@teifi-digital/pos-tools/form/components/FormDecimalField.js';
 
 type SegmentId = CreateWorkOrderCharge['type'] | 'none';
 
@@ -24,10 +26,7 @@ const segmentToggleName: Partial<Record<SegmentId, keyof ShopSettings['chargeSet
 
 type ChargeType<SegmentTypes extends SegmentId> = SegmentTypes extends 'none'
   ? null
-  : DiscriminatedUnionOmit<
-      CreateWorkOrderCharge & { type: SegmentTypes },
-      'chargeUuid' | 'lineItemUuid' | 'employeeId'
-    >;
+  : DiscriminatedUnionOmit<CreateWorkOrderCharge & { type: SegmentTypes }, 'uuid' | 'workOrderItemUuid' | 'employeeId'>;
 
 /**
  * Segmented labour configuration control.
@@ -55,6 +54,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
 
   const shouldShowSegment = (type: SegmentTypes[number]) => {
     if (type === charge?.type) return true;
+    if (charge?.removeLocked) return false;
     const toggleName = segmentToggleName[type];
     if (!toggleName) return true;
     return settings.chargeSettings[toggleName];
@@ -68,10 +68,11 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
 
   const selectedSegmentId = charge?.type ?? 'none';
 
-  const canResetLabour =
+  const canResetLabourRate =
     defaultHourlyRate &&
     charge?.type === 'hourly-labour' &&
-    !BigDecimal.fromMoney(defaultHourlyRate).equals(BigDecimal.fromMoney(charge.rate));
+    !BigDecimal.fromMoney(defaultHourlyRate).equals(BigDecimal.fromMoney(charge.rate)) &&
+    !charge.rateLocked;
 
   const onSelect = (id: SegmentTypes[number]) => {
     switch (id) {
@@ -84,7 +85,9 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
         const fixedPriceLabour: ChargeType<'fixed-price-labour'> = {
           type: 'fixed-price-labour',
           name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
-          amount: getChargesPrice(charge ? [charge] : []),
+          amount: getTotalPriceForCharges(charge ? [charge] : []),
+          amountLocked: false,
+          removeLocked: false,
         };
 
         onChange(fixedPriceLabour as any);
@@ -95,8 +98,11 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
         const hourlyLabour: ChargeType<'hourly-labour'> = {
           type: 'hourly-labour',
           name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
-          rate: getChargesPrice(charge ? [charge] : []),
+          rate: getTotalPriceForCharges(charge ? [charge] : []),
           hours: BigDecimal.ONE.toDecimal(),
+          rateLocked: false,
+          hoursLocked: false,
+          removeLocked: false,
         };
 
         onChange(hourlyLabour as any);
@@ -128,53 +134,34 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       )}
       {charge?.type === 'hourly-labour' && (
         <>
-          <Stack direction={'horizontal'} alignment={'space-between'}>
-            <Text color={'TextSubdued'} variant={'headingSmall'}>
-              Hourly Rate
-            </Text>
+          <Stack direction={'horizontal'} alignment={'flex-end'}>
             {defaultHourlyRate && (
               <Selectable
-                disabled={disabled || !canResetLabour}
+                disabled={disabled || !canResetLabourRate}
                 onPress={() => onChange({ ...charge, rate: defaultHourlyRate })}
               >
-                <Text color={canResetLabour ? 'TextInteractive' : 'TextSubdued'}>Reset</Text>
+                <Text color={canResetLabourRate ? 'TextInteractive' : 'TextSubdued'}>Reset</Text>
               </Selectable>
             )}
           </Stack>
-          <Stepper
-            disabled={disabled}
-            initialValue={Number(charge.rate)}
-            value={Number(charge.rate)}
-            minimumValue={0}
-            onValueChanged={(rate: number) => {
-              if (!BigDecimal.isValid(rate.toFixed(2))) return;
 
-              onChange({
-                ...charge,
-                rate: BigDecimal.fromString(rate.toFixed(2)).toMoney(),
-              });
-            }}
-          ></Stepper>
+          <FormMoneyField
+            label={'Hourly Rate'}
+            disabled={disabled || charge.rateLocked}
+            value={charge.rate}
+            min={0}
+            onChange={rate => onChange({ ...charge, rate })}
+            decimals={2}
+          />
 
-          <Stack direction={'horizontal'}>
-            <Text color={'TextSubdued'} variant={'headingSmall'}>
-              Hours
-            </Text>
-          </Stack>
-          <Stepper
-            disabled={disabled}
-            initialValue={Number(charge.hours)}
-            value={Number(charge.hours)}
-            minimumValue={0}
-            onValueChanged={(hours: number) => {
-              if (!BigDecimal.isValid(hours.toFixed(2))) return;
+          <FormDecimalField
+            label={'Hours'}
+            disabled={disabled || charge.hoursLocked}
+            value={charge.hours}
+            min={0}
+            onChange={hours => onChange({ ...charge, hours })}
+          />
 
-              onChange({
-                ...charge,
-                hours: BigDecimal.fromString(hours.toFixed(2)).toDecimal(),
-              });
-            }}
-          ></Stepper>
           <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
             <Text variant={'headingSmall'} color={'TextSubdued'}>
               {charge.hours} hours × {currencyFormatter(charge.rate)}/hour ={' '}
@@ -187,27 +174,15 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       )}
       {charge?.type === 'fixed-price-labour' && (
         <>
-          <Stack direction={'horizontal'} flexChildren>
-            <Text color={'TextSubdued'} variant={'headingSmall'}>
-              Price
-            </Text>
-          </Stack>
-          <Stack direction={'horizontal'} alignment={'space-between'} flexChildren>
-            <Stepper
-              disabled={disabled}
-              initialValue={Number(charge.amount)}
-              value={Number(charge.amount)}
-              minimumValue={0}
-              onValueChanged={(amount: number) => {
-                if (!BigDecimal.isValid(amount.toFixed(2))) return;
+          <FormMoneyField
+            label={'Price'}
+            disabled={disabled || charge.amountLocked}
+            value={charge.amount}
+            min={0}
+            onChange={amount => onChange({ ...charge, amount })}
+            decimals={2}
+          />
 
-                onChange({
-                  ...charge,
-                  amount: BigDecimal.fromString(amount.toFixed(2)).toMoney(),
-                });
-              }}
-            ></Stepper>
-          </Stack>
           <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
             <Text variant={'headingSmall'} color={'TextSubdued'}>
               {currencyFormatter(charge.amount)}

@@ -1,809 +1,637 @@
 import {
+  BadgeProps,
   Banner,
-  Button,
   DateField,
   List,
   ListRow,
-  NumberField,
   ScrollView,
   Stack,
   Text,
-  TextArea,
-  TextField,
-  useCartSubscription,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { useScreen } from '../hooks/use-screen.js';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
-import type { DateTime } from '@web/schemas/generated/create-work-order.js';
-import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
-import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
-import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
-import { useCreateWorkOrderReducer } from '../create-work-order/reducer.js';
+import {
+  CreateWorkOrderDispatchProxy,
+  WIPCreateWorkOrder,
+  useCreateWorkOrderReducer,
+} from '../create-work-order/reducer.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { CreateWorkOrderLineItem, ScreenInputOutput } from './routes.js';
-import { useUnsavedChangesDialog } from '@work-orders/common-pos/hooks/use-unsaved-changes-dialog.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { getChargesPrice } from '../create-work-order/charges.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { getTotalPriceForCharges } from '../create-work-order/charges.js';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
-import { ResponsiveGrid } from '@work-orders/common-pos/components/ResponsiveGrid.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { usePaymentHandler } from '../hooks/use-payment-handler.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { useRouter } from '../routes.js';
+import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
+import { useForm } from '@teifi-digital/pos-tools/form';
+import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
+import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { getPurchaseOrderBadge } from '../util/badges.js';
+import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
+import {
+  getProductServiceType,
+  QUANTITY_ADJUSTING_SERVICE,
+} from '@work-orders/common/metafields/product-service-type.js';
 
-/**
- * Stuff to pass around between components
- */
-type WorkOrderContext = ReturnType<typeof useWorkOrderContext>;
+export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
+  const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
 
-const useWorkOrderContext = () => {
-  const [unsavedChanges, setUnsavedChanges] = useState(false);
-  const [title, setTitle] = useState('');
-  const [createWorkOrder, dispatchCreateWorkOrder] = useCreateWorkOrderReducer();
+  const router = useRouter();
+  const screen = useScreen();
+  const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
+
+  screen.setTitle(createWorkOrder.name ?? 'New Work Order');
+  screen.addOverrideNavigateBack(unsavedChangesDialog.show);
+
   const fetch = useAuthenticatedFetch();
-  const api = useExtensionApi<'pos.home.modal.render'>();
-  const cart = useCartSubscription();
-  const settings = useSettingsQuery({ fetch })?.data?.settings;
-
-  const { Screen, usePopup, navigate } = useScreen('WorkOrder', async action => {
-    if (!settings) {
-      api.toast.show('Settings not loaded');
-      navigate('Entry');
-      return;
-    }
-
-    switch (action.type) {
-      case 'new-work-order': {
-        setTitle('New Work Order');
-
-        if (action.initial) {
-          dispatchCreateWorkOrder({
-            type: 'set-work-order',
-            workOrder: {
-              ...defaultCreateWorkOrder,
-              ...action.initial,
-            },
-          });
-        } else {
-          dispatchCreateWorkOrder({ type: 'reset-work-order' });
-
-          if (cart.customer) {
-            dispatchCreateWorkOrder({
-              type: 'set-field',
-              field: 'customerId',
-              value: createGid('Customer', String(cart.customer.id)),
-            });
-            api.toast.show('Imported customer from cart');
-          }
-        }
-
-        const defaultStatus = settings.defaultStatus;
-
-        if (defaultStatus) {
-          dispatchCreateWorkOrder({
-            type: 'set-field',
-            field: 'status',
-            value: defaultStatus,
-          });
-        }
-
-        break;
-      }
-
-      case 'load-work-order': {
-        setTitle(`Edit Work Order ${action.name}`);
-
-        dispatchCreateWorkOrder({
-          type: 'set-work-order',
-          workOrder: {
-            ...defaultCreateWorkOrder,
-            name: action.name,
-          },
-        });
-
-        break;
-      }
-
-      default: {
-        return action satisfies never;
-      }
-    }
-  });
-
-  const [shouldOpenSavedPopup, setShouldOpenSavedPopup] = useState(false);
-
-  const workOrderQuery = useWorkOrderQuery(
-    { fetch, name: createWorkOrder.name },
-    {
-      onSuccess({ workOrder }) {
-        if (!workOrder) return;
-        dispatchCreateWorkOrder({
-          type: 'set-work-order',
-          workOrder: workOrderToCreateWorkOrder(workOrder),
-        });
-
-        if (shouldOpenSavedPopup) {
-          workOrderSavedPopup.navigate(workOrder);
-          setShouldOpenSavedPopup(false);
-        }
-      },
-      onError() {
-        api.toast.show('Error loading work order');
-        navigate('Entry');
-      },
-    },
-  );
-
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      lineItems: createWorkOrder.lineItems ?? [],
-      charges: createWorkOrder.charges ?? [],
-      customerId: createWorkOrder.customerId,
-      discount: createWorkOrder.discount,
-    },
-    {
-      enabled: !createWorkOrder.name || workOrderQuery.data?.workOrder?.order.type !== 'order',
-    },
-  );
-
-  const workOrderSavedPopup = usePopup('WorkOrderSaved');
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation(
     { fetch },
     {
       onMutate() {
-        api.toast.show('Saving work order', { duration: 1000 });
+        toast.show('Saving work order', { duration: 1000 });
       },
       onError() {
-        api.toast.show('Error saving work order');
+        toast.show('Error saving work order');
       },
       onSuccess(workOrder) {
-        if (!workOrder.name) return;
-        setUnsavedChanges(false);
-        dispatchCreateWorkOrder({ type: 'set-work-order', workOrder: { ...createWorkOrder, name: workOrder.name } });
+        dispatch.set(workOrderToCreateWorkOrder(workOrder));
+        setHasUnsavedChanges(false);
+        router.push('WorkOrderSaved', { workOrder });
       },
     },
   );
 
-  return {
-    createWorkOrder,
-    dispatchCreateWorkOrder: (...[action]: Parameters<typeof dispatchCreateWorkOrder>) => {
-      setUnsavedChanges(action.type !== 'reset-work-order');
-      dispatchCreateWorkOrder(action);
-    },
-    unsavedChanges,
-    Screen,
-    title,
-    usePopup,
-    navigate,
-    calculatedDraftOrderQuery,
-    saveWorkOrderMutation,
-    workOrderQuery,
-    setShouldOpenSavedPopup,
-    hasOrder: workOrderQuery.data?.workOrder?.order.type === 'order',
-  };
-};
-
-export function WorkOrderPage() {
-  const context = useWorkOrderContext();
-  const { Screen } = context;
-
-  const paymentHandler = usePaymentHandler();
-  const unsavedChangesDialog = useUnsavedChangesDialog({
-    hasUnsavedChanges: context.unsavedChanges,
-    onAction: () => {
-      context.dispatchCreateWorkOrder({ type: 'reset-work-order' });
-      context.navigate('Entry');
-    },
-  });
-
-  const currencyFormatter = useCurrencyFormatter();
-
-  let bannerText: string | null = null;
-
-  if (context.hasOrder) {
-    const order = context.workOrderQuery.data?.workOrder?.order;
-
-    if (order) {
-      const isFullyPaid = BigDecimal.fromMoney(order.outstanding).equals(BigDecimal.ZERO);
-      const paymentText = isFullyPaid
-        ? 'paid in full'
-        : `partially paid (${currencyFormatter(order.received)} / ${currencyFormatter(order.total)})`;
-      bannerText = `This order has been ${paymentText} through order ${context.workOrderQuery.data?.workOrder?.order?.name}. You can no longer change the products and services within this order`;
-    }
-  }
+  const { Form } = useForm();
 
   return (
-    <Screen
-      title={context.title}
-      isLoading={
-        context.workOrderQuery.isFetching || context.saveWorkOrderMutation.isLoading || paymentHandler.isLoading
-      }
-      overrideNavigateBack={unsavedChangesDialog.show}
-    >
-      <ScrollView>
-        {bannerText && <Banner title={bannerText} variant={'information'} visible />}
-
-        {context.saveWorkOrderMutation.isError && (
-          <Banner
-            title={'Error saving work order: ' + extractErrorMessage(context.saveWorkOrderMutation.error, '')}
-            variant={'error'}
-            visible
-          />
-        )}
-
-        <WorkOrderProperties context={context} />
-
-        <Stack direction="horizontal" flexChildren>
-          <ResponsiveGrid columns={2}>
-            <WorkOrderItems context={context} />
-
-            <ResponsiveGrid columns={1}>
-              <WorkOrderDescription context={context} />
-              <WorkOrderAssignment context={context} />
-              <WorkOrderMoney context={context} />
-            </ResponsiveGrid>
-          </ResponsiveGrid>
-        </Stack>
-
-        <Stack direction="horizontal" flexChildren paddingVertical={'ExtraLarge'}>
-          <ShowDerivedFromOrderPreviewButton context={context} />
-          {!context.hasOrder && (
-            <Button
-              title={'Pay Balance'}
-              onPress={async () => {
-                const name = await context.saveWorkOrderMutation
-                  .mutateAsync(context.createWorkOrder)
-                  .then(result => result.name);
-
-                if (!name) {
-                  return;
-                }
-
-                const result = await context.workOrderQuery.refetch();
-                const workOrder = result.data?.workOrder;
-
-                if (!workOrder) {
-                  return;
-                }
-
-                await paymentHandler.handlePayment({ workOrder });
-              }}
+    <ScrollView>
+      <Form disabled={saveWorkOrderMutation.isLoading}>
+        <ResponsiveStack direction={'vertical'} spacing={2}>
+          {saveWorkOrderMutation.error && (
+            <Banner
+              title={`Error saving work order: ${extractErrorMessage(saveWorkOrderMutation.error)}`}
+              variant={'error'}
+              visible
             />
           )}
-          <Button
-            title={context.createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
-            type="primary"
-            onPress={() =>
-              context.saveWorkOrderMutation.mutate(context.createWorkOrder, {
-                onSuccess: response => {
-                  if (!response.errors) {
-                    context.setShouldOpenSavedPopup(true);
-                  }
-                },
-              })
-            }
-            isDisabled={context.saveWorkOrderMutation.isLoading}
-          />
-        </Stack>
-      </ScrollView>
-    </Screen>
+
+          <WorkOrderProperties createWorkOrder={createWorkOrder} dispatch={dispatch} />
+          <WorkOrderCustomFields createWorkOrder={createWorkOrder} dispatch={dispatch} />
+
+          <ResponsiveGrid columns={1}>
+            <WorkOrderItems createWorkOrder={createWorkOrder} dispatch={dispatch} />
+
+            <ResponsiveGrid columns={1}>
+              <FormStringField
+                label={'Note'}
+                type={'area'}
+                value={createWorkOrder.note}
+                onChange={(value: string) => dispatch.setPartial({ note: value })}
+              />
+              <FormStringField
+                label={'Hidden Note'}
+                type={'area'}
+                value={createWorkOrder.internalNote}
+                onChange={(value: string) => dispatch.setPartial({ internalNote: value })}
+              />
+              <DateField
+                label={'Due Date'}
+                value={createWorkOrder.dueDate}
+                onChange={(date: string) => {
+                  // TODO: Do we actually want to convert everything to UTC? (for display we need utc, but we can just do that in value)
+                  const dueDate = new Date(date);
+                  const dueDateUtc = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60 * 1000);
+                  dispatch.setPartial({ dueDate: dueDateUtc.toISOString() as DateTime });
+                }}
+                disabled={saveWorkOrderMutation.isLoading}
+              />
+              <WorkOrderMoneySummary createWorkOrder={createWorkOrder} dispatch={dispatch} />
+            </ResponsiveGrid>
+          </ResponsiveGrid>
+
+          <ResponsiveGrid columns={4} grow>
+            <FormButton
+              title={'Manage payments'}
+              type={'basic'}
+              action={'button'}
+              disabled={!createWorkOrder.name || hasUnsavedChanges}
+              onPress={() => {
+                if (createWorkOrder.name) {
+                  router.push('PaymentOverview', {
+                    name: createWorkOrder.name,
+                  });
+                }
+              }}
+            />
+
+            <FormButton
+              title={'Print'}
+              type={'basic'}
+              action={'button'}
+              disabled={!createWorkOrder.name || hasUnsavedChanges}
+              onPress={() => {
+                if (createWorkOrder.name) {
+                  router.push('PrintOverview', {
+                    name: createWorkOrder.name,
+                  });
+                }
+              }}
+            />
+
+            <FormButton
+              title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
+              type="primary"
+              action={'submit'}
+              disabled={!hasUnsavedChanges}
+              loading={saveWorkOrderMutation.isLoading}
+              onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
+            />
+          </ResponsiveGrid>
+
+          {!createWorkOrder.name ||
+            (hasUnsavedChanges && (
+              <Text color="TextSubdued" variant="body">
+                You must save your work order before you can manage payments/print
+              </Text>
+            ))}
+        </ResponsiveStack>
+      </Form>
+    </ScrollView>
   );
 }
 
-function WorkOrderDescription({ context }: { context: WorkOrderContext }) {
-  return (
-    <TextArea
-      rows={3}
-      label="Description"
-      value={context.createWorkOrder.description}
-      onChange={(value: string) => context.dispatchCreateWorkOrder({ type: 'set-field', field: 'description', value })}
-      error={context.saveWorkOrderMutation.data?.errors?.description ?? ''}
-    />
-  );
-}
-
-function ShowDerivedFromOrderPreviewButton({ context }: { context: WorkOrderContext }) {
-  if (!context.workOrderQuery.data?.workOrder?.derivedFromOrder) {
-    return null;
-  }
-
-  const { derivedFromOrder } = context.workOrderQuery.data.workOrder;
-
-  const title = `View Previous (${[derivedFromOrder.name, derivedFromOrder.workOrderName]
-    .filter(Boolean)
-    .join(' - ')})`;
-
-  // TODO: If derived from a work order, perhaps navigate to the work order instead of the order preview? Or just a work order preview
-
-  return (
-    <Button
-      title={title}
-      onPress={() =>
-        context.navigate('OrderPreview', {
-          orderId: derivedFromOrder.id,
-          unsavedChanges: context.unsavedChanges,
-          showImportButton: false,
-        })
-      }
-    />
-  );
-}
-
-const WorkOrderProperties = ({ context }: { context: WorkOrderContext }) => {
-  const statusSelectorPopup = context.usePopup('StatusSelector', result =>
-    context.dispatchCreateWorkOrder({
-      type: 'set-field',
-      field: 'status',
-      value: result,
-    }),
-  );
-
-  const customerSelectorPopup = context.usePopup('CustomerSelector', result =>
-    context.dispatchCreateWorkOrder({
-      type: 'set-field',
-      field: 'customerId',
-      value: result,
-    }),
-  );
-
+function WorkOrderProperties({
+  createWorkOrder,
+  dispatch,
+}: {
+  createWorkOrder: WIPCreateWorkOrder;
+  dispatch: CreateWorkOrderDispatchProxy;
+}) {
   const fetch = useAuthenticatedFetch();
-  const customerQuery = useCustomerQuery({ fetch, id: context.createWorkOrder.customerId });
-  const customerValue = context.createWorkOrder.customerId
-    ? customerQuery.isLoading
-      ? 'Loading...'
-      : customerQuery.data?.displayName ?? 'Unknown'
-    : null;
+
+  const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
+  const { workOrder } = workOrderQuery.data ?? {};
+
+  const derivedFromOrderQuery = useOrderQuery({ fetch, id: createWorkOrder.derivedFromOrderId });
+  const derivedFromOrder = derivedFromOrderQuery.data?.order;
+
+  const customerQuery = useCustomerQuery({ fetch, id: createWorkOrder.customerId });
+  const customer = customerQuery.data;
+
+  // TODO: Make Previous Order and Previous Work Orders clickable to view history (wrap in selectable or make it a button?)
+
+  const router = useRouter();
 
   return (
     <ResponsiveGrid columns={4} grow>
-      {context.workOrderQuery?.data?.workOrder?.name && (
-        <TextField label="Work Order ID" disabled value={context.workOrderQuery?.data?.workOrder?.name} />
+      {createWorkOrder.name && <FormStringField label="Work Order ID" disabled value={createWorkOrder.name} />}
+      {createWorkOrder.derivedFromOrderId && (
+        <FormStringField
+          label="Previous Order"
+          disabled
+          value={derivedFromOrder ? derivedFromOrder.name : 'Loading...'}
+        />
       )}
-      {context.workOrderQuery?.data?.workOrder?.derivedFromOrder &&
-        (context.workOrderQuery.data.workOrder.derivedFromOrder.workOrderName ? (
-          <TextField
-            label="Previous Work Order"
-            disabled
-            value={context.workOrderQuery.data.workOrder.derivedFromOrder.workOrderName}
-          />
-        ) : (
-          <TextField
-            label="Previous Order"
-            disabled
-            value={context.workOrderQuery.data.workOrder.derivedFromOrder.name}
-          />
-        ))}
-      <TextField
-        label="Status"
+      {derivedFromOrder && derivedFromOrder.workOrders?.length > 0 && (
+        <FormStringField
+          label="Previous Work Orders"
+          disabled
+          value={derivedFromOrder.workOrders.map(workOrder => workOrder.name).join(' • ')}
+        />
+      )}
+      <FormStringField
+        label={'Status'}
         required
-        placeholder="Status"
-        onFocus={() => statusSelectorPopup.navigate()}
-        value={context.createWorkOrder.status ?? ''}
-        error={context.saveWorkOrderMutation.data?.errors?.status ?? ''}
+        onFocus={() => router.push('StatusSelector', { onSelect: status => dispatch.setPartial({ status }) })}
+        value={createWorkOrder.status}
       />
-      <TextField
-        label="Customer"
+      <FormStringField
+        label={'Customer'}
         required
-        placeholder="Customer"
-        disabled={context.hasOrder}
-        onFocus={() => customerSelectorPopup.navigate()}
-        value={customerValue}
-        error={context.saveWorkOrderMutation.data?.errors?.customerId ?? ''}
+        onFocus={() => router.push('CustomerSelector', { onSelect: customerId => dispatch.setPartial({ customerId }) })}
+        disabled={workOrder?.orders.some(order => order.type === 'ORDER') ?? false}
+        value={
+          createWorkOrder.customerId === null
+            ? ''
+            : customerQuery.isLoading
+              ? 'Loading...'
+              : customer?.displayName ?? 'Unknown customer'
+        }
       />
     </ResponsiveGrid>
   );
-};
+}
 
-const WorkOrderItems = ({ context }: { context: WorkOrderContext }) => {
+function WorkOrderItems({
+  createWorkOrder,
+  dispatch,
+}: {
+  createWorkOrder: WIPCreateWorkOrder;
+  dispatch: CreateWorkOrderDispatchProxy;
+}) {
+  const router = useRouter();
   const [query, setQuery] = useState('');
 
-  const productSelectorPopup = context.usePopup('ProductSelector', ({ lineItems, charges }) => {
-    // TODO: Charge reduce types instead of set-field everywhere
-    context.dispatchCreateWorkOrder({
-      type: 'set-field',
-      field: 'charges',
-      value: [...(context.createWorkOrder.charges ?? []), ...charges],
-    });
-
-    for (const lineItem of lineItems) {
-      context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable: false });
-    }
-  });
-
-  const serviceSelectorPopup = context.usePopup('ServiceSelector', ({ type, lineItem, charges }) => {
-    const isUnstackable = type === 'mutable-service';
-
-    const createWorkOrderCharges = [...(context.createWorkOrder.charges ?? []), ...charges];
-
-    context.dispatchCreateWorkOrder({
-      type: 'set-field',
-      field: 'charges',
-      value: createWorkOrderCharges,
-    });
-
-    context.dispatchCreateWorkOrder({ type: 'upsert-line-item', lineItem, isUnstackable });
-
-    if (type === 'mutable-service') {
-      mutableServiceConfigPopup.navigate({
-        readonly: context.hasOrder,
-        hasBasePrice: false,
-        lineItem,
-        labour: createWorkOrderCharges.filter(l => l.lineItemUuid === lineItem.uuid) ?? [],
-      });
-    }
-  });
-
-  const handleLineItemConfigResult = (
-    result:
-      | { type: 'product' | 'mutable-service'; hasLabour: true; result: ScreenInputOutput['LabourLineItemConfig'][1] }
-      | { type: 'product' | 'fixed-service'; hasLabour: false; result: ScreenInputOutput['LineItemConfig'][1] },
-  ) => {
-    if (result.result.type === 'remove') {
-      context.dispatchCreateWorkOrder({
-        type: 'remove-line-item',
-        lineItem: result.result.lineItem,
-      });
-
-      if (result.hasLabour) {
-        context.dispatchCreateWorkOrder({
-          type: 'set-field',
-          field: 'charges',
-          value: context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== result.result.lineItem.uuid) ?? [],
-        });
-      }
-      return;
-    }
-
-    if (result.result.type === 'update') {
-      const lineItemUuid = result.result.lineItem.uuid;
-
-      if (result.hasLabour) {
-        context.dispatchCreateWorkOrder({
-          type: 'set-field',
-          field: 'charges',
-          value: [
-            ...(context.createWorkOrder.charges?.filter(l => l.lineItemUuid !== lineItemUuid) ?? []),
-            ...result.result.labour.map(l => ({ ...l, lineItemUuid })),
-          ],
-        });
-      }
-
-      context.dispatchCreateWorkOrder({
-        type: 'upsert-line-item',
-        lineItem: result.result.lineItem,
-        isUnstackable: result.type === 'mutable-service',
-      });
-
-      return;
-    }
-
-    if (result.result.type === 'assign-employees') {
-      labourLineItemConfigPopup.navigate({
-        readonly: context.hasOrder,
-        hasBasePrice: result.type !== 'mutable-service',
-        lineItem: result.result.lineItem,
-        labour: [],
-      });
-
-      return;
-    }
-
-    return result.result.type satisfies never;
-  };
-
-  const mutableServiceConfigPopup = context.usePopup('LabourLineItemConfig', result =>
-    handleLineItemConfigResult({ type: 'mutable-service', hasLabour: true, result }),
-  );
-
-  const fixedServiceConfigPopup = context.usePopup('LineItemConfig', result =>
-    handleLineItemConfigResult({ type: 'fixed-service', hasLabour: false, result }),
-  );
-
-  const productConfigPopup = context.usePopup('LineItemConfig', result =>
-    handleLineItemConfigResult({ type: 'product', hasLabour: false, result }),
-  );
-
-  const labourLineItemConfigPopup = context.usePopup('LabourLineItemConfig', result =>
-    handleLineItemConfigResult({ type: 'product', hasLabour: true, result }),
-  );
-
-  const rows = useItemRows(context, query, (type, lineItem) => {
-    switch (type) {
-      case 'product': {
-        const hasLabour = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
-
-        if (hasLabour) {
-          labourLineItemConfigPopup.navigate({
-            labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
-            hasBasePrice: true,
-            readonly: context.hasOrder,
-            lineItem,
-          });
-        } else {
-          productConfigPopup.navigate({
-            readonly: context.hasOrder,
-            canAddLabour: true,
-            lineItem,
-          });
-        }
-
-        break;
-      }
-
-      case 'fixed-service':
-        fixedServiceConfigPopup.navigate({
-          readonly: context.hasOrder,
-          canAddLabour: false,
-          lineItem,
-        });
-        break;
-
-      case 'mutable-service':
-        mutableServiceConfigPopup.navigate({
-          labour: context.createWorkOrder.charges?.filter(ea => ea.lineItemUuid === lineItem.uuid) ?? [],
-          hasBasePrice: false,
-          readonly: context.hasOrder,
-          lineItem,
-        });
-        break;
-
-      default: {
-        return type satisfies never;
-      }
-    }
-  });
+  const rows = useItemRows(createWorkOrder, dispatch, query);
 
   return (
     <ResponsiveGrid columns={1}>
       <ResponsiveGrid columns={2}>
-        <Button
+        <FormButton
           title="Add Product"
           type="primary"
-          onPress={() => productSelectorPopup.navigate()}
-          isDisabled={context.hasOrder}
+          action={'button'}
+          onPress={() =>
+            router.push('ProductSelector', {
+              onSelect: ({ item, charges }) => {
+                dispatch.updateItemCharges({ item, charges });
+                dispatch.addItems({ items: [item] });
+              },
+            })
+          }
         />
-        <Button
+
+        <FormButton
           title="Add Service"
           type="primary"
-          onPress={() => serviceSelectorPopup.navigate()}
-          isDisabled={context.hasOrder}
+          action={'button'}
+          onPress={() =>
+            router.push('ServiceSelector', {
+              createWorkOrder,
+              onSelect: ({ type, item, charges }) => {
+                const createWorkOrderCharges = [...(createWorkOrder.charges ?? []), ...charges];
+
+                dispatch.updateItemCharges({ item, charges });
+                dispatch.addItems({ items: [item] });
+
+                if (type === QUANTITY_ADJUSTING_SERVICE) {
+                  router.push('ItemChargeConfig', {
+                    item,
+                    createWorkOrder,
+                    initialCharges: createWorkOrderCharges,
+                    onRemove: () => dispatch.removeItems({ items: [item] }),
+                    onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
+                  });
+                }
+              },
+              onAddLabourToItem: item => {
+                router.push('ItemChargeConfig', {
+                  item,
+                  createWorkOrder,
+                  initialCharges: createWorkOrder.charges,
+                  onRemove: () => dispatch.removeItems({ items: [item] }),
+                  onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
+                });
+              },
+            })
+          }
         />
       </ResponsiveGrid>
+
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
         <List data={rows} imageDisplayStrategy={'always'}></List>
       ) : (
-        <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>
+        <ResponsiveStack direction="horizontal" alignment="center" paddingVertical={'Large'}>
           <Text variant="body" color="TextSubdued">
             No products or services added to work order
           </Text>
-        </Stack>
+        </ResponsiveStack>
       )}
     </ResponsiveGrid>
   );
-};
+}
 
-const WorkOrderMoney = ({ context }: { context: WorkOrderContext }) => {
-  const api = useExtensionApi<'pos.home.modal.render'>();
-
-  const discountSelectorPopup = context.usePopup('DiscountSelector', result => {
-    context.dispatchCreateWorkOrder({
-      type: 'set-field',
-      field: 'discount',
-      value: result,
-    });
-
-    api.toast.show('Applying discount', { duration: 1000 });
-  });
-
-  // TODO: Re-add this?
-  // const shippingConfigPopup = context.usePopup('ShippingConfig', result => {
-  //   context.dispatchCreateWorkOrder({
-  //     type: 'set-field',
-  //     field: 'price',
-  //     value: { ...price, shipping: result },
-  //   });
-  // });
-
-  const currencyFormatter = useCurrencyFormatter();
-
-  const { calculateDraftOrderResponse } = context.calculatedDraftOrderQuery.data ?? {};
-  const isLoading = context.calculatedDraftOrderQuery.isLoading;
-
-  const getFormattedCalculatedMoney = (
-    key: {
-      [K in keyof CalculateDraftOrderResponse]: CalculateDraftOrderResponse[K] extends Money ? K : never;
-    }[keyof CalculateDraftOrderResponse],
-  ) =>
-    isLoading
-      ? 'Loading...'
-      : calculateDraftOrderResponse?.[key]
-        ? currencyFormatter(calculateDraftOrderResponse[key])
-        : '-';
-
-  const receivedBigDecimal = context.workOrderQuery?.data?.workOrder?.order?.received
-    ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.received)
-    : BigDecimal.ZERO;
-  const totalPriceBigDecimal = context.workOrderQuery?.data?.workOrder?.order?.total
-    ? BigDecimal.fromMoney(context.workOrderQuery?.data?.workOrder?.order?.total)
-    : calculateDraftOrderResponse?.totalPrice
-      ? BigDecimal.fromMoney(calculateDraftOrderResponse?.totalPrice)
-      : BigDecimal.ZERO;
-  const outstandingBigDecimal = totalPriceBigDecimal.subtract(receivedBigDecimal);
-
-  const outstanding = currencyFormatter(outstandingBigDecimal.toMoney());
-  const total = currencyFormatter(totalPriceBigDecimal.toMoney());
-  const received = currencyFormatter(
-    context.workOrderQuery.data?.workOrder?.order?.received ?? BigDecimal.ZERO.toMoney(),
-  );
-
-  const discountValue = calculateDraftOrderResponse?.appliedDiscount
-    ? {
-        FIXED_AMOUNT: currencyFormatter(calculateDraftOrderResponse.appliedDiscount.value),
-        PERCENTAGE: `${calculateDraftOrderResponse.appliedDiscount.value}% (${currencyFormatter(
-          calculateDraftOrderResponse.appliedDiscount.amount,
-        )})`,
-      }[calculateDraftOrderResponse.appliedDiscount.valueType]
-    : '-';
+function WorkOrderCustomFields({
+  createWorkOrder,
+  dispatch,
+}: {
+  createWorkOrder: WIPCreateWorkOrder;
+  dispatch: CreateWorkOrderDispatchProxy;
+}) {
+  const router = useRouter();
 
   return (
-    <Stack direction="vertical" flex={1}>
-      <Stack direction="vertical" flex={1}>
-        <Stack direction={'horizontal'} flexChildren flex={1}>
-          <NumberField label="Subtotal" disabled value={getFormattedCalculatedMoney('subtotalPrice')} />
-          <NumberField
-            label={'Discount'}
-            value={discountValue}
-            disabled={!calculateDraftOrderResponse || context.hasOrder}
-            onFocus={() => {
-              const subTotal = calculateDraftOrderResponse
-                ? calculateDraftOrderResponse.subtotalPrice
-                : BigDecimal.ZERO.toMoney();
-              discountSelectorPopup.navigate({ subTotal });
-            }}
-          />
-        </Stack>
-        <Stack direction={'horizontal'} flexChildren flex={1}>
-          <NumberField label="Tax" disabled value={getFormattedCalculatedMoney('totalTax')} />
-          <NumberField label="Total" disabled value={getFormattedCalculatedMoney('totalPrice')} />
-        </Stack>
-      </Stack>
+    <ResponsiveGrid columns={4}>
+      {Object.entries(createWorkOrder.customFields).map(([key, value]) => (
+        <FormStringField
+          key={key}
+          label={key}
+          value={value}
+          onChange={(value: string) =>
+            dispatch.setPartial({ customFields: { ...createWorkOrder.customFields, [key]: value } })
+          }
+        />
+      ))}
 
-      <Stack direction="vertical" flexChildren flex={1}>
-        <Stack direction={'vertical'}>
-          <Stack direction={'horizontal'} flexChildren flex={1}>
-            <NumberField label={'Paid'} disabled={true} value={received} />
-            <NumberField label="Balance Due" disabled value={outstanding} />
-          </Stack>
-          {context.hasOrder && outstandingBigDecimal.compare(BigDecimal.ZERO) > 0 && (
-            <Banner
-              title={`This order has been partially paid (${received} / ${total}). The remaining balance can be paid through order ${context.workOrderQuery.data?.workOrder?.order?.name}`}
-              variant={'information'}
-              visible
-            />
-          )}
-        </Stack>
-      </Stack>
-    </Stack>
+      <FormButton
+        title={'Custom Fields'}
+        onPress={() => {
+          router.push('CustomFieldConfig', {
+            initialCustomFields: createWorkOrder.customFields,
+            onSave: customFields => dispatch.setPartial({ customFields }),
+            type: 'WORK_ORDER',
+          });
+        }}
+      />
+    </ResponsiveGrid>
   );
-};
+}
 
-const WorkOrderAssignment = ({ context }: { context: WorkOrderContext }) => {
-  const selectedEmployeeIds = unique(
-    context.createWorkOrder.charges?.map(employee => employee.employeeId).filter(isNonNullable) ?? [],
-  );
+function WorkOrderEmployees({ createWorkOrder }: { createWorkOrder: WIPCreateWorkOrder }) {
+  const employeeIds = unique(createWorkOrder.charges.map(charge => charge.employeeId).filter(isNonNullable));
 
   const fetch = useAuthenticatedFetch();
-  const employeeQueries = useEmployeeQueries({ fetch, ids: selectedEmployeeIds });
-  const selectedEmployeeNames = selectedEmployeeIds
-    .map(employeeId => employeeQueries[employeeId]?.data?.name ?? 'Unknown Employee')
-    .join('\n');
+  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
 
-  const setDueDate = (date: string) => {
-    const dueDate = new Date(date);
-    const dueDateUtc = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60 * 1000);
-    context.dispatchCreateWorkOrder({
-      type: 'set-field',
-      field: 'dueDate',
-      value: dueDateUtc.toISOString() as DateTime,
-    });
-  };
+  const isLoading = Object.values(employeeQueries).some(query => query.isLoading);
+  const employeeNames = employeeIds.map(id => {
+    let label = employeeQueries[id]?.data?.name ?? 'Unknown Employee';
+
+    const employeeHours = BigDecimal.sum(
+      ...createWorkOrder.charges
+        .filter(hasPropertyValue('employeeId', id))
+        .filter(hasPropertyValue('type', 'hourly-labour'))
+        .map(charge => BigDecimal.fromDecimal(charge.hours)),
+    );
+
+    if (employeeHours.compare(BigDecimal.ZERO) > 0) {
+      label = `${label} (${employeeHours.round(2).trim().toDecimal()})`;
+    }
+
+    return label;
+  });
+
+  const totalHours = BigDecimal.sum(
+    ...createWorkOrder.charges
+      .filter(hasPropertyValue('type', 'hourly-labour'))
+      .map(charge => BigDecimal.fromDecimal(charge.hours)),
+  );
+
+  const nonEmployeeHours = BigDecimal.sum(
+    ...createWorkOrder.charges
+      .filter(hasPropertyValue('type', 'hourly-labour'))
+      .filter(hasPropertyValue('employeeId', null))
+      .map(charge => BigDecimal.fromDecimal(charge.hours)),
+  );
+
+  let totalHoursLabel = 'Total Hours';
+
+  if (nonEmployeeHours.compare(BigDecimal.ZERO) > 0) {
+    totalHoursLabel = `${totalHoursLabel} (${nonEmployeeHours.round(2).trim().toDecimal()} hours unassigned)`;
+  }
 
   return (
-    <Stack direction="vertical" flex={1} flexChildren>
-      <TextArea
-        rows={Math.max(1, selectedEmployeeIds.length) - 1}
+    <ResponsiveGrid columns={2}>
+      <FormStringField
+        label={'Assigned Employees'}
+        type={'area'}
         disabled
-        label="Assigned Employees"
-        value={selectedEmployeeNames}
-        error={context.saveWorkOrderMutation.data?.errors?.description ?? ''}
+        value={isLoading ? 'Loading...' : employeeNames.join(', ')}
       />
-      <DateField
-        label="Due date"
-        value={context.createWorkOrder.dueDate}
-        onChange={setDueDate}
-        error={context.saveWorkOrderMutation.data?.errors?.dueDate ?? ''}
-      />
-    </Stack>
+      {totalHours.compare(BigDecimal.ZERO) > 0 && (
+        <FormStringField
+          label={totalHoursLabel}
+          type={'decimal'}
+          disabled
+          value={totalHours.round(2).trim().toDecimal()}
+          formatter={hours => `${hours} hours`}
+        />
+      )}
+    </ResponsiveGrid>
   );
-};
+}
 
-function useItemRows(
-  context: WorkOrderContext,
-  query: string,
-  openPopup: (type: 'product' | 'mutable-service' | 'fixed-service', lineItem: CreateWorkOrderLineItem) => void,
-): ListRow[] {
+function WorkOrderMoneySummary({
+  createWorkOrder,
+  dispatch,
+}: {
+  createWorkOrder: WIPCreateWorkOrder;
+  dispatch: CreateWorkOrderDispatchProxy;
+}) {
+  const fetch = useAuthenticatedFetch();
+  const currencyFormatter = useCurrencyFormatter();
+  const formatter = (value: Money | null) => (value !== null ? currencyFormatter(value) : '-');
+
+  // this calculation automatically accounts for paid-for items
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      name: createWorkOrder.name,
+      items: createWorkOrder.items,
+      charges: createWorkOrder.charges,
+      customerId: createWorkOrder.customerId!,
+      discount: createWorkOrder.discount,
+    },
+    { enabled: createWorkOrder.customerId !== null },
+  );
+  const calculatedDraftOrder = calculatedDraftOrderQuery.data;
+
+  let appliedDiscount = BigDecimal.ZERO;
+
+  if (calculatedDraftOrder) {
+    appliedDiscount = BigDecimal.fromMoney(calculatedDraftOrder.orderDiscount.applied).add(
+      BigDecimal.fromMoney(calculatedDraftOrder.lineItemDiscount.applied),
+    );
+  }
+
+  const router = useRouter();
+
+  return (
+    <ResponsiveGrid columns={1}>
+      <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+        <Text variant={'headingLarge'}>Summary</Text>
+      </Stack>
+
+      {calculatedDraftOrderQuery.error && (
+        <Banner
+          title={`Error calculating work order: ${extractErrorMessage(calculatedDraftOrderQuery.error)}`}
+          variant={'error'}
+          visible
+        />
+      )}
+
+      <WorkOrderEmployees createWorkOrder={createWorkOrder} />
+
+      <ResponsiveGrid columns={2} grow>
+        <FormStringField
+          label={'Discount'}
+          value={(() => {
+            if (!createWorkOrder.discount) return '';
+
+            if (createWorkOrder.discount.type === 'FIXED_AMOUNT') {
+              return currencyFormatter(createWorkOrder.discount.value);
+            }
+
+            if (createWorkOrder.discount.type === 'PERCENTAGE') {
+              let value = `${createWorkOrder.discount.value}%`;
+
+              if (calculatedDraftOrder) {
+                const discount = BigDecimal.fromMoney(calculatedDraftOrder.orderDiscount.total).add(
+                  BigDecimal.fromMoney(calculatedDraftOrder.lineItemDiscount.total),
+                );
+
+                const amount = discount.subtract(appliedDiscount);
+
+                value += ` (${currencyFormatter(amount.round(2).toMoney())})`;
+              }
+
+              return value;
+            }
+
+            return createWorkOrder.discount satisfies never;
+          })()}
+          onFocus={() => router.push('DiscountSelector', { onSelect: discount => dispatch.setPartial({ discount }) })}
+        />
+        {appliedDiscount.compare(BigDecimal.ZERO) > 0 && (
+          <FormMoneyField
+            label={'Applied Discount'}
+            disabled
+            value={appliedDiscount.round(2).toMoney()}
+            formatter={formatter}
+          />
+        )}
+        <FormMoneyField label={'Subtotal'} disabled value={calculatedDraftOrder?.subtotal} formatter={formatter} />
+        <FormMoneyField label={'Tax'} disabled value={calculatedDraftOrder?.tax} formatter={formatter} />
+        <FormMoneyField label={'Total'} disabled value={calculatedDraftOrder?.total} formatter={formatter} />
+
+        <FormMoneyField label={'Paid'} disabled value={calculatedDraftOrder?.paid} formatter={formatter} />
+        <FormMoneyField
+          label={'Balance Due'}
+          disabled
+          value={calculatedDraftOrder?.outstanding}
+          formatter={formatter}
+        />
+      </ResponsiveGrid>
+    </ResponsiveGrid>
+  );
+}
+
+function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOrderDispatchProxy, query: string) {
   const fetch = useAuthenticatedFetch();
   const currencyFormatter = useCurrencyFormatter();
 
-  const productVariantQueries = useProductVariantQueries({
-    fetch,
-    ids: context.createWorkOrder.lineItems?.map(li => li.productVariantId) ?? [],
-  });
+  const productVariantIds = unique(createWorkOrder.items.map(item => item.productVariantId).filter(isNonNullable));
+  const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  return (
-    context.createWorkOrder.lineItems
-      ?.map(lineItem => ({ lineItem, productVariant: productVariantQueries[lineItem.productVariantId]?.data ?? null }))
-      ?.filter(
-        ({ productVariant }) =>
-          !query || getProductVariantName(productVariant)?.toLowerCase().includes(query.toLowerCase()),
-      )
-      ?.map<ListRow>(({ lineItem, productVariant }) => {
-        const isMutableServiceItem = productVariant?.product.isMutableServiceItem ?? false;
+  const { workOrderQuery, getItemOrdersIncludingCharges } = useWorkOrderOrders(createWorkOrder.name);
 
-        const basePrice = productVariant && !isMutableServiceItem ? productVariant.price : BigDecimal.ZERO.toMoney();
+  const isLoading = [workOrderQuery, ...Object.values(productVariantQueries)].some(query => query.isLoading);
 
-        const labourPrice = getChargesPrice(
-          context.createWorkOrder.charges?.filter(assignment => assignment.lineItemUuid === lineItem.uuid) ?? [],
-        );
+  const router = useRouter();
+  const screen = useScreen();
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
-        const hasLabour = context.createWorkOrder.charges?.some(ea => ea.lineItemUuid === lineItem.uuid);
+  screen.setIsLoading(isLoading);
 
-        return {
-          id: lineItem.uuid,
-          onPress() {
-            if (!productVariant || !lineItem) return;
+  function queryFilter(productVariant?: ProductVariant | null) {
+    return (
+      !productVariant || !query || getProductVariantName(productVariant)?.toLowerCase().includes(query.toLowerCase())
+    );
+  }
 
-            const popupType = productVariant.product.isMutableServiceItem
-              ? 'mutable-service'
-              : productVariant.product.isFixedServiceItem
-                ? 'fixed-service'
-                : 'product';
+  return createWorkOrder.items
+    .map(item => {
+      return {
+        item,
+        productVariant: productVariantQueries[item.productVariantId]?.data,
+        purchaseOrders: workOrderQuery.data?.workOrder?.items.find(i => i.uuid === item.uuid)?.purchaseOrders ?? [],
+      };
+    })
+    .filter(({ productVariant }) => queryFilter(productVariant))
+    .map<ListRow>(({ item, productVariant, purchaseOrders }) => {
+      const isMutableService =
+        getProductServiceType(productVariant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
+      const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
+      const hasCharges = charges.length > 0;
 
-            openPopup(popupType, lineItem);
+      const basePrice = isMutableService
+        ? BigDecimal.ZERO.toMoney()
+        : productVariant?.price ?? BigDecimal.ZERO.toMoney();
+
+      const chargesPrice = getTotalPriceForCharges(charges);
+
+      const totalPrice = BigDecimal.fromMoney(basePrice)
+        .multiply(BigDecimal.fromString(item.quantity.toFixed(0)))
+        .add(BigDecimal.fromMoney(chargesPrice));
+
+      const orders = getItemOrdersIncludingCharges(item).filter(order => order.type === 'ORDER');
+
+      return {
+        id: item.uuid,
+        leftSide: {
+          label: getProductVariantName(productVariant) ?? 'Unknown item',
+          subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
+          image: {
+            source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
+            badge: (!isMutableService && !hasCharges) || item.quantity > 1 ? item.quantity : undefined,
           },
-          leftSide: {
-            label: getProductVariantName(productVariant) ?? 'Unknown item',
-            subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
-            image: {
-              source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
-              badge: productVariant?.product.isMutableServiceItem || hasLabour ? undefined : lineItem.quantity,
+          badges: [
+            ...unique(orders.map(order => order.name)).map<BadgeProps>(orderName => ({
+              text: orderName,
+              variant: 'highlight',
+            })),
+            ...purchaseOrders.map<BadgeProps>(po => getPurchaseOrderBadge(po, true)),
+          ],
+        },
+        rightSide: {
+          label: currencyFormatter(totalPrice.toMoney()),
+          showChevron: true,
+        },
+        onPress() {
+          if (!productVariant) {
+            toast.show('Cannot edit item - product variant not found');
+            return;
+          }
+
+          if (hasCharges || isMutableService) {
+            router.push('ItemChargeConfig', {
+              item,
+              createWorkOrder,
+              initialCharges: charges,
+              onRemove: () => dispatch.removeItems({ items: [item] }),
+              onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
+            });
+            return;
+          }
+
+          router.push('ItemConfig', {
+            workOrderName: createWorkOrder.name,
+            item,
+            onRemove: () => dispatch.removeItems({ items: [item] }),
+            onUpdate: item => dispatch.updateItem({ item }),
+            onAssignLabour: item => {
+              dispatch.updateItem({ item });
+              router.push('ItemChargeConfig', {
+                item,
+                initialCharges: charges,
+                createWorkOrder,
+                onRemove: () => dispatch.removeItems({ items: [item] }),
+                onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
+              });
             },
-          },
-          rightSide: {
-            label: currencyFormatter(
-              BigDecimal.fromMoney(basePrice)
-                .add(BigDecimal.fromMoney(labourPrice))
-                .multiply(BigDecimal.fromString(lineItem.quantity.toFixed(0)))
-                .toMoney(),
-            ),
-            showChevron: true,
-          },
-        };
-      }) ?? []
-  );
+          });
+        },
+      };
+    });
 }

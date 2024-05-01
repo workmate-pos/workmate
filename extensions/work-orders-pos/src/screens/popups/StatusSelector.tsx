@@ -1,18 +1,26 @@
 import { Button, Stack } from '@shopify/retail-ui-extensions-react';
-import { useScreen } from '../../hooks/use-screen.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useRouter } from '../../routes.js';
 
-export function StatusSelector() {
-  const { Screen, closePopup } = useScreen('StatusSelector');
+export function StatusSelector({ onSelect }: { onSelect: (status: string) => void }) {
   const fetch = useAuthenticatedFetch();
   const settings = useSettingsQuery({ fetch })?.data?.settings;
 
+  const router = useRouter();
+
   return (
-    <Screen title="Select Status" presentation={{ sheet: true }}>
-      <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
-        {settings?.statuses.map(status => <Button title={status} onPress={() => closePopup(status)} />)}
-      </Stack>
-    </Screen>
+    <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
+      {settings?.statuses.map(status => (
+        <Button
+          key={status}
+          title={status}
+          onPress={() => {
+            onSelect(status);
+            router.popCurrent();
+          }}
+        />
+      ))}
+    </Stack>
   );
 }

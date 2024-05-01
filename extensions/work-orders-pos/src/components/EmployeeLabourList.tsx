@@ -1,31 +1,37 @@
 import { List, ListRowLeftSide, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useCurrencyFormatter } from '../hooks/use-currency-formatter.js';
 import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { getChargesPrice } from '../create-work-order/charges.js';
-import { CreateWorkOrderCharge } from '../screens/routes.js';
+import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { CreateWorkOrderCharge } from '../types.js';
+import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 /**
  * A list of clickable EmployeeLabour items.
  */
 export function EmployeeLabourList({
-  labour,
+  workOrderName,
+  charges,
   onClick,
-  readonly = false,
 }: {
-  readonly?: boolean;
-  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'lineItemUuid'>[];
-  onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'lineItemUuid'>) => void;
+  workOrderName: string | null;
+  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>[];
+  onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>) => void;
 }) {
   const currencyFormatter = useCurrencyFormatter();
 
   const fetch = useAuthenticatedFetch();
-  const employeeQueries = useEmployeeQueries({ fetch, ids: labour.map(e => e.employeeId).filter(isNonNullable) });
+  const employeeQueries = useEmployeeQueries({ fetch, ids: charges.map(e => e.employeeId).filter(isNonNullable) });
+  const { workOrderQuery, getChargeOrder } = useWorkOrderOrders(workOrderName);
 
-  if (labour.length === 0) {
+  const screen = useScreen();
+  screen.setIsLoading(workOrderQuery.isLoading || Object.values(employeeQueries).some(q => q.isLoading));
+
+  if (charges.length === 0) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text variant="body" color="TextSubdued">
@@ -37,28 +43,34 @@ export function EmployeeLabourList({
 
   return (
     <List
-      data={labour.map(l => {
-        const query = employeeQueries[l.employeeId];
+      data={charges.map(charge => {
+        const query = employeeQueries[charge.employeeId];
 
-        const price = getChargesPrice([l]);
+        const price = getTotalPriceForCharges([charge]);
 
         const leftSide: ListRowLeftSide =
-          l.type === 'hourly-labour'
+          charge.type === 'hourly-labour'
             ? {
                 label: query?.data?.name ?? 'Unknown Employee',
-                subtitle: [l.name, `${l.hours} hours × ${currencyFormatter(l.rate)}/hour`],
+                subtitle: [charge.name, `${charge.hours} hours × ${currencyFormatter(charge.rate)}/hour`],
               }
             : {
                 label: query?.data?.name ?? 'Unknown Employee',
-                subtitle: [l.name, currencyFormatter(l.amount)],
+                subtitle: [charge.name, currencyFormatter(charge.amount)],
               };
 
         return {
-          id: l.employeeId,
-          onPress: readonly ? undefined : () => onClick(l),
-          leftSide,
+          id: charge.employeeId,
+          onPress: getChargeOrder(charge)?.type === 'ORDER' ? undefined : () => onClick(charge),
+          leftSide: {
+            ...leftSide,
+            badges: [getChargeOrder(charge)]
+              .filter(isNonNullable)
+              .filter(order => order?.type === 'ORDER')
+              .map(order => ({ text: order.name, variant: 'highlight' })),
+          },
           rightSide: {
-            showChevron: !readonly,
+            showChevron: getChargeOrder(charge)?.type !== 'ORDER',
             label: currencyFormatter(price),
           },
         };

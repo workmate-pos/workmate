@@ -1,103 +1,185 @@
-import { BadgeVariant, Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { PopupNavigateFn, useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
+import { Button, List, ListRow, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
 import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-purchase-order-info-page-query.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { Status } from '@web/schemas/generated/create-purchase-order.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { ResponsiveStack } from '@work-orders/common-pos/components/ResponsiveStack.js';
-import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
+import { useRouter } from '../routes.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { defaultCreatePurchaseOrder } from '@work-orders/common/create-purchase-order/default.js';
+import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
+import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function Entry() {
-  const [query, setQuery] = useState('');
-
-  const { Screen, navigate } = useScreen('Entry', () => {
-    setQuery('');
-  });
+  const [query, setQuery] = useDebouncedState('');
+  const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
 
   const fetch = useAuthenticatedFetch();
-  const purchaseOrderInfoQuery = usePurchaseOrderInfoPageQuery({ fetch, query });
+  const purchaseOrderInfoQuery = usePurchaseOrderInfoPageQuery({
+    fetch,
+    query,
+    customFieldFilters,
+  });
   const purchaseOrders = purchaseOrderInfoQuery.data?.pages ?? [];
 
-  const purchaseOrderRows = getPurchaseOrderRows(purchaseOrders, arg => navigate('PurchaseOrder', arg));
+  const settingsQuery = useSettingsQuery({ fetch });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const purchaseOrderRows = usePurchaseOrderRows(purchaseOrders);
+
+  const screen = useScreen();
+  screen.setIsLoading(settingsQuery.isLoading || customFieldsPresetsQuery.isLoading);
+
+  const router = useRouter();
+
+  if (settingsQuery.isError) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(settingsQuery.error, 'An error occurred while loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
 
   return (
-    <Screen title={'Purchase Orders'} isLoading={isLoading}>
-      <ScrollView>
-        <PermissionBoundary
-          permissions={['read_settings', 'read_purchase_orders', 'read_employees']}
-          onIsLoading={setIsLoading}
-        >
-          <ResponsiveStack direction={'horizontal'} alignment={'space-between'} paddingVertical={'Small'}>
-            <ResponsiveStack direction={'horizontal'}>
-              <Text variant="headingLarge">Purchase Orders</Text>
-            </ResponsiveStack>
-            <Button title={'New Purchase Order'} type={'primary'} onPress={() => navigate('PurchaseOrder', null)} />
-          </ResponsiveStack>
+    <>
+      <ResponsiveStack direction={'horizontal'} alignment={'space-between'} paddingVertical={'Small'}>
+        <ResponsiveStack direction={'horizontal'}>
+          <Text variant="headingLarge">Purchase Orders</Text>
+        </ResponsiveStack>
+        <Button
+          title={'New Purchase Order'}
+          type={'primary'}
+          onPress={() => {
+            if (!settingsQuery.data) {
+              return;
+            }
 
-          <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+            if (!customFieldsPresetsQuery.data) {
+              return;
+            }
+
+            const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
+            const createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
+
+            const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
+            const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
+
+            router.push('PurchaseOrder', {
+              initialCreatePurchaseOrder: {
+                ...createPurchaseOrder,
+                customFields: {
+                  ...Object.fromEntries(defaultCustomFieldKeys.map(key => [key, ''])),
+                  ...createPurchaseOrder.customFields,
+                },
+              },
+              purchaseOrder: null,
+            });
+          }}
+        />
+      </ResponsiveStack>
+
+      <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {purchaseOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
+        </Text>
+      </Stack>
+
+      <ResponsiveStack
+        direction={'horizontal'}
+        alignment={'space-between'}
+        paddingVertical={'Small'}
+        sm={{ direction: 'vertical', alignment: 'center' }}
+      >
+        <Button
+          title={'Filter Custom Fields'}
+          onPress={() =>
+            router.push('CustomFieldFilterConfig', {
+              onSave: setCustomFieldFilters,
+              initialFilters: customFieldFilters,
+            })
+          }
+        />
+      </ResponsiveStack>
+
+      <ResponsiveStack direction={'vertical'} spacing={1} paddingVertical={'ExtraSmall'}>
+        {customFieldFilters.length > 0 && (
+          <>
             <Text variant="body" color="TextSubdued">
-              {purchaseOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
+              Active filters:
             </Text>
-          </Stack>
-          <ControlledSearchBar
-            value={query}
-            onTextChange={setQuery}
-            onSearch={() => {}}
-            placeholder={'Search purchase orders'}
-          />
-          <List
-            data={purchaseOrderRows}
-            onEndReached={purchaseOrderInfoQuery.fetchNextPage}
-            isLoadingMore={purchaseOrderInfoQuery.isFetchingNextPage}
-          />
-          {purchaseOrderInfoQuery.isLoading && (
-            <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-              <Text variant="body" color="TextSubdued">
-                Loading purchase orders...
+            {customFieldFilters.map((filter, i) => (
+              <Text key={i} variant="body" color="TextSubdued">
+                • {getCustomFieldFilterText(filter)}
               </Text>
-            </Stack>
-          )}
-          {purchaseOrderInfoQuery.isSuccess && purchaseOrderRows.length === 0 && (
-            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-              <Text variant="body" color="TextSubdued">
-                No purchase orders found
-              </Text>
-            </Stack>
-          )}
-          {purchaseOrderInfoQuery.isError && (
-            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-              <Text color="TextCritical" variant="body">
-                {extractErrorMessage(purchaseOrderInfoQuery.error, 'An error occurred while loading purchase orders')}
-              </Text>
-            </Stack>
-          )}
-        </PermissionBoundary>
-      </ScrollView>
-    </Screen>
+            ))}
+          </>
+        )}
+      </ResponsiveStack>
+
+      <ControlledSearchBar
+        value={query}
+        onTextChange={setQuery}
+        onSearch={() => {}}
+        placeholder={'Search purchase orders'}
+      />
+      <List
+        data={purchaseOrderRows}
+        onEndReached={purchaseOrderInfoQuery.fetchNextPage}
+        isLoadingMore={purchaseOrderInfoQuery.isFetchingNextPage}
+      />
+      {purchaseOrderInfoQuery.isLoading && (
+        <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            Loading purchase orders...
+          </Text>
+        </Stack>
+      )}
+      {purchaseOrderInfoQuery.isSuccess && purchaseOrderRows.length === 0 && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No purchase orders found
+          </Text>
+        </Stack>
+      )}
+      {purchaseOrderInfoQuery.isError && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(purchaseOrderInfoQuery.error, 'An error occurred while loading purchase orders')}
+          </Text>
+        </Stack>
+      )}
+    </>
   );
 }
 
-function getPurchaseOrderRows(
-  purchaseOrders: PurchaseOrderInfo[],
-  openPurchaseOrder: PopupNavigateFn<'PurchaseOrder'>,
-) {
+function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
+  const router = useRouter();
+
   return purchaseOrders.map<ListRow>(purchaseOrder => ({
     id: purchaseOrder.name,
-    onPress: () => openPurchaseOrder(purchaseOrder),
+    onPress: () => {
+      router.push('PurchaseOrder', {
+        initialCreatePurchaseOrder: createPurchaseOrderFromPurchaseOrder(purchaseOrder),
+        purchaseOrder,
+      });
+    },
     leftSide: {
       label: purchaseOrder.name,
       subtitle: getPurchaseOrderSubtitle(purchaseOrder),
       badges: [
         {
           text: titleCase(purchaseOrder.status),
-          variant: getPurchaseOrderBadgeVariant(purchaseOrder),
+          variant: 'highlight',
         },
       ],
     },
@@ -110,9 +192,9 @@ function getPurchaseOrderRows(
 function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
   const possibilities = [
     purchaseOrder.vendorName,
-    purchaseOrder.locationName,
-    purchaseOrder.workOrderName,
-    purchaseOrder.customerName,
+    purchaseOrder.location?.name,
+    purchaseOrder.linkedOrders.map(order => order.name).join(', '),
+    purchaseOrder.linkedCustomers.map(customer => customer.displayName).join(', '),
   ].filter(isNonNullable);
 
   if (possibilities.length === 0) {
@@ -120,15 +202,4 @@ function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
   }
 
   return possibilities.slice(0, 3) as [string] | [string, string] | [string, string, string];
-}
-
-function getPurchaseOrderBadgeVariant(purchaseOrder: PurchaseOrderInfo) {
-  const mapping: Record<Status, BadgeVariant> = {
-    OPEN: 'success',
-    CANCELLED: 'neutral',
-    CLOSED: 'neutral',
-    RECEIVED: 'neutral',
-  };
-
-  return mapping[purchaseOrder.status];
 }

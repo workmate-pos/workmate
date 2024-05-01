@@ -1,20 +1,24 @@
-import {
-  Authenticated,
-  BodySchema,
-  Get,
-  Post,
-  QuerySchema,
-} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
 import { Permission } from '../../decorators/permission.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
 import { Session } from '@shopify/shopify-api';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { upsertPurchaseOrder } from '../../services/purchase-orders/upsert.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
 import { PurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
+import { db } from '../../services/db/db.js';
+import { PurchaseOrderPrintJob } from '../../schemas/generated/purchase-order-print-job.js';
+import { getShopSettings } from '../../services/settings.js';
+import {
+  getPurchaseOrderTemplateData,
+  getRenderedPurchaseOrderTemplate,
+} from '../../services/mail/templates/purchase-order.js';
+import { renderHtmlToPdfCustomFile } from '../../services/mail/html-pdf/renderer.js';
+import { mg } from '../../services/mail/mailgun.js';
 
 @Authenticated()
 export default class PurchaseOrdersController {
@@ -63,6 +67,68 @@ export default class PurchaseOrdersController {
 
     return res.json({ purchaseOrders });
   }
+
+  @Get('/common-custom-fields')
+  @QuerySchema('offset-pagination-options')
+  @Permission('read_purchase_orders')
+  async fetchPurchaseOrderCustomFields(
+    req: Request<unknown, unknown, unknown, OffsetPaginationOptions>,
+    res: Response<FetchPurchaseOrderCustomFieldsResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const paginationOptions = req.query;
+
+    const customFields = await db.purchaseOrder.getCommonCustomFieldsForShop({
+      shop: session.shop,
+      offset: paginationOptions.offset ?? 0,
+      limit: Math.min(paginationOptions.first ?? 10, 100),
+      query: paginationOptions.query,
+    });
+
+    return res.json({ customFields: customFields.map(field => field.key) });
+  }
+
+  @Post('/:name/print/:template')
+  @Authenticated()
+  @Permission('read_purchase_orders')
+  @QuerySchema('purchase-order-print-job')
+  async printWorkOrder(
+    req: Request<{ name: string; template: string }, unknown, unknown, PurchaseOrderPrintJob>,
+    res: Response<PrintPurchaseOrderResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const { name, template } = req.params;
+    const { date } = req.query;
+
+    const { emailReplyTo, emailFromTitle, purchaseOrderPrintTemplates, printEmail } = await getShopSettings(
+      session.shop,
+    );
+
+    if (!Object.keys(purchaseOrderPrintTemplates).includes(template)) {
+      throw new HttpError('Unknown print template', 400);
+    }
+
+    if (!printEmail) {
+      throw new HttpError('No print email address set', 400);
+    }
+
+    const printTemplate = purchaseOrderPrintTemplates[template] ?? never();
+    const context = await getPurchaseOrderTemplateData(session.shop, name, date);
+    const { subject, html } = await getRenderedPurchaseOrderTemplate(printTemplate, context);
+    const file = await renderHtmlToPdfCustomFile(subject, html);
+
+    await mg.send(
+      { emailReplyTo, emailFromTitle },
+      {
+        to: printEmail,
+        attachment: [file],
+        subject,
+        text: 'WorkMate Purchase Order',
+      },
+    );
+
+    return res.json({ success: true });
+  }
 }
 
 export type FetchPurchaseOrderInfoPageResponse = {
@@ -76,3 +142,9 @@ export type CreatePurchaseOrderResponse = {
 export type FetchPurchaseOrderResponse = {
   purchaseOrder: PurchaseOrder;
 };
+
+export type FetchPurchaseOrderCustomFieldsResponse = {
+  customFields: string[];
+};
+
+export type PrintPurchaseOrderResponse = { success: true };

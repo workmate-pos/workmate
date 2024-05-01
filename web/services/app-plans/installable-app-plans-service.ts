@@ -1,7 +1,7 @@
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import * as gql from '../gql/queries/generated/queries.js';
 import { AppPlanName } from '../db/queries/generated/app-plan.sql.js';
-import { InstallableService } from '@teifi-digital/shopify-app-express/services/installable-service.js';
+import { InstallableService } from '@teifi-digital/shopify-app-express/services';
 import { Permutations } from '../../util/types.js';
 import { db } from '../db/db.js';
 

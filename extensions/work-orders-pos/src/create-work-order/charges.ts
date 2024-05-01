@@ -1,13 +1,23 @@
 import { Money } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { CreateWorkOrderCharge } from '../screens/routes.js';
+import { CreateWorkOrderCharge } from '../types.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
-export function getChargesPrice(
-  labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'employeeId' | 'lineItemUuid' | 'name' | 'chargeUuid'>[],
+export function getTotalPriceForCharges(
+  charges: DiscriminatedUnionOmit<
+    CreateWorkOrderCharge,
+    | 'employeeId'
+    | 'workOrderItemUuid'
+    | 'name'
+    | 'uuid'
+    | 'amountLocked'
+    | 'rateLocked'
+    | 'hoursLocked'
+    | 'removeLocked'
+  >[],
 ): Money {
   return BigDecimal.sum(
-    ...labour.map(l => {
+    ...charges.map(l => {
       if (l.type === 'hourly-labour') {
         return BigDecimal.fromDecimal(l.hours).multiply(BigDecimal.fromMoney(l.rate));
       }

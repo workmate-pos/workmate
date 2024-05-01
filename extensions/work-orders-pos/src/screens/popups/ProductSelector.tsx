@@ -1,113 +1,143 @@
-import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
+import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { useScreen } from '../../hooks/use-screen.js';
-import { useCurrencyFormatter } from '../../hooks/use-currency-formatter.js';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
-import { useState } from 'react';
-import { CreateWorkOrderCharge, CreateWorkOrderLineItem } from '../routes.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
-import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useServiceCollectionIds } from '../../hooks/use-service-collection-ids.js';
+import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { useRouter } from '../../routes.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { useState } from 'react';
+import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
+import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
+import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 
-export function ProductSelector() {
+export function ProductSelector({
+  onSelect,
+}: {
+  onSelect: (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
+}) {
   const [query, setQuery] = useDebouncedState('');
-  const [selectedLineItems, setSelectedLineItems] = useState<CreateWorkOrderLineItem[]>([]);
-  const [defaultCharges, setDefaultCharges] = useState<CreateWorkOrderCharge[]>([]);
-
-  const { Screen, closePopup } = useScreen('ProductSelector', () => {
-    setQuery('', true);
-    setSelectedLineItems([]);
-    setDefaultCharges([]);
-  });
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
-  const serviceCollectionIds = useServiceCollectionIds();
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
-      query: serviceCollectionIds
-        ? `${query} ${serviceCollectionIds.map(id => `NOT collection:${parseGid(id).id}`).join(' ')}`
-        : query,
+      first: 50 as Int,
+      query: [
+        query,
+        ...Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).map(tag => `tag_not:"${escapeQuotationMarks(tag)}"`),
+      ]
+        .filter(Boolean)
+        .map(q => `(${q})`)
+        .join(' AND '),
     },
   });
 
-  const productVariants = productVariantsQuery.data?.pages.flat() ?? [];
   const currencyFormatter = useCurrencyFormatter();
 
-  const selectLineItem = (
-    lineItem: CreateWorkOrderLineItem,
-    defaultCharges: CreateWorkOrderCharge[],
+  const internalOnSelect = (
+    lineItem: CreateWorkOrderItem,
+    charges: CreateWorkOrderCharge[],
     name: string = 'Product',
   ) => {
     setQuery('', true);
-    setSelectedLineItems([...selectedLineItems, lineItem]);
-    setDefaultCharges(current => [...current, ...defaultCharges]);
-    toast.show(`${name} added to cart`, { duration: 1000 });
+    onSelect({ item: lineItem, charges });
+    toast.show(`${name} added to cart`, { duration: 750 });
   };
 
-  const rows = getProductVariantRows(productVariants, selectLineItem, currencyFormatter);
+  const router = useRouter();
+
+  const [page, setPage] = useState(1);
+  const pagination = (
+    <PaginationControls
+      page={page}
+      pageCount={productVariantsQuery.data?.pages?.length ?? 0}
+      onPageChange={setPage}
+      hasNextPage={productVariantsQuery.hasNextPage ?? false}
+      isLoadingNextPage={productVariantsQuery.isFetchingNextPage}
+      onFetchNextPage={productVariantsQuery.fetchNextPage}
+    />
+  );
+
+  const rows = getProductVariantRows(
+    productVariantsQuery.data?.pages?.[page - 1] ?? [],
+    internalOnSelect,
+    currencyFormatter,
+  );
 
   return (
-    <Screen
-      title={'Select product'}
-      presentation={{ sheet: true }}
-      overrideNavigateBack={() => closePopup({ lineItems: selectedLineItems, charges: defaultCharges })}
-    >
-      <ScrollView>
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+    <ScrollView>
+      <Button
+        title={'New Product'}
+        variant={'primary'}
+        onPress={() => {
+          router.push('ProductCreator', {
+            initialProduct: {},
+            onCreate: product =>
+              internalOnSelect(
+                {
+                  quantity: product.quantity,
+                  uuid: uuid(),
+                  productVariantId: product.productVariantId,
+                  absorbCharges: false,
+                },
+                [],
+              ),
+          });
+        }}
+      />
+
+      <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
+        </Text>
+      </Stack>
+      <ControlledSearchBar
+        value={query}
+        onTextChange={(query: string) => setQuery(query, !query)}
+        onSearch={() => {}}
+        placeholder={'Search products'}
+      />
+      {pagination}
+      <List data={rows} imageDisplayStrategy={'always'} />
+      {productVariantsQuery.isFetching && (
+        <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
-            {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
+            Loading products...
           </Text>
         </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={(query: string) => setQuery(query, !query)}
-          onSearch={() => {}}
-          placeholder={'Search products'}
-        />
-        <List
-          data={rows}
-          onEndReached={() => productVariantsQuery.fetchNextPage()}
-          isLoadingMore={productVariantsQuery.isLoading}
-          imageDisplayStrategy={'always'}
-        />
-        {productVariantsQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading products...
-            </Text>
-          </Stack>
-        )}
-        {productVariantsQuery.isSuccess && rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No products found
-            </Text>
-          </Stack>
-        )}
-        {productVariantsQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(productVariantsQuery.error, 'Error loading products')}
-            </Text>
-          </Stack>
-        )}
-      </ScrollView>
-    </Screen>
+      )}
+      {!productVariantsQuery.isFetching && productVariantsQuery.isSuccess && rows.length === 0 && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No products found
+          </Text>
+        </Stack>
+      )}
+      {productVariantsQuery.isError && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(productVariantsQuery.error, 'Error loading products')}
+          </Text>
+        </Stack>
+      )}
+      {pagination}
+    </ScrollView>
   );
 }
 
 function getProductVariantRows(
   productVariants: ProductVariant[],
-  selectLineItem: (lineItem: CreateWorkOrderLineItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
+  onSelect: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
   return productVariants.map(variant => {
@@ -115,22 +145,27 @@ function getProductVariantRows(
 
     const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
 
-    const defaultCharges = variant.defaultCharges.map<CreateWorkOrderCharge>(charge =>
-      productVariantDefaultChargeToCreateWorkOrderCharge(charge, 'placeholder'),
+    const defaultCharges = variant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
+
+    const label = currencyFormatter(
+      BigDecimal.fromMoney(variant.price)
+        .add(BigDecimal.fromMoney(getTotalPriceForCharges(defaultCharges)))
+        .toMoney(),
     );
 
     return {
       id: variant.id,
       onPress: () => {
-        const lineItemUuid = uuid();
+        const itemUuid = uuid();
 
-        selectLineItem(
+        onSelect(
           {
-            uuid: lineItemUuid,
+            uuid: itemUuid,
             productVariantId: variant.id,
             quantity: 1 as Int,
+            absorbCharges: false,
           },
-          defaultCharges.map(charge => ({ ...charge, lineItemUuid })),
+          defaultCharges.map(charge => ({ ...charge, uuid: uuid(), workOrderItemUuid: itemUuid })),
         );
       },
       leftSide: {
@@ -140,7 +175,7 @@ function getProductVariantRows(
       },
       rightSide: {
         showChevron: true,
-        label: currencyFormatter(variant.price),
+        label,
       },
     };
   });

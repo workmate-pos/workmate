@@ -26,6 +26,13 @@ query getMany($ids: [ID!]!) {
   }
 }
 
+query getManyForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseLocationFragment
+  }
+}
+
 query get($id: ID!) {
   location(id: $id) {
     ...LocationFragment
@@ -39,4 +46,9 @@ fragment LocationFragment on Location {
     formatted
   }
   isActive
+}
+
+fragment DatabaseLocationFragment on Location {
+  id
+  name
 }

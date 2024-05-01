@@ -10,8 +10,10 @@ export interface IUpsertSettingParams {
 
 /** 'UpsertSetting' return type */
 export interface IUpsertSettingResult {
+  createdAt: Date;
   key: string;
   shop: string;
+  updatedAt: Date;
   value: string;
 }
 
@@ -21,14 +23,14 @@ export interface IUpsertSettingQuery {
   result: IUpsertSettingResult;
 }
 
-const upsertSettingIR: any = {"usedParamSet":{"shop":true,"key":true,"value":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":50,"b":55}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":58,"b":62}]},{"name":"value","required":true,"transform":{"type":"scalar"},"locs":[{"a":65,"b":71},{"a":120,"b":126}]}],"statement":"INSERT INTO \"Settings\" (shop, key, value)\nVALUES (:shop!, :key!, :value!)\nON CONFLICT (shop, key) DO UPDATE SET value = :value!\nRETURNING *"};
+const upsertSettingIR: any = {"usedParamSet":{"shop":true,"key":true,"value":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":50,"b":55}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":58,"b":62}]},{"name":"value","required":true,"transform":{"type":"scalar"},"locs":[{"a":65,"b":71}]}],"statement":"INSERT INTO \"Settings\" (shop, key, value)\nVALUES (:shop!, :key!, :value!)\nON CONFLICT (shop, key) DO UPDATE SET value = EXCLUDED.value\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "Settings" (shop, key, value)
  * VALUES (:shop!, :key!, :value!)
- * ON CONFLICT (shop, key) DO UPDATE SET value = :value!
+ * ON CONFLICT (shop, key) DO UPDATE SET value = EXCLUDED.value
  * RETURNING *
  * ```
  */
@@ -74,8 +76,10 @@ export interface IInsertSettingIfNotExistsParams {
 
 /** 'InsertSettingIfNotExists' return type */
 export interface IInsertSettingIfNotExistsResult {
+  createdAt: Date;
   key: string;
   shop: string;
+  updatedAt: Date;
   value: string;
 }
 
@@ -97,5 +101,43 @@ const insertSettingIfNotExistsIR: any = {"usedParamSet":{"shop":true,"key":true,
  * ```
  */
 export const insertSettingIfNotExists = new PreparedQuery<IInsertSettingIfNotExistsParams,IInsertSettingIfNotExistsResult>(insertSettingIfNotExistsIR);
+
+
+/** 'InsertSettingsIfNotExists' parameters type */
+export interface IInsertSettingsIfNotExistsParams {
+  settings: readonly ({
+    shop: string,
+    key: string,
+    value: string
+  })[];
+}
+
+/** 'InsertSettingsIfNotExists' return type */
+export interface IInsertSettingsIfNotExistsResult {
+  createdAt: Date;
+  key: string;
+  shop: string;
+  updatedAt: Date;
+  value: string;
+}
+
+/** 'InsertSettingsIfNotExists' query type */
+export interface IInsertSettingsIfNotExistsQuery {
+  params: IInsertSettingsIfNotExistsParams;
+  result: IInsertSettingsIfNotExistsResult;
+}
+
+const insertSettingsIfNotExistsIR: any = {"usedParamSet":{"settings":true},"params":[{"name":"settings","required":true,"transform":{"type":"pick_array_spread","keys":[{"name":"shop","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":49,"b":58}]}],"statement":"INSERT INTO \"Settings\" (shop, key, value)\nVALUES :settings!\nON CONFLICT DO NOTHING\nRETURNING *"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "Settings" (shop, key, value)
+ * VALUES :settings!
+ * ON CONFLICT DO NOTHING
+ * RETURNING *
+ * ```
+ */
+export const insertSettingsIfNotExists = new PreparedQuery<IInsertSettingsIfNotExistsParams,IInsertSettingsIfNotExistsResult>(insertSettingsIfNotExistsIR);
 
 

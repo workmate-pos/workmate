@@ -1,76 +1,106 @@
-import { useState } from 'react';
-import { useScreen } from '@work-orders/common-pos/hooks/use-screen.js';
-import { useDebouncedState } from '@work-orders/common/hooks/use-debounced-state.js';
-import { Int, Product } from '@web/schemas/generated/create-purchase-order.js';
+import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useAuthenticatedFetch } from '@work-orders/common-pos/hooks/use-authenticated-fetch.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { extractErrorMessage } from '@work-orders/common-pos/util/errors.js';
-import { ControlledSearchBar } from '@work-orders/common-pos/components/ControlledSearchBar.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
+import { useRouter } from '../../routes.js';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { useState } from 'react';
+import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
+import { v4 as uuid } from 'uuid';
+import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 
-export function ProductSelector() {
+export function ProductSelector({
+  filters: { vendorName, locationId },
+  onSelect,
+}: {
+  filters: NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationId'>>;
+  onSelect: (product: Product) => void;
+}) {
   const [query, setQuery] = useDebouncedState('');
-  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
-
-  // optional fields, used to filter products by vendor, and show stock for a location
-  const [vendorName, setVendorName] = useState<string | null>(null);
-  const [locationName, setLocationName] = useState<string | null>(null);
-  const [locationId, setLocationId] = useState<ID | null>(null);
-
-  const { Screen, usePopup, closePopup } = useScreen('ProductSelector', ({ vendorName, locationName, locationId }) => {
-    setQuery('', true);
-    setSelectedProducts([]);
-    setVendorName(vendorName);
-    setLocationName(locationName);
-    setLocationId(locationId);
-  });
-
-  const createProductPopup = usePopup('ProductCreator', product => selectProduct(product));
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
 
-  const vendorQuery = vendorName ? `vendor:"${vendorName}"` : '';
+  const locationQuery = useLocationQuery({ fetch, id: locationId });
+
+  const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
   const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : '';
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
-      query: [query, vendorQuery, locationIdQuery].filter(Boolean).join(' AND '),
+      first: 50 as Int,
+      query: [query, vendorQuery, locationIdQuery]
+        .filter(Boolean)
+        .map(q => `(${q})`)
+        .join(' AND '),
     },
   });
-  const productVariants = productVariantsQuery.data?.pages ?? [];
 
-  const selectProduct = (product: Product, name: string = 'Product') => {
+  const selectProducts = (products: Product[]) => {
     setQuery('', true);
-    setSelectedProducts(products => [...products, product]);
-    toast.show(`${name} added to purchase order`, { duration: 1000 });
+    for (const product of products) onSelect(product);
+    const productOrProducts = products.length === 1 ? 'Product' : 'products';
+    const productCount = products.length === 1 ? '' : String(products.length);
+    toast.show(`${productCount} ${productOrProducts} added to purchase order`.trim(), { duration: 1000 });
   };
 
-  const rows = useProductVariantRows(productVariants.flat(), locationId, selectProduct);
+  const router = useRouter();
+  const screen = useScreen();
+  screen.setIsLoading(locationQuery.isLoading);
+
+  const [page, setPage] = useState(1);
+  const pagination = (
+    <PaginationControls
+      page={page}
+      pageCount={productVariantsQuery.data?.pages?.length ?? 0}
+      onPageChange={setPage}
+      hasNextPage={productVariantsQuery.hasNextPage ?? false}
+      isLoadingNextPage={productVariantsQuery.isFetchingNextPage}
+      onFetchNextPage={productVariantsQuery.fetchNextPage}
+    />
+  );
+
+  const rows = useProductVariantRows(productVariantsQuery.data?.pages?.[page - 1] ?? [], locationId, selectProducts);
 
   return (
-    <Screen
-      title="Select Product"
-      presentation={{ sheet: true }}
-      onNavigateBack={() => closePopup(selectedProducts)}
-      overrideNavigateBack={() => closePopup(selectedProducts)}
-    >
-      <ScrollView>
-        {vendorName && (
-          <Stack direction={'horizontal'} paddingVertical={'Medium'} alignment={'center'}>
-            <Text variant="captionMedium" color="TextSubdued">
-              Showing products for vendor {vendorName}, and stock for location {locationName}
-            </Text>
-          </Stack>
-        )}
+    <ScrollView>
+      <Stack direction={'horizontal'} paddingVertical={'Medium'} alignment={'center'}>
+        <Text variant="captionMedium" color="TextSubdued">
+          Showing products for vendor {vendorName}, and stock for location {locationQuery.data?.name ?? 'N/A'}
+        </Text>
+      </Stack>
 
+      <ResponsiveGrid columns={2}>
+        <Button
+          title={'Select from Order'}
+          onPress={() => {
+            router.push('OrderSelector', {
+              onSelect: orderId => {
+                router.push('OrderProductSelector', {
+                  orderId,
+                  onSave: products => {
+                    selectProducts(products);
+                    router.popCurrent();
+                  },
+                });
+              },
+            });
+          }}
+        />
         <Button
           title={'New Product'}
-          variant={'primary'}
           onPress={() => {
             if (!locationId) {
               toast.show('Location id not set');
@@ -82,85 +112,148 @@ export function ProductSelector() {
               return;
             }
 
-            createProductPopup.navigate({ locationId, vendorName });
+            router.push('ProductCreator', {
+              initialProduct: {
+                locationId,
+                vendor: vendorName,
+              },
+              onCreate: product => {
+                selectProducts([{ ...product, uuid: uuid() }]);
+                router.popCurrent();
+              },
+            });
           }}
         />
+      </ResponsiveGrid>
 
-        <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+      <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
+        </Text>
+      </Stack>
+      <ControlledSearchBar
+        value={query}
+        onTextChange={(query: string) => setQuery(query, !query)}
+        onSearch={() => {}}
+        placeholder={'Search products'}
+      />
+      {pagination}
+      <List data={rows} imageDisplayStrategy={'always'} />
+      {productVariantsQuery.isFetching && (
+        <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
-            {productVariantsQuery.isRefetching ? 'Reloading...' : ' '}
+            Loading products...
           </Text>
         </Stack>
-        <ControlledSearchBar
-          value={query}
-          onTextChange={(query: string) => setQuery(query, !query)}
-          onSearch={() => {}}
-          placeholder={'Search products'}
-        />
-        <List
-          data={rows}
-          onEndReached={productVariantsQuery.fetchNextPage}
-          isLoadingMore={productVariantsQuery.isLoading}
-          imageDisplayStrategy={'always'}
-        />
-        {productVariantsQuery.isLoading && (
-          <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              Loading products...
-            </Text>
-          </Stack>
-        )}
-        {productVariantsQuery.isSuccess && rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No products found
-            </Text>
-          </Stack>
-        )}
-        {productVariantsQuery.isError && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextCritical" variant="body">
-              {extractErrorMessage(productVariantsQuery.error, 'Error loading products')}
-            </Text>
-          </Stack>
-        )}
-      </ScrollView>
-    </Screen>
+      )}
+      {!productVariantsQuery.isFetching && productVariantsQuery.isSuccess && rows.length === 0 && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No products found
+          </Text>
+        </Stack>
+      )}
+      {productVariantsQuery.isError && (
+        <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(productVariantsQuery.error, 'Error loading products')}
+          </Text>
+        </Stack>
+      )}
+      {pagination}
+    </ScrollView>
   );
 }
 
 function useProductVariantRows(
   productVariants: ProductVariant[],
-  locationId: ID | null,
-  selectProduct: (product: Product, name?: string) => void,
+  locationId: ID,
+  selectProducts: (products: Product[]) => void,
 ) {
   const fetch = useAuthenticatedFetch();
 
-  const inventoryItemIds = productVariants.map(variant => variant.inventoryItem.id);
-  const inventoryItemQueries = useInventoryItemQueries({ fetch, ids: inventoryItemIds });
+  const inventoryItemIds = productVariants.flatMap(variant => [
+    variant.inventoryItem.id,
+    ...variant.productVariantComponents.map(({ productVariant }) => productVariant.inventoryItem.id),
+  ]);
+  const inventoryItemQueries = useInventoryItemQueries({ fetch, ids: inventoryItemIds, locationId });
 
   return productVariants.map<ListRow>(variant => {
     const displayName = getProductVariantName(variant) ?? 'Unknown Product';
     const imageUrl = variant.image?.url ?? variant.product?.featuredImage?.url;
 
     const inventoryItemId = variant.inventoryItem.id;
-    const inventoryItem = inventoryItemQueries[inventoryItemId]?.data;
-    const availableQuantity = inventoryItem?.inventoryLevels?.nodes
-      ?.find(level => level.location.id === locationId)
-      ?.quantities?.find(quantity => quantity.name === 'available')?.quantity;
+    const inventoryItemQuery = inventoryItemQueries[inventoryItemId];
+    const inventoryItem = inventoryItemQuery?.data;
+    let availableQuantity = inventoryItem?.inventoryLevel?.quantities?.find(
+      quantity => quantity.name === 'available',
+    )?.quantity;
 
+    // todo: clean this mess
+
+    // If this is a bundle, the available quantity is the available quantity of the lowest available component divided by the quantity of that component in this bundle
+    if (variant.requiresComponents) {
+      let bundleAvailableQuantity: Int | undefined = undefined;
+
+      for (const bundleProductVariant of variant.productVariantComponents) {
+        const { quantity, productVariant } = bundleProductVariant;
+        const availableQuantityForComponent = inventoryItemQueries[
+          productVariant.inventoryItem.id
+        ]?.data?.inventoryLevel?.quantities?.find(quantity => quantity.name === 'available')?.quantity;
+
+        if (availableQuantityForComponent === undefined) {
+          bundleAvailableQuantity = undefined;
+          break;
+        }
+
+        const availableQuantityForComponentInBundle = Math.floor(availableQuantityForComponent / quantity) as Int;
+        bundleAvailableQuantity =
+          bundleAvailableQuantity === undefined
+            ? availableQuantityForComponentInBundle
+            : (Math.min(bundleAvailableQuantity, availableQuantityForComponentInBundle) as Int);
+      }
+
+      availableQuantity = bundleAvailableQuantity;
+    }
+
+    // TODO: Only allow clicking once its loaded everything
     return {
       id: variant.id,
-      onPress: () =>
-        selectProduct({
-          inventoryItemId: variant.inventoryItem.id,
-          handle: variant.product.handle,
-          productVariantId: variant.id,
-          availableQuantity: 0 as Int,
-          quantity: 1 as Int,
-          name: displayName,
-          sku: variant.sku,
-        }),
+      onPress: () => {
+        if (!variant.requiresComponents) {
+          selectProducts([
+            {
+              uuid: uuid(),
+              shopifyOrderLineItem: null,
+              productVariantId: variant.id,
+              availableQuantity: 0 as Int,
+              quantity: 1 as Int,
+              unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
+            },
+          ]);
+          return;
+        }
+
+        // Bundle!
+
+        selectProducts(
+          variant.productVariantComponents.flatMap(({ quantity, productVariant }) => {
+            const inventoryItem = inventoryItemQueries[productVariant.inventoryItem.id]?.data;
+
+            return Array.from({ length: quantity }, () => ({
+              uuid: uuid(),
+              shopifyOrderLineItem: null,
+              handle: productVariant.product.handle,
+              productVariantId: productVariant.id,
+              availableQuantity: 0 as Int,
+              quantity: 1 as Int,
+              name: getProductVariantName(productVariant) ?? 'Unknown Product',
+              sku: productVariant.sku,
+              unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
+            }));
+          }),
+        );
+      },
       leftSide: {
         label: displayName,
         image: {
@@ -171,4 +264,12 @@ function useProductVariantRows(
       rightSide: { showChevron: true },
     };
   });
+}
+
+function decimalToMoneyOrDefault(decimal: Decimal | null | undefined, defaultValue: Money) {
+  if (decimal === null || decimal === undefined) {
+    return defaultValue;
+  }
+
+  return BigDecimal.fromDecimal(decimal).toMoney();
 }

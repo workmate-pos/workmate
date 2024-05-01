@@ -1,25 +1,32 @@
-import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
-import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
-import { Ids } from '../../schemas/generated/ids.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { InventoryItemPaginationOptions } from '../../schemas/generated/inventory-item-pagination-options.js';
+import { InventoryItemIds } from '../../schemas/generated/inventory-item-ids.js';
 
 @Authenticated()
 export default class InventoryItemsController {
   @Get('/')
-  @QuerySchema('pagination-options')
+  @QuerySchema('inventory-item-pagination-options')
   async fetchInventoryItems(
-    req: Request<unknown, unknown, unknown, PaginationOptions>,
+    req: Request<unknown, unknown, unknown, InventoryItemPaginationOptions>,
     res: Response<FetchInventoryItemsResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
-    const paginationOptions = req.query;
+    const { locationId, query, first, after } = req.query;
 
     const graphql = new Graphql(session);
-    const response = await gql.inventoryItems.getPage.run(graphql, paginationOptions);
+    const response = locationId
+      ? await gql.inventoryItems.getPageWithLocationInventoryLevel.run(graphql, { locationId, query, first, after })
+      : await gql.inventoryItems.getPage.run(graphql, { query, first, after }).then(result => ({
+          inventoryItems: {
+            nodes: result.inventoryItems.nodes.map(node => ({ ...node, inventoryLevel: null })),
+            pageInfo: result.inventoryItems.pageInfo,
+          },
+        }));
 
     const inventoryItems = response.inventoryItems.nodes;
     const pageInfo = response.inventoryItems.pageInfo;
@@ -28,46 +35,68 @@ export default class InventoryItemsController {
   }
 
   @Get('/by-ids')
-  @QuerySchema('ids')
+  @QuerySchema('inventory-item-ids')
   async fetchInventoryItemsByIds(
-    req: Request<unknown, unknown, unknown, Ids>,
+    req: Request<unknown, unknown, unknown, InventoryItemIds>,
     res: Response<FetchInventoryItemsByIdResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
-    const { ids } = req.query;
+    const { inventoryItemIds, locationId } = req.query;
 
     const graphql = new Graphql(session);
-    const { nodes } = await gql.inventoryItems.getMany.run(graphql, { ids });
+
+    const { nodes } = locationId
+      ? await gql.inventoryItems.getManyWithLocationInventoryLevel.run(graphql, { ids: inventoryItemIds, locationId })
+      : await gql.inventoryItems.getMany.run(graphql, { ids: inventoryItemIds }).then(result => ({
+          nodes: result.nodes.map(node => (node ? { ...node, inventoryLevel: null } : null)),
+        }));
 
     const inventoryItems = nodes.filter(
-      (node): node is null | (gql.inventoryItems.getMany.Result['nodes'][number] & { __typename: 'InventoryItem' }) =>
-        node === null || node.__typename === 'InventoryItem',
+      (
+        node,
+      ): node is
+        | null
+        | (gql.inventoryItems.getManyWithLocationInventoryLevel.Result['nodes'][number] & {
+            __typename: 'InventoryItem';
+          }) => node === null || node.__typename === 'InventoryItem',
     );
 
     return res.json({ inventoryItems });
   }
 
-  @Get('/id/:id')
-  async fetchInventoryItem(req: Request<{ id: ID }>, res: Response<FetchInventoryItemResponse>) {
+  @Get('/id/:locationId/:id')
+  async fetchInventoryItem(
+    req: Request<{ locationId: ID; inventoryItemId: ID }>,
+    res: Response<FetchInventoryItemResponse>,
+  ) {
     const session: Session = res.locals.shopify.session;
-    const { id } = req.params;
+    const { locationId, inventoryItemId } = req.params;
 
     const graphql = new Graphql(session);
-    const { inventoryItem } = await gql.inventoryItems.get.run(graphql, { id });
+    const { inventoryItem } = locationId
+      ? await gql.inventoryItems.getWithLocationInventoryLevel.run(graphql, { id: inventoryItemId, locationId })
+      : await gql.inventoryItems.get.run(graphql, { id: inventoryItemId, locationId }).then(result => ({
+          inventoryItem: result.inventoryItem ? { ...result.inventoryItem, inventoryLevel: null } : null,
+        }));
 
     return res.json({ inventoryItem });
   }
 }
 
 export type FetchInventoryItemsResponse = {
-  inventoryItems: gql.inventoryItems.getPage.Result['inventoryItems']['nodes'];
-  pageInfo: gql.inventoryItems.getPage.Result['inventoryItems']['pageInfo'];
+  inventoryItems: gql.inventoryItems.getPageWithLocationInventoryLevel.Result['inventoryItems']['nodes'];
+  pageInfo: gql.inventoryItems.getPageWithLocationInventoryLevel.Result['inventoryItems']['pageInfo'];
 };
 
 export type FetchInventoryItemsByIdResponse = {
-  inventoryItems: (gql.inventoryItems.InventoryItemFragment.Result | null)[];
+  inventoryItems: (
+    | (gql.inventoryItems.InventoryItemFragment.Result & gql.inventoryItems.InventoryItemInventoryLevelFragment.Result)
+    | null
+  )[];
 };
 
 export type FetchInventoryItemResponse = {
-  inventoryItem: gql.inventoryItems.InventoryItemFragment.Result | null;
+  inventoryItem:
+    | (gql.inventoryItems.InventoryItemFragment.Result & gql.inventoryItems.InventoryItemInventoryLevelFragment.Result)
+    | null;
 };

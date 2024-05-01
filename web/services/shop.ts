@@ -1,7 +1,7 @@
 import { gql } from './gql/gql.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { getShopPlanType } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export type Shop = gql.shop.getShop.Result['shop'];
 const shopCache = new Map<string, Shop>();
@@ -20,6 +20,7 @@ export async function getShopType(graphql: Graphql) {
   const type = getShopPlanType(shop.plan);
 
   if (type === null) {
+    sentryErr('Unknown shop plan', { shopPlan: shop.plan });
     throw new HttpError('Unknown shop plan type', 500);
   }
 

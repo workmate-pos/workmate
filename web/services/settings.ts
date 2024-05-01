@@ -5,7 +5,7 @@ import { db } from './db/db.js';
 import { unit } from './db/unit-of-work.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { assertValidFormatString } from './id-formatting.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 function serialize(value: ShopSettings[keyof ShopSettings]) {
   return JSON.stringify(value);
@@ -41,26 +41,42 @@ export async function updateSettings(shop: string, partialShopSettings: PartialS
 }
 
 export async function insertDefaultSettingsIfNotExists(shop: string) {
-  await unit(async () => {
-    const entries = getShopSettingKeys().map(key => [key, getDefaultShopSetting(key)]) as [
-      keyof ShopSettings,
-      ShopSettings[keyof ShopSettings],
-    ][];
-
-    return await Promise.all(
-      entries.map(([key, value]) =>
-        db.settings.insertSettingIfNotExists({
-          shop,
-          key,
-          value: serialize(value),
-        }),
-      ),
-    );
+  await db.settings.insertSettingsIfNotExists({
+    settings: getShopSettingKeys().map(key => ({
+      shop,
+      key,
+      value: serialize(getDefaultShopSetting(key)),
+    })),
   });
 }
 
 function assertValidSettings(settings: ShopSettings) {
-  assertValidFormatString(settings.idFormat);
+  for (const { idFormat, defaultStatus, statuses } of [
+    {
+      idFormat: settings.idFormat,
+      defaultStatus: settings.defaultStatus,
+      statuses: settings.statuses,
+    },
+    {
+      idFormat: settings.purchaseOrderIdFormat,
+      defaultStatus: settings.defaultPurchaseOrderStatus,
+      statuses: settings.purchaseOrderStatuses,
+    },
+  ]) {
+    assertValidFormatString(idFormat);
+
+    if (!statuses.includes(defaultStatus)) {
+      throw new HttpError('Invalid default status', 400);
+    }
+
+    if (unique(statuses).length !== statuses.length) {
+      throw new HttpError('Duplicate statuses are not allowed', 400);
+    }
+
+    if (statuses.length === 0) {
+      throw new HttpError('Must have at least one status', 400);
+    }
+  }
 
   if (settings.purchaseOrderWebhook.endpointUrl !== null) {
     try {
@@ -68,17 +84,5 @@ function assertValidSettings(settings: ShopSettings) {
     } catch (e) {
       throw new HttpError('Invalid webhook endpoint URL', 400);
     }
-  }
-
-  if (!settings.statuses.includes(settings.defaultStatus)) {
-    throw new HttpError('Invalid default status', 400);
-  }
-
-  if (unique(settings.statuses).length !== settings.statuses.length) {
-    throw new HttpError('Duplicate statuses are not allowed', 400);
-  }
-
-  if (settings.statuses.length === 0) {
-    throw new HttpError('Must have at least one status', 400);
   }
 }

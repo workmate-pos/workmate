@@ -4,6 +4,9 @@ import type {
 } from '@web/services/gql/queries/generated/schema.js';
 import type { BadgeVariant, BadgeStatus } from '@shopify/retail-ui-extensions/src/components/Badge/Badge.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { BadgeProps } from '@shopify/retail-ui-extensions-react';
+import { WorkOrderPurchaseOrder } from '@web/services/work-orders/types.js';
+import { sum } from '@teifi-digital/shopify-app-toolbox/array';
 
 export function getStatusText(status: OrderDisplayFinancialStatus | OrderDisplayFulfillmentStatus): string {
   return titleCase(status.replace(/_/g, ' '));
@@ -69,4 +72,33 @@ export function getFulfillmentStatusBadgeStatus(status: OrderDisplayFulfillmentS
       SCHEDULED: 'empty',
     } as const
   )[status];
+}
+
+export function getPurchaseOrderBadge(purchaseOrder: WorkOrderPurchaseOrder, includeQuantity: boolean): BadgeProps {
+  const availableQuantity = sum(purchaseOrder.items.map(item => item.availableQuantity));
+  const quantity = sum(purchaseOrder.items.map(item => item.quantity));
+  const status = availableQuantity === quantity ? 'complete' : availableQuantity === 0 ? 'empty' : 'partial';
+  const variant = availableQuantity === quantity ? 'success' : 'warning';
+
+  let text = purchaseOrder.name;
+
+  if (includeQuantity) {
+    text = `${availableQuantity}/${quantity} • ${text}`;
+  }
+
+  return { text, variant, status } as const;
+}
+
+export function getPurchaseOrderBadges(
+  purchaseOrders: WorkOrderPurchaseOrder[],
+  includeQuantity: boolean,
+): BadgeProps[] {
+  const purchaseOrderByName: Record<string, WorkOrderPurchaseOrder> = {};
+
+  for (const { name, items } of purchaseOrders) {
+    const purchaseOrder = (purchaseOrderByName[name] ??= { name, items: [] });
+    purchaseOrder.items.push(...items);
+  }
+
+  return Object.values(purchaseOrderByName).map(purchaseOrder => getPurchaseOrderBadge(purchaseOrder, includeQuantity));
 }

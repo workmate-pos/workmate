@@ -1,5 +1,5 @@
-import { decorator, DecoratorHandler } from '@teifi-digital/shopify-app-express/decorators/registry.js';
-import { err } from '@teifi-digital/shopify-app-express/utils/express-utils.js';
+import { decorator, DecoratorHandler } from '@teifi-digital/shopify-app-express/decorators';
+import { err } from '@teifi-digital/shopify-app-express/utils';
 import { RequestHandler } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
 import { IGetManyResult, PermissionNode } from '../services/db/queries/generated/employee.sql.js';
@@ -9,8 +9,8 @@ import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import jwt from 'jsonwebtoken';
 import type { Request, Response } from 'express-serve-static-core';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { hasReadUsersScope } from '../services/shop.js';
 
@@ -58,37 +58,28 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     if (!employee) {
       const superuser = associatedUser.isShopOwner || !doesSuperuserExist;
 
-      [employee = never()] = await db.employee.upsertMany({
+      [employee = never('just made it')] = await db.employee.upsert({
         shop: session.shop,
-        employees: [
-          {
-            employeeId,
-            permissions: [],
-            rate: null,
-            name: associatedUser.name,
-            isShopOwner: associatedUser.isShopOwner,
-            superuser,
-          },
-        ],
+        staffMemberId: employeeId,
+        permissions: [],
+        rate: null,
+        name: associatedUser.name,
+        isShopOwner: associatedUser.isShopOwner,
+        superuser,
       });
 
       doesSuperuserExist ||= superuser;
     }
 
-    // ensure that every store has at least one superuser
     if (!doesSuperuserExist) {
-      [employee = never()] = await db.employee.upsertMany({
+      [employee = never('just made it')] = await db.employee.upsert({
         shop: session.shop,
-        employees: [
-          {
-            employeeId: employee.employeeId,
-            permissions: employee.permissions ?? [],
-            isShopOwner: employee.isShopOwner,
-            name: employee.name,
-            rate: employee.rate,
-            superuser: true,
-          },
-        ],
+        staffMemberId: employee.staffMemberId,
+        permissions: employee.permissions ?? [],
+        isShopOwner: employee.isShopOwner,
+        name: employee.name,
+        rate: employee.rate,
+        superuser: true,
       });
     }
 
@@ -121,7 +112,7 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
   // POS does not send associated_user, but will send the staff member's id in the session token
   const staffMemberId = getBearerStaffMemberId(req.headers.authorization);
 
-  const [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
+  const [employee] = await db.employee.getMany({ employeeIds: [staffMemberId] });
 
   if (employee) {
     return {
@@ -152,7 +143,7 @@ function getBearerStaffMemberId(authorizationHeader?: string): ID {
     throw new HttpError('You must be a staff member to access this resource', 401);
   }
 
-  const token = authorizationHeader.split(' ')[1] ?? never();
+  const token = authorizationHeader.split(' ')[1] ?? never('bad token');
   const content = jwt.decode(token, { json: true });
 
   if (!content) {

@@ -10,44 +10,54 @@
       "type": "string",
       "minLength": 1
     },
+    "dueDate": {
+      "$ref": "scalars.json#/definitions/DateTime"
+    },
+    "note": {
+      "type": "string"
+    },
+    "internalNote": {
+      "type": "string"
+    },
     "customerId": {
       "$ref": "scalars.json#/definitions/ID"
     },
-    "dueDate": {
-      "$ref": "scalars.json#/definitions/DateTime"
+    "derivedFromOrderId": {
+      "description": "A Shopify Order ID from which this work order was derived",
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "customFields": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string"
+          },
+          "productVariantId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "quantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          },
+          "absorbCharges": {
+            "type": "boolean"
+          }
+        },
+        "required": ["uuid", "productVariantId", "quantity", "absorbCharges"],
+        "additionalProperties": false
+      }
     },
     "charges": {
       "type": "array",
       "items": {
-        "type": "object",
         "anyOf": [
-          {
-            "title": "fixed-price-labour",
-            "description": "An absolute amount of money for some labour",
-            "properties": {
-              "type": {
-                "const": "fixed-price-labour"
-              },
-              "name": {
-                "type": "string"
-              },
-              "employeeId": {
-                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
-              },
-              "amount": {
-                "$ref": "scalars.json#/definitions/Money"
-              },
-              "lineItemUuid": {
-                "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
-              },
-              "chargeUuid": {
-                "type": "string",
-                "minLength": 1
-              }
-            },
-            "required": ["type", "name", "employeeId", "amount", "lineItemUuid", "chargeUuid"],
-            "additionalProperties": false
-          },
           {
             "title": "hourly-labour",
             "description": "An amount of labour determined by some hourly rate",
@@ -55,11 +65,33 @@
               "type": {
                 "const": "hourly-labour"
               },
-              "name": {
+              "uuid": {
                 "type": "string"
               },
+              "workOrderItemUuid": {
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
               "employeeId": {
-                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "$ref": "scalars.json#/definitions/ID"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
               },
               "rate": {
                 "$ref": "scalars.json#/definitions/Money"
@@ -67,48 +99,88 @@
               "hours": {
                 "$ref": "scalars.json#/definitions/Decimal"
               },
-              "lineItemUuid": {
-                "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+              "rateLocked": {
+                "type": "boolean"
               },
-              "chargeUuid": {
-                "type": "string",
-                "minLength": 1
+              "hoursLocked": {
+                "type": "boolean"
+              },
+              "removeLocked": {
+                "type": "boolean"
               }
             },
-            "required": ["type", "name", "employeeId", "rate", "hours", "lineItemUuid", "chargeUuid"],
+            "required": [
+              "type",
+              "uuid",
+              "workOrderItemUuid",
+              "employeeId",
+              "name",
+              "rate",
+              "hours",
+              "rateLocked",
+              "hoursLocked",
+              "removeLocked"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "title": "fixed-price-labour",
+            "description": "An absolute amount of money for some labour",
+            "properties": {
+              "type": {
+                "const": "fixed-price-labour"
+              },
+              "uuid": {
+                "type": "string"
+              },
+              "workOrderItemUuid": {
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "employeeId": {
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "$ref": "scalars.json#/definitions/ID"
+                  }
+                ]
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "amount": {
+                "$ref": "scalars.json#/definitions/Money"
+              },
+              "amountLocked": {
+                "type": "boolean"
+              },
+              "removeLocked": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "type",
+              "uuid",
+              "workOrderItemUuid",
+              "employeeId",
+              "name",
+              "amount",
+              "amountLocked",
+              "removeLocked"
+            ],
             "additionalProperties": false
           }
         ]
-      }
-    },
-    "description": {
-      "type": "string"
-    },
-    "derivedFromOrderId": {
-      "description": "A Shopify Order ID from which this work order was derived",
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
-    },
-    "lineItems": {
-      "description": "All line items for this work order, including products and services",
-      "type": "array",
-      "items": {
-        "title": "line-item",
-        "type": "object",
-        "properties": {
-          "uuid": {
-            "description": "A unique identifier for this line item",
-            "type": "string",
-            "minLength": 1
-          },
-          "productVariantId": {
-            "$ref": "scalars.json#/definitions/ID"
-          },
-          "quantity": {
-            "$ref": "scalars.json#/definitions/Int"
-          }
-        },
-        "required": ["uuid", "productVariantId", "quantity"],
-        "additionalProperties": false
       }
     },
     "discount": {
@@ -120,26 +192,26 @@
           "anyOf": [
             {
               "properties": {
-                "valueType": {
+                "type": {
                   "const": "FIXED_AMOUNT"
                 },
                 "value": {
                   "$ref": "scalars.json#/definitions/Money"
                 }
               },
-              "required": ["value", "valueType"],
+              "required": ["value", "type"],
               "additionalProperties": false
             },
             {
               "properties": {
-                "valueType": {
+                "type": {
                   "const": "PERCENTAGE"
                 },
                 "value": {
                   "$ref": "scalars.json#/definitions/Decimal"
                 }
               },
-              "required": ["value", "valueType"],
+              "required": ["value", "type"],
               "additionalProperties": false
             }
           ]
@@ -150,12 +222,14 @@
   "required": [
     "name",
     "status",
-    "customerId",
     "dueDate",
-    "charges",
-    "description",
+    "note",
+    "internalNote",
+    "customerId",
     "derivedFromOrderId",
-    "lineItems",
+    "items",
+    "charges",
+    "customFields",
     "discount"
   ],
   "additionalProperties": false

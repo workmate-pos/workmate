@@ -1,5 +1,8 @@
-import { Money, Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { Money, Decimal, BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
+import { quoteTemplate } from '../mail/templates/defaults/work-order/quote.js';
+import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchase-order/invoice.js';
+import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
 
 const defaultShopSettings: ShopSettings = {
   statuses: ['Draft', 'In Progress', 'Done'],
@@ -14,12 +17,20 @@ const defaultShopSettings: ShopSettings = {
     allowedPercentageRange: null,
     allowedCurrencyRange: null,
   },
+  depositShortcuts: [
+    { percentage: BigDecimal.fromString('40.00').toDecimal(), unit: 'percentage' },
+    { money: BigDecimal.fromString('100.00').toMoney(), unit: 'currency' },
+  ],
+  depositRules: {
+    onlyAllowShortcuts: true,
+    onlyAllowHighestAbsoluteShortcut: true,
+    allowedCurrencyRange: null,
+    allowedPercentageRange: null,
+  },
   workOrderRequests: {
     enabled: false,
     status: null,
   },
-  mutableServiceCollectionId: null,
-  fixedServiceCollectionId: null,
   defaultRate: '15.00' as Money,
   labourLineItemName: 'Labour',
   labourLineItemSKU: '',
@@ -27,6 +38,28 @@ const defaultShopSettings: ShopSettings = {
     fixedPriceLabour: true,
     hourlyLabour: true,
     employeeAssignments: true,
+  },
+  purchaseOrderIdFormat: 'PO-#{{id}}',
+  purchaseOrderStatuses: ['Draft', 'In Transit', 'Received'],
+  defaultPurchaseOrderStatus: 'Draft',
+  emailFromTitle: 'WorkMate',
+  emailReplyTo: '',
+  printEmail: '',
+  workOrderPrintTemplates: {
+    Quote: {
+      subject: 'Quote for {{ name }}',
+      template: quoteTemplate,
+    },
+    'WO Invoice': {
+      subject: 'Invoice for {{ name }}',
+      template: workOrderInvoiceTemplate,
+    },
+  },
+  purchaseOrderPrintTemplates: {
+    'PO Invoice': {
+      subject: 'Invoice for {{ name }}',
+      template: purchaseOrderInvoiceTemplate,
+    },
   },
   purchaseOrderWebhook: {
     endpointUrl: null,

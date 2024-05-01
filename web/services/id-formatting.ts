@@ -1,21 +1,28 @@
-import { ShopSettings } from '../schemas/generated/shop-settings.js';
 import { getShopSettings } from './settings.js';
 import { db } from './db/db.js';
 import { useClient } from './db/client.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
-const workOrderFormatters: Record<
-  string,
-  ({ shop, settings }: { shop: string; settings: ShopSettings }) => Promise<string> | string
-> = {
-  id: ({ shop }) => getNextWorkOrderIdForShop(shop).then(String),
+type Formatters = Record<string, ({ shop }: { shop: string }) => Promise<string> | string>;
+
+const baseFormatters: Formatters = {
   // TODO: adjust to local timezone (timezone setting? take from shopify?)
   year: () => new Date().getFullYear().toString(),
   month: () => (new Date().getMonth() + 1).toString(),
   day: () => new Date().getDate().toString(),
   hour: () => new Date().getHours().toString(),
   minute: () => new Date().getMinutes().toString(),
+};
+
+const workOrderFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getNextWorkOrderIdForShop(shop).then(String),
+};
+
+const purchaseOrderFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getNextPurchaseOrderIdForShop(shop).then(String),
 };
 
 async function applyFormatters<Arg>(
@@ -36,16 +43,14 @@ async function applyFormatters<Arg>(
   return format;
 }
 
-export async function getNewWorkOrderId(shop: string) {
+export async function getNewWorkOrderName(shop: string) {
   const settings = await getShopSettings(shop);
-
-  return await applyFormatters(settings.idFormat, workOrderFormatters, { shop, settings });
+  return await applyFormatters(settings.idFormat, workOrderFormatters, { shop });
 }
 
-export async function getNewPurchaseOrderId(shop: string) {
-  const format = 'PO-#{{id}}';
-  assertValidFormatString(format);
-  return format.replace('{{id}}', String(await getNextPurchaseOrderIdForShop(shop)));
+export async function getNewPurchaseOrderName(shop: string) {
+  const settings = await getShopSettings(shop);
+  return await applyFormatters(settings.purchaseOrderIdFormat, purchaseOrderFormatters, { shop });
 }
 
 async function getNextWorkOrderIdForShop(shop: string) {

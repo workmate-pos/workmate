@@ -8,6 +8,34 @@ query get($id: ID!) {
   }
 }
 
+query getMany($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...OrderInfoFragment
+  }
+}
+
+query getManyForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseShopifyOrderFragment
+  }
+}
+
+query getLineItemsForDatabase($orderId: ID!, $first: Int = 25) {
+  order(id: $orderId) {
+    lineItems(first: $first) {
+      nodes {
+        ...DatabaseShopifyOrderLineItemFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
 fragment ShopMoneyAmountFragment on MoneyBag {
   shopMoney {
     amount
@@ -17,11 +45,12 @@ fragment ShopMoneyAmountFragment on MoneyBag {
 query getLineItems(
   $id: ID!,
   $after: String,
+  $first: Int = 25,
   $fixedServiceCollectionId: ID = "gid://shopify/Collection/null",
   $mutableServiceCollectionId: ID = "gid://shopify/Collection/null"
 ) {
   order(id: $id) {
-    lineItems(first: 10, after: $after) {
+    lineItems(first: $first, after: $after) {
       nodes {
         ... on LineItem {
           id
@@ -36,6 +65,7 @@ query getLineItems(
             product {
               id
               title
+              hasOnlyDefaultVariant
               isFixedServiceItem: inCollection(id: $fixedServiceCollectionId)
               isMutableServiceItem: inCollection(id: $mutableServiceCollectionId)
               featuredImage {
@@ -81,8 +111,12 @@ query getInfo($id: ID!) {
 fragment OrderInfoFragment on Order {
   id
   name
-  totalReceived
-  totalPrice
+  totalReceivedSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentTotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
   totalOutstandingSet {
     ...ShopMoneyAmountFragment
   }
@@ -114,22 +148,61 @@ fragment UserErrorFragment on UserError {
   message
 }
 
-query getManyOrderInfoDraftOrderInfo($ids: [ID!]!) {
-  nodes(ids: $ids) {
-    __typename
-    ... on Order {
-      name
-      totalPrice
-      totalOutstandingSet {
-        ...ShopMoneyAmountFragment
-      }
-      displayFinancialStatus
-      # TODO
-      # displayFulfillmentStatus
+fragment DatabaseShopifyOrderFragment on Order {
+  id
+  name
+  customer {
+    id
+  }
+  currentSubtotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentCartDiscountAmountSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentTotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  totalOutstandingSet {
+    ...ShopMoneyAmountFragment
+  }
+  customAttributes {
+    key
+    value
+  }
+  fullyPaid
+}
+
+fragment DatabaseShopifyOrderLineItemFragment on LineItem {
+  id
+  title
+  variant {
+    id
+  }
+  quantity: currentQuantity
+  unfulfilledQuantity
+  originalUnitPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  discountedUnitPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  taxLines {
+    priceSet {
+      ...ShopMoneyAmountFragment
     }
-    ... on DraftOrder {
-      name
-      totalPrice
+  }
+  customAttributes {
+    key
+    value
+  }
+}
+
+mutation updateCustomAttributes($id: ID!, $customAttributes: [AttributeInput!]!) {
+  orderUpdate(input: {id: $id, customAttributes: $customAttributes}) {
+    userErrors {
+      field
+      message
     }
   }
 }

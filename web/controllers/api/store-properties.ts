@@ -1,6 +1,6 @@
 import { Session } from '@shopify/shopify-api';
-import { Authenticated, Get } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Authenticated, Get } from '@teifi-digital/shopify-app-express/decorators';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
 import { Request, Response } from 'express-serve-static-core';
 import { CurrencyCode } from '../../services/gql/queries/generated/schema.js';

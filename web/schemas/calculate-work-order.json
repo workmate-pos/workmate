@@ -2,19 +2,22 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "name": {
+      "$ref": "create-work-order.json#/properties/name"
+    },
     "customerId": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
     },
     "charges": {
       "$ref": "create-work-order.json#/properties/charges"
     },
-    "lineItems": {
-      "$ref": "create-work-order.json#/properties/lineItems"
+    "items": {
+      "$ref": "create-work-order.json#/properties/items"
     },
     "discount": {
       "$ref": "create-work-order.json#/properties/discount"
     }
   },
-  "required": ["customerId", "charges", "lineItems", "discount"],
+  "required": ["customerId", "charges", "items", "discount"],
   "additionalProperties": false
 }

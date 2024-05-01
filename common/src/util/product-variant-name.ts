@@ -4,9 +4,13 @@ export function getProductVariantName(
     title: string;
   } | null,
 ) {
-  return productVariant
-    ? productVariant?.product?.hasOnlyDefaultVariant
-      ? productVariant?.product?.title
-      : `${productVariant?.product?.title} - ${productVariant?.title}`
-    : null;
+  if (!productVariant) {
+    return null;
+  }
+
+  if (productVariant.product?.hasOnlyDefaultVariant) {
+    return productVariant.product.title;
+  }
+
+  return `${productVariant?.product?.title} - ${productVariant?.title}`;
 }

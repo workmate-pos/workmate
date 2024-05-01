@@ -10,14 +10,33 @@ mutation calculate($input: DraftOrderInput!) {
 }
 
 fragment CalculatedDraftOrderFragment on CalculatedDraftOrder {
-  totalTax
-  totalPrice
-  totalShippingPrice
-  subtotalPrice
+  totalTaxSet {
+    ...ShopMoneyAmountFragment
+  }
+  subtotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
   appliedDiscount {
-    value
-    valueType
-    amount
+    amountSet {
+      ...ShopMoneyAmountFragment
+    }
+  }
+  totalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  lineItems {
+    quantity
+    taxable
+    originalUnitPriceSet {
+      ...ShopMoneyAmountFragment
+    }
+    discountedUnitPriceSet {
+      ...ShopMoneyAmountFragment
+    }
+    customAttributes {
+      key
+      value
+    }
   }
 }
 
@@ -45,6 +64,14 @@ mutation update($id: ID!, $input: DraftOrderInput!) {
 
 mutation remove($id: ID!) {
   draftOrderDelete(input: { id: $id }) {
+    userErrors {
+      ...UserErrorFragment
+    }
+  }
+}
+
+mutation removeMany($ids: [ID!]!) {
+  draftOrderBulkDelete(ids: $ids) {
     userErrors {
       ...UserErrorFragment
     }
@@ -90,6 +117,27 @@ query get($id: ID!) {
     customAttributes {
       key
       value
+    }
+  }
+}
+
+query getManyForDatabase($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...DatabaseShopifyOrderFragment
+  }
+}
+
+query getLineItemsForDatabase($draftOrderId: ID!, $first: Int = 25) {
+  draftOrder(id: $draftOrderId) {
+    lineItems(first: $first) {
+      nodes {
+        ...DatabaseShopifyOrderLineItemFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
     }
   }
 }
@@ -149,6 +197,53 @@ fragment DraftOrderInfoFragment on DraftOrder {
   draftTotalTax: totalTax
   totalPrice
   totalShippingPrice
+  customAttributes {
+    key
+    value
+  }
+}
+
+fragment DatabaseShopifyOrderFragment on DraftOrder {
+  id
+  name
+  customer {
+    id
+  }
+  customAttributes {
+    key
+    value
+  }
+  subtotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  appliedDiscount {
+    amountSet {
+      ...ShopMoneyAmountFragment
+    }
+  }
+  totalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+}
+
+fragment DatabaseShopifyOrderLineItemFragment on DraftOrderLineItem {
+  id
+  title
+  variant {
+    id
+  }
+  quantity
+  originalUnitPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  discountedUnitPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  taxLines {
+    priceSet {
+      ...ShopMoneyAmountFragment
+    }
+  }
   customAttributes {
     key
     value

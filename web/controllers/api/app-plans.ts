@@ -1,6 +1,6 @@
-import { Authenticated, BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Get, Post } from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
 import { CreateAppPlanSubscription } from '../../schemas/generated/create-app-plan-subscription.js';
 import { Int } from '../../services/gql/queries/generated/schema.js';

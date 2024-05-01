@@ -15,20 +15,45 @@ Then you need to create a github token with `read:packages` scope, and add both 
 @teifi-digital:registry=https://npm.pkg.github.com/
 ```
 
-Then, you can install the dependencies for all subprojects:
+Then, copy the .env.example file to .env:
 ```bash
-npm i ; cd web && npm i ; cd frontend && npm i ; cd ../..
+cp .env.example .env
 ```
 
-Also link your .env file to the web directory:
+Make sure to populate this yourself.
+
+Then, create symlinks to .npmrc for all subprojects:
+```bash
+cd web && ln -s ../.npmrc .
+cd frontend && ln -s ../../.npmrc .
+cd ../../common && ln -s ../.npmrc .
+cd ../extensions && ln -s ../.npmrc .
+cd common-pos && ln -s ../../.npmrc .
+cd ../work-orders-pos && ln -s ../../.npmrc .
+cd ../purchase-orders-pos && ln -s ../../.npmrc .
+cd ../cycle-count-pos && ln -s ../../.npmrc .
 ```
-cd web
-ln -s ../.env .
-cd ../
+
+Do the same for the .env file:
+```bash
+cd web && ln -s ../.env .
+```
+
+Then, you can install the dependencies for all subprojects:
+```bash
+npm i
+cd web && npm i --ignore-scripts
+cd ../frontend && npm i --ignore-scripts
+cd ../common && npm i --ignore-scripts
+cd ../extensions && npm i --ignore-scripts
+cd common-pos && npm i --ignore-scripts
+cd ../work-orders-pos && npm i --ignore-scripts
+cd ../purchase-orders-pos && npm i --ignore-scripts
+cd ../../work-order-shopify-order && npm i --ignore-scripts
 ```
 
 Finally, run prisma migrate to populate the db:
-```
+```bash
 cd web
 npx prisma migrate dev generate
 cd ../

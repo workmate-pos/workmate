@@ -1,16 +1,23 @@
-import { CreateWorkOrder, DateTime } from '@web/schemas/generated/create-work-order.js';
-import { Nullable } from '@work-orders/common/types/Nullable.js';
+import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { WIPCreateWorkOrder } from './reducer.js';
+import { WEEK_IN_MS } from '@work-orders/common/time/constants.js';
 
-export const defaultCreateWorkOrder: Nullable<CreateWorkOrder> = {
+export type CreateWorkOrderBase = {
+  status: string;
+};
+
+export const defaultCreateWorkOrder = (base: CreateWorkOrderBase): WIPCreateWorkOrder => ({
+  ...base,
   name: null,
-  description: '',
-  status: null,
+  note: '',
+  internalNote: '',
   derivedFromOrderId: null,
   dueDate: new Date(
-    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + 1000 * 60 * 60 * 24 * 7,
+    Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()) + WEEK_IN_MS,
   ).toISOString() as DateTime,
   charges: [],
-  lineItems: [],
+  items: [],
   customerId: null,
+  customFields: {},
   discount: null,
-};
+});

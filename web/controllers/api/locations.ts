@@ -1,7 +1,7 @@
-import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Session } from '@shopify/shopify-api';
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services/graphql.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
 import type { Request, Response } from 'express-serve-static-core';
 import { Ids } from '../../schemas/generated/ids.js';
@@ -38,7 +38,7 @@ export default class LocationsController {
 
     const locations = nodes.filter(
       (node): node is null | (gql.location.getMany.Result['nodes'][number] & { __typename: 'Location' }) =>
-        node === null || node.__typename === 'Customer',
+        node === null || node.__typename === 'Location',
     );
 
     return res.json({ locations });

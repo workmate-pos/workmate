@@ -23,6 +23,9 @@ query getDefinitionByType($type: String!) {
   metaobjectDefinitionByType(type: $type) {
     id
     type
+    fieldDefinitions {
+      key
+    }
   }
 }
 

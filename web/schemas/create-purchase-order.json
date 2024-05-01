@@ -7,66 +7,13 @@
       "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
     },
     "status": {
-      "title": "status",
-      "enum": ["OPEN", "RECEIVED", "CANCELLED", "CLOSED"]
-    },
-    "orderId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
-    },
-    "workOrderName": {
-      "anyOf": [{ "const": null }, { "type": "string" }]
-    },
-    "orderName": {
-      "anyOf": [{ "const": null }, { "type": "string" }]
+      "type": "string"
     },
     "locationId": {
       "anyOf": [
         { "const": null },
         {
           "$ref": "scalars.json#/definitions/ID"
-        }
-      ]
-    },
-    "customerId": {
-      "anyOf": [
-        { "const": null },
-        {
-          "$ref": "scalars.json#/definitions/ID"
-        }
-      ]
-    },
-    "vendorCustomerId": {
-      "anyOf": [
-        { "const": null },
-        {
-          "$ref": "scalars.json#/definitions/ID"
-        }
-      ]
-    },
-    "shipFrom": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
-    },
-    "shipTo": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
-    },
-    "note": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
         }
       ]
     },
@@ -79,26 +26,14 @@
         }
       ]
     },
-    "customerName": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+    "shipFrom": {
+      "type": "string"
     },
-    "locationName": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+    "shipTo": {
+      "type": "string"
     },
-    "subtotal": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
+    "note": {
+      "type": "string"
     },
     "discount": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
@@ -115,17 +50,35 @@
     "paid": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/Money" }]
     },
-    "products": {
+    "lineItems": {
       "type": "array",
       "items": {
         "type": "object",
         "title": "product",
         "properties": {
+          "uuid": {
+            "type": "string"
+          },
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
           },
-          "inventoryItemId": {
-            "$ref": "scalars.json#/definitions/ID"
+          "shopifyOrderLineItem": {
+            "anyOf": [
+              { "const": null },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "scalars.json#/definitions/ID"
+                  },
+                  "orderId": {
+                    "$ref": "scalars.json#/definitions/ID"
+                  }
+                },
+                "required": ["id", "orderId"],
+                "additionalProperties": false
+              }
+            ]
           },
           "quantity": {
             "description": "The quantity of this product variant in the PO",
@@ -135,17 +88,11 @@
             "description": "The quantity of this product variant available in the inventory",
             "$ref": "scalars.json#/definitions/Int"
           },
-          "sku": {
-            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
-          },
-          "name": {
-            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
-          },
-          "handle": {
-            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+          "unitCost": {
+            "$ref": "scalars.json#/definitions/Money"
           }
         },
-        "required": ["productVariantId", "inventoryItemId", "quantity", "availableQuantity", "sku", "name", "handle"],
+        "required": ["uuid", "productVariantId", "shopifyOrderLineItem", "quantity", "availableQuantity", "unitCost"],
         "additionalProperties": false
       }
     },
@@ -162,12 +109,9 @@
         "properties": {
           "employeeId": {
             "$ref": "scalars.json#/definitions/ID"
-          },
-          "employeeName": {
-            "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
           }
         },
-        "required": ["employeeId", "employeeName"],
+        "required": ["employeeId"],
         "additionalProperties": false
       }
     }
@@ -175,25 +119,17 @@
   "required": [
     "name",
     "status",
-    "orderId",
-    "workOrderName",
-    "orderName",
     "locationId",
-    "customerId",
-    "vendorCustomerId",
+    "vendorName",
     "shipFrom",
     "shipTo",
     "note",
-    "vendorName",
-    "customerName",
-    "locationName",
-    "subtotal",
     "discount",
     "tax",
     "shipping",
     "deposited",
     "paid",
-    "products",
+    "lineItems",
     "customFields",
     "employeeAssignments"
   ],

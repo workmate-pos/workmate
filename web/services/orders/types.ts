@@ -14,15 +14,13 @@ export type Order = {
   displayFinancialStatus: OrderDisplayFinancialStatus | null;
   outstanding: Money;
   received: Money;
-  discount: Money;
-  tax: Money;
+  discount: Money | null;
+  tax: Money | null;
   customer: {
     id: ID;
     displayName: string;
   } | null;
-  workOrder: {
-    name: string;
-  } | null;
+  workOrders: { name: string }[];
 };
 
 /**
@@ -31,7 +29,7 @@ export type Order = {
 export type OrderInfo = {
   id: ID;
   name: string;
-  workOrderName: string | null;
+  workOrders: { name: string }[];
   total: Money;
   displayFulfillmentStatus: OrderDisplayFulfillmentStatus;
   displayFinancialStatus: OrderDisplayFinancialStatus | null;

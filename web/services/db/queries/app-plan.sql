@@ -18,9 +18,9 @@ WITH insertedSubscriptionTrial AS (
 INSERT INTO "AppPlanSubscription" ("appSubscriptionShopifyId", shop, "appSubscriptionStatus", "appPlanId")
 VALUES (:appSubscriptionShopifyId!, :shop!, :appSubscriptionStatus!, :appPlanId!)
 ON CONFLICT ("shop") DO UPDATE SET
-                                 "appSubscriptionShopifyId" = :appSubscriptionShopifyId!,
-                                 "appSubscriptionStatus" = :appSubscriptionStatus!,
-                                 "appPlanId" = :appPlanId!
+                                 "appSubscriptionShopifyId" = EXCLUDED."appSubscriptionShopifyId",
+                                 "appSubscriptionStatus" = EXCLUDED."appSubscriptionStatus",
+                                 "appPlanId" = EXCLUDED."appPlanId"
 RETURNING *;
 
 /* @name get */

@@ -4,7 +4,7 @@ import { ReactNode, useEffect } from 'react';
 export function Pinger({ children }: { children: ReactNode }) {
   const fetch = useAuthenticatedFetch({
     setToastAction: () => {},
-    reauthOptions: { redirect: true },
+    reauthOptions: { redirect: true, newContext: false },
   });
 
   useEffect(() => {

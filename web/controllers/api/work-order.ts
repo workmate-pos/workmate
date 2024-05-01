@@ -1,11 +1,5 @@
 import { Session } from '@shopify/shopify-api';
-import {
-  Authenticated,
-  BodySchema,
-  Get,
-  Post,
-  QuerySchema,
-} from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
@@ -15,10 +9,15 @@ import { getShopSettings } from '../../services/settings.js';
 import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { sessionStorage } from '../../index.js';
-import { calculateDraftOrder } from '../../services/work-orders/calculate.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors/http-error.js';
+import { calculateWorkOrder } from '../../services/work-orders/calculate.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Permission } from '../../decorators/permission.js';
+import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { mg } from '../../services/mail/mailgun.js';
+import { renderHtmlToPdfCustomFile } from '../../services/mail/html-pdf/renderer.js';
+import { getRenderedWorkOrderTemplate, getWorkOrderTemplateData } from '../../services/mail/templates/work-order.js';
+import { WorkOrderPrintJob } from '../../schemas/generated/work-order-print-job.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -30,9 +29,8 @@ export default class WorkOrderController {
     res: Response<CalculateDraftOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
-    const calculateWorkOrder = req.body;
 
-    const calculatedDraft = await calculateDraftOrder(session, calculateWorkOrder);
+    const calculatedDraft = await calculateWorkOrder(session, req.body);
 
     return res.json(calculatedDraft);
   }
@@ -45,9 +43,12 @@ export default class WorkOrderController {
     const session: Session = res.locals.shopify.session;
     const createWorkOrder = req.body;
 
-    const { name } = await upsertWorkOrder(session, createWorkOrder);
+    const user: LocalsTeifiUser = res.locals.teifi.user;
 
-    return res.json({ name });
+    const { name } = await upsertWorkOrder(session, user, createWorkOrder);
+    const workOrder = await getWorkOrder(session, name);
+
+    return res.json(workOrder ?? never());
   }
 
   @Post('/request')
@@ -82,16 +83,18 @@ export default class WorkOrderController {
       throw new HttpError('Shop is not installed', 400);
     }
 
-    const { name } = await upsertWorkOrder(session, {
+    const { name } = await upsertWorkOrder(session, null, {
       status: settings.workOrderRequests.status,
       dueDate: createWorkOrderRequest.dueDate,
       customerId: createGid('Customer', customerId),
-      description: createWorkOrderRequest.description,
+      note: createWorkOrderRequest.description,
       charges: [],
-      lineItems: [],
+      items: [],
       derivedFromOrderId: null,
       name: null,
+      customFields: {},
       discount: null,
+      internalNote: '',
     });
 
     return res.json({ name });
@@ -120,22 +123,64 @@ export default class WorkOrderController {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
-    const result = await getWorkOrder(session, name);
+    const workOrder = await getWorkOrder(session, name);
 
-    if (!result) {
+    if (!workOrder) {
       throw new HttpError('Work order not found', 404);
     }
 
-    return res.json(result);
+    return res.json(workOrder);
+  }
+
+  @Post('/:name/print/:template')
+  @Authenticated()
+  @Permission('read_work_orders')
+  @QuerySchema('work-order-print-job')
+  async printWorkOrder(
+    req: Request<{ name: string; template: string }, unknown, unknown, WorkOrderPrintJob>,
+    res: Response<PrintWorkOrderResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const { name, template } = req.params;
+    const { date } = req.query;
+
+    const { emailReplyTo, emailFromTitle, workOrderPrintTemplates, printEmail } = await getShopSettings(session.shop);
+
+    if (!Object.keys(workOrderPrintTemplates).includes(template)) {
+      throw new HttpError('Unknown print template', 400);
+    }
+
+    if (!printEmail) {
+      throw new HttpError('No print email address set', 400);
+    }
+
+    const printTemplate = workOrderPrintTemplates[template] ?? never();
+    const context = await getWorkOrderTemplateData(session, name, date);
+    const { subject, html } = await getRenderedWorkOrderTemplate(printTemplate, context);
+    const file = await renderHtmlToPdfCustomFile(subject, html);
+
+    await mg.send(
+      { emailReplyTo, emailFromTitle },
+      {
+        to: printEmail,
+        attachment: [file],
+        subject,
+        text: 'WorkMate Work Order',
+      },
+    );
+
+    return res.json({ success: true });
   }
 }
 
-export type CalculateDraftOrderResponse = Awaited<ReturnType<typeof calculateDraftOrder>>;
+export type CalculateDraftOrderResponse = Awaited<ReturnType<typeof calculateWorkOrder>>;
 
-export type CreateWorkOrderResponse = { name: string };
+export type CreateWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
 
 export type CreateWorkOrderRequestResponse = { name: string };
 
 export type FetchWorkOrderInfoPageResponse = Awaited<ReturnType<typeof getWorkOrderInfoPage>>;
 
 export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
+
+export type PrintWorkOrderResponse = { success: true };

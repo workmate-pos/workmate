@@ -1,4 +1,4 @@
-import { Authenticated, Get } from '@teifi-digital/shopify-app-express/decorators/default/index.js';
+import { Authenticated, Get } from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
 
 @Authenticated()

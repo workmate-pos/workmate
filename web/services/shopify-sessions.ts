@@ -1,4 +1,4 @@
-import { TeifiSessionStorage } from '@teifi-digital/shopify-app-express/shopify.js';
+import { TeifiSessionStorage } from '@teifi-digital/shopify-app-express';
 import { ShopifySession } from '@prisma/client';
 import { Session } from '@shopify/shopify-api';
 import { db } from './db/db.js';
@@ -91,7 +91,7 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
   }
 }
 
-function shopifySessionToSession(session: ShopifySession): Session {
+export function shopifySessionToSession(session: ShopifySession): Session {
   return new Session({
     id: session.id,
     shop: session.shop,
