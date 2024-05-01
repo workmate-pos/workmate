@@ -28,7 +28,7 @@
     "@prisma/client": "^5.5.2",
     "@sentry/node": "^7.74.1",
     "@sinclair/typebox": "^0.32.15",
-    "@teifi-digital/shopify-app-express": "^0.8.5",
+    "@teifi-digital/shopify-app-express": "^0.8.6",
     "@teifi-digital/shopify-app-toolbox": "^0.0.40",
     "@work-orders/common": "file:../common",
     "@work-orders/work-order-shopify-order": "file:../work-order-shopify-order",
