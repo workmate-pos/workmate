@@ -48,7 +48,7 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
 
     if (previousShopifyOrderLineItemId) {
       // if this work order item was previously linked to a different line item, we should also re-link purchase order line items.
-      // this is handy when a draft order is converted to a real order.
+      // this is handy when a draft order is converted to a real order/when a new draft order is created (e.g. when changing a work order)
 
       for (const { purchaseOrderId, uuid } of await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemId({
         shopifyOrderLineItemId: previousShopifyOrderLineItemId,

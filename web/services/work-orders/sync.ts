@@ -12,6 +12,8 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
 import { getWorkOrderDiscount } from './get.js';
 import { syncShopifyOrders } from '../shopify-order/sync.js';
+import { assertGidOrNull } from '../../util/assertions.js';
+import { DraftOrderInput, Int } from '../gql/queries/generated/schema.js';
 
 export type SyncWorkOrdersOptions = {
   /**
@@ -104,36 +106,44 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
 
   assertGid(workOrder.customerId);
 
-  const { result } = await gql.draftOrder.create.run(graphql, {
-    input: {
-      customAttributes: getCustomAttributeArrayFromObject(
-        getWorkOrderOrderCustomAttributes({
-          name: workOrder.name,
-          customFields: Object.fromEntries(customFields.map(({ key, value }) => [key, value])),
-        }),
-      ),
-      lineItems: [
-        ...lineItems.map(lineItem => ({
-          variantId: lineItem.productVariantId,
-          quantity: lineItem.quantity,
-          customAttributes: getCustomAttributeArrayFromObject(lineItem.customAttributes),
-        })),
-        ...customSales.map(customSale => ({
-          title: customSale.title,
-          quantity: customSale.quantity,
-          customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
-          originalUnitPrice: customSale.unitPrice,
-          taxable: customSale.taxable,
-        })),
-      ],
-      note: workOrder.note,
-      purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
-      appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
-    },
-  });
+  const input: DraftOrderInput = {
+    customAttributes: getCustomAttributeArrayFromObject(
+      getWorkOrderOrderCustomAttributes({
+        name: workOrder.name,
+        customFields: Object.fromEntries(customFields.map(({ key, value }) => [key, value])),
+      }),
+    ),
+    lineItems: [
+      ...lineItems.map(lineItem => ({
+        variantId: lineItem.productVariantId,
+        quantity: lineItem.quantity as Int,
+        customAttributes: getCustomAttributeArrayFromObject(lineItem.customAttributes),
+      })),
+      ...customSales.map(customSale => ({
+        title: customSale.title,
+        quantity: customSale.quantity as Int,
+        customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
+        originalUnitPrice: customSale.unitPrice,
+        taxable: customSale.taxable,
+      })),
+    ],
+    note: workOrder.note,
+    purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
+    appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
+  };
+
+  const [{ orderId: draftOrderId } = { orderId: null }] = linkedOrders.filter(
+    hasPropertyValue('orderType', 'DRAFT_ORDER'),
+  );
+
+  assertGidOrNull(draftOrderId);
+
+  const { result } = draftOrderId
+    ? await gql.draftOrder.update.run(graphql, { id: draftOrderId, input })
+    : await gql.draftOrder.create.run(graphql, { input });
 
   if (!result?.draftOrder) {
-    throw new Error('Failed to create draft order');
+    throw new Error('Failed to create/update draft order');
   }
 
   await syncShopifyOrders(session, [result.draftOrder?.id]);
