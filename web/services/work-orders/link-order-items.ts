@@ -3,7 +3,6 @@ import { getUuidFromCustomAttributeKey, WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from 
 import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Session } from '@shopify/shopify-api';
-import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 import { gql } from '../gql/gql.js';
 
 type Order = { id: ID; customAttributes: { key: string; value: string | null }[] };
@@ -26,14 +25,11 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
 
   const errors: unknown[] = [];
 
-  // TODO: Perhaps remove the custom attribute after linking is done (for orders, not for drafts)? Should not hurt as linking is only required once
-  await cleanOrphanedDraftOrders(session, workOrder.id, () =>
-    Promise.all([
-      linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
-      linkHourlyLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
-      linkFixedPriceLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
-    ]),
-  );
+  await Promise.all([
+    linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
+    linkHourlyLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
+    linkFixedPriceLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
+  ]);
 
   if (errors.length) {
     throw new AggregateError(errors, 'Failed to link work order items and charges');

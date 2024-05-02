@@ -11,8 +11,33 @@ import {
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
 import { getWorkOrderDiscount } from './get.js';
+import { syncShopifyOrders } from '../shopify-order/sync.js';
 
-export async function syncWorkOrders(session: Session, workOrderIds: number[], workOrderHasChanged: boolean) {
+export type SyncWorkOrdersOptions = {
+  /**
+   * If true, work orders are only synced if there is some unlinked line item.
+   * Defaults to false.
+   *
+   * This is used to break an infinite update cycle:
+   * 1. Update Order webhook
+   * 2. Sync Related Work Orders (in case something was deleted)
+   * 3. Update Order webhook
+   */
+  onlySyncIfUnlinked?: boolean;
+
+  /**
+   * If true, updates the custom attributes of existing orders.
+   * Defaults to true.
+   */
+  updateCustomAttributes?: boolean;
+};
+
+const defaultSyncWorkOrdersOptions: SyncWorkOrdersOptions = {
+  onlySyncIfUnlinked: false,
+  updateCustomAttributes: true,
+};
+
+export async function syncWorkOrders(session: Session, workOrderIds: number[], options?: SyncWorkOrdersOptions) {
   if (workOrderIds.length === 0) {
     return;
   }
@@ -20,7 +45,7 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], w
   const errors: unknown[] = [];
 
   for (const workOrderId of workOrderIds) {
-    await syncWorkOrder(session, workOrderId, workOrderHasChanged).catch(error => errors.push(error));
+    await syncWorkOrder(session, workOrderId, options).catch(error => errors.push(error));
   }
 
   if (errors.length > 0) {
@@ -28,8 +53,10 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], w
   }
 }
 
-// TODO: Don't wait for webhooks here - just directly ensure that (draft) orders are synced
-export async function syncWorkOrder(session: Session, workOrderId: number, workOrderHasChanged: boolean) {
+/**
+ * Syncs a work order to Shopify by creating a new draft order for any draft/unlinked line items, and updating custom attributes of existing orders.
+ */
+export async function syncWorkOrder(session: Session, workOrderId: number, options?: SyncWorkOrdersOptions) {
   const { labourLineItemSKU } = await getShopSettings(session.shop);
 
   const [workOrder] = await db.workOrder.get({ id: workOrderId });
@@ -38,93 +65,80 @@ export async function syncWorkOrder(session: Session, workOrderId: number, workO
     throw new Error(`Work order with id ${workOrderId} not found`);
   }
 
-  const customFields = await db.workOrder.getCustomFields({ workOrderId });
-  const items = await db.workOrder.getItems({ workOrderId });
-  const hourlyLabourCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
-  const fixedPriceLabourCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
+  const [customFields, items, hourlyLabourCharges, fixedPriceLabourCharges] = await Promise.all([
+    db.workOrder.getCustomFields({ workOrderId }),
+    db.workOrder.getItems({ workOrderId }),
+    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
+    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
+  ]);
 
-  // a filter to get line items that should be re-linked to a draft order
-  const draftLineItemFilter = (el: { shopifyOrderLineItemId: string | null }) => {
-    if (isLineItemId(el.shopifyOrderLineItemId)) {
-      return false;
+  if (options?.onlySyncIfUnlinked ?? defaultSyncWorkOrdersOptions.onlySyncIfUnlinked) {
+    const hasUnlinkedItems = [...items, ...hourlyLabourCharges, ...fixedPriceLabourCharges].some(
+      el => el.shopifyOrderLineItemId === null,
+    );
+
+    if (!hasUnlinkedItems) {
+      return;
     }
-
-    if (el.shopifyOrderLineItemId === null) {
-      return true;
-    }
-
-    // at this point we know that its a draft order line item.
-    // we only want to re-create draft line items in case the work order has changed.
-    // otherwise we would create a new draft order every time a draft order has changed via the webhook.
-    if (workOrderHasChanged) {
-      return true;
-    }
-
-    return false;
-  };
+  }
 
   const graphql = new Graphql(session);
 
-  const draftItems = items.filter(draftLineItemFilter);
-  const draftHourlyLabourCharges = hourlyLabourCharges.filter(draftLineItemFilter);
-  const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(draftLineItemFilter);
-
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
-  const shouldRecreateDraftOrder =
-    draftItems.length !== 0 || draftHourlyLabourCharges.length !== 0 || draftFixedPriceLabourCharges.length !== 0;
+  const lineItemToLinkFilter = (el: { shopifyOrderLineItemId: string | null }) =>
+    !isLineItemId(el.shopifyOrderLineItemId);
 
-  if (shouldRecreateDraftOrder) {
-    const { lineItems, customSales } = getWorkOrderLineItems(
-      draftItems,
-      draftHourlyLabourCharges,
-      draftFixedPriceLabourCharges,
-      { labourSku: labourLineItemSKU },
-    );
+  const draftItems = items.filter(lineItemToLinkFilter);
+  const draftHourlyLabourCharges = hourlyLabourCharges.filter(lineItemToLinkFilter);
+  const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(lineItemToLinkFilter);
 
-    const discount = getWorkOrderDiscount(workOrder);
+  const { lineItems, customSales } = getWorkOrderLineItems(
+    draftItems,
+    draftHourlyLabourCharges,
+    draftFixedPriceLabourCharges,
+    { labourSku: labourLineItemSKU },
+  );
 
-    assertGid(workOrder.customerId);
+  const discount = getWorkOrderDiscount(workOrder);
 
-    const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(({ orderId }) => {
-      assertGid(orderId);
-      return orderId;
-    });
+  assertGid(workOrder.customerId);
 
-    if (draftOrderIds.length > 0) {
-      await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
-    }
+  const { result } = await gql.draftOrder.create.run(graphql, {
+    input: {
+      customAttributes: getCustomAttributeArrayFromObject(
+        getWorkOrderOrderCustomAttributes({
+          name: workOrder.name,
+          customFields: Object.fromEntries(customFields.map(({ key, value }) => [key, value])),
+        }),
+      ),
+      lineItems: [
+        ...lineItems.map(lineItem => ({
+          variantId: lineItem.productVariantId,
+          quantity: lineItem.quantity,
+          customAttributes: getCustomAttributeArrayFromObject(lineItem.customAttributes),
+        })),
+        ...customSales.map(customSale => ({
+          title: customSale.title,
+          quantity: customSale.quantity,
+          customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
+          originalUnitPrice: customSale.unitPrice,
+          taxable: customSale.taxable,
+        })),
+      ],
+      note: workOrder.note,
+      purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
+      appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
+    },
+  });
 
-    await gql.draftOrder.create.run(graphql, {
-      input: {
-        customAttributes: getCustomAttributeArrayFromObject(
-          getWorkOrderOrderCustomAttributes({
-            name: workOrder.name,
-            customFields: Object.fromEntries(customFields.map(({ key, value }) => [key, value])),
-          }),
-        ),
-        lineItems: [
-          ...lineItems.map(lineItem => ({
-            variantId: lineItem.productVariantId,
-            quantity: lineItem.quantity,
-            customAttributes: getCustomAttributeArrayFromObject(lineItem.customAttributes),
-          })),
-          ...customSales.map(customSale => ({
-            title: customSale.title,
-            quantity: customSale.quantity,
-            customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
-            originalUnitPrice: customSale.unitPrice,
-            taxable: customSale.taxable,
-          })),
-        ],
-        note: workOrder.note,
-        purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
-        appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
-      },
-    });
+  if (!result?.draftOrder) {
+    throw new Error('Failed to create draft order');
   }
 
-  if (workOrderHasChanged) {
+  await syncShopifyOrders(session, [result.draftOrder?.id]);
+
+  if (options?.updateCustomAttributes ?? defaultSyncWorkOrdersOptions.updateCustomAttributes) {
     await Promise.all(
       linkedOrders.filter(hasPropertyValue('orderType', 'ORDER')).map(order => {
         assertGid(order.orderId);

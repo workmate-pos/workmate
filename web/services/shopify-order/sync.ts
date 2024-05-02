@@ -205,7 +205,7 @@ async function syncShopifyOrderLineItems(
   await syncWorkOrders(
     session,
     workOrders.map(({ id }) => id),
-    false,
+    { onlySyncIfUnlinked: true, updateCustomAttributes: false },
   );
 }
 

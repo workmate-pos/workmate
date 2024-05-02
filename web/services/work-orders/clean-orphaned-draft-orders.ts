@@ -3,15 +3,24 @@ import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { inTransaction } from '../db/client.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { recompose } from '../../util/functional.js';
+import { syncWorkOrders } from './sync.js';
 
 /**
  * Simple wrapper function that tracks draft orders before and after some async operation, and cleans those that are no longer referenced by any work order item/charge.
+ * IMPORTANT: This should not be called inside of a transaction! Deleting draft orders triggers a webhook which depends on database state!
  */
 export async function cleanOrphanedDraftOrders<T>(
   session: Session,
   workOrderId: number,
   fn: () => Promise<T>,
 ): Promise<T> {
+  if (inTransaction()) {
+    throw new Error('cleanOrphanedDraftOrders should not be called inside of a transaction!');
+  }
+
   const oldLinkedDraftOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
   async function clean() {
@@ -37,4 +46,12 @@ export async function cleanOrphanedDraftOrders<T>(
     result => clean().then(() => result),
     error => clean().then(() => Promise.reject(error)),
   );
+}
+
+/**
+ * Just like {@link cleanOrphanedDraftOrders}, but accepts an array of work order ids.
+ */
+export function cleanManyOrphanedDraftOrders<T>(session: Session, workOrderIds: number[], fn: () => Promise<T>) {
+  const run = recompose(workOrderIds, (workOrderId, next) => cleanOrphanedDraftOrders(session, workOrderId, next), fn);
+  return run();
 }

@@ -1,4 +1,4 @@
-import { WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
+import { sentryErr, WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
 import { db } from './db/db.js';
 import { AppPlanName } from './db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
@@ -11,6 +11,8 @@ import { syncShopifyOrders, syncShopifyOrdersIfExists } from './shopify-order/sy
 import { syncWorkOrders } from './work-orders/sync.js';
 import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
 import { syncProductServiceTypeTag } from './metafields/product-service-type-metafield.js';
+import { cleanManyOrphanedDraftOrders, cleanOrphanedDraftOrders } from './work-orders/clean-orphaned-draft-orders.js';
+import { unit } from './db/unit-of-work.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -70,10 +72,20 @@ export default {
         note_attributes: { name: string; value: string }[];
       },
     ) {
-      const isWorkOrder = body.note_attributes.some(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
+      const workOrderName = body.note_attributes.find(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
 
-      if (isWorkOrder) {
-        await syncShopifyOrders(session, [body.admin_graphql_api_id]);
+      if (workOrderName) {
+        const [workOrder] = await db.workOrder.get({ name: workOrderName.value });
+
+        if (!workOrder) {
+          // can happen if a merchant manually adds the attribute. if this happens often something is wrong
+          sentryErr('Order with Work Order Attribute not found in db');
+          return;
+        }
+
+        await cleanOrphanedDraftOrders(session, workOrder.id, () =>
+          syncShopifyOrders(session, [body.admin_graphql_api_id]),
+        );
       }
     },
   },
@@ -127,27 +139,17 @@ export default {
     },
   },
 
-  DRAFT_ORDERS_CREATE: {
-    async handler(
-      session,
-      topic,
-      shop,
-      body: {
-        admin_graphql_api_id: ID;
-        note_attributes: { name: string; value: string }[];
-      },
-    ) {
-      const isWorkOrder = body.note_attributes.some(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
-
-      if (isWorkOrder) {
-        await syncShopifyOrders(session, [body.admin_graphql_api_id]);
-      }
-    },
-  },
-
   DRAFT_ORDERS_UPDATE: {
-    async handler(session, topic, shop, body: { admin_graphql_api_id: ID }) {
-      await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
+    async handler(session, topic, shop, body: { admin_graphql_api_id: ID; name: string }) {
+      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({
+        orderId: body.admin_graphql_api_id,
+      });
+
+      await cleanManyOrphanedDraftOrders(
+        session,
+        relatedWorkOrders.map(({ id }) => id),
+        () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
+      );
     },
   },
 
@@ -157,13 +159,20 @@ export default {
 
       const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId });
 
-      await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
-      await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });
-
-      await syncWorkOrders(
+      await cleanManyOrphanedDraftOrders(
         session,
         relatedWorkOrders.map(({ id }) => id),
-        false,
+        () =>
+          unit(async () => {
+            await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
+            await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });
+
+            await syncWorkOrders(
+              session,
+              relatedWorkOrders.map(({ id }) => id),
+              { onlySyncIfUnlinked: true, updateCustomAttributes: false },
+            );
+          }),
       );
     },
   },
@@ -178,7 +187,15 @@ export default {
         note_attributes: { name: string; value: string }[];
       },
     ) {
-      await syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]);
+      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({
+        orderId: body.admin_graphql_api_id,
+      });
+
+      await cleanManyOrphanedDraftOrders(
+        session,
+        relatedWorkOrders.map(({ id }) => id),
+        () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
+      );
     },
   },
 
@@ -192,13 +209,20 @@ export default {
         orderId: body.admin_graphql_api_id,
       });
 
-      await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [body.admin_graphql_api_id] });
-      await db.shopifyOrder.deleteOrders({ orderIds: [body.admin_graphql_api_id] });
-
-      await syncWorkOrders(
+      await cleanManyOrphanedDraftOrders(
         session,
         relatedWorkOrders.map(({ id }) => id),
-        false,
+        () =>
+          unit(async () => {
+            await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [body.admin_graphql_api_id] });
+            await db.shopifyOrder.deleteOrders({ orderIds: [body.admin_graphql_api_id] });
+
+            await syncWorkOrders(
+              session,
+              relatedWorkOrders.map(({ id }) => id),
+              { onlySyncIfUnlinked: true, updateCustomAttributes: false },
+            );
+          }),
       );
     },
   },
