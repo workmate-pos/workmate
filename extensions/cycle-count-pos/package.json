@@ -11,6 +11,6 @@
     "@work-orders/common-pos": "file:../common-pos"
   },
   "scripts": {
-    "clean": "rimraf node_modules"
+    "clean": "rm -fr node_modules"
   }
 }

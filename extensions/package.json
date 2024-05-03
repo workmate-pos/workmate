@@ -5,7 +5,7 @@
   "scripts": {
     "set-app-url": "node ./set-app-url.js",
     "postinstall": "npm run set-app-url",
-    "clean": "rimraf node_modules"
+    "clean": "rm -fr node_modules"
   },
   "dependencies": {
     "@shopify/retail-ui-extensions": "^1.5.1",

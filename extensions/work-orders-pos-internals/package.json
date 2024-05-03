@@ -19,7 +19,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "clean": "rimraf dist node_modules"
+    "clean": "rm -fr dist node_modules"
   },
   "devDependencies": {
     "@types/uuid": "^9.0.8"
