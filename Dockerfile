@@ -12,7 +12,6 @@ WORKDIR /app
 COPY package.json package.json
 COPY package-lock.json package-lock.json
 COPY web web
-COPY extensions extensions
 COPY work-order-shopify-order work-order-shopify-order
 COPY common common
 COPY meta.json web
@@ -24,11 +23,11 @@ COPY graphql.config.yml web
 
 RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
     NPM_GITHUB_TOKEN=$(cat /run/secrets/NPM_GITHUB_TOKEN) \
-    npm run all:install
+    npm run admin:install
 
 RUN --mount=type=secret,id=SHOPIFY_ACCESS_TOKEN \
     SHOPIFY_ACCESS_TOKEN=$(cat /run/secrets/SHOPIFY_ACCESS_TOKEN) \
-    npm run all:build
+    npm run admin:build
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["npm", "run", "serve"]
