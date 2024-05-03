@@ -6,5 +6,8 @@
   "license": "UNLICENSED",
   "dependencies": {
     "@work-orders/work-orders-pos-internals": "file:../work-orders-pos-internals"
+  },
+  "scripts": {
+    "clean": "rimraf node_modules"
   }
 }

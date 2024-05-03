@@ -43,7 +43,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "build:watch": "tsc -w"
+    "build:watch": "tsc -w",
+    "clean": "rimraf dist node_modules"
   },
   "author": "Tim van Dam",
   "devDependencies": {

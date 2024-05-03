@@ -18,4 +18,5 @@ jobs:
       sentry_project: ${{ vars.SENTRY_PROJECT }}
       docker_username: ${{ vars.DOCKER_USERNAME }}
       deploy_extensions: true
+      extensions_install_command: npm run all:install && npm run all:build
     secrets: inherit

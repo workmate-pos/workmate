@@ -7,7 +7,8 @@
   },
   "scripts": {
     "build": "tsc",
-    "watch": "tsc -w"
+    "watch": "tsc -w",
+    "clean": "rimraf dist node_modules"
   },
   "private": true,
   "author": "Tim van Dam",

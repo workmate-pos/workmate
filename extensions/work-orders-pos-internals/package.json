@@ -18,11 +18,8 @@
     "uuid": "^9.0.1"
   },
   "scripts": {
-    "build:web": "cd ../../web && npm install && npm run build",
-    "build:common": "cd ../../common && npm install && npm run build",
-    "build:common-pos": "cd ../common-pos && npm install && npm run build",
-    "build:work-order-shopify-order": "cd ../../work-order-shopify-order && npm install && npm run build",
-    "postinstall": "npm run build:common-pos && npm run build:work-order-shopify-order && npm run build:web && npm run build:common"
+    "build": "tsc",
+    "clean": "rimraf dist node_modules"
   },
   "devDependencies": {
     "@types/uuid": "^9.0.8"

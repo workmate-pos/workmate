@@ -9,9 +9,7 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
 /**
  * Simple wrapper function that tracks draft orders before and after some async operation, and cleans those that are no longer referenced by any work order item/charge.
- * IMPORTANT: This should not be called inside of a transaction! Deleting draft orders triggers a webhook which depends on database state!
- *
- * @todo: maybe just delete all orphans, rather than only ones for this work order?
+ * IMPORTANT: This should not be called inside a transaction! Deleting draft orders triggers a webhook which depends on database state!
  */
 export async function cleanOrphanedDraftOrders<T>(
   session: Session,
@@ -19,7 +17,7 @@ export async function cleanOrphanedDraftOrders<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
   if (inTransaction()) {
-    throw new Error('cleanOrphanedDraftOrders should not be called inside of a transaction!');
+    throw new Error('cleanOrphanedDraftOrders should not be called inside a transaction!');
   }
 
   const oldLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });

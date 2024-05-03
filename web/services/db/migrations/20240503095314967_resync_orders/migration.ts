@@ -40,7 +40,7 @@ export default async function migrate() {
         await cleanManyOrphanedDraftOrders(
           session,
           relatedWorkOrders.map(wo => wo.id),
-          async () => syncShopifyOrdersIfExists(session, [orderId]),
+          () => syncShopifyOrdersIfExists(session, [orderId]),
         );
 
         successCount++;
