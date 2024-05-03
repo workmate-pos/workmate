@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite",
-    "clean": "rimraf dist node_modules"
+    "clean": "rm -fr dist node_modules"
   },
   "engines": {
     "node": ">= 18.15"

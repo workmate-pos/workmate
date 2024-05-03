@@ -79,7 +79,11 @@ export default {
 
         if (!workOrder) {
           // can happen if a merchant manually adds the attribute. if this happens often something is wrong
-          sentryErr('Order with Work Order Attribute not found in db');
+          sentryErr('Order with Work Order Attribute not found in db', {
+            shop: session.shop,
+            workOrderName,
+            orderId: body.admin_graphql_api_id,
+          });
           return;
         }
 
