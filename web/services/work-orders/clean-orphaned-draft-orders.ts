@@ -4,13 +4,14 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { inTransaction } from '../db/client.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { recompose } from '../../util/functional.js';
-import { syncWorkOrders } from './sync.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
 /**
  * Simple wrapper function that tracks draft orders before and after some async operation, and cleans those that are no longer referenced by any work order item/charge.
  * IMPORTANT: This should not be called inside of a transaction! Deleting draft orders triggers a webhook which depends on database state!
+ *
+ * @todo: maybe just delete all orphans, rather than only ones for this work order?
  */
 export async function cleanOrphanedDraftOrders<T>(
   session: Session,
@@ -21,13 +22,13 @@ export async function cleanOrphanedDraftOrders<T>(
     throw new Error('cleanOrphanedDraftOrders should not be called inside of a transaction!');
   }
 
-  const oldLinkedDraftOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
+  const oldLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
   async function clean() {
-    const newLinkedDraftOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
-    const orphanedDraftOrders = oldLinkedDraftOrders.filter(
-      ({ orderId }) => !newLinkedDraftOrders.some(({ orderId: id }) => id === orderId),
-    );
+    const newLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
+    const orphanedDraftOrders = oldLinkedOrders
+      .filter(hasPropertyValue('orderType', 'DRAFT_ORDER'))
+      .filter(({ orderId }) => !newLinkedOrders.some(({ orderId: id }) => id === orderId));
 
     if (orphanedDraftOrders.length === 0) {
       return;

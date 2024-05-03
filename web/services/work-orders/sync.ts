@@ -61,7 +61,7 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], o
 export async function syncWorkOrder(session: Session, workOrderId: number, options?: SyncWorkOrdersOptions) {
   const { labourLineItemSKU } = await getShopSettings(session.shop);
 
-  const [workOrder] = await db.workOrder.get({ id: workOrderId });
+  const [workOrder] = await db.workOrder.getById({ id: workOrderId });
 
   if (!workOrder) {
     throw new Error(`Work order with id ${workOrderId} not found`);

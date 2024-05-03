@@ -17,7 +17,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
     return;
   }
 
-  const [workOrder] = await db.workOrder.get({ name: workOrderName });
+  const [workOrder] = await db.workOrder.get({ shop: session.shop, name: workOrderName });
 
   if (!workOrder) {
     throw new Error(`Work order with name ${workOrderName} not found`);

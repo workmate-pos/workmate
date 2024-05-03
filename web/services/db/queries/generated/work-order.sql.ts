@@ -264,9 +264,8 @@ export const getPage = new PreparedQuery<IGetPageParams,IGetPageResult>(getPageI
 
 /** 'Get' parameters type */
 export interface IGetParams {
-  id?: number | null | void;
-  name?: string | null | void;
-  shop?: string | null | void;
+  name: string;
+  shop: string;
 }
 
 /** 'Get' return type */
@@ -292,19 +291,59 @@ export interface IGetQuery {
   result: IGetResult;
 }
 
-const getIR: any = {"usedParamSet":{"id":true,"shop":true,"name":true},"params":[{"name":"id","required":false,"transform":{"type":"scalar"},"locs":[{"a":46,"b":48}]},{"name":"shop","required":false,"transform":{"type":"scalar"},"locs":[{"a":77,"b":81}]},{"name":"name","required":false,"transform":{"type":"scalar"},"locs":[{"a":112,"b":116}]}],"statement":"SELECT *\nFROM \"WorkOrder\"\nWHERE id = COALESCE(:id, id)\n  AND shop = COALESCE(:shop, shop)\n  AND name = COALESCE(:name, name)"};
+const getIR: any = {"usedParamSet":{"shop":true,"name":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":39,"b":44}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":59,"b":64}]}],"statement":"SELECT *\nFROM \"WorkOrder\"\nWHERE shop = :shop!\n  AND name = :name!"};
 
 /**
  * Query generated from SQL:
  * ```
  * SELECT *
  * FROM "WorkOrder"
- * WHERE id = COALESCE(:id, id)
- *   AND shop = COALESCE(:shop, shop)
- *   AND name = COALESCE(:name, name)
+ * WHERE shop = :shop!
+ *   AND name = :name!
  * ```
  */
 export const get = new PreparedQuery<IGetParams,IGetResult>(getIR);
+
+
+/** 'GetById' parameters type */
+export interface IGetByIdParams {
+  id: number;
+}
+
+/** 'GetById' return type */
+export interface IGetByIdResult {
+  createdAt: Date;
+  customerId: string;
+  derivedFromOrderId: string | null;
+  discountAmount: string | null;
+  discountType: DiscountType | null;
+  dueDate: Date;
+  id: number;
+  internalNote: string;
+  name: string;
+  note: string;
+  shop: string;
+  status: string;
+  updatedAt: Date;
+}
+
+/** 'GetById' query type */
+export interface IGetByIdQuery {
+  params: IGetByIdParams;
+  result: IGetByIdResult;
+}
+
+const getByIdIR: any = {"usedParamSet":{"id":true},"params":[{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":37,"b":40}]}],"statement":"SELECT *\nFROM \"WorkOrder\"\nWHERE id = :id!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "WorkOrder"
+ * WHERE id = :id!
+ * ```
+ */
+export const getById = new PreparedQuery<IGetByIdParams,IGetByIdResult>(getByIdIR);
 
 
 /** 'GetItems' parameters type */

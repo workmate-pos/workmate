@@ -75,7 +75,7 @@ export default {
       const workOrderName = body.note_attributes.find(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
 
       if (workOrderName) {
-        const [workOrder] = await db.workOrder.get({ name: workOrderName.value });
+        const [workOrder] = await db.workOrder.get({ shop: session.shop, name: workOrderName.value });
 
         if (!workOrder) {
           // can happen if a merchant manually adds the attribute. if this happens often something is wrong

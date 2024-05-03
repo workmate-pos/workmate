@@ -14,6 +14,7 @@ import * as productVariants from './queries/generated/product-variants.sql.js';
 import * as shopifyOrder from './queries/generated/shopify-order.sql.js';
 import * as customFieldPresets from './queries/generated/custom-field-presets.sql.js';
 import * as workOrderSoLi from './queries/generated/work-order-so-li-migration.sql.js';
+import * as resyncOrders from './queries/generated/resync-orders-migration.sql.js';
 import * as appMigration from './queries/generated/app-migration.sql.js';
 import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
 import { useClient } from './client.js';
@@ -40,6 +41,7 @@ export const db = {
   appMigration: wrapPreparedQueries(appMigration),
   migrations: {
     workOrderSoLi: wrapPreparedQueries(workOrderSoLi),
+    resyncOrders: wrapPreparedQueries(resyncOrders),
   },
 };
 
