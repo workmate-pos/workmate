@@ -1,6 +1,6 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { OrderLineItem, useOrderLineItemsQuery } from '@work-orders/common/queries/use-order-line-items-query.js';
@@ -13,6 +13,11 @@ import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guard
 import { Int } from '@web/schemas/generated/create-product.js';
 import { useRouter } from '../../routes.js';
 import { v4 as uuid } from 'uuid';
+import { useDraftOrderQuery } from '@work-orders/common/queries/use-draft-order-query.js';
+import {
+  DraftOrderLineItem,
+  useDraftOrderLineItemsQuery,
+} from '@work-orders/common/queries/use-draft-order-line-items-query.js';
 
 /**
  * Similar to ProductSelector, but shows line items of a specific order to be able to link to them.
@@ -20,11 +25,20 @@ import { v4 as uuid } from 'uuid';
 export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave: (products: Product[]) => void }) {
   const fetch = useAuthenticatedFetch();
 
-  const orderQuery = useOrderQuery({ fetch, id: orderId });
-  const order = orderQuery?.data?.order;
+  const isDraftOrder = parseGid(orderId).objectName === 'DraftOrder';
 
-  const lineItemsQuery = useOrderLineItemsQuery({ fetch, id: orderId });
-  const lineItems = lineItemsQuery.data?.pages.flat().filter(hasNonNullableProperty('variant'));
+  const orderQuery = useOrderQuery({ fetch, id: orderId }, { enabled: !isDraftOrder });
+  const draftOrderQuery = useDraftOrderQuery({ fetch, id: orderId }, { enabled: isDraftOrder });
+
+  const currentOrderQuery = isDraftOrder ? draftOrderQuery : orderQuery;
+  const currentOrder = currentOrderQuery.data?.order;
+
+  const orderLineItemsQuery = useOrderLineItemsQuery({ fetch, id: orderId }, { enabled: !isDraftOrder });
+  const draftOrderLineItemsQuery = useDraftOrderLineItemsQuery({ fetch, id: orderId }, { enabled: isDraftOrder });
+
+  const currentLineItemsQuery = isDraftOrder ? draftOrderLineItemsQuery : orderLineItemsQuery;
+  const currentLineItems = currentLineItemsQuery.data?.pages.flat().filter(hasNonNullableProperty('variant'));
+
   // TODO: Query to check if the line item is already in a PO
   // TODO: Set default unit cost to line item unit cost (use location)
 
@@ -32,53 +46,43 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(orderQuery.isLoading || lineItemsQuery.isLoading);
+  screen.setIsLoading(orderQuery.isLoading || orderLineItemsQuery.isLoading);
 
-  if (orderQuery.isError || (!orderQuery.isLoading && !order)) {
+  if (currentOrderQuery.isError || (!currentOrderQuery.isLoading && !currentOrder)) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text color="TextCritical" variant="body">
-          {extractErrorMessage(orderQuery.error, 'Error loading order')}
+          {extractErrorMessage(currentOrderQuery.error, 'Error loading order')}
         </Text>
       </Stack>
     );
   }
 
-  if (orderQuery.isError || (!orderQuery.isLoading && !order)) {
+  if (currentLineItemsQuery.isError || (!currentLineItemsQuery.isLoading && !currentLineItems)) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text color="TextCritical" variant="body">
-          {extractErrorMessage(orderQuery.error, 'Error loading order')}
+          {extractErrorMessage(currentLineItemsQuery.error, 'Error loading order line items')}
         </Text>
       </Stack>
     );
   }
 
-  if (lineItemsQuery.isError || (!lineItemsQuery.isLoading && !order)) {
-    return (
-      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-        <Text color="TextCritical" variant="body">
-          {extractErrorMessage(lineItemsQuery.error, 'Error loading order line items')}
-        </Text>
-      </Stack>
-    );
-  }
-
-  if (!order) {
+  if (!currentOrder) {
     return null;
   }
 
-  if (!lineItems) {
+  if (!currentLineItems) {
     return null;
   }
 
-  screen.setTitle(`Select Products for ${order.name}`);
+  screen.setTitle(`Select Products for ${currentOrder.name}`);
 
-  const rows = getOrderLineItemRows(lineItems, selectedLineItemIds, setSelectedLineItemIds);
+  const rows = getOrderLineItemRows(currentLineItems, selectedLineItemIds, setSelectedLineItemIds);
 
   return (
     <ScrollView>
-      <Text variant={'headingLarge'}>Select Products for {order.name}</Text>
+      <Text variant={'headingLarge'}>Select Products for {currentOrder.name}</Text>
       <List data={rows} onEndReached={() => false} isLoadingMore={false} imageDisplayStrategy={'always'} />
       <Button
         title={'Add selection to Purchase Order'}
@@ -87,7 +91,7 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
         onPress={async () => {
           await router.popCurrent();
           onSave(
-            lineItems
+            currentLineItems
               .filter(li => selectedLineItemIds.includes(li.id))
               .map(li => {
                 return {
@@ -97,7 +101,7 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
                   availableQuantity: 0 as Int,
                   unitCost: BigDecimal.ZERO.toMoney(),
                   shopifyOrderLineItem: {
-                    orderId: order.id,
+                    orderId: currentOrder.id,
                     id: li.id,
                   },
                 };
@@ -110,7 +114,7 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
 }
 
 function getOrderLineItemRows(
-  lineItems: OrderLineItem[],
+  lineItems: (OrderLineItem | DraftOrderLineItem)[],
   selectedLineItemIds: ID[],
   setSelectedLineItemIds: Dispatch<SetStateAction<ID[]>>,
 ) {

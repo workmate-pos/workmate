@@ -6,6 +6,7 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import { gql } from '../gql/gql.js';
 import { db } from '../db/db.js';
 import { decimalToMoney } from '../../util/decimal.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export async function getOrder(session: Session, id: ID): Promise<Order | null> {
   const graphql = new Graphql(session);
@@ -28,14 +29,14 @@ export async function getOrder(session: Session, id: ID): Promise<Order | null> 
     displayFinancialStatus: order.displayFinancialStatus,
     outstanding: decimalToMoney(order.totalOutstandingSet.shopMoney.amount),
     received: decimalToMoney(order.totalReceivedSet.shopMoney.amount),
-    discount: order.totalDiscounts,
-    tax: order.totalTax,
+    discount: decimalToMoney(order.totalDiscountsSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()),
+    tax: decimalToMoney(order.totalTaxSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()),
     customer: order.customer,
     workOrders: relatedWorkOrders.map(({ name }) => ({ name })),
   };
 }
 
-export async function getOrderInfos(
+export async function getOrderPage(
   session: Session,
   paginationOptions: PaginationOptions,
 ): Promise<{
@@ -54,17 +55,6 @@ export async function getOrderInfos(
     pageInfo,
     orders: await Promise.all(nodes.map(getOrderInfoFromFragment)),
   };
-}
-
-export async function getOrderInfo(session: Session, id: ID) {
-  const graphql = new Graphql(session);
-  const { order } = await gql.order.getInfo.run(graphql, { id });
-
-  if (!order) {
-    return null;
-  }
-
-  return getOrderInfoFromFragment(order);
 }
 
 export async function getOrderLineItems(session: Session, id: ID, paginationOptions: PaginationOptions) {

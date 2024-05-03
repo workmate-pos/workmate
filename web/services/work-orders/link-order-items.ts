@@ -3,7 +3,6 @@ import { getUuidFromCustomAttributeKey, WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from 
 import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Session } from '@shopify/shopify-api';
-import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 import { gql } from '../gql/gql.js';
 
 type Order = { id: ID; customAttributes: { key: string; value: string | null }[] };
@@ -18,7 +17,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
     return;
   }
 
-  const [workOrder] = await db.workOrder.get({ name: workOrderName });
+  const [workOrder] = await db.workOrder.get({ shop: session.shop, name: workOrderName });
 
   if (!workOrder) {
     throw new Error(`Work order with name ${workOrderName} not found`);
@@ -26,14 +25,11 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
 
   const errors: unknown[] = [];
 
-  // TODO: Perhaps remove the custom attribute after linking is done (for orders, not for drafts)? Should not hurt as linking is only required once
-  await cleanOrphanedDraftOrders(session, workOrder.id, () =>
-    Promise.all([
-      linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
-      linkHourlyLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
-      linkFixedPriceLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
-    ]),
-  );
+  await Promise.all([
+    linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
+    linkHourlyLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
+    linkFixedPriceLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
+  ]);
 
   if (errors.length) {
     throw new AggregateError(errors, 'Failed to link work order items and charges');
@@ -52,7 +48,7 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
 
     if (previousShopifyOrderLineItemId) {
       // if this work order item was previously linked to a different line item, we should also re-link purchase order line items.
-      // this is handy when a draft order is converted to a real order.
+      // this is handy when a draft order is converted to a real order/when a new draft order is created (e.g. when changing a work order)
 
       for (const { purchaseOrderId, uuid } of await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemId({
         shopifyOrderLineItemId: previousShopifyOrderLineItemId,

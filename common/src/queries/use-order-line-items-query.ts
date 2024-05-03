@@ -4,8 +4,13 @@ import { useInfiniteQuery } from 'react-query';
 import { Fetch } from './fetch.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
-export const useOrderLineItemsQuery = ({ fetch, id = null }: { fetch: Fetch; id: ID | null }) => {
+export const useOrderLineItemsQuery = (
+  { fetch, id = null }: { fetch: Fetch; id: ID | null },
+  options?: { enabled?: boolean },
+) => {
   return useInfiniteQuery({
+    ...options,
+
     queryKey: ['order-line-items', id],
     queryFn: async ({ pageParam }): Promise<FetchOrderLineItemsResponse> => {
       if (id === null) {

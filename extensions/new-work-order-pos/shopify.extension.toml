@@ -1,0 +1,8 @@
+type = "pos_ui_extension"
+name = "new-work-order-pos"
+description = "new-work-order-pos"
+
+extension_points = [
+  'pos.home.tile.render',
+  'pos.home.modal.render'
+]

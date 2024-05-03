@@ -7,8 +7,8 @@ import { VendorSelector } from './screens/VendorSelector.js';
 import { ProductConfig } from './screens/ProductConfig.js';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 
-export const { Router, useRouter } = createRouter(
-  {
+export const { Router, useRouter } = createRouter({
+  Entry: {
     title: 'Cycle Count',
     Component: () => {
       return (
@@ -20,24 +20,22 @@ export const { Router, useRouter } = createRouter(
       );
     },
   },
-  {
-    LocationSelector: {
-      title: 'Select Location',
-      Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
-        <LocationSelector {...props} useRouter={useRouter} />
-      ),
-    },
-    Camera: {
-      title: 'Camera',
-      Component: Camera,
-    },
-    VendorSelector: {
-      title: 'Select Vendor',
-      Component: VendorSelector,
-    },
-    ProductConfig: {
-      title: 'Product Config',
-      Component: ProductConfig,
-    },
+  LocationSelector: {
+    title: 'Select Location',
+    Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
+      <LocationSelector {...props} useRouter={useRouter} />
+    ),
   },
-);
+  Camera: {
+    title: 'Camera',
+    Component: Camera,
+  },
+  VendorSelector: {
+    title: 'Select Vendor',
+    Component: VendorSelector,
+  },
+  ProductConfig: {
+    title: 'Product Config',
+    Component: ProductConfig,
+  },
+});

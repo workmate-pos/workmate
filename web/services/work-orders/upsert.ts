@@ -23,48 +23,44 @@ import { ensureEmployeesExist } from '../employee/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 
-export async function upsertWorkOrder(
-  session: Session,
-  user: LocalsTeifiUser | null,
-  createWorkOrder: CreateWorkOrder,
-) {
-  return await unit(async () => {
-    validateCreateWorkOrder(createWorkOrder);
+export function upsertWorkOrder(session: Session, user: LocalsTeifiUser | null, createWorkOrder: CreateWorkOrder) {
+  validateCreateWorkOrder(createWorkOrder);
 
-    if (createWorkOrder.name === null) {
-      return await createNewWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
-    }
+  if (createWorkOrder.name === null) {
+    return createNewWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
+  }
 
-    return await updateWorkOrder(session, user, { ...createWorkOrder, name: createWorkOrder.name });
-  });
+  return updateWorkOrder(session, user, { ...createWorkOrder, name: createWorkOrder.name });
 }
 
 async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: null }) {
-  await ensureRequiredDatabaseDataExists(session, createWorkOrder);
+  return await unit(async () => {
+    await ensureRequiredDatabaseDataExists(session, createWorkOrder);
 
-  const [workOrder = never()] = await db.workOrder.upsert({
-    shop: session.shop,
-    name: await getNewWorkOrderName(session.shop),
-    derivedFromOrderId: createWorkOrder.derivedFromOrderId,
-    customerId: createWorkOrder.customerId,
-    dueDate: new Date(createWorkOrder.dueDate),
-    status: createWorkOrder.status,
-    note: createWorkOrder.note,
-    internalNote: createWorkOrder.internalNote,
-    discountAmount: createWorkOrder.discount?.value,
-    discountType: createWorkOrder.discount?.type,
+    const [workOrder = never()] = await db.workOrder.upsert({
+      shop: session.shop,
+      name: await getNewWorkOrderName(session.shop),
+      derivedFromOrderId: createWorkOrder.derivedFromOrderId,
+      customerId: createWorkOrder.customerId,
+      dueDate: new Date(createWorkOrder.dueDate),
+      status: createWorkOrder.status,
+      note: createWorkOrder.note,
+      internalNote: createWorkOrder.internalNote,
+      discountAmount: createWorkOrder.discount?.value,
+      discountType: createWorkOrder.discount?.type,
+    });
+
+    for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
+      await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
+    }
+
+    await upsertItems(session, createWorkOrder, workOrder.id, []);
+    await upsertCharges(session, createWorkOrder, workOrder.id, [], []);
+
+    await syncWorkOrder(session, workOrder.id);
+
+    return workOrder;
   });
-
-  for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
-    await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
-  }
-
-  await upsertItems(session, createWorkOrder, workOrder.id, []);
-  await upsertCharges(session, createWorkOrder, workOrder.id, [], []);
-
-  await syncWorkOrder(session, workOrder.id, true);
-
-  return workOrder;
 }
 
 async function updateWorkOrder(
@@ -74,57 +70,59 @@ async function updateWorkOrder(
 ) {
   const [workOrder = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
 
-  await cleanOrphanedDraftOrders(session, workOrder.id, async () => {
-    const currentItems = await db.workOrder.getItems({ workOrderId: workOrder.id });
-    const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId: workOrder.id });
-    const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({
-      workOrderId: workOrder.id,
-    });
+  return await cleanOrphanedDraftOrders(session, workOrder.id, () =>
+    unit(async () => {
+      const currentItems = await db.workOrder.getItems({ workOrderId: workOrder.id });
+      const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId: workOrder.id });
+      const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({
+        workOrderId: workOrder.id,
+      });
 
-    // not all changes are allowed, e.g., once you create an order for some item it is no longer possible to change its price.
-    // additionally, locked fields can only be changed/unlocked by superusers
-    assertNoIllegalItemChanges(createWorkOrder, currentItems);
-    assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges, user?.user.superuser ?? false);
-    assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges, user?.user.superuser ?? false);
+      // not all changes are allowed, e.g., once you create an order for some item it is no longer possible to change its price.
+      // additionally, locked fields can only be changed/unlocked by superusers
+      assertNoIllegalItemChanges(createWorkOrder, currentItems);
+      assertNoIllegalHourlyChargeChanges(createWorkOrder, currentHourlyCharges, user?.user.superuser ?? false);
+      assertNoIllegalFixedPriceChargeChanges(createWorkOrder, currentFixedPriceCharges, user?.user.superuser ?? false);
 
-    const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
-    const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));
-    if (createWorkOrder.customerId !== workOrder.customerId && hasOrder) {
-      throw new HttpError('Cannot change customer after an order has been created', 400);
-    }
+      const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
+      const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));
+      if (createWorkOrder.customerId !== workOrder.customerId && hasOrder) {
+        throw new HttpError('Cannot change customer after an order has been created', 400);
+      }
 
-    // nothing illegal, so we can upsert and delete items/charges safely
+      // nothing illegal, so we can upsert and delete items/charges safely
 
-    await ensureRequiredDatabaseDataExists(session, createWorkOrder);
+      await ensureRequiredDatabaseDataExists(session, createWorkOrder);
 
-    await db.workOrder.upsert({
-      shop: session.shop,
-      name: workOrder.name,
-      status: createWorkOrder.status,
-      customerId: createWorkOrder.customerId,
-      dueDate: new Date(createWorkOrder.dueDate),
-      derivedFromOrderId: createWorkOrder.derivedFromOrderId,
-      note: createWorkOrder.note,
-      internalNote: createWorkOrder.internalNote,
-      discountAmount: createWorkOrder.discount?.value,
-      discountType: createWorkOrder.discount?.type,
-    });
+      await db.workOrder.upsert({
+        shop: session.shop,
+        name: workOrder.name,
+        status: createWorkOrder.status,
+        customerId: createWorkOrder.customerId,
+        dueDate: new Date(createWorkOrder.dueDate),
+        derivedFromOrderId: createWorkOrder.derivedFromOrderId,
+        note: createWorkOrder.note,
+        internalNote: createWorkOrder.internalNote,
+        discountAmount: createWorkOrder.discount?.value,
+        discountType: createWorkOrder.discount?.type,
+      });
 
-    await db.workOrder.removeCustomFields({ workOrderId: workOrder.id });
-    for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
-      await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
-    }
+      await db.workOrder.removeCustomFields({ workOrderId: workOrder.id });
+      for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
+        await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
+      }
 
-    await upsertItems(session, createWorkOrder, workOrder.id, currentItems);
-    await upsertCharges(session, createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
+      await upsertItems(session, createWorkOrder, workOrder.id, currentItems);
+      await upsertCharges(session, createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
 
-    await deleteCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
-    await deleteItems(createWorkOrder, workOrder.id, currentItems);
-  });
+      await deleteCharges(createWorkOrder, workOrder.id, currentHourlyCharges, currentFixedPriceCharges);
+      await deleteItems(createWorkOrder, workOrder.id, currentItems);
 
-  await syncWorkOrder(session, workOrder.id, true);
+      await syncWorkOrder(session, workOrder.id);
 
-  return workOrder;
+      return workOrder;
+    }),
+  );
 }
 
 async function ensureRequiredDatabaseDataExists(session: Session, createWorkOrder: CreateWorkOrder) {

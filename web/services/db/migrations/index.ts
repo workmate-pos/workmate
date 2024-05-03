@@ -65,7 +65,7 @@ async function getNewMigrations() {
       const e = new Error(
         `Migration '${migration.name}' has been modified since last run.` +
           ' Please fix it before running new migrations.' +
-          ` Expected checksum '${migration.checksum}', actual checksum was '${loggedMigration.checksum}'.`,
+          ` Expected checksum '${loggedMigration.checksum}', actual checksum was '${migration.checksum}'.`,
       );
       sentryErr(e, { migration, loggedMigration });
       throw e;

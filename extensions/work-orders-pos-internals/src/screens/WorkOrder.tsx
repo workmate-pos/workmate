@@ -51,7 +51,11 @@ import {
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
 
-export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
+export type WorkOrderProps = {
+  initial: WIPCreateWorkOrder;
+};
+
+export function WorkOrder({ initial }: WorkOrderProps) {
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
 
   const router = useRouter();
@@ -129,7 +133,7 @@ export function WorkOrder({ initial }: { initial: WIPCreateWorkOrder }) {
             </ResponsiveGrid>
           </ResponsiveGrid>
 
-          <ResponsiveGrid columns={4} grow>
+          <ResponsiveGrid columns={4} smColumns={2} grow>
             <FormButton
               title={'Manage payments'}
               type={'basic'}

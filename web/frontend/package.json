@@ -5,7 +5,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "clean": "rm -fr dist node_modules"
   },
   "engines": {
     "node": ">= 18.15"

@@ -1,13 +1,4 @@
-import {
-  Button,
-  List,
-  ListRow,
-  Selectable,
-  Stack,
-  Text,
-  useCartSubscription,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Selectable, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { OverdueStatus, useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
@@ -23,10 +14,8 @@ import { useRouter } from '../routes.js';
 import { useWorkOrderQueries } from '@work-orders/common/queries/use-work-order-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
@@ -73,11 +62,9 @@ export function Entry() {
   screen.setIsLoading(settingsQuery.isLoading || customFieldsPresetsQuery.isLoading);
 
   const router = useRouter();
-  const cart = useCartSubscription();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   return (
-    <Stack direction={'vertical'}>
+    <ScrollView>
       <ResponsiveStack
         direction={'horizontal'}
         alignment={'space-between'}
@@ -89,42 +76,7 @@ export function Entry() {
         </ResponsiveStack>
         <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           <Button title="Import Work Order" type={'plain'} onPress={() => router.push('ImportOrderSelector', {})} />
-          <Button
-            title={'New Work Order'}
-            type={'primary'}
-            onPress={() => {
-              if (!settingsQuery.data) {
-                return;
-              }
-
-              if (!customFieldsPresetsQuery.data) {
-                return;
-              }
-
-              let customerId = null;
-
-              if (cart.customer) {
-                customerId = createGid('Customer', String(cart.customer.id));
-                toast.show('Imported customer from cart');
-              }
-
-              const createWorkOrder = defaultCreateWorkOrder({ status: settingsQuery.data.settings.defaultStatus });
-
-              const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
-              const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
-
-              router.push('WorkOrder', {
-                initial: {
-                  ...createWorkOrder,
-                  customFields: {
-                    ...Object.fromEntries(defaultCustomFieldKeys.map(key => [key, ''])),
-                    ...createWorkOrder.customFields,
-                  },
-                  customerId,
-                },
-              });
-            }}
-          />
+          <Button title={'New Work Order'} type={'primary'} onPress={() => router.push('NewWorkOrder', {})} />
         </ResponsiveStack>
       </ResponsiveStack>
 
@@ -363,7 +315,7 @@ export function Entry() {
           </Text>
         </Stack>
       )}
-    </Stack>
+    </ScrollView>
   );
 }
 

@@ -1,0 +1,27 @@
+{
+  "name": "@work-orders/work-orders-pos-internals",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./dist/index.js",
+      "types": "./src/index.tsx"
+    }
+  },
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@teifi-digital/shopify-app-toolbox": "^0.0.42",
+    "@work-orders/common": "file:../../common",
+    "@work-orders/common-pos": "file:../common-pos",
+    "@work-orders/work-order-shopify-order": "file:../../work-order-shopify-order",
+    "uuid": "^9.0.1"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -fr dist node_modules"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.8"
+  }
+}

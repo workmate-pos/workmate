@@ -1,9 +1,5 @@
 import { render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { ReactQueryProvider } from './providers/ReactQueryProvider.js';
-import { DialogProvider } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
-import { ScreenSizeProvider } from '@teifi-digital/pos-tools/providers/ScreenSizeProvider.js';
-import { AppProvider } from '@teifi-digital/pos-tools/providers/AppProvider.js';
-import { Router } from './routes.js';
+import { WorkOrdersApp, Router } from '@work-orders/work-orders-pos-internals';
 
 function SmartGridTile() {
   const api = useExtensionApi<'pos.home.tile.render'>();
@@ -13,15 +9,9 @@ function SmartGridTile() {
 
 function SmartGridModal() {
   return (
-    <AppProvider appUrl={process.env.APP_URL!}>
-      <ReactQueryProvider>
-        <DialogProvider>
-          <ScreenSizeProvider>
-            <Router />
-          </ScreenSizeProvider>
-        </DialogProvider>
-      </ReactQueryProvider>
-    </AppProvider>
+    <WorkOrdersApp>
+      <Router mainRoute={'Entry'} />
+    </WorkOrdersApp>
   );
 }
 

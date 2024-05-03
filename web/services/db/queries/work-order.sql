@@ -95,9 +95,13 @@ LIMIT :limit! OFFSET :offset;
 /* @name get */
 SELECT *
 FROM "WorkOrder"
-WHERE id = COALESCE(:id, id)
-  AND shop = COALESCE(:shop, shop)
-  AND name = COALESCE(:name, name);
+WHERE shop = :shop!
+  AND name = :name!;
+
+/* @name getById */
+SELECT *
+FROM "WorkOrder"
+WHERE id = :id!;
 
 /* @name getItems */
 SELECT *

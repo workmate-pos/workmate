@@ -1,24 +1,35 @@
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, SegmentedControl, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
 import { Int } from '@web/schemas/generated/create-product.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useRouter } from '../../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { useState } from 'react';
+import { DraftOrder, useDraftOrdersQuery } from '@work-orders/common/queries/use-draft-orders-query.js';
 
-// TODO: Also support draft orders
+type OrderTypeSegment = 'Orders' | 'Draft Orders';
+
+const orderTypeSegments: OrderTypeSegment[] = ['Orders', 'Draft Orders'];
+
 export function OrderSelector({ onSelect }: { onSelect: (orderId: ID) => void }) {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
 
+  const [orderType, setOrderType] = useState<OrderTypeSegment>('Orders');
+
   const ordersQuery = useOrdersQuery({ fetch, params: { query, first: 25 as Int } });
   const orders = ordersQuery.data?.pages.flat() ?? [];
 
-  const rows = useOrderRows(orders, onSelect);
+  const draftOrdersQuery = useDraftOrdersQuery({ fetch, params: { query, first: 25 as Int } });
+  const draftOrders = draftOrdersQuery.data?.pages.flat() ?? [];
+
+  const currentOrders = orderType === 'Orders' ? orders : draftOrders;
+
+  const rows = useOrderRows(currentOrders, onSelect);
 
   return (
     <ScrollView>
@@ -27,6 +38,11 @@ export function OrderSelector({ onSelect }: { onSelect: (orderId: ID) => void })
           {ordersQuery.isRefetching ? 'Reloading...' : ' '}
         </Text>
       </Stack>
+      <SegmentedControl
+        segments={orderTypeSegments.map(segment => ({ id: segment, label: segment, disabled: false }))}
+        onSelect={(orderType: OrderTypeSegment) => setOrderType(orderType)}
+        selected={orderType}
+      />
       <ControlledSearchBar
         value={query}
         onTextChange={(query: string) => setQuery(query, !query)}
@@ -35,8 +51,24 @@ export function OrderSelector({ onSelect }: { onSelect: (orderId: ID) => void })
       />
       <List
         data={rows}
-        onEndReached={ordersQuery.fetchNextPage}
-        isLoadingMore={ordersQuery.isLoading}
+        onEndReached={() => {
+          if (orderType === 'Draft Orders') {
+            draftOrdersQuery.fetchNextPage();
+          } else if (orderType === 'Orders') {
+            ordersQuery.fetchNextPage();
+          } else {
+            return orderType satisfies never;
+          }
+        }}
+        isLoadingMore={(() => {
+          if (orderType === 'Draft Orders') {
+            return draftOrdersQuery.isFetchingNextPage;
+          } else if (orderType === 'Orders') {
+            return ordersQuery.isFetchingNextPage;
+          } else {
+            return orderType satisfies never;
+          }
+        })()}
         imageDisplayStrategy={'always'}
       />
       {ordersQuery.isLoading && (
@@ -64,8 +96,7 @@ export function OrderSelector({ onSelect }: { onSelect: (orderId: ID) => void })
   );
 }
 
-function useOrderRows(orders: Order[], onSelect: (orderId: ID) => void) {
-  const currencyFormatter = useCurrencyFormatter();
+function useOrderRows(orders: (Order | DraftOrder)[], onSelect: (orderId: ID) => void) {
   const router = useRouter();
 
   return orders.map<ListRow>(order => {
@@ -77,13 +108,7 @@ function useOrderRows(orders: Order[], onSelect: (orderId: ID) => void) {
       },
       leftSide: {
         label: order.name,
-        subtitle: order.customer
-          ? [
-              `Paid ${currencyFormatter(order.received)}`,
-              `Total ${currencyFormatter(order.total)}`,
-              order.customer.displayName,
-            ]
-          : [`Paid ${currencyFormatter(order.received)}`, `Total ${currencyFormatter(order.total)}`],
+        subtitle: order.customer ? [order.customer.displayName] : undefined,
       },
       rightSide: { showChevron: true },
     };
