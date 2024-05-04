@@ -106,7 +106,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
 
   assertGid(workOrder.customerId);
 
-  const input: DraftOrderInput = {
+  const input = {
     customAttributes: getCustomAttributeArrayFromObject(
       getWorkOrderOrderCustomAttributes({
         name: workOrder.name,
@@ -130,23 +130,33 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
     note: workOrder.note,
     purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
     appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
-  };
+  } as const satisfies DraftOrderInput;
 
-  const [{ orderId: draftOrderId } = { orderId: null }] = linkedOrders.filter(
-    hasPropertyValue('orderType', 'DRAFT_ORDER'),
-  );
+  if (input.lineItems.length === 0) {
+    // No line items, so we should delete all draft orders since draft orders don't support 0 line items.
+    const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(o => {
+      assertGid(o.orderId);
+      return o.orderId;
+    });
 
-  assertGidOrNull(draftOrderId);
+    if (draftOrderIds.length > 0) {
+      await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
+    }
+  } else {
+    const draftOrderId = linkedOrders.find(hasPropertyValue('orderType', 'DRAFT_ORDER'))?.orderId ?? null;
 
-  const { result } = draftOrderId
-    ? await gql.draftOrder.update.run(graphql, { id: draftOrderId, input })
-    : await gql.draftOrder.create.run(graphql, { input });
+    assertGidOrNull(draftOrderId);
 
-  if (!result?.draftOrder) {
-    throw new Error('Failed to create/update draft order');
+    const { result } = draftOrderId
+      ? await gql.draftOrder.update.run(graphql, { id: draftOrderId, input })
+      : await gql.draftOrder.create.run(graphql, { input });
+
+    if (!result?.draftOrder) {
+      throw new Error('Failed to create/update draft order');
+    }
+
+    await syncShopifyOrders(session, [result.draftOrder?.id]);
   }
-
-  await syncShopifyOrders(session, [result.draftOrder?.id]);
 
   if (options?.updateCustomAttributes ?? defaultSyncWorkOrdersOptions.updateCustomAttributes) {
     await Promise.all(
