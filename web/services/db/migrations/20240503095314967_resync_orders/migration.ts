@@ -21,7 +21,7 @@ export default async function migrate() {
 
   await Promise.all(
     Object.entries(ordersByShop).map(async ([shop, orders]) => {
-      const [shopifySession] = await db.shopifySession.get({ shop });
+      const [shopifySession] = await db.shopifySession.get({ shop, isOnline: false });
 
       if (!shopifySession) {
         console.error(`No session found for shop ${shop}`);
