@@ -29,5 +29,6 @@ RUN --mount=type=secret,id=SHOPIFY_ACCESS_TOKEN \
     SHOPIFY_ACCESS_TOKEN=$(cat /run/secrets/SHOPIFY_ACCESS_TOKEN) \
     npm run admin:build
 
+WORKDIR /app/web
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["npm", "run", "serve"]
