@@ -8,7 +8,7 @@ EXPOSE 8081
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY package*.json ./
 COPY web web
 COPY work-order-shopify-order work-order-shopify-order
 COPY common common
@@ -36,13 +36,12 @@ RUN apt-get update \
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-COPY web/package.json web/package-lock.json meta.json web/
-COPY web/controllers web/controllers
-COPY web/schemas web/schemas
-COPY web/frontend/package.json web/frontend/package-lock.json web/frontend/
-COPY work-order-shopify-order/package.json work-order-shopify-order/package-lock.json work-order-shopify-order/
-COPY common/package.json common/package-lock.json common/
+COPY package*.json ./
+COPY web/package*.json meta.json web/
+COPY web/prisma web/prisma/
+COPY web/frontend/package*.json web/frontend/
+COPY work-order-shopify-order/package*.json work-order-shopify-order/
+COPY common/package*.json common/
 
 COPY .npmrc-ci common/.npmrc
 COPY .npmrc-ci web/.npmrc
@@ -56,10 +55,10 @@ RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
     NODE_ENV=production \
     npm run admin:install
 
-COPY --from=build /app/web/dist web/dist
-COPY --from=build /app/web/frontend/dist web/frontend/dist
-COPY --from=build /app/common/dist common/dist
-COPY --from=build /app/work-order-shopify-order/dist work-order-shopify-order/dist
+COPY --from=build /app/web/dist web/dist/
+COPY --from=build /app/web/frontend/dist web/frontend/dist/
+COPY --from=build /app/common/dist common/dist/
+COPY --from=build /app/work-order-shopify-order/dist work-order-shopify-order/dist/
 
 WORKDIR /app/web
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
