@@ -12,6 +12,8 @@ import { registerEnumTypes } from './services/db/types.js';
 import { installableAppPlansService } from './services/app-plans/index.js';
 import { installableSegmentService } from './services/segments/index.js';
 import { runMigrations } from './services/db/migrations/index.js';
+import { ApiVersion } from '@shopify/shopify-api';
+import { restResources } from '@shopify/shopify-api/rest/admin/2024-01';
 
 await registerEnumTypes();
 
@@ -27,7 +29,14 @@ export const sessionStorage = new ShopifySessionStorage();
 
 const isAppMigrate = process.env.APP_MIGRATE === 'true';
 
-const appConfig: ShopifyAppConfig = { sessionStorage, useOnlineTokens: true };
+const appConfig: ShopifyAppConfig = {
+  api: {
+    apiVersion: ApiVersion.January24, // TODO: @Tim update to latest
+    restResources,
+  },
+  sessionStorage,
+  useOnlineTokens: true,
+};
 
 if (isAppMigrate) {
   createShopifyApp(appConfig); // Only need to create the app if we're running migrations
