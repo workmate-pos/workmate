@@ -12,6 +12,8 @@ import { registerEnumTypes } from './services/db/types.js';
 import { installableAppPlansService } from './services/app-plans/index.js';
 import { installableSegmentService } from './services/segments/index.js';
 import { runMigrations } from './services/db/migrations/index.js';
+import { restResources } from '@shopify/shopify-api/rest/admin/2024-01';
+import { ApiVersion } from '@shopify/shopify-api';
 
 await registerEnumTypes();
 
@@ -27,7 +29,14 @@ export const sessionStorage = new ShopifySessionStorage();
 
 const isAppMigrate = process.env.APP_MIGRATE === 'true';
 
-const appConfig: ShopifyAppConfig = { sessionStorage, useOnlineTokens: true };
+const appConfig: ShopifyAppConfig = {
+  sessionStorage,
+  useOnlineTokens: true,
+  api: {
+    apiVersion: ApiVersion.January24,
+    restResources,
+  },
+};
 
 if (isAppMigrate) {
   createShopifyApp(appConfig); // Only need to create the app if we're running migrations
@@ -37,12 +46,12 @@ if (isAppMigrate) {
     appConfig,
     webhookHandlers,
     registerWebhooksOnStart: false,
-  }).then(async app => {
+  }).then(async () => {
     console.log(`Configured Shopify API Key: '${process.env.SHOPIFY_API_KEY}'`);
   });
 }
 
 // Run migrations if needed
-if (process.env.NODE_ENV === 'development' || isAppMigrate) {
+if (isAppMigrate) {
   await runMigrations();
 }

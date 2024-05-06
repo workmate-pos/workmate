@@ -2,7 +2,6 @@ import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-tool
 import { parseMetaobject } from './metaobjects/index.js';
 import { fetchAllPages, gql } from './gql/gql.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function parseProductVariantMetafields<const T extends gql.products.ProductVariantFragment.Result>(
   productVariant: T,
