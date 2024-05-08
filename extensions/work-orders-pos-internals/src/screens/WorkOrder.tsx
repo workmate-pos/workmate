@@ -50,6 +50,7 @@ import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
+import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -120,11 +121,14 @@ export function WorkOrder({ initial }: WorkOrderProps) {
               />
               <DateField
                 label={'Due Date'}
-                value={createWorkOrder.dueDate}
+                value={(() => {
+                  const dueDateUtc = new Date(createWorkOrder.dueDate);
+                  const dueDateLocal = new Date(dueDateUtc.getTime() + dueDateUtc.getTimezoneOffset() * MINUTE_IN_MS);
+                  return dueDateLocal.toISOString();
+                })()}
                 onChange={(date: string) => {
-                  // TODO: Do we actually want to convert everything to UTC? (for display we need utc, but we can just do that in value)
-                  const dueDate = new Date(date);
-                  const dueDateUtc = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60 * 1000);
+                  const dueDateLocal = new Date(date);
+                  const dueDateUtc = new Date(dueDateLocal.getTime() - dueDateLocal.getTimezoneOffset() * MINUTE_IN_MS);
                   dispatch.setPartial({ dueDate: dueDateUtc.toISOString() as DateTime });
                 }}
                 disabled={saveWorkOrderMutation.isLoading}
@@ -157,6 +161,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
                 if (createWorkOrder.name) {
                   router.push('PrintOverview', {
                     name: createWorkOrder.name,
+                    dueDate: new Date(createWorkOrder.dueDate),
                   });
                 }
               }}

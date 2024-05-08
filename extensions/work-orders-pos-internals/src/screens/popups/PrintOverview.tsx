@@ -9,7 +9,7 @@ import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { useRouter } from '../../routes.js';
 
-export function PrintOverview({ name }: { name: string }) {
+export function PrintOverview({ name, dueDate }: { name: string; dueDate: Date }) {
   const fetch = useAuthenticatedFetch();
 
   const settingsQuery = useSettingsQuery({ fetch });
@@ -42,6 +42,7 @@ export function PrintOverview({ name }: { name: string }) {
       {
         workOrderName: name,
         date: new Date().toLocaleDateString(),
+        dueDate: new Date(dueDate).toLocaleDateString(),
         templateName: selectedTemplate,
       },
       {

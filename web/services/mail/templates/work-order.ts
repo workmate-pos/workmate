@@ -31,6 +31,7 @@ export async function getWorkOrderTemplateData(
   session: Session,
   workOrderName: string,
   clientDate: string,
+  clientDueDate: string,
 ): Promise<WorkOrderTemplateData> {
   const workOrder = await getWorkOrder(session, workOrderName);
 
@@ -106,6 +107,7 @@ export async function getWorkOrderTemplateData(
     name: workOrder.name,
     status: workOrder.status,
     date: clientDate,
+    dueDate: clientDueDate,
     shopifyOrderNames: workOrder.orders.filter(hasPropertyValue('type', 'ORDER')).map(order => order.name),
     purchaseOrderNames: unique(workOrder.items.flatMap(item => item.purchaseOrders.map(po => po.name))),
     customer: {
@@ -177,6 +179,7 @@ export type WorkOrderTemplateData = {
    * Date provided/formatted by clients.
    */
   date: string;
+  dueDate: string;
   shopifyOrderNames: string[];
   purchaseOrderNames: string[];
   customFields: Record<string, string>;

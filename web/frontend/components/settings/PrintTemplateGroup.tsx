@@ -27,6 +27,7 @@ export function PrintTemplateGroup({
     workOrderPrintTemplates: {
       '{{ name }}': 'The name of the work order',
       '{{ date }}': 'The current date',
+      '{{ dueDate }}': 'The due date of the work order',
       '{{ status }}': 'The status of the work order',
       '{{ note }}': 'The note attached to the work order',
       '{{ hiddenNote }}': 'The hidden note attached to the work order',

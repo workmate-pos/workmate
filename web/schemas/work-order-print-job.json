@@ -5,8 +5,12 @@
     "date": {
       "description": "A date to display in the work order printout",
       "type": "string"
+    },
+    "dueDate": {
+      "description": "A due date to display in the work order printout",
+      "type": "string"
     }
   },
-  "required": ["date"],
+  "required": ["date", "dueDate"],
   "additionalProperties": false
 }
