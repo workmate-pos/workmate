@@ -5,6 +5,8 @@ import { Fetch } from './fetch.js';
 import { Nullable } from '../types/Nullable.js';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { string } from '@teifi-digital/shopify-app-toolbox';
+import { UseQueryData } from './react-query.js';
+import { useWorkOrderQuery } from './use-work-order-query.js';
 
 export const useSaveWorkOrderMutation = (
   { fetch }: { fetch: Fetch },
@@ -29,10 +31,11 @@ export const useSaveWorkOrderMutation = (
       return workOrder;
     },
     onSuccess(...args) {
-      const [, { name }] = args;
-      if (name) {
-        queryClient.invalidateQueries(['work-order', name]);
-      }
+      const [workOrder] = args;
+
+      queryClient.setQueryData(['work-order', workOrder.name], { workOrder } satisfies UseQueryData<
+        typeof useWorkOrderQuery
+      >);
 
       queryClient.invalidateQueries(['work-order-info']);
 

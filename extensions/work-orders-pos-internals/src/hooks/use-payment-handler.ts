@@ -91,7 +91,7 @@ export const usePaymentHandler = () => {
 
     if (discount) {
       const discountType = ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[discount.type];
-      await cart.applyCartDiscount(discountType, '', discount.value);
+      await cart.applyCartDiscount(discountType, 'Discount', discount.value);
     }
 
     navigation.dismiss();

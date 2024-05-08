@@ -24,6 +24,8 @@ import {
 } from '../db/queries/generated/work-order-charges.sql.js';
 import { getLineItemIdsByUuids } from './link-order-items.js';
 
+// TODO: Instead of calculating locally, just fetch the orders from shopify use use that
+
 type CalculateWorkOrderResult = {
   outstanding: Money;
   paid: Money;
@@ -43,8 +45,6 @@ type CalculateWorkOrderResult = {
   hourlyLabourChargePrices: Record<string, Money>;
   fixedPriceLabourChargePrices: Record<string, Money>;
 };
-
-// TODO: Use this for templates
 
 /**
  * Calculates the price of a work order on a per-item/charge basis.
