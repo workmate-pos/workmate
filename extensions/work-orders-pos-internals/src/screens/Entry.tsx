@@ -367,7 +367,9 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     let financialStatus = undefined;
 
     if (calculation) {
-      const { outstanding, paid, total } = calculation;
+      const { outstanding, total } = calculation;
+
+      const paid = BigDecimal.fromMoney(total).subtract(BigDecimal.fromMoney(outstanding)).toMoney();
 
       moneySubtitle = `${currencyFormatter(paid)} paid of ${currencyFormatter(total)}`;
 

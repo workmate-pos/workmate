@@ -12,9 +12,10 @@ export async function fetchAllPages<R, N>(
   graphql: Graphql,
   fn: (graphql: Graphql, variables: Input<{ after: string | null }>) => Promise<R>,
   extract: (result: R) => { nodes: N[]; pageInfo: PageInfo },
+  initialEndCursor: string | null = null,
 ): Promise<N[]> {
   const nodes: N[] = [];
-  let pageInfo: PageInfo = { hasNextPage: true, endCursor: null };
+  let pageInfo: PageInfo = { hasNextPage: true, endCursor: initialEndCursor };
 
   while (pageInfo.hasNextPage) {
     const result = await fn(graphql, { after: pageInfo.endCursor });

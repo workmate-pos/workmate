@@ -12,6 +12,7 @@ import { calculateWorkOrder } from '../../work-orders/calculate.js';
 import { Session } from '@shopify/shopify-api';
 import { getWorkOrder } from '../../work-orders/get.js';
 import { WorkOrderCharge } from '../../work-orders/types.js';
+import { subtractMoney } from '../../../util/money.js';
 
 export async function getRenderedWorkOrderTemplate(
   printTemplate: ShopSettings['workOrderPrintTemplates'][string],
@@ -47,7 +48,6 @@ export async function getWorkOrderTemplateData(
     [productVariants, products],
     orders,
     {
-      paid,
       outstanding,
       total,
       subtotal,
@@ -68,6 +68,8 @@ export async function getWorkOrderTemplateData(
     orderIds.length ? db.shopifyOrder.getMany({ orderIds }) : [],
     calculateWorkOrder(session, workOrder),
   ]);
+
+  const paid = subtractMoney(total, outstanding);
 
   const productById = indexBy(products, p => p.productId);
   const productVariantById = indexBy(productVariants, pv => pv.productVariantId);

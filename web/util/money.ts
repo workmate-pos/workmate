@@ -1,4 +1,4 @@
-import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 type BinaryBigDecimalOperation = {
   [K in keyof BigDecimal]: ((b: BigDecimal) => BigDecimal) extends BigDecimal[K] ? K : never;
@@ -19,4 +19,8 @@ export const multiplyMoney = binaryBigDecimalOperation('multiply');
 export const subtractMoney = binaryBigDecimalOperation('subtract');
 export const divideMoney = binaryBigDecimalOperation('divide');
 export const compareMoney = (a: Money, b: Money) => BigDecimal.fromMoney(a).compare(BigDecimal.fromMoney(b));
+export const roundMoney = (a: Money, decimals: number, roundingMode?: RoundingMode) =>
+  BigDecimal.fromMoney(a).round(decimals, roundingMode).toMoney();
+export const maxMoney = (...[arg, ...args]: [Money, ...Money[]]) =>
+  BigDecimal.max(BigDecimal.fromMoney(arg), ...args.map(money => BigDecimal.fromMoney(money))).toMoney();
 export const ZERO_MONEY = BigDecimal.ZERO.round(2).toMoney();

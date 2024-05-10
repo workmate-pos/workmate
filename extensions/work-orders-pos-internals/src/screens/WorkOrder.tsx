@@ -480,6 +480,18 @@ function WorkOrderMoneySummary({
         />
       )}
 
+      {calculatedDraftOrderQuery.data?.warnings.map(warning => <Banner title={warning} variant={'alert'} visible />)}
+
+      {(calculatedDraftOrderQuery.data?.missingProductVariantIds?.length ?? 0) > 0 && (
+        <Banner
+          title={
+            'You work order contains products which have likely been deleted. Please remove them to save this work order'
+          }
+          variant={'alert'}
+          visible
+        />
+      )}
+
       <WorkOrderEmployees createWorkOrder={createWorkOrder} />
 
       <ResponsiveGrid columns={2} grow>
@@ -524,7 +536,17 @@ function WorkOrderMoneySummary({
         <FormMoneyField label={'Tax'} disabled value={calculatedDraftOrder?.tax} formatter={formatter} />
         <FormMoneyField label={'Total'} disabled value={calculatedDraftOrder?.total} formatter={formatter} />
 
-        <FormMoneyField label={'Paid'} disabled value={calculatedDraftOrder?.paid} formatter={formatter} />
+        <FormMoneyField
+          label={'Paid'}
+          disabled
+          value={(() => {
+            if (!calculatedDraftOrder) return null;
+            return BigDecimal.fromMoney(calculatedDraftOrder.total)
+              .subtract(BigDecimal.fromMoney(calculatedDraftOrder.outstanding))
+              .toMoney();
+          })()}
+          formatter={formatter}
+        />
         <FormMoneyField
           label={'Balance Due'}
           disabled

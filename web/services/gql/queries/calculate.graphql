@@ -1,0 +1,248 @@
+# This file contains all GraphQL stuff required to calculate a work order.
+# Note that calculating a work order includes product information for line items.
+# This ensures we have a central place to get product information, as product information for deleted products is retrieved from the line items directly.
+
+mutation draftOrderCalculate($input: DraftOrderInput!) {
+  draftOrderCalculate(input: $input) {
+    calculatedDraftOrder {
+      ...CalculatedDraftOrderFragment
+    }
+    userErrors {
+      ...UserErrorFragment
+    }
+  }
+}
+
+query getOrders($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...OrderFragment
+  }
+}
+
+# In case getOrder did not grab all line items we can get more pages with this.
+query getOrderLineItems($id: ID!, $after: String) {
+  order(id: $id) {
+    ...OrderLineItems
+  }
+}
+
+fragment UserErrorFragment on UserError {
+  field
+  message
+}
+
+fragment ShopMoneyAmountFragment on MoneyBag {
+  shopMoney {
+    amount
+  }
+}
+
+fragment CalculatedDraftOrderFragment on CalculatedDraftOrder {
+  __typename
+  currentTotalTaxSet: totalTaxSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentSubtotalPriceSet: subtotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  appliedDiscount {
+    amountSet {
+      ...ShopMoneyAmountFragment
+    }
+  }
+  currentTotalPriceSet: totalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  lineItems {
+    ...CalculatedDraftLineItemFragment
+  }
+}
+
+fragment OrderFragment on Order {
+  __typename
+  id
+  currentTotalTaxSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentSubtotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentTotalDiscountsSet {
+    ...ShopMoneyAmountFragment
+  }
+  currentTotalPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  totalOutstandingSet {
+    ...ShopMoneyAmountFragment
+  }
+  lineItems(first: 250) {
+    nodes {
+      ...LineItemFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+fragment OrderLineItems on Order {
+  lineItems(first: 250, after: $after) {
+    nodes {
+      ...LineItemFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+fragment CalculatedDraftLineItemFragment on CalculatedDraftOrderLineItem {
+  title
+  sku
+  image {
+    url
+  }
+  quantity
+  taxable
+  originalUnitPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  discountedUnitPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  originalTotalSet {
+    ...ShopMoneyAmountFragment
+  }
+  discountedTotalSet {
+    ...ShopMoneyAmountFragment
+  }
+  customAttributes {
+    key
+    value
+  }
+  variant {
+    ...ProductVariantFragment
+  }
+}
+
+fragment LineItemFragment on LineItem {
+  id
+  title
+  sku
+  image {
+    url
+  }
+  quantity
+  taxable
+  originalUnitPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  discountedUnitPriceSet {
+    ...ShopMoneyAmountFragment
+  }
+  originalTotalSet {
+    ...ShopMoneyAmountFragment
+  }
+  discountedTotalSet {
+    ...ShopMoneyAmountFragment
+  }
+  customAttributes {
+    key
+    value
+  }
+  variant {
+    ...ProductVariantFragment
+  }
+}
+
+fragment ProductVariantFragment on ProductVariant {
+  id
+  title
+  sku
+  price
+  barcode
+  image {
+    url
+  }
+  inventoryItem {
+    id
+    unitCost {
+      currencyCode
+      amount
+    }
+  }
+  product {
+    ...ProductFragment
+  }
+  requiresComponents
+  defaultCharges: metafield(namespace: "$app", key: "default-charges") {
+    references(first: 10) {
+      nodes {
+        __typename
+        ...FixedPriceLabourChargeFragment
+        ...HourlyLabourChargeFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+fragment ProductFragment on Product {
+  id
+  title
+  handle
+  hasOnlyDefaultVariant
+  featuredImage {
+    url
+  }
+  description
+  productType
+  serviceType: metafield(namespace: "$app", key: "service-type") {
+    value
+  }
+}
+
+fragment FixedPriceLabourChargeFragment on Metaobject {
+  type
+  name: field(key: "name") {
+    value
+  }
+  amount: field(key: "amount") {
+    value
+  }
+  customizeAmount: field(key: "customize-amount") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
+  }
+}
+
+fragment HourlyLabourChargeFragment on Metaobject {
+  type
+  name: field(key: "name") {
+    value
+  }
+  rate: field(key: "rate") {
+    value
+  }
+  hours: field(key: "hours") {
+    value
+  }
+  customizeRate: field(key: "customize-rate") {
+    value
+  }
+  customizeHours: field(key: "customize-hours") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
+  }
+}
