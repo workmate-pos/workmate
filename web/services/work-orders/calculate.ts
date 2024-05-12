@@ -1,6 +1,6 @@
 import { Session } from '@shopify/shopify-api';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
-import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { fetchAllPages, gql } from '../gql/gql.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import {
@@ -13,7 +13,7 @@ import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-tool
 import { getShopSettings } from '../settings.js';
 import { db } from '../db/db.js';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, createGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { decimalToMoney } from '../../util/decimal.js';
@@ -34,7 +34,6 @@ import {
 import { getMissingNonPaidWorkOrderProduct, validateCalculateWorkOrder } from './validate.js';
 import { v4 as uuid } from 'uuid';
 
-// TODO: Include line item information to show in POS
 type CalculateWorkOrderResult = {
   outstanding: Money;
   orderDiscount: {
@@ -49,11 +48,46 @@ type CalculateWorkOrderResult = {
   total: Money;
   tax: Money;
   itemPrices: Record<string, Money>;
+  itemLineItemIds: Record<string, ID>;
   hourlyLabourChargePrices: Record<string, Money>;
+  hourlyLabourChargeLineItemIds: Record<string, ID>;
   fixedPriceLabourChargePrices: Record<string, Money>;
-  itemLineItems: Record<string, unknown>;
+  fixedPriceLabourChargeLineItemIds: Record<string, ID>;
   missingProductVariantIds: ID[];
   warnings: string[];
+  lineItems: {
+    id: ID;
+    name: string;
+    sku: string | null;
+    unitPrice: Money;
+    image: {
+      url: string;
+    } | null;
+    variant: gql.calculate.ProductVariantFragment.Result | null;
+    order: {
+      name: string;
+    } | null;
+  }[];
+};
+
+type WorkOrderItem = {
+  shopifyOrderLineItemId: string | null;
+  uuid: string;
+  quantity: number;
+  absorbCharges: boolean;
+};
+
+type WorkOrderHourlyLabourCharge = {
+  shopifyOrderLineItemId: string | null;
+  uuid: string;
+  hours: string;
+  rate: string;
+};
+
+type WorkOrderFixedPriceLabourCharge = {
+  shopifyOrderLineItemId: string | null;
+  uuid: string;
+  amount: string;
 };
 
 /**
@@ -61,7 +95,7 @@ type CalculateWorkOrderResult = {
  *
  * Uses existing orders when present, but uses the `draftOrderCalculate` mutation otherwise.
  * Also includes product/line item information to support deleted products.
- * Tries to not throw, but to instead send an error along with a semi-correct result (e.g. in case there are missing products/deleted orders).
+ * Tries to not throw, but to instead send an error/warning along with a semi-correct result (e.g. in case there are missing products/deleted orders).
  */
 export async function calculateWorkOrder(
   session: Session,
@@ -69,9 +103,7 @@ export async function calculateWorkOrder(
 ): Promise<CalculateWorkOrderResult> {
   await validateCalculateWorkOrder(session, calculateWorkOrder, true);
 
-  const { shop } = session;
   const { name } = calculateWorkOrder;
-  const graphql = new Graphql(session);
 
   let tax = ZERO_MONEY;
   let total = ZERO_MONEY;
@@ -81,237 +113,134 @@ export async function calculateWorkOrder(
   let totalOrderDiscount = ZERO_MONEY;
   let appliedLineItemDiscount = ZERO_MONEY;
   let totalLineItemDiscount = ZERO_MONEY;
-  const missingProductVariantIds = await getMissingNonPaidWorkOrderProduct(session, calculateWorkOrder);
+
+  const lineItems: CalculateWorkOrderResult['lineItems'] = [];
+
   const itemPrices: Record<string, Money> = {};
-  const itemLineItems: Record<string, unknown> = {};
   const hourlyLabourChargePrices: Record<string, Money> = {};
   const fixedPriceLabourChargePrices: Record<string, Money> = {};
 
+  const itemLineItemIds: Record<string, ID> = {};
+  const hourlyLabourChargeLineItemIds: Record<string, ID> = {};
+  const fixedPriceLabourChargeLineItemIds: Record<string, ID> = {};
+
+  const missingProductVariantIds = await getMissingNonPaidWorkOrderProduct(session, calculateWorkOrder);
   const warnings: string[] = [];
 
   // All orders involved in the WO, including all their line items. These will be processed to compute everything.
   const orders: (OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds)[] = [];
 
-  const items: Pick<IGetItemsResult, 'shopifyOrderLineItemId' | 'uuid' | 'quantity' | 'absorbCharges'>[] = [];
-  const hourlyCharges: Pick<IGetHourlyLabourChargesResult, 'shopifyOrderLineItemId' | 'uuid' | 'hours' | 'rate'>[] = [];
-  const fixedPriceLabourCharges: Pick<
-    IGetFixedPriceLabourChargesResult,
-    'shopifyOrderLineItemId' | 'uuid' | 'amount'
-  >[] = [];
+  const items: WorkOrderItem[] = [];
+  const hourlyLabourCharges: WorkOrderHourlyLabourCharge[] = [];
+  const fixedPriceLabourCharges: WorkOrderFixedPriceLabourCharge[] = [];
 
-  // fetch all existing orders for this WO if it is not a new WO.
   if (name) {
-    const [workOrder] = await db.workOrder.get({ shop, name });
+    const existingInfo = await getExistingOrderInfo(session, name);
 
-    if (!workOrder) {
-      throw new HttpError('Work order not found', 404);
-    }
+    orders.push(...existingInfo.orders);
 
-    const { id: workOrderId } = workOrder;
+    items.push(...existingInfo.items);
+    hourlyLabourCharges.push(...existingInfo.hourlyLabourCharges);
+    fixedPriceLabourCharges.push(...existingInfo.fixedPriceLabourCharges);
 
-    const [databaseItems, databaseHourlyCharges, databaseFixedCharges] = await Promise.all([
-      db.workOrder.getItems({ workOrderId }),
-      db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
-      db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
-    ]);
+    Object.assign(itemLineItemIds, existingInfo.itemLineItemIds);
+    Object.assign(hourlyLabourChargeLineItemIds, existingInfo.hourlyLabourChargeLineItemIds);
+    Object.assign(fixedPriceLabourChargeLineItemIds, existingInfo.fixedPriceLabourChargeLineItemIds);
 
-    const lineItemIds = unique(
-      [...databaseItems, ...databaseHourlyCharges, ...databaseFixedCharges]
-        .map(item => item.shopifyOrderLineItemId)
-        .filter(isLineItemId),
-    );
-
-    const lineItems = lineItemIds.length ? await db.shopifyOrder.getLineItemsByIds({ lineItemIds }) : [];
-
-    const orderIds = unique(
-      lineItems.map(lineItem => {
-        assertGid(lineItem.orderId);
-        return lineItem.orderId;
-      }),
-    );
-
-    const existingOrders = await getOrdersWithAllLineItems(graphql, orderIds);
-
-    if (existingOrders.length < orderIds.length) {
-      warnings.push(
-        `${orderIds.length - existingOrders.length} orders were not found - excluding them from price calculations.`,
-      );
-    }
-
-    // We assume that every order only contains items added to the work order
-    // TODO: Automatically add these items to the work order in case this happens
-    orders.push(...existingOrders);
+    warnings.push(...existingInfo.warnings);
   }
 
-  const draftOrder = await getCalculatedDraftOrderWithFakeIds(session, {
-    ...calculateWorkOrder,
-    // do not include any items/charges that are already paid for/in a real order
-    items: calculateWorkOrder.items
-      .filter(item => !items.some(hasPropertyValue('uuid', item.uuid)))
-      .filter(item => !missingProductVariantIds.includes(item.productVariantId)),
-    charges: calculateWorkOrder.charges.filter(charge => {
-      if (charge.type === 'hourly-labour') {
-        return !hourlyCharges.some(hasPropertyValue('uuid', charge.uuid));
-      }
+  // do draftOrderCalculate stuff on items/charges that aren't in an order yet
 
-      if (charge.type === 'fixed-price-labour') {
-        return !fixedPriceLabourCharges.some(hasPropertyValue('uuid', charge.uuid));
-      }
+  const newItems = calculateWorkOrder.items
+    .filter(item => !items.some(hasPropertyValue('uuid', item.uuid)))
+    .filter(item => !missingProductVariantIds.includes(item.productVariantId));
 
-      return charge satisfies never;
-    }),
+  const newCharges = calculateWorkOrder.charges.filter(charge => {
+    if (charge.type === 'hourly-labour') {
+      return !hourlyLabourCharges.some(hasPropertyValue('uuid', charge.uuid));
+    }
+
+    if (charge.type === 'fixed-price-labour') {
+      return !fixedPriceLabourCharges.some(hasPropertyValue('uuid', charge.uuid));
+    }
+
+    return charge satisfies never;
   });
 
-  if (draftOrder) {
-    orders.push(draftOrder);
+  const calculation = await getCalculatedDraftOrderInfo(session, {
+    ...calculateWorkOrder,
+    items: newItems,
+    charges: newCharges,
+  });
+
+  if (calculation.calculatedDraftOrder) {
+    orders.push(calculation.calculatedDraftOrder);
+
+    items.push(...calculation.items);
+    hourlyLabourCharges.push(...calculation.hourlyLabourCharges);
+    fixedPriceLabourCharges.push(...calculation.fixedPriceLabourCharges);
+
+    Object.assign(itemLineItemIds, calculation.itemLineItemIds);
+    Object.assign(hourlyLabourChargeLineItemIds, calculation.hourlyLabourChargeLineItemIds);
+    Object.assign(fixedPriceLabourChargeLineItemIds, calculation.fixedPriceLabourChargeLineItemIds);
   }
 
-  for (const item of calculateWorkOrder.items) {
-    if (items.some(hasPropertyValue('uuid', item.uuid))) {
-      continue;
-    }
-
-    items.push({
-      uuid: item.uuid,
-      quantity: item.quantity,
-      // We use a fake shopifyOrderLineItemId because draftOrderCalculate does not generate one!
-      shopifyOrderLineItemId: getItemCalculatedDraftLineItemGid(item),
-      absorbCharges: item.absorbCharges,
-    });
-  }
-
-  for (const charge of calculateWorkOrder.charges) {
-    let shopifyOrderLineItemId = getChargeCalculatedDraftLineItemGid(charge);
-
-    if (charge.workOrderItemUuid) {
-      const item =
-        items.find(i => i.uuid === charge.workOrderItemUuid) ?? never('should have been verified by assertions');
-
-      if (item.absorbCharges) {
-        shopifyOrderLineItemId = getItemCalculatedDraftLineItemGid(item);
-      }
-    }
-
-    if (charge.type === 'hourly-labour') {
-      hourlyCharges.push({
-        uuid: charge.uuid,
-        shopifyOrderLineItemId,
-        hours: charge.hours,
-        rate: charge.rate,
-      });
-    } else if (charge.type === 'fixed-price-labour') {
-      fixedPriceLabourCharges.push({
-        uuid: charge.uuid,
-        shopifyOrderLineItemId,
-        amount: charge.amount,
-      });
-    } else {
-      return charge satisfies never;
-    }
-  }
-
+  // process orders and line items to get work order totals and item/charge prices
   for (const order of orders) {
-    tax = addMoney(tax, decimalToMoney(order.currentTotalTaxSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()));
-    total = addMoney(
-      total,
-      decimalToMoney(order.currentTotalPriceSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()),
-    );
-    subtotal = addMoney(
-      subtotal,
-      decimalToMoney(order.currentSubtotalPriceSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()),
-    );
+    const orderPriceInfo = getOrderPriceInformation(order);
 
-    if (order.__typename === 'Order') {
-      outstanding = addMoney(
-        outstanding,
-        decimalToMoney(order.totalOutstandingSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()),
-      );
-
-      const orderDiscount = decimalToMoney(
-        order.currentTotalDiscountsSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal(),
-      );
-
-      appliedOrderDiscount = addMoney(appliedOrderDiscount, orderDiscount);
-      totalOrderDiscount = addMoney(totalOrderDiscount, orderDiscount);
-    } else {
-      outstanding = addMoney(
-        outstanding,
-        decimalToMoney(order.currentTotalPriceSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()),
-      );
-      totalOrderDiscount = addMoney(
-        totalOrderDiscount,
-        decimalToMoney(order.appliedDiscount?.amountSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()),
-      );
-    }
+    tax = addMoney(tax, orderPriceInfo.tax);
+    total = addMoney(total, orderPriceInfo.total);
+    subtotal = addMoney(subtotal, orderPriceInfo.subtotal);
+    outstanding = addMoney(outstanding, orderPriceInfo.outstanding);
+    appliedOrderDiscount = addMoney(appliedOrderDiscount, orderPriceInfo.appliedOrderDiscount);
+    totalOrderDiscount = addMoney(totalOrderDiscount, orderPriceInfo.totalOrderDiscount);
 
     for (const lineItem of order.lineItems) {
-      const discountedTotal = decimalToMoney(lineItem.discountedTotalSet.shopMoney.amount);
-      const originalTotal = decimalToMoney(lineItem.originalTotalSet.shopMoney.amount);
+      lineItems.push({
+        id: lineItem.id,
+        name: lineItem.name,
+        sku: lineItem.sku,
+        image: lineItem.image,
+        variant: lineItem.variant,
+        order: order.__typename === 'Order' ? { name: order.name } : null,
+        unitPrice: decimalToMoney(lineItem.discountedUnitPriceSet.shopMoney.amount),
+      });
 
-      const lineItemDiscount = subtractMoney(originalTotal, discountedTotal);
-
-      totalLineItemDiscount = addMoney(totalLineItemDiscount, lineItemDiscount);
-
-      if (order.__typename === 'Order') {
-        appliedLineItemDiscount = addMoney(appliedLineItemDiscount, lineItemDiscount);
-      }
-
-      // next, we determine the price of every thing contained in this line item (items, charges, etc)
-
-      const lineItemItems = items.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
-      const lineItemHourlyCharges = hourlyCharges.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
-      const lineItemFixedCharges = fixedPriceLabourCharges.filter(
-        hasPropertyValue('shopifyOrderLineItemId', lineItem.id),
+      const lineItemPriceInfo = getLineItemPriceInformation(
+        lineItem,
+        items,
+        hourlyLabourCharges,
+        fixedPriceLabourCharges,
       );
 
-      // if the line item is discounted, we apply the same discount % on every contained item/charge
-      const discountFactor = (() => {
-        if (compareMoney(decimalToMoney(lineItem.discountedTotalSet.shopMoney.amount), ZERO_MONEY) === 0)
-          return BigDecimal.ONE;
-        return BigDecimal.fromMoney(divideMoney(discountedTotal, originalTotal));
-      })();
+      totalLineItemDiscount = addMoney(totalLineItemDiscount, lineItemPriceInfo.lineItemDiscount);
 
-      // 1) determine the price of charges
-      let remainingLineItemPrice = discountedTotal;
-
-      for (const [charges, chargePriceRecord] of [
-        [lineItemHourlyCharges, hourlyLabourChargePrices],
-        [lineItemFixedCharges, fixedPriceLabourChargePrices],
-      ] as const) {
-        for (const charge of charges) {
-          const originalChargeTotal = BigDecimal.fromMoney(getChargeUnitPrice(charge));
-          const discountedChargeTotal = originalChargeTotal.multiply(discountFactor).round(2, RoundingMode.CEILING);
-
-          chargePriceRecord[charge.uuid] = discountedChargeTotal.toMoney();
-
-          remainingLineItemPrice = subtractMoney(remainingLineItemPrice, discountedChargeTotal.toMoney());
-        }
+      if (order.__typename === 'Order') {
+        appliedLineItemDiscount = addMoney(appliedLineItemDiscount, lineItemPriceInfo.lineItemDiscount);
       }
 
-      remainingLineItemPrice = roundMoney(remainingLineItemPrice, 2, RoundingMode.CEILING);
-      remainingLineItemPrice = maxMoney(remainingLineItemPrice, ZERO_MONEY);
+      assignMoneyDictionary(itemPrices, lineItemPriceInfo.itemPrices);
+      assignMoneyDictionary(hourlyLabourChargePrices, lineItemPriceInfo.hourlyLabourChargePrices);
+      assignMoneyDictionary(fixedPriceLabourChargePrices, lineItemPriceInfo.fixedPriceLabourChargePrices);
 
-      // 2) the remainder goes to the items (distributed by quantity)
-      let remainingItemQuantity = sum(lineItemItems.map(li => li.quantity));
-
-      for (const [i, item] of lineItemItems.entries()) {
-        let divideQuantity = remainingItemQuantity;
-
-        if (divideQuantity === 0) {
-          // it is possible for mutable services to be stored as having a quantity of 0 (their quantity is not used for anything)
-          // in this case, divide evenly based on the number of remaining items
-          divideQuantity = lineItemItems.length - i;
-        }
-
-        let itemPrice = divideMoney(remainingLineItemPrice, BigDecimal.fromString(divideQuantity.toFixed(0)).toMoney());
-
-        itemPrice = roundMoney(itemPrice, 2, RoundingMode.FLOOR);
-
-        itemPrices[item.uuid] = itemPrice;
-        remainingItemQuantity -= item.quantity;
-        remainingLineItemPrice = subtractMoney(remainingLineItemPrice, itemPrice);
-      }
+      warnings.push(...lineItemPriceInfo.warnings);
     }
+  }
+
+  const knownLineItemIds = new Set(orders.flatMap(order => order.lineItems.map(lineItem => lineItem.id)));
+  const missingLineItemIds = [...items, ...hourlyLabourCharges, ...fixedPriceLabourCharges]
+    .map(item => item.shopifyOrderLineItemId)
+    .filter(isNonNullable)
+    .map(lineItemId => {
+      assertGid(lineItemId);
+      return lineItemId;
+    })
+    .filter(lineItemId => !knownLineItemIds.has(lineItemId));
+
+  if (missingLineItemIds.length > 0) {
+    warnings.push(`${missingLineItemIds.length} line items were not found - excluding them from price calculations.`);
   }
 
   return {
@@ -320,36 +249,137 @@ export async function calculateWorkOrder(
     subtotal,
     outstanding,
 
-    // TODO: Fix
-    // total = applied, because we are working with real orders (non-draft)
-    orderDiscount: { total: totalOrderDiscount, applied: totalOrderDiscount },
-    lineItemDiscount: { total: totalLineItemDiscount, applied: totalLineItemDiscount },
+    orderDiscount: { total: totalOrderDiscount, applied: appliedOrderDiscount },
+    lineItemDiscount: { total: totalLineItemDiscount, applied: appliedLineItemDiscount },
 
-    missingProductVariantIds,
+    lineItems,
+
     itemPrices,
-    itemLineItems,
     hourlyLabourChargePrices,
     fixedPriceLabourChargePrices,
 
+    itemLineItemIds,
+    hourlyLabourChargeLineItemIds,
+    fixedPriceLabourChargeLineItemIds,
+
+    missingProductVariantIds,
     warnings,
   };
 }
 
-function getItemCalculatedDraftLineItemGid(item: { uuid: string }) {
-  return `gid://shopify/CalculatedDraftLineItem/item-${item.uuid}`;
+async function getExistingOrderInfo(session: Session, name: string) {
+  const graphql = new Graphql(session);
+
+  const itemLineItemIds: Record<string, ID> = {};
+  const hourlyLabourChargeLineItemIds: Record<string, ID> = {};
+  const fixedPriceLabourChargeLineItemIds: Record<string, ID> = {};
+
+  const items: Pick<IGetItemsResult, 'shopifyOrderLineItemId' | 'uuid' | 'quantity' | 'absorbCharges'>[] = [];
+  const hourlyLabourCharges: Pick<
+    IGetHourlyLabourChargesResult,
+    'shopifyOrderLineItemId' | 'uuid' | 'hours' | 'rate'
+  >[] = [];
+  const fixedPriceLabourCharges: Pick<
+    IGetFixedPriceLabourChargesResult,
+    'shopifyOrderLineItemId' | 'uuid' | 'amount'
+  >[] = [];
+
+  const warnings: string[] = [];
+
+  const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
+
+  if (!workOrder) {
+    throw new HttpError('Work order not found', 404);
+  }
+
+  const { id: workOrderId } = workOrder;
+
+  const [databaseItems, databaseHourlyLabourCharges, databaseFixedLabourCharges] = await Promise.all([
+    db.workOrder.getItems({ workOrderId }),
+    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
+    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
+  ]);
+
+  const lineItemIds = new Set<ID>();
+
+  for (const item of databaseItems) {
+    if (isLineItemId(item.shopifyOrderLineItemId)) {
+      lineItemIds.add(item.shopifyOrderLineItemId);
+
+      itemLineItemIds[item.uuid] = item.shopifyOrderLineItemId;
+      items.push({
+        uuid: item.uuid,
+        shopifyOrderLineItemId: item.shopifyOrderLineItemId,
+        quantity: item.quantity,
+        absorbCharges: item.absorbCharges,
+      });
+    }
+  }
+
+  for (const hourlyLabourCharge of databaseHourlyLabourCharges) {
+    if (isLineItemId(hourlyLabourCharge.shopifyOrderLineItemId)) {
+      lineItemIds.add(hourlyLabourCharge.shopifyOrderLineItemId);
+
+      hourlyLabourChargeLineItemIds[hourlyLabourCharge.uuid] = hourlyLabourCharge.shopifyOrderLineItemId;
+      hourlyLabourCharges.push({
+        uuid: hourlyLabourCharge.uuid,
+        shopifyOrderLineItemId: hourlyLabourCharge.shopifyOrderLineItemId,
+        hours: hourlyLabourCharge.hours,
+        rate: hourlyLabourCharge.rate,
+      });
+    }
+  }
+
+  for (const fixedLabourCharge of databaseFixedLabourCharges) {
+    if (isLineItemId(fixedLabourCharge.shopifyOrderLineItemId)) {
+      lineItemIds.add(fixedLabourCharge.shopifyOrderLineItemId);
+
+      fixedPriceLabourChargeLineItemIds[fixedLabourCharge.uuid] = fixedLabourCharge.shopifyOrderLineItemId;
+      fixedPriceLabourCharges.push({
+        uuid: fixedLabourCharge.uuid,
+        shopifyOrderLineItemId: fixedLabourCharge.shopifyOrderLineItemId,
+        amount: fixedLabourCharge.amount,
+      });
+    }
+  }
+
+  const lineItems = lineItemIds.size ? await db.shopifyOrder.getLineItemsByIds({ lineItemIds: [...lineItemIds] }) : [];
+
+  const orderIds = unique(
+    lineItems.map(lineItem => {
+      assertGid(lineItem.orderId);
+      return lineItem.orderId;
+    }),
+  );
+
+  // We assume that every order only contains items added to the work order
+  // TODO: Automatically add these items to the work order in case this happens
+  const orders = await getOrdersWithAllLineItems(graphql, orderIds);
+
+  if (orders.length < orderIds.length) {
+    warnings.push(`${orderIds.length - orders.length} orders were not found - excluding them from price calculations.`);
+  }
+
+  return {
+    orders,
+    warnings,
+    items,
+    hourlyLabourCharges,
+    fixedPriceLabourCharges,
+    itemLineItemIds,
+    hourlyLabourChargeLineItemIds,
+    fixedPriceLabourChargeLineItemIds,
+  };
 }
 
-function getChargeCalculatedDraftLineItemGid(charge: { type: string; uuid: string }) {
-  return `gid://shopify/CalculatedDraftLineItem/${charge.type}-${charge.uuid}`;
-}
-
-type CalculatedDraftOrderWithFakeIds = NonNullable<Awaited<ReturnType<typeof getCalculatedDraftOrderWithFakeIds>>>;
+type CalculatedDraftOrderWithFakeIds = NonNullable<
+  Awaited<ReturnType<typeof getCalculatedDraftOrderInfo>>['calculatedDraftOrder']
+>;
 
 /**
- * draftOrderCalculate does not generate a line item id for items that are already in an order.
- * To make line items identifiable we add fake ids to line items to make them identifiable.
+ * Uses the `draftOrderCalculate` mutation and creates dictionaries mapping items/charges to line items.
  */
-async function getCalculatedDraftOrderWithFakeIds(session: Session, calculateWorkOrder: CalculateWorkOrder) {
+async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder: CalculateWorkOrder) {
   const { shop } = session;
   const { labourLineItemSKU } = await getShopSettings(shop);
 
@@ -361,8 +391,17 @@ async function getCalculatedDraftOrderWithFakeIds(session: Session, calculateWor
     labourSku: labourLineItemSKU,
   });
 
+  const itemLineItemIds: Record<string, ID> = {};
+  const hourlyLabourChargeLineItemIds: Record<string, ID> = {};
+  const fixedPriceLabourChargeLineItemIds: Record<string, ID> = {};
+
   if (lineItems.length === 0 && customSales.length === 0) {
-    return null;
+    return {
+      calculatedDraftOrder: null,
+      itemLineItemIds,
+      hourlyLabourChargeLineItemIds,
+      fixedPriceLabourChargeLineItemIds,
+    };
   }
 
   const graphql = new Graphql(session);
@@ -390,28 +429,168 @@ async function getCalculatedDraftOrderWithFakeIds(session: Session, calculateWor
     throw new HttpError('Calculation failed', 400);
   }
 
-  return {
+  const calculatedDraftOrder = {
     ...result.draftOrderCalculate.calculatedDraftOrder,
     lineItems: result.draftOrderCalculate.calculatedDraftOrder.lineItems.map(lineItem => {
-      let id: string = `gid://shopify/CalculatedDraftLineItem/${uuid()}`;
+      // `draftOrderCalculate` does not give line items ids, but we need those to map between items/charges and line items.
+      // so just create a random one
+      const id = createGid('CalculatedDraftLineItem', uuid());
 
-      const uuids = getUuidsFromCustomAttributes(lineItem.customAttributes);
-
-      for (const uuid of uuids) {
+      for (const uuid of getUuidsFromCustomAttributes(lineItem.customAttributes)) {
         if (uuid.type === 'item') {
-          id = getItemCalculatedDraftLineItemGid({ uuid: uuid.uuid });
-          break;
+          itemLineItemIds[uuid.uuid] = id;
+        } else if (uuid.type === 'hourly') {
+          hourlyLabourChargeLineItemIds[uuid.uuid] = id;
+        } else if (uuid.type === 'fixed') {
+          fixedPriceLabourChargeLineItemIds[uuid.uuid] = id;
+        } else {
+          return uuid.type satisfies never;
         }
-
-        id = getChargeCalculatedDraftLineItemGid({ type: uuid.type, uuid: uuid.uuid });
       }
 
-      return {
-        ...lineItem,
-        id,
-      };
+      return { ...lineItem, id };
     }),
   };
+
+  return {
+    calculatedDraftOrder,
+    itemLineItemIds,
+    hourlyLabourChargeLineItemIds,
+    fixedPriceLabourChargeLineItemIds,
+
+    items: items.map<WorkOrderItem>(item => ({
+      shopifyOrderLineItemId:
+        itemLineItemIds[item.uuid] ?? never('every item should be represented in the calculated draft order'),
+      uuid: item.uuid,
+      quantity: item.quantity,
+      absorbCharges: item.absorbCharges,
+    })),
+
+    hourlyLabourCharges: charges
+      .filter(hasPropertyValue('type', 'hourly-labour'))
+      .map<WorkOrderHourlyLabourCharge>(charge => ({
+        uuid: charge.uuid,
+        shopifyOrderLineItemId:
+          hourlyLabourChargeLineItemIds[charge.uuid] ??
+          never('every hourly charge should be represented in the calculated draft order'),
+        hours: charge.hours,
+        rate: charge.rate,
+      })),
+
+    fixedPriceLabourCharges: charges
+      .filter(hasPropertyValue('type', 'fixed-price-labour'))
+      .map<WorkOrderFixedPriceLabourCharge>(charge => ({
+        uuid: charge.uuid,
+        shopifyOrderLineItemId:
+          hourlyLabourChargeLineItemIds[charge.uuid] ??
+          never('every fixed price charge should be represented in the calculated draft order'),
+        amount: charge.amount,
+      })),
+  };
+}
+
+function getOrderPriceInformation(order: OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds) {
+  const tax = decimalToMoney(order.currentTotalTaxSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal());
+  const total = decimalToMoney(order.currentTotalPriceSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal());
+  const subtotal = decimalToMoney(order.currentSubtotalPriceSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal());
+  const outstanding = decimalToMoney(
+    order.__typename === 'Order'
+      ? order.totalOutstandingSet.shopMoney.amount
+      : order.currentTotalPriceSet.shopMoney.amount,
+  );
+  const orderDiscount = decimalToMoney(
+    order.__typename === 'Order'
+      ? order.currentTotalDiscountsSet.shopMoney.amount
+      : order.appliedDiscount?.amountSet.shopMoney.amount ?? BigDecimal.ZERO.toDecimal(),
+  );
+
+  return {
+    tax,
+    total,
+    subtotal,
+    outstanding,
+    totalOrderDiscount: orderDiscount,
+    appliedOrderDiscount: order.__typename === 'Order' ? orderDiscount : ZERO_MONEY,
+  };
+}
+
+function getLineItemPriceInformation(
+  lineItem: (OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds)['lineItems'][number],
+  items: WorkOrderItem[],
+  hourlyLabourCharges: WorkOrderHourlyLabourCharge[],
+  fixedPriceLabourCharges: WorkOrderFixedPriceLabourCharge[],
+) {
+  const itemPrices: Record<string, Money> = {};
+  const hourlyLabourChargePrices: Record<string, Money> = {};
+  const fixedPriceLabourChargePrices: Record<string, Money> = {};
+
+  const warnings: string[] = [];
+
+  const discountedTotal = decimalToMoney(lineItem.discountedTotalSet.shopMoney.amount);
+  const originalTotal = decimalToMoney(lineItem.originalTotalSet.shopMoney.amount);
+
+  const lineItemDiscount = subtractMoney(originalTotal, discountedTotal);
+
+  // next, we determine the price of every thing contained in this line item (items, charges, etc)
+
+  const lineItemItems = items.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
+  const lineItemHourlyCharges = hourlyLabourCharges.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
+  const lineItemFixedCharges = fixedPriceLabourCharges.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
+
+  // if the line item is discounted, we apply the same discount % on every contained item/charge
+  const discountFactor = (() => {
+    if (compareMoney(decimalToMoney(lineItem.discountedTotalSet.shopMoney.amount), ZERO_MONEY) === 0)
+      return BigDecimal.ONE;
+    return BigDecimal.fromMoney(divideMoney(discountedTotal, originalTotal));
+  })();
+
+  // 1) determine the price of charges
+  let remainingLineItemPrice = discountedTotal;
+
+  for (const [charges, chargePriceRecord] of [
+    [lineItemHourlyCharges, hourlyLabourChargePrices],
+    [lineItemFixedCharges, fixedPriceLabourChargePrices],
+  ] as const) {
+    for (const charge of charges) {
+      const originalChargeTotal = BigDecimal.fromMoney(getChargeUnitPrice(charge));
+      const discountedChargeTotal = originalChargeTotal.multiply(discountFactor).round(2, RoundingMode.CEILING);
+
+      chargePriceRecord[charge.uuid] = discountedChargeTotal.toMoney();
+
+      remainingLineItemPrice = subtractMoney(remainingLineItemPrice, discountedChargeTotal.toMoney());
+    }
+  }
+
+  remainingLineItemPrice = roundMoney(remainingLineItemPrice, 2, RoundingMode.CEILING);
+  remainingLineItemPrice = maxMoney(remainingLineItemPrice, ZERO_MONEY);
+
+  // 2) the remainder goes to the items (distributed by quantity)
+  let remainingItemQuantity = sum(lineItemItems.map(li => li.quantity));
+
+  for (const [i, item] of lineItemItems.entries()) {
+    let divideQuantity = remainingItemQuantity;
+
+    if (divideQuantity === 0) {
+      // it is possible for mutable services to be stored as having a quantity of 0 (their quantity is not used for anything)
+      // in this case, divide evenly based on the number of remaining items
+      divideQuantity = lineItemItems.length - i;
+    }
+
+    let itemPrice = divideMoney(remainingLineItemPrice, BigDecimal.fromString(divideQuantity.toFixed(0)).toMoney());
+
+    itemPrice = roundMoney(itemPrice, 2, RoundingMode.FLOOR);
+
+    itemPrices[item.uuid] = itemPrice;
+    remainingItemQuantity -= item.quantity;
+    remainingLineItemPrice = subtractMoney(remainingLineItemPrice, itemPrice);
+  }
+
+  if (compareMoney(remainingLineItemPrice, ZERO_MONEY) !== 0) {
+    sentryErr('Remaining line item price is not zero', {});
+    warnings.push('Detected an issue during line item price calculation. Prices may not be 100% accurate');
+  }
+
+  return { lineItemDiscount, itemPrices, hourlyLabourChargePrices, fixedPriceLabourChargePrices, warnings };
 }
 
 type OrderWithAllLineItems = Awaited<ReturnType<typeof getOrdersWithAllLineItems>>[number];
@@ -444,6 +623,12 @@ async function getOrdersWithAllLineItems(graphql: Graphql, orderIds: ID[]) {
     ...order,
     lineItems: order.lineItems.nodes,
   }));
+}
+
+function assignMoneyDictionary(a: Record<string, Money>, b: Record<string, Money>) {
+  for (const [key, value] of Object.entries(b)) {
+    a[key] = addMoney(a[key] ?? ZERO_MONEY, value);
+  }
 }
 
 function isLineItemId(id: string | null): id is ID {

@@ -144,7 +144,7 @@ export async function assertNonPaidWorkOrderItemProductsExist(
   const missingProductVariantIds = await getMissingNonPaidWorkOrderProduct(session, createWorkOrder);
 
   if (missingProductVariantIds.length > 0) {
-    throw new HttpError('Could not validate work order - remove any invalid products from the work order', 400, {
+    throw new HttpError('You must remove any invalid products from the work order', 400, {
       missingProductVariantIds,
     });
   }
