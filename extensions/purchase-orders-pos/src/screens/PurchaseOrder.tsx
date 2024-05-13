@@ -173,6 +173,16 @@ export function PurchaseOrder({
               }
             />
 
+            {vendorCustomer?.metafields &&
+              vendorCustomer.metafields.nodes.length > 0 &&
+              vendorCustomer.metafields.nodes.map(({ definition, namespace, key, value }) => (
+                <FormStringField
+                  label={(definition?.name ?? `${namespace}.${key}`) + ' (metafield)'}
+                  value={value}
+                  disabled
+                />
+              ))}
+
             <FormStringField
               label={'Location'}
               onFocus={() => {

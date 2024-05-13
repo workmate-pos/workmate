@@ -64,6 +64,7 @@ const defaultShopSettings: ShopSettings = {
   purchaseOrderWebhook: {
     endpointUrl: null,
   },
+  vendorCustomerMetafieldsToShow: [],
 };
 
 export function getDefaultShopSetting<const K extends keyof ShopSettings>(key: K): ShopSettings[K] {

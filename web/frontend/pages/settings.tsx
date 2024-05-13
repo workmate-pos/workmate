@@ -1,40 +1,39 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { Dispatch, ReactNode, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { ContextualSaveBar, Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
-import { Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
+import { Loading, useAppBridge } from '@shopify/app-bridge-react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 import { useSettingsMutation } from '../queries/use-settings-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
-import { DiscountSettings } from '@web/frontend/components/settings/cards/DiscountSettings.js';
-import { WorkOrderSettings } from '@web/frontend/components/settings/cards/WorkOrderSettings.js';
-import { LabourSettings } from '@web/frontend/components/settings/cards/LabourSettings.js';
-import { PurchaseOrderSettings } from '@web/frontend/components/settings/cards/PurchaseOrderSettings.js';
-import { RatesSettings } from '@web/frontend/components/settings/cards/RatesSettings.js';
-import { EmailSettings } from '@web/frontend/components/settings/cards/EmailSettings.js';
-import { PrintSettings } from '@web/frontend/components/settings/cards/PrintSettings.js';
-import { PurchaseOrderWebhookSettings } from '@web/frontend/components/settings/cards/PurchaseOrderWebhookSettings.js';
+import { DiscountSettings } from '@web/frontend/components/settings/sections/DiscountSettings.js';
+import { WorkOrderSettings } from '@web/frontend/components/settings/sections/WorkOrderSettings.js';
+import { LabourSettings } from '@web/frontend/components/settings/sections/LabourSettings.js';
+import { PurchaseOrderSettings } from '@web/frontend/components/settings/sections/PurchaseOrderSettings.js';
+import { RatesSettings } from '@web/frontend/components/settings/sections/RatesSettings.js';
+import { EmailSettings } from '@web/frontend/components/settings/sections/EmailSettings.js';
+import { PrintSettings } from '@web/frontend/components/settings/sections/PrintSettings.js';
+import { PurchaseOrderWebhookSettings } from '@web/frontend/components/settings/sections/PurchaseOrderWebhookSettings.js';
 import { useSearchParams } from 'react-router-dom';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { WorkOrderRequestSettings } from '@web/frontend/components/settings/cards/WorkOrderRequestSettings.js';
+import { WorkOrderRequestSettings } from '@web/frontend/components/settings/sections/WorkOrderRequestSettings.js';
+import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
 
 export default function () {
-  const [topBar, setTopBar] = useState<ReactNode>(null);
-
   return (
-    <Frame topBar={topBar}>
+    <Frame>
       <Page narrowWidth>
         <PermissionBoundary permissions={['read_settings']}>
-          <Settings setTopBar={setTopBar} />
+          <Settings />
         </PermissionBoundary>
       </Page>
     </Frame>
   );
 }
 
-function Settings({ setTopBar }: { setTopBar: Dispatch<SetStateAction<ReactNode>> }) {
+function Settings() {
   const app = useAppBridge();
   const [toast, setToastAction] = useToast();
   const [searchParams] = useSearchParams();
@@ -92,31 +91,6 @@ function Settings({ setTopBar }: { setTopBar: Dispatch<SetStateAction<ReactNode>
     },
   );
 
-  useEffect(() => {
-    if (!hasUnsavedChanges) setTopBar(null);
-    else
-      setTopBar(
-        <ContextualSaveBar
-          message="Unsaved changes"
-          fullWidth
-          saveAction={{
-            disabled: !canWriteSettings || !isValid,
-            loading: saveSettingsMutation.isLoading,
-            onAction: () => saveSettingsMutation.mutate(settings),
-          }}
-          discardAction={{
-            onAction: () => {
-              if (settingsQuery.data?.settings) {
-                setSettings(settingsQuery.data.settings);
-                setHasUnsavedChanges(false);
-              }
-            },
-          }}
-          alignContentFlush
-        />,
-      );
-  }, [hasUnsavedChanges]);
-
   const superuser = currentEmployeeQuery?.data?.superuser ?? false;
   const canWriteSettings = superuser || (currentEmployeeQuery?.data?.permissions?.includes('write_settings') ?? false);
 
@@ -148,11 +122,15 @@ function Settings({ setTopBar }: { setTopBar: Dispatch<SetStateAction<ReactNode>
     {
       name: 'Purchase Orders',
       tab: (
-        <PurchaseOrderSettings
-          settings={settings}
-          setSettings={setSettings}
-          defaultPurchaseOrderStatusValue={defaultPurchaseOrderStatusValue}
-        />
+        <>
+          <PurchaseOrderSettings
+            settings={settings}
+            setSettings={setSettings}
+            defaultPurchaseOrderStatusValue={defaultPurchaseOrderStatusValue}
+          />
+          <Divider />
+          <CustomerMetafieldSettings settings={settings} setSettings={setSettings} />
+        </>
       ),
     },
     {
@@ -184,6 +162,27 @@ function Settings({ setTopBar }: { setTopBar: Dispatch<SetStateAction<ReactNode>
 
   return (
     <>
+      {hasUnsavedChanges && (
+        <ContextualSaveBar
+          message="Unsaved changes"
+          fullWidth
+          saveAction={{
+            disabled: !canWriteSettings || !isValid,
+            loading: saveSettingsMutation.isLoading,
+            onAction: () => saveSettingsMutation.mutate(settings),
+          }}
+          discardAction={{
+            onAction: () => {
+              if (settingsQuery.data?.settings) {
+                setSettings(settingsQuery.data.settings);
+                setHasUnsavedChanges(false);
+              }
+            },
+          }}
+          alignContentFlush
+        />
+      )}
+
       <LegacyCard>
         <Tabs
           tabs={tabs.map(tab => ({ id: tab.name, content: tab.name }))}

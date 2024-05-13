@@ -71,8 +71,8 @@ export function SaveCustomFieldPresetModal({
                   label={fieldName}
                   value={fieldName}
                   checked={selectedFieldNames.includes(fieldName)}
-                  onChange={value => {
-                    if (value) {
+                  onChange={checked => {
+                    if (checked) {
                       setSelectedFieldNames([...selectedFieldNames, fieldName]);
                     } else {
                       setSelectedFieldNames(selectedFieldNames.filter(f => f !== fieldName));

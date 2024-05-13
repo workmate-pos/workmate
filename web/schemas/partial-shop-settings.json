@@ -180,6 +180,10 @@
         "required": ["subject", "template"],
         "additionalProperties": false
       }
+    },
+    "vendorCustomerMetafieldsToShow": {
+      "type": "array",
+      "items": { "type": "string" }
     }
   },
   "additionalProperties": false,

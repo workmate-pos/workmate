@@ -51,3 +51,20 @@ fragment DatabaseCustomerFragment on Customer {
     formatted
   }
 }
+
+query getCustomerMetafieldDefinitions($after: String) {
+  metafieldDefinitions(first: 250, ownerType: CUSTOMER, after: $after) {
+    nodes {
+      name
+      namespace
+      key
+      type {
+        name
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
