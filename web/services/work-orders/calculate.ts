@@ -1,6 +1,6 @@
 import { Session } from '@shopify/shopify-api';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
-import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { fetchAllPages, gql } from '../gql/gql.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import {
@@ -209,6 +209,7 @@ export async function calculateWorkOrder(
       });
 
       const lineItemPriceInfo = getLineItemPriceInformation(
+        calculateWorkOrder.name ?? 'no work order',
         lineItem,
         items,
         hourlyLabourCharges,
@@ -515,6 +516,7 @@ function getOrderPriceInformation(order: OrderWithAllLineItems | CalculatedDraft
 }
 
 function getLineItemPriceInformation(
+  xd: string,
   lineItem: (OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds)['lineItems'][number],
   items: WorkOrderItem[],
   hourlyLabourCharges: WorkOrderHourlyLabourCharge[],
@@ -583,11 +585,6 @@ function getLineItemPriceInformation(
     itemPrices[item.uuid] = itemPrice;
     remainingItemQuantity -= item.quantity;
     remainingLineItemPrice = subtractMoney(remainingLineItemPrice, itemPrice);
-  }
-
-  if (compareMoney(remainingLineItemPrice, ZERO_MONEY) !== 0) {
-    sentryErr('Remaining line item price is not zero', {});
-    warnings.push('Detected an issue during line item price calculation. Prices may not be 100% accurate');
   }
 
   return { lineItemDiscount, itemPrices, hourlyLabourChargePrices, fixedPriceLabourChargePrices, warnings };

@@ -12,7 +12,7 @@ import { calculateWorkOrder } from '../../work-orders/calculate.js';
 import { Session } from '@shopify/shopify-api';
 import { getWorkOrder } from '../../work-orders/get.js';
 import { WorkOrderCharge } from '../../work-orders/types.js';
-import { subtractMoney } from '../../../util/money.js';
+import { multiplyMoney, subtractMoney } from '../../../util/money.js';
 
 export async function getRenderedWorkOrderTemplate(
   printTemplate: ShopSettings['workOrderPrintTemplates'][string],
@@ -135,14 +135,8 @@ export async function getWorkOrderTemplateData(
 
       const purchaseOrderNames = item.purchaseOrders.map(po => po.name);
 
-      const totalPrice = itemPrices[item.uuid] ?? never('smth wrong with calculate');
-      const unitPrice = (() => {
-        if (item.quantity === 0) return totalPrice;
-        return BigDecimal.fromMoney(totalPrice)
-          .divide(BigDecimal.fromString(item.quantity.toFixed(0)))
-          .round(2, RoundingMode.CEILING)
-          .toMoney();
-      })();
+      const unitPrice = itemPrices[item.uuid] ?? never('smth wrong with calculate');
+      const totalPrice = multiplyMoney(unitPrice, BigDecimal.fromString(item.quantity.toFixed(0)).toMoney());
 
       return {
         name,

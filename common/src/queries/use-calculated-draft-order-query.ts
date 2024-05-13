@@ -4,6 +4,7 @@ import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.j
 import { CalculateWorkOrder } from '@web/schemas/generated/calculate-work-order.js';
 import { Fetch } from './fetch.js';
 import { DiscriminatedUnionPick } from '../types/DiscriminatedUnionPick.js';
+import { WEEK_IN_MS } from '../time/constants.js';
 
 export const useCalculatedDraftOrderQuery = (
   {
@@ -30,6 +31,7 @@ export const useCalculatedDraftOrderQuery = (
 ) => {
   const query = useQuery({
     ...options,
+    staleTime: WEEK_IN_MS,
     queryKey: ['calculated-draft-order', name, items, customerId, charges, discount],
     queryFn: async () => {
       const response = await fetch('/api/work-order/calculate-draft-order', {
