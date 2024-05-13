@@ -85,8 +85,8 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   const { Form } = useForm();
 
   return (
-    <ScrollView>
-      <Form disabled={saveWorkOrderMutation.isLoading}>
+    <Form disabled={saveWorkOrderMutation.isLoading}>
+      <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {saveWorkOrderMutation.error && (
             <Banner
@@ -132,56 +132,70 @@ export function WorkOrder({ initial }: WorkOrderProps) {
               <WorkOrderMoneySummary createWorkOrder={createWorkOrder} dispatch={dispatch} />
             </ResponsiveGrid>
           </ResponsiveGrid>
+        </ResponsiveStack>
+      </ScrollView>
 
-          <ResponsiveGrid columns={4} smColumns={2} grow>
-            <FormButton
-              title={'Manage payments'}
-              type={'basic'}
-              action={'button'}
-              disabled={!createWorkOrder.name || hasUnsavedChanges}
-              onPress={() => {
-                if (createWorkOrder.name) {
-                  router.push('PaymentOverview', {
-                    name: createWorkOrder.name,
-                  });
-                }
-              }}
-            />
+      <ResponsiveStack
+        direction={'vertical'}
+        spacing={0.5}
+        paddingHorizontal={'HalfPoint'}
+        paddingVertical={'HalfPoint'}
+        flex={0}
+      >
+        <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
+          <FormButton
+            title={'Manage payments'}
+            type={'basic'}
+            action={'button'}
+            disabled={
+              !createWorkOrder.name ||
+              hasUnsavedChanges ||
+              createWorkOrder.items.length + createWorkOrder.charges.length === 0
+            }
+            onPress={() => {
+              if (createWorkOrder.name) {
+                router.push('PaymentOverview', {
+                  name: createWorkOrder.name,
+                });
+              }
+            }}
+          />
 
-            <FormButton
-              title={'Print'}
-              type={'basic'}
-              action={'button'}
-              disabled={!createWorkOrder.name || hasUnsavedChanges}
-              onPress={() => {
-                if (createWorkOrder.name) {
-                  router.push('PrintOverview', {
-                    name: createWorkOrder.name,
-                    dueDate: new Date(createWorkOrder.dueDate),
-                  });
-                }
-              }}
-            />
+          <FormButton
+            title={'Print'}
+            type={'basic'}
+            action={'button'}
+            disabled={!createWorkOrder.name || hasUnsavedChanges}
+            onPress={() => {
+              if (createWorkOrder.name) {
+                router.push('PrintOverview', {
+                  name: createWorkOrder.name,
+                  dueDate: new Date(createWorkOrder.dueDate),
+                });
+              }
+            }}
+          />
 
-            <FormButton
-              title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
-              type="primary"
-              action={'submit'}
-              disabled={!hasUnsavedChanges}
-              loading={saveWorkOrderMutation.isLoading}
-              onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
-            />
-          </ResponsiveGrid>
+          <FormButton
+            title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
+            type="primary"
+            action={'submit'}
+            disabled={!hasUnsavedChanges}
+            loading={saveWorkOrderMutation.isLoading}
+            onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
+          />
+        </ResponsiveGrid>
 
-          {!createWorkOrder.name ||
-            (hasUnsavedChanges && (
+        {!createWorkOrder.name ||
+          (hasUnsavedChanges && (
+            <Stack direction="horizontal" alignment="center">
               <Text color="TextSubdued" variant="body">
                 You must save your work order before you can manage payments/print
               </Text>
-            ))}
-        </ResponsiveStack>
-      </Form>
-    </ScrollView>
+            </Stack>
+          ))}
+      </ResponsiveStack>
+    </Form>
   );
 }
 

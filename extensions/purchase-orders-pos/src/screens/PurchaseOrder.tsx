@@ -41,6 +41,7 @@ import {
 import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to draft SO line items
@@ -147,8 +148,8 @@ export function PurchaseOrder({
   }, [createPurchaseOrder]);
 
   return (
-    <ScrollView>
-      <Form disabled={purchaseOrderMutation.isLoading}>
+    <Form disabled={purchaseOrderMutation.isLoading}>
+      <ScrollView>
         {purchaseOrderMutation.error && (
           <Banner
             title={`Error saving purchase order: ${extractErrorMessage(purchaseOrderMutation.error)}`}
@@ -366,29 +367,29 @@ export function PurchaseOrder({
             </ResponsiveGrid>
           </ResponsiveGrid>
         </Stack>
+      </ScrollView>
 
-        <Stack direction={'vertical'} paddingVertical={'Small'}>
-          <ResponsiveGrid columns={1}>
-            <FormButton
-              title={'Print'}
-              type={'basic'}
-              action={'button'}
-              disabled={!createPurchaseOrder.name || hasUnsavedChanges}
-              onPress={() => {
-                if (createPurchaseOrder.name) {
-                  router.push('PrintOverview', {
-                    name: createPurchaseOrder.name,
-                  });
-                }
-              }}
-            />
-            {!createPurchaseOrder.name ||
-              (hasUnsavedChanges && (
-                <Text color="TextSubdued" variant="body">
-                  You must save your purchase order before you can print
-                </Text>
-              ))}
-          </ResponsiveGrid>
+      <ResponsiveStack
+        direction={'vertical'}
+        spacing={0.5}
+        paddingHorizontal={'HalfPoint'}
+        paddingVertical={'HalfPoint'}
+        flex={0}
+      >
+        <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
+          <FormButton
+            title={'Print'}
+            type={'basic'}
+            action={'button'}
+            disabled={!createPurchaseOrder.name || hasUnsavedChanges}
+            onPress={() => {
+              if (createPurchaseOrder.name) {
+                router.push('PrintOverview', {
+                  name: createPurchaseOrder.name,
+                });
+              }
+            }}
+          />
 
           <FormButton
             title={createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
@@ -397,9 +398,18 @@ export function PurchaseOrder({
             loading={purchaseOrderMutation.isLoading}
             action={'submit'}
           />
-        </Stack>
-      </Form>
-    </ScrollView>
+        </ResponsiveGrid>
+
+        {!createPurchaseOrder.name ||
+          (hasUnsavedChanges && (
+            <Stack direction="horizontal" alignment="center">
+              <Text color="TextSubdued" variant="body">
+                You must save your purchase order before you can print
+              </Text>
+            </Stack>
+          ))}
+      </ResponsiveStack>
+    </Form>
   );
 }
 
