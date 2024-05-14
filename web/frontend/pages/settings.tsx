@@ -1,5 +1,5 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { ContextualSaveBar, Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
 import { Loading, useAppBridge } from '@shopify/app-bridge-react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';

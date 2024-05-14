@@ -1,6 +1,6 @@
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { Dispatch, SetStateAction } from 'react';
-import { BlockStack, Box, Card, Checkbox, Text, TextField } from '@shopify/polaris';
+import { BlockStack, Checkbox, TextField } from '@shopify/polaris';
 
 export function PurchaseOrderWebhookSettings({
   settings,

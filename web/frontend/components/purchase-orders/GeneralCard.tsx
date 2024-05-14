@@ -4,7 +4,6 @@ import { BlockStack, Card, InlineGrid, InlineStack, SkeletonBodyText, Text, Text
 import type { Location } from '@web/frontend/pages/purchase-orders/[name].js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 
 export function GeneralCard({

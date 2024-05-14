@@ -1,4 +1,4 @@
-import { Tile, render, useExtensionApi, Navigator, Screen } from '@shopify/retail-ui-extensions-react';
+import { Tile, render, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { QueryClient, QueryClientProvider } from '@work-orders/common/queries/react-query.js';
 import { Router } from './routes.js';
 import { ScreenSizeProvider } from '@teifi-digital/pos-tools/providers/ScreenSizeProvider.js';

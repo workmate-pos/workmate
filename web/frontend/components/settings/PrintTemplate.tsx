@@ -1,4 +1,4 @@
-import { BlockStack, Button, Card, TextField } from '@shopify/polaris';
+import { BlockStack, Button, TextField } from '@shopify/polaris';
 
 /**
  * Configuration for a specific print template.

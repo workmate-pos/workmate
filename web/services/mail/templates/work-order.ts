@@ -11,7 +11,7 @@ import { calculateWorkOrder } from '../../work-orders/calculate.js';
 import { Session } from '@shopify/shopify-api';
 import { getWorkOrder } from '../../work-orders/get.js';
 import { WorkOrderCharge } from '../../work-orders/types.js';
-import { divideMoney, multiplyMoney, subtractMoney } from '../../../util/money.js';
+import { subtractMoney } from '../../../util/money.js';
 
 export async function getRenderedWorkOrderTemplate(
   printTemplate: ShopSettings['workOrderPrintTemplates'][string],
