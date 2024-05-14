@@ -429,6 +429,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
           taxable: customSale.taxable,
         })),
       ],
+      purchasingEntity: calculateWorkOrder.customerId ? { customerId: calculateWorkOrder.customerId } : null,
       appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
     },
   });
@@ -490,7 +491,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
       .map<WorkOrderFixedPriceLabourCharge>(charge => ({
         uuid: charge.uuid,
         shopifyOrderLineItemId:
-          hourlyLabourChargeLineItemIds[charge.uuid] ??
+          fixedPriceLabourChargeLineItemIds[charge.uuid] ??
           never('every fixed price charge should be represented in the calculated draft order'),
         amount: charge.amount,
       })),

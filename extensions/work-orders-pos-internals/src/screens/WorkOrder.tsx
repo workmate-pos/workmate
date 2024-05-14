@@ -47,6 +47,7 @@ import {
 } from '@work-orders/common/metafields/product-service-type.js';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
+import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -273,17 +274,10 @@ function WorkOrderItems({
 
   const rows = useItemRows(createWorkOrder, dispatch, query);
 
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      name: createWorkOrder.name,
-      items: createWorkOrder.items,
-      charges: createWorkOrder.charges,
-      customerId: createWorkOrder.customerId!,
-      discount: createWorkOrder.discount,
-    },
-    { enabled: !!createWorkOrder.customerId },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
+    fetch,
+    ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+  });
 
   const [openChargeConfigPopupItemUuid, setOpenChargeConfigPopup] = useState<string | null>(null);
 
@@ -478,17 +472,10 @@ function WorkOrderMoneySummary({
   const formatter = (value: Money | null) => (value !== null ? currencyFormatter(value) : '-');
 
   // this calculation automatically accounts for paid-for items
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      name: createWorkOrder.name,
-      items: createWorkOrder.items,
-      charges: createWorkOrder.charges,
-      customerId: createWorkOrder.customerId!,
-      discount: createWorkOrder.discount,
-    },
-    { enabled: createWorkOrder.customerId !== null },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
+    fetch,
+    ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+  });
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
   let appliedDiscount = BigDecimal.ZERO;
@@ -593,13 +580,9 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
   const calculatedWorkOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      name: createWorkOrder.name,
-      items: createWorkOrder.items,
-      charges: createWorkOrder.charges,
-      customerId: createWorkOrder.customerId!,
-      discount: createWorkOrder.discount,
+      ...pick(createWorkOrder, 'name', 'items', 'customerId', 'charges', 'discount'),
     },
-    { enabled: !!createWorkOrder.customerId, keepPreviousData: true },
+    { keepPreviousData: true },
   );
 
   const router = useRouter();
@@ -674,7 +657,7 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
       return {
         id: item.uuid,
         leftSide: {
-          label: lineItem?.name ?? 'Unknown item',
+          label: lineItem?.name ?? (calculatedWorkOrderQuery.isFetching ? 'Loading...' : 'Unknown item'),
           subtitle: lineItem?.sku ? [lineItem.sku] : undefined,
           image: {
             source:
