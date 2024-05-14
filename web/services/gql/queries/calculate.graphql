@@ -63,6 +63,7 @@ fragment OrderFragment on Order {
   __typename
   id
   name
+  fullyPaid
   currentTotalTaxSet {
     ...ShopMoneyAmountFragment
   }

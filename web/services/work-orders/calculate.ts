@@ -66,6 +66,7 @@ type CalculateWorkOrderResult = {
     variant: gql.calculate.ProductVariantFragment.Result | null;
     order: {
       name: string;
+      fullyPaid: boolean;
     } | null;
   }[];
 };
@@ -204,7 +205,13 @@ export async function calculateWorkOrder(
         sku: lineItem.sku,
         image: lineItem.image,
         variant: lineItem.variant,
-        order: order.__typename === 'Order' ? { name: order.name } : null,
+        order:
+          order.__typename === 'Order'
+            ? {
+                name: order.name,
+                fullyPaid: order.fullyPaid,
+              }
+            : null,
         unitPrice: decimalToMoney(lineItem.discountedUnitPriceSet.shopMoney.amount),
       });
 
@@ -567,20 +574,14 @@ function getLineItemPriceInformation(
   remainingLineItemPrice = maxMoney(remainingLineItemPrice, ZERO_MONEY);
 
   // 2) the remainder goes to the items (distributed by quantity)
-  let remainingItemQuantity = sum(lineItemItems.map(li => li.quantity));
+  let remainingItemQuantity = sum(lineItemItems.map(li => Math.max(1, li.quantity)));
 
-  for (const [i, item] of lineItemItems.entries()) {
-    let divideQuantity = remainingItemQuantity;
-
-    if (divideQuantity === 0) {
-      // it is possible for mutable services to be stored as having a quantity of 0 (their quantity is not used for anything)
-      // in this case, divide evenly based on the number of remaining items
-      divideQuantity = lineItemItems.length - i;
-    }
-
-    let itemPrice = divideMoney(remainingLineItemPrice, BigDecimal.fromString(divideQuantity.toFixed(0)).toMoney());
-
-    itemPrice = roundMoney(itemPrice, 2, RoundingMode.FLOOR);
+  for (const item of lineItemItems) {
+    const itemPrice = BigDecimal.fromMoney(remainingLineItemPrice)
+      .divide(BigDecimal.fromString(remainingItemQuantity.toFixed(0)))
+      .multiply(BigDecimal.fromString(Math.max(1, item.quantity).toFixed(0)))
+      .round(2, RoundingMode.FLOOR)
+      .toMoney();
 
     itemPrices[item.uuid] = itemPrice;
     remainingItemQuantity -= item.quantity;
