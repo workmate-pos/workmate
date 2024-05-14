@@ -14,6 +14,12 @@ ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.statu
                                            "discountType"       = EXCLUDED."discountType"
 RETURNING *;
 
+/* @name updateDiscount */
+UPDATE "WorkOrder"
+  SET "discountAmount" = :discountAmount,
+      "discountType"   = :discountType
+WHERE id = :id!;
+
 /* @name insertCustomField */
 INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
 VALUES (:workOrderId!, :key!, :value!);

@@ -44,6 +44,7 @@ export function ServiceSelector({
       first: 50 as Int,
       query: [
         query,
+        'product_status:active',
         Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
           .map(tag => `tag:"${escapeQuotationMarks(tag)}"`)
           .join(' OR '),

@@ -10,7 +10,9 @@ import { linkWorkOrderItemsAndChargesAndDeposits } from '../work-orders/link-ord
 import { ensureCustomersExist } from '../customer/sync.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unit } from '../db/unit-of-work.js';
-import { ZERO_MONEY } from '../../util/money.js';
+import { compareMoney, subtractMoney, ZERO_MONEY } from '../../util/money.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { getWorkOrderDiscount } from '../work-orders/get.js';
 
 export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[]) {
   if (orderIds.length === 0) {
@@ -95,6 +97,8 @@ async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrd
   }
 
   await unit(async () => {
+    const [existingOrder] = await db.shopifyOrder.get({ orderId });
+
     await db.shopifyOrder.upsert({
       shop: session.shop,
       orderId,
@@ -107,7 +111,7 @@ async function upsertOrder(session: Session, order: gql.order.DatabaseShopifyOrd
       total: currentTotalPriceSet.shopMoney.amount,
       fullyPaid,
     });
-    await syncShopifyOrderLineItems(session, { type: 'order', order });
+    await syncShopifyOrderLineItems(session, { type: 'order', order, isNewOrder: !existingOrder });
   });
 }
 
@@ -138,7 +142,7 @@ async function upsertDraftOrder(session: Session, draftOrder: gql.draftOrder.Dat
 async function syncShopifyOrderLineItems(
   session: Session,
   order:
-    | { type: 'order'; order: gql.order.DatabaseShopifyOrderFragment.Result }
+    | { type: 'order'; order: gql.order.DatabaseShopifyOrderFragment.Result; isNewOrder: boolean }
     | { type: 'draft-order'; order: gql.draftOrder.DatabaseShopifyOrderFragment.Result },
 ) {
   const databaseLineItems = await db.shopifyOrder.getLineItems({ orderId: order.order.id });
@@ -156,42 +160,44 @@ async function syncShopifyOrderLineItems(
   const lineItemIds = new Set(lineItems.map(lineItem => lineItem.id));
   const lineItemIdsToDelete = databaseLineItemIds.filter(lineItemId => !lineItemIds.has(lineItemId));
 
-  const workOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId: order.order.id });
-
   if (lineItemIdsToDelete.length) {
     await db.shopifyOrder.removeLineItemsByIds({ lineItemIds: lineItemIdsToDelete });
   }
 
-  for (const {
-    id: lineItemId,
-    title,
-    quantity,
-    variant,
-    unfulfilledQuantity,
-    taxLines,
-    discountedUnitPriceSet,
-    originalUnitPriceSet,
-  } of lineItems) {
-    if (variant) {
-      await ensureProductVariantsExist(session, [variant.id]);
-    }
+  await Promise.all(
+    lineItems.map(
+      async ({
+        id: lineItemId,
+        title,
+        quantity,
+        variant,
+        unfulfilledQuantity,
+        taxLines,
+        discountedUnitPriceSet,
+        originalUnitPriceSet,
+      }) => {
+        if (variant) {
+          await ensureProductVariantsExist(session, [variant.id]);
+        }
 
-    const totalTax = BigDecimal.sum(
-      ...taxLines.map(taxLine => BigDecimal.fromDecimal(taxLine.priceSet.shopMoney.amount)),
-    ).toMoney();
+        const totalTax = BigDecimal.sum(
+          ...taxLines.map(taxLine => BigDecimal.fromDecimal(taxLine.priceSet.shopMoney.amount)),
+        ).toMoney();
 
-    await db.shopifyOrder.upsertLineItem({
-      lineItemId,
-      orderId: order.order.id,
-      productVariantId: variant?.id ?? null,
-      quantity,
-      title,
-      unfulfilledQuantity,
-      unitPrice: originalUnitPriceSet.shopMoney.amount,
-      discountedUnitPrice: discountedUnitPriceSet.shopMoney.amount,
-      totalTax,
-    });
-  }
+        await db.shopifyOrder.upsertLineItem({
+          lineItemId,
+          orderId: order.order.id,
+          productVariantId: variant?.id ?? null,
+          quantity,
+          title,
+          unfulfilledQuantity,
+          unitPrice: originalUnitPriceSet.shopMoney.amount,
+          discountedUnitPrice: discountedUnitPriceSet.shopMoney.amount,
+          totalTax,
+        });
+      },
+    ),
+  );
 
   // We should link work order items and work order charges if referenced
   try {
@@ -199,6 +205,36 @@ async function syncShopifyOrderLineItems(
   } catch (error) {
     sentryErr(error, {});
   }
+
+  const workOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId: order.order.id });
+
+  await Promise.all(
+    workOrders.map(async ({ id }) => {
+      if (order.type !== 'order') return;
+      if (!order.isNewOrder) return;
+
+      const orderDiscountAmount = BigDecimal.fromDecimal(
+        order.order.currentCartDiscountAmountSet.shopMoney.amount,
+      ).toMoney();
+
+      if (compareMoney(orderDiscountAmount, ZERO_MONEY) === 0) return;
+
+      // If this is a new order that has a discount, make sure to subtract it from the discount that the Work Order has
+
+      const [workOrder = never('pk')] = await db.workOrder.getById({ id });
+      const discount = getWorkOrderDiscount(workOrder);
+
+      if (discount?.type !== 'FIXED_AMOUNT') return;
+
+      const newDiscountAmount = subtractMoney(discount.value, orderDiscountAmount);
+
+      if (compareMoney(newDiscountAmount, ZERO_MONEY) <= 0) {
+        await db.workOrder.updateDiscount({ id, discountType: null, discountAmount: null });
+      } else {
+        await db.workOrder.updateDiscount({ id, discountType: 'FIXED_AMOUNT', discountAmount: newDiscountAmount });
+      }
+    }),
+  );
 
   // sync work orders in case any line items now don't have a related line item anymore
   // can happen when a merchant deletes a draft order that we reference, or deletes a line item from an order

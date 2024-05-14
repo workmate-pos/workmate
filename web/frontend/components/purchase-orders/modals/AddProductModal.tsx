@@ -52,10 +52,11 @@ export function AddProductModal({
 
   const vendorQuery = vendorName ? `vendor:"${vendorName}"` : undefined;
   const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : undefined;
+  const productStatusQuery = 'product_status:active';
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
-      query: [query, vendorQuery, locationIdQuery].filter(Boolean).join(' AND '),
+      query: [query, productStatusQuery, vendorQuery, locationIdQuery].filter(Boolean).join(' AND '),
     },
     options: {
       onSuccess(data) {
