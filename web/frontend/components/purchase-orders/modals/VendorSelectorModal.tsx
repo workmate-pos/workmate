@@ -1,7 +1,7 @@
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
-import { Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
+import { InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 
 export function VendorSelectorModal({
   open,
@@ -38,6 +38,16 @@ export function VendorSelectorModal({
             <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
               {vendor.customer?.defaultAddress?.formatted?.join(', ')}
             </Text>
+            {vendor.customer?.metafields.nodes.map(({ definition, namespace, key, value }) => (
+              <InlineStack key={`${namespace}.${key}`} gap="200">
+                <Text as={'p'} variant={'bodyMd'} fontWeight={'semibold'} tone={'subdued'}>
+                  {definition?.name ?? `${namespace}.${key}`}
+                </Text>
+                <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+                  {value}
+                </Text>
+              </InlineStack>
+            ))}
           </ResourceItem>
         )}
         loading={vendorsQuery.isLoading}

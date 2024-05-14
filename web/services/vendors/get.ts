@@ -6,6 +6,8 @@ import { customerIsVendorMetafield } from '../metafields/customer-is-vendor-meta
 import { CacheMap } from '../../util/CacheMap.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { MINUTE_IN_MILLIS } from '../../util/date-utils.js';
+import { getShopSettings } from '../settings.js';
+import { Int } from '../gql/queries/generated/schema.js';
 
 const vendorCustomersCache = new CacheMap<string, gql.segments.CustomerSegmentMemberFragment.Result[]>(
   30 * MINUTE_IN_MILLIS,
@@ -16,12 +18,20 @@ async function getVendorCustomers(session: Session) {
     return vendorCustomersCache.get(session.shop) ?? never();
   }
 
+  const settings = await getShopSettings(session.shop);
+
   const graphql = new Graphql(session);
   const query = `metafields.${await resolveNamespace(session, customerIsVendorMetafield.namespace)}.${customerIsVendorMetafield.key} = true`;
 
   const result = await fetchAllPages(
     graphql,
-    (graphql, variables) => gql.segments.getCustomerSegmentByQuery.run(graphql, { ...variables, query }),
+    (graphql, variables) =>
+      gql.segments.getCustomerSegmentByQuery.run(graphql, {
+        ...variables,
+        query,
+        metafieldCount: settings.vendorCustomerMetafieldsToShow.length as Int,
+        metafields: settings.vendorCustomerMetafieldsToShow,
+      }),
     result => ({
       pageInfo: result.customerSegmentMembers.pageInfo,
       nodes: result.customerSegmentMembers.edges.map(({ node }) => node),

@@ -14,7 +14,6 @@ import { ItemChargeConfig } from './screens/popups/ItemChargeConfig.js';
 import { WorkOrder, WorkOrderProps } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { PaymentOverview } from './screens/popups/PaymentOverview.js';
-import { ScrollView, Stack } from '@shopify/retail-ui-extensions-react';
 import {
   CustomFieldConfig,
   CustomFieldConfigProps,

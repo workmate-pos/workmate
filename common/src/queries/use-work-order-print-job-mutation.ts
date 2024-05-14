@@ -1,6 +1,7 @@
 import { Fetch } from './fetch.js';
 import { useMutation } from 'react-query';
 import { PrintWorkOrderResponse } from '@web/controllers/api/work-order.js';
+import { WorkOrderPrintJob } from '@web/schemas/generated/work-order-print-job.js';
 
 export function useWorkOrderPrintJobMutation({ fetch }: { fetch: Fetch }) {
   return useMutation({
@@ -8,12 +9,12 @@ export function useWorkOrderPrintJobMutation({ fetch }: { fetch: Fetch }) {
       workOrderName,
       templateName,
       date,
+      dueDate,
     }: {
       workOrderName: string;
       templateName: string;
-      date: string;
-    }) => {
-      const searchParams = new URLSearchParams({ date });
+    } & WorkOrderPrintJob) => {
+      const searchParams = new URLSearchParams({ date, dueDate });
 
       const response = await fetch(
         `/api/work-order/${encodeURIComponent(workOrderName)}/print/${encodeURIComponent(templateName)}?${searchParams}`,

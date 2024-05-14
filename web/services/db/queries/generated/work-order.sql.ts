@@ -70,6 +70,36 @@ const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"du
 export const upsert = new PreparedQuery<IUpsertParams,IUpsertResult>(upsertIR);
 
 
+/** 'UpdateDiscount' parameters type */
+export interface IUpdateDiscountParams {
+  discountAmount?: string | null | void;
+  discountType?: DiscountType | null | void;
+  id: number;
+}
+
+/** 'UpdateDiscount' return type */
+export type IUpdateDiscountResult = void;
+
+/** 'UpdateDiscount' query type */
+export interface IUpdateDiscountQuery {
+  params: IUpdateDiscountParams;
+  result: IUpdateDiscountResult;
+}
+
+const updateDiscountIR: any = {"usedParamSet":{"discountAmount":true,"discountType":true,"id":true},"params":[{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":44,"b":58}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":86,"b":98}]},{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":111,"b":114}]}],"statement":"UPDATE \"WorkOrder\"\n  SET \"discountAmount\" = :discountAmount,\n      \"discountType\"   = :discountType\nWHERE id = :id!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * UPDATE "WorkOrder"
+ *   SET "discountAmount" = :discountAmount,
+ *       "discountType"   = :discountType
+ * WHERE id = :id!
+ * ```
+ */
+export const updateDiscount = new PreparedQuery<IUpdateDiscountParams,IUpdateDiscountResult>(updateDiscountIR);
+
+
 /** 'InsertCustomField' parameters type */
 export interface IInsertCustomFieldParams {
   key: string;

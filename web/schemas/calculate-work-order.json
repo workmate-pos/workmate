@@ -1,6 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
+  "description": "Calculates the price of a work order on a total/per item/charge basis. Also includes product/line item information",
   "properties": {
     "name": {
       "$ref": "create-work-order.json#/properties/name"
@@ -18,6 +19,6 @@
       "$ref": "create-work-order.json#/properties/discount"
     }
   },
-  "required": ["customerId", "charges", "items", "discount"],
+  "required": ["name", "customerId", "charges", "items", "discount"],
   "additionalProperties": false
 }

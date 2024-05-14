@@ -10,7 +10,7 @@ mutation createSegment($name: String!, $query: String!) {
   }
 }
 
-query getCustomerSegmentByQuery($first: Int = 10, $after: String, $query: String) {
+query getCustomerSegmentByQuery($first: Int = 50, $after: String, $query: String, $metafieldCount: Int!, $metafields: [String!]) {
   customerSegmentMembers(query: $query, first: $first, after: $after) {
     edges {
       node {
@@ -29,5 +29,15 @@ fragment CustomerSegmentMemberFragment on CustomerSegmentMember {
   displayName
   defaultAddress {
     formatted
+  }
+  metafields(first: $metafieldCount, keys: $metafields) {
+    nodes {
+      namespace
+      key
+      value
+      definition {
+        name
+      }
+    }
   }
 }

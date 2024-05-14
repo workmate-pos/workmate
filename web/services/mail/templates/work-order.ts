@@ -1,10 +1,9 @@
 import { Liquid } from 'liquidjs';
 import { db } from '../../db/db.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { indexBy, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ShopSettings } from '../../../schemas/generated/shop-settings.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
@@ -12,6 +11,7 @@ import { calculateWorkOrder } from '../../work-orders/calculate.js';
 import { Session } from '@shopify/shopify-api';
 import { getWorkOrder } from '../../work-orders/get.js';
 import { WorkOrderCharge } from '../../work-orders/types.js';
+import { subtractMoney } from '../../../util/money.js';
 
 export async function getRenderedWorkOrderTemplate(
   printTemplate: ShopSettings['workOrderPrintTemplates'][string],
@@ -31,6 +31,7 @@ export async function getWorkOrderTemplateData(
   session: Session,
   workOrderName: string,
   clientDate: string,
+  clientDueDate: string,
 ): Promise<WorkOrderTemplateData> {
   const workOrder = await getWorkOrder(session, workOrderName);
 
@@ -38,15 +39,9 @@ export async function getWorkOrderTemplateData(
     throw new HttpError(`Work order ${workOrderName} not found`, 404);
   }
 
-  const productVariantIds = unique(workOrder.items.map(item => item.productVariantId));
-  const orderIds = unique(workOrder.items.map(item => item.shopifyOrderLineItem?.orderId).filter(isNonNullable));
-
   const [
     [customer = never('fk')],
-    [productVariants, products],
-    orders,
     {
-      paid,
       outstanding,
       total,
       subtotal,
@@ -55,26 +50,26 @@ export async function getWorkOrderTemplateData(
       itemPrices,
       fixedPriceLabourChargePrices,
       hourlyLabourChargePrices,
+      itemLineItemIds,
+      fixedPriceLabourChargeLineItemIds,
+      hourlyLabourChargeLineItemIds,
+      lineItems,
     },
   ] = await Promise.all([
     db.customers.get({ customerId: workOrder.customerId }),
-    productVariantIds.length
-      ? db.productVariants.getMany({ productVariantIds }).then(productVariants => {
-          const productIds = unique(productVariants.map(pv => pv.productId));
-          return Promise.all([productVariants, productIds.length ? db.products.getMany({ productIds }) : []]);
-        })
-      : [[], []],
-    orderIds.length ? db.shopifyOrder.getMany({ orderIds }) : [],
     calculateWorkOrder(session, workOrder),
   ]);
 
-  const productById = indexBy(products, p => p.productId);
-  const productVariantById = indexBy(productVariants, pv => pv.productVariantId);
-  const orderById = indexBy(orders, o => o.orderId);
+  const paid = subtractMoney(total, outstanding);
 
   function getChargeTemplateData(charge: WorkOrderCharge): WorkOrderTemplateCharge {
-    const orderId = charge.shopifyOrderLineItem?.orderId;
-    const order = orderId ? orderById[orderId] ?? never('fk') : null;
+    const lineItemIdRecord = {
+      'fixed-price-labour': fixedPriceLabourChargeLineItemIds,
+      'hourly-labour': hourlyLabourChargeLineItemIds,
+    }[charge.type];
+
+    const lineItemId = lineItemIdRecord[charge.uuid];
+    const lineItem = lineItems.find(li => li.id === lineItemId);
 
     const priceRecord = {
       'fixed-price-labour': fixedPriceLabourChargePrices,
@@ -95,8 +90,8 @@ export async function getWorkOrderTemplateData(
 
     return {
       name: charge.name,
-      fullyPaid: order?.fullyPaid ?? false,
-      shopifyOrderName: order?.name ?? null,
+      fullyPaid: lineItem?.order?.fullyPaid ?? false,
+      shopifyOrderName: lineItem?.order?.name ?? null,
       totalPrice: round(totalPrice),
       details,
     };
@@ -106,6 +101,7 @@ export async function getWorkOrderTemplateData(
     name: workOrder.name,
     status: workOrder.status,
     date: clientDate,
+    dueDate: clientDueDate,
     shopifyOrderNames: workOrder.orders.filter(hasPropertyValue('type', 'ORDER')).map(order => order.name),
     purchaseOrderNames: unique(workOrder.items.flatMap(item => item.purchaseOrders.map(po => po.name))),
     customer: {
@@ -118,16 +114,8 @@ export async function getWorkOrderTemplateData(
     hiddenNote: workOrder.internalNote,
     customFields: workOrder.customFields,
     items: workOrder.items.map<WorkOrderTemplateItem>(item => {
-      const productVariant = productVariantById[item.productVariantId] ?? never('product variant fk');
-      const product = productById[productVariant.productId] ?? never('product fk');
-      const name =
-        getProductVariantName({
-          title: productVariant.title,
-          product: { title: product.title, hasOnlyDefaultVariant: product.productVariantCount === 1 },
-        }) ?? never('no pv name');
-
-      const orderId = item.shopifyOrderLineItem?.orderId;
-      const order = orderId ? orderById[orderId] ?? never('fk') : null;
+      const lineItemId = itemLineItemIds[item.uuid];
+      const lineItem = lineItems.find(li => li.id === lineItemId) ?? null;
 
       const purchaseOrderNames = item.purchaseOrders.map(po => po.name);
 
@@ -141,24 +129,24 @@ export async function getWorkOrderTemplateData(
       })();
 
       return {
-        name,
+        name: lineItem?.name ?? 'Unknown product',
         charges: workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid)).map(getChargeTemplateData),
-        sku: productVariant.sku,
-        fullyPaid: order?.fullyPaid ?? false,
-        shopifyOrderName: order?.name ?? null,
+        sku: lineItem?.sku ?? null,
+        fullyPaid: lineItem?.order?.fullyPaid ?? false,
+        shopifyOrderName: lineItem?.order?.name ?? null,
         purchaseOrderNames,
         purchaseOrderQuantities: {
           orderedQuantity: sum(item.purchaseOrders.flatMap(po => po.items.map(item => item.quantity))),
           availableQuantity: sum(item.purchaseOrders.flatMap(po => po.items.map(item => item.availableQuantity))),
         },
         quantity: item.quantity,
-        description: product.description,
+        description: lineItem?.variant?.product?.description ?? '',
         totalPrice: round(totalPrice),
         unitPrice: round(unitPrice),
       };
     }),
     charges: workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null)).map(getChargeTemplateData),
-    fullyPaid: orders.every(order => order.fullyPaid),
+    fullyPaid: lineItems.every(lineItem => lineItem.order?.fullyPaid ?? false),
     outstanding: round(outstanding),
     paid: round(paid),
     total: round(total),
@@ -177,6 +165,7 @@ export type WorkOrderTemplateData = {
    * Date provided/formatted by clients.
    */
   date: string;
+  dueDate: string;
   shopifyOrderNames: string[];
   purchaseOrderNames: string[];
   customFields: Record<string, string>;

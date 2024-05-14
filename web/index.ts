@@ -46,12 +46,12 @@ if (isAppMigrate) {
     appConfig,
     webhookHandlers,
     registerWebhooksOnStart: false,
-  }).then(async app => {
+  }).then(async () => {
     console.log(`Configured Shopify API Key: '${process.env.SHOPIFY_API_KEY}'`);
   });
 }
 
 // Run migrations if needed
-if (process.env.NODE_ENV === 'development' || isAppMigrate) {
+if (isAppMigrate) {
   await runMigrations();
 }

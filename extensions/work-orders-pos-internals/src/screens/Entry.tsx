@@ -26,7 +26,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
-import { MINUTE_IN_MS, SECOND_IN_MS } from '@work-orders/common/time/constants.js';
+import { DAY_IN_MS, MINUTE_IN_MS, SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);
@@ -357,18 +357,19 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     const customer = customerQuery.data;
     const calculation = calculateWorkOrderQuery.data;
 
-    let parsedDueDate = new Date(workOrder.dueDate);
-    // convert from UTC to local time
-    parsedDueDate = new Date(parsedDueDate.getTime() + parsedDueDate.getTimezoneOffset() * MINUTE_IN_MS);
+    const dueDateUtc = new Date(workOrder.dueDate);
+    const dueDateLocal = new Date(dueDateUtc.getTime() + dueDateUtc.getTimezoneOffset() * MINUTE_IN_MS);
 
-    const dueDateString = parsedDueDate.toLocaleDateString();
+    const dueDateString = dueDateLocal.toLocaleDateString();
     const orderNamesSubtitle = workOrder.orders.map(order => order.name).join(' • ');
 
     let moneySubtitle = extractErrorMessage(calculateWorkOrderQuery.error, 'Loading...');
     let financialStatus = undefined;
 
     if (calculation) {
-      const { outstanding, paid, total } = calculation;
+      const { outstanding, total } = calculation;
+
+      const paid = BigDecimal.fromMoney(total).subtract(BigDecimal.fromMoney(outstanding)).toMoney();
 
       moneySubtitle = `${currencyFormatter(paid)} paid of ${currencyFormatter(total)}`;
 
@@ -385,7 +386,7 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     }
 
     const isOverdue =
-      new Date() > parsedDueDate &&
+      Date.now() > dueDateUtc.getTime() + DAY_IN_MS &&
       calculation &&
       BigDecimal.fromMoney(calculation.outstanding).compare(BigDecimal.ZERO) > 0;
 

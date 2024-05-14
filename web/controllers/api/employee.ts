@@ -12,7 +12,6 @@ import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { unit } from '../../services/db/unit-of-work.js';
 import { getStaffMembersByIds, getStaffMembersPage } from '../../services/staff-members.js';
 
 @Authenticated()

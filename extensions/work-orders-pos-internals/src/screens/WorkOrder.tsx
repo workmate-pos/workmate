@@ -9,7 +9,7 @@ import {
   Text,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
@@ -19,11 +19,8 @@ import {
   WIPCreateWorkOrder,
   useCreateWorkOrderReducer,
 } from '../create-work-order/reducer.js';
-import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
-import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -40,9 +37,7 @@ import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { getPurchaseOrderBadge } from '../util/badges.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
@@ -50,6 +45,8 @@ import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
+import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
+import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -88,8 +85,8 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   const { Form } = useForm();
 
   return (
-    <ScrollView>
-      <Form disabled={saveWorkOrderMutation.isLoading}>
+    <Form disabled={saveWorkOrderMutation.isLoading}>
+      <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {saveWorkOrderMutation.error && (
             <Banner
@@ -120,11 +117,14 @@ export function WorkOrder({ initial }: WorkOrderProps) {
               />
               <DateField
                 label={'Due Date'}
-                value={createWorkOrder.dueDate}
+                value={(() => {
+                  const dueDateUtc = new Date(createWorkOrder.dueDate);
+                  const dueDateLocal = new Date(dueDateUtc.getTime() + dueDateUtc.getTimezoneOffset() * MINUTE_IN_MS);
+                  return dueDateLocal.toISOString();
+                })()}
                 onChange={(date: string) => {
-                  // TODO: Do we actually want to convert everything to UTC? (for display we need utc, but we can just do that in value)
-                  const dueDate = new Date(date);
-                  const dueDateUtc = new Date(dueDate.getTime() - dueDate.getTimezoneOffset() * 60 * 1000);
+                  const dueDateLocal = new Date(date);
+                  const dueDateUtc = new Date(dueDateLocal.getTime() - dueDateLocal.getTimezoneOffset() * MINUTE_IN_MS);
                   dispatch.setPartial({ dueDate: dueDateUtc.toISOString() as DateTime });
                 }}
                 disabled={saveWorkOrderMutation.isLoading}
@@ -132,55 +132,70 @@ export function WorkOrder({ initial }: WorkOrderProps) {
               <WorkOrderMoneySummary createWorkOrder={createWorkOrder} dispatch={dispatch} />
             </ResponsiveGrid>
           </ResponsiveGrid>
+        </ResponsiveStack>
+      </ScrollView>
 
-          <ResponsiveGrid columns={4} smColumns={2} grow>
-            <FormButton
-              title={'Manage payments'}
-              type={'basic'}
-              action={'button'}
-              disabled={!createWorkOrder.name || hasUnsavedChanges}
-              onPress={() => {
-                if (createWorkOrder.name) {
-                  router.push('PaymentOverview', {
-                    name: createWorkOrder.name,
-                  });
-                }
-              }}
-            />
+      <ResponsiveStack
+        direction={'vertical'}
+        spacing={0.5}
+        paddingHorizontal={'HalfPoint'}
+        paddingVertical={'HalfPoint'}
+        flex={0}
+      >
+        <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
+          <FormButton
+            title={'Manage payments'}
+            type={'basic'}
+            action={'button'}
+            disabled={
+              !createWorkOrder.name ||
+              hasUnsavedChanges ||
+              createWorkOrder.items.length + createWorkOrder.charges.length === 0
+            }
+            onPress={() => {
+              if (createWorkOrder.name) {
+                router.push('PaymentOverview', {
+                  name: createWorkOrder.name,
+                });
+              }
+            }}
+          />
 
-            <FormButton
-              title={'Print'}
-              type={'basic'}
-              action={'button'}
-              disabled={!createWorkOrder.name || hasUnsavedChanges}
-              onPress={() => {
-                if (createWorkOrder.name) {
-                  router.push('PrintOverview', {
-                    name: createWorkOrder.name,
-                  });
-                }
-              }}
-            />
+          <FormButton
+            title={'Print'}
+            type={'basic'}
+            action={'button'}
+            disabled={!createWorkOrder.name || hasUnsavedChanges}
+            onPress={() => {
+              if (createWorkOrder.name) {
+                router.push('PrintOverview', {
+                  name: createWorkOrder.name,
+                  dueDate: new Date(createWorkOrder.dueDate),
+                });
+              }
+            }}
+          />
 
-            <FormButton
-              title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
-              type="primary"
-              action={'submit'}
-              disabled={!hasUnsavedChanges}
-              loading={saveWorkOrderMutation.isLoading}
-              onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
-            />
-          </ResponsiveGrid>
+          <FormButton
+            title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
+            type="primary"
+            action={'submit'}
+            disabled={!hasUnsavedChanges}
+            loading={saveWorkOrderMutation.isLoading}
+            onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
+          />
+        </ResponsiveGrid>
 
-          {!createWorkOrder.name ||
-            (hasUnsavedChanges && (
+        {!createWorkOrder.name ||
+          (hasUnsavedChanges && (
+            <Stack direction="horizontal" alignment="center">
               <Text color="TextSubdued" variant="body">
                 You must save your work order before you can manage payments/print
               </Text>
-            ))}
-        </ResponsiveStack>
-      </Form>
-    </ScrollView>
+            </Stack>
+          ))}
+      </ResponsiveStack>
+    </Form>
   );
 }
 
@@ -258,6 +273,31 @@ function WorkOrderItems({
 
   const rows = useItemRows(createWorkOrder, dispatch, query);
 
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      name: createWorkOrder.name,
+      items: createWorkOrder.items,
+      charges: createWorkOrder.charges,
+      customerId: createWorkOrder.customerId!,
+      discount: createWorkOrder.discount,
+    },
+    { enabled: !!createWorkOrder.customerId },
+  );
+
+  const [openChargeConfigPopupItemUuid, setOpenChargeConfigPopup] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (openChargeConfigPopupItemUuid) {
+      setOpenChargeConfigPopup(null);
+      router.push('ItemChargeConfig', {
+        itemUuid: openChargeConfigPopupItemUuid,
+        createWorkOrder,
+        dispatch,
+      });
+    }
+  }, [openChargeConfigPopupItemUuid]);
+
   return (
     <ResponsiveGrid columns={1}>
       <ResponsiveGrid columns={2}>
@@ -268,8 +308,8 @@ function WorkOrderItems({
           onPress={() =>
             router.push('ProductSelector', {
               onSelect: ({ item, charges }) => {
-                dispatch.updateItemCharges({ item, charges });
                 dispatch.addItems({ items: [item] });
+                dispatch.updateItemCharges({ uuid: item.uuid, charges });
               },
             })
           }
@@ -282,35 +322,35 @@ function WorkOrderItems({
           onPress={() =>
             router.push('ServiceSelector', {
               createWorkOrder,
-              onSelect: ({ type, item, charges }) => {
-                const createWorkOrderCharges = [...(createWorkOrder.charges ?? []), ...charges];
-
-                dispatch.updateItemCharges({ item, charges });
+              onSelect: ({ item, charges }) => {
+                dispatch.updateItemCharges({ uuid: item.uuid, charges });
                 dispatch.addItems({ items: [item] });
 
-                if (type === QUANTITY_ADJUSTING_SERVICE) {
-                  router.push('ItemChargeConfig', {
-                    item,
-                    createWorkOrder,
-                    initialCharges: createWorkOrderCharges,
-                    onRemove: () => dispatch.removeItems({ items: [item] }),
-                    onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
-                  });
+                if (item.absorbCharges) {
+                  setOpenChargeConfigPopup(item.uuid);
                 }
               },
               onAddLabourToItem: item => {
                 router.push('ItemChargeConfig', {
-                  item,
+                  itemUuid: item.uuid,
                   createWorkOrder,
-                  initialCharges: createWorkOrder.charges,
-                  onRemove: () => dispatch.removeItems({ items: [item] }),
-                  onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
+                  dispatch,
                 });
               },
             })
           }
         />
       </ResponsiveGrid>
+
+      {(calculatedDraftOrderQuery.data?.missingProductVariantIds?.length ?? 0) > 0 && (
+        <Banner
+          title={
+            'This work order contains products which have likely been deleted. Please remove them to save this work order'
+          }
+          variant={'alert'}
+          visible
+        />
+      )}
 
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length ? (
@@ -475,6 +515,10 @@ function WorkOrderMoneySummary({
         />
       )}
 
+      {unique(calculatedDraftOrderQuery.data?.warnings ?? []).map(warning => (
+        <Banner title={warning} variant={'alert'} visible />
+      ))}
+
       <WorkOrderEmployees createWorkOrder={createWorkOrder} />
 
       <ResponsiveGrid columns={2} grow>
@@ -519,7 +563,17 @@ function WorkOrderMoneySummary({
         <FormMoneyField label={'Tax'} disabled value={calculatedDraftOrder?.tax} formatter={formatter} />
         <FormMoneyField label={'Total'} disabled value={calculatedDraftOrder?.total} formatter={formatter} />
 
-        <FormMoneyField label={'Paid'} disabled value={calculatedDraftOrder?.paid} formatter={formatter} />
+        <FormMoneyField
+          label={'Paid'}
+          disabled
+          value={(() => {
+            if (!calculatedDraftOrder) return null;
+            return BigDecimal.fromMoney(calculatedDraftOrder.total)
+              .subtract(BigDecimal.fromMoney(calculatedDraftOrder.outstanding))
+              .toMoney();
+          })()}
+          formatter={formatter}
+        />
         <FormMoneyField
           label={'Balance Due'}
           disabled
@@ -535,66 +589,100 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
   const fetch = useAuthenticatedFetch();
   const currencyFormatter = useCurrencyFormatter();
 
-  const productVariantIds = unique(createWorkOrder.items.map(item => item.productVariantId).filter(isNonNullable));
-  const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
-
-  const { workOrderQuery, getItemOrdersIncludingCharges } = useWorkOrderOrders(createWorkOrder.name);
-
-  const isLoading = [workOrderQuery, ...Object.values(productVariantQueries)].some(query => query.isLoading);
+  const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
+  const calculatedWorkOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      name: createWorkOrder.name,
+      items: createWorkOrder.items,
+      charges: createWorkOrder.charges,
+      customerId: createWorkOrder.customerId!,
+      discount: createWorkOrder.discount,
+    },
+    { enabled: !!createWorkOrder.customerId, keepPreviousData: true },
+  );
 
   const router = useRouter();
   const screen = useScreen();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
-  screen.setIsLoading(isLoading);
+  screen.setIsLoading(workOrderQuery.isLoading || calculatedWorkOrderQuery.isLoading);
 
-  function queryFilter(productVariant?: ProductVariant | null) {
-    return (
-      !productVariant || !query || getProductVariantName(productVariant)?.toLowerCase().includes(query.toLowerCase())
-    );
-  }
+  const queryFilter = (lineItem?: CalculateDraftOrderResponse['lineItems'][number] | null) => {
+    if (!lineItem || !query) {
+      return true;
+    }
+
+    return lineItem.name.toLowerCase().includes(query.toLowerCase());
+  };
 
   return createWorkOrder.items
     .map(item => {
       return {
         item,
-        productVariant: productVariantQueries[item.productVariantId]?.data,
-        purchaseOrders: workOrderQuery.data?.workOrder?.items.find(i => i.uuid === item.uuid)?.purchaseOrders ?? [],
+        lineItem: calculatedWorkOrderQuery.getItemLineItem(item.uuid),
       };
     })
-    .filter(({ productVariant }) => queryFilter(productVariant))
-    .map<ListRow>(({ item, productVariant, purchaseOrders }) => {
+    .filter(({ lineItem }) => queryFilter(lineItem))
+    .map<ListRow>(({ item, lineItem }) => {
+      if (!lineItem?.order && calculatedWorkOrderQuery.data?.missingProductVariantIds.includes(item.productVariantId)) {
+        return {
+          id: item.uuid,
+          leftSide: {
+            label: 'Deleted product',
+            subtitle: ['This product has been deleted.', 'Click to delete this line item from the work order.'],
+          },
+          rightSide: {
+            showChevron: true,
+          },
+          onPress() {
+            dispatch.removeItem({ uuid: item.uuid });
+          },
+        };
+      }
+
       const isMutableService =
-        getProductServiceType(productVariant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
+        getProductServiceType(lineItem?.variant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
+
+      const purchaseOrders =
+        workOrderQuery.data?.workOrder?.items.find(i => i.uuid === item.uuid)?.purchaseOrders ?? [];
+
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
-      const hasCharges = charges.length > 0;
 
-      const basePrice = isMutableService
-        ? BigDecimal.ZERO.toMoney()
-        : productVariant?.price ?? BigDecimal.ZERO.toMoney();
+      const itemPrice = calculatedWorkOrderQuery.data?.itemPrices[item.uuid];
+      const chargePrices = charges.map(charge => {
+        if (charge.type === 'hourly-labour') {
+          return calculatedWorkOrderQuery.data?.hourlyLabourChargePrices[charge.uuid];
+        } else if (charge.type === 'fixed-price-labour') {
+          return calculatedWorkOrderQuery.data?.fixedPriceLabourChargePrices[charge.uuid];
+        }
 
-      const chargesPrice = getTotalPriceForCharges(charges);
+        return charge satisfies never;
+      });
 
-      const totalPrice = BigDecimal.fromMoney(basePrice)
-        .multiply(BigDecimal.fromString(item.quantity.toFixed(0)))
-        .add(BigDecimal.fromMoney(chargesPrice));
+      const totalPrice = BigDecimal.sum(
+        ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),
+      );
 
-      const orders = getItemOrdersIncludingCharges(item).filter(order => order.type === 'ORDER');
+      const chargeLineItems = charges
+        .map(charge => calculatedWorkOrderQuery.getChargeLineItem(charge))
+        .filter(isNonNullable);
+
+      const orderNames = unique(
+        [lineItem, ...chargeLineItems].map(lineItem => lineItem?.order?.name).filter(isNonNullable),
+      );
 
       return {
         id: item.uuid,
         leftSide: {
-          label: getProductVariantName(productVariant) ?? 'Unknown item',
-          subtitle: productVariant?.sku ? [productVariant.sku] : undefined,
+          label: lineItem?.name ?? 'Unknown item',
+          subtitle: lineItem?.sku ? [lineItem.sku] : undefined,
           image: {
-            source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
-            badge: (!isMutableService && !hasCharges) || item.quantity > 1 ? item.quantity : undefined,
+            source:
+              lineItem?.image?.url ?? lineItem?.variant?.image?.url ?? lineItem?.variant?.product?.featuredImage?.url,
+            badge: !isMutableService ? item.quantity : undefined,
           },
           badges: [
-            ...unique(orders.map(order => order.name)).map<BadgeProps>(orderName => ({
-              text: orderName,
-              variant: 'highlight',
-            })),
+            ...orderNames.map<BadgeProps>(orderName => ({ text: orderName, variant: 'highlight' })),
             ...purchaseOrders.map<BadgeProps>(po => getPurchaseOrderBadge(po, true)),
           ],
         },
@@ -603,37 +691,19 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
           showChevron: true,
         },
         onPress() {
-          if (!productVariant) {
-            toast.show('Cannot edit item - product variant not found');
-            return;
-          }
-
-          if (hasCharges || isMutableService) {
+          if (charges.length > 0 || isMutableService) {
             router.push('ItemChargeConfig', {
-              item,
+              itemUuid: item.uuid,
               createWorkOrder,
-              initialCharges: charges,
-              onRemove: () => dispatch.removeItems({ items: [item] }),
-              onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
+              dispatch,
             });
             return;
           }
 
           router.push('ItemConfig', {
-            workOrderName: createWorkOrder.name,
-            item,
-            onRemove: () => dispatch.removeItems({ items: [item] }),
-            onUpdate: item => dispatch.updateItem({ item }),
-            onAssignLabour: item => {
-              dispatch.updateItem({ item });
-              router.push('ItemChargeConfig', {
-                item,
-                initialCharges: charges,
-                createWorkOrder,
-                onRemove: () => dispatch.removeItems({ items: [item] }),
-                onUpdate: charges => dispatch.updateItemCharges({ item, charges }),
-              });
-            },
+            itemUuid: item.uuid,
+            createWorkOrder,
+            dispatch,
           });
         },
       };

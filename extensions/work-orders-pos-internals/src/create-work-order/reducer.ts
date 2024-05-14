@@ -27,8 +27,8 @@ export type CreateWorkOrderAction =
       items: CreateWorkOrderItem[];
     }
   | {
-      type: 'removeItems';
-      items: CreateWorkOrderItem[];
+      type: 'removeItem';
+      uuid: string;
     }
   | {
       /**
@@ -39,7 +39,7 @@ export type CreateWorkOrderAction =
     }
   | {
       type: 'updateItemCharges';
-      item: Pick<CreateWorkOrderItem, 'uuid'>;
+      uuid: string;
       charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[];
     }
   | ({
@@ -101,8 +101,8 @@ function createWorkOrderReducer(
 
     case 'updateItemCharges': {
       const charges = [
-        ...createWorkOrder.charges.filter(charge => charge.workOrderItemUuid !== action.item.uuid),
-        ...action.charges.map(charge => ({ ...charge, workOrderItemUuid: action.item.uuid })),
+        ...createWorkOrder.charges.filter(charge => charge.workOrderItemUuid !== action.uuid),
+        ...action.charges.map(charge => ({ ...charge, workOrderItemUuid: action.uuid })),
       ];
 
       const merged = getMergedItems(createWorkOrder.items, charges, getItemOrder);
@@ -136,15 +136,11 @@ function createWorkOrderReducer(
       };
     }
 
-    case 'removeItems': {
-      const removedItemUuids = new Set(action.items.map(item => item.uuid));
-
+    case 'removeItem': {
       return {
         ...createWorkOrder,
-        items: createWorkOrder.items.filter(item => !action.items.includes(item)),
-        charges: createWorkOrder.charges.filter(
-          charge => !charge.workOrderItemUuid || !removedItemUuids.has(charge.workOrderItemUuid),
-        ),
+        items: createWorkOrder.items.filter(item => item.uuid !== action.uuid),
+        charges: createWorkOrder.charges.filter(charge => charge.workOrderItemUuid !== action.uuid),
       };
     }
 

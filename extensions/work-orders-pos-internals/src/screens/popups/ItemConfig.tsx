@@ -1,65 +1,104 @@
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { CreateWorkOrderItem } from '../../types.js';
-import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
-import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
-import { getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
+import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
+import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
+import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
+import { pick } from '@teifi-digital/shopify-app-toolbox/object';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { CreateWorkOrderItem } from '../../types.js';
 
 export function ItemConfig({
-  workOrderName,
-  item: initialItem,
-  onRemove,
-  onUpdate,
-  onAssignLabour,
+  itemUuid,
+  createWorkOrder,
+  dispatch,
 }: {
-  workOrderName: string | null;
-  item: CreateWorkOrderItem;
-  onRemove: () => void;
-  onUpdate: (lineItem: CreateWorkOrderItem) => void;
-  onAssignLabour: (lineItem: CreateWorkOrderItem) => void;
+  itemUuid: string;
+  createWorkOrder: WIPCreateWorkOrder;
+  dispatch: CreateWorkOrderDispatchProxy;
 }) {
+  const initialItem = createWorkOrder.items.find(item => item.uuid === itemUuid);
+
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [item, setItem] = useState<CreateWorkOrderItem>(initialItem);
+  const [item, setItem] = useState<CreateWorkOrderItem | undefined>(initialItem);
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
-  const productVariantQuery = useProductVariantQuery({ fetch, id: item?.productVariantId ?? null });
-  const { workOrderQuery, getItemOrder } = useWorkOrderOrders(workOrderName);
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount'),
+      customerId: createWorkOrder.customerId!,
+    },
+    { enabled: !!createWorkOrder.customerId },
+  );
 
-  const productVariant = productVariantQuery?.data;
-  const name = getProductVariantName(productVariant);
+  const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setTitle(name ?? 'Product');
-  screen.setIsLoading(productVariantQuery.isLoading || workOrderQuery.isLoading);
+  screen.setIsLoading(calculatedDraftOrderQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  if (!productVariant) {
+  if (!item) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          Item not found
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (calculatedDraftOrderQuery.isError) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(calculatedDraftOrderQuery.error, 'Error loading product details')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (calculatedDraftOrderQuery.isLoading) {
     return null;
   }
 
-  const readonly = getItemOrder(item)?.type === 'ORDER';
+  const itemLineItemId = calculatedDraftOrder?.itemLineItemIds[item.uuid];
+  const itemLineItem = calculatedDraftOrder?.lineItems.find(li => li.id === itemLineItemId);
+
+  if (!calculatedDraftOrder || !itemLineItem) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          Could not load product details
+        </Text>
+      </Stack>
+    );
+  }
+
+  const readonly = !!itemLineItem.order;
+  const canAddLabour = getProductServiceType(itemLineItem.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE;
+
+  screen.setTitle(itemLineItem.name);
 
   return (
     <ScrollView>
       <Stack direction="vertical" spacing={5}>
         <Stack direction="vertical">
-          <Text variant="headingLarge">{name}</Text>
+          <Text variant="headingLarge">{itemLineItem.name}</Text>
           <Text variant="body" color="TextSubdued">
-            {productVariant.sku}
+            {itemLineItem.sku}
           </Text>
           <Text variant="body" color="TextSubdued">
-            {currencyFormatter(productVariant.price)}
+            {currencyFormatter(itemLineItem.unitPrice)}
           </Text>
         </Stack>
         <Stack direction="vertical" spacing={2}>
@@ -85,23 +124,23 @@ export function ItemConfig({
                 title="Remove"
                 type="destructive"
                 onPress={() => {
-                  onRemove();
+                  dispatch.removeItem({ uuid: item.uuid });
                   router.popCurrent();
                 }}
               />
               <Button
                 title="Save"
                 onPress={() => {
-                  onUpdate(item);
+                  dispatch.updateItem({ item });
                   router.popCurrent();
                 }}
               />
-              {getProductServiceType(productVariant.product.serviceType?.value) !== 'Fixed-Price Service' && (
+              {canAddLabour && (
                 <Button
                   title="Add Labour"
                   onPress={async () => {
                     await router.popCurrent();
-                    onAssignLabour(item);
+                    router.push('ItemChargeConfig', { itemUuid: itemUuid, createWorkOrder, dispatch });
                   }}
                 />
               )}

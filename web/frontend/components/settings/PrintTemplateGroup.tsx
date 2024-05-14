@@ -1,7 +1,7 @@
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { string } from '@teifi-digital/shopify-app-toolbox';
 import { useState } from 'react';
-import { BlockStack, Button, Card, DescriptionList, Modal, Text } from '@shopify/polaris';
+import { BlockStack, Button, DescriptionList, InlineStack, Modal, Text } from '@shopify/polaris';
 import { PrintTemplate } from '@web/frontend/components/settings/PrintTemplate.js';
 
 /**
@@ -17,6 +17,8 @@ export function PrintTemplateGroup({
   templateType: 'workOrderPrintTemplates' | 'purchaseOrderPrintTemplates';
 }) {
   const templates = settings[templateType];
+  const [templateNames, setTemplateNames] = useState(Object.keys(templates));
+
   const title = string.titleCase(templateType);
 
   const [modalOpened, setModalOpened] = useState(false);
@@ -25,6 +27,7 @@ export function PrintTemplateGroup({
     workOrderPrintTemplates: {
       '{{ name }}': 'The name of the work order',
       '{{ date }}': 'The current date',
+      '{{ dueDate }}': 'The due date of the work order',
       '{{ status }}': 'The status of the work order',
       '{{ note }}': 'The note attached to the work order',
       '{{ hiddenNote }}': 'The hidden note attached to the work order',
@@ -91,36 +94,38 @@ export function PrintTemplateGroup({
   }[templateType];
 
   return (
-    <Card roundedAbove="sm">
-      <BlockStack gap="400">
+    <BlockStack gap="400">
+      <InlineStack align={'space-between'}>
         <Text as="h3" variant="headingMd">
           {title}
         </Text>
 
-        <Modal
-          activator={
-            <Button onClick={() => setModalOpened(true)} variant={'plain'}>
-              View Template Variables
-            </Button>
-          }
-          open={modalOpened}
-          title={`${title} - Available Variables`}
-          onClose={() => setModalOpened(false)}
-          size={'large'}
-        >
-          <Modal.Section>
-            <DescriptionList
-              items={Object.entries(availableVariables).map(([term, description]) => ({
-                term,
-                description,
-              }))}
-            />
-          </Modal.Section>
-        </Modal>
+        <Button onClick={() => setModalOpened(true)} variant={'plain'}>
+          View Template Variables
+        </Button>
+      </InlineStack>
 
-        {Object.entries(templates).map(([name, template]) => (
+      <Modal
+        open={modalOpened}
+        title={`${title} - Available Variables`}
+        onClose={() => setModalOpened(false)}
+        size={'large'}
+      >
+        <Modal.Section>
+          <DescriptionList
+            items={Object.entries(availableVariables).map(([term, description]) => ({
+              term,
+              description,
+            }))}
+          />
+        </Modal.Section>
+      </Modal>
+
+      {templateNames
+        .map(name => [name, templates[name]!] as const)
+        .map(([name, template], i) => (
           <PrintTemplate
-            key={name}
+            key={i}
             name={name}
             template={template.template}
             subject={template.subject}
@@ -151,34 +156,37 @@ export function PrintTemplateGroup({
                 ...settings,
                 [templateType]: groupContent,
               });
+
+              setTemplateNames(templateNames =>
+                templateNames.map(templateName => (templateName === name ? newName : templateName)),
+              );
             }}
           />
         ))}
-        <Button
-          onClick={() => {
-            let name = 'New Template';
-            if (name in settings[templateType]) {
-              let i = 2;
-              while (`${name} (${i})` in settings[templateType]) {
-                i++;
-              }
-              name = `${name} (${i})`;
+      <Button
+        onClick={() => {
+          let name = 'New Template';
+          if (name in settings[templateType]) {
+            let i = 2;
+            while (`${name} (${i})` in settings[templateType]) {
+              i++;
             }
-            setSettings({
-              ...settings,
-              [templateType]: {
-                ...settings[templateType],
-                [name]: {
-                  template: '',
-                  subject: '',
-                },
+            name = `${name} (${i})`;
+          }
+          setSettings({
+            ...settings,
+            [templateType]: {
+              ...settings[templateType],
+              [name]: {
+                template: '',
+                subject: '',
               },
-            });
-          }}
-        >
-          New Template
-        </Button>
-      </BlockStack>
-    </Card>
+            },
+          });
+        }}
+      >
+        New Template
+      </Button>
+    </BlockStack>
   );
 }

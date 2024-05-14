@@ -7,6 +7,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { assertValidFormatString } from './id-formatting.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { Liquid } from 'liquidjs';
 
 function serialize(value: ShopSettings[keyof ShopSettings]) {
   return JSON.stringify(value);
@@ -90,5 +91,27 @@ function assertValidSettings(settings: ShopSettings) {
     } catch (e) {
       throw new HttpError('Invalid webhook endpoint URL', 400);
     }
+  }
+
+  for (const templates of [settings.purchaseOrderPrintTemplates, settings.workOrderPrintTemplates] as const) {
+    for (const [name, template] of Object.entries(templates)) {
+      if (!isValidLiquidTemplate(template.subject)) {
+        throw new HttpError(`Invalid subject template for ${name}`, 400);
+      }
+
+      if (!isValidLiquidTemplate(template.template)) {
+        throw new HttpError(`Invalid liquid template for ${name}`, 400);
+      }
+    }
+  }
+}
+
+function isValidLiquidTemplate(template: string) {
+  try {
+    const liquid = new Liquid();
+    liquid.parse(template);
+    return true;
+  } catch (e) {
+    return false;
   }
 }

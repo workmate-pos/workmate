@@ -1,8 +1,6 @@
 import { Badge, Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useState } from 'react';
-import { CreateWorkOrderItem, CreateWorkOrderCharge } from '../../types.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
+import { CreateWorkOrderCharge } from '../../types.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
@@ -17,97 +15,153 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { useWorkOrderOrders } from '../../hooks/use-work-order-orders.js';
-import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
-import {
-  getProductServiceType,
-  QUANTITY_ADJUSTING_SERVICE,
-} from '@work-orders/common/metafields/product-service-type.js';
+import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
+import { pick } from '@teifi-digital/shopify-app-toolbox/object';
+import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
 export function ItemChargeConfig({
-  item,
+  itemUuid,
   createWorkOrder,
-  initialCharges,
-  onRemove,
-  onUpdate,
+  dispatch,
 }: {
+  itemUuid: string;
   createWorkOrder: WIPCreateWorkOrder;
-  item: CreateWorkOrderItem;
-  initialCharges: CreateWorkOrderCharge[];
-  /**
-   * Remove the item from the work order.
-   */
-  onRemove: () => void;
-  /**
-   * Override the charges for this line item.
-   */
-  onUpdate: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[]) => void;
+  dispatch: CreateWorkOrderDispatchProxy;
 }) {
-  const initialItemCharges = initialCharges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
+  const item = createWorkOrder.items.find(item => item.uuid === itemUuid);
+  const initialItemCharges = createWorkOrder.charges.filter(hasPropertyValue('workOrderItemUuid', itemUuid)) ?? [];
 
-  const [employeeLabour, setEmployeeLabour] = useState(initialItemCharges.filter(hasNonNullableProperty('employeeId')));
-  const [generalLabour, setGeneralLabour] = useState(extractInitialGeneralLabour(initialItemCharges));
+  const [employeeLabourCharges, setEmployeeLabourCharges] = useState(
+    initialItemCharges.filter(hasNonNullableProperty('employeeId')),
+  );
+  const [generalLabourCharge, setGeneralLabourCharge] = useState(extractInitialGeneralLabour(initialItemCharges));
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
-
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount'),
+      customerId: createWorkOrder.customerId!,
+    },
+    { enabled: !!createWorkOrder.customerId },
+  );
   const settingsQuery = useSettingsQuery({ fetch });
-  const productVariantQuery = useProductVariantQuery({ fetch, id: item?.productVariantId ?? null });
-  const { workOrderQuery, getChargeOrder, getItemOrder } = useWorkOrderOrders(createWorkOrder.name);
+
+  const settings = settingsQuery?.data?.settings;
+  const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
-  const productVariant = productVariantQuery?.data;
-  const name = getProductVariantName(productVariant);
-
-  const settings = settingsQuery?.data?.settings;
-
   const router = useRouter();
   const screen = useScreen();
-  screen.setTitle(name ?? 'Service');
-  screen.setIsLoading(productVariantQuery.isLoading || settingsQuery.isLoading || workOrderQuery.isLoading);
+  screen.setIsLoading(calculatedDraftOrderQuery.isLoading || settingsQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  if (!productVariant) {
+  if (!item) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          Item not found
+        </Text>
+      </Stack>
+    );
+  }
+
+  // TODO: once @remote-ui/react finally supports suspense, use suspense with an error boundary instead of constantly doing this
+  if (calculatedDraftOrderQuery.isError) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(calculatedDraftOrderQuery.error, 'Error loading product details')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (settingsQuery.isError) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(calculatedDraftOrderQuery.error, 'Error loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (calculatedDraftOrderQuery.isLoading || settingsQuery.isLoading) {
     return null;
+  }
+
+  const itemLineItemId = calculatedDraftOrder?.itemLineItemIds[item.uuid];
+  const itemLineItem = calculatedDraftOrder?.lineItems.find(li => li.id === itemLineItemId);
+
+  if (!calculatedDraftOrder || !itemLineItem) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          Could not load product details
+        </Text>
+      </Stack>
+    );
   }
 
   if (!settings) {
-    return null;
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          Could not load settings
+        </Text>
+      </Stack>
+    );
   }
 
-  const hasBasePrice = getProductServiceType(productVariant.product.serviceType?.value) !== QUANTITY_ADJUSTING_SERVICE;
+  screen.setTitle(itemLineItem.name);
 
-  const charges = [
-    ...employeeLabour,
-    ...(generalLabour ? [{ ...generalLabour, name: generalLabour.name || 'Unnamed Labour' }] : []),
-  ];
+  const itemCharges = [...employeeLabourCharges, ...(generalLabourCharge ? [generalLabourCharge] : [])].map(charge => ({
+    ...charge,
+    name: charge.name || 'Unnamed Labour',
+  }));
 
   const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
-  const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabour.length > 0;
+  const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabourCharges.length > 0;
 
-  const basePrice = hasBasePrice ? productVariant.price : BigDecimal.ZERO.toMoney();
-  const chargesPrice = getTotalPriceForCharges(charges);
+  const basePrice = calculatedDraftOrder.itemPrices[item.uuid] ?? BigDecimal.ZERO.toMoney();
+  const chargePrices = itemCharges.map(charge => {
+    if (charge.type === 'hourly-labour') {
+      return calculatedDraftOrder.hourlyLabourChargePrices[charge.uuid] ?? BigDecimal.ZERO.toMoney();
+    }
+
+    if (charge.type === 'fixed-price-labour') {
+      return calculatedDraftOrder.fixedPriceLabourChargePrices[charge.uuid] ?? BigDecimal.ZERO.toMoney();
+    }
+
+    return charge satisfies never;
+  });
+  const chargesPrice = BigDecimal.sum(...chargePrices.map(price => BigDecimal.fromMoney(price))).toMoney();
   const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(chargesPrice)).toMoney();
-
-  const itemOrder = getItemOrder(item);
 
   return (
     <ScrollView>
       <Stack direction={'vertical'} spacing={1}>
         <Text variant={'headingLarge'}>{name}</Text>
-        {itemOrder?.type === 'ORDER' && <Badge text={itemOrder.name} variant={'highlight'} />}
+        {itemLineItem.order && <Badge text={itemLineItem.order.name} variant={'highlight'} />}
       </Stack>
       <Stack direction={'vertical'} paddingVertical={'Small'} spacing={5}>
         <Text variant={'headingLarge'}>Labour Charge</Text>
         <SegmentedLabourControl
           types={['none', 'hourly-labour', 'fixed-price-labour']}
-          disabled={getChargeOrder(generalLabour)?.type === 'ORDER'}
-          charge={generalLabour}
+          disabled={
+            generalLabourCharge ? !!calculatedDraftOrderQuery.getChargeLineItem(generalLabourCharge)?.order : false
+          }
+          charge={generalLabourCharge}
           onChange={charge =>
-            charge !== null ? setGeneralLabour({ ...charge, uuid: uuid(), employeeId: null }) : setGeneralLabour(null)
+            charge !== null
+              ? setGeneralLabourCharge({ ...charge, uuid: uuid(), employeeId: null })
+              : setGeneralLabourCharge(null)
           }
         />
 
@@ -120,9 +174,9 @@ export function ItemChargeConfig({
                 type={'primary'}
                 onPress={() =>
                   router.push('EmployeeSelector', {
-                    selected: employeeLabour.map(e => e.employeeId),
-                    disabled: employeeLabour
-                      .filter(charge => getChargeOrder(charge)?.type === 'ORDER')
+                    selected: employeeLabourCharges.map(e => e.employeeId),
+                    disabled: employeeLabourCharges
+                      .filter(charge => !!calculatedDraftOrderQuery.getChargeLineItem(charge)?.order)
                       .map(e => e.employeeId),
                     onSelect: employeeId => {
                       setHasUnsavedChanges(true);
@@ -138,11 +192,11 @@ export function ItemChargeConfig({
                         removeLocked: false,
                       } as const;
 
-                      setEmployeeLabour(current => [...current, defaultLabourCharge]);
+                      setEmployeeLabourCharges(current => [...current, defaultLabourCharge]);
                     },
                     onDeselect: employeeId => {
                       setHasUnsavedChanges(true);
-                      setEmployeeLabour(current => current.filter(l => l.employeeId !== employeeId));
+                      setEmployeeLabourCharges(current => current.filter(l => l.employeeId !== employeeId));
                     },
                   })
                 }
@@ -150,19 +204,19 @@ export function ItemChargeConfig({
               />
 
               <EmployeeLabourList
-                charges={employeeLabour.filter(hasNonNullableProperty('employeeId'))}
+                charges={employeeLabourCharges.filter(hasNonNullableProperty('employeeId'))}
                 workOrderName={createWorkOrder.name}
                 onClick={labour =>
                   router.push('EmployeeLabourConfig', {
                     labour,
                     onRemove: () => {
                       setHasUnsavedChanges(true);
-                      setEmployeeLabour(employeeLabour.filter(l => l !== labour));
+                      setEmployeeLabourCharges(employeeLabourCharges.filter(l => l !== labour));
                     },
                     onUpdate: updatedLabour => {
                       setHasUnsavedChanges(true);
-                      setEmployeeLabour(
-                        employeeLabour.map(l =>
+                      setEmployeeLabourCharges(
+                        employeeLabourCharges.map(l =>
                           l === labour
                             ? {
                                 uuid: l.uuid,
@@ -188,7 +242,7 @@ export function ItemChargeConfig({
             paddingVertical={'ExtraLarge'}
             sm={{ direction: 'vertical', alignment: 'center', paddingVertical: undefined }}
           >
-            {hasBasePrice && (
+            {BigDecimal.fromMoney(basePrice).compare(BigDecimal.ZERO) > 0 && (
               <Text variant={'headingSmall'} color={'TextSubdued'}>
                 Base Price: {currencyFormatter(basePrice)}
               </Text>
@@ -207,16 +261,19 @@ export function ItemChargeConfig({
         <Button
           title="Remove"
           type="destructive"
-          isDisabled={getItemOrder(item)?.type === 'ORDER'}
+          isDisabled={!!itemLineItem.order}
           onPress={() => {
-            onRemove();
+            dispatch.removeItem({ uuid: itemUuid });
             router.popCurrent();
           }}
         />
         <Button
           title="Save"
           onPress={() => {
-            onUpdate([...employeeLabour, ...(generalLabour ? [generalLabour] : [])]);
+            dispatch.updateItemCharges({
+              uuid: itemUuid,
+              charges: [...employeeLabourCharges, ...(generalLabourCharge ? [generalLabourCharge] : [])],
+            });
             router.popCurrent();
           }}
         />

@@ -18,18 +18,13 @@ import { PaginationControls } from '@work-orders/common-pos/components/Paginatio
 import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
 import {
   getProductServiceType,
-  ProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
   SERVICE_METAFIELD_VALUE_TAG_NAME,
 } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
-type OnSelect = (arg: {
-  type: ProductServiceType;
-  item: CreateWorkOrderItem;
-  charges: CreateWorkOrderCharge[];
-}) => void;
+type OnSelect = (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 
 export function ServiceSelector({
   onSelect,
@@ -49,6 +44,7 @@ export function ServiceSelector({
       first: 50 as Int,
       query: [
         query,
+        'product_status:active',
         Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
           .map(tag => `tag:"${escapeQuotationMarks(tag)}"`)
           .join(' OR '),
@@ -167,7 +163,6 @@ function useProductVariantRows(
           await router.popCurrent();
 
           onSelect({
-            type,
             item: {
               uuid: itemUuid,
               productVariantId: variant.id,

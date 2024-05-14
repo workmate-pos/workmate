@@ -137,12 +137,12 @@ export default class WorkOrderController {
   @Permission('read_work_orders')
   @QuerySchema('work-order-print-job')
   async printWorkOrder(
-    req: Request<{ name: string; template: string }, unknown, unknown, WorkOrderPrintJob>,
+    req: Request<{ name: string; template: string; dueDate: string }, unknown, unknown, WorkOrderPrintJob>,
     res: Response<PrintWorkOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
     const { name, template } = req.params;
-    const { date } = req.query;
+    const { date, dueDate } = req.query;
 
     const { emailReplyTo, emailFromTitle, workOrderPrintTemplates, printEmail } = await getShopSettings(session.shop);
 
@@ -155,7 +155,7 @@ export default class WorkOrderController {
     }
 
     const printTemplate = workOrderPrintTemplates[template] ?? never();
-    const context = await getWorkOrderTemplateData(session, name, date);
+    const context = await getWorkOrderTemplateData(session, name, date, dueDate);
     const { subject, html } = await getRenderedWorkOrderTemplate(printTemplate, context);
     const file = await renderHtmlToPdfCustomFile(subject, html);
 

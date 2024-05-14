@@ -80,10 +80,11 @@ function useVendorRows(
 
   const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
   const locationIdQuery = `location_id:${session.currentSession.locationId}`;
+  const productStatusQuery = 'product_status:active';
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
-      query: [vendorQuery, locationIdQuery].filter(Boolean).join(' AND '),
+      query: [vendorQuery, locationIdQuery, productStatusQuery].filter(Boolean).join(' AND '),
       first: 50 as Int,
     },
     options: { enabled: !!vendorName },

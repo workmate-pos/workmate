@@ -34,6 +34,7 @@ export function ProductSelector({
       first: 50 as Int,
       query: [
         query,
+        'product_status:active',
         ...Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).map(tag => `tag_not:"${escapeQuotationMarks(tag)}"`),
       ]
         .filter(Boolean)

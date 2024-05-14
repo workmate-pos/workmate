@@ -37,11 +37,12 @@ export function ProductSelector({
 
   const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
   const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : '';
+  const productStatusQuery = 'product_status:active';
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
       first: 50 as Int,
-      query: [query, vendorQuery, locationIdQuery]
+      query: [query, vendorQuery, locationIdQuery, productStatusQuery]
         .filter(Boolean)
         .map(q => `(${q})`)
         .join(' AND '),

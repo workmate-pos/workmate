@@ -1,0 +1,6 @@
+query getMany($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    id
+  }
+}

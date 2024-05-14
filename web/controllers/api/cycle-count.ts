@@ -2,7 +2,7 @@ import { Authenticated, BodySchema, Post } from '@teifi-digital/shopify-app-expr
 import { PostCycleCount } from '../../schemas/generated/post-cycle-count.js';
 import { Request, Response } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
-import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';

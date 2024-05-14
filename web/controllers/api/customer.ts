@@ -3,7 +3,7 @@ import { Session } from '@shopify/shopify-api';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
-import { gql } from '../../services/gql/gql.js';
+import { fetchAllPages, gql } from '../../services/gql/gql.js';
 import { ID } from '../../services/gql/queries/generated/schema.js';
 import { Ids } from '../../schemas/generated/ids.js';
 
@@ -54,6 +54,27 @@ export default class CustomerController {
 
     return res.json({ customer });
   }
+
+  @Get('/metafields')
+  async fetchCustomerMetafields(req: Request, res: Response<FetchCustomerMetafieldsResponse>) {
+    const session: Session = res.locals.shopify.session;
+
+    const graphql = new Graphql(session);
+
+    const metafields = await fetchAllPages(
+      graphql,
+      gql.customer.getCustomerMetafieldDefinitions.run,
+      result => result.metafieldDefinitions,
+    );
+
+    return res.json({
+      metafields: metafields.map(({ namespace, key, name }) => ({
+        namespace,
+        key,
+        name,
+      })),
+    });
+  }
 }
 
 export type FetchCustomersResponse = {
@@ -67,4 +88,12 @@ export type FetchCustomerResponse = {
 
 export type FetchCustomersByIdResponse = {
   customers: (gql.customer.CustomerFragment.Result | null)[];
+};
+
+export type FetchCustomerMetafieldsResponse = {
+  metafields: {
+    namespace: string;
+    key: string;
+    name: string;
+  }[];
 };

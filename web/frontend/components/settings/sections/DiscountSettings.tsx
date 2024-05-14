@@ -3,7 +3,7 @@ import { Dispatch, SetStateAction, useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { CurrencyFormatter, useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
-import { BlockStack, Box, Card, InlineStack, Tag, Text } from '@shopify/polaris';
+import { BlockStack, InlineStack, Tag } from '@shopify/polaris';
 import { BigDecimal, Decimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Rule, RuleSet } from '@web/frontend/components/RuleSet.js';
 import invariant from 'tiny-invariant';
@@ -29,52 +29,43 @@ export function DiscountSettings({
 
   return (
     <>
-      <Box as="section" paddingInlineStart={{ xs: '400', sm: '0' }} paddingInlineEnd={{ xs: '400', sm: '0' }}>
-        <BlockStack gap="400">
-          <Text as="h3" variant="headingMd">
-            Discounts
-          </Text>
-        </BlockStack>
-      </Box>
-      <Card roundedAbove="sm">
-        <BlockStack gap="400">
-          <CurrencyOrPercentageInput
-            label={'Discount Shortcuts'}
-            value={discountShortcutValue}
-            setValue={setDiscountShortcutValue}
-            onSelect={unit => {
-              setSettings({
-                ...settings,
-                discountShortcuts: [
-                  ...settings.discountShortcuts,
-                  {
-                    currency: { unit: 'currency', money: discountShortcutValue as Money } as const,
-                    percentage: { unit: 'percentage', percentage: discountShortcutValue as Decimal } as const,
-                  }[unit],
-                ],
-              });
-              setDiscountShortcutValue('');
-            }}
-          />
-          <InlineStack gap="200">
-            {settings.discountShortcuts.map((shortcut, i) => (
-              <Tag
-                key={i}
-                onRemove={() =>
-                  setSettings({
-                    ...settings,
-                    discountShortcuts: settings.discountShortcuts.filter((_, j) => i !== j),
-                  })
-                }
-              >
-                {shortcut.unit === 'currency' && currencyFormatter(shortcut.money)}
-                {shortcut.unit === 'percentage' && `${shortcut.percentage}%`}
-              </Tag>
-            ))}
-          </InlineStack>
-          <RuleSet title="Discount Rules" rules={discountRules} activeRules={activeDiscountRules} />
-        </BlockStack>
-      </Card>
+      <BlockStack gap="400">
+        <CurrencyOrPercentageInput
+          label={'Discount Shortcuts'}
+          value={discountShortcutValue}
+          setValue={setDiscountShortcutValue}
+          onSelect={unit => {
+            setSettings({
+              ...settings,
+              discountShortcuts: [
+                ...settings.discountShortcuts,
+                {
+                  currency: { unit: 'currency', money: discountShortcutValue as Money } as const,
+                  percentage: { unit: 'percentage', percentage: discountShortcutValue as Decimal } as const,
+                }[unit],
+              ],
+            });
+            setDiscountShortcutValue('');
+          }}
+        />
+        <InlineStack gap="200">
+          {settings.discountShortcuts.map((shortcut, i) => (
+            <Tag
+              key={i}
+              onRemove={() =>
+                setSettings({
+                  ...settings,
+                  discountShortcuts: settings.discountShortcuts.filter((_, j) => i !== j),
+                })
+              }
+            >
+              {shortcut.unit === 'currency' && currencyFormatter(shortcut.money)}
+              {shortcut.unit === 'percentage' && `${shortcut.percentage}%`}
+            </Tag>
+          ))}
+        </InlineStack>
+        <RuleSet title="Discount Rules" rules={discountRules} activeRules={activeDiscountRules} />
+      </BlockStack>
       {toast}
     </>
   );

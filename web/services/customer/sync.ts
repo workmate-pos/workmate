@@ -4,7 +4,6 @@ import { gql } from '../gql/gql.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { unit } from '../db/unit-of-work.js';
 
 export async function ensureCustomersExist(session: Session, customerIds: ID[]) {
   if (customerIds.length === 0) {
