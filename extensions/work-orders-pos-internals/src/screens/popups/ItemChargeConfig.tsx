@@ -41,14 +41,10 @@ export function ItemChargeConfig({
 
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount'),
-      customerId: createWorkOrder.customerId!,
-    },
-    { enabled: !!createWorkOrder.customerId },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
+    fetch,
+    ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+  });
   const settingsQuery = useSettingsQuery({ fetch });
 
   const settings = settingsQuery?.data?.settings;

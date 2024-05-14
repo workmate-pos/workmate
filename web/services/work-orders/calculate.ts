@@ -429,6 +429,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
           taxable: customSale.taxable,
         })),
       ],
+      purchasingEntity: calculateWorkOrder.customerId ? { customerId: calculateWorkOrder.customerId } : null,
       appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
     },
   });
