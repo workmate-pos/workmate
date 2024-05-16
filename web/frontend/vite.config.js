@@ -4,12 +4,14 @@ import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-if (process.env.npm_lifecycle_event === 'build' && !process.env.CI && !process.env.SHOPIFY_API_KEY) {
-  console.warn(
-    '\nBuilding the frontend app without an API key. The frontend build will not run without an API key. Set the SHOPIFY_API_KEY environment variable when running the build command.\n',
-  );
-} else {
-  console.log(`Building the frontend app with API key '${process.env.SHOPIFY_API_KEY}'.`);
+const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID'];
+
+if (process.env.npm_lifecycle_event === 'build' && !process.env.CI) {
+  for (const envVar of requiredEnvVars) {
+    if (!process.env[envVar]) {
+      throw new Error(`${envVar} environment variable is required to build the frontend app`);
+    }
+  }
 }
 
 const proxyOptions = {

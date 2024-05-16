@@ -13,6 +13,7 @@ import { Ids } from '../../schemas/generated/ids.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getStaffMembersByIds, getStaffMembersPage } from '../../services/staff-members.js';
+import { intercom, IntercomUser } from '../../services/intercom.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -30,6 +31,7 @@ export default class EmployeeController {
         ...user.user,
         rate: (user.user.rate ?? defaultRate) as Money,
         isDefaultRate: user.user.rate === null || user.user.rate === undefined,
+        intercomUser: intercom.getUser(session.shop, user.staffMember.id),
       },
     });
   }
@@ -140,6 +142,9 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
 }
 
 export type EmployeeWithDatabaseInfo = Awaited<ReturnType<typeof attachDatabaseEmployees>>[number];
+export type MeEmployee = EmployeeWithDatabaseInfo & {
+  intercomUser: IntercomUser;
+};
 
 export type FetchEmployeesResponse = {
   employees: EmployeeWithDatabaseInfo[];
@@ -155,5 +160,5 @@ export type UpsertEmployeesResponse = {
 };
 
 export type FetchMeResponse = {
-  employee: EmployeeWithDatabaseInfo;
+  employee: MeEmployee;
 };
