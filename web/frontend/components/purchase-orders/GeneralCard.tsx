@@ -1,6 +1,15 @@
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { CreatePurchaseOrderDispatchProxy } from '@work-orders/common/create-purchase-order/reducer.js';
-import { BlockStack, Card, InlineGrid, InlineStack, SkeletonBodyText, Text, TextField } from '@shopify/polaris';
+import {
+  BlockStack,
+  Card,
+  Divider,
+  InlineGrid,
+  InlineStack,
+  SkeletonBodyText,
+  Text,
+  TextField,
+} from '@shopify/polaris';
 import type { Location } from '@web/frontend/pages/purchase-orders/[name].js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -47,26 +56,29 @@ export function GeneralCard({
             readOnly
           />
 
-          {vendorQuery.isLoading && <SkeletonBodyText />}
+          {!!createPurchaseOrder.vendorName && vendorQuery.isLoading && <SkeletonBodyText />}
           {vendor?.customer && vendor.customer.metafields.nodes.length > 0 && (
-            <BlockStack gap={'200'}>
-              <InlineStack gap={'200'}>
-                <Text as={'p'} variant={'bodyMd'} fontWeight={'semibold'} tone={'subdued'}>
-                  Vendor Metafields
-                </Text>
-              </InlineStack>
+            <>
+              <BlockStack gap={'200'}>
+                <InlineStack gap={'200'}>
+                  <Text as={'p'} variant={'bodyMd'} fontWeight={'semibold'} tone={'subdued'}>
+                    Vendor Metafields
+                  </Text>
+                </InlineStack>
 
-              <InlineGrid gap={'200'} columns={3}>
-                {vendor.customer.metafields.nodes.map(({ definition, namespace, key, value }) => (
-                  <TextField
-                    label={definition?.name ?? `${namespace}.${key}`}
-                    autoComplete="off"
-                    readOnly
-                    value={value}
-                  />
-                ))}
-              </InlineGrid>
-            </BlockStack>
+                <InlineGrid gap={'200'} columns={3}>
+                  {vendor.customer.metafields.nodes.map(({ definition, namespace, key, value }) => (
+                    <TextField
+                      label={definition?.name ?? `${namespace}.${key}`}
+                      autoComplete="off"
+                      readOnly
+                      value={value}
+                    />
+                  ))}
+                </InlineGrid>
+              </BlockStack>
+              <Divider />
+            </>
           )}
 
           <TextField

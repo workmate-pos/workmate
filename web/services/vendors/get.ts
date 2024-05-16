@@ -9,21 +9,38 @@ import { MINUTE_IN_MILLIS } from '../../util/date-utils.js';
 import { getShopSettings } from '../settings.js';
 import { Int } from '../gql/queries/generated/schema.js';
 
-const vendorCustomersCache = new CacheMap<string, gql.segments.CustomerSegmentMemberFragment.Result[]>(
-  30 * MINUTE_IN_MILLIS,
-);
+type CachedVendorCustomers = {
+  /**
+   * The metafields that are loaded can be changed in settings.
+   * If they are indeed changed the cache will be invalidated.
+   */
+  metafields: string[];
+  customers: gql.segments.CustomerSegmentMemberFragment.Result[];
+};
+
+const vendorCustomersCache = new CacheMap<string, CachedVendorCustomers>(30 * MINUTE_IN_MILLIS);
 
 async function getVendorCustomers(session: Session) {
-  if (vendorCustomersCache.has(session.shop)) {
-    return vendorCustomersCache.get(session.shop) ?? never();
-  }
-
   const settings = await getShopSettings(session.shop);
+
+  if (vendorCustomersCache.has(session.shop)) {
+    const cacheValue = vendorCustomersCache.get(session.shop) ?? never();
+
+    const newSettingsMetafields = Array.from(settings.vendorCustomerMetafieldsToShow).filter(
+      metafield => !cacheValue.metafields.includes(metafield),
+    );
+
+    if (newSettingsMetafields.length === 0) {
+      return cacheValue.customers;
+    }
+
+    // if there are new metafields to load we ignore the cached value
+  }
 
   const graphql = new Graphql(session);
   const query = `metafields.${await resolveNamespace(session, customerIsVendorMetafield.namespace)}.${customerIsVendorMetafield.key} = true`;
 
-  const result = await fetchAllPages(
+  const customers = await fetchAllPages(
     graphql,
     (graphql, variables) =>
       gql.segments.getCustomerSegmentByQuery.run(graphql, {
@@ -38,9 +55,9 @@ async function getVendorCustomers(session: Session) {
     }),
   );
 
-  vendorCustomersCache.set(session.shop, result);
+  vendorCustomersCache.set(session.shop, { customers: customers, metafields: settings.vendorCustomerMetafieldsToShow });
 
-  return result;
+  return customers;
 }
 
 /**
@@ -59,11 +76,11 @@ export async function getVendors(session: Session): Promise<Vendor[]> {
   const vendorNames = productVendors.edges.map(({ node }) => node);
 
   return vendorNames.map(vendor => {
-    const customer = vendorCustomers.find(customer => customer.displayName === vendor);
+    const customer = vendorCustomers.find(customer => customer.displayName === vendor) ?? null;
 
     return {
       name: vendor,
-      customer: customer ?? null,
+      customer,
     };
   });
 }
