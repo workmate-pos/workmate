@@ -23,7 +23,7 @@
     "@shopify/stylelint-polaris": "^13.0.8",
     "@teifi-digital/shopify-app-react": "^0.2.0",
     "@teifi-digital/shopify-app-toolbox": "^0.0.42",
-    "@vitejs/plugin-react": "4.0.4",
+    "@vitejs/plugin-react": "^4.2.1",
     "@work-orders/common": "file:../../common",
     "react": "^18",
     "react-dom": "^18",
