@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { v4 as uuid } from 'uuid';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 export function ProductSelector({
   filters: { vendorName, locationId },
@@ -34,6 +35,13 @@ export function ProductSelector({
   const fetch = useAuthenticatedFetch();
 
   const locationQuery = useLocationQuery({ fetch, id: locationId });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
+  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
+  const defaultCustomFields = defaultCustomFieldKeys
+    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
+    : undefined;
 
   const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
   const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : '';
@@ -59,7 +67,7 @@ export function ProductSelector({
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(locationQuery.isLoading);
+  screen.setIsLoading(locationQuery.isLoading || customFieldsPresetsQuery.isLoading);
 
   const [page, setPage] = useState(1);
   const pagination = (
@@ -119,7 +127,11 @@ export function ProductSelector({
                 vendor: vendorName,
               },
               onCreate: product => {
-                selectProducts([{ ...product, uuid: uuid() }]);
+                if (!defaultCustomFields) {
+                  return;
+                }
+
+                selectProducts([{ ...product, uuid: uuid(), customFields: defaultCustomFields }]);
                 router.popCurrent();
               },
             });
@@ -172,6 +184,13 @@ function useProductVariantRows(
   selectProducts: (products: Product[]) => void,
 ) {
   const fetch = useAuthenticatedFetch();
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
+  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
+  const defaultCustomFields = defaultCustomFieldKeys
+    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
+    : undefined;
 
   const inventoryItemIds = productVariants.flatMap(variant => [
     variant.inventoryItem.id,
@@ -221,6 +240,10 @@ function useProductVariantRows(
     return {
       id: variant.id,
       onPress: () => {
+        if (!defaultCustomFields) {
+          return;
+        }
+
         if (!variant.requiresComponents) {
           selectProducts([
             {
@@ -230,6 +253,7 @@ function useProductVariantRows(
               availableQuantity: 0 as Int,
               quantity: 1 as Int,
               unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
+              customFields: defaultCustomFields,
             },
           ]);
           return;
@@ -251,6 +275,7 @@ function useProductVariantRows(
               name: getProductVariantName(productVariant) ?? 'Unknown Product',
               sku: productVariant.sku,
               unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
+              customFields: defaultCustomFields,
             }));
           }),
         );

@@ -24,6 +24,7 @@ function mapItem(item: WorkOrder['items'][number]): CreateWorkOrderItem {
     quantity: item.quantity,
     uuid: item.uuid,
     absorbCharges: item.absorbCharges,
+    customFields: item.customFields,
   };
 }
 

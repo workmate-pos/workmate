@@ -18,6 +18,7 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 
 export function ProductConfig({
   product: initialProduct,
@@ -204,6 +205,20 @@ export function ProductConfig({
                 setProduct({ ...product, unitCost: unitCost ?? product.unitCost });
                 setHasUnsavedChanges(true);
               }}
+            />
+          </Stack>
+
+          <Stack direction="vertical" spacing={2}>
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="headingSmall" color="TextSubdued">
+                Custom Fields
+              </Text>
+            </Stack>
+            <CustomFieldsList
+              customFields={product.customFields}
+              onSave={customFields => setProduct({ ...product, customFields })}
+              type={'LINE_ITEM'}
+              useRouter={useRouter}
             />
           </Stack>
 

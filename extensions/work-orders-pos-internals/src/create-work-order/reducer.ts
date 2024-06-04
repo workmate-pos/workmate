@@ -42,6 +42,11 @@ export type CreateWorkOrderAction =
       uuid: string;
       charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[];
     }
+  | {
+      type: 'updateItemCustomFields';
+      uuid: string;
+      customFields: Record<string, string>;
+    }
   | ({
       type: 'set';
     } & CreateWorkOrder);
@@ -112,6 +117,19 @@ function createWorkOrderReducer(
         ...createWorkOrder,
         items: split.filter(item => item.quantity > 0),
         charges,
+      };
+    }
+
+    case 'updateItemCustomFields': {
+      return {
+        ...createWorkOrder,
+        items: createWorkOrder.items.map(item => {
+          if (item.uuid === action.uuid) {
+            return { ...item, customFields: action.customFields };
+          }
+
+          return item;
+        }),
       };
     }
 
@@ -211,14 +229,18 @@ function getSplitItems(items: CreateWorkOrderItem[], charges: CreateWorkOrderCha
 
     return [
       {
-        ...item,
+        uuid: item.uuid,
+        productVariantId: item.productVariantId,
         quantity: 1 as Int,
+        absorbCharges: item.absorbCharges,
+        customFields: item.customFields,
       },
       {
         uuid: uuid(),
         productVariantId: item.productVariantId,
         quantity: (item.quantity - 1) as Int,
         absorbCharges: item.absorbCharges,
+        customFields: item.customFields,
       },
     ];
   });

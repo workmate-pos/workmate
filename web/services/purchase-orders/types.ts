@@ -63,5 +63,7 @@ export type PurchaseOrderWebhookBody = {
       quantity: Int;
       availableQuantity: Int;
     }[];
+    createdAt: string;
+    updatedAt: string;
   };
 };

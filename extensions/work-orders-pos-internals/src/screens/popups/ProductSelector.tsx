@@ -17,6 +17,8 @@ import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 export function ProductSelector({
   onSelect,
@@ -42,6 +44,11 @@ export function ProductSelector({
         .join(' AND '),
     },
   });
+
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const screen = useScreen();
+  screen.setIsLoading(customFieldsPresetsQuery.isLoading);
 
   const currencyFormatter = useCurrencyFormatter();
 
@@ -69,7 +76,7 @@ export function ProductSelector({
     />
   );
 
-  const rows = getProductVariantRows(
+  const rows = useProductVariantRows(
     productVariantsQuery.data?.pages?.[page - 1] ?? [],
     internalOnSelect,
     currencyFormatter,
@@ -90,6 +97,7 @@ export function ProductSelector({
                   uuid: uuid(),
                   productVariantId: product.productVariantId,
                   absorbCharges: false,
+                  customFields: {},
                 },
                 [],
               ),
@@ -136,11 +144,20 @@ export function ProductSelector({
   );
 }
 
-function getProductVariantRows(
+function useProductVariantRows(
   productVariants: ProductVariant[],
   onSelect: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
+  const fetch = useAuthenticatedFetch();
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
+  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
+  const defaultCustomFields = defaultCustomFieldKeys
+    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
+    : undefined;
+
   return productVariants.map(variant => {
     const displayName = getProductVariantName(variant) ?? 'Unknown product';
 
@@ -157,6 +174,10 @@ function getProductVariantRows(
     return {
       id: variant.id,
       onPress: () => {
+        if (!defaultCustomFields) {
+          return;
+        }
+
         const itemUuid = uuid();
 
         onSelect(
@@ -165,6 +186,7 @@ function getProductVariantRows(
             productVariantId: variant.id,
             quantity: 1 as Int,
             absorbCharges: false,
+            customFields: defaultCustomFields,
           },
           defaultCharges.map(charge => ({ ...charge, uuid: uuid(), workOrderItemUuid: itemUuid })),
         );

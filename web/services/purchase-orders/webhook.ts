@@ -24,7 +24,7 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
     return;
   }
 
-  const [{ id } = never()] = await db.purchaseOrder.get({ name });
+  const [{ id, createdAt, updatedAt } = never()] = await db.purchaseOrder.get({ name });
 
   const url = new URL(endpointUrl);
 
@@ -105,6 +105,8 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
           };
         }),
       ),
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString(),
     },
   };
 

@@ -48,9 +48,15 @@
           },
           "absorbCharges": {
             "type": "boolean"
+          },
+          "customFields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
-        "required": ["uuid", "productVariantId", "quantity", "absorbCharges"],
+        "required": ["uuid", "productVariantId", "quantity", "absorbCharges", "customFields"],
         "additionalProperties": false
       }
     },

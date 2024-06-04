@@ -90,9 +90,23 @@
           },
           "unitCost": {
             "$ref": "scalars.json#/definitions/Money"
+          },
+          "customFields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
-        "required": ["uuid", "productVariantId", "shopifyOrderLineItem", "quantity", "availableQuantity", "unitCost"],
+        "required": [
+          "uuid",
+          "productVariantId",
+          "shopifyOrderLineItem",
+          "quantity",
+          "availableQuantity",
+          "unitCost",
+          "customFields"
+        ],
         "additionalProperties": false
       }
     },

@@ -58,10 +58,11 @@ model WorkOrder {
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
 
-  items                   WorkOrderItem[]
-  fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
-  hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
-  customFields            WorkOrderCustomField[]
+  items                    WorkOrderItem[]
+  fixedPriceLabourCharges  WorkOrderFixedPriceLabourCharge[]
+  hourlyLabourCharges      WorkOrderHourlyLabourCharge[]
+  customFields             WorkOrderCustomField[]
+  WorkOrderItemCustomField WorkOrderItemCustomField[]
 
   @@unique([shop, name])
 }
@@ -94,8 +95,9 @@ model WorkOrderItem {
   hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt                DateTime                   @default(now())
+  updatedAt                DateTime                   @default(now())
+  WorkOrderItemCustomField WorkOrderItemCustomField[]
 
   @@id([workOrderId, uuid])
   @@index([shopifyOrderLineItemId])
@@ -384,8 +386,9 @@ model PurchaseOrder {
   customFields        PurchaseOrderCustomField[]
   employeeAssignments PurchaseOrderEmployeeAssignment[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt                        DateTime                           @default(now())
+  updatedAt                        DateTime                           @default(now())
+  PurchaseOrderLineItemCustomField PurchaseOrderLineItemCustomField[]
 
   @@unique([shop, name])
 }
@@ -407,8 +410,9 @@ model PurchaseOrderLineItem {
   /// Quantity that is added Shopify as available inventory
   availableQuantity Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt                        DateTime                           @default(now())
+  updatedAt                        DateTime                           @default(now())
+  PurchaseOrderLineItemCustomField PurchaseOrderLineItemCustomField[]
 
   @@id([purchaseOrderId, uuid])
   @@index([purchaseOrderId])
@@ -460,10 +464,10 @@ model StockTransferLineItem {
   stockTransfer   StockTransfer @relation(fields: [stockTransferId], references: [id])
   stockTransferId Int
 
-  inventoryItemId String
+  inventoryItemId     String
   // Store titles in case the inventory item id is deleted/etc.
   // TODO: Do this everywhere instead of syncing?
-  productTitle String
+  productTitle        String
   productVariantTitle String
 
   // The status of this line item. Line item can be split to have different statuses.
@@ -495,6 +499,25 @@ model PurchaseOrderCustomField {
   @@index([key, value])
 }
 
+model PurchaseOrderLineItemCustomField {
+  id Int @id @default(autoincrement())
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  purchaseOrderLineItem     PurchaseOrderLineItem @relation(fields: [purchaseOrderId, purchaseOrderLineItemUuid], references: [purchaseOrderId, uuid])
+  purchaseOrderLineItemUuid String                @db.Uuid
+
+  key   String
+  value String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@unique([purchaseOrderId, purchaseOrderLineItemUuid, key])
+  @@index([key, value])
+}
+
 model WorkOrderCustomField {
   id Int @id @default(autoincrement())
 
@@ -508,6 +531,25 @@ model WorkOrderCustomField {
   updatedAt DateTime @default(now())
 
   @@unique([workOrderId, key])
+  @@index([key, value])
+}
+
+model WorkOrderItemCustomField {
+  id Int @id @default(autoincrement())
+
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+  workOrderId Int
+
+  workOrderItem     WorkOrderItem @relation(fields: [workOrderId, workOrderItemUuid], references: [workOrderId, uuid])
+  workOrderItemUuid String        @db.Uuid
+
+  key   String
+  value String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@unique([workOrderId, workOrderItemUuid, key])
   @@index([key, value])
 }
 
@@ -533,6 +575,8 @@ model CustomFieldsPreset {
 enum CustomFieldsPresetType {
   WORK_ORDER
   PURCHASE_ORDER
+  // Shared between work order line items (incl services) and purchase order line items for now.
+  LINE_ITEM
 }
 
 model ProductVariant {

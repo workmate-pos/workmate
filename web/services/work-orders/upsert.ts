@@ -53,12 +53,13 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
       discountType: createWorkOrder.discount?.type,
     });
 
-    for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
-      await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
-    }
-
     await upsertItems(session, createWorkOrder, workOrder.id, []);
     await upsertCharges(session, createWorkOrder, workOrder.id, [], []);
+
+    await Promise.all([
+      insertWorkOrderCustomFields(workOrder.id, createWorkOrder.customFields),
+      insertItemCustomFields(workOrder.id, createWorkOrder.items),
+    ]);
 
     await syncWorkOrder(session, workOrder.id);
 
@@ -100,11 +101,6 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
         discountType: createWorkOrder.discount?.type,
       });
 
-      await db.workOrder.removeCustomFields({ workOrderId });
-      for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
-        await db.workOrder.insertCustomField({ workOrderId, key, value });
-      }
-
       const currentItems = await db.workOrder.getItems({ workOrderId });
       const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
       const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
@@ -115,10 +111,48 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       await deleteCharges(createWorkOrder, workOrderId, currentHourlyCharges, currentFixedPriceCharges);
       await deleteItems(createWorkOrder, workOrderId, currentItems);
 
+      await removeCustomFields(workOrderId);
+      await Promise.all([
+        insertWorkOrderCustomFields(workOrderId, createWorkOrder.customFields),
+        insertItemCustomFields(workOrderId, createWorkOrder.items),
+      ]);
+
       await syncWorkOrder(session, workOrderId);
 
       return workOrder;
     }),
+  );
+}
+
+async function removeCustomFields(workOrderId: number) {
+  await db.workOrder.removeCustomFields({ workOrderId });
+  await db.workOrder.removeItemCustomFields({ workOrderId });
+}
+
+async function insertWorkOrderCustomFields(workOrderId: number, customFields: Record<string, string>) {
+  await Promise.all(
+    Object.entries(customFields).map(([key, value]) =>
+      db.workOrder.insertCustomField({
+        workOrderId,
+        key,
+        value,
+      }),
+    ),
+  );
+}
+
+async function insertItemCustomFields(workOrderId: number, items: CreateWorkOrder['items']) {
+  await Promise.all(
+    items.flatMap(item =>
+      Object.entries(item.customFields).map(([key, value]) =>
+        db.workOrder.insertItemCustomField({
+          workOrderId,
+          workOrderItemUuid: item.uuid,
+          key,
+          value,
+        }),
+      ),
+    ),
   );
 }
 

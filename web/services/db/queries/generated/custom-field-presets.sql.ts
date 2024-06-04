@@ -1,7 +1,7 @@
 /** Types generated for queries found in "services/db/queries/custom-field-presets.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
-export type CustomFieldsPresetType = 'PURCHASE_ORDER' | 'WORK_ORDER';
+export type CustomFieldsPresetType = 'LINE_ITEM' | 'PURCHASE_ORDER' | 'WORK_ORDER';
 
 export type stringArray = (string)[];
 

@@ -63,6 +63,7 @@ export type UpsertCustomFieldsPresetResponse = {
 const CUSTOM_FIELDS_PRESET_TYPE = {
   WORK_ORDER: 'WORK_ORDER',
   PURCHASE_ORDER: 'PURCHASE_ORDER',
+  LINE_ITEM: 'LINE_ITEM',
 } as const;
 
 function assertValidPresetType(type: string): asserts type is CustomFieldsPresetType {

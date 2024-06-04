@@ -34,6 +34,7 @@ export type WorkOrderItem = {
   quantity: Int;
   absorbCharges: boolean;
   purchaseOrders: WorkOrderPurchaseOrder[];
+  customFields: Record<string, string>;
 };
 
 export type WorkOrderPurchaseOrder = {

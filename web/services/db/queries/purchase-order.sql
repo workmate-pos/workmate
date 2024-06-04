@@ -112,6 +112,20 @@ GROUP BY key
 ORDER BY COUNT(*)
 LIMIT :limit! OFFSET :offset!;
 
+/* @name insertLineItemCustomField */
+INSERT INTO "PurchaseOrderLineItemCustomField" ("purchaseOrderId", "purchaseOrderLineItemUuid", key, value)
+VALUES (:purchaseOrderId!, :purchaseOrderLineItemUuid!, :key!, :value!);
+
+/* @name removeLineItemCustomFields */
+DELETE
+FROM "PurchaseOrderLineItemCustomField"
+WHERE "purchaseOrderId" = :purchaseOrderId!;
+
+/* @name getLineItemCustomFields */
+SELECT *
+FROM "PurchaseOrderLineItemCustomField"
+WHERE "purchaseOrderId" = :purchaseOrderId!;
+
 /* @name getAssignedEmployees */
 SELECT *
 FROM "PurchaseOrderEmployeeAssignment"

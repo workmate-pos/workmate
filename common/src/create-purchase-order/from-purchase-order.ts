@@ -15,6 +15,7 @@ export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: PurchaseOrde
       productVariantId: lineItem.productVariant.id,
       quantity: lineItem.quantity,
       unitCost: lineItem.unitCost,
+      customFields: lineItem.customFields,
     })),
     name: purchaseOrder.name,
     tax: purchaseOrder.tax,

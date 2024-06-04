@@ -34,6 +34,20 @@ SELECT *
 FROM "WorkOrderCustomField"
 WHERE "workOrderId" = :workOrderId!;
 
+/* @name insertItemCustomField */
+INSERT INTO "WorkOrderItemCustomField" ("workOrderId", "workOrderItemUuid", key, value)
+VALUES (:workOrderId!, :workOrderItemUuid!, :key!, :value!);
+
+/* @name removeItemCustomFields */
+DELETE
+FROM "WorkOrderItemCustomField"
+WHERE "workOrderId" = :workOrderId!;
+
+/* @name getItemCustomFields */
+SELECT *
+FROM "WorkOrderItemCustomField"
+WHERE "workOrderId" = :workOrderId!;
+
 /*
   @name getPage
   @param requiredCustomFieldFilters -> ((key, value, inverse!)...)

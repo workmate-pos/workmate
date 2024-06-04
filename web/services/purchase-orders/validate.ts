@@ -2,7 +2,7 @@ import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-ord
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { assertValidUuid } from '../../util/uuid.js';
 
-export async function validateCreatePurchaseOrder(createPurchaseOrder: CreatePurchaseOrder) {
+export function validateCreatePurchaseOrder(createPurchaseOrder: CreatePurchaseOrder) {
   for (const item of createPurchaseOrder.lineItems) {
     assertValidUuid(item.uuid);
 

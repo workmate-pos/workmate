@@ -19,6 +19,7 @@ import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '../../create-w
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 
 export function ItemChargeConfig({
   itemUuid,
@@ -250,6 +251,17 @@ export function ItemChargeConfig({
               Total Price: {currencyFormatter(totalPrice)}
             </Text>
           </ResponsiveStack>
+        </Stack>
+
+        <Stack direction={'vertical'} spacing={2}>
+          <Text variant={'headingLarge'}>Custom Fields</Text>
+
+          <CustomFieldsList
+            customFields={item.customFields}
+            onSave={customFields => dispatch.updateItemCustomFields({ uuid: itemUuid, customFields })}
+            type={'LINE_ITEM'}
+            useRouter={useRouter}
+          />
         </Stack>
       </Stack>
 

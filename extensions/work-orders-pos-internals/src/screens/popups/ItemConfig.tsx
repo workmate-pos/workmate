@@ -12,6 +12,7 @@ import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-ca
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CreateWorkOrderItem } from '../../types.js';
+import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 
 export function ItemConfig({
   itemUuid,
@@ -110,6 +111,17 @@ export function ItemConfig({
               setHasUnsavedChanges(true);
             }}
             value={item.quantity}
+          />
+        </Stack>
+        <Stack direction="vertical" spacing={2}>
+          <Text variant="body" color="TextSubdued">
+            Custom Fields
+          </Text>
+          <CustomFieldsList
+            customFields={item.customFields}
+            onSave={customFields => setItem({ ...item, customFields })}
+            type={'LINE_ITEM'}
+            useRouter={useRouter}
           />
         </Stack>
         <Stack direction="vertical" flex={1} alignment="flex-end">

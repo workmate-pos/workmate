@@ -71,7 +71,10 @@ async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string, Shopi
 }
 
 async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> {
-  const items = await db.workOrder.getItems({ workOrderId });
+  const [items, allItemCustomFields] = await Promise.all([
+    db.workOrder.getItems({ workOrderId }),
+    db.workOrder.getItemCustomFields({ workOrderId }),
+  ]);
 
   const lineItemIds = unique(
     items
@@ -81,13 +84,15 @@ async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> 
       })
       .filter(isNonNullable),
   );
-  const lineItemById = await getLineItemsById(lineItemIds);
 
-  const purchaseOrderLineItems = lineItemIds.length
-    ? await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemIds({
-        shopifyOrderLineItemIds: lineItemIds,
-      })
-    : [];
+  const [lineItemById, purchaseOrderLineItems] = await Promise.all([
+    getLineItemsById(lineItemIds),
+    lineItemIds.length
+      ? await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemIds({
+          shopifyOrderLineItemIds: lineItemIds,
+        })
+      : [],
+  ]);
 
   const purchaseOrderIds = unique(purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId));
 
@@ -97,6 +102,8 @@ async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> 
   return items.map<WorkOrderItem>(item => {
     assertGidOrNull(item.shopifyOrderLineItemId);
     assertGid(item.productVariantId);
+
+    const itemCustomFields = allItemCustomFields.filter(cf => cf.workOrderItemUuid === item.uuid);
 
     const itemPurchaseOrderLineItems = purchaseOrderLineItems.filter(
       li => li.shopifyOrderLineItemId === item.shopifyOrderLineItemId && item.shopifyOrderLineItemId !== null,
@@ -128,6 +135,7 @@ async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> 
       productVariantId: item.productVariantId,
       quantity: item.quantity as Int,
       absorbCharges: item.absorbCharges,
+      customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
     };
   });
 }

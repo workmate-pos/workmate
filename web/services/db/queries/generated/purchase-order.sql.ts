@@ -381,6 +381,97 @@ const getCommonCustomFieldsForShopIR: any = {"usedParamSet":{"shop":true,"query"
 export const getCommonCustomFieldsForShop = new PreparedQuery<IGetCommonCustomFieldsForShopParams,IGetCommonCustomFieldsForShopResult>(getCommonCustomFieldsForShopIR);
 
 
+/** 'InsertLineItemCustomField' parameters type */
+export interface IInsertLineItemCustomFieldParams {
+  key: string;
+  purchaseOrderId: number;
+  purchaseOrderLineItemUuid: string;
+  value: string;
+}
+
+/** 'InsertLineItemCustomField' return type */
+export type IInsertLineItemCustomFieldResult = void;
+
+/** 'InsertLineItemCustomField' query type */
+export interface IInsertLineItemCustomFieldQuery {
+  params: IInsertLineItemCustomFieldParams;
+  result: IInsertLineItemCustomFieldResult;
+}
+
+const insertLineItemCustomFieldIR: any = {"usedParamSet":{"purchaseOrderId":true,"purchaseOrderLineItemUuid":true,"key":true,"value":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":116,"b":132}]},{"name":"purchaseOrderLineItemUuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":135,"b":161}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":164,"b":168}]},{"name":"value","required":true,"transform":{"type":"scalar"},"locs":[{"a":171,"b":177}]}],"statement":"INSERT INTO \"PurchaseOrderLineItemCustomField\" (\"purchaseOrderId\", \"purchaseOrderLineItemUuid\", key, value)\nVALUES (:purchaseOrderId!, :purchaseOrderLineItemUuid!, :key!, :value!)"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "PurchaseOrderLineItemCustomField" ("purchaseOrderId", "purchaseOrderLineItemUuid", key, value)
+ * VALUES (:purchaseOrderId!, :purchaseOrderLineItemUuid!, :key!, :value!)
+ * ```
+ */
+export const insertLineItemCustomField = new PreparedQuery<IInsertLineItemCustomFieldParams,IInsertLineItemCustomFieldResult>(insertLineItemCustomFieldIR);
+
+
+/** 'RemoveLineItemCustomFields' parameters type */
+export interface IRemoveLineItemCustomFieldsParams {
+  purchaseOrderId: number;
+}
+
+/** 'RemoveLineItemCustomFields' return type */
+export type IRemoveLineItemCustomFieldsResult = void;
+
+/** 'RemoveLineItemCustomFields' query type */
+export interface IRemoveLineItemCustomFieldsQuery {
+  params: IRemoveLineItemCustomFieldsParams;
+  result: IRemoveLineItemCustomFieldsResult;
+}
+
+const removeLineItemCustomFieldsIR: any = {"usedParamSet":{"purchaseOrderId":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":73,"b":89}]}],"statement":"DELETE\nFROM \"PurchaseOrderLineItemCustomField\"\nWHERE \"purchaseOrderId\" = :purchaseOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * DELETE
+ * FROM "PurchaseOrderLineItemCustomField"
+ * WHERE "purchaseOrderId" = :purchaseOrderId!
+ * ```
+ */
+export const removeLineItemCustomFields = new PreparedQuery<IRemoveLineItemCustomFieldsParams,IRemoveLineItemCustomFieldsResult>(removeLineItemCustomFieldsIR);
+
+
+/** 'GetLineItemCustomFields' parameters type */
+export interface IGetLineItemCustomFieldsParams {
+  purchaseOrderId: number;
+}
+
+/** 'GetLineItemCustomFields' return type */
+export interface IGetLineItemCustomFieldsResult {
+  createdAt: Date;
+  id: number;
+  key: string;
+  purchaseOrderId: number;
+  purchaseOrderLineItemUuid: string;
+  updatedAt: Date;
+  value: string;
+}
+
+/** 'GetLineItemCustomFields' query type */
+export interface IGetLineItemCustomFieldsQuery {
+  params: IGetLineItemCustomFieldsParams;
+  result: IGetLineItemCustomFieldsResult;
+}
+
+const getLineItemCustomFieldsIR: any = {"usedParamSet":{"purchaseOrderId":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":75,"b":91}]}],"statement":"SELECT *\nFROM \"PurchaseOrderLineItemCustomField\"\nWHERE \"purchaseOrderId\" = :purchaseOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "PurchaseOrderLineItemCustomField"
+ * WHERE "purchaseOrderId" = :purchaseOrderId!
+ * ```
+ */
+export const getLineItemCustomFields = new PreparedQuery<IGetLineItemCustomFieldsParams,IGetLineItemCustomFieldsResult>(getLineItemCustomFieldsIR);
+
+
 /** 'GetAssignedEmployees' parameters type */
 export interface IGetAssignedEmployeesParams {
   purchaseOrderId: number;

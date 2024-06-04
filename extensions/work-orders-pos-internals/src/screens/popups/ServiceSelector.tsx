@@ -23,6 +23,8 @@ import {
 } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 type OnSelect = (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 
@@ -51,6 +53,11 @@ export function ServiceSelector({
       ].join(' AND '),
     },
   });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const screen = useScreen();
+  screen.setIsLoading(customFieldsPresetsQuery.isLoading);
+
   const currencyFormatter = useCurrencyFormatter();
 
   const [page, setPage] = useState(1);
@@ -130,6 +137,15 @@ function useProductVariantRows(
   onSelect: OnSelect,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
+  const fetch = useAuthenticatedFetch();
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
+  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
+  const defaultCustomFields = defaultCustomFieldKeys
+    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
+    : undefined;
+
   const router = useRouter();
 
   return productVariants
@@ -158,6 +174,10 @@ function useProductVariantRows(
       return {
         id: variant.id,
         onPress: async () => {
+          if (!defaultCustomFields) {
+            return;
+          }
+
           const itemUuid = uuid();
 
           await router.popCurrent();
@@ -168,6 +188,7 @@ function useProductVariantRows(
               productVariantId: variant.id,
               quantity: 1 as Int,
               absorbCharges: type === QUANTITY_ADJUSTING_SERVICE,
+              customFields: defaultCustomFields,
             },
             charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
               ...charge,

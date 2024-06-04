@@ -18,6 +18,7 @@ import {
   DraftOrderLineItem,
   useDraftOrderLineItemsQuery,
 } from '@work-orders/common/queries/use-draft-order-line-items-query.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 /**
  * Similar to ProductSelector, but shows line items of a specific order to be able to link to them.
@@ -26,6 +27,14 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
   const fetch = useAuthenticatedFetch();
 
   const isDraftOrder = parseGid(orderId).objectName === 'DraftOrder';
+
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
+  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
+  const defaultCustomFields = defaultCustomFieldKeys
+    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
+    : undefined;
 
   const orderQuery = useOrderQuery({ fetch, id: orderId }, { enabled: !isDraftOrder });
   const draftOrderQuery = useDraftOrderQuery({ fetch, id: orderId }, { enabled: isDraftOrder });
@@ -46,7 +55,7 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(orderQuery.isLoading || orderLineItemsQuery.isLoading);
+  screen.setIsLoading(orderQuery.isLoading || orderLineItemsQuery.isLoading || customFieldsPresetsQuery.isLoading);
 
   if (currentOrderQuery.isError || (!currentOrderQuery.isLoading && !currentOrder)) {
     return (
@@ -89,6 +98,10 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
         type={'primary'}
         isDisabled={selectedLineItemIds.length === 0}
         onPress={async () => {
+          if (!defaultCustomFields) {
+            return;
+          }
+
           await router.popCurrent();
           onSave(
             currentLineItems
@@ -104,6 +117,7 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
                     orderId: currentOrder.id,
                     id: li.id,
                   },
+                  customFields: defaultCustomFields,
                 };
               }),
           );
