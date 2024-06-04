@@ -6,6 +6,7 @@ import * as types from './queries/generated/types.sql.js';
 import * as sequence from './queries/generated/sequence.sql.js';
 import * as appPlan from './queries/generated/app-plan.sql.js';
 import * as purchaseOrder from './queries/generated/purchase-order.sql.js';
+import * as stockTransfers from './queries/generated/stock-transfers.sql.js';
 import * as settings from './queries/generated/settings.sql.js';
 import * as locations from './queries/generated/locations.sql.js';
 import * as customers from './queries/generated/customers.sql.js';
@@ -31,6 +32,7 @@ export const db = {
   sequence: wrapPreparedQueries(sequence),
   appPlan: wrapPreparedQueries(appPlan),
   purchaseOrder: wrapPreparedQueries(purchaseOrder),
+  stockTransfers: wrapPreparedQueries(stockTransfers),
   settings: wrapPreparedQueries(settings),
   locations: wrapPreparedQueries(locations),
   customers: wrapPreparedQueries(customers),

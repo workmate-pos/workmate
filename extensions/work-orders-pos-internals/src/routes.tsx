@@ -11,7 +11,7 @@ import { ServiceSelector } from './screens/popups/ServiceSelector.js';
 import { ItemConfig } from './screens/popups/ItemConfig.js';
 import { EmployeeLabourConfig } from './screens/popups/EmployeeLabourConfig.js';
 import { ItemChargeConfig } from './screens/popups/ItemChargeConfig.js';
-import { WorkOrder, WorkOrderProps } from './screens/WorkOrder.js';
+import { WorkOrder } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { PaymentOverview } from './screens/popups/PaymentOverview.js';
 import {
@@ -46,8 +46,8 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   WorkOrder: {
-    title: 'Work order',
-    Component: (props: WorkOrderProps) => <WorkOrder {...props} />,
+    title: 'Work Order',
+    Component: WorkOrder,
   },
   NewWorkOrder: {
     title: 'New Work Order',

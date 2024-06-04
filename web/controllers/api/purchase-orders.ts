@@ -47,7 +47,7 @@ export default class PurchaseOrdersController {
     const purchaseOrder = await getPurchaseOrder(session, name);
 
     if (!purchaseOrder) {
-      throw new HttpError('Purchase order not found', 404);
+      throw new HttpError(`Purchase order ${name} not found`, 404);
     }
 
     return res.json({ purchaseOrder });

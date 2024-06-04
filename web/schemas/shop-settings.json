@@ -9,6 +9,7 @@
     "purchaseOrderIdFormat",
     "purchaseOrderStatuses",
     "defaultPurchaseOrderStatus",
+    "stockTransferIdFormat",
     "discountShortcuts",
     "discountRules",
     "depositShortcuts",

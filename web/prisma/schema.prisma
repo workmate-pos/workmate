@@ -271,6 +271,8 @@ enum PermissionNode {
   read_purchase_orders
   write_purchase_orders
   cycle_count
+  read_stock_transfers
+  write_stock_transfers
 }
 
 model AppPlanSubscription {
@@ -424,6 +426,57 @@ model PurchaseOrderEmployeeAssignment {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now())
+}
+
+model StockTransfer {
+  id Int @id @default(autoincrement())
+
+  shop String
+  name String
+
+  fromLocationId String
+  toLocationId   String
+
+  note String
+
+  lineItems StockTransferLineItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@unique([shop, name])
+}
+
+enum StockTransferLineItemStatus {
+  PENDING
+  IN_TRANSIT
+  RECEIVED
+  REJECTED
+}
+
+model StockTransferLineItem {
+  uuid String @db.Uuid
+
+  stockTransfer   StockTransfer @relation(fields: [stockTransferId], references: [id])
+  stockTransferId Int
+
+  inventoryItemId String
+  // Store titles in case the inventory item id is deleted/etc.
+  // TODO: Do this everywhere instead of syncing?
+  productTitle String
+  productVariantTitle String
+
+  // The status of this line item. Line item can be split to have different statuses.
+  status StockTransferLineItemStatus
+
+  // The quantity pending/sent/received/rejected depending on the status.
+  // Line item is split if there are multiple statuses.
+  quantity Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  @@id([stockTransferId, uuid])
 }
 
 model PurchaseOrderCustomField {
@@ -605,7 +658,6 @@ model OldHourlyLabour {
 
   @@index([workOrderId])
 }
-
 
 model AppMigration {
   name      String             @id

@@ -32,6 +32,7 @@ cd common-pos && ln -s ../../.npmrc .
 cd ../work-orders-pos && ln -s ../../.npmrc .
 cd ../purchase-orders-pos && ln -s ../../.npmrc .
 cd ../cycle-count-pos && ln -s ../../.npmrc .
+cd ../stock-transfer-pos && ln -s ../../.npmrc .
 ```
 
 Do the same for the .env file:

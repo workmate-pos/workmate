@@ -20,6 +20,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { WorkOrderRequestSettings } from '@web/frontend/components/settings/sections/WorkOrderRequestSettings.js';
 import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
+import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
 
 export default function () {
   return (
@@ -134,7 +135,11 @@ function Settings() {
       ),
     },
     {
-      name: 'Print',
+      name: 'Stock Transfers',
+      tab: <StockTransferSettings settings={settings} setSettings={setSettings} />,
+    },
+    {
+      name: 'Printing',
       tab: (
         <>
           <PrintSettings settings={settings} setSettings={setSettings} />

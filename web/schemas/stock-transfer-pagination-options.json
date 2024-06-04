@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "status": {
+      "enum": ["PENDING", "IN_TRANSIT", "RECEIVED", "REJECTED"]
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25
+    },
+    "query": {
+      "type": "string"
+    },
+    "fromLocationId": {
+      "type": "integer"
+    },
+    "toLocationId": {
+      "type": "integer"
+    }
+  },
+  "required": ["limit", "offset"],
+  "additionalProperties": false
+}

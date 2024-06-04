@@ -274,10 +274,13 @@ function WorkOrderItems({
 
   const rows = useItemRows(createWorkOrder, dispatch, query);
 
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
-    fetch,
-    ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
-  });
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+    },
+    { enabled: router.isCurrent },
+  );
 
   const [openChargeConfigPopupItemUuid, setOpenChargeConfigPopup] = useState<string | null>(null);
 
@@ -347,7 +350,7 @@ function WorkOrderItems({
       )}
 
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
-      {rows.length ? (
+      {rows.length > 0 ? (
         <List data={rows} imageDisplayStrategy={'always'}></List>
       ) : (
         <ResponsiveStack direction="horizontal" alignment="center" paddingVertical={'Large'}>
@@ -468,14 +471,18 @@ function WorkOrderMoneySummary({
   dispatch: CreateWorkOrderDispatchProxy;
 }) {
   const fetch = useAuthenticatedFetch();
+  const router = useRouter();
   const currencyFormatter = useCurrencyFormatter();
   const formatter = (value: Money | null) => (value !== null ? currencyFormatter(value) : '-');
 
   // this calculation automatically accounts for paid-for items
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
-    fetch,
-    ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
-  });
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+    },
+    { enabled: router.isCurrent },
+  );
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
   let appliedDiscount = BigDecimal.ZERO;
@@ -485,8 +492,6 @@ function WorkOrderMoneySummary({
       BigDecimal.fromMoney(calculatedDraftOrder.lineItemDiscount.applied),
     );
   }
-
-  const router = useRouter();
 
   return (
     <ResponsiveGrid columns={1}>
@@ -574,6 +579,7 @@ function WorkOrderMoneySummary({
 
 function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOrderDispatchProxy, query: string) {
   const fetch = useAuthenticatedFetch();
+  const router = useRouter();
   const currencyFormatter = useCurrencyFormatter();
 
   const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
@@ -582,10 +588,9 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
       fetch,
       ...pick(createWorkOrder, 'name', 'items', 'customerId', 'charges', 'discount'),
     },
-    { keepPreviousData: true },
+    { keepPreviousData: true, enabled: router.isCurrent },
   );
 
-  const router = useRouter();
   const screen = useScreen();
 
   screen.setIsLoading(workOrderQuery.isLoading || calculatedWorkOrderQuery.isLoading);

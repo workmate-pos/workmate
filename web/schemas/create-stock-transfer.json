@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+    },
+    "fromLocationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "toLocationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "note": {
+      "type": "string"
+    },
+    "lineItems": {
+      "type": "array",
+      "items": {
+        "title": "stock-transfer-line-item",
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "type": "string"
+          },
+          "inventoryItemId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "productTitle": {
+            "type": "string"
+          },
+          "productVariantTitle": {
+            "type": "string"
+          },
+          "quantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          },
+          "status": {
+            "title": "create-stock-transfer-line-item-status",
+            "enum": ["PENDING", "IN_TRANSIT", "RECEIVED", "REJECTED"]
+          }
+        },
+        "required": ["uuid", "inventoryItemId", "productTitle", "productVariantTitle", "quantity", "status"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["name", "fromLocationId", "toLocationId", "note", "lineItems"],
+  "additionalProperties": false
+}

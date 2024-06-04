@@ -258,7 +258,7 @@ async function adjustShopifyInventory(
   try {
     // TODO: Perhaps enable inventory tracking first? Then show all vendor items in the product list rather than only tracked ones
     const { inventoryAdjustQuantities } = await gql.inventory.adjust.run(graphql, {
-      input: { name: 'available', reason: 'correction', changes },
+      input: { name: 'available', reason: 'other', changes },
     });
 
     if (!inventoryAdjustQuantities) {
