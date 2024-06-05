@@ -15,7 +15,7 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 
-export function GeneralCard({
+export function PurchaseOrderGeneralCard({
   createPurchaseOrder,
   dispatch,
   selectedLocation,

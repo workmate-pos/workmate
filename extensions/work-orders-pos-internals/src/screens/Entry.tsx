@@ -13,7 +13,6 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { useRouter } from '../routes.js';
 import { useWorkOrderQueries } from '@work-orders/common/queries/use-work-order-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
@@ -27,6 +26,7 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { DAY_IN_MS, MINUTE_IN_MS, SECOND_IN_MS } from '@work-orders/common/time/constants.js';
+import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 
 export function Entry() {
   const [status, setStatus] = useState<string | null>(null);

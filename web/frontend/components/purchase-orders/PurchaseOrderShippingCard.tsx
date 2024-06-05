@@ -3,7 +3,7 @@ import { CreatePurchaseOrderDispatchProxy } from '@work-orders/common/create-pur
 import { BlockStack, Card, Text, TextField } from '@shopify/polaris';
 import { Location } from '@web/frontend/pages/purchase-orders/[name].js';
 
-export function ShippingCard({
+export function PurchaseOrderShippingCard({
   createPurchaseOrder,
   dispatch,
   disabled,

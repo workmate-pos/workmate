@@ -30,9 +30,10 @@ const useLocationBatcher = (fetch: Fetch) =>
     },
   });
 
-export const useLocationQuery = ({ fetch, id }: { fetch: Fetch; id: ID | null }) => {
+export const useLocationQuery = ({ fetch, id }: { fetch: Fetch; id: ID | null }, options?: { enabled?: boolean }) => {
   const batcher = useLocationBatcher(fetch);
   return useQuery({
+    ...options,
     queryKey: ['location', id] as const,
     queryFn: () => {
       if (id === null) {

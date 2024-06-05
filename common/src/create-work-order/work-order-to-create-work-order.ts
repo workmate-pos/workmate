@@ -1,6 +1,5 @@
 import type { WorkOrder } from '@web/services/work-orders/types.js';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
-import type { CreateWorkOrderCharge, CreateWorkOrderItem } from '../types.js';
 
 export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrder {
   return {
@@ -18,7 +17,7 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
   };
 }
 
-function mapItem(item: WorkOrder['items'][number]): CreateWorkOrderItem {
+function mapItem(item: WorkOrder['items'][number]): CreateWorkOrder['items'][number] {
   return {
     productVariantId: item.productVariantId,
     quantity: item.quantity,
@@ -28,7 +27,7 @@ function mapItem(item: WorkOrder['items'][number]): CreateWorkOrderItem {
   };
 }
 
-function mapCharge(charge: WorkOrder['charges'][number]): CreateWorkOrderCharge {
+function mapCharge(charge: WorkOrder['charges'][number]): CreateWorkOrder['charges'][number] {
   if (charge.type === 'hourly-labour') {
     return {
       type: 'hourly-labour',

@@ -10,7 +10,6 @@ import {
 } from '@work-orders/work-order-shopify-order';
 import { WorkOrderCharge } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
@@ -18,7 +17,7 @@ export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
  * Creates work order payments.
  */
 export const usePaymentHandler = () => {
-  const { cart, navigation, toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { cart, navigation } = useExtensionApi<'pos.home.modal.render'>();
   const [isLoading, setIsLoading] = useState(false);
 
   const cartRef = useCartRef();

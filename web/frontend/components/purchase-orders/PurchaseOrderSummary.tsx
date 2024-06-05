@@ -4,7 +4,7 @@ import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { CreatePurchaseOrderDispatchProxy } from '@work-orders/common/create-purchase-order/reducer.js';
 
-export function Summary({
+export function PurchaseOrderSummary({
   createPurchaseOrder,
   dispatch,
   hasUnsavedChanges,

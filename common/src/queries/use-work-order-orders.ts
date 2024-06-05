@@ -1,12 +1,11 @@
-import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
-import { CreateWorkOrderCharge } from '../types.js';
-import { DiscriminatedUnionPick } from '@work-orders/common/types/DiscriminatedUnionPick.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { WorkOrderOrder } from '@web/services/work-orders/types.js';
+import { Fetch } from './fetch.js';
+import { useWorkOrderQuery } from './use-work-order-query.js';
+import { DiscriminatedUnionPick } from '../types/DiscriminatedUnionPick.js';
+import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 
-export function useWorkOrderOrders(workOrderName: string | null) {
-  const fetch = useAuthenticatedFetch();
+export function useWorkOrderOrders({ fetch, workOrderName }: { fetch: Fetch; workOrderName: string | null }) {
   const workOrderQuery = useWorkOrderQuery({ fetch, name: workOrderName });
   const workOrder = workOrderQuery.data?.workOrder;
 
@@ -40,7 +39,7 @@ export function useWorkOrderOrders(workOrderName: string | null) {
   }
 
   function getChargeOrder(
-    charge?: DiscriminatedUnionPick<CreateWorkOrderCharge, 'type' | 'uuid'> | null,
+    charge?: DiscriminatedUnionPick<CreateWorkOrder['charges'][number], 'type' | 'uuid'> | null,
   ): WorkOrderOrder | null {
     if (!charge) return null;
 

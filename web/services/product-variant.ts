@@ -17,10 +17,9 @@ export function parseProductVariantMetafields<const T extends gql.products.Produ
   };
 }
 
-export async function addProductVariantComponents<const T extends gql.products.ProductVariantFragment.Result>(
-  graphql: Graphql,
-  productVariant: T,
-) {
+export async function addProductVariantComponents<
+  const T extends Pick<gql.products.ProductVariantFragment.Result, 'id' | 'requiresComponents'>,
+>(graphql: Graphql, productVariant: T) {
   if (!productVariant.requiresComponents) {
     return { ...productVariant, productVariantComponents: [] };
   }
@@ -39,7 +38,13 @@ export async function addProductVariantComponents<const T extends gql.products.P
       },
   );
 
-  return { ...productVariant, productVariantComponents };
+  return {
+    ...productVariant,
+    productVariantComponents: productVariantComponents.map(({ quantity, productVariant }) => ({
+      quantity,
+      productVariant: parseProductVariantMetafields(productVariant),
+    })),
+  };
 }
 
 export type ProductVariantFragmentWithMetafields = ReturnType<typeof parseProductVariantMetafields>;

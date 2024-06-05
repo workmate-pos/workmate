@@ -1,7 +1,15 @@
 import { TextField, TextFieldProps } from '@shopify/polaris';
 import { useEffect, useState } from 'react';
 
-export function MoneyField({ id, onChange, value, min, max, prefix, ...props }: Omit<TextFieldProps, 'type'>) {
+export function DecimalField({
+  id,
+  onChange,
+  value,
+  min,
+  max,
+  decimals = 5,
+  ...props
+}: Omit<TextFieldProps, 'type'> & { decimals?: number }) {
   const [internalValue, setInternalValue] = useState(value ?? '');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -11,9 +19,9 @@ export function MoneyField({ id, onChange, value, min, max, prefix, ...props }: 
     }
   }, [value]);
 
-  const displayValue = isFocused ? internalValue : formatMoney(internalValue);
+  const displayValue = isFocused ? internalValue : formatDecimal(internalValue);
 
-  function formatMoney(value: string) {
+  function formatDecimal(value: string) {
     if (value === '') return '';
 
     const num = Number(value);
@@ -22,7 +30,7 @@ export function MoneyField({ id, onChange, value, min, max, prefix, ...props }: 
       return value;
     }
 
-    return num.toFixed(2);
+    return num.toFixed(decimals);
   }
 
   return (
@@ -31,7 +39,6 @@ export function MoneyField({ id, onChange, value, min, max, prefix, ...props }: 
       id={id}
       type={'number'}
       min={min}
-      prefix={prefix ?? '$'}
       max={max}
       onChange={value => setInternalValue(value)}
       value={displayValue}

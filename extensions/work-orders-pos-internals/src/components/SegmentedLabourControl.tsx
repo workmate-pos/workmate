@@ -1,6 +1,5 @@
 import { SegmentedControl, Text, TextField, Stack, Selectable } from '@shopify/retail-ui-extensions-react';
 import { Segment } from '@shopify/retail-ui-extensions/src/components/SegmentedControl/SegmentedControl.js';
-import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
@@ -10,6 +9,7 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { CreateWorkOrderCharge } from '../types.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { FormDecimalField } from '@teifi-digital/pos-tools/form/components/FormDecimalField.js';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 
 type SegmentId = CreateWorkOrderCharge['type'] | 'none';
 

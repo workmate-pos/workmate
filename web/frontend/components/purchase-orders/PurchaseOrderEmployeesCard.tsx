@@ -5,7 +5,7 @@ import { useAuthenticatedFetch } from '../../hooks/use-authenticated-fetch.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { BlockStack, Button, Card, InlineStack, ResourceList, SkeletonBodyText, Text } from '@shopify/polaris';
 
-export function EmployeesCard({
+export function PurchaseOrderEmployeesCard({
   createPurchaseOrder,
   dispatch,
   disabled,

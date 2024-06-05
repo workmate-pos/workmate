@@ -9,16 +9,10 @@ import {
   Text,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { useEffect, useState } from 'react';
-import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
-import {
-  CreateWorkOrderDispatchProxy,
-  WIPCreateWorkOrder,
-  useCreateWorkOrderReducer,
-} from '../create-work-order/reducer.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -48,13 +42,26 @@ import {
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
+import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
+import {
+  CreateWorkOrderDispatchProxy,
+  useCreateWorkOrderReducer,
+  WIPCreateWorkOrder,
+} from '@work-orders/common/create-work-order/reducer.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
 };
 
 export function WorkOrder({ initial }: WorkOrderProps) {
-  const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
+  const fetch = useAuthenticatedFetch();
+  const workOrderQuery = useWorkOrderQuery({ fetch, name: initial.name });
+
+  const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(
+    initial,
+    workOrderQuery.data?.workOrder,
+    { useRef, useState, useReducer },
+  );
 
   const router = useRouter();
   const screen = useScreen();
@@ -63,7 +70,6 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   screen.setTitle(createWorkOrder.name ?? 'New Work Order');
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  const fetch = useAuthenticatedFetch();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation(
@@ -171,7 +177,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
               if (createWorkOrder.name) {
                 router.push('PrintOverview', {
                   name: createWorkOrder.name,
-                  dueDate: new Date(createWorkOrder.dueDate),
+                  dueDateUtc: new Date(createWorkOrder.dueDate),
                 });
               }
             }}

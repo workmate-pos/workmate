@@ -4,9 +4,8 @@ import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
-import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
+import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -15,7 +14,6 @@ import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
-import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
 import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
@@ -25,6 +23,8 @@ import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
+import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 
 type OnSelect = (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 

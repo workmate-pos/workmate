@@ -17,24 +17,24 @@ import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.j
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { defaultCreatePurchaseOrder } from '@work-orders/common/create-purchase-order/default.js';
 import { emptyState } from '@web/frontend/assets/index.js';
-import { PrintModal } from '@web/frontend/components/purchase-orders/modals/PrintModal.js';
-import { LocationSelectorModal } from '@web/frontend/components/purchase-orders/modals/LocationSelectorModal.js';
-import { VendorSelectorModal } from '@web/frontend/components/purchase-orders/modals/VendorSelectorModal.js';
-import { AddEmployeeModal } from '@web/frontend/components/purchase-orders/modals/AddEmployeeModal.js';
-import { ImportCustomFieldPresetModal } from '@web/frontend/components/purchase-orders/modals/ImportCustomFieldPresetModal.js';
-import { SaveCustomFieldPresetModal } from '@web/frontend/components/purchase-orders/modals/SaveCustomFieldPresetModal.js';
-import { NewCustomFieldModal } from '@web/frontend/components/purchase-orders/modals/NewCustomFieldModal.js';
-import { GeneralCard } from '@web/frontend/components/purchase-orders/GeneralCard.js';
-import { ShippingCard } from '@web/frontend/components/purchase-orders/ShippingCard.js';
-import { EmployeesCard } from '@web/frontend/components/purchase-orders/EmployeesCard.js';
-import { CustomFieldsCard } from '@web/frontend/components/purchase-orders/CustomFieldsCard.js';
-import { ProductsCard } from '@web/frontend/components/purchase-orders/ProductsCard.js';
-import { Summary } from '@web/frontend/components/purchase-orders/Summary.js';
-import { AddProductModal } from '@web/frontend/components/purchase-orders/modals/AddProductModal.js';
+import { PurchaseOrderPrintModal } from '@web/frontend/components/purchase-orders/modals/PurchaseOrderPrintModal.js';
+import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
+import { VendorSelectorModal } from '@web/frontend/components/shared-orders/modals/VendorSelectorModal.js';
+import { AddEmployeeModal } from '@web/frontend/components/shared-orders/modals/AddEmployeeModal.js';
+import { ImportCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/ImportCustomFieldPresetModal.js';
+import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
+import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
+import { PurchaseOrderGeneralCard } from '@web/frontend/components/purchase-orders/PurchaseOrderGeneralCard.js';
+import { PurchaseOrderShippingCard } from '@web/frontend/components/purchase-orders/PurchaseOrderShippingCard.js';
+import { PurchaseOrderEmployeesCard } from '@web/frontend/components/purchase-orders/PurchaseOrderEmployeesCard.js';
+import { PurchaseOrderProductsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderProductsCard.js';
+import { PurchaseOrderSummary } from '@web/frontend/components/purchase-orders/PurchaseOrderSummary.js';
+import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { AddOrderProductModal } from '@web/frontend/components/purchase-orders/modals/AddOrderProductModal.js';
 import { Int } from '@web/schemas/generated/create-product.js';
-import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import type { PurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
 
 export default function () {
   return (
@@ -106,9 +106,10 @@ function PurchaseOrderLoader() {
 
     const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
     const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
+    const defaultCustomFields = Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']));
 
     createPurchaseOrder.customFields = {
-      ...Object.fromEntries(defaultCustomFieldKeys.map(key => [key, ''])),
+      ...defaultCustomFields,
       ...createPurchaseOrder.customFields,
     };
   }
@@ -128,7 +129,7 @@ function PurchaseOrder({
   purchaseOrder,
 }: {
   initialCreatePurchaseOrder: CreatePurchaseOrder;
-  purchaseOrder: PurchaseOrder | null;
+  purchaseOrder: PurchaseOrderType | null;
 }) {
   const app = useAppBridge();
 
@@ -231,7 +232,7 @@ function PurchaseOrder({
         </InlineStack>
 
         <InlineGrid gap={'400'} columns={2}>
-          <GeneralCard
+          <PurchaseOrderGeneralCard
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isLoading}
@@ -241,21 +242,21 @@ function PurchaseOrder({
             onLocationSelectorClick={() => setIsLocationSelectorModalOpen(true)}
           />
 
-          <ShippingCard
+          <PurchaseOrderShippingCard
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isLoading}
             selectedLocation={selectedLocation}
           />
 
-          <EmployeesCard
+          <PurchaseOrderEmployeesCard
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isLoading}
             onAssignEmployeesClick={() => setIsAddEmployeeModalOpen(true)}
           />
 
-          <CustomFieldsCard
+          <PurchaseOrderCustomFieldsCard
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isLoading}
@@ -264,7 +265,7 @@ function PurchaseOrder({
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
           />
 
-          <ProductsCard
+          <PurchaseOrderProductsCard
             createPurchaseOrder={createPurchaseOrder}
             purchaseOrder={purchaseOrder}
             dispatch={dispatch}
@@ -309,7 +310,7 @@ function PurchaseOrder({
             }}
           />
 
-          <Summary
+          <PurchaseOrderSummary
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             hasUnsavedChanges={hasUnsavedChanges}
@@ -340,6 +341,7 @@ function PurchaseOrder({
 
       {isSaveCustomFieldPresetModalOpen && (
         <SaveCustomFieldPresetModal
+          type={'PURCHASE_ORDER'}
           fieldNames={Object.keys(createPurchaseOrder.customFields)}
           open={isSaveCustomFieldPresetModalOpen}
           onClose={() => setIsSaveCustomFieldPresetModalOpen(false)}
@@ -349,6 +351,7 @@ function PurchaseOrder({
 
       {isImportCustomFieldPresetModalOpen && (
         <ImportCustomFieldPresetModal
+          type={'PURCHASE_ORDER'}
           open={isImportCustomFieldPresetModalOpen}
           onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
           onOverride={fieldNames => {
@@ -403,7 +406,7 @@ function PurchaseOrder({
       )}
 
       {isPrintModalOpen && (
-        <PrintModal
+        <PurchaseOrderPrintModal
           open={isPrintModalOpen}
           onClose={() => setIsPrintModalOpen(false)}
           setToastAction={setToastAction}
@@ -413,6 +416,8 @@ function PurchaseOrder({
 
       {isAddProductModalOpen && createPurchaseOrder.locationId && createPurchaseOrder.vendorName && (
         <AddProductModal
+          outputType="PURCHASE_ORDER"
+          productType="PRODUCT"
           open={isAddProductModalOpen}
           locationId={createPurchaseOrder.locationId}
           setToastAction={setToastAction}

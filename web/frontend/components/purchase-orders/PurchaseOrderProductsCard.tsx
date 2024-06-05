@@ -23,13 +23,13 @@ import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-tool
 import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
 import { useState } from 'react';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { LineItemModal } from '@web/frontend/components/purchase-orders/modals/LineItemModal.js';
+import { PurchaseOrderLineItemModal } from '@web/frontend/components/purchase-orders/modals/PurchaseOrderLineItemModal.js';
 import { Tone } from '@shopify/polaris/build/ts/src/components/Badge/index.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 
-export function ProductsCard({
+export function PurchaseOrderProductsCard({
   createPurchaseOrder,
   purchaseOrder,
   dispatch,
@@ -214,7 +214,7 @@ function ProductsList({
       />
 
       {modalLineItem && (
-        <LineItemModal
+        <PurchaseOrderLineItemModal
           initialProduct={modalLineItem}
           purchaseOrder={purchaseOrder}
           locationId={createPurchaseOrder.locationId}

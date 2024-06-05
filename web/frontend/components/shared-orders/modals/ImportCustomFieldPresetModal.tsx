@@ -3,6 +3,7 @@ import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fet
 import { useState } from 'react';
 import { Filters, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
 
 export function ImportCustomFieldPresetModal({
   open,
@@ -10,15 +11,17 @@ export function ImportCustomFieldPresetModal({
   onMerge,
   onClose,
   setToastAction,
+  type,
 }: {
   open: boolean;
   onClose: () => void;
   onOverride: (fieldNames: string[]) => void;
   onMerge: (fieldNames: string[]) => void;
   setToastAction: ToastActionCallable;
+  type: CustomFieldsPresetType;
 }) {
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
+  const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type });
 
   const [query, setQuery] = useState('');
 

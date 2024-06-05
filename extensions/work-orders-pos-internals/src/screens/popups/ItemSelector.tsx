@@ -1,5 +1,4 @@
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
@@ -12,6 +11,7 @@ import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
+import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 
 export type ItemFilter = 'can-add-labour';
 type Item = WIPCreateWorkOrder['items'][number];

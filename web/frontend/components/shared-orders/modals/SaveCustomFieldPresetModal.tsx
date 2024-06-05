@@ -4,21 +4,25 @@ import { useState } from 'react';
 import { BlockStack, Checkbox, InlineError, InlineGrid, Label, Modal, TextField } from '@shopify/polaris';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useCustomFieldsPresetsMutation } from '@work-orders/common/queries/use-custom-fields-presets-mutation.js';
+import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function SaveCustomFieldPresetModal({
   fieldNames,
   open,
   onClose,
   setToastAction,
+  type,
 }: {
   fieldNames: string[];
   open: boolean;
   onClose: () => void;
   setToastAction: ToastActionCallable;
+  type: CustomFieldsPresetType;
 }) {
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
-  const presetMutation = useCustomFieldsPresetsMutation({ fetch, type: 'PURCHASE_ORDER' });
+  const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type });
+  const presetMutation = useCustomFieldsPresetsMutation({ fetch, type });
 
   const [name, setName] = useState('');
   const [selectedFieldNames, setSelectedFieldNames] = useState(fieldNames);
@@ -87,7 +91,7 @@ export function SaveCustomFieldPresetModal({
           </BlockStack>
           <Checkbox
             label={'Default'}
-            helpText={'Default presets are automatically applied to new purchase orders'}
+            helpText={`Default presets are automatically applied to new ${titleCase(type).toLowerCase()}s`}
             checked={isDefault}
             onChange={setIsDefault}
           />

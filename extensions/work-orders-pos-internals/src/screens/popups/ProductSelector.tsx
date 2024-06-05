@@ -3,7 +3,7 @@ import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/que
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
-import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
+import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
@@ -11,7 +11,6 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
@@ -19,6 +18,7 @@ import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 
 export function ProductSelector({
   onSelect,

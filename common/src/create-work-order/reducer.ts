@@ -1,19 +1,14 @@
-import { useReducer, useState } from 'react';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
-import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../types.js';
-import { useConst } from '@work-orders/common-pos/hooks/use-const.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { uuid } from '../util/uuid.js';
-import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
-import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useFreshRef } from '@teifi-digital/pos-tools/hooks/use-fresh-ref.js';
+import { v4 as uuid } from 'uuid';
+import type { useReducer, useRef, useState } from 'react';
+import { WorkOrder } from '@web/services/work-orders/types.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
   customerId: CreateWorkOrder['customerId'] | null;
 };
-
-type GetItemOrder = ReturnType<typeof useWorkOrderOrders>['getItemOrder'];
 
 export type CreateWorkOrderAction =
   | ({
@@ -24,7 +19,7 @@ export type CreateWorkOrderAction =
        * Make sure to upsert charges before adding items
        */
       type: 'addItems';
-      items: CreateWorkOrderItem[];
+      items: CreateWorkOrder['items'][number][];
     }
   | {
       type: 'removeItem';
@@ -35,12 +30,12 @@ export type CreateWorkOrderAction =
        * Make sure to upsert charges before updating items
        */
       type: 'updateItem';
-      item: CreateWorkOrderItem;
+      item: CreateWorkOrder['items'][number];
     }
   | {
       type: 'updateItemCharges';
       uuid: string;
-      charges: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[];
+      charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[];
     }
   | {
       type: 'updateItemCustomFields';
@@ -49,37 +44,49 @@ export type CreateWorkOrderAction =
     }
   | ({
       type: 'set';
-    } & CreateWorkOrder);
+    } & WIPCreateWorkOrder);
 
-type CreateWorkOrderActionWithGetItemOrder = CreateWorkOrderAction & { getItemOrder: GetItemOrder };
+type CreateWorkOrderActionWithWorkOrder = CreateWorkOrderAction & { workOrder: WorkOrder | null };
 
 export type CreateWorkOrderDispatchProxy = {
   [type in CreateWorkOrderAction['type']]: (args: Omit<CreateWorkOrderAction & { type: type }, 'type'>) => void;
 };
 
-export const useCreateWorkOrderReducer = (initialCreateWorkOrder: WIPCreateWorkOrder) => {
+export type UseCreateWorkOrderReactContext = {
+  useRef: typeof useRef;
+  useState: typeof useState;
+  useReducer: typeof useReducer;
+};
+
+/**
+ * We require a WorkOrder object to be able to prevent merging line items that are in an order.
+ */
+export const useCreateWorkOrderReducer = (
+  initialCreateWorkOrder: WIPCreateWorkOrder,
+  workOrder: WorkOrder | undefined | null,
+  { useState, useRef, useReducer }: UseCreateWorkOrderReactContext,
+) => {
   const [createWorkOrder, dispatchCreateWorkOrder] = useReducer(createWorkOrderReducer, initialCreateWorkOrder);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const { workOrderQuery, getItemOrder } = useWorkOrderOrders(createWorkOrder.name);
-  const workOrderQueryDataRef = useFreshRef(workOrderQuery.data);
+  const workOrderRef = useRef(workOrder);
+  workOrderRef.current = workOrder;
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
-
-  const proxy = useConst(
+  const [proxy] = useState(
     () =>
       new Proxy<CreateWorkOrderDispatchProxy>({} as CreateWorkOrderDispatchProxy, {
         get: (target, prop) => (args: DiscriminatedUnionOmit<CreateWorkOrderAction, 'type'>) => {
-          // We must load the work order before we can modify it so we can make sure that we don't accidentally merge uuids with with a paid item\
-          // TODO: Maybe just pass the workorder instance into useCreateWorkOrderReducer
-          if (!workOrderQueryDataRef.current) {
-            toast.show('Cannot modify work order because it was not loaded successfully');
-            return;
+          if (!workOrderRef.current === undefined) {
+            throw new Error('Cannot modify work order because it has not been loaded yet');
           }
 
           setHasUnsavedChanges(true);
-          dispatchCreateWorkOrder({ type: prop, ...args, getItemOrder } as CreateWorkOrderActionWithGetItemOrder);
+          dispatchCreateWorkOrder({
+            type: prop,
+            ...args,
+            workOrder: workOrderRef.current,
+          } as CreateWorkOrderActionWithWorkOrder);
         },
       }),
   );
@@ -89,9 +96,9 @@ export const useCreateWorkOrderReducer = (initialCreateWorkOrder: WIPCreateWorkO
 
 function createWorkOrderReducer(
   createWorkOrder: WIPCreateWorkOrder,
-  action: CreateWorkOrderActionWithGetItemOrder,
+  action: CreateWorkOrderActionWithWorkOrder,
 ): WIPCreateWorkOrder {
-  const { getItemOrder } = action;
+  const { workOrder } = action;
 
   switch (action.type) {
     case 'setPartial':
@@ -110,12 +117,12 @@ function createWorkOrderReducer(
         ...action.charges.map(charge => ({ ...charge, workOrderItemUuid: action.uuid })),
       ];
 
-      const merged = getMergedItems(createWorkOrder.items, charges, getItemOrder);
+      const merged = getMergedItems(createWorkOrder.items, charges, workOrder);
       const split = getSplitItems(merged, charges);
 
       return {
         ...createWorkOrder,
-        items: split.filter(item => item.quantity > 0),
+        items: split,
         charges,
       };
     }
@@ -135,22 +142,22 @@ function createWorkOrderReducer(
 
     case 'updateItem': {
       const updated = createWorkOrder.items.map(item => (item.uuid === action.item.uuid ? action.item : item));
-      const merged = getMergedItems(updated, createWorkOrder.charges, getItemOrder);
+      const merged = getMergedItems(updated, createWorkOrder.charges, workOrder);
       const split = getSplitItems(merged, createWorkOrder.charges);
 
       return {
         ...createWorkOrder,
-        items: split.filter(item => item.quantity > 0),
+        items: split,
       };
     }
 
     case 'addItems': {
-      const merged = getMergedItems([...createWorkOrder.items, ...action.items], createWorkOrder.charges, getItemOrder);
+      const merged = getMergedItems([...createWorkOrder.items, ...action.items], createWorkOrder.charges, workOrder);
       const split = getSplitItems(merged, createWorkOrder.charges);
 
       return {
         ...createWorkOrder,
-        items: split.filter(item => item.quantity > 0),
+        items: split,
       };
     }
 
@@ -168,10 +175,10 @@ function createWorkOrderReducer(
 }
 
 function shouldMergeItems(
-  a: CreateWorkOrderItem,
-  b: CreateWorkOrderItem,
-  charges: CreateWorkOrderCharge[],
-  getItemOrder: GetItemOrder,
+  a: CreateWorkOrder['items'][number],
+  b: CreateWorkOrder['items'][number],
+  charges: CreateWorkOrder['charges'][number][],
+  workOrder: WorkOrder | null,
 ) {
   if (a.productVariantId !== b.productVariantId) {
     return false;
@@ -188,21 +195,30 @@ function shouldMergeItems(
     return false;
   }
 
-  if (getItemOrder(a)?.type === 'ORDER' || getItemOrder(b)?.type === 'ORDER') {
+  // do not allow merging if either item is in an order
+  if (
+    [a, b].some(({ uuid }) =>
+      isOrderId(workOrder?.items.find(hasPropertyValue('uuid', uuid))?.shopifyOrderLineItem?.orderId),
+    )
+  ) {
     return false;
   }
 
   return true;
 }
 
-function getMergedItems(items: CreateWorkOrderItem[], charges: CreateWorkOrderCharge[], getItemOrder: GetItemOrder) {
-  const merged: CreateWorkOrderItem[] = [];
+function getMergedItems(
+  items: CreateWorkOrder['items'][number][],
+  charges: CreateWorkOrder['charges'][number][],
+  workOrder: WorkOrder | null,
+) {
+  const merged: CreateWorkOrder['items'][number][] = [];
 
   for (const item of items) {
     let found = false;
 
     for (const existing of merged) {
-      if (shouldMergeItems(item, existing, charges, getItemOrder)) {
+      if (shouldMergeItems(item, existing, charges, workOrder)) {
         existing.quantity = (existing.quantity + item.quantity) as Int;
         found = true;
         break;
@@ -214,34 +230,40 @@ function getMergedItems(items: CreateWorkOrderItem[], charges: CreateWorkOrderCh
     }
   }
 
-  return merged;
+  return merged.filter(item => item.quantity > 0);
 }
 
-function shouldSplitItem(item: CreateWorkOrderItem, charges: CreateWorkOrderCharge[]) {
+function shouldSplitItem(item: CreateWorkOrder['items'][number], charges: CreateWorkOrder['charges'][number][]) {
   return item.quantity > 1 && charges.some(hasPropertyValue('workOrderItemUuid', item.uuid));
 }
 
-function getSplitItems(items: CreateWorkOrderItem[], charges: CreateWorkOrderCharge[]) {
-  return items.flatMap<CreateWorkOrderItem>(item => {
-    if (!shouldSplitItem(item, charges)) {
-      return [item];
-    }
+function getSplitItems(items: CreateWorkOrder['items'][number][], charges: CreateWorkOrder['charges'][number][]) {
+  return items
+    .flatMap<CreateWorkOrder['items'][number]>(item => {
+      if (!shouldSplitItem(item, charges)) {
+        return [item];
+      }
 
-    return [
-      {
-        uuid: item.uuid,
-        productVariantId: item.productVariantId,
-        quantity: 1 as Int,
-        absorbCharges: item.absorbCharges,
-        customFields: item.customFields,
-      },
-      {
-        uuid: uuid(),
-        productVariantId: item.productVariantId,
-        quantity: (item.quantity - 1) as Int,
-        absorbCharges: item.absorbCharges,
-        customFields: item.customFields,
-      },
-    ];
-  });
+      return [
+        {
+          uuid: item.uuid,
+          productVariantId: item.productVariantId,
+          quantity: 1 as Int,
+          absorbCharges: item.absorbCharges,
+          customFields: item.customFields,
+        },
+        {
+          uuid: uuid(),
+          productVariantId: item.productVariantId,
+          quantity: (item.quantity - 1) as Int,
+          absorbCharges: item.absorbCharges,
+          customFields: item.customFields,
+        },
+      ];
+    })
+    .filter(item => item.quantity > 0);
+}
+
+function isOrderId(id: string | undefined) {
+  return !!id && parseGid(id).objectName === 'Order';
 }

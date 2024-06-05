@@ -1,11 +1,10 @@
-import { Money } from '@web/schemas/generated/create-work-order.js';
+import { CreateWorkOrder, Money } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { CreateWorkOrderCharge } from '../types.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export function getTotalPriceForCharges(
   charges: DiscriminatedUnionOmit<
-    CreateWorkOrderCharge,
+    CreateWorkOrder['charges'][number],
     | 'employeeId'
     | 'workOrderItemUuid'
     | 'name'

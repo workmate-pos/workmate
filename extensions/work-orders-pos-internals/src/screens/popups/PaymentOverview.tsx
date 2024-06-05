@@ -9,12 +9,12 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { workOrderToCreateWorkOrder } from '../../dto/work-order-to-create-work-order.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 
 /**
  * Page that allows initializing payments for line items.

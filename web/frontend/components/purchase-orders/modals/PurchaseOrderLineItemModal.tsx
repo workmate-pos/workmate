@@ -16,7 +16,9 @@ import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 
-export function LineItemModal({
+// TODO: Custom fields
+
+export function PurchaseOrderLineItemModal({
   initialProduct,
   purchaseOrder,
   locationId,

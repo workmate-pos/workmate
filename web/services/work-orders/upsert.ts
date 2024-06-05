@@ -105,13 +105,14 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
       const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
 
+      await removeCustomFields(workOrderId);
+
       await upsertItems(session, createWorkOrder, workOrderId, currentItems);
       await upsertCharges(session, createWorkOrder, workOrderId, currentHourlyCharges, currentFixedPriceCharges);
 
       await deleteCharges(createWorkOrder, workOrderId, currentHourlyCharges, currentFixedPriceCharges);
       await deleteItems(createWorkOrder, workOrderId, currentItems);
 
-      await removeCustomFields(workOrderId);
       await Promise.all([
         insertWorkOrderCustomFields(workOrderId, createWorkOrder.customFields),
         insertItemCustomFields(workOrderId, createWorkOrder.items),

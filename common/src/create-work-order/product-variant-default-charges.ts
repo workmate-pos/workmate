@@ -1,10 +1,10 @@
-import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
-import { CreateWorkOrderCharge } from '../types.js';
-import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
+import { ProductVariant } from '../queries/use-product-variants-query.js';
+import { DiscriminatedUnionOmit } from '../types/DiscriminatedUnionOmit.js';
 
 export function productVariantDefaultChargeToCreateWorkOrderCharge(
   charge: ProductVariant['defaultCharges'][number],
-): DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid' | 'uuid'> {
+): DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid' | 'uuid'> {
   switch (charge.type) {
     case 'fixed-price-labour-charge': {
       return {

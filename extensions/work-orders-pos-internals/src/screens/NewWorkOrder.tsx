@@ -4,10 +4,10 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { Stack, Text, useCartSubscription, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 import { WorkOrder } from './WorkOrder.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useEffect } from 'react';
+import { defaultCreateWorkOrder } from '@work-orders/common/create-work-order/default.js';
 
 /**
  * A wrapper around WorkOrder that shows a loading indicator while loading defaults etc.
