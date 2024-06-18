@@ -46,6 +46,8 @@ import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/modals/
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
+import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 
 export default function () {
   return (
@@ -170,6 +172,8 @@ function WorkOrder({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
+  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
+  const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   const isModalOpen = [
     isCustomerSelectorModalOpen,
@@ -179,6 +183,8 @@ function WorkOrder({
     isPrintModalOpen,
     isAddProductModalOpen,
     isAddServiceModalOpen,
+    isSelectCustomFieldPresetToEditModalOpen,
+    !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
   // all nested useCalculatedDraftOrderQuery's are disabled s.t. only this one fetches when no modals are opened
@@ -197,7 +203,7 @@ function WorkOrder({
   const settings = settingsQuery.data.settings;
 
   return (
-    <>
+    <Box paddingBlockEnd={'1600'}>
       <TitleBar title={'Work Orders'} />
 
       <ContextualSaveBar
@@ -259,27 +265,28 @@ function WorkOrder({
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
             onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
-          />
-
-          <WorkOrderItemsCard
-            createWorkOrder={createWorkOrder}
-            dispatch={dispatch}
-            workOrder={workOrder!}
-            disabled={workOrderMutation.isLoading}
-            onAddProductClick={() => setIsAddProductModalOpen(true)}
-            onAddServiceClick={() => setIsAddServiceModalOpen(true)}
-            isLoading={calculatedDraftOrderQuery.isLoading}
-          />
-
-          <WorkOrderSummary
-            createWorkOrder={createWorkOrder}
-            hasUnsavedChanges={hasUnsavedChanges}
-            disabled={workOrderMutation.isLoading}
-            onSave={() => workOrderMutation.mutate(createWorkOrder)}
-            isSaving={workOrderMutation.isLoading}
-            onPrint={() => setIsPrintModalOpen(true)}
+            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
           />
         </InlineGrid>
+
+        <WorkOrderItemsCard
+          createWorkOrder={createWorkOrder}
+          dispatch={dispatch}
+          workOrder={workOrder!}
+          disabled={workOrderMutation.isLoading}
+          onAddProductClick={() => setIsAddProductModalOpen(true)}
+          onAddServiceClick={() => setIsAddServiceModalOpen(true)}
+          isLoading={calculatedDraftOrderQuery.isLoading}
+        />
+
+        <WorkOrderSummary
+          createWorkOrder={createWorkOrder}
+          hasUnsavedChanges={hasUnsavedChanges}
+          disabled={workOrderMutation.isLoading}
+          onSave={() => workOrderMutation.mutate(createWorkOrder)}
+          isSaving={workOrderMutation.isLoading}
+          onPrint={() => setIsPrintModalOpen(true)}
+        />
       </BlockStack>
 
       {isCustomerSelectorModalOpen && (
@@ -321,8 +328,9 @@ function WorkOrder({
       {isImportCustomFieldPresetModalOpen && (
         <ImportCustomFieldPresetModal
           type={'WORK_ORDER'}
-          open={isImportCustomFieldPresetModalOpen}
+          open={isImportCustomFieldPresetModalOpen && !customFieldPresetNameToEdit}
           onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
+          onEdit={presetName => setCustomFieldPresetNameToEdit(presetName)}
           onOverride={fieldNames => {
             dispatch.setPartial({
               customFields: Object.fromEntries(
@@ -393,7 +401,27 @@ function WorkOrder({
         />
       )}
 
+      {isSelectCustomFieldPresetToEditModalOpen && (
+        <SelectCustomFieldPresetModal
+          open={isSelectCustomFieldPresetToEditModalOpen}
+          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
+          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
+          setToastAction={setToastAction}
+          type="WORK_ORDER"
+        />
+      )}
+
+      {!!customFieldPresetNameToEdit && (
+        <EditCustomFieldPresetModal
+          open={!!customFieldPresetNameToEdit}
+          onClose={() => setCustomFieldPresetNameToEdit(undefined)}
+          setToastAction={setToastAction}
+          name={customFieldPresetNameToEdit}
+          type="WORK_ORDER"
+        />
+      )}
+
       {toast}
-    </>
+    </Box>
   );
 }

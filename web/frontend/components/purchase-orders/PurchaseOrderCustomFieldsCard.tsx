@@ -9,6 +9,7 @@ export function PurchaseOrderCustomFieldsCard({
   onImportPresetClick,
   onSavePresetClick,
   onAddCustomFieldClick,
+  onEditPresetClick,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
   dispatch: CreatePurchaseOrderDispatchProxy;
@@ -16,6 +17,7 @@ export function PurchaseOrderCustomFieldsCard({
   onImportPresetClick: () => void;
   onSavePresetClick: () => void;
   onAddCustomFieldClick: () => void;
+  onEditPresetClick: () => void;
 }) {
   return (
     <CustomFieldsCard
@@ -24,6 +26,7 @@ export function PurchaseOrderCustomFieldsCard({
       disabled={disabled}
       onImportPresetClick={onImportPresetClick}
       onSavePresetClick={onSavePresetClick}
+      onEditPresetClick={onEditPresetClick}
       onAddCustomFieldClick={onAddCustomFieldClick}
     />
   );

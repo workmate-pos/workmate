@@ -1,24 +1,23 @@
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
+import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
+import {
+  CustomFieldsPreset,
+  useCustomFieldsPresetsQuery,
+} from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
 import { Filters, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
-import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
-import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
 
-export function ImportCustomFieldPresetModal({
+export function SelectCustomFieldPresetModal({
   open,
-  onOverride,
-  onMerge,
-  onEdit,
+  onSelect,
   onClose,
   setToastAction,
   type,
 }: {
   open: boolean;
   onClose: () => void;
-  onOverride: (fieldNames: string[]) => void;
-  onMerge: (fieldNames: string[]) => void;
-  onEdit: (presetName: string) => void;
+  onSelect: (preset: CustomFieldsPreset) => void;
   setToastAction: ToastActionCallable;
   type: CustomFieldsPresetType;
 }) {
@@ -54,36 +53,7 @@ export function ImportCustomFieldPresetModal({
         }
         loading={presetsQuery.isLoading}
         renderItem={preset => (
-          <ResourceItem
-            id={preset.name}
-            onClick={() => {}}
-            persistActions
-            shortcutActions={[
-              {
-                content: 'Edit',
-                onAction: () => {
-                  onEdit(preset.name);
-                  onClose();
-                },
-              },
-              {
-                content: 'Override',
-                onAction: () => {
-                  onOverride([...preset.keys]);
-                  setToastAction({ content: 'Imported preset' });
-                  onClose();
-                },
-              },
-              {
-                content: 'Merge',
-                onAction: () => {
-                  onMerge([...preset.keys]);
-                  setToastAction({ content: 'Imported preset' });
-                  onClose();
-                },
-              },
-            ]}
-          >
+          <ResourceItem id={preset.name} onClick={() => onSelect(preset)} persistActions>
             <InlineStack gap={'200'}>
               <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
                 {preset.name}

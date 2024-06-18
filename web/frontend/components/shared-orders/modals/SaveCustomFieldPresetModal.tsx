@@ -68,6 +68,9 @@ export function SaveCustomFieldPresetModal({
           />
           <BlockStack gap={'150'}>
             <Label id={'selected-fields'}>Selected Fields</Label>
+            {selectedFieldNames.length === 0 && (
+              <InlineError message={'You must select at least one field'} fieldID={'selected-fields'} />
+            )}
             <InlineGrid gap={'400'} columns={2}>
               {fieldNames.map(fieldName => (
                 <Checkbox
@@ -85,9 +88,6 @@ export function SaveCustomFieldPresetModal({
                 />
               ))}
             </InlineGrid>
-            {selectedFieldNames.length === 0 && (
-              <InlineError message={'You must select at least one field'} fieldID={'selected-fields'} />
-            )}
           </BlockStack>
           <Checkbox
             label={'Default'}

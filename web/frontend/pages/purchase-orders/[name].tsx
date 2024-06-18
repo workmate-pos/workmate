@@ -5,7 +5,18 @@ import { useEffect, useReducer, useRef, useState } from 'react';
 import { useCreatePurchaseOrderReducer } from '@work-orders/common/create-purchase-order/reducer.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { BlockStack, Card, EmptyState, Frame, InlineGrid, InlineStack, Page, Select, Text } from '@shopify/polaris';
+import {
+  BlockStack,
+  Box,
+  Card,
+  EmptyState,
+  Frame,
+  InlineGrid,
+  InlineStack,
+  Page,
+  Select,
+  Text,
+} from '@shopify/polaris';
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';
@@ -35,6 +46,8 @@ import { Int } from '@web/schemas/generated/create-product.js';
 import type { PurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
+import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
+import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 
 export default function () {
   return (
@@ -190,6 +203,8 @@ function PurchaseOrder({
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isAddOrderProductModalOpen, setIsAddOrderProductModalOpen] = useState(false);
+  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
+  const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   if (!settingsQuery.data) {
     return <Loading />;
@@ -198,7 +213,7 @@ function PurchaseOrder({
   const settings = settingsQuery.data.settings;
 
   return (
-    <>
+    <Box paddingBlockEnd={'1600'}>
       <TitleBar title={'Purchase Orders'} />
 
       <ContextualSaveBar
@@ -263,63 +278,64 @@ function PurchaseOrder({
             onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
-          />
-
-          <PurchaseOrderProductsCard
-            createPurchaseOrder={createPurchaseOrder}
-            purchaseOrder={purchaseOrder}
-            dispatch={dispatch}
-            disabled={purchaseOrderMutation.isLoading}
-            onAddProductClick={() => {
-              if (!createPurchaseOrder.locationId) {
-                setToastAction({ content: 'You must select a location to add products' });
-                return;
-              }
-
-              if (!createPurchaseOrder.vendorName) {
-                setToastAction({ content: 'You must select a vendor to add products' });
-                return;
-              }
-
-              setIsAddProductModalOpen(true);
-            }}
-            onAddOrderProductClick={() => {
-              if (!createPurchaseOrder.locationId) {
-                setToastAction({ content: 'You must select a location to add products' });
-                return;
-              }
-
-              if (!createPurchaseOrder.vendorName) {
-                setToastAction({ content: 'You must select a vendor to add products' });
-                return;
-              }
-
-              setIsAddOrderProductModalOpen(true);
-            }}
-            onMarkAllAsNotReceivedClick={() => {
-              for (const product of createPurchaseOrder.lineItems) {
-                const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
-                const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-                dispatch.updateProduct({ product: { ...product, availableQuantity: minimumAvailableQuantity as Int } });
-              }
-            }}
-            onMarkAllAsReceivedClick={() => {
-              for (const product of createPurchaseOrder.lineItems) {
-                dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
-              }
-            }}
-          />
-
-          <PurchaseOrderSummary
-            createPurchaseOrder={createPurchaseOrder}
-            dispatch={dispatch}
-            hasUnsavedChanges={hasUnsavedChanges}
-            disabled={purchaseOrderMutation.isLoading}
-            onSave={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
-            isSaving={purchaseOrderMutation.isLoading}
-            onPrint={() => setIsPrintModalOpen(true)}
+            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
           />
         </InlineGrid>
+
+        <PurchaseOrderProductsCard
+          createPurchaseOrder={createPurchaseOrder}
+          purchaseOrder={purchaseOrder}
+          dispatch={dispatch}
+          disabled={purchaseOrderMutation.isLoading}
+          onAddProductClick={() => {
+            if (!createPurchaseOrder.locationId) {
+              setToastAction({ content: 'You must select a location to add products' });
+              return;
+            }
+
+            if (!createPurchaseOrder.vendorName) {
+              setToastAction({ content: 'You must select a vendor to add products' });
+              return;
+            }
+
+            setIsAddProductModalOpen(true);
+          }}
+          onAddOrderProductClick={() => {
+            if (!createPurchaseOrder.locationId) {
+              setToastAction({ content: 'You must select a location to add products' });
+              return;
+            }
+
+            if (!createPurchaseOrder.vendorName) {
+              setToastAction({ content: 'You must select a vendor to add products' });
+              return;
+            }
+
+            setIsAddOrderProductModalOpen(true);
+          }}
+          onMarkAllAsNotReceivedClick={() => {
+            for (const product of createPurchaseOrder.lineItems) {
+              const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
+              const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
+              dispatch.updateProduct({ product: { ...product, availableQuantity: minimumAvailableQuantity as Int } });
+            }
+          }}
+          onMarkAllAsReceivedClick={() => {
+            for (const product of createPurchaseOrder.lineItems) {
+              dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
+            }
+          }}
+        />
+
+        <PurchaseOrderSummary
+          createPurchaseOrder={createPurchaseOrder}
+          dispatch={dispatch}
+          hasUnsavedChanges={hasUnsavedChanges}
+          disabled={purchaseOrderMutation.isLoading}
+          onSave={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
+          isSaving={purchaseOrderMutation.isLoading}
+          onPrint={() => setIsPrintModalOpen(true)}
+        />
       </BlockStack>
 
       {/*TODO: Nicer way of making this remount*/}
@@ -371,6 +387,7 @@ function PurchaseOrder({
               },
             });
           }}
+          onEdit={presetName => setCustomFieldPresetNameToEdit(presetName)}
           setToastAction={setToastAction}
         />
       )}
@@ -436,7 +453,27 @@ function PurchaseOrder({
         />
       )}
 
+      {isSelectCustomFieldPresetToEditModalOpen && (
+        <SelectCustomFieldPresetModal
+          open={isSelectCustomFieldPresetToEditModalOpen}
+          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
+          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
+          setToastAction={setToastAction}
+          type="PURCHASE_ORDER"
+        />
+      )}
+
+      {!!customFieldPresetNameToEdit && (
+        <EditCustomFieldPresetModal
+          open={!!customFieldPresetNameToEdit}
+          onClose={() => setCustomFieldPresetNameToEdit(undefined)}
+          setToastAction={setToastAction}
+          name={customFieldPresetNameToEdit}
+          type="PURCHASE_ORDER"
+        />
+      )}
+
       {toast}
-    </>
+    </Box>
   );
 }

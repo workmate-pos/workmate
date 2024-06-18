@@ -42,6 +42,8 @@ import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/moda
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
 import { ImportCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/ImportCustomFieldPresetModal.js';
 import { CaretUpMinor } from '@shopify/polaris-icons';
+import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
+import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 
 export function WorkOrderItemModal({
   createWorkOrder,
@@ -68,12 +70,16 @@ export function WorkOrderItemModal({
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
   const [isImportCustomFieldPresetModalOpen, setIsImportCustomFieldPresetModalOpen] = useState(false);
+  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
+  const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   const isSubModalOpen = [
     isAddEmployeeModalOpen,
     isNewCustomFieldModalOpen,
     isSaveCustomFieldPresetModalOpen,
     isImportCustomFieldPresetModalOpen,
+    isSelectCustomFieldPresetToEditModalOpen,
+    !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
   const initialCharges = createWorkOrder.charges.filter(hasPropertyValue('workOrderItemUuid', itemUuid)) ?? [];
@@ -199,6 +205,7 @@ export function WorkOrderItemModal({
             customFields={item.customFields}
             onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
+            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
             onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
           />
@@ -261,7 +268,7 @@ export function WorkOrderItemModal({
       {isImportCustomFieldPresetModalOpen && (
         <ImportCustomFieldPresetModal
           type={'LINE_ITEM'}
-          open={isImportCustomFieldPresetModalOpen}
+          open={isImportCustomFieldPresetModalOpen && !customFieldPresetNameToEdit}
           onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
           onOverride={fieldNames =>
             setItem(item => ({
@@ -280,7 +287,28 @@ export function WorkOrderItemModal({
               },
             }));
           }}
+          onEdit={presetName => setCustomFieldPresetNameToEdit(presetName)}
           setToastAction={setToastAction}
+        />
+      )}
+
+      {isSelectCustomFieldPresetToEditModalOpen && (
+        <SelectCustomFieldPresetModal
+          open={isSelectCustomFieldPresetToEditModalOpen}
+          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
+          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
+          setToastAction={setToastAction}
+          type="LINE_ITEM"
+        />
+      )}
+
+      {!!customFieldPresetNameToEdit && (
+        <EditCustomFieldPresetModal
+          open={!!customFieldPresetNameToEdit}
+          onClose={() => setCustomFieldPresetNameToEdit(undefined)}
+          setToastAction={setToastAction}
+          name={customFieldPresetNameToEdit}
+          type="LINE_ITEM"
         />
       )}
     </>

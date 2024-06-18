@@ -6,6 +6,7 @@ export type CustomFieldsListProps = {
   disabled?: boolean;
   onImportPresetClick: () => void;
   onSavePresetClick: () => void;
+  onEditPresetClick: () => void;
   onAddCustomFieldClick: () => void;
 };
 
@@ -15,6 +16,7 @@ export function CustomFieldsList({
   disabled,
   onImportPresetClick,
   onSavePresetClick,
+  onEditPresetClick,
   onAddCustomFieldClick,
 }: CustomFieldsListProps) {
   return (
@@ -24,6 +26,9 @@ export function CustomFieldsList({
           Custom Fields
         </Text>
         <ButtonGroup>
+          <Button variant={'plain'} onClick={() => onEditPresetClick()} disabled={disabled}>
+            Edit preset
+          </Button>
           <Button variant={'plain'} onClick={() => onImportPresetClick()} disabled={disabled}>
             Import preset
           </Button>

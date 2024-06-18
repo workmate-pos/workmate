@@ -55,7 +55,9 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
   screen.setIsLoading(presetsQuery.isLoading || presetMutation.isLoading || presetDeleteMutation.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  const preset = presetsQuery.data?.find(p => p.name === name);
+  const preset = presetsQuery.data?.find(p => p.name === initialName);
+  // TODO: Modal for this
+  const presetNameInUse = presetsQuery.data?.some(preset => name !== initialName && preset.name === name) ?? false;
 
   useEffect(() => {
     if (preset) {

@@ -7,6 +7,7 @@ export function WorkOrderCustomFieldsCard({
   disabled,
   onImportPresetClick,
   onSavePresetClick,
+  onEditPresetClick,
   onAddCustomFieldClick,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
@@ -15,6 +16,7 @@ export function WorkOrderCustomFieldsCard({
   onImportPresetClick: () => void;
   onSavePresetClick: () => void;
   onAddCustomFieldClick: () => void;
+  onEditPresetClick: () => void;
 }) {
   return (
     <CustomFieldsCard
@@ -23,6 +25,7 @@ export function WorkOrderCustomFieldsCard({
       disabled={disabled}
       onImportPresetClick={onImportPresetClick}
       onSavePresetClick={onSavePresetClick}
+      onEditPresetClick={onEditPresetClick}
       onAddCustomFieldClick={onAddCustomFieldClick}
     />
   );

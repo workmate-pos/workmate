@@ -15,8 +15,12 @@ import { IntegerField } from '@web/frontend/components/IntegerField.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
-
-// TODO: Custom fields
+import { CustomFieldsList } from '@web/frontend/components/shared-orders/CustomFieldsList.js';
+import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
+import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
+import { ImportCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/ImportCustomFieldPresetModal.js';
+import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
+import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 
 export function PurchaseOrderLineItemModal({
   initialProduct,
@@ -35,6 +39,20 @@ export function PurchaseOrderLineItemModal({
   setToastAction: ToastActionCallable;
   onSave: (product: CreatePurchaseOrder['lineItems'][number]) => void;
 }) {
+  const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
+  const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
+  const [isImportCustomFieldPresetModalOpen, setIsImportCustomFieldPresetModalOpen] = useState(false);
+  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
+  const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
+
+  const isSubModalOpen = [
+    isNewCustomFieldModalOpen,
+    isSaveCustomFieldPresetModalOpen,
+    isImportCustomFieldPresetModalOpen,
+    isSelectCustomFieldPresetToEditModalOpen,
+    !!customFieldPresetNameToEdit,
+  ].some(Boolean);
+
   const [product, setProduct] = useState(initialProduct);
   const savedProduct = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
 
@@ -60,91 +78,172 @@ export function PurchaseOrderLineItemModal({
   const isImmutable = savedProduct && savedProduct.availableQuantity > 0;
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={name}
-      loading={isLoading}
-      primaryAction={{
-        content: 'Save',
-        onAction: () => {
-          onSave(product);
-          setToastAction({ content: 'Saved product' });
-          onClose();
-        },
-      }}
-      secondaryActions={[
-        {
-          content: 'Cancel',
-          onAction: onClose,
-        },
-        {
-          content: 'Remove',
+    <>
+      <Modal
+        open={open && !isSubModalOpen}
+        onClose={onClose}
+        title={name}
+        loading={isLoading}
+        primaryAction={{
+          content: 'Save',
           onAction: () => {
-            onSave({ ...product, quantity: 0 as Int });
-            setToastAction({ content: 'Removed product' });
+            onSave(product);
+            setToastAction({ content: 'Saved product' });
             onClose();
           },
-          disabled: isImmutable,
-          destructive: true,
-        },
-      ]}
-    >
-      {order && (
+        }}
+        secondaryActions={[
+          {
+            content: 'Cancel',
+            onAction: onClose,
+          },
+          {
+            content: 'Remove',
+            onAction: () => {
+              onSave({ ...product, quantity: 0 as Int });
+              setToastAction({ content: 'Removed product' });
+              onClose();
+            },
+            disabled: isImmutable,
+            destructive: true,
+          },
+        ]}
+      >
+        {order && (
+          <Modal.Section>
+            <Box>
+              <Badge tone={'info'}>{order.name}</Badge>
+            </Box>
+          </Modal.Section>
+        )}
+
+        {location && inventoryItem?.inventoryLevel && (
+          <Modal.Section>
+            <InlineStack align={'center'}>
+              <Text as={'h3'} fontWeight={'semibold'}>
+                Current stock at {location.name}
+              </Text>
+            </InlineStack>
+            <DataTable
+              columnContentTypes={['text', 'numeric']}
+              headings={['Status', 'Quantity']}
+              rows={inventoryItem.inventoryLevel.quantities.map(({ name, quantity }) => [titleCase(name), quantity])}
+            />
+          </Modal.Section>
+        )}
+
         <Modal.Section>
-          <Box>
-            <Badge tone={'info'}>{order.name}</Badge>
-          </Box>
+          <BlockStack gap={'400'}>
+            <MoneyField
+              label={'Unit Cost'}
+              autoComplete={'off'}
+              value={product.unitCost.toString()}
+              onChange={value => setProduct(product => ({ ...product, unitCost: value as Money }))}
+              min={0}
+              requiredIndicator
+              readOnly={isImmutable}
+            />
+            <IntegerField
+              label={'Quantity'}
+              autoComplete={'off'}
+              value={product.quantity.toString()}
+              onChange={value => setProduct(product => ({ ...product, quantity: Number(value) as Int }))}
+              helpText={'The quantity that has been ordered'}
+              min={isImmutable ? savedProduct.quantity : 1}
+              requiredIndicator
+            />
+            <IntegerField
+              label={'Available Quantity'}
+              autoComplete={'off'}
+              value={product.availableQuantity.toString()}
+              onChange={value => setProduct(product => ({ ...product, availableQuantity: Number(value) as Int }))}
+              min={savedProduct ? savedProduct.availableQuantity : 0}
+              max={product.quantity}
+              helpText={'The quantity that has been delivered'}
+              requiredIndicator
+            />
+          </BlockStack>
         </Modal.Section>
+
+        <Modal.Section>
+          <CustomFieldsList
+            customFields={product.customFields}
+            onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
+            onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
+            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
+            onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
+            onUpdate={customFields => setProduct(product => ({ ...product, customFields }))}
+          />
+        </Modal.Section>
+      </Modal>
+
+      {isNewCustomFieldModalOpen && (
+        <NewCustomFieldModal
+          open={isNewCustomFieldModalOpen}
+          existingFields={Object.keys(product.customFields)}
+          onClose={() => setIsNewCustomFieldModalOpen(false)}
+          onAdd={(fieldName, fieldValue) =>
+            setProduct(product => ({ ...product, customFields: { ...product.customFields, [fieldName]: fieldValue } }))
+          }
+        />
       )}
 
-      {location && inventoryItem?.inventoryLevel && (
-        <Modal.Section>
-          <InlineStack align={'center'}>
-            <Text as={'h3'} fontWeight={'semibold'}>
-              Current stock at {location.name}
-            </Text>
-          </InlineStack>
-          <DataTable
-            columnContentTypes={['text', 'numeric']}
-            headings={['Status', 'Quantity']}
-            rows={inventoryItem.inventoryLevel.quantities.map(({ name, quantity }) => [titleCase(name), quantity])}
-          />
-        </Modal.Section>
+      {isSaveCustomFieldPresetModalOpen && (
+        <SaveCustomFieldPresetModal
+          type={'LINE_ITEM'}
+          fieldNames={Object.keys(product.customFields)}
+          open={isSaveCustomFieldPresetModalOpen}
+          onClose={() => setIsSaveCustomFieldPresetModalOpen(false)}
+          setToastAction={setToastAction}
+        />
       )}
 
-      <Modal.Section>
-        <BlockStack gap={'400'}>
-          <MoneyField
-            label={'Unit Cost'}
-            autoComplete={'off'}
-            value={product.unitCost.toString()}
-            onChange={value => setProduct(product => ({ ...product, unitCost: value as Money }))}
-            min={0}
-            requiredIndicator
-            readOnly={isImmutable}
-          />
-          <IntegerField
-            label={'Quantity'}
-            autoComplete={'off'}
-            value={product.quantity.toString()}
-            onChange={value => setProduct(product => ({ ...product, quantity: Number(value) as Int }))}
-            helpText={'The quantity that has been ordered'}
-            min={isImmutable ? savedProduct.quantity : 1}
-            requiredIndicator
-          />
-          <IntegerField
-            label={'Available Quantity'}
-            autoComplete={'off'}
-            value={product.availableQuantity.toString()}
-            onChange={value => setProduct(product => ({ ...product, availableQuantity: Number(value) as Int }))}
-            min={savedProduct ? savedProduct.availableQuantity : 0}
-            max={product.quantity}
-            helpText={'The quantity that has been delivered'}
-            requiredIndicator
-          />
-        </BlockStack>
-      </Modal.Section>
-    </Modal>
+      {isImportCustomFieldPresetModalOpen && (
+        <ImportCustomFieldPresetModal
+          type={'LINE_ITEM'}
+          open={isImportCustomFieldPresetModalOpen && !customFieldPresetNameToEdit}
+          onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
+          onOverride={fieldNames =>
+            setProduct(product => ({
+              ...product,
+              customFields: Object.fromEntries(
+                fieldNames.map(fieldName => [fieldName, product.customFields[fieldName] ?? '']),
+              ),
+            }))
+          }
+          onMerge={fieldNames => {
+            setProduct(product => ({
+              ...product,
+              customFields: {
+                ...product.customFields,
+                ...Object.fromEntries(fieldNames.map(fieldName => [fieldName, product.customFields[fieldName] ?? ''])),
+              },
+            }));
+          }}
+          onEdit={presetName => setCustomFieldPresetNameToEdit(presetName)}
+          setToastAction={setToastAction}
+        />
+      )}
+
+      {isSelectCustomFieldPresetToEditModalOpen && (
+        <SelectCustomFieldPresetModal
+          open={isSelectCustomFieldPresetToEditModalOpen}
+          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
+          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
+          setToastAction={setToastAction}
+          type="LINE_ITEM"
+        />
+      )}
+
+      {!!customFieldPresetNameToEdit && (
+        <EditCustomFieldPresetModal
+          open={!!customFieldPresetNameToEdit}
+          onClose={() => setCustomFieldPresetNameToEdit(undefined)}
+          setToastAction={setToastAction}
+          name={customFieldPresetNameToEdit}
+          type="LINE_ITEM"
+        />
+      )}
+    </>
   );
 }
