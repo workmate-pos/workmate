@@ -37,7 +37,7 @@ export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
     },
   );
 
-  const presets = presetsQuery.data ?? [];
+  const presets = presetsQuery.data?.presets ?? [];
   const mutate = () => {
     presetMutation.mutate({ name, keys, default: isDefault });
   };

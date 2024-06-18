@@ -20,7 +20,15 @@ export const useCustomFieldsPresetsQuery = (
       }
 
       const { presets }: FetchCustomFieldsPresetsResponse = await response.json();
-      return presets;
+
+      const defaultCustomFieldPresets = presets.filter(preset => preset.default);
+      const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
+      const defaultCustomFields = Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']));
+
+      return {
+        presets,
+        defaultCustomFields,
+      };
     },
   });
 

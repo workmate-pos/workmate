@@ -43,8 +43,9 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
     return '';
   })();
 
-  const preset = presetsQuery.data?.find(p => p.name === initialName);
-  const presetNameInUse = presetsQuery.data?.some(preset => name !== initialName && preset.name === name) ?? false;
+  const preset = presetsQuery.data?.presets?.find(p => p.name === initialName);
+  const presetNameInUse =
+    presetsQuery.data?.presets?.some(preset => name !== initialName && preset.name === name) ?? false;
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   const areYouSureYouWantToDeleteDialog = useAreYouSureYouWantToDeleteDialog({

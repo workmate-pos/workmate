@@ -77,9 +77,10 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const oldLineItemUuids = new Set(existingPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
 
     await Promise.all([
-      ...[...oldLineItemUuids]
-        .filter(oldUuid => !newLineItemUuids.has(oldUuid))
-        .map(uuid => db.purchaseOrder.removeLineItem({ purchaseOrderId, uuid })),
+      db.purchaseOrder.removeLineItemsByUuids({
+        purchaseOrderId,
+        uuids: [...oldLineItemUuids].filter(oldUuid => !newLineItemUuids.has(oldUuid)),
+      }),
       db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
       db.purchaseOrder.removeLineItemCustomFields({ purchaseOrderId }),
       db.purchaseOrder.removeAssignedEmployees({ purchaseOrderId }),

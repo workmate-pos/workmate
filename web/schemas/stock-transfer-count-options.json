@@ -3,7 +3,7 @@
   "type": "object",
   "properties": {
     "status": {
-      "enum": ["PENDING", "IN_TRANSIT", "RECEIVED", "REJECTED"]
+      "$ref": "create-stock-transfer.json#/properties/lineItems/items/properties/status"
     },
     "query": {
       "type": "string"

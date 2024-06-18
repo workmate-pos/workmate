@@ -70,16 +70,12 @@ export function NewWorkOrder() {
     status: settingsQuery.data.settings.defaultStatus,
   });
 
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
-  const defaultCustomFields = Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']));
-
   return (
     <WorkOrder
       initial={{
         ...createWorkOrder,
         customFields: {
-          ...defaultCustomFields,
+          ...customFieldsPresetsQuery.data.defaultCustomFields,
           ...createWorkOrder.customFields,
         },
         customerId: defaultCustomerId,

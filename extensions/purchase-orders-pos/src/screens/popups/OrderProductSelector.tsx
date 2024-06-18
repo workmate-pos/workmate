@@ -30,12 +30,6 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
 
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
-  const defaultCustomFields = defaultCustomFieldKeys
-    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
-    : undefined;
-
   const orderQuery = useOrderQuery({ fetch, id: orderId }, { enabled: !isDraftOrder });
   const draftOrderQuery = useDraftOrderQuery({ fetch, id: orderId }, { enabled: isDraftOrder });
 
@@ -55,9 +49,15 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(orderQuery.isLoading || orderLineItemsQuery.isLoading || customFieldsPresetsQuery.isLoading);
 
-  if (currentOrderQuery.isError || (!currentOrderQuery.isLoading && !currentOrder)) {
+  const isLoading = orderQuery.isLoading || orderLineItemsQuery.isLoading || customFieldsPresetsQuery.isLoading;
+  screen.setIsLoading(isLoading);
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (currentOrderQuery.isError || !currentOrder) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text color="TextCritical" variant="body">
@@ -67,11 +67,21 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
     );
   }
 
-  if (currentLineItemsQuery.isError || (!currentLineItemsQuery.isLoading && !currentLineItems)) {
+  if (currentLineItemsQuery.isError || !currentLineItems) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text color="TextCritical" variant="body">
           {extractErrorMessage(currentLineItemsQuery.error, 'Error loading order line items')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (customFieldsPresetsQuery.isError || !customFieldsPresetsQuery.data) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(customFieldsPresetsQuery.error, 'Error loading custom fields presets')}
         </Text>
       </Stack>
     );
@@ -98,10 +108,6 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
         type={'primary'}
         isDisabled={selectedLineItemIds.length === 0}
         onPress={async () => {
-          if (!defaultCustomFields) {
-            return;
-          }
-
           await router.popCurrent();
           onSave(
             currentLineItems
@@ -117,7 +123,7 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
                     orderId: currentOrder.id,
                     id: li.id,
                   },
-                  customFields: defaultCustomFields,
+                  customFields: customFieldsPresetsQuery.data.defaultCustomFields,
                 };
               }),
           );

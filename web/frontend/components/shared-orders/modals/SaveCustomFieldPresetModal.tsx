@@ -28,7 +28,7 @@ export function SaveCustomFieldPresetModal({
   const [selectedFieldNames, setSelectedFieldNames] = useState(fieldNames);
   const [isDefault, setIsDefault] = useState(false);
 
-  const presetNameInUse = presetsQuery.data?.some(preset => preset.name === name) ?? false;
+  const presetNameInUse = presetsQuery.data?.presets?.some(preset => preset.name === name) ?? false;
 
   return (
     <Modal

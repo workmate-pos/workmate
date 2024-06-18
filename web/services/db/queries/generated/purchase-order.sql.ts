@@ -538,33 +538,33 @@ const removeLineItemsIR: any = {"usedParamSet":{"purchaseOrderId":true},"params"
 export const removeLineItems = new PreparedQuery<IRemoveLineItemsParams,IRemoveLineItemsResult>(removeLineItemsIR);
 
 
-/** 'RemoveLineItem' parameters type */
-export interface IRemoveLineItemParams {
+/** 'RemoveLineItemsByUuids' parameters type */
+export interface IRemoveLineItemsByUuidsParams {
   purchaseOrderId: number;
-  uuid: string;
+  uuids: readonly (string)[];
 }
 
-/** 'RemoveLineItem' return type */
-export type IRemoveLineItemResult = void;
+/** 'RemoveLineItemsByUuids' return type */
+export type IRemoveLineItemsByUuidsResult = void;
 
-/** 'RemoveLineItem' query type */
-export interface IRemoveLineItemQuery {
-  params: IRemoveLineItemParams;
-  result: IRemoveLineItemResult;
+/** 'RemoveLineItemsByUuids' query type */
+export interface IRemoveLineItemsByUuidsQuery {
+  params: IRemoveLineItemsByUuidsParams;
+  result: IRemoveLineItemsByUuidsResult;
 }
 
-const removeLineItemIR: any = {"usedParamSet":{"uuid":true,"purchaseOrderId":true},"params":[{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":49,"b":54}]},{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":82,"b":98}]}],"statement":"DELETE\nFROM \"PurchaseOrderLineItem\"\nWHERE uuid = :uuid!\n  AND \"purchaseOrderId\" = :purchaseOrderId!"};
+const removeLineItemsByUuidsIR: any = {"usedParamSet":{"uuids":true,"purchaseOrderId":true},"params":[{"name":"uuids","required":true,"transform":{"type":"array_spread"},"locs":[{"a":50,"b":56}]},{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":84,"b":100}]}],"statement":"DELETE\nFROM \"PurchaseOrderLineItem\"\nWHERE uuid IN :uuids!\n  AND \"purchaseOrderId\" = :purchaseOrderId!"};
 
 /**
  * Query generated from SQL:
  * ```
  * DELETE
  * FROM "PurchaseOrderLineItem"
- * WHERE uuid = :uuid!
+ * WHERE uuid IN :uuids!
  *   AND "purchaseOrderId" = :purchaseOrderId!
  * ```
  */
-export const removeLineItem = new PreparedQuery<IRemoveLineItemParams,IRemoveLineItemResult>(removeLineItemIR);
+export const removeLineItemsByUuids = new PreparedQuery<IRemoveLineItemsByUuidsParams,IRemoveLineItemsByUuidsResult>(removeLineItemsByUuidsIR);
 
 
 /** 'RemoveCustomFields' parameters type */

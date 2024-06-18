@@ -7,7 +7,7 @@
       "minimum": 0
     },
     "status": {
-      "enum": ["PENDING", "IN_TRANSIT", "RECEIVED", "REJECTED"]
+      "$ref": "create-stock-transfer.json#/properties/lineItems/items/properties/status"
     },
     "limit": {
       "type": "integer",

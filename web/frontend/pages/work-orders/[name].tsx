@@ -79,13 +79,16 @@ function WorkOrderLoader() {
     return null;
   }
 
-  if (workOrderQuery.isError) {
+  if (workOrderQuery.isError || settingsQuery.isError || customFieldsPresetsQuery.isError) {
     return (
       <>
         <Card>
           <EmptyState image={emptyState} heading={'An error occurred'}>
             <Text as={'p'} variant={'bodyLg'} fontWeight={'bold'} tone={'critical'}>
-              {extractErrorMessage(workOrderQuery.error, 'An error occurred while loading work order')}
+              {extractErrorMessage(
+                workOrderQuery.error ?? settingsQuery.error ?? customFieldsPresetsQuery.error,
+                'An error occurred while loading work order',
+              )}
             </Text>
           </EmptyState>
         </Card>
@@ -111,11 +114,8 @@ function WorkOrderLoader() {
     const { defaultStatus } = settingsQuery.data.settings;
     createWorkOrder = defaultCreateWorkOrder({ status: defaultStatus });
 
-    const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
-    const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
-
     createWorkOrder.customFields = {
-      ...Object.fromEntries(defaultCustomFieldKeys.map(key => [key, ''])),
+      ...customFieldsPresetsQuery.data.defaultCustomFields,
       ...createWorkOrder.customFields,
     };
   }

@@ -85,13 +85,16 @@ function PurchaseOrderLoader() {
     return null;
   }
 
-  if (purchaseOrderQuery.isError) {
+  if (purchaseOrderQuery.isError || settingsQuery.isError || customFieldsPresetsQuery.isError) {
     return (
       <>
         <Card>
           <EmptyState image={emptyState} heading={'An error occurred'}>
             <Text as={'p'} variant={'bodyLg'} fontWeight={'bold'} tone={'critical'}>
-              {extractErrorMessage(purchaseOrderQuery.error, 'An error occurred while loading purchase order')}
+              {extractErrorMessage(
+                purchaseOrderQuery.error ?? settingsQuery.error ?? customFieldsPresetsQuery.error,
+                'An error occurred while loading purchase order',
+              )}
             </Text>
           </EmptyState>
         </Card>
@@ -117,12 +120,8 @@ function PurchaseOrderLoader() {
     const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
     createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
 
-    const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
-    const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
-    const defaultCustomFields = Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']));
-
     createPurchaseOrder.customFields = {
-      ...defaultCustomFields,
+      ...customFieldsPresetsQuery.data.defaultCustomFields,
       ...createPurchaseOrder.customFields,
     };
   }

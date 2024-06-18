@@ -125,11 +125,6 @@ export function AddProductModal({
   );
 
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
-  const defaultCustomFields = defaultCustomFieldKeys
-    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
-    : undefined;
 
   const location = locationQuery?.data;
   const productVariants = productVariantsQuery.data?.pages?.[page] ?? [];
@@ -239,7 +234,7 @@ export function AddProductModal({
                   return;
                 }
 
-                if (!defaultCustomFields) {
+                if (!customFieldsPresetsQuery.data) {
                   setToastAction({ content: 'Loading default custom fields... Try again momentarily' });
                   return;
                 }
@@ -258,7 +253,7 @@ export function AddProductModal({
                       uuid: itemUuid,
                       productVariantId: pv.productVariant.id,
                       quantity: pv.quantity,
-                      customFields: defaultCustomFields ?? {},
+                      customFields: customFieldsPresetsQuery.data.defaultCustomFields,
                       absorbCharges:
                         getProductServiceType(pv.productVariant.product.serviceType?.value) ===
                         QUANTITY_ADJUSTING_SERVICE,
@@ -280,7 +275,7 @@ export function AddProductModal({
                         productVariantId: pv.productVariant.id,
                         quantity: pv.quantity,
                         availableQuantity: 0 as Int,
-                        customFields: defaultCustomFields ?? {},
+                        customFields: customFieldsPresetsQuery.data.defaultCustomFields,
                       };
                     }),
                   );

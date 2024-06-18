@@ -11,10 +11,10 @@ import { StockTransferPaginationOptions } from '../../schemas/generated/stock-tr
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { StockTransferCountOptions } from '../../schemas/generated/stock-transfer-count-options.js';
 
+@Authenticated()
 export default class StockTransfersController {
   @Post('/')
   @BodySchema('create-stock-transfer')
-  @Authenticated()
   @Permission('write_stock_transfers')
   async createStockTransfer(
     req: Request<unknown, unknown, CreateStockTransfer>,
@@ -30,7 +30,6 @@ export default class StockTransfersController {
   }
 
   @Get('/count')
-  @Authenticated()
   @Permission('read_stock_transfers')
   @QuerySchema('stock-transfer-count-options')
   async fetchStockTransferCount(
@@ -46,7 +45,6 @@ export default class StockTransfersController {
   }
 
   @Get('/')
-  @Authenticated()
   @Permission('read_stock_transfers')
   @QuerySchema('stock-transfer-pagination-options')
   async fetchStockTransfers(
@@ -62,7 +60,6 @@ export default class StockTransfersController {
   }
 
   @Get('/:name')
-  @Authenticated()
   @Permission('read_stock_transfers')
   async fetchStockTransfer(req: Request<{ name: string }>, res: Response<FetchStockTransferResponse>) {
     const session: Session = res.locals.shopify.session;

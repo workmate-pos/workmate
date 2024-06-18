@@ -37,12 +37,6 @@ export function ProductSelector({
   const locationQuery = useLocationQuery({ fetch, id: locationId });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
-  const defaultCustomFields = defaultCustomFieldKeys
-    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
-    : undefined;
-
   const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
   const locationIdQuery = locationId ? `location_id:${parseGid(locationId).id}` : '';
   const productStatusQuery = 'product_status:active';
@@ -67,7 +61,9 @@ export function ProductSelector({
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(locationQuery.isLoading || customFieldsPresetsQuery.isLoading);
+
+  const isLoading = locationQuery.isLoading || customFieldsPresetsQuery.isLoading;
+  screen.setIsLoading(isLoading);
 
   const [page, setPage] = useState(1);
   const pagination = (
@@ -82,6 +78,20 @@ export function ProductSelector({
   );
 
   const rows = useProductVariantRows(productVariantsQuery.data?.pages?.[page - 1] ?? [], locationId, selectProducts);
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (customFieldsPresetsQuery.isError || !customFieldsPresetsQuery.data) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(customFieldsPresetsQuery.error, 'Error loading custom fields presets')}
+        </Text>
+      </Stack>
+    );
+  }
 
   return (
     <ScrollView>
@@ -127,11 +137,9 @@ export function ProductSelector({
                 vendor: vendorName,
               },
               onCreate: product => {
-                if (!defaultCustomFields) {
-                  return;
-                }
-
-                selectProducts([{ ...product, uuid: uuid(), customFields: defaultCustomFields }]);
+                selectProducts([
+                  { ...product, uuid: uuid(), customFields: customFieldsPresetsQuery.data.defaultCustomFields },
+                ]);
                 router.popCurrent();
               },
             });
@@ -186,17 +194,15 @@ function useProductVariantRows(
   const fetch = useAuthenticatedFetch();
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
-  const defaultCustomFields = defaultCustomFieldKeys
-    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
-    : undefined;
-
   const inventoryItemIds = productVariants.flatMap(variant => [
     variant.inventoryItem.id,
     ...variant.productVariantComponents.map(({ productVariant }) => productVariant.inventoryItem.id),
   ]);
   const inventoryItemQueries = useInventoryItemQueries({ fetch, ids: inventoryItemIds, locationId });
+
+  if (!customFieldsPresetsQuery.data) {
+    return [];
+  }
 
   return productVariants.map<ListRow>(variant => {
     const displayName = getProductVariantName(variant) ?? 'Unknown Product';
@@ -240,10 +246,6 @@ function useProductVariantRows(
     return {
       id: variant.id,
       onPress: () => {
-        if (!defaultCustomFields) {
-          return;
-        }
-
         if (!variant.requiresComponents) {
           selectProducts([
             {
@@ -253,7 +255,7 @@ function useProductVariantRows(
               availableQuantity: 0 as Int,
               quantity: 1 as Int,
               unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
-              customFields: defaultCustomFields,
+              customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             },
           ]);
           return;
@@ -275,7 +277,7 @@ function useProductVariantRows(
               name: getProductVariantName(productVariant) ?? 'Unknown Product',
               sku: productVariant.sku,
               unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
-              customFields: defaultCustomFields,
+              customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             }));
           }),
         );

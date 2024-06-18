@@ -100,32 +100,34 @@ const updateDiscountIR: any = {"usedParamSet":{"discountAmount":true,"discountTy
 export const updateDiscount = new PreparedQuery<IUpdateDiscountParams,IUpdateDiscountResult>(updateDiscountIR);
 
 
-/** 'InsertCustomField' parameters type */
-export interface IInsertCustomFieldParams {
-  key: string;
-  value: string;
-  workOrderId: number;
+/** 'InsertCustomFields' parameters type */
+export interface IInsertCustomFieldsParams {
+  customFields: readonly ({
+    workOrderId: number,
+    key: string,
+    value: string
+  })[];
 }
 
-/** 'InsertCustomField' return type */
-export type IInsertCustomFieldResult = void;
+/** 'InsertCustomFields' return type */
+export type IInsertCustomFieldsResult = void;
 
-/** 'InsertCustomField' query type */
-export interface IInsertCustomFieldQuery {
-  params: IInsertCustomFieldParams;
-  result: IInsertCustomFieldResult;
+/** 'InsertCustomFields' query type */
+export interface IInsertCustomFieldsQuery {
+  params: IInsertCustomFieldsParams;
+  result: IInsertCustomFieldsResult;
 }
 
-const insertCustomFieldIR: any = {"usedParamSet":{"workOrderId":true,"key":true,"value":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":71,"b":83}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":86,"b":90}]},{"name":"value","required":true,"transform":{"type":"scalar"},"locs":[{"a":93,"b":99}]}],"statement":"INSERT INTO \"WorkOrderCustomField\" (\"workOrderId\", key, value)\nVALUES (:workOrderId!, :key!, :value!)"};
+const insertCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":83,"b":95}]}],"statement":"INSERT INTO \"WorkOrderCustomField\" (\"workOrderId\", key, value)\nVALUES (0, '', ''), :customFields OFFSET 1"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
- * VALUES (:workOrderId!, :key!, :value!)
+ * VALUES (0, '', ''), :customFields OFFSET 1
  * ```
  */
-export const insertCustomField = new PreparedQuery<IInsertCustomFieldParams,IInsertCustomFieldResult>(insertCustomFieldIR);
+export const insertCustomFields = new PreparedQuery<IInsertCustomFieldsParams,IInsertCustomFieldsResult>(insertCustomFieldsIR);
 
 
 /** 'RemoveCustomFields' parameters type */
@@ -189,33 +191,35 @@ const getCustomFieldsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"
 export const getCustomFields = new PreparedQuery<IGetCustomFieldsParams,IGetCustomFieldsResult>(getCustomFieldsIR);
 
 
-/** 'InsertItemCustomField' parameters type */
-export interface IInsertItemCustomFieldParams {
-  key: string;
-  value: string;
-  workOrderId: number;
-  workOrderItemUuid: string;
+/** 'InsertItemCustomFields' parameters type */
+export interface IInsertItemCustomFieldsParams {
+  customFields: readonly ({
+    workOrderId: number,
+    workOrderItemUuid: string,
+    key: string,
+    value: string
+  })[];
 }
 
-/** 'InsertItemCustomField' return type */
-export type IInsertItemCustomFieldResult = void;
+/** 'InsertItemCustomFields' return type */
+export type IInsertItemCustomFieldsResult = void;
 
-/** 'InsertItemCustomField' query type */
-export interface IInsertItemCustomFieldQuery {
-  params: IInsertItemCustomFieldParams;
-  result: IInsertItemCustomFieldResult;
+/** 'InsertItemCustomFields' query type */
+export interface IInsertItemCustomFieldsQuery {
+  params: IInsertItemCustomFieldsParams;
+  result: IInsertItemCustomFieldsResult;
 }
 
-const insertItemCustomFieldIR: any = {"usedParamSet":{"workOrderId":true,"workOrderItemUuid":true,"key":true,"value":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":96,"b":108}]},{"name":"workOrderItemUuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":111,"b":129}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":132,"b":136}]},{"name":"value","required":true,"transform":{"type":"scalar"},"locs":[{"a":139,"b":145}]}],"statement":"INSERT INTO \"WorkOrderItemCustomField\" (\"workOrderId\", \"workOrderItemUuid\", key, value)\nVALUES (:workOrderId!, :workOrderItemUuid!, :key!, :value!)"};
+const insertItemCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"workOrderItemUuid","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":127,"b":139}]}],"statement":"INSERT INTO \"WorkOrderItemCustomField\" (\"workOrderId\", \"workOrderItemUuid\", key, value)\nVALUES (0, gen_random_uuid(), '', ''), :customFields OFFSET 1"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderItemCustomField" ("workOrderId", "workOrderItemUuid", key, value)
- * VALUES (:workOrderId!, :workOrderItemUuid!, :key!, :value!)
+ * VALUES (0, gen_random_uuid(), '', ''), :customFields OFFSET 1
  * ```
  */
-export const insertItemCustomField = new PreparedQuery<IInsertItemCustomFieldParams,IInsertItemCustomFieldResult>(insertItemCustomFieldIR);
+export const insertItemCustomFields = new PreparedQuery<IInsertItemCustomFieldsParams,IInsertItemCustomFieldsResult>(insertItemCustomFieldsIR);
 
 
 /** 'RemoveItemCustomFields' parameters type */

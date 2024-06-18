@@ -37,8 +37,6 @@ export async function upsertStockTransfer(session: Session, createStockTransfer:
     await db.stockTransfers.removeLineItems({ stockTransferId: stockTransfer.id });
     await upsertLineItems(createStockTransfer, stockTransfer.id);
 
-    const currentLineItems = await db.stockTransfers.getLineItems({ stockTransferId });
-
     const getLocationIds = (stockTransfer: IGetResult | undefined) => {
       const from = stockTransfer?.fromLocationId ?? null;
       const to = stockTransfer?.toLocationId ?? null;
@@ -55,7 +53,7 @@ export async function upsertStockTransfer(session: Session, createStockTransfer:
       getLocationIds(previousStockTransfer),
       getLocationIds(stockTransfer),
       previousLineItems,
-      currentLineItems,
+      createStockTransfer.lineItems,
     );
 
     return stockTransfer;
@@ -64,10 +62,10 @@ export async function upsertStockTransfer(session: Session, createStockTransfer:
 
 async function upsertLineItems(createStockTransfer: CreateStockTransfer, stockTransferId: number) {
   if (!createStockTransfer.lineItems.length) {
-    return;
+    return [];
   }
 
-  await db.stockTransfers.upsertLineItems({
+  return await db.stockTransfers.upsertLineItems({
     lineItems: createStockTransfer.lineItems.map(lineItem => ({
       uuid: lineItem.uuid,
       stockTransferId,
@@ -85,11 +83,16 @@ async function adjustShopifyInventory(
   previousLocations: { from: ID | null; to: ID | null },
   currentLocations: { from: ID | null; to: ID | null },
   previousLineItems: IGetLineItemsResult[],
-  currentLineItems: IGetLineItemsResult[],
+  currentLineItems: CreateStockTransfer['lineItems'],
 ) {
   const deltaByLocationByInventoryItem: Record<ID, Record<ID, number>> = {};
 
-  for (const { lineItems, factor, fromLocationId, toLocationId } of [
+  const transfers: {
+    lineItems: Pick<IGetLineItemsResult, 'uuid' | 'quantity' | 'inventoryItemId' | 'status'>[];
+    factor: number;
+    fromLocationId: ID | null;
+    toLocationId: ID | null;
+  }[] = [
     {
       lineItems: previousLineItems,
       factor: -1,
@@ -102,11 +105,11 @@ async function adjustShopifyInventory(
       fromLocationId: currentLocations.from,
       toLocationId: currentLocations.to,
     },
-  ]) {
+  ];
+
+  for (const { lineItems, factor, fromLocationId, toLocationId } of transfers) {
     for (const lineItem of lineItems) {
       assertGid(lineItem.inventoryItemId);
-
-      // TODO: Get rid of restocked
 
       if (['IN_TRANSIT', 'RECEIVED', 'REJECTED'].includes(lineItem.status)) {
         // Remove quantity from the source inventory.

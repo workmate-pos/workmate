@@ -137,10 +137,13 @@ DELETE
 FROM "PurchaseOrderLineItem"
 WHERE "purchaseOrderId" = :purchaseOrderId!;
 
-/* @name removeLineItem */
+/*
+  @name removeLineItemsByUuids
+  @param uuids -> (...)
+*/
 DELETE
 FROM "PurchaseOrderLineItem"
-WHERE uuid = :uuid!
+WHERE uuid IN :uuids!
   AND "purchaseOrderId" = :purchaseOrderId!;
 
 /* @name removeCustomFields */

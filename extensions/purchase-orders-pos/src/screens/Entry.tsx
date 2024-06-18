@@ -36,15 +36,31 @@ export function Entry() {
   const purchaseOrderRows = usePurchaseOrderRows(purchaseOrders);
 
   const screen = useScreen();
-  screen.setIsLoading(settingsQuery.isLoading || customFieldsPresetsQuery.isLoading);
+
+  const isLoading = settingsQuery.isLoading || customFieldsPresetsQuery.isLoading;
+  screen.setIsLoading(isLoading);
 
   const router = useRouter();
 
-  if (settingsQuery.isError) {
+  if (isLoading) {
+    return null;
+  }
+
+  if (settingsQuery.isError || !settingsQuery.data) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text color="TextCritical" variant="body">
           {extractErrorMessage(settingsQuery.error, 'An error occurred while loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (customFieldsPresetsQuery.isError || !customFieldsPresetsQuery.data) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(customFieldsPresetsQuery.error, 'An error occurred while loading presets')}
         </Text>
       </Stack>
     );
@@ -60,25 +76,14 @@ export function Entry() {
           title={'New Purchase Order'}
           type={'primary'}
           onPress={() => {
-            if (!settingsQuery.data) {
-              return;
-            }
-
-            if (!customFieldsPresetsQuery.data) {
-              return;
-            }
-
             const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
             const createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
-
-            const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
-            const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
 
             router.push('PurchaseOrder', {
               initialCreatePurchaseOrder: {
                 ...createPurchaseOrder,
                 customFields: {
-                  ...Object.fromEntries(defaultCustomFieldKeys.map(key => [key, ''])),
+                  ...customFieldsPresetsQuery.data.defaultCustomFields,
                   ...createPurchaseOrder.customFields,
                 },
               },

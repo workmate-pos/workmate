@@ -140,13 +140,11 @@ function useProductVariantRows(
   const fetch = useAuthenticatedFetch();
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
-  const defaultCustomFields = defaultCustomFieldKeys
-    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
-    : undefined;
-
   const router = useRouter();
+
+  if (!customFieldsPresetsQuery.data) {
+    return [];
+  }
 
   return productVariants
     .map<ListRow | null>(variant => {
@@ -174,10 +172,6 @@ function useProductVariantRows(
       return {
         id: variant.id,
         onPress: async () => {
-          if (!defaultCustomFields) {
-            return;
-          }
-
           const itemUuid = uuid();
 
           await router.popCurrent();
@@ -188,7 +182,7 @@ function useProductVariantRows(
               productVariantId: variant.id,
               quantity: 1 as Int,
               absorbCharges: type === QUANTITY_ADJUSTING_SERVICE,
-              customFields: defaultCustomFields,
+              customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             },
             charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
               ...charge,

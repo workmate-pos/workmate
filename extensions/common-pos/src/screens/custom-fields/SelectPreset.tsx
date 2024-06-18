@@ -25,7 +25,7 @@ export function SelectPreset({ onSelect, useRouter, type }: SelectPresetProps) {
 
   const fetch = useAuthenticatedFetch();
   const presetsQuery = useCustomFieldsPresetsQuery({ fetch, type });
-  const presets = presetsQuery.data ?? [];
+  const presets = presetsQuery.data?.presets ?? [];
 
   const router = useRouter();
 

@@ -55,11 +55,6 @@ export function SelectOrderProductModal({
   });
 
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
-  const defaultCustomFields = defaultCustomFieldKeys
-    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
-    : undefined;
 
   const [selectedLineItems, setSelectedLineItems] = useState<typeof lineItems>([]);
 
@@ -78,7 +73,7 @@ export function SelectOrderProductModal({
       primaryAction={{
         content: 'Select products',
         onAction: () => {
-          if (!defaultCustomFields) {
+          if (!customFieldsPresetsQuery.data) {
             setToastAction({ content: 'Loading default custom fields... Try again momentarily' });
             return;
           }
@@ -101,7 +96,7 @@ export function SelectOrderProductModal({
                   orderId,
                   id: li.id,
                 },
-                customFields: defaultCustomFields,
+                customFields: customFieldsPresetsQuery.data.defaultCustomFields,
               };
             }),
           );

@@ -265,5 +265,9 @@ function getSplitItems(items: CreateWorkOrder['items'][number][], charges: Creat
 }
 
 function isOrderId(id: string | undefined) {
-  return !!id && parseGid(id).objectName === 'Order';
+  try {
+    return !!id && parseGid(id).objectName === 'Order';
+  } catch (e) {
+    return true;
+  }
 }

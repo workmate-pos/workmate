@@ -20,9 +20,12 @@ UPDATE "WorkOrder"
       "discountType"   = :discountType
 WHERE id = :id!;
 
-/* @name insertCustomField */
+/*
+  @name insertCustomFields
+  @param customFields -> ((workOrderId!, key!, value!)...)
+*/
 INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
-VALUES (:workOrderId!, :key!, :value!);
+VALUES (0, '', ''), :customFields OFFSET 1;
 
 /* @name removeCustomFields */
 DELETE
@@ -34,9 +37,12 @@ SELECT *
 FROM "WorkOrderCustomField"
 WHERE "workOrderId" = :workOrderId!;
 
-/* @name insertItemCustomField */
+/*
+  @name insertItemCustomFields
+  @param customFields -> ((workOrderId!, workOrderItemUuid!, key!, value!)...)
+*/
 INSERT INTO "WorkOrderItemCustomField" ("workOrderId", "workOrderItemUuid", key, value)
-VALUES (:workOrderId!, :workOrderItemUuid!, :key!, :value!);
+VALUES (0, gen_random_uuid(), '', ''), :customFields OFFSET 1;
 
 /* @name removeItemCustomFields */
 DELETE

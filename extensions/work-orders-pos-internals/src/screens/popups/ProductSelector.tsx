@@ -152,11 +152,9 @@ function useProductVariantRows(
   const fetch = useAuthenticatedFetch();
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data?.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets?.flatMap(preset => preset.keys);
-  const defaultCustomFields = defaultCustomFieldKeys
-    ? Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']))
-    : undefined;
+  if (!customFieldsPresetsQuery.data) {
+    return [];
+  }
 
   return productVariants.map(variant => {
     const displayName = getProductVariantName(variant) ?? 'Unknown product';
@@ -174,10 +172,6 @@ function useProductVariantRows(
     return {
       id: variant.id,
       onPress: () => {
-        if (!defaultCustomFields) {
-          return;
-        }
-
         const itemUuid = uuid();
 
         onSelect(
@@ -186,7 +180,7 @@ function useProductVariantRows(
             productVariantId: variant.id,
             quantity: 1 as Int,
             absorbCharges: false,
-            customFields: defaultCustomFields,
+            customFields: customFieldsPresetsQuery.data.defaultCustomFields,
           },
           defaultCharges.map(charge => ({ ...charge, uuid: uuid(), workOrderItemUuid: itemUuid })),
         );
