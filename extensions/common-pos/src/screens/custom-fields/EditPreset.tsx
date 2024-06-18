@@ -43,9 +43,25 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
     return '';
   })();
 
+  const preset = presetsQuery.data?.find(p => p.name === initialName);
+  const presetNameInUse = presetsQuery.data?.some(preset => name !== initialName && preset.name === name) ?? false;
+
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   const areYouSureYouWantToDeleteDialog = useAreYouSureYouWantToDeleteDialog({
     onDelete: () => presetDeleteMutation.mutate({ name }, { onSuccess: router.popCurrent }),
+  });
+  const areYouSureYouWantToOverwriteDialog = useAreYouSureYouWantToOverwriteDialog({
+    isOverwrite: presetNameInUse,
+    onOverwrite: () =>
+      presetMutation.mutate(
+        {
+          currentName: initialName,
+          name,
+          keys,
+          default: isDefault,
+        },
+        { onSuccess: router.popCurrent },
+      ),
   });
 
   const { Form } = useForm();
@@ -54,10 +70,6 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
   screen.setTitle(`Edit Preset - ${name}`);
   screen.setIsLoading(presetsQuery.isLoading || presetMutation.isLoading || presetDeleteMutation.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
-
-  const preset = presetsQuery.data?.find(p => p.name === initialName);
-  // TODO: Modal for this
-  const presetNameInUse = presetsQuery.data?.some(preset => name !== initialName && preset.name === name) ?? false;
 
   useEffect(() => {
     if (preset) {
@@ -123,6 +135,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
               setHasUnsavedChanges(true);
             }}
             required
+            helpText={presetNameInUse ? 'A preset with this name already exists. Saving will overwrite it.' : undefined}
           />
           <FormButton
             title={isDefault ? 'Is Default' : 'Is Not Default'}
@@ -183,19 +196,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
             type={'primary'}
             action={'submit'}
             loading={presetMutation.isLoading}
-            onPress={() =>
-              presetMutation.mutate(
-                {
-                  currentName: initialName,
-                  name,
-                  keys,
-                  default: isDefault,
-                },
-                {
-                  onSuccess: () => router.popCurrent(),
-                },
-              )
-            }
+            onPress={areYouSureYouWantToOverwriteDialog.show}
           />
 
           <FormButton
@@ -224,6 +225,33 @@ const useAreYouSureYouWantToDeleteDialog = ({ onDelete }: { onDelete: () => void
           type: 'destructive',
           content: 'You are about to permanently delete a preset. Are you sure you want to proceed?',
           actionText: 'Delete',
+          showSecondaryAction: true,
+          secondaryActionText: 'Cancel',
+        },
+      });
+    },
+  };
+};
+
+const useAreYouSureYouWantToOverwriteDialog = ({
+  isOverwrite,
+  onOverwrite,
+}: {
+  isOverwrite: boolean;
+  onOverwrite: () => void;
+}) => {
+  const dialog = useDialog();
+
+  return {
+    show: () => {
+      dialog.show({
+        showDialog: isOverwrite,
+        onAction: onOverwrite,
+        props: {
+          title: 'Overwrite Preset',
+          type: 'destructive',
+          content: 'You are about to overwrite a preset. Are you sure you want to proceed?',
+          actionText: 'Overwrite',
           showSecondaryAction: true,
           secondaryActionText: 'Cancel',
         },

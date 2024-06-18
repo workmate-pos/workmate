@@ -41,16 +41,7 @@ export default class CustomFieldsPresetsController {
     assertValidPresetType(type);
 
     await unit(async () => {
-      const [preset] = await db.customFieldPresets.getCustomFieldsPreset({ shop, type, name });
-
-      if (!preset) {
-        throw new HttpError('Preset not found', 404);
-      }
-
-      if (currentName) {
-        await db.customFieldPresets.removeCustomFieldsPreset({ shop, name: currentName, type });
-      }
-
+      await db.customFieldPresets.removeCustomFieldsPreset({ shop, name: currentName, type });
       await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type, default: isDefault });
     });
 

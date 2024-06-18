@@ -403,7 +403,7 @@ function WorkOrder({
 
       {isSelectCustomFieldPresetToEditModalOpen && (
         <SelectCustomFieldPresetModal
-          open={isSelectCustomFieldPresetToEditModalOpen}
+          open={isSelectCustomFieldPresetToEditModalOpen && !customFieldPresetNameToEdit}
           onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
           onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
           setToastAction={setToastAction}

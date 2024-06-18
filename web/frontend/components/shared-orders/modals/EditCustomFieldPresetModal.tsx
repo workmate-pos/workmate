@@ -47,13 +47,6 @@ export function EditCustomFieldPresetModal({
   const [isDefault, setIsDefault] = useState(false);
 
   const [newCustomFieldName, setNewCustomFieldName] = useState('');
-  const newCustomFieldNameError = (() => {
-    if (keys.includes(newCustomFieldName)) {
-      return 'A custom field with this name already exists';
-    }
-
-    return '';
-  })();
 
   const preset = presetsQuery.data?.find(p => p.name === initialName);
   const presetNameInUse = presetsQuery.data?.some(preset => name !== initialName && preset.name === name) ?? false;
