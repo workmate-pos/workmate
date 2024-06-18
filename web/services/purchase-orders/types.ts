@@ -23,7 +23,10 @@ export type PurchaseOrderWebhookBody = {
       id: ID;
       name: string;
     } | null;
-    vendorName: string | null;
+    vendor: {
+      name: string;
+      metafields: Record<string, string>;
+    } | null;
     note: string;
     subtotal: Money;
     total: Money;
