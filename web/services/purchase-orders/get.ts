@@ -13,6 +13,7 @@ import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-tool
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
+import { DateTime } from '../../schemas/generated/create-purchase-order.js';
 
 export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
   const [purchaseOrder] = await db.purchaseOrder.get({ name, shop });
@@ -49,6 +50,7 @@ export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: st
   return await awaitNested({
     name: purchaseOrder.name,
     status: purchaseOrder.status,
+    placedDate: purchaseOrder.placedDate ? (purchaseOrder.placedDate.toISOString() as DateTime) : null,
     location: getLocation(purchaseOrder.locationId),
     vendorName: purchaseOrder.vendorName,
     shipFrom: purchaseOrder.shipFrom,

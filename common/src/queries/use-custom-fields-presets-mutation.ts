@@ -25,7 +25,7 @@ export const useCustomFieldsPresetsMutation = (
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to mutate custom fields preset '${name}'`);
+        throw new Error(`Failed to mutate custom fields preset '${currentName}'`);
       }
 
       const body: UpsertCustomFieldsPresetResponse = await response.json();

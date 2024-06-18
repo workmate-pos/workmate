@@ -26,8 +26,8 @@ model Settings {
   key   String
   value String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([shop, key])
 }
@@ -55,14 +55,14 @@ model WorkOrder {
   // Either an absolute amount, or a percentage (range 0-100)
   discountAmount String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  items                    WorkOrderItem[]
-  fixedPriceLabourCharges  WorkOrderFixedPriceLabourCharge[]
-  hourlyLabourCharges      WorkOrderHourlyLabourCharge[]
-  customFields             WorkOrderCustomField[]
-  WorkOrderItemCustomField WorkOrderItemCustomField[]
+  items                     WorkOrderItem[]
+  fixedPriceLabourCharges   WorkOrderFixedPriceLabourCharge[]
+  hourlyLabourCharges       WorkOrderHourlyLabourCharge[]
+  customFields              WorkOrderCustomField[]
+  workOrderItemCustomFields WorkOrderItemCustomField[]
 
   @@unique([shop, name])
 }
@@ -95,8 +95,8 @@ model WorkOrderItem {
   hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
 
-  createdAt                DateTime                   @default(now())
-  updatedAt                DateTime                   @default(now())
+  createdAt                DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime                   @default(now()) @db.Timestamptz(3)
   WorkOrderItemCustomField WorkOrderItemCustomField[]
 
   @@id([workOrderId, uuid])
@@ -127,8 +127,8 @@ model WorkOrderFixedPriceLabourCharge {
   amountLocked Boolean
   removeLocked Boolean
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([workOrderId, uuid])
 }
@@ -159,8 +159,8 @@ model WorkOrderHourlyLabourCharge {
   hoursLocked  Boolean
   removeLocked Boolean
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([workOrderId, uuid])
 }
@@ -185,8 +185,8 @@ model ShopifyOrder {
   outstanding String
   fullyPaid   Boolean
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   workOrders WorkOrder[]
   discounts  ShopifyOrderDiscount[]
@@ -203,8 +203,8 @@ model ShopifyOrderDiscount {
   code   String
   amount String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }
 
 model ShopifyOrderLineItem {
@@ -223,8 +223,8 @@ model ShopifyOrderLineItem {
   unitPrice           String // before tax/discounts
   totalTax            String // for all quantities
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
   fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
@@ -255,8 +255,8 @@ model Employee {
   fixedPriceLabourCharges          WorkOrderFixedPriceLabourCharge[]
   purchaseOrderEmployeeAssignments PurchaseOrderEmployeeAssignment[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([shop])
 }
@@ -370,7 +370,9 @@ model PurchaseOrder {
 
   vendorName String?
 
-  note String
+  note       String
+  /// The date the purchase order was placed.
+  placedDate DateTime? @db.Timestamptz(3)
 
   discount  String?
   tax       String?
@@ -386,9 +388,9 @@ model PurchaseOrder {
   customFields        PurchaseOrderCustomField[]
   employeeAssignments PurchaseOrderEmployeeAssignment[]
 
-  createdAt                        DateTime                           @default(now())
-  updatedAt                        DateTime                           @default(now())
-  PurchaseOrderLineItemCustomField PurchaseOrderLineItemCustomField[]
+  createdAt                         DateTime                           @default(now()) @db.Timestamptz(3)
+  updatedAt                         DateTime                           @default(now()) @db.Timestamptz(3)
+  purchaseOrderLineItemCustomFields PurchaseOrderLineItemCustomField[]
 
   @@unique([shop, name])
 }
@@ -410,8 +412,8 @@ model PurchaseOrderLineItem {
   /// Quantity that is added Shopify as available inventory
   availableQuantity Int
 
-  createdAt                        DateTime                           @default(now())
-  updatedAt                        DateTime                           @default(now())
+  createdAt                        DateTime                           @default(now()) @db.Timestamptz(3)
+  updatedAt                        DateTime                           @default(now()) @db.Timestamptz(3)
   PurchaseOrderLineItemCustomField PurchaseOrderLineItemCustomField[]
 
   @@id([purchaseOrderId, uuid])
@@ -428,8 +430,8 @@ model PurchaseOrderEmployeeAssignment {
   employee   Employee @relation(fields: [employeeId], references: [staffMemberId])
   employeeId String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }
 
 model StockTransfer {
@@ -445,8 +447,8 @@ model StockTransfer {
 
   lineItems StockTransferLineItem[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([shop, name])
 }
@@ -477,8 +479,8 @@ model StockTransferLineItem {
   // Line item is split if there are multiple statuses.
   quantity Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([stockTransferId, uuid])
 }
@@ -492,8 +494,8 @@ model PurchaseOrderCustomField {
   key   String
   value String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([purchaseOrderId, key])
   @@index([key, value])
@@ -511,8 +513,8 @@ model PurchaseOrderLineItemCustomField {
   key   String
   value String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([purchaseOrderId, purchaseOrderLineItemUuid, key])
   @@index([key, value])
@@ -527,8 +529,8 @@ model WorkOrderCustomField {
   key   String
   value String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([workOrderId, key])
   @@index([key, value])
@@ -546,8 +548,8 @@ model WorkOrderItemCustomField {
   key   String
   value String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([workOrderId, workOrderItemUuid, key])
   @@index([key, value])
@@ -566,8 +568,8 @@ model CustomFieldsPreset {
   // If default, all keys will automatically be added to a work order/purchase order (depending on the type)
   default Boolean
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([shop, type, name])
 }
@@ -589,8 +591,8 @@ model ProductVariant {
   sku             String?
   title           String
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now())
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
   deletedAt DateTime?
 
   purchaseOrderLineItems PurchaseOrderLineItem[]
@@ -610,8 +612,8 @@ model Product {
 
   productVariants ProductVariant[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now())
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
   deletedAt DateTime?
 
   @@index([shop])
@@ -632,8 +634,8 @@ model Customer {
   workOrders    WorkOrder[]
   shopifyOrders ShopifyOrder[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now())
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
   deletedAt DateTime?
 
   @@index([shop])
@@ -648,8 +650,8 @@ model Location {
 
   purchaseOrders PurchaseOrder[]
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now())
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
   deletedAt DateTime?
 
   @@index([shop])
@@ -663,7 +665,7 @@ model OldWorkOrder {
   name               String
   status             String
   dueDate            DateTime
-  createdAt          DateTime              @default(now())
+  createdAt          DateTime              @default(now()) @db.Timestamptz(3)
   customerId         String
   derivedFromOrderId String?
   draftOrderId       String?

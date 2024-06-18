@@ -59,6 +59,7 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const [{ id: purchaseOrderId } = never()] = await db.purchaseOrder.upsert({
       shop,
       name,
+      placedDate: createPurchaseOrder.placedDate,
       status: createPurchaseOrder.status,
       vendorName: createPurchaseOrder.vendorName,
       locationId: createPurchaseOrder.locationId,

@@ -391,6 +391,7 @@ export interface IGetPurchaseOrdersResult {
   name: string;
   note: string;
   paid: string | null;
+  placedDate: Date | null;
   shipFrom: string;
   shipping: string | null;
   shipTo: string;

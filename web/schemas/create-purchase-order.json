@@ -9,6 +9,9 @@
     "status": {
       "type": "string"
     },
+    "placedDate": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+    },
     "locationId": {
       "anyOf": [
         { "const": null },
@@ -133,6 +136,7 @@
   "required": [
     "name",
     "status",
+    "placedDate",
     "locationId",
     "vendorName",
     "shipFrom",

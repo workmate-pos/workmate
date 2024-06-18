@@ -66,9 +66,9 @@ WHERE id IN :purchaseOrderIds!;
 
 /* @name upsert */
 INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
-                             "shipTo", note, "vendorName")
+                             "shipTo", note, "vendorName", "placedDate")
 VALUES (:shop!, :locationId, :discount, :tax, :shipping, :deposited, :paid, :name!, :status!, :shipFrom!, :shipTo!,
-        :note!, :vendorName)
+        :note!, :vendorName, :placedDate)
 ON CONFLICT (shop, name) DO UPDATE
   SET "shipFrom"   = EXCLUDED."shipFrom",
       "shipTo"     = EXCLUDED."shipTo",
@@ -80,7 +80,8 @@ ON CONFLICT (shop, name) DO UPDATE
       deposited    = EXCLUDED.deposited,
       paid         = EXCLUDED.paid,
       status       = EXCLUDED.status,
-      "vendorName" = EXCLUDED."vendorName"
+      "vendorName" = EXCLUDED."vendorName",
+      "placedDate" = EXCLUDED."placedDate"
 RETURNING id;
 
 /* @name getLineItems */

@@ -48,6 +48,7 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
       id,
       customFields: purchaseOrder.customFields,
       name: purchaseOrder.name,
+      placedDate: purchaseOrder.placedDate,
       deposited: purchaseOrder.deposited,
       discount: purchaseOrder.discount,
       employeeAssignments: purchaseOrder.employeeAssignments.map(ea => ({

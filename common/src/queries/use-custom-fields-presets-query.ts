@@ -5,8 +5,12 @@ import {
   FetchCustomFieldsPresetsResponse,
 } from '@web/controllers/api/custom-fields-presets.js';
 
-export const useCustomFieldsPresetsQuery = ({ fetch, type }: { fetch: Fetch; type: CustomFieldsPresetType }) =>
+export const useCustomFieldsPresetsQuery = (
+  { fetch, type }: { fetch: Fetch; type: CustomFieldsPresetType },
+  options?: { staleTime?: number },
+) =>
   useQuery({
+    ...options,
     queryKey: ['custom-fields-presets', type],
     queryFn: async () => {
       const response = await fetch(`/api/custom-fields-presets/${encodeURIComponent(type)}`);

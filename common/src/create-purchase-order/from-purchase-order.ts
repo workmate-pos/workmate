@@ -18,6 +18,7 @@ export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: PurchaseOrde
       customFields: lineItem.customFields,
     })),
     name: purchaseOrder.name,
+    placedDate: purchaseOrder.placedDate,
     tax: purchaseOrder.tax,
     discount: purchaseOrder.discount,
     paid: purchaseOrder.paid,
