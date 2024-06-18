@@ -1,22 +1,26 @@
-import { Text, ScrollView, Stack, List, ListRow } from '@shopify/retail-ui-extensions-react';
-import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { useState } from 'react';
-import { Router, UseRouter } from '../router.js';
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
+import { Router, UseRouter } from '../router.js';
+import { useState } from 'react';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import {
   CustomFieldsPreset,
   useCustomFieldsPresetsQuery,
 } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 
-export type ImportPresetProps = {
-  onImport: (preset: { keys: string[] }) => void;
+export type SelectPresetProps = {
+  onSelect: (preset: CustomFieldsPreset) => void;
   useRouter: UseRouter;
   type: CustomFieldsPresetType;
 };
 
-export function ImportPreset({ onImport, useRouter, type }: ImportPresetProps) {
+/**
+ * Select a custom field preset.
+ * Used for both selecting presets to edit and selecting presets to import.
+ */
+export function SelectPreset({ onSelect, useRouter, type }: SelectPresetProps) {
   const [query, setQuery] = useState('');
 
   const fetch = useAuthenticatedFetch();
@@ -25,7 +29,7 @@ export function ImportPreset({ onImport, useRouter, type }: ImportPresetProps) {
 
   const router = useRouter();
 
-  const rows = getPresetRows(presets, query, onImport, router);
+  const rows = getPresetRows(presets, query, onSelect, router);
 
   return (
     <ScrollView>
@@ -69,7 +73,7 @@ export function ImportPreset({ onImport, useRouter, type }: ImportPresetProps) {
 function getPresetRows(
   presets: CustomFieldsPreset[],
   query: string,
-  onImport: (preset: { keys: string[] }) => void,
+  onSelect: (preset: CustomFieldsPreset) => void,
   router: Router,
 ) {
   const queryFilter = (preset: CustomFieldsPreset) => preset.name.toLowerCase().includes(query.toLowerCase());
@@ -88,9 +92,9 @@ function getPresetRows(
 
     return {
       id: preset.name,
-      onPress: () => {
-        onImport({ keys: preset.keys });
-        router.popCurrent();
+      onPress: async () => {
+        await router.popCurrent();
+        onSelect(preset);
       },
       leftSide: {
         label,

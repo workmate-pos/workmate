@@ -4,7 +4,20 @@ import { Redirect } from '@shopify/app-bridge/actions';
 import { useReducer, useRef, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { BlockStack, Card, EmptyState, Frame, InlineGrid, InlineStack, Page, Select, Text } from '@shopify/polaris';
+import {
+  Banner,
+  BlockStack,
+  Box,
+  Card,
+  EmptyState,
+  Frame,
+  InlineGrid,
+  InlineStack,
+  List,
+  Page,
+  Select,
+  Text,
+} from '@shopify/polaris';
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
@@ -16,7 +29,10 @@ import { useCreateWorkOrderReducer, WIPCreateWorkOrder } from '@work-orders/comm
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { defaultCreateWorkOrder } from '@work-orders/common/create-work-order/default.js';
 import { WorkOrder as WorkOrderType } from '@web/services/work-orders/types.js';
-import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
+import {
+  SaveWorkOrderValidationErrors,
+  useSaveWorkOrderMutation,
+} from '@work-orders/common/queries/use-save-work-order-mutation.js';
 import { WorkOrderGeneralCard } from '@web/frontend/components/work-orders/WorkOrderGeneralCard.js';
 import { CustomerSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomerSelectorModal.js';
 import { WorkOrderCustomFieldsCard } from '@web/frontend/components/work-orders/WorkOrderCustomFieldsCard.js';
@@ -29,6 +45,7 @@ import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/modals/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export default function () {
   return (
@@ -197,6 +214,20 @@ function WorkOrder({
           },
         }}
       />
+
+      {workOrderMutation.error instanceof SaveWorkOrderValidationErrors && (
+        <Box paddingBlock={'800'}>
+          <Banner title="Cannot save work order" tone="critical">
+            <List>
+              {Object.entries(workOrderMutation.error.errors).map(([key, value]) => (
+                <List.Item key={key}>
+                  {titleCase(key)}: {value}
+                </List.Item>
+              ))}
+            </List>
+          </Banner>
+        </Box>
+      )}
 
       <BlockStack gap={'400'}>
         <InlineStack align={'space-between'}>

@@ -4,6 +4,13 @@ FROM "CustomFieldsPreset"
 WHERE shop = :shop!
   AND type = COALESCE(:type, type);
 
+/* @name getCustomFieldsPreset */
+SELECT *
+FROM "CustomFieldsPreset"
+WHERE shop = :shop!
+  AND type = :type!
+  AND name = :name!;
+
 /* @name upsertCustomFieldsPreset */
 INSERT INTO "CustomFieldsPreset" (shop, name, type, keys, "default")
 VALUES (:shop!, :name!, :type!, :keys!, :default!)

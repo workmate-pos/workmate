@@ -2,17 +2,20 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
     "keys": {
       "type": "array",
       "items": {
         "type": "string"
-      },
-      "minItems": 1
+      }
     },
     "default": {
       "type": "boolean"
     }
   },
-  "required": ["keys", "default"],
+  "required": ["name", "keys", "default"],
   "additionalProperties": false
 }

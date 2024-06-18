@@ -12,7 +12,7 @@ import { useCustomFieldsPresetsMutation } from '@work-orders/common/queries/use-
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
 export type SavePresetProps = {
-  keys: [string, ...string[]];
+  keys: string[];
   useRouter: UseRouter;
   type: CustomFieldsPresetType;
 };
