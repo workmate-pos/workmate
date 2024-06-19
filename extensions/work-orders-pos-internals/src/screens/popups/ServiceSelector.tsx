@@ -25,6 +25,8 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
 type OnSelect = (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 
@@ -56,7 +58,9 @@ export function ServiceSelector({
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
   const screen = useScreen();
-  screen.setIsLoading(customFieldsPresetsQuery.isLoading);
+
+  const isLoading = customFieldsPresetsQuery.isLoading;
+  screen.setIsLoading(isLoading);
 
   const currencyFormatter = useCurrencyFormatter();
 
@@ -76,22 +80,62 @@ export function ServiceSelector({
 
   const router = useRouter();
 
+  if (isLoading) {
+    return null;
+  }
+
+  if (customFieldsPresetsQuery.isError || !customFieldsPresetsQuery.data) {
+    return (
+      <ResponsiveStack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(
+            customFieldsPresetsQuery.error,
+            'An error occurred while loading default custom field presets',
+          )}
+        </Text>
+      </ResponsiveStack>
+    );
+  }
+
   return (
     <ScrollView>
-      <Button
-        title={'Add labour to line item'}
-        variant={'primary'}
-        onPress={() =>
-          router.push('ItemSelector', {
-            filter: 'can-add-labour',
-            onSelect: async item => {
-              await router.popCurrent();
-              onAddLabourToItem(item);
-            },
-            items: createWorkOrder.items,
-          })
-        }
-      />
+      <ResponsiveGrid columns={2}>
+        <Button
+          title={'New Service'}
+          variant={'primary'}
+          onPress={() => {
+            router.push('ProductCreator', {
+              initialProduct: {},
+              service: true,
+              onCreate: product =>
+                onSelect({
+                  item: {
+                    uuid: uuid(),
+                    productVariantId: product.productVariantId,
+                    absorbCharges: product.serviceType === QUANTITY_ADJUSTING_SERVICE,
+                    customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                    quantity: product.quantity,
+                  },
+                  charges: [],
+                }),
+            });
+          }}
+        />
+        <Button
+          title={'Add labour to line item'}
+          variant={'primary'}
+          onPress={() =>
+            router.push('ItemSelector', {
+              filter: 'can-add-labour',
+              onSelect: async item => {
+                await router.popCurrent();
+                onAddLabourToItem(item);
+              },
+              items: createWorkOrder.items,
+            })
+          }
+        />
+      </ResponsiveGrid>
 
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">

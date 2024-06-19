@@ -19,9 +19,12 @@ export function NewWorkOrder() {
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const settingsQuery = useSettingsQuery({ fetch });
-  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'WORK_ORDER' }, { staleTime: 0 });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery(
+    { fetch, type: 'WORK_ORDER' },
+    { refetchOnMount: 'always' },
+  );
 
-  const isLoading = settingsQuery.isFetching || customFieldsPresetsQuery.isFetching;
+  const isLoading = settingsQuery.isLoading || customFieldsPresetsQuery.isFetching;
 
   const screen = useScreen();
   screen.setIsLoading(isLoading);

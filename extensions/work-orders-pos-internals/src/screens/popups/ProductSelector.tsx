@@ -19,6 +19,7 @@ import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
 export function ProductSelector({
   onSelect,
@@ -48,7 +49,9 @@ export function ProductSelector({
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
   const screen = useScreen();
-  screen.setIsLoading(customFieldsPresetsQuery.isLoading);
+
+  const isLoading = customFieldsPresetsQuery.isLoading;
+  screen.setIsLoading(isLoading);
 
   const currencyFormatter = useCurrencyFormatter();
 
@@ -82,6 +85,23 @@ export function ProductSelector({
     currencyFormatter,
   );
 
+  if (isLoading) {
+    return null;
+  }
+
+  if (customFieldsPresetsQuery.isError || !customFieldsPresetsQuery.data) {
+    return (
+      <ResponsiveStack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(
+            customFieldsPresetsQuery.error,
+            'An error occurred while loading default custom field presets',
+          )}
+        </Text>
+      </ResponsiveStack>
+    );
+  }
+
   return (
     <ScrollView>
       <Button
@@ -97,7 +117,7 @@ export function ProductSelector({
                   uuid: uuid(),
                   productVariantId: product.productVariantId,
                   absorbCharges: false,
-                  customFields: {},
+                  customFields: customFieldsPresetsQuery.data.defaultCustomFields,
                 },
                 [],
               ),

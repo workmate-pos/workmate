@@ -120,6 +120,8 @@ export default {
 
   PRODUCTS_UPDATE: {
     async handler(session, topic, shop, body: { admin_graphql_api_id: ID; variant_ids: { id: number }[] }) {
+      await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
+
       // shopify sends this webhook whenever the product is ordered, so we throttle a bit here
       // (we cannot use shopify's product.updatedAt because it updates even if the inventory item changes...)
       const FIVE_MINUTES = 5 * 60 * 1000;
@@ -128,9 +130,7 @@ export default {
         return;
       }
 
-      await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
       await syncProductsIfExists(session, [body.admin_graphql_api_id]);
-
       const variantIds = body.variant_ids.map(({ id }) => createGid('ProductVariant', id));
       await syncProductVariantsIfExists(session, variantIds);
     },

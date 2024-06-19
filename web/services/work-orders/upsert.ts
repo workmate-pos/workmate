@@ -131,12 +131,20 @@ async function removeCustomFields(workOrderId: number) {
 }
 
 async function insertWorkOrderCustomFields(workOrderId: number, customFields: Record<string, string>) {
+  if (Object.keys(customFields).length === 0) {
+    return;
+  }
+
   await db.workOrder.insertCustomFields({
     customFields: Object.entries(customFields).map(([key, value]) => ({ workOrderId, key, value })),
   });
 }
 
 async function insertItemCustomFields(workOrderId: number, items: CreateWorkOrder['items']) {
+  if (items.length === 0) {
+    return;
+  }
+
   await db.workOrder.insertItemCustomFields({
     customFields: items.flatMap(({ customFields, uuid: workOrderItemUuid }) =>
       Object.entries(customFields).map(([key, value]) => ({ workOrderId, workOrderItemUuid, key, value })),

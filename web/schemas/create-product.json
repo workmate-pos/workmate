@@ -71,6 +71,9 @@
           "$ref": "scalars.json#/definitions/ID"
         }
       ]
+    },
+    "serviceType": {
+      "anyOf": [{ "const": null }, { "enum": ["Quantity-Adjusting Service", "Fixed-Price Service"] }]
     }
   },
   "required": [
@@ -84,7 +87,8 @@
     "allowOutOfStockPurchases",
     "vendor",
     "locationId",
-    "availableQuantity"
+    "availableQuantity",
+    "serviceType"
   ],
   "additionalProperties": false
 }

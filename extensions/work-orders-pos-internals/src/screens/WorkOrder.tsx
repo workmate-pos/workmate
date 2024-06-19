@@ -299,7 +299,7 @@ function WorkOrderItems({
         dispatch,
       });
     }
-  }, [openChargeConfigPopupItemUuid]);
+  }, [openChargeConfigPopupItemUuid, createWorkOrder]);
 
   return (
     <ResponsiveGrid columns={1}>

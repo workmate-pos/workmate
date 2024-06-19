@@ -103,7 +103,7 @@ function createWorkOrderReducer(
   switch (action.type) {
     case 'setPartial':
     case 'set': {
-      const { type, ...partial } = action;
+      const { type, workOrder, ...partial } = action;
       const partialNotUndefined: Partial<WIPCreateWorkOrder> = Object.fromEntries(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );

@@ -1,5 +1,5 @@
 import { gql } from '../gql/gql.js';
-import { Graphql, InstallableService } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, InstallableService, sentryErr } from '@teifi-digital/shopify-app-express/services';
 
 export type SegmentDefinition =
   | gql.segments.createSegment.Variables
@@ -16,12 +16,11 @@ export class InstallableSegmentService extends InstallableService {
     for (const definitionorFn of this.segmentDefinitions) {
       const definition = typeof definitionorFn === 'function' ? await definitionorFn(graphql) : definitionorFn;
 
-      const result = await gql.segments.createSegment.run(graphql, definition);
-
-      if (result?.segmentCreate?.userErrors.length) {
-        console.error(`Failed to create segment '${definition.name}'`, result.segmentCreate.userErrors);
-      } else {
+      try {
+        await gql.segments.createSegment.run(graphql, definition);
         console.log(`Created segment '${definition.name}'`);
+      } catch (error) {
+        sentryErr(error);
       }
     }
   }

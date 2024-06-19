@@ -43,10 +43,19 @@ export async function syncProductServiceTypeTag(session: Session, productId: ID)
   }
 
   const serviceType = product.serviceType ? parseProductServiceType(product.serviceType.value) : null;
+  const serviceTypeTag = serviceType ? SERVICE_METAFIELD_VALUE_TAG_NAME[serviceType] : null;
 
-  await gql.tags.removeAndAddTags.run(graphql, {
-    id: productId,
-    removeTags: Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME),
-    addTags: serviceType ? [SERVICE_METAFIELD_VALUE_TAG_NAME[serviceType]] : [],
-  });
+  const removeTags = product.tags.filter(
+    tag => tag !== serviceTypeTag && Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).some(t => tag === t),
+  );
+
+  const addTags = serviceTypeTag && !product.tags.some(tag => tag === serviceTypeTag) ? [serviceTypeTag] : [];
+
+  if (removeTags.length > 0 || addTags.length > 0) {
+    await gql.tags.removeAndAddTags.run(graphql, {
+      id: productId,
+      removeTags,
+      addTags,
+    });
+  }
 }

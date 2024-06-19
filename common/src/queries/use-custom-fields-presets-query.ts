@@ -7,7 +7,7 @@ import {
 
 export const useCustomFieldsPresetsQuery = (
   { fetch, type }: { fetch: Fetch; type: CustomFieldsPresetType },
-  options?: { staleTime?: number },
+  options?: { staleTime?: number; enabled?: boolean; refetchOnMount?: boolean | 'always' },
 ) =>
   useQuery({
     ...options,

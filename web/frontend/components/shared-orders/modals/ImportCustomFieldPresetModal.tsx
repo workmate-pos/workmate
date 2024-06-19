@@ -27,7 +27,7 @@ export function ImportCustomFieldPresetModal({
 
   const [query, setQuery] = useState('');
 
-  const presets = presetsQuery.data ?? [];
+  const presets = presetsQuery.data?.presets ?? [];
   const filteredPresets = presets.filter(preset => {
     return (
       preset.name.toLowerCase().includes(query.toLowerCase()) ||
