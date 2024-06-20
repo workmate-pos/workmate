@@ -113,7 +113,7 @@ export default class PurchaseOrdersController {
     }
 
     const printTemplate = purchaseOrderPrintTemplates[template] ?? never();
-    const context = await getPurchaseOrderTemplateData(session.shop, name, date);
+    const context = await getPurchaseOrderTemplateData(session, name, date);
     const { subject, html } = await getRenderedPurchaseOrderTemplate(printTemplate, context);
     const file = await renderHtmlToPdfCustomFile(subject, html);
 
