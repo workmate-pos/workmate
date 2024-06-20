@@ -8,7 +8,6 @@ import {
   IndexTable,
   Page,
   SkeletonBodyText,
-  SkeletonDisplayText,
   Text,
 } from '@shopify/polaris';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
@@ -157,7 +156,9 @@ function WorkOrders() {
               <Text as={'p'} variant="bodyMd">
                 {(() => {
                   const purchaseOrderNames = unique(
-                    workOrder.items.flatMap(item => item.purchaseOrders.map(po => po.name)),
+                    workOrder.items
+                      .filter(hasPropertyValue('type', 'product'))
+                      .flatMap(item => item.purchaseOrders.map(po => po.name)),
                   );
 
                   return purchaseOrderNames.join(', ');

@@ -21,7 +21,7 @@ import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.j
 import { useState } from 'react';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { WorkOrderItemModal } from '@web/frontend/components/work-orders/modals/WorkOrderItemModal.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
@@ -108,7 +108,17 @@ function ProductsList({
         resourceName={{ singular: 'product', plural: 'products' }}
         resolveItemId={item => item.uuid}
         renderItem={item => {
-          const itemLineItemId = calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
+          const itemLineItemId = (() => {
+            if (item.type === 'product') {
+              return calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
+            }
+
+            if (item.type === 'custom-item') {
+              return calculatedDraftOrderQuery.data?.customItemLineItemIds[item.uuid];
+            }
+
+            return item satisfies never;
+          })();
           const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
 
           const canRemove = !!itemLineItem?.order;
@@ -116,9 +126,22 @@ function ProductsList({
           const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
           const imageUrl = itemLineItem?.image?.url;
 
-          const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
+          const charges = createWorkOrder.charges
+            .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
+            .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
 
-          const itemPrice = calculatedDraftOrderQuery.data?.itemPrices[item.uuid];
+          const itemPrice = (() => {
+            if (item.type === 'product') {
+              return calculatedDraftOrderQuery.data?.itemPrices[item.uuid];
+            }
+
+            if (item.type === 'custom-item') {
+              return calculatedDraftOrderQuery.data?.customItemPrices[item.uuid];
+            }
+
+            return item satisfies never;
+          })();
+
           const chargePrices = charges.map(charge => {
             if (charge.type === 'hourly-labour') {
               return calculatedDraftOrderQuery.data?.hourlyLabourChargePrices[charge.uuid];
@@ -180,10 +203,7 @@ function ProductsList({
           setToastAction={setToastAction}
           onSave={(item, charges) => {
             dispatch.updateItem({ item });
-            dispatch.updateItemCharges({
-              uuid: item.uuid,
-              charges,
-            });
+            dispatch.updateItemCharges({ item, charges });
           }}
         />
       )}

@@ -48,6 +48,9 @@ import { AddProductModal } from '@web/frontend/components/shared-orders/modals/A
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
+import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
+import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export default function () {
   return (
@@ -370,12 +373,15 @@ function WorkOrder({
           onClose={() => setIsAddProductModalOpen(false)}
           onAdd={(items, charges) => {
             dispatch.addItems({ items });
-            for (const charge of charges) {
-              if (!charge.workOrderItemUuid) {
-                continue;
-              }
 
-              dispatch.updateItemCharges({ uuid: charge.workOrderItemUuid, charges: [charge] });
+            const chargesByItem = groupBy(
+              charges.filter(hasNonNullableProperty('workOrderItem')),
+              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
+            );
+
+            for (const charges of Object.values(chargesByItem)) {
+              const [charge = never()] = charges;
+              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
             }
           }}
         />
@@ -390,12 +396,15 @@ function WorkOrder({
           onClose={() => setIsAddServiceModalOpen(false)}
           onAdd={(items, charges) => {
             dispatch.addItems({ items });
-            for (const charge of charges) {
-              if (!charge.workOrderItemUuid) {
-                continue;
-              }
 
-              dispatch.updateItemCharges({ uuid: charge.workOrderItemUuid, charges: [charge] });
+            const chargesByItem = groupBy(
+              charges.filter(hasNonNullableProperty('workOrderItem')),
+              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
+            );
+
+            for (const charges of Object.values(chargesByItem)) {
+              const [charge = never()] = charges;
+              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
             }
           }}
         />

@@ -27,6 +27,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
 
   await Promise.all([
     linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
+    linkCustomItems(lineItems, workOrder.id),
     linkHourlyLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
     linkFixedPriceLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
   ]);
@@ -60,6 +61,22 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
         });
       }
     }
+  }
+
+  if (items.length !== uuids.length) {
+    throw new Error('Did not find all item uuids from a Shopify Order in the database');
+  }
+}
+
+async function linkCustomItems(lineItems: LineItem[], workOrderId: number) {
+  const lineItemIdByItemUuid = getLineItemIdsByUuids(lineItems, 'custom-item');
+
+  const uuids = Object.keys(lineItemIdByItemUuid);
+
+  const items = uuids.length ? await db.workOrder.getCustomItemsByUuids({ workOrderId, uuids }) : [];
+  for (const { uuid } of items) {
+    const shopifyOrderLineItemId = lineItemIdByItemUuid[uuid] ?? never();
+    await db.workOrder.setCustomItemShopifyOrderLineItemId({ workOrderId, uuid, shopifyOrderLineItemId });
   }
 
   if (items.length !== uuids.length) {

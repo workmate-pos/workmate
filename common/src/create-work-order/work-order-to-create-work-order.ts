@@ -18,20 +18,37 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
 }
 
 function mapItem(item: WorkOrder['items'][number]): CreateWorkOrder['items'][number] {
-  return {
-    productVariantId: item.productVariantId,
-    quantity: item.quantity,
-    uuid: item.uuid,
-    absorbCharges: item.absorbCharges,
-    customFields: item.customFields,
-  };
+  if (item.type === 'product') {
+    return {
+      type: 'product',
+      productVariantId: item.productVariantId,
+      quantity: item.quantity,
+      uuid: item.uuid,
+      absorbCharges: item.absorbCharges,
+      customFields: item.customFields,
+    };
+  }
+
+  if (item.type === 'custom-item') {
+    return {
+      type: 'custom-item',
+      quantity: item.quantity,
+      uuid: item.uuid,
+      absorbCharges: item.absorbCharges,
+      customFields: item.customFields,
+      name: item.name,
+      unitPrice: item.unitPrice,
+    };
+  }
+
+  return item satisfies never;
 }
 
 function mapCharge(charge: WorkOrder['charges'][number]): CreateWorkOrder['charges'][number] {
   if (charge.type === 'hourly-labour') {
     return {
       type: 'hourly-labour',
-      workOrderItemUuid: charge.workOrderItemUuid,
+      workOrderItem: charge.workOrderItem,
       employeeId: charge.employeeId,
       uuid: charge.uuid,
       hours: charge.hours,
@@ -46,7 +63,7 @@ function mapCharge(charge: WorkOrder['charges'][number]): CreateWorkOrder['charg
   if (charge.type === 'fixed-price-labour') {
     return {
       type: 'fixed-price-labour',
-      workOrderItemUuid: charge.workOrderItemUuid,
+      workOrderItem: charge.workOrderItem,
       employeeId: charge.employeeId,
       amount: charge.amount,
       uuid: charge.uuid,

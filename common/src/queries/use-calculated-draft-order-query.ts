@@ -58,14 +58,26 @@ export const useCalculatedDraftOrderQuery = (
   return {
     ...query,
 
-    getItemLineItem: (uuid: string) => {
+    getItemLineItem: ({ uuid, type }: DiscriminatedUnionPick<CalculateWorkOrder['items'][number], 'type' | 'uuid'>) => {
       if (!calculatedDraftOrder) {
         return null;
       }
 
-      const { lineItems, itemLineItemIds } = calculatedDraftOrder;
+      const { lineItems, itemLineItemIds, customItemLineItemIds } = calculatedDraftOrder;
 
-      return lineItems.find(li => li.id === itemLineItemIds[uuid]) ?? null;
+      const lineItemByUuid = (() => {
+        if (type === 'product') {
+          return itemLineItemIds;
+        }
+
+        if (type === 'custom-item') {
+          return customItemLineItemIds;
+        }
+
+        return type satisfies never;
+      })();
+
+      return lineItems.find(li => li.id === lineItemByUuid[uuid]) ?? null;
     },
 
     getChargeLineItem: (charge: DiscriminatedUnionPick<CalculateWorkOrder['charges'][number], 'type' | 'uuid'>) => {

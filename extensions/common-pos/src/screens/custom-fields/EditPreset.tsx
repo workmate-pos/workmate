@@ -200,12 +200,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
             onPress={areYouSureYouWantToOverwriteDialog.show}
           />
 
-          <FormButton
-            title={'Delete'}
-            type={'destructive'}
-            action={'submit'}
-            onPress={areYouSureYouWantToDeleteDialog.show}
-          />
+          <FormButton title={'Delete'} type={'destructive'} onPress={areYouSureYouWantToDeleteDialog.show} />
 
           <FormButton title={'Cancel'} type={'basic'} onPress={() => router.popCurrent()} />
         </ResponsiveStack>

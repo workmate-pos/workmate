@@ -6,7 +6,12 @@ import { Dispatch, SetStateAction, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import {
+  hasNestedPropertyValue,
+  hasNonNullableProperty,
+  hasPropertyValue,
+  isNonNullable,
+} from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import {
@@ -62,7 +67,7 @@ export function WorkOrderItemModal({
   setToastAction: ToastActionCallable;
   onSave: (
     item: CreateWorkOrder['items'][number],
-    charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[],
+    charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItem'>[],
   ) => void;
 }) {
   const [forceShowCharges, setForceShowCharges] = useState(false);
@@ -82,7 +87,11 @@ export function WorkOrderItemModal({
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
-  const initialCharges = createWorkOrder.charges.filter(hasPropertyValue('workOrderItemUuid', itemUuid)) ?? [];
+  // TODO: Support custom items
+  const initialCharges =
+    createWorkOrder.charges
+      .filter(hasNestedPropertyValue('workOrderItem.type', 'product' as 'product' | 'custom-item'))
+      .filter(hasNestedPropertyValue('workOrderItem.uuid', itemUuid)) ?? [];
   const shouldShowCharges = initialCharges.length > 0 || forceShowCharges;
 
   const [item, setItem] = useState(
@@ -90,9 +99,7 @@ export function WorkOrderItemModal({
   );
   const [generalCharge, setGeneralCharge] = useState(extractInitialGeneralCharge(initialCharges));
   const [employeeCharges, setEmployeeCharges] = useState(
-    createWorkOrder.charges
-      .filter(hasPropertyValue('workOrderItemUuid', itemUuid))
-      .filter((charge): charge is typeof charge & { employeeId: ID } => !!charge.employeeId) ?? [],
+    initialCharges.filter(hasNonNullableProperty('employeeId')) ?? [],
   );
 
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -105,7 +112,17 @@ export function WorkOrderItemModal({
     { enabled: false },
   );
 
-  const itemLineItemId = calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
+  const itemLineItemId = (() => {
+    if (item.type === 'product') {
+      return calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
+    }
+
+    if (item.type === 'custom-item') {
+      return calculatedDraftOrderQuery.data?.customItemLineItemIds[item.uuid];
+    }
+
+    return item satisfies never;
+  })();
   const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
 
   const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
@@ -233,7 +250,11 @@ export function WorkOrderItemModal({
                       name: settingsQuery.data?.settings?.labourLineItemName || 'Labour',
                       amount: BigDecimal.ZERO.toMoney(),
                       employeeId,
-                      workOrderItemUuid: itemUuid,
+                      workOrderItem: {
+                        uuid: itemUuid,
+                        // TODO: Support custom items
+                        type: 'product',
+                      },
                       amountLocked: false,
                       removeLocked: false,
                     }) as const,
@@ -320,7 +341,7 @@ export function WorkOrderItemModal({
  * @TODO: Shared with pos!!!
  */
 function extractInitialGeneralCharge(
-  charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[],
+  charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItem'>[],
 ) {
   const generalCharges = charges.filter(hasPropertyValue('employeeId', null));
 
@@ -343,6 +364,11 @@ function extractInitialGeneralCharge(
   return null;
 }
 
+type LinkedEmployeeCharge = CreateWorkOrder['charges'][number] & {
+  workOrderItem: { type: 'product' | 'custom-item' };
+  employeeId: ID;
+};
+
 function Charges({
   setToastAction,
   generalCharge,
@@ -356,10 +382,8 @@ function Charges({
   generalCharge: ReturnType<typeof extractInitialGeneralCharge>;
   setGeneralCharge: Dispatch<SetStateAction<ReturnType<typeof extractInitialGeneralCharge>>>;
   readonly: boolean;
-  employeeCharges: (CreateWorkOrder['charges'][number] & { workOrderItemUuid: string; employeeId: ID })[];
-  setEmployeeCharges: Dispatch<
-    SetStateAction<(CreateWorkOrder['charges'][number] & { workOrderItemUuid: string; employeeId: ID })[]>
-  >;
+  employeeCharges: LinkedEmployeeCharge[];
+  setEmployeeCharges: Dispatch<SetStateAction<LinkedEmployeeCharge[]>>;
   setIsAddEmployeeModalOpen: Dispatch<SetStateAction<boolean>>;
 }) {
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -489,7 +513,7 @@ function Charges({
                         return {
                           ...partialNewCharge,
                           uuid: charge.uuid,
-                          workOrderItemUuid: charge.workOrderItemUuid,
+                          workOrderItem: charge.workOrderItem,
                           employeeId: charge.employeeId,
                         };
                       }
@@ -498,7 +522,7 @@ function Charges({
                         return {
                           ...partialNewCharge,
                           uuid: charge.uuid,
-                          workOrderItemUuid: charge.workOrderItemUuid,
+                          workOrderItem: charge.workOrderItem,
                           employeeId: charge.employeeId,
                         };
                       }

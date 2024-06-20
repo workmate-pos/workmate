@@ -5,14 +5,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 export function getTotalPriceForCharges(
   charges: DiscriminatedUnionOmit<
     CreateWorkOrder['charges'][number],
-    | 'employeeId'
-    | 'workOrderItemUuid'
-    | 'name'
-    | 'uuid'
-    | 'amountLocked'
-    | 'rateLocked'
-    | 'hoursLocked'
-    | 'removeLocked'
+    'employeeId' | 'workOrderItem' | 'name' | 'uuid' | 'amountLocked' | 'rateLocked' | 'hoursLocked' | 'removeLocked'
   >[],
 ): Money {
   return BigDecimal.sum(

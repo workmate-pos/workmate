@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { WorkOrder, WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
@@ -113,7 +113,7 @@ export function PaymentOverview({ name }: { name: string }) {
   };
 
   const selectableItems = workOrder.items.filter(
-    item => calculatedDraftOrderQuery.getItemLineItem(item.uuid)?.order === null,
+    item => calculatedDraftOrderQuery.getItemLineItem(item)?.order === null,
   );
   const selectableCharges = workOrder.charges.filter(
     charge => calculatedDraftOrderQuery.getChargeLineItem(charge)?.order === null,
@@ -189,9 +189,21 @@ function useItemRows(
   const itemRows = workOrder.items.flatMap<ListRow>(item => {
     const rows: ListRow[] = [];
 
-    const itemCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
-    const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item.uuid);
-    const itemPrice = calculatedDraftOrder.itemPrices[item.uuid];
+    const itemCharges = workOrder.charges
+      .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid))
+      .filter(hasNestedPropertyValue('workOrderItem.type', item.type));
+    const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
+    const itemPrice = (() => {
+      if (item.type === 'product') {
+        return calculatedDraftOrder.itemPrices[item.uuid];
+      }
+
+      if (item.type === 'custom-item') {
+        return calculatedDraftOrder.customItemPrices[item.uuid];
+      }
+
+      return item satisfies never;
+    })();
 
     rows.push({
       id: `item-${item.uuid}`,
@@ -229,7 +241,7 @@ function useItemRows(
     return rows;
   });
 
-  const unlinkedCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null));
+  const unlinkedCharges = workOrder.charges.filter(hasPropertyValue('workOrderItem', null));
 
   const unlinkedChargeRows = unlinkedCharges.map<ListRow>(charge => getChargeRow(charge));
 
@@ -239,7 +251,7 @@ function useItemRows(
 
     let label = charge.name;
 
-    if (charge.workOrderItemUuid) {
+    if (charge.workOrderItem) {
       label = `⮑ ${label}`;
     }
 

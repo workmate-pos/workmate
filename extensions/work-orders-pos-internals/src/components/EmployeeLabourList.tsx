@@ -19,8 +19,8 @@ export function EmployeeLabourList({
   onClick,
 }: {
   workOrderName: string | null;
-  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>[];
-  onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>) => void;
+  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItem'>[];
+  onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItem'>) => void;
 }) {
   const currencyFormatter = useCurrencyFormatter();
 

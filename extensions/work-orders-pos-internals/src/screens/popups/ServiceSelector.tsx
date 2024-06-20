@@ -103,13 +103,14 @@ export function ServiceSelector({
         <Button
           title={'New Service'}
           variant={'primary'}
-          onPress={() => {
+          onPress={() =>
             router.push('ProductCreator', {
               initialProduct: {},
               service: true,
               onCreate: product =>
                 onSelect({
                   item: {
+                    type: 'product',
                     uuid: uuid(),
                     productVariantId: product.productVariantId,
                     absorbCharges: product.serviceType === QUANTITY_ADJUSTING_SERVICE,
@@ -118,8 +119,8 @@ export function ServiceSelector({
                   },
                   charges: [],
                 }),
-            });
-          }}
+            })
+          }
         />
         <Button
           title={'Add labour to line item'}
@@ -222,6 +223,7 @@ function useProductVariantRows(
 
           onSelect({
             item: {
+              type: 'product',
               uuid: itemUuid,
               productVariantId: variant.id,
               quantity: 1 as Int,
@@ -231,7 +233,10 @@ function useProductVariantRows(
             charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
               ...charge,
               uuid: uuid(),
-              workOrderItemUuid: itemUuid,
+              workOrderItem: {
+                type: 'product',
+                uuid: itemUuid,
+              },
             })),
           });
         },

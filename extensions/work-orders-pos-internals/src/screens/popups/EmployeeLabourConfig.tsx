@@ -18,9 +18,9 @@ export function EmployeeLabourConfig({
   onRemove,
   onUpdate,
 }: {
-  labour: DiscriminatedUnionOmit<LabourCharge, 'workOrderItemUuid' | 'uuid'> & { employeeId: ID };
+  labour: DiscriminatedUnionOmit<LabourCharge, 'workOrderItem' | 'uuid'> & { employeeId: ID };
   onRemove: () => void;
-  onUpdate: (labour: DiscriminatedUnionOmit<LabourCharge, 'workOrderItemUuid' | 'uuid'> & { employeeId: ID }) => void;
+  onUpdate: (labour: DiscriminatedUnionOmit<LabourCharge, 'workOrderItem' | 'uuid'> & { employeeId: ID }) => void;
 }) {
   const [labour, setLabour] = useState(initialLabour);
 

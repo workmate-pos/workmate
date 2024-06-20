@@ -54,6 +54,11 @@ SELECT *
 FROM "WorkOrderItemCustomField"
 WHERE "workOrderId" = :workOrderId!;
 
+/* @name getCustomItemCustomFields */
+SELECT *
+FROM "WorkOrderCustomItemCustomField"
+WHERE "workOrderId" = :workOrderId!;
+
 /*
   @name getPage
   @param requiredCustomFieldFilters -> ((key, value, inverse!)...)
@@ -134,6 +139,11 @@ SELECT *
 FROM "WorkOrderItem"
 WHERE "workOrderId" = :workOrderId!;
 
+/* @name getCustomItems */
+SELECT *
+FROM "WorkOrderCustomItem"
+WHERE "workOrderId" = :workOrderId!;
+
 /*
   @name getItemsByUuids
   @param uuids -> (...)
@@ -143,8 +153,23 @@ FROM "WorkOrderItem"
 WHERE uuid IN :uuids!
   AND "workOrderId" = :workOrderId!;
 
+/*
+  @name getCustomItemsByUuids
+  @param uuids -> (...)
+*/
+SELECT *
+FROM "WorkOrderCustomItem"
+WHERE uuid IN :uuids!
+  AND "workOrderId" = :workOrderId!;
+
 /* @name setItemShopifyOrderLineItemId */
 UPDATE "WorkOrderItem"
+SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
+WHERE uuid = :uuid!
+  AND "workOrderId" = :workOrderId!;
+
+/* @name setCustomItemShopifyOrderLineItemId */
+UPDATE "WorkOrderCustomItem"
 SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
 WHERE uuid = :uuid!
   AND "workOrderId" = :workOrderId!;
@@ -171,6 +196,20 @@ ON CONFLICT ("workOrderId", uuid)
 DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
 quantity = EXCLUDED.quantity,
 "productVariantId" = EXCLUDED."productVariantId",
+"absorbCharges" = EXCLUDED."absorbCharges";
+
+/*
+  @name upsertCustomItems
+  @param items -> ((uuid!, workOrderId!, shopifyOrderLineItemId, quantity!, name!, unitPrice!, absorbCharges!)...)
+*/
+INSERT INTO "WorkOrderCustomItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, name, "unitPrice", "absorbCharges")
+VALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items
+OFFSET 1
+ON CONFLICT ("workOrderId", uuid)
+DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+quantity = EXCLUDED.quantity,
+name = EXCLUDED.name,
+"unitPrice" = EXCLUDED."unitPrice",
 "absorbCharges" = EXCLUDED."absorbCharges";
 
 

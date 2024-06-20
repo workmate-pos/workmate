@@ -20,6 +20,7 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 
 export function ProductSelector({
   onSelect,
@@ -104,26 +105,48 @@ export function ProductSelector({
 
   return (
     <ScrollView>
-      <Button
-        title={'New Product'}
-        variant={'primary'}
-        onPress={() => {
-          router.push('ProductCreator', {
-            initialProduct: {},
-            onCreate: product =>
-              internalOnSelect(
-                {
-                  quantity: product.quantity,
-                  uuid: uuid(),
-                  productVariantId: product.productVariantId,
-                  absorbCharges: false,
-                  customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                },
-                [],
-              ),
-          });
-        }}
-      />
+      <ResponsiveGrid columns={2}>
+        <Button
+          title={'New Product'}
+          variant={'primary'}
+          onPress={() =>
+            router.push('ProductCreator', {
+              initialProduct: {},
+              onCreate: product =>
+                internalOnSelect(
+                  {
+                    type: 'product',
+                    quantity: product.quantity,
+                    uuid: uuid(),
+                    productVariantId: product.productVariantId,
+                    absorbCharges: false,
+                    customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                  },
+                  [],
+                ),
+            })
+          }
+        />
+        <Button
+          title={'Custom Product'}
+          variant={'primary'}
+          onPress={async () => {
+            await router.popCurrent();
+            internalOnSelect(
+              {
+                type: 'custom-item',
+                quantity: 1 as Int,
+                absorbCharges: false,
+                customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                uuid: uuid(),
+                name: 'Unnamed product',
+                unitPrice: BigDecimal.ONE.toMoney(),
+              },
+              [],
+            );
+          }}
+        />
+      </ResponsiveGrid>
 
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">
@@ -196,13 +219,18 @@ function useProductVariantRows(
 
         onSelect(
           {
+            type: 'product',
             uuid: itemUuid,
             productVariantId: variant.id,
             quantity: 1 as Int,
             absorbCharges: false,
             customFields: customFieldsPresetsQuery.data.defaultCustomFields,
           },
-          defaultCharges.map(charge => ({ ...charge, uuid: uuid(), workOrderItemUuid: itemUuid })),
+          defaultCharges.map(charge => ({
+            ...charge,
+            uuid: uuid(),
+            workOrderItem: { type: 'product', uuid: itemUuid },
+          })),
         );
       },
       leftSide: {

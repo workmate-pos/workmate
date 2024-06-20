@@ -46,7 +46,8 @@ export const usePaymentHandler = () => {
     setIsLoading(true);
 
     const { lineItems, customSales } = getWorkOrderLineItems(
-      items,
+      items.filter(hasPropertyValue('type', 'product')),
+      items.filter(hasPropertyValue('type', 'custom-item')),
       charges.filter(hasPropertyValue('type', 'hourly-labour')),
       charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
       { labourSku },

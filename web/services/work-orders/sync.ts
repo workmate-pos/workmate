@@ -67,9 +67,10 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
     throw new Error(`Work order with id ${workOrderId} not found`);
   }
 
-  const [customFields, items, hourlyLabourCharges, fixedPriceLabourCharges] = await Promise.all([
+  const [customFields, items, customItems, hourlyLabourCharges, fixedPriceLabourCharges] = await Promise.all([
     db.workOrder.getCustomFields({ workOrderId }),
     db.workOrder.getItems({ workOrderId }),
+    db.workOrder.getCustomItems({ workOrderId }),
     db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
     db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
   ]);
@@ -92,13 +93,35 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
     !isLineItemId(el.shopifyOrderLineItemId);
 
   const draftItems = items.filter(lineItemToLinkFilter);
+  const draftCustomItems = customItems.filter(lineItemToLinkFilter);
   const draftHourlyLabourCharges = hourlyLabourCharges.filter(lineItemToLinkFilter);
   const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(lineItemToLinkFilter);
 
+  const mapWorkOrderItem = <T extends { workOrderItemUuid: string | null; workOrderCustomItemUuid: string | null }>(
+    charge: T,
+  ) => {
+    const { workOrderCustomItemUuid, workOrderItemUuid, ...rest } = charge;
+
+    if (workOrderItemUuid && workOrderCustomItemUuid) {
+      // impossible by design of create-work-order.json
+      throw new Error('Cannot have both workOrderItemUuid and workOrderCustomItemUuid');
+    }
+
+    return {
+      ...charge,
+      workOrderItem: workOrderItemUuid
+        ? ({ type: 'product', uuid: workOrderItemUuid } as const)
+        : workOrderCustomItemUuid
+          ? ({ type: 'custom-item', uuid: workOrderCustomItemUuid } as const)
+          : null,
+    };
+  };
+
   const { lineItems, customSales } = getWorkOrderLineItems(
     draftItems,
-    draftHourlyLabourCharges,
-    draftFixedPriceLabourCharges,
+    draftCustomItems,
+    draftHourlyLabourCharges.map(mapWorkOrderItem),
+    draftFixedPriceLabourCharges.map(mapWorkOrderItem),
     { labourSku: labourLineItemSKU },
   );
 

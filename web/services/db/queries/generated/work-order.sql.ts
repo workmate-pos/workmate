@@ -284,6 +284,41 @@ const getItemCustomFieldsIR: any = {"usedParamSet":{"workOrderId":true},"params"
 export const getItemCustomFields = new PreparedQuery<IGetItemCustomFieldsParams,IGetItemCustomFieldsResult>(getItemCustomFieldsIR);
 
 
+/** 'GetCustomItemCustomFields' parameters type */
+export interface IGetCustomItemCustomFieldsParams {
+  workOrderId: number;
+}
+
+/** 'GetCustomItemCustomFields' return type */
+export interface IGetCustomItemCustomFieldsResult {
+  createdAt: Date;
+  id: number;
+  key: string;
+  updatedAt: Date;
+  value: string;
+  workOrderCustomItemUuid: string;
+  workOrderId: number;
+}
+
+/** 'GetCustomItemCustomFields' query type */
+export interface IGetCustomItemCustomFieldsQuery {
+  params: IGetCustomItemCustomFieldsParams;
+  result: IGetCustomItemCustomFieldsResult;
+}
+
+const getCustomItemCustomFieldsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":69,"b":81}]}],"statement":"SELECT *\nFROM \"WorkOrderCustomItemCustomField\"\nWHERE \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "WorkOrderCustomItemCustomField"
+ * WHERE "workOrderId" = :workOrderId!
+ * ```
+ */
+export const getCustomItemCustomFields = new PreparedQuery<IGetCustomItemCustomFieldsParams,IGetCustomItemCustomFieldsResult>(getCustomItemCustomFieldsIR);
+
+
 /** 'GetPage' parameters type */
 export interface IGetPageParams {
   afterDueDate?: DateOrString | null | void;
@@ -507,6 +542,43 @@ const getItemsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"
 export const getItems = new PreparedQuery<IGetItemsParams,IGetItemsResult>(getItemsIR);
 
 
+/** 'GetCustomItems' parameters type */
+export interface IGetCustomItemsParams {
+  workOrderId: number;
+}
+
+/** 'GetCustomItems' return type */
+export interface IGetCustomItemsResult {
+  absorbCharges: boolean;
+  createdAt: Date;
+  name: string;
+  quantity: number;
+  shopifyOrderLineItemId: string | null;
+  unitPrice: string;
+  updatedAt: Date;
+  uuid: string;
+  workOrderId: number;
+}
+
+/** 'GetCustomItems' query type */
+export interface IGetCustomItemsQuery {
+  params: IGetCustomItemsParams;
+  result: IGetCustomItemsResult;
+}
+
+const getCustomItemsIR: any = {"usedParamSet":{"workOrderId":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":58,"b":70}]}],"statement":"SELECT *\nFROM \"WorkOrderCustomItem\"\nWHERE \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "WorkOrderCustomItem"
+ * WHERE "workOrderId" = :workOrderId!
+ * ```
+ */
+export const getCustomItems = new PreparedQuery<IGetCustomItemsParams,IGetCustomItemsResult>(getCustomItemsIR);
+
+
 /** 'GetItemsByUuids' parameters type */
 export interface IGetItemsByUuidsParams {
   uuids: readonly (string)[];
@@ -545,6 +617,45 @@ const getItemsByUuidsIR: any = {"usedParamSet":{"uuids":true,"workOrderId":true}
 export const getItemsByUuids = new PreparedQuery<IGetItemsByUuidsParams,IGetItemsByUuidsResult>(getItemsByUuidsIR);
 
 
+/** 'GetCustomItemsByUuids' parameters type */
+export interface IGetCustomItemsByUuidsParams {
+  uuids: readonly (string)[];
+  workOrderId: number;
+}
+
+/** 'GetCustomItemsByUuids' return type */
+export interface IGetCustomItemsByUuidsResult {
+  absorbCharges: boolean;
+  createdAt: Date;
+  name: string;
+  quantity: number;
+  shopifyOrderLineItemId: string | null;
+  unitPrice: string;
+  updatedAt: Date;
+  uuid: string;
+  workOrderId: number;
+}
+
+/** 'GetCustomItemsByUuids' query type */
+export interface IGetCustomItemsByUuidsQuery {
+  params: IGetCustomItemsByUuidsParams;
+  result: IGetCustomItemsByUuidsResult;
+}
+
+const getCustomItemsByUuidsIR: any = {"usedParamSet":{"uuids":true,"workOrderId":true},"params":[{"name":"uuids","required":true,"transform":{"type":"array_spread"},"locs":[{"a":50,"b":56}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":80,"b":92}]}],"statement":"SELECT *\nFROM \"WorkOrderCustomItem\"\nWHERE uuid IN :uuids!\n  AND \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "WorkOrderCustomItem"
+ * WHERE uuid IN :uuids!
+ *   AND "workOrderId" = :workOrderId!
+ * ```
+ */
+export const getCustomItemsByUuids = new PreparedQuery<IGetCustomItemsByUuidsParams,IGetCustomItemsByUuidsResult>(getCustomItemsByUuidsIR);
+
+
 /** 'SetItemShopifyOrderLineItemId' parameters type */
 export interface ISetItemShopifyOrderLineItemIdParams {
   shopifyOrderLineItemId: string;
@@ -573,6 +684,36 @@ const setItemShopifyOrderLineItemIdIR: any = {"usedParamSet":{"shopifyOrderLineI
  * ```
  */
 export const setItemShopifyOrderLineItemId = new PreparedQuery<ISetItemShopifyOrderLineItemIdParams,ISetItemShopifyOrderLineItemIdResult>(setItemShopifyOrderLineItemIdIR);
+
+
+/** 'SetCustomItemShopifyOrderLineItemId' parameters type */
+export interface ISetCustomItemShopifyOrderLineItemIdParams {
+  shopifyOrderLineItemId: string;
+  uuid: string;
+  workOrderId: number;
+}
+
+/** 'SetCustomItemShopifyOrderLineItemId' return type */
+export type ISetCustomItemShopifyOrderLineItemIdResult = void;
+
+/** 'SetCustomItemShopifyOrderLineItemId' query type */
+export interface ISetCustomItemShopifyOrderLineItemIdQuery {
+  params: ISetCustomItemShopifyOrderLineItemIdParams;
+  result: ISetCustomItemShopifyOrderLineItemIdResult;
+}
+
+const setCustomItemShopifyOrderLineItemIdIR: any = {"usedParamSet":{"shopifyOrderLineItemId":true,"uuid":true,"workOrderId":true},"params":[{"name":"shopifyOrderLineItemId","required":true,"transform":{"type":"scalar"},"locs":[{"a":60,"b":83}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":98,"b":103}]},{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":127,"b":139}]}],"statement":"UPDATE \"WorkOrderCustomItem\"\nSET \"shopifyOrderLineItemId\" = :shopifyOrderLineItemId!\nWHERE uuid = :uuid!\n  AND \"workOrderId\" = :workOrderId!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * UPDATE "WorkOrderCustomItem"
+ * SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId!
+ * WHERE uuid = :uuid!
+ *   AND "workOrderId" = :workOrderId!
+ * ```
+ */
+export const setCustomItemShopifyOrderLineItemId = new PreparedQuery<ISetCustomItemShopifyOrderLineItemIdParams,ISetCustomItemShopifyOrderLineItemIdResult>(setCustomItemShopifyOrderLineItemIdIR);
 
 
 /** 'UpsertItem' parameters type */
@@ -650,6 +791,47 @@ const upsertItemsIR: any = {"usedParamSet":{"items":true},"params":[{"name":"ite
  * ```
  */
 export const upsertItems = new PreparedQuery<IUpsertItemsParams,IUpsertItemsResult>(upsertItemsIR);
+
+
+/** 'UpsertCustomItems' parameters type */
+export interface IUpsertCustomItemsParams {
+  items: readonly ({
+    uuid: string,
+    workOrderId: number,
+    shopifyOrderLineItemId: string | null | void,
+    quantity: number,
+    name: string,
+    unitPrice: string,
+    absorbCharges: boolean
+  })[];
+}
+
+/** 'UpsertCustomItems' return type */
+export type IUpsertCustomItemsResult = void;
+
+/** 'UpsertCustomItems' query type */
+export interface IUpsertCustomItemsQuery {
+  params: IUpsertCustomItemsParams;
+  result: IUpsertCustomItemsResult;
+}
+
+const upsertCustomItemsIR: any = {"usedParamSet":{"items":true},"params":[{"name":"items","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"uuid","required":true},{"name":"workOrderId","required":true},{"name":"shopifyOrderLineItemId","required":false},{"name":"quantity","required":true},{"name":"name","required":true},{"name":"unitPrice","required":true},{"name":"absorbCharges","required":true}]},"locs":[{"a":183,"b":188}]}],"statement":"INSERT INTO \"WorkOrderCustomItem\" (uuid, \"workOrderId\", \"shopifyOrderLineItemId\", quantity, name, \"unitPrice\", \"absorbCharges\")\nVALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items\nOFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\nDO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\nquantity = EXCLUDED.quantity,\nname = EXCLUDED.name,\n\"unitPrice\" = EXCLUDED.\"unitPrice\",\n\"absorbCharges\" = EXCLUDED.\"absorbCharges\""};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * INSERT INTO "WorkOrderCustomItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, name, "unitPrice", "absorbCharges")
+ * VALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items
+ * OFFSET 1
+ * ON CONFLICT ("workOrderId", uuid)
+ * DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+ * quantity = EXCLUDED.quantity,
+ * name = EXCLUDED.name,
+ * "unitPrice" = EXCLUDED."unitPrice",
+ * "absorbCharges" = EXCLUDED."absorbCharges"
+ * ```
+ */
+export const upsertCustomItems = new PreparedQuery<IUpsertCustomItemsParams,IUpsertCustomItemsResult>(upsertCustomItemsIR);
 
 
 /** 'RemoveItem' parameters type */

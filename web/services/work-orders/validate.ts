@@ -85,13 +85,17 @@ function assertUniqueFixedPriceLabourChargeUuids(createWorkOrder: Pick<CreateWor
 }
 
 function assertValidChargeItemUuids(createWorkOrder: Pick<CreateWorkOrder, 'items' | 'charges'>) {
-  const itemUuids = createWorkOrder.items.map(item => item.uuid);
-  const itemUuidsSet = new Set(itemUuids);
-
   for (const charge of createWorkOrder.charges) {
-    if (charge.workOrderItemUuid !== null) {
-      if (!itemUuidsSet.has(charge.workOrderItemUuid)) {
-        throw new HttpError(`Charge references non-existent work order item ${charge.workOrderItemUuid}`, 400);
+    if (charge.workOrderItem !== null) {
+      if (
+        !createWorkOrder.items
+          .filter(hasPropertyValue('type', charge.workOrderItem.type))
+          .some(hasPropertyValue('uuid', charge.workOrderItem.uuid))
+      ) {
+        throw new HttpError(
+          `Charge references non-existent work order ${charge.workOrderItem.type} ${charge.workOrderItem.uuid}`,
+          400,
+        );
       }
     }
 
@@ -150,6 +154,9 @@ export async function assertNonPaidWorkOrderItemProductsExist(
   }
 }
 
+/**
+ * Find all products in a CreateWorkOrder that has not been paid for. These are not allowed >:(
+ */
 export async function getMissingNonPaidWorkOrderProduct(
   session: Session,
   createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items'>,
@@ -157,6 +164,8 @@ export async function getMissingNonPaidWorkOrderProduct(
   const graphql = new Graphql(session);
 
   const productVariantIds = new Set<ID>();
+
+  const workOrderItems = createWorkOrder.items.filter(hasPropertyValue('type', 'product'));
 
   if (createWorkOrder.name) {
     // if this work order already exists we should only check product variant ids that have not been paid for yet
@@ -167,7 +176,7 @@ export async function getMissingNonPaidWorkOrderProduct(
     const items = uuids.length ? await db.workOrder.getItemsByUuids({ workOrderId, uuids }) : [];
     const itemByUuid = indexBy(items, i => i.uuid);
 
-    for (const { uuid, productVariantId } of createWorkOrder.items) {
+    for (const { uuid, productVariantId } of workOrderItems) {
       const shopifyOrderLineItemId = itemByUuid[uuid]?.shopifyOrderLineItemId;
 
       if (isLineItemId(shopifyOrderLineItemId)) {
@@ -177,7 +186,7 @@ export async function getMissingNonPaidWorkOrderProduct(
       productVariantIds.add(productVariantId);
     }
   } else {
-    for (const { productVariantId } of createWorkOrder.items) {
+    for (const { productVariantId } of workOrderItems) {
       productVariantIds.add(productVariantId);
     }
   }
@@ -213,7 +222,7 @@ async function assertNoIllegalItemChanges(session: Session, createWorkOrder: Pic
 
       const newItem = newItemsByUuid[currentItem.uuid] ?? never();
 
-      if (newItem.productVariantId !== currentItem.productVariantId) {
+      if (newItem.type == 'product' && newItem.productVariantId !== currentItem.productVariantId) {
         throw new HttpError(`Cannot change product variant of item ${currentItem.uuid}`, 400);
       }
 

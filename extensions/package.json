@@ -11,6 +11,7 @@
     "@shopify/retail-ui-extensions": "^1.5.1",
     "@shopify/retail-ui-extensions-react": "^1.5.1",
     "@teifi-digital/pos-tools": "^0.0.49",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.50",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
   },

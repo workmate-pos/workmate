@@ -6,7 +6,6 @@
   "license": "UNLICENSED",
   "author": "Tim van Dam",
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.42",
     "@work-orders/common": "file:../../common",
     "@work-orders/common-pos": "file:../common-pos"
   },

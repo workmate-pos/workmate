@@ -1,6 +1,5 @@
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { v4 as uuid } from 'uuid';
 import type { useReducer, useRef, useState } from 'react';
 import { WorkOrder } from '@web/services/work-orders/types.js';
@@ -8,6 +7,11 @@ import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
   customerId: CreateWorkOrder['customerId'] | null;
+};
+
+type ItemDescriptor = {
+  type: 'product' | 'custom-item';
+  uuid: string;
 };
 
 export type CreateWorkOrderAction =
@@ -23,7 +27,7 @@ export type CreateWorkOrderAction =
     }
   | {
       type: 'removeItem';
-      uuid: string;
+      item: ItemDescriptor;
     }
   | {
       /**
@@ -34,12 +38,12 @@ export type CreateWorkOrderAction =
     }
   | {
       type: 'updateItemCharges';
-      uuid: string;
-      charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[];
+      item: ItemDescriptor;
+      charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItem'>[];
     }
   | {
       type: 'updateItemCustomFields';
-      uuid: string;
+      item: ItemDescriptor;
       customFields: Record<string, string>;
     }
   | ({
@@ -113,8 +117,14 @@ function createWorkOrderReducer(
 
     case 'updateItemCharges': {
       const charges = [
-        ...createWorkOrder.charges.filter(charge => charge.workOrderItemUuid !== action.uuid),
-        ...action.charges.map(charge => ({ ...charge, workOrderItemUuid: action.uuid })),
+        ...createWorkOrder.charges.filter(
+          charge =>
+            !(charge.workOrderItem?.uuid === action.item.uuid && charge.workOrderItem?.type === action.item.type),
+        ),
+        ...action.charges.map(charge => ({
+          ...charge,
+          workOrderItem: { type: action.item.type, uuid: action.item.uuid },
+        })),
       ];
 
       const merged = getMergedItems(createWorkOrder.items, charges, workOrder);
@@ -131,7 +141,7 @@ function createWorkOrderReducer(
       return {
         ...createWorkOrder,
         items: createWorkOrder.items.map(item => {
-          if (item.uuid === action.uuid) {
+          if (item.uuid === action.item.uuid && item.type === action.item.type) {
             return { ...item, customFields: action.customFields };
           }
 
@@ -164,8 +174,13 @@ function createWorkOrderReducer(
     case 'removeItem': {
       return {
         ...createWorkOrder,
-        items: createWorkOrder.items.filter(item => item.uuid !== action.uuid),
-        charges: createWorkOrder.charges.filter(charge => charge.workOrderItemUuid !== action.uuid),
+        items: createWorkOrder.items.filter(
+          item => !(item.uuid === action.item.uuid && item.type === action.item.type),
+        ),
+        charges: createWorkOrder.charges.filter(
+          charge =>
+            !(charge.workOrderItem?.type === action.item.type && charge.workOrderItem?.uuid === action.item.uuid),
+        ),
       };
     }
 
@@ -180,6 +195,14 @@ function shouldMergeItems(
   charges: CreateWorkOrder['charges'][number][],
   workOrder: WorkOrder | null,
 ) {
+  if (a.type !== b.type) {
+    return false;
+  }
+
+  if (a.type === 'custom-item' || b.type === 'custom-item') {
+    return false;
+  }
+
   if (a.productVariantId !== b.productVariantId) {
     return false;
   }
@@ -188,19 +211,20 @@ function shouldMergeItems(
     return false;
   }
 
-  if (
-    charges.some(hasPropertyValue('workOrderItemUuid', a.uuid)) ||
-    charges.some(hasPropertyValue('workOrderItemUuid', b.uuid))
-  ) {
+  const itemHasCharges = (item: { type: 'product' | 'custom-item'; uuid: string }) =>
+    charges.some(charge => charge.workOrderItem?.uuid === item.uuid && charge.workOrderItem.type === item.type);
+
+  if ([a, b].some(itemHasCharges)) {
     return false;
   }
 
+  const itemIsInOrder = (item: { type: 'product' | 'custom-item'; uuid: string }) =>
+    workOrder?.items.some(
+      oi => oi.type === item.type && oi.uuid === item.uuid && isOrderId(oi.shopifyOrderLineItem?.orderId),
+    );
+
   // do not allow merging if either item is in an order
-  if (
-    [a, b].some(({ uuid }) =>
-      isOrderId(workOrder?.items.find(hasPropertyValue('uuid', uuid))?.shopifyOrderLineItem?.orderId),
-    )
-  ) {
+  if ([a, b].some(itemIsInOrder)) {
     return false;
   }
 
@@ -234,7 +258,10 @@ function getMergedItems(
 }
 
 function shouldSplitItem(item: CreateWorkOrder['items'][number], charges: CreateWorkOrder['charges'][number][]) {
-  return item.quantity > 1 && charges.some(hasPropertyValue('workOrderItemUuid', item.uuid));
+  return (
+    item.quantity > 1 &&
+    charges.some(charge => charge.workOrderItem?.uuid === item.uuid && charge.workOrderItem.type === item.type)
+  );
 }
 
 function getSplitItems(items: CreateWorkOrder['items'][number][], charges: CreateWorkOrder['charges'][number][]) {
@@ -246,18 +273,13 @@ function getSplitItems(items: CreateWorkOrder['items'][number][], charges: Creat
 
       return [
         {
-          uuid: item.uuid,
-          productVariantId: item.productVariantId,
+          ...item,
           quantity: 1 as Int,
-          absorbCharges: item.absorbCharges,
-          customFields: item.customFields,
         },
         {
+          ...item,
           uuid: uuid(),
-          productVariantId: item.productVariantId,
           quantity: (item.quantity - 1) as Int,
-          absorbCharges: item.absorbCharges,
-          customFields: item.customFields,
         },
       ];
     })

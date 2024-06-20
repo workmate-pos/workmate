@@ -1,4 +1,3 @@
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { WorkOrderOrder } from '@web/services/work-orders/types.js';
 import { Fetch } from './fetch.js';
 import { useWorkOrderQuery } from './use-work-order-query.js';
@@ -8,25 +7,6 @@ import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 export function useWorkOrderOrders({ fetch, workOrderName }: { fetch: Fetch; workOrderName: string | null }) {
   const workOrderQuery = useWorkOrderQuery({ fetch, name: workOrderName });
   const workOrder = workOrderQuery.data?.workOrder;
-
-  function getItemOrder(item?: { uuid: string }): WorkOrderOrder | null {
-    const workOrderItem = workOrder?.items.find(i => i.uuid === item?.uuid);
-    return workOrder?.orders.find(order => order.id === workOrderItem?.shopifyOrderLineItem?.orderId) ?? null;
-  }
-
-  function getItemOrdersIncludingCharges(item?: { uuid: string }): WorkOrderOrder[] {
-    const workOrderItem = workOrder?.items.find(i => i.uuid === item?.uuid);
-    const itemOrders =
-      workOrder?.orders.filter(order => order.id === workOrderItem?.shopifyOrderLineItem?.orderId) ?? [];
-
-    const itemCharges = workOrder?.charges.filter(c => c.workOrderItemUuid === item?.uuid);
-    const chargeOrders =
-      itemCharges
-        ?.map(charge => workOrder?.orders.find(order => order.id === charge.shopifyOrderLineItem?.orderId) ?? null)
-        .filter(isNonNullable) ?? [];
-
-    return [...itemOrders, ...chargeOrders];
-  }
 
   function getHourlyLabourOrder(charge?: { uuid: string }): WorkOrderOrder | null {
     const hourlyLabour = workOrder?.charges.find(c => c.uuid === charge?.uuid);
@@ -54,8 +34,6 @@ export function useWorkOrderOrders({ fetch, workOrderName }: { fetch: Fetch; wor
 
   return {
     workOrderQuery,
-    getItemOrder,
-    getItemOrdersIncludingCharges,
     getHourlyLabourOrder,
     getFixedPriceLabourOrder,
     getChargeOrder,

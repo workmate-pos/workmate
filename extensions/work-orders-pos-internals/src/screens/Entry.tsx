@@ -22,7 +22,7 @@ import { PaymentStatus, PurchaseOrderStatus } from '@web/schemas/generated/work-
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { getPurchaseOrderBadges } from '../util/badges.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { DAY_IN_MS, MINUTE_IN_MS, SECOND_IN_MS } from '@work-orders/common/time/constants.js';
@@ -390,7 +390,9 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
       calculation &&
       BigDecimal.fromMoney(calculation.outstanding).compare(BigDecimal.ZERO) > 0;
 
-    const purchaseOrders = workOrder.items.flatMap(item => item.purchaseOrders);
+    const purchaseOrders = workOrder.items
+      .filter(hasPropertyValue('type', 'product'))
+      .flatMap(item => item.purchaseOrders);
 
     return {
       id: workOrder.name,

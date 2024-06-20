@@ -246,10 +246,15 @@ export function AddProductModal({
 
                     for (const charge of pv.productVariant.defaultCharges) {
                       const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
-                      charges.push({ ...defaultCharge, uuid: uuid(), workOrderItemUuid: itemUuid });
+                      charges.push({
+                        ...defaultCharge,
+                        uuid: uuid(),
+                        workOrderItem: { type: 'product', uuid: itemUuid },
+                      });
                     }
 
                     return {
+                      type: 'product',
                       uuid: itemUuid,
                       productVariantId: pv.productVariant.id,
                       quantity: pv.quantity,
@@ -257,7 +262,7 @@ export function AddProductModal({
                       absorbCharges:
                         getProductServiceType(pv.productVariant.product.serviceType?.value) ===
                         QUANTITY_ADJUSTING_SERVICE,
-                    };
+                    } as const;
                   });
 
                   onAdd(items, charges);
@@ -267,6 +272,7 @@ export function AddProductModal({
                       const unitCost = inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
 
                       return {
+                        type: 'product',
                         uuid: uuid(),
                         shopifyOrderLineItem: null,
                         unitCost: BigDecimal.fromString(unitCost ?? '0.00')
@@ -276,7 +282,7 @@ export function AddProductModal({
                         quantity: pv.quantity,
                         availableQuantity: 0 as Int,
                         customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                      };
+                      } as const;
                     }),
                   );
                 } else {
