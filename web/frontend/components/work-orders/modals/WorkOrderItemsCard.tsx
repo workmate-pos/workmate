@@ -169,7 +169,7 @@ function ProductsList({
                 <InlineStack align={'space-between'} blockAlign={'center'}>
                   <InlineStack gap={'400'}>
                     {(!hasCharges || item.quantity > 1) && <Badge tone={'info'}>{item.quantity.toString()}</Badge>}
-                    {hasCharges && <Badge tone={'magic'}>Labour</Badge>}
+                    {hasCharges && <Badge tone={'magic'}>Has Additional Labour</Badge>}
                     {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
                   </InlineStack>
                   <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>

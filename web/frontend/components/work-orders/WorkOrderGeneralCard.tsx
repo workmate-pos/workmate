@@ -95,7 +95,7 @@ export function WorkOrderGeneralCard({
           <TextField
             label={'Hidden Note'}
             autoComplete={'off'}
-            value={createWorkOrder.note ?? ''}
+            value={createWorkOrder.internalNote ?? ''}
             multiline={2}
             onChange={internalNote => dispatch.setPartial({ internalNote })}
             disabled={disabled}
