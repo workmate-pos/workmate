@@ -171,7 +171,9 @@ export async function calculateWorkOrder(
 
   const newItems = calculateWorkOrder.items.filter(item => {
     if (item.type === 'product') {
-      return !items.some(hasPropertyValue('uuid', item.uuid));
+      return (
+        !missingProductVariantIds.includes(item.productVariantId) && !items.some(hasPropertyValue('uuid', item.uuid))
+      );
     }
 
     if (item.type === 'custom-item') {
