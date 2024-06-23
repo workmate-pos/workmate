@@ -50,6 +50,7 @@ export async function upsertStockTransfer(session: Session, createStockTransfer:
 
     await adjustShopifyInventory(
       session,
+      stockTransfer.name,
       getLocationIds(previousStockTransfer),
       getLocationIds(stockTransfer),
       previousLineItems,
@@ -80,12 +81,13 @@ async function upsertLineItems(createStockTransfer: CreateStockTransfer, stockTr
 
 async function adjustShopifyInventory(
   session: Session,
+  name: string,
   previousLocations: { from: ID | null; to: ID | null },
   currentLocations: { from: ID | null; to: ID | null },
   previousLineItems: IGetLineItemsResult[],
   currentLineItems: CreateStockTransfer['lineItems'],
 ) {
-  const deltaByLocationByInventoryItem: Record<ID, Record<ID, number>> = {};
+  const deltaByLocationByInventoryItem: Record<ID, Record<ID, Record<'incoming' | 'available', number>>> = {};
 
   const transfers: {
     lineItems: Pick<IGetLineItemsResult, 'uuid' | 'quantity' | 'inventoryItemId' | 'status'>[];
@@ -115,29 +117,49 @@ async function adjustShopifyInventory(
         // Remove quantity from the source inventory.
         if (fromLocationId) {
           const deltaByInventoryItem = (deltaByLocationByInventoryItem[fromLocationId] ??= {});
-          deltaByInventoryItem[lineItem.inventoryItemId] ??= 0;
-          deltaByInventoryItem[lineItem.inventoryItemId] -= lineItem.quantity * factor;
+          const deltas = (deltaByInventoryItem[lineItem.inventoryItemId] ??= { incoming: 0, available: 0 });
+          deltas.available -= lineItem.quantity * factor;
+        }
+      }
+
+      if (lineItem.status === 'IN_TRANSIT') {
+        // Add quantity to the destination inventory as incoming.
+        if (toLocationId) {
+          const deltaByInventoryItem = (deltaByLocationByInventoryItem[toLocationId] ??= {});
+          const deltas = (deltaByInventoryItem[lineItem.inventoryItemId] ??= { incoming: 0, available: 0 });
+          deltas.incoming += lineItem.quantity * factor;
         }
       }
 
       if (lineItem.status === 'RECEIVED') {
-        // Add quantity to the destination inventory.
+        // Add quantity to the destination inventory as available.
         if (toLocationId) {
           const deltaByInventoryItem = (deltaByLocationByInventoryItem[toLocationId] ??= {});
-          deltaByInventoryItem[lineItem.inventoryItemId] ??= 0;
-          deltaByInventoryItem[lineItem.inventoryItemId] += lineItem.quantity * factor;
+          const deltas = (deltaByInventoryItem[lineItem.inventoryItemId] ??= { incoming: 0, available: 0 });
+          deltas.available += lineItem.quantity * factor;
         }
       }
     }
   }
 
-  const changes: InventoryChangeInput[] = [];
-  for (const [locationId, deltaByInventoryItem] of entries(deltaByLocationByInventoryItem)) {
-    for (const [inventoryItemId, delta] of entries(deltaByInventoryItem)) {
-      changes.push({
+  const availableChanges: InventoryChangeInput[] = [];
+  const incomingChanges: InventoryChangeInput[] = [];
+
+  const ledgerDocumentUri = `workmate://stock-transfer/${encodeURIComponent(name)}`;
+
+  for (const [locationId, deltasByInventoryItem] of entries(deltaByLocationByInventoryItem)) {
+    for (const [inventoryItemId, deltas] of entries(deltasByInventoryItem)) {
+      availableChanges.push({
         locationId,
         inventoryItemId,
-        delta: delta as Int,
+        delta: deltas.available as Int,
+      });
+
+      incomingChanges.push({
+        locationId,
+        inventoryItemId,
+        delta: deltas.incoming as Int,
+        ledgerDocumentUri,
       });
     }
   }
@@ -145,13 +167,13 @@ async function adjustShopifyInventory(
   const graphql = new Graphql(session);
 
   try {
-    const { inventoryAdjustQuantities } = await gql.inventory.adjust.run(graphql, {
-      input: { name: 'available', reason: 'other', changes },
+    // TODO: use this once it releases: https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/inventorySetQuantities
+    //  -> current mutation is not atomic bcs its 2 mutations in 1
+    await gql.inventory.adjustIncomingAvailable.run(graphql, {
+      reason: 'other',
+      availableChanges,
+      incomingChanges,
     });
-
-    if (!inventoryAdjustQuantities) {
-      throw new HttpError('Failed to adjust inventory', 500);
-    }
   } catch (error) {
     if (error instanceof GraphqlUserErrors) {
       sentryErr('Failed to adjust inventory', { userErrors: error.userErrors });

@@ -272,7 +272,6 @@ export function AddProductModal({
                       const unitCost = inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
 
                       return {
-                        type: 'product',
                         uuid: uuid(),
                         shopifyOrderLineItem: null,
                         unitCost: BigDecimal.fromString(unitCost ?? '0.00')
