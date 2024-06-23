@@ -36,7 +36,7 @@ export const usePaymentHandler = () => {
     customFields: Record<string, string>;
     items: WorkOrderItem[];
     charges: DiscriminatedUnionOmit<WorkOrderCharge, 'shopifyOrderLineItem'>[];
-    customerId: ID;
+    customerId: ID | null;
     labourSku: string;
     discount: {
       type: 'FIXED_AMOUNT' | 'PERCENTAGE';
@@ -60,7 +60,10 @@ export const usePaymentHandler = () => {
         customFields,
       }),
     );
-    await cart.setCustomer({ id: Number(parseGid(customerId).id) });
+
+    if (customerId) {
+      await cart.setCustomer({ id: Number(parseGid(customerId).id) });
+    }
 
     for (const { quantity, title, unitPrice, taxable } of customSales) {
       await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });

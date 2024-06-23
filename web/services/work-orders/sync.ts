@@ -87,6 +87,11 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
 
   const graphql = new Graphql(session);
 
+  assertGid(workOrder.customerId);
+
+  const { customer } = await gql.customer.get.run(graphql, { id: workOrder.customerId });
+  const customerId = customer?.id ?? null;
+
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
   const lineItemToLinkFilter = (el: { shopifyOrderLineItemId: string | null }) =>
@@ -107,13 +112,17 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
       throw new Error('Cannot have both workOrderItemUuid and workOrderCustomItemUuid');
     }
 
+    let workOrderItem = null;
+
+    if (workOrderItemUuid) {
+      workOrderItem = { type: 'product', uuid: workOrderItemUuid } as const;
+    } else if (workOrderCustomItemUuid) {
+      workOrderItem = { type: 'custom-item', uuid: workOrderCustomItemUuid } as const;
+    }
+
     return {
       ...charge,
-      workOrderItem: workOrderItemUuid
-        ? ({ type: 'product', uuid: workOrderItemUuid } as const)
-        : workOrderCustomItemUuid
-          ? ({ type: 'custom-item', uuid: workOrderCustomItemUuid } as const)
-          : null,
+      workOrderItem,
     };
   };
 
@@ -126,8 +135,6 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
   );
 
   const discount = getWorkOrderDiscount(workOrder);
-
-  assertGid(workOrder.customerId);
 
   const input = {
     customAttributes: getCustomAttributeArrayFromObject(
@@ -151,7 +158,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
       })),
     ],
     note: workOrder.note,
-    purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
+    purchasingEntity: customerId ? { customerId } : null,
     appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
   } as const satisfies DraftOrderInput;
 

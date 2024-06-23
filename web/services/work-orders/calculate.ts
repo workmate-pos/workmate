@@ -478,6 +478,13 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
   }
 
   const graphql = new Graphql(session);
+
+  let customerId = null;
+  if (calculateWorkOrder.customerId) {
+    const { customer } = await gql.customer.get.run(graphql, { id: calculateWorkOrder.customerId });
+    customerId = customer?.id ?? null;
+  }
+
   const result = await gql.calculate.draftOrderCalculate.run(graphql, {
     input: {
       lineItems: [
@@ -494,7 +501,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
           taxable: customSale.taxable,
         })),
       ],
-      purchasingEntity: calculateWorkOrder.customerId ? { customerId: calculateWorkOrder.customerId } : null,
+      purchasingEntity: customerId ? { customerId } : null,
       appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
     },
   });

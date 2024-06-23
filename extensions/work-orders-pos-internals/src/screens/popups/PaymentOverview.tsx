@@ -15,6 +15,7 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
+import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 
 /**
  * Page that allows initializing payments for line items.
@@ -28,6 +29,9 @@ export function PaymentOverview({ name }: { name: string }) {
 
   const settingsQuery = useSettingsQuery({ fetch });
   const settings = settingsQuery.data?.settings;
+
+  const customerQuery = useCustomerQuery({ fetch, id: workOrder?.customerId ?? null });
+  const customer = customerQuery.data;
 
   const calculateWorkOrder = workOrder
     ? pick(workOrderToCreateWorkOrder(workOrder), 'name', 'items', 'charges', 'discount', 'customerId')
@@ -49,7 +53,12 @@ export function PaymentOverview({ name }: { name: string }) {
 
   const screen = useScreen();
   screen.setTitle(`Payment Overview - ${name}`);
-  screen.setIsLoading(workOrderQuery.isLoading || settingsQuery.isLoading || calculatedDraftOrderQuery.isLoading);
+  screen.setIsLoading(
+    workOrderQuery.isFetching ||
+      settingsQuery.isFetching ||
+      calculatedDraftOrderQuery.isFetching ||
+      customerQuery.isFetching,
+  );
 
   const rows = useItemRows(
     workOrder ?? null,
@@ -106,7 +115,7 @@ export function PaymentOverview({ name }: { name: string }) {
       customFields: workOrder.customFields,
       items: selectedItems,
       charges: selectedCharges,
-      customerId: workOrder.customerId,
+      customerId: customer?.id ?? null,
       labourSku: settings.labourLineItemSKU,
       discount: workOrder.discount,
     });
