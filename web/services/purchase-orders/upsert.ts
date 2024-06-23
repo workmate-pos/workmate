@@ -11,7 +11,7 @@ import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services'
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { sendPurchaseOrderWebhook } from './webhook.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNonNullableProperty, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { PurchaseOrder } from './types.js';
@@ -76,11 +76,10 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const newLineItemUuids = new Set(createPurchaseOrder.lineItems.map(li => li.uuid));
     const oldLineItemUuids = new Set(existingPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
 
+    const uuids = [...oldLineItemUuids].filter(oldUuid => !newLineItemUuids.has(oldUuid));
+
     await Promise.all([
-      db.purchaseOrder.removeLineItemsByUuids({
-        purchaseOrderId,
-        uuids: [...oldLineItemUuids].filter(oldUuid => !newLineItemUuids.has(oldUuid)),
-      }),
+      uuids.length && db.purchaseOrder.removeLineItemsByUuids({ purchaseOrderId, uuids }),
       db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
       db.purchaseOrder.removeLineItemCustomFields({ purchaseOrderId }),
       db.purchaseOrder.removeAssignedEmployees({ purchaseOrderId }),
@@ -230,45 +229,63 @@ async function adjustShopifyInventory(
   oldPurchaseOrder: PurchaseOrder | null,
   newPurchaseOrder: PurchaseOrder,
 ) {
-  const deltaByLocationByInventoryItemId: Record<ID, Record<ID, Int>> = {};
+  const deltasByLocationByInventoryItemId: Record<ID, Record<ID, Record<'incoming' | 'available', number>>> = {};
 
-  // remove old inventory
-  if (oldPurchaseOrder?.location) {
-    const deltaByInventoryItemId = (deltaByLocationByInventoryItemId[oldPurchaseOrder.location.id] ??= {});
+  const transfers = [
+    {
+      purchaseOrder: oldPurchaseOrder,
+      factor: -1,
+    },
+    {
+      purchaseOrder: newPurchaseOrder,
+      factor: 1,
+    },
+  ].filter(hasNonNullableProperty('purchaseOrder'));
 
-    for (const {
-      productVariant: { inventoryItemId },
-      availableQuantity,
-    } of oldPurchaseOrder.lineItems) {
+  for (const { purchaseOrder, factor } of transfers) {
+    if (!purchaseOrder.location) {
+      continue;
+    }
+
+    const deltasByInventoryItemId = (deltasByLocationByInventoryItemId[purchaseOrder.location.id] ??= {});
+
+    for (const lineItem of purchaseOrder.lineItems) {
+      const { productVariant, availableQuantity, quantity } = lineItem;
+      const { inventoryItemId } = productVariant;
       assertGid(inventoryItemId);
 
-      const current = (deltaByInventoryItemId[inventoryItemId] ??= 0 as Int);
-      deltaByInventoryItemId[inventoryItemId] = (current - availableQuantity) as Int;
+      const deltas = (deltasByInventoryItemId[inventoryItemId] ??= { incoming: 0, available: 0 });
+
+      const transitQuantity = quantity - availableQuantity;
+
+      if (transitQuantity) {
+        deltas.incoming += transitQuantity * factor;
+      }
+
+      if (availableQuantity) {
+        deltas.available += availableQuantity * factor;
+      }
     }
   }
 
-  // add new inventory
-  if (newPurchaseOrder?.location) {
-    const deltaByInventoryItemId = (deltaByLocationByInventoryItemId[newPurchaseOrder.location.id] ??= {});
+  const availableChanges: InventoryChangeInput[] = [];
+  const incomingChanges: InventoryChangeInput[] = [];
 
-    for (const {
-      productVariant: { inventoryItemId },
-      availableQuantity,
-    } of newPurchaseOrder.lineItems) {
-      assertGid(inventoryItemId);
+  const ledgerDocumentUri = `workmate://purchase-order/${encodeURIComponent(newPurchaseOrder.name)}`;
 
-      const current = (deltaByInventoryItemId[inventoryItemId] ??= 0 as Int);
-      deltaByInventoryItemId[inventoryItemId] = (current + availableQuantity) as Int;
-    }
-  }
-
-  const changes: InventoryChangeInput[] = [];
-  for (const [locationId, deltaByInventoryItemId] of entries(deltaByLocationByInventoryItemId)) {
-    for (const [inventoryItemId, delta] of entries(deltaByInventoryItemId)) {
-      changes.push({
+  for (const [locationId, deltasByInventoryItemId] of entries(deltasByLocationByInventoryItemId)) {
+    for (const [inventoryItemId, deltas] of entries(deltasByInventoryItemId)) {
+      availableChanges.push({
         locationId,
         inventoryItemId,
-        delta,
+        delta: deltas.available as Int,
+      });
+
+      incomingChanges.push({
+        locationId,
+        inventoryItemId,
+        delta: deltas.incoming as Int,
+        ledgerDocumentUri,
       });
     }
   }
@@ -276,14 +293,29 @@ async function adjustShopifyInventory(
   const graphql = new Graphql(session);
 
   try {
-    // TODO: Perhaps enable inventory tracking first? Then show all vendor items in the product list rather than only tracked ones
-    const { inventoryAdjustQuantities } = await gql.inventory.adjust.run(graphql, {
-      input: { name: 'available', reason: 'other', changes },
-    });
+    // TODO: Do the same for stock transfers?
+    if (newPurchaseOrder.location) {
+      // Ensure all inventory items are being tracked
 
-    if (!inventoryAdjustQuantities) {
-      throw new HttpError('Failed to adjust inventory', 500);
+      const locationId = newPurchaseOrder.location.id;
+      const inventoryItemIds = unique(
+        newPurchaseOrder.lineItems.map(lineItem => lineItem.productVariant.inventoryItemId),
+      );
+
+      await Promise.all(
+        inventoryItemIds.map(inventoryItemId =>
+          gql.inventory.activateItems.run(graphql, { locationId, inventoryItemId }),
+        ),
+      );
     }
+
+    // TODO: use this once it releases: https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/inventorySetQuantities
+    //  -> current mutation is not atomic bcs its 2 mutations in 1
+    await gql.inventory.adjustIncomingAvailable.run(graphql, {
+      reason: 'other',
+      availableChanges,
+      incomingChanges,
+    });
   } catch (error) {
     if (error instanceof GraphqlUserErrors) {
       sentryErr('Failed to adjust inventory', { userErrors: error.userErrors });

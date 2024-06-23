@@ -59,3 +59,15 @@ mutation setOnHand($input: InventorySetOnHandQuantitiesInput!) {
     }
   }
 }
+
+mutation activateItems($locationId: ID!, $inventoryItemId: ID!) {
+  inventoryActivate(locationId: $locationId, inventoryItemId: $inventoryItemId) {
+    userErrors {
+      message
+      field
+    }
+    inventoryLevel {
+      id
+    }
+  }
+}

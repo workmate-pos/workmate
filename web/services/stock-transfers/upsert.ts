@@ -147,18 +147,18 @@ async function adjustShopifyInventory(
 
   const ledgerDocumentUri = `workmate://stock-transfer/${encodeURIComponent(name)}`;
 
-  for (const [locationId, deltaByInventoryItem] of entries(deltaByLocationByInventoryItem)) {
-    for (const [inventoryItemId, delta] of entries(deltaByInventoryItem)) {
+  for (const [locationId, deltasByInventoryItem] of entries(deltaByLocationByInventoryItem)) {
+    for (const [inventoryItemId, deltas] of entries(deltasByInventoryItem)) {
       availableChanges.push({
         locationId,
         inventoryItemId,
-        delta: delta.available as Int,
+        delta: deltas.available as Int,
       });
 
       incomingChanges.push({
         locationId,
         inventoryItemId,
-        delta: delta.incoming as Int,
+        delta: deltas.incoming as Int,
         ledgerDocumentUri,
       });
     }
