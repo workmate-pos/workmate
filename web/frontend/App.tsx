@@ -20,6 +20,10 @@ export default function App() {
               <NavigationMenu
                 navigationLinks={[
                   {
+                    label: 'Work Orders',
+                    destination: '/work-orders',
+                  },
+                  {
                     label: 'Purchase Orders',
                     destination: '/purchase-orders',
                   },

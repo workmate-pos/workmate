@@ -42,6 +42,7 @@ const defaultShopSettings: ShopSettings = {
   purchaseOrderIdFormat: 'PO-#{{id}}',
   purchaseOrderStatuses: ['Draft', 'In Transit', 'Received'],
   defaultPurchaseOrderStatus: 'Draft',
+  stockTransferIdFormat: 'ST-#{{id}}',
   emailFromTitle: 'WorkMate',
   emailReplyTo: '',
   printEmail: '',

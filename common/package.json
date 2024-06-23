@@ -32,6 +32,10 @@
       "default": "./dist/create-purchase-order/*",
       "types": "./src/create-purchase-order/*"
     },
+    "./create-work-order/*": {
+      "default": "./dist/create-work-order/*",
+      "types": "./src/create-work-order/*"
+    },
     "./metafields/*": {
       "default": "./dist/metafields/*",
       "types": "./src/metafields/*"
@@ -50,11 +54,13 @@
   "devDependencies": {
     "@types/react": "^17.0.75",
     "@types/react-dom": "^17.0.25",
+    "@types/uuid": "^9.0.8",
     "typescript": "^5.3.3"
   },
   "dependencies": {
     "@teifi-digital/shopify-app-toolbox": "^0.0.37",
     "react-query": "^3.39.3",
+    "uuid": "^9.0.1",
     "zod": "^3.22.4"
   },
   "overrides": {

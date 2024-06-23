@@ -6,15 +6,16 @@ import { useState } from 'react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { WorkOrder, WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { workOrderToCreateWorkOrder } from '../../dto/work-order-to-create-work-order.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
+import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 
 /**
  * Page that allows initializing payments for line items.
@@ -28,6 +29,9 @@ export function PaymentOverview({ name }: { name: string }) {
 
   const settingsQuery = useSettingsQuery({ fetch });
   const settings = settingsQuery.data?.settings;
+
+  const customerQuery = useCustomerQuery({ fetch, id: workOrder?.customerId ?? null });
+  const customer = customerQuery.data;
 
   const calculateWorkOrder = workOrder
     ? pick(workOrderToCreateWorkOrder(workOrder), 'name', 'items', 'charges', 'discount', 'customerId')
@@ -49,7 +53,12 @@ export function PaymentOverview({ name }: { name: string }) {
 
   const screen = useScreen();
   screen.setTitle(`Payment Overview - ${name}`);
-  screen.setIsLoading(workOrderQuery.isLoading || settingsQuery.isLoading || calculatedDraftOrderQuery.isLoading);
+  screen.setIsLoading(
+    workOrderQuery.isFetching ||
+      settingsQuery.isFetching ||
+      calculatedDraftOrderQuery.isFetching ||
+      customerQuery.isFetching,
+  );
 
   const rows = useItemRows(
     workOrder ?? null,
@@ -106,14 +115,14 @@ export function PaymentOverview({ name }: { name: string }) {
       customFields: workOrder.customFields,
       items: selectedItems,
       charges: selectedCharges,
-      customerId: workOrder.customerId,
+      customerId: customer?.id ?? null,
       labourSku: settings.labourLineItemSKU,
       discount: workOrder.discount,
     });
   };
 
   const selectableItems = workOrder.items.filter(
-    item => calculatedDraftOrderQuery.getItemLineItem(item.uuid)?.order === null,
+    item => calculatedDraftOrderQuery.getItemLineItem(item)?.order === null,
   );
   const selectableCharges = workOrder.charges.filter(
     charge => calculatedDraftOrderQuery.getChargeLineItem(charge)?.order === null,
@@ -189,9 +198,21 @@ function useItemRows(
   const itemRows = workOrder.items.flatMap<ListRow>(item => {
     const rows: ListRow[] = [];
 
-    const itemCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
-    const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item.uuid);
-    const itemPrice = calculatedDraftOrder.itemPrices[item.uuid];
+    const itemCharges = workOrder.charges
+      .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid))
+      .filter(hasNestedPropertyValue('workOrderItem.type', item.type));
+    const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
+    const itemPrice = (() => {
+      if (item.type === 'product') {
+        return calculatedDraftOrder.itemPrices[item.uuid];
+      }
+
+      if (item.type === 'custom-item') {
+        return calculatedDraftOrder.customItemPrices[item.uuid];
+      }
+
+      return item satisfies never;
+    })();
 
     rows.push({
       id: `item-${item.uuid}`,
@@ -229,7 +250,7 @@ function useItemRows(
     return rows;
   });
 
-  const unlinkedCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null));
+  const unlinkedCharges = workOrder.charges.filter(hasPropertyValue('workOrderItem', null));
 
   const unlinkedChargeRows = unlinkedCharges.map<ListRow>(charge => getChargeRow(charge));
 
@@ -239,7 +260,7 @@ function useItemRows(
 
     let label = charge.name;
 
-    if (charge.workOrderItemUuid) {
+    if (charge.workOrderItem) {
       label = `⮑ ${label}`;
     }
 

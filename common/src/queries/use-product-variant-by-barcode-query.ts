@@ -69,13 +69,15 @@ export const useProductVariantByBarcodeQueries = (
 async function fetchProductVariantByBarcode(fetch: Fetch, barcode: string) {
   const response = await fetch(`/api/product-variant/barcode/${encodeURIComponent(barcode)}`);
 
-  let productVariant: FetchProductVariantResponse['productVariant'] | null = null;
+  if (response.status === 404) {
+    return null;
+  }
 
-  if (response.ok) {
-    ({ productVariant } = await response.json());
-  } else if (response.status !== 404) {
+  if (!response.ok) {
     throw new Error('Error fetching product variant by barcode');
   }
+
+  const { productVariant }: FetchProductVariantResponse = await response.json();
 
   return productVariant;
 }

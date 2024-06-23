@@ -9,16 +9,10 @@ import {
   Text,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
-import { useEffect, useState } from 'react';
-import { workOrderToCreateWorkOrder } from '../dto/work-order-to-create-work-order.js';
+import { Dispatch, SetStateAction, useEffect, useReducer, useRef, useState } from 'react';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
-import {
-  CreateWorkOrderDispatchProxy,
-  WIPCreateWorkOrder,
-  useCreateWorkOrderReducer,
-} from '../create-work-order/reducer.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -48,13 +42,32 @@ import {
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
+import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
+import {
+  CreateWorkOrderDispatchProxy,
+  useCreateWorkOrderReducer,
+  WIPCreateWorkOrder,
+} from '@work-orders/common/create-work-order/reducer.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
 };
 
+type OpenConfigPopup = {
+  configType: 'item' | 'charge';
+  type: 'product' | 'custom-item';
+  uuid: string;
+};
+
 export function WorkOrder({ initial }: WorkOrderProps) {
-  const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(initial);
+  const fetch = useAuthenticatedFetch();
+  const workOrderQuery = useWorkOrderQuery({ fetch, name: initial.name });
+
+  const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(
+    initial,
+    workOrderQuery.data?.workOrder,
+    { useRef, useState, useReducer },
+  );
 
   const router = useRouter();
   const screen = useScreen();
@@ -63,7 +76,6 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   screen.setTitle(createWorkOrder.name ?? 'New Work Order');
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  const fetch = useAuthenticatedFetch();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation(
@@ -171,7 +183,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
               if (createWorkOrder.name) {
                 router.push('PrintOverview', {
                   name: createWorkOrder.name,
-                  dueDate: new Date(createWorkOrder.dueDate),
+                  dueDateUtc: new Date(createWorkOrder.dueDate),
                 });
               }
             }}
@@ -271,26 +283,47 @@ function WorkOrderItems({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const fetch = useAuthenticatedFetch();
 
-  const rows = useItemRows(createWorkOrder, dispatch, query);
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+    },
+    { enabled: router.isCurrent },
+  );
 
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
-    fetch,
-    ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
-  });
-
-  const [openChargeConfigPopupItemUuid, setOpenChargeConfigPopup] = useState<string | null>(null);
+  const [openConfigPopup, setOpenConfigPopup] = useState<OpenConfigPopup | null>(null);
 
   useEffect(() => {
-    if (openChargeConfigPopupItemUuid) {
-      setOpenChargeConfigPopup(null);
-      router.push('ItemChargeConfig', {
-        itemUuid: openChargeConfigPopupItemUuid,
-        createWorkOrder,
-        dispatch,
-      });
+    if (openConfigPopup) {
+      setOpenConfigPopup(null);
+
+      if (openConfigPopup.configType === 'item') {
+        router.push('ItemConfig', {
+          item: openConfigPopup,
+          createWorkOrder,
+          dispatch,
+          onAddLabour: () =>
+            setOpenConfigPopup({ configType: 'charge', type: openConfigPopup.type, uuid: openConfigPopup.uuid }),
+        });
+        return;
+      }
+
+      if (openConfigPopup.configType === 'charge') {
+        router.push('ItemChargeConfig', {
+          item: openConfigPopup,
+          createWorkOrder,
+          dispatch,
+        });
+        return;
+      }
+
+      return openConfigPopup.configType satisfies never;
     }
-  }, [openChargeConfigPopupItemUuid]);
+  }, [openConfigPopup, createWorkOrder]);
+
+  const rows = useItemRows(createWorkOrder, dispatch, query, setOpenConfigPopup);
 
   return (
     <ResponsiveGrid columns={1}>
@@ -303,7 +336,11 @@ function WorkOrderItems({
             router.push('ProductSelector', {
               onSelect: ({ item, charges }) => {
                 dispatch.addItems({ items: [item] });
-                dispatch.updateItemCharges({ uuid: item.uuid, charges });
+                dispatch.updateItemCharges({ item, charges });
+
+                if (item.type === 'custom-item') {
+                  setOpenConfigPopup({ type: item.type, uuid: item.uuid, configType: 'item' });
+                }
               },
             })
           }
@@ -317,16 +354,16 @@ function WorkOrderItems({
             router.push('ServiceSelector', {
               createWorkOrder,
               onSelect: ({ item, charges }) => {
-                dispatch.updateItemCharges({ uuid: item.uuid, charges });
+                dispatch.updateItemCharges({ item, charges });
                 dispatch.addItems({ items: [item] });
 
                 if (item.absorbCharges) {
-                  setOpenChargeConfigPopup(item.uuid);
+                  setOpenConfigPopup({ type: item.type, uuid: item.uuid, configType: 'charge' });
                 }
               },
               onAddLabourToItem: item => {
                 router.push('ItemChargeConfig', {
-                  itemUuid: item.uuid,
+                  item,
                   createWorkOrder,
                   dispatch,
                 });
@@ -347,7 +384,7 @@ function WorkOrderItems({
       )}
 
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
-      {rows.length ? (
+      {rows.length > 0 ? (
         <List data={rows} imageDisplayStrategy={'always'}></List>
       ) : (
         <ResponsiveStack direction="horizontal" alignment="center" paddingVertical={'Large'}>
@@ -468,14 +505,18 @@ function WorkOrderMoneySummary({
   dispatch: CreateWorkOrderDispatchProxy;
 }) {
   const fetch = useAuthenticatedFetch();
+  const router = useRouter();
   const currencyFormatter = useCurrencyFormatter();
   const formatter = (value: Money | null) => (value !== null ? currencyFormatter(value) : '-');
 
   // this calculation automatically accounts for paid-for items
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({
-    fetch,
-    ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
-  });
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+    },
+    { enabled: router.isCurrent },
+  );
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
   let appliedDiscount = BigDecimal.ZERO;
@@ -485,8 +526,6 @@ function WorkOrderMoneySummary({
       BigDecimal.fromMoney(calculatedDraftOrder.lineItemDiscount.applied),
     );
   }
-
-  const router = useRouter();
 
   return (
     <ResponsiveGrid columns={1}>
@@ -572,8 +611,14 @@ function WorkOrderMoneySummary({
   );
 }
 
-function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOrderDispatchProxy, query: string) {
+function useItemRows(
+  createWorkOrder: WIPCreateWorkOrder,
+  dispatch: CreateWorkOrderDispatchProxy,
+  query: string,
+  setOpenConfigPopup: Dispatch<SetStateAction<OpenConfigPopup | null>>,
+) {
   const fetch = useAuthenticatedFetch();
+  const router = useRouter();
   const currencyFormatter = useCurrencyFormatter();
 
   const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
@@ -582,13 +627,12 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
       fetch,
       ...pick(createWorkOrder, 'name', 'items', 'customerId', 'charges', 'discount'),
     },
-    { keepPreviousData: true },
+    { keepPreviousData: true, enabled: router.isCurrent },
   );
 
-  const router = useRouter();
   const screen = useScreen();
 
-  screen.setIsLoading(workOrderQuery.isLoading || calculatedWorkOrderQuery.isLoading);
+  screen.setIsLoading(workOrderQuery.isLoading);
 
   const queryFilter = (lineItem?: CalculateDraftOrderResponse['lineItems'][number] | null) => {
     if (!lineItem || !query) {
@@ -602,12 +646,17 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
     .map(item => {
       return {
         item,
-        lineItem: calculatedWorkOrderQuery.getItemLineItem(item.uuid),
+        lineItem: calculatedWorkOrderQuery.getItemLineItem(item),
+        // TODO: Also load product vraiant to prevent showing hte loading text
       };
     })
     .filter(({ lineItem }) => queryFilter(lineItem))
     .map<ListRow>(({ item, lineItem }) => {
-      if (!lineItem?.order && calculatedWorkOrderQuery.data?.missingProductVariantIds.includes(item.productVariantId)) {
+      if (
+        item.type === 'product' &&
+        !lineItem?.order &&
+        calculatedWorkOrderQuery.data?.missingProductVariantIds.includes(item.productVariantId)
+      ) {
         return {
           id: item.uuid,
           leftSide: {
@@ -618,7 +667,7 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
             showChevron: true,
           },
           onPress() {
-            dispatch.removeItem({ uuid: item.uuid });
+            dispatch.removeItem({ item });
           },
         };
       }
@@ -626,16 +675,41 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
       const isMutableService =
         getProductServiceType(lineItem?.variant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
 
-      const purchaseOrders =
-        workOrderQuery.data?.workOrder?.items.find(i => i.uuid === item.uuid)?.purchaseOrders ?? [];
+      const purchaseOrders = (() => {
+        if (item.type === 'product') {
+          return (
+            workOrderQuery.data?.workOrder?.items
+              .filter(hasPropertyValue('uuid', item.uuid))
+              .find(hasPropertyValue('type', item.type))?.purchaseOrders ?? []
+          );
+        }
 
-      const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
+        return [];
+      })();
 
-      const itemPrice = calculatedWorkOrderQuery.data?.itemPrices[item.uuid];
+      const charges =
+        createWorkOrder.charges?.filter(
+          charge => charge.workOrderItem?.uuid === item.uuid && charge.workOrderItem?.type === item.type,
+        ) ?? [];
+
+      const itemPrice = (() => {
+        if (item.type === 'product') {
+          return calculatedWorkOrderQuery.data?.itemPrices[item.uuid];
+        }
+
+        if (item.type === 'custom-item') {
+          return calculatedWorkOrderQuery.data?.customItemPrices[item.uuid];
+        }
+
+        return item satisfies never;
+      })();
+
       const chargePrices = charges.map(charge => {
         if (charge.type === 'hourly-labour') {
           return calculatedWorkOrderQuery.data?.hourlyLabourChargePrices[charge.uuid];
-        } else if (charge.type === 'fixed-price-labour') {
+        }
+
+        if (charge.type === 'fixed-price-labour') {
           return calculatedWorkOrderQuery.data?.fixedPriceLabourChargePrices[charge.uuid];
         }
 
@@ -676,7 +750,7 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
         onPress() {
           if (charges.length > 0 || isMutableService) {
             router.push('ItemChargeConfig', {
-              itemUuid: item.uuid,
+              item,
               createWorkOrder,
               dispatch,
             });
@@ -684,9 +758,10 @@ function useItemRows(createWorkOrder: WIPCreateWorkOrder, dispatch: CreateWorkOr
           }
 
           router.push('ItemConfig', {
-            itemUuid: item.uuid,
+            item,
             createWorkOrder,
             dispatch,
+            onAddLabour: () => setOpenConfigPopup({ configType: 'charge', type: item.type, uuid: item.uuid }),
           });
         },
       };

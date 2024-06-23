@@ -90,18 +90,22 @@ export const useInventoryItemQuery = ({
   });
 };
 
-export const useInventoryItemQueries = ({
-  fetch,
-  ids,
-  locationId,
-}: {
-  fetch: Fetch;
-  ids: ID[];
-  locationId: ID | null;
-}) => {
+export const useInventoryItemQueries = (
+  {
+    fetch,
+    ids,
+    locationId,
+  }: {
+    fetch: Fetch;
+    ids: ID[];
+    locationId: ID | null;
+  },
+  options?: { enabled?: boolean },
+) => {
   const batcher = useInventoryItemBatcher(fetch);
   const queries = useQueries(
     ids.map(id => ({
+      ...options,
       queryKey: ['inventory-item', id, locationId],
       queryFn: () => batcher.fetch({ inventoryItemId: id, locationId }),
     })),

@@ -2,6 +2,7 @@ import type { getPurchaseOrder } from './get.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Int } from '../gql/queries/generated/schema.js';
+import { DateTime } from '../../schemas/generated/create-purchase-order.js';
 
 export type PurchaseOrder = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>;
 
@@ -15,13 +16,17 @@ export type PurchaseOrderWebhookBody = {
      */
     id: number;
     name: string;
+    placedDate: DateTime | null;
     shipFrom: string;
     shipTo: string;
     location: {
       id: ID;
       name: string;
     } | null;
-    vendorName: string | null;
+    vendor: {
+      name: string;
+      metafields: Record<string, string>;
+    } | null;
     note: string;
     subtotal: Money;
     total: Money;
@@ -63,5 +68,7 @@ export type PurchaseOrderWebhookBody = {
       quantity: Int;
       availableQuantity: Int;
     }[];
+    createdAt: string;
+    updatedAt: string;
   };
 };

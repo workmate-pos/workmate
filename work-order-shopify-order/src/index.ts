@@ -1,15 +1,14 @@
 // TODO: Move to common
 
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { assertMoney, BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { groupByKey } from '@teifi-digital/shopify-app-toolbox/array';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export type WorkOrderItem = {
   uuid: string;
-  productVariantId: string;
   quantity: number;
   /**
    * When charges are absorbed, the line item for this item will adjust its quantity such that the price covers
@@ -19,12 +18,28 @@ export type WorkOrderItem = {
    * The item quantity does not change the line item quantity, but is reported as-is in the custom attribute.
    */
   absorbCharges: boolean;
-};
+} & (
+  | {
+      type: 'product';
+      productVariantId: string;
+    }
+  | {
+      type: 'custom-item';
+      name: string;
+      unitPrice: string;
+    }
+);
+
+export type WorkOrderProductItem = Omit<WorkOrderItem & { type: 'product' }, 'type'>;
+export type WorkOrderCustomItem = Omit<WorkOrderItem & { type: 'custom-item' }, 'type'>;
 
 type BaseCharge = {
   uuid: string;
   name: string;
-  workOrderItemUuid: string | null;
+  workOrderItem: {
+    uuid: string;
+    type: 'product' | 'custom-item';
+  } | null;
 };
 
 export type HourlyLabourCharge = BaseCharge & {
@@ -35,6 +50,10 @@ export type HourlyLabourCharge = BaseCharge & {
 export type FixedPriceLabourCharge = BaseCharge & {
   amount: string;
 };
+
+type LabourCharge =
+  | (HourlyLabourCharge & { type: 'hourly-labour-charge' })
+  | (FixedPriceLabourCharge & { type: 'fixed-price-labour-charge' });
 
 export type LineItem = {
   productVariantId: ID;
@@ -62,7 +81,8 @@ export type CustomSale = {
  * Includes a bunch of custom attributes to be able to identify line items.
  */
 export function getWorkOrderLineItems(
-  items: WorkOrderItem[],
+  productItems: WorkOrderProductItem[],
+  customItems: WorkOrderCustomItem[],
   hourlyLabourCharges: HourlyLabourCharge[],
   fixedPriceLabourCharges: FixedPriceLabourCharge[],
   options: {
@@ -74,8 +94,8 @@ export function getWorkOrderLineItems(
   // create line items
   const lineItemByVariantId: Record<ID, LineItem> = {};
 
-  for (const item of items) {
-    const { uuid, productVariantId, quantity } = item;
+  for (const item of productItems) {
+    const { productVariantId, quantity, absorbCharges } = item;
 
     assertGid(productVariantId);
 
@@ -85,69 +105,101 @@ export function getWorkOrderLineItems(
       customAttributes: {},
     });
 
-    if (item.absorbCharges) {
-      const absorbedCharges = charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
+    lineItem.customAttributes = {
+      ...lineItem.customAttributes,
+      ...getItemCustomAttributes({ ...item, type: 'product' }, charges, options),
+    };
+
+    if (absorbCharges) {
+      const absorbedCharges = charges
+        .filter(hasNestedPropertyValue('workOrderItem.type', 'product'))
+        .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
 
       const totalChargeCost = BigDecimal.sum(
         ...absorbedCharges.map(getChargeUnitPrice).map(money => BigDecimal.fromMoney(money)),
       );
 
-      // if we absorb charges we should override, as it is assumed that the product is a service with price 1.00
       lineItem.quantity += Number(totalChargeCost.round(0, RoundingMode.CEILING).toString());
-
-      for (const absorbedCharge of absorbedCharges) {
-        const quantity = 1;
-        const chargeCustomAttributes = getChargeCustomAttributes(absorbedCharge, options, quantity);
-        for (const [key, value] of Object.entries(chargeCustomAttributes)) {
-          lineItem.customAttributes[getAbsorbedChargeCustomAttributeKey(absorbedCharge, key)] = value;
-        }
-      }
     } else {
       lineItem.quantity += quantity;
     }
-
-    lineItem.quantity = Math.max(1, lineItem.quantity);
-    lineItem.customAttributes[getItemUuidCustomAttributeKey({ uuid })] = String(item.quantity);
-
-    const linkedCharges = charges.filter(charge => charge.workOrderItemUuid === uuid);
-
-    // Add the linked charge name and prices to the item to make it readable for customers.
-    for (const charge of linkedCharges) {
-      lineItem.customAttributes[charge.name] = getChargeUnitPrice(charge);
-    }
   }
 
-  // create custom sales
-  const customSales = charges
-    .map<CustomSale | null>(charge => {
-      const linkedToItem = items.find(item => item.uuid === charge.workOrderItemUuid);
-      const isAbsorbed = linkedToItem?.absorbCharges ?? false;
+  const customSales: CustomSale[] = [];
 
-      if (isAbsorbed) {
-        return null;
+  for (const item of customItems) {
+    const { quantity, name, absorbCharges } = item;
+
+    assertMoney(item.unitPrice);
+    let { unitPrice } = item;
+
+    if (absorbCharges) {
+      const absorbedCharges = charges
+        .filter(hasNestedPropertyValue('workOrderItem.type', 'custom-item'))
+        .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+
+      const totalChargeCost = BigDecimal.sum(
+        ...absorbedCharges.map(getChargeUnitPrice).map(money => BigDecimal.fromMoney(money)),
+      );
+
+      const quantityBigDecimal = BigDecimal.fromString(quantity.toFixed(0));
+
+      const baseCost = BigDecimal.fromMoney(unitPrice).multiply(quantityBigDecimal);
+
+      const totalCost = baseCost.add(totalChargeCost);
+
+      unitPrice = totalCost.divide(quantityBigDecimal).round(2, RoundingMode.CEILING).toMoney();
+    }
+
+    customSales.push({
+      title: name,
+      quantity,
+      taxable: true,
+      unitPrice,
+      customAttributes: getItemCustomAttributes({ ...item, type: 'custom-item' }, charges, options),
+    });
+  }
+
+  for (const charge of charges) {
+    let isAbsorbed = false;
+
+    if (charge.workOrderItem) {
+      if (charge.workOrderItem?.type === 'product') {
+        isAbsorbed = productItems
+          .filter(hasPropertyValue('uuid', charge.workOrderItem?.uuid ?? ''))
+          .some(hasPropertyValue('absorbCharges', true));
+      } else if (charge.workOrderItem?.type === 'custom-item') {
+        isAbsorbed = customItems
+          .filter(hasPropertyValue('uuid', charge.workOrderItem?.uuid ?? ''))
+          .some(hasPropertyValue('absorbCharges', true));
+      } else {
+        return charge.workOrderItem.type satisfies never;
       }
+    }
 
-      const quantity = 1;
+    if (isAbsorbed) {
+      continue;
+    }
 
-      return {
-        customAttributes: getChargeCustomAttributes(charge, options, quantity),
-        unitPrice: getChargeUnitPrice(charge),
-        title: charge.name,
-        quantity,
-        taxable: true,
-      };
-    })
-    .filter(isNonNullable);
+    const quantity = 1;
+
+    customSales.push({
+      customAttributes: getChargeCustomAttributes(charge, options, quantity),
+      unitPrice: getChargeUnitPrice(charge),
+      title: charge.name,
+      quantity,
+      taxable: true,
+    });
+  }
 
   return {
-    lineItems: Object.values(lineItemByVariantId),
+    lineItems: Object.values(lineItemByVariantId).map(lineItem => ({
+      ...lineItem,
+      quantity: Math.max(1, lineItem.quantity),
+    })),
     customSales,
   };
 }
-
-type LabourCharge =
-  | (HourlyLabourCharge & { type: 'hourly-labour-charge' })
-  | (FixedPriceLabourCharge & { type: 'fixed-price-labour-charge' });
 
 function getChargesWithTypes(
   hourlyLabourCharges: HourlyLabourCharge[],
@@ -186,6 +238,7 @@ export function getChargeUnitPrice(
 }
 
 const ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_item_uuid:';
+const CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_custom_item_uuid:';
 const HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_hourly_charge_uuid:';
 const FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_fixed_charge_uuid:';
 export const WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = 'Work Order';
@@ -197,6 +250,38 @@ export function getWorkOrderOrderCustomAttributes(workOrder: { name: string; cus
   };
 }
 
+function getItemCustomAttributes(item: WorkOrderItem, charges: LabourCharge[], options: { labourSku: string }) {
+  const customAttributes: Record<string, string> = {};
+
+  if (item.type === 'product') {
+    customAttributes[getItemUuidCustomAttributeKey({ uuid: item.uuid })] = String(item.quantity);
+  } else if (item.type === 'custom-item') {
+    customAttributes[getCustomItemUuidCustomAttributeKey({ uuid: item.uuid })] = String(item.quantity);
+  } else {
+    return item satisfies never;
+  }
+
+  const linkedCharges = charges
+    .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
+    .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+
+  if (item.absorbCharges) {
+    for (const absorbedCharge of linkedCharges) {
+      const quantity = 1;
+      const chargeCustomAttributes = getChargeCustomAttributes(absorbedCharge, options, quantity);
+      for (const [key, value] of Object.entries(chargeCustomAttributes)) {
+        customAttributes[getAbsorbedChargeCustomAttributeKey(absorbedCharge, key)] = value;
+      }
+    }
+  }
+
+  for (const charge of linkedCharges) {
+    customAttributes[charge.name] = getChargeUnitPrice(charge);
+  }
+
+  return customAttributes;
+}
+
 function getChargeCustomAttributes(
   charge:
     | ({ type: 'hourly-labour-charge' } & HourlyLabourCharge)
@@ -204,19 +289,30 @@ function getChargeCustomAttributes(
   options: { labourSku: string },
   quantity: number,
 ): Record<string, string> {
-  return {
+  const customAttributes: Record<string, string> = {
     [getChargeUuidCustomAttributeKey(charge)]: String(quantity),
-    ...(charge.workOrderItemUuid !== null
-      ? {
-          _wm_linked_to_item_uuid: charge.workOrderItemUuid,
-        }
-      : {}),
     _wm_sku: options.labourSku,
   };
+
+  if (charge.workOrderItem) {
+    if (charge.workOrderItem.type === 'product') {
+      customAttributes._wm_linked_to_item_uuid = String(quantity);
+    } else if (charge.workOrderItem.type === 'custom-item') {
+      customAttributes._wm_linked_to_custom_item_uuid = String(quantity);
+    } else {
+      return charge.workOrderItem.type satisfies never;
+    }
+  }
+
+  return customAttributes;
 }
 
 export function getItemUuidCustomAttributeKey(item: { uuid: string }) {
   return `${ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${item.uuid}`;
+}
+
+export function getCustomItemUuidCustomAttributeKey(item: { uuid: string }) {
+  return `${CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${item.uuid}`;
 }
 
 export function getChargeUuidCustomAttributeKey(charge: Pick<LabourCharge, 'uuid' | 'type'>) {
@@ -245,6 +341,7 @@ function getAbsorbedChargeCustomAttributeKey(charge: LabourCharge, key: string) 
 export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
   const prefixes = {
     item: ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    'custom-item': CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
     hourly: HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
     fixed: FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
   } as const;
@@ -270,6 +367,7 @@ export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
 export function getAbsorbedUuidFromCustomAttributeKey(customAttributeKey: string) {
   const prefixes = [
     ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
     HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
     FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
   ];
@@ -279,9 +377,7 @@ export function getAbsorbedUuidFromCustomAttributeKey(customAttributeKey: string
       customAttributeKey.startsWith(prefix) &&
       customAttributeKey.includes(ABSORBED_CHARGE_SEPARATOR, prefix.length)
     ) {
-      const [base = never(), absorbed = never()] = customAttributeKey
-        .slice(ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX.length)
-        .split(ABSORBED_CHARGE_SEPARATOR);
+      const [base = never(), absorbed = never()] = customAttributeKey.split(ABSORBED_CHARGE_SEPARATOR);
 
       const baseUuid = getUuidFromCustomAttributeKey(base);
       const absorbedUuid = getUuidFromCustomAttributeKey(absorbed);

@@ -9,6 +9,9 @@
     "status": {
       "type": "string"
     },
+    "placedDate": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+    },
     "locationId": {
       "anyOf": [
         { "const": null },
@@ -90,9 +93,23 @@
           },
           "unitCost": {
             "$ref": "scalars.json#/definitions/Money"
+          },
+          "customFields": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           }
         },
-        "required": ["uuid", "productVariantId", "shopifyOrderLineItem", "quantity", "availableQuantity", "unitCost"],
+        "required": [
+          "uuid",
+          "productVariantId",
+          "shopifyOrderLineItem",
+          "quantity",
+          "availableQuantity",
+          "unitCost",
+          "customFields"
+        ],
         "additionalProperties": false
       }
     },
@@ -119,6 +136,7 @@
   "required": [
     "name",
     "status",
+    "placedDate",
     "locationId",
     "vendorName",
     "shipFrom",

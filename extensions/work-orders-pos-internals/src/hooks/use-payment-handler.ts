@@ -10,7 +10,6 @@ import {
 } from '@work-orders/work-order-shopify-order';
 import { WorkOrderCharge } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
@@ -18,7 +17,7 @@ export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
  * Creates work order payments.
  */
 export const usePaymentHandler = () => {
-  const { cart, navigation, toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { cart, navigation } = useExtensionApi<'pos.home.modal.render'>();
   const [isLoading, setIsLoading] = useState(false);
 
   const cartRef = useCartRef();
@@ -37,7 +36,7 @@ export const usePaymentHandler = () => {
     customFields: Record<string, string>;
     items: WorkOrderItem[];
     charges: DiscriminatedUnionOmit<WorkOrderCharge, 'shopifyOrderLineItem'>[];
-    customerId: ID;
+    customerId: ID | null;
     labourSku: string;
     discount: {
       type: 'FIXED_AMOUNT' | 'PERCENTAGE';
@@ -47,7 +46,8 @@ export const usePaymentHandler = () => {
     setIsLoading(true);
 
     const { lineItems, customSales } = getWorkOrderLineItems(
-      items,
+      items.filter(hasPropertyValue('type', 'product')),
+      items.filter(hasPropertyValue('type', 'custom-item')),
       charges.filter(hasPropertyValue('type', 'hourly-labour')),
       charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
       { labourSku },
@@ -60,7 +60,10 @@ export const usePaymentHandler = () => {
         customFields,
       }),
     );
-    await cart.setCustomer({ id: Number(parseGid(customerId).id) });
+
+    if (customerId) {
+      await cart.setCustomer({ id: Number(parseGid(customerId).id) });
+    }
 
     for (const { quantity, title, unitPrice, taxable } of customSales) {
       await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });

@@ -26,7 +26,7 @@ import {
   subtractMoney,
   ZERO_MONEY,
 } from '../../util/money.js';
-import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
+import { IGetCustomItemsResult, IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import {
   IGetFixedPriceLabourChargesResult,
   IGetHourlyLabourChargesResult,
@@ -49,6 +49,8 @@ type CalculateWorkOrderResult = {
   tax: Money;
   itemPrices: Record<string, Money>;
   itemLineItemIds: Record<string, ID>;
+  customItemPrices: Record<string, Money>;
+  customItemLineItemIds: Record<string, ID>;
   hourlyLabourChargePrices: Record<string, Money>;
   hourlyLabourChargeLineItemIds: Record<string, ID>;
   fixedPriceLabourChargePrices: Record<string, Money>;
@@ -76,6 +78,15 @@ type WorkOrderItem = {
   uuid: string;
   quantity: number;
   absorbCharges: boolean;
+};
+
+type WorkOrderCustomItem = {
+  shopifyOrderLineItemId: string | null;
+  uuid: string;
+  quantity: number;
+  absorbCharges: boolean;
+  name: string;
+  unitPrice: string;
 };
 
 type WorkOrderHourlyLabourCharge = {
@@ -118,10 +129,12 @@ export async function calculateWorkOrder(
   const lineItems: CalculateWorkOrderResult['lineItems'] = [];
 
   const itemPrices: Record<string, Money> = {};
+  const customItemPrices: Record<string, Money> = {};
   const hourlyLabourChargePrices: Record<string, Money> = {};
   const fixedPriceLabourChargePrices: Record<string, Money> = {};
 
   const itemLineItemIds: Record<string, ID> = {};
+  const customItemLineItemIds: Record<string, ID> = {};
   const hourlyLabourChargeLineItemIds: Record<string, ID> = {};
   const fixedPriceLabourChargeLineItemIds: Record<string, ID> = {};
 
@@ -132,6 +145,7 @@ export async function calculateWorkOrder(
   const orders: (OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds)[] = [];
 
   const items: WorkOrderItem[] = [];
+  const customItems: WorkOrderCustomItem[] = [];
   const hourlyLabourCharges: WorkOrderHourlyLabourCharge[] = [];
   const fixedPriceLabourCharges: WorkOrderFixedPriceLabourCharge[] = [];
 
@@ -141,10 +155,12 @@ export async function calculateWorkOrder(
     orders.push(...existingInfo.orders);
 
     items.push(...existingInfo.items);
+    customItems.push(...existingInfo.customItems);
     hourlyLabourCharges.push(...existingInfo.hourlyLabourCharges);
     fixedPriceLabourCharges.push(...existingInfo.fixedPriceLabourCharges);
 
     Object.assign(itemLineItemIds, existingInfo.itemLineItemIds);
+    Object.assign(customItemLineItemIds, existingInfo.customItemLineItemIds);
     Object.assign(hourlyLabourChargeLineItemIds, existingInfo.hourlyLabourChargeLineItemIds);
     Object.assign(fixedPriceLabourChargeLineItemIds, existingInfo.fixedPriceLabourChargeLineItemIds);
 
@@ -153,9 +169,19 @@ export async function calculateWorkOrder(
 
   // do draftOrderCalculate stuff on items/charges that aren't in an order yet
 
-  const newItems = calculateWorkOrder.items
-    .filter(item => !items.some(hasPropertyValue('uuid', item.uuid)))
-    .filter(item => !missingProductVariantIds.includes(item.productVariantId));
+  const newItems = calculateWorkOrder.items.filter(item => {
+    if (item.type === 'product') {
+      return (
+        !missingProductVariantIds.includes(item.productVariantId) && !items.some(hasPropertyValue('uuid', item.uuid))
+      );
+    }
+
+    if (item.type === 'custom-item') {
+      return !customItems.some(hasPropertyValue('uuid', item.uuid));
+    }
+
+    return item satisfies never;
+  });
 
   const newCharges = calculateWorkOrder.charges.filter(charge => {
     if (charge.type === 'hourly-labour') {
@@ -179,10 +205,12 @@ export async function calculateWorkOrder(
     orders.push(calculation.calculatedDraftOrder);
 
     items.push(...calculation.items);
+    customItems.push(...calculation.customItems);
     hourlyLabourCharges.push(...calculation.hourlyLabourCharges);
     fixedPriceLabourCharges.push(...calculation.fixedPriceLabourCharges);
 
     Object.assign(itemLineItemIds, calculation.itemLineItemIds);
+    Object.assign(customItemLineItemIds, calculation.customItemLineItemIds);
     Object.assign(hourlyLabourChargeLineItemIds, calculation.hourlyLabourChargeLineItemIds);
     Object.assign(fixedPriceLabourChargeLineItemIds, calculation.fixedPriceLabourChargeLineItemIds);
   }
@@ -219,6 +247,7 @@ export async function calculateWorkOrder(
         calculateWorkOrder.name ?? 'no work order',
         lineItem,
         items,
+        customItems,
         hourlyLabourCharges,
         fixedPriceLabourCharges,
       );
@@ -229,16 +258,17 @@ export async function calculateWorkOrder(
         appliedLineItemDiscount = addMoney(appliedLineItemDiscount, lineItemPriceInfo.lineItemDiscount);
       }
 
-      assignMoneyDictionary(itemPrices, lineItemPriceInfo.itemPrices);
-      assignMoneyDictionary(hourlyLabourChargePrices, lineItemPriceInfo.hourlyLabourChargePrices);
-      assignMoneyDictionary(fixedPriceLabourChargePrices, lineItemPriceInfo.fixedPriceLabourChargePrices);
+      mergeIntoMoneyDictionary(itemPrices, lineItemPriceInfo.itemPrices);
+      mergeIntoMoneyDictionary(customItemPrices, lineItemPriceInfo.customItemPrices);
+      mergeIntoMoneyDictionary(hourlyLabourChargePrices, lineItemPriceInfo.hourlyLabourChargePrices);
+      mergeIntoMoneyDictionary(fixedPriceLabourChargePrices, lineItemPriceInfo.fixedPriceLabourChargePrices);
 
       warnings.push(...lineItemPriceInfo.warnings);
     }
   }
 
   const knownLineItemIds = new Set(orders.flatMap(order => order.lineItems.map(lineItem => lineItem.id)));
-  const missingLineItemIds = [...items, ...hourlyLabourCharges, ...fixedPriceLabourCharges]
+  const missingLineItemIds = [...items, ...customItems, ...hourlyLabourCharges, ...fixedPriceLabourCharges]
     .map(item => item.shopifyOrderLineItemId)
     .filter(isNonNullable)
     .map(lineItemId => {
@@ -263,10 +293,12 @@ export async function calculateWorkOrder(
     lineItems,
 
     itemPrices,
+    customItemPrices,
     hourlyLabourChargePrices,
     fixedPriceLabourChargePrices,
 
     itemLineItemIds,
+    customItemLineItemIds,
     hourlyLabourChargeLineItemIds,
     fixedPriceLabourChargeLineItemIds,
 
@@ -279,10 +311,15 @@ async function getExistingOrderInfo(session: Session, name: string) {
   const graphql = new Graphql(session);
 
   const itemLineItemIds: Record<string, ID> = {};
+  const customItemLineItemIds: Record<string, ID> = {};
   const hourlyLabourChargeLineItemIds: Record<string, ID> = {};
   const fixedPriceLabourChargeLineItemIds: Record<string, ID> = {};
 
   const items: Pick<IGetItemsResult, 'shopifyOrderLineItemId' | 'uuid' | 'quantity' | 'absorbCharges'>[] = [];
+  const customItems: Pick<
+    IGetCustomItemsResult,
+    'shopifyOrderLineItemId' | 'uuid' | 'quantity' | 'absorbCharges' | 'name' | 'unitPrice'
+  >[] = [];
   const hourlyLabourCharges: Pick<
     IGetHourlyLabourChargesResult,
     'shopifyOrderLineItemId' | 'uuid' | 'hours' | 'rate'
@@ -302,11 +339,13 @@ async function getExistingOrderInfo(session: Session, name: string) {
 
   const { id: workOrderId } = workOrder;
 
-  const [databaseItems, databaseHourlyLabourCharges, databaseFixedLabourCharges] = await Promise.all([
-    db.workOrder.getItems({ workOrderId }),
-    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
-    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
-  ]);
+  const [databaseItems, databaseCustomItems, databaseHourlyLabourCharges, databaseFixedLabourCharges] =
+    await Promise.all([
+      db.workOrder.getItems({ workOrderId }),
+      db.workOrder.getCustomItems({ workOrderId }),
+      db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
+      db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
+    ]);
 
   const lineItemIds = new Set<ID>();
 
@@ -320,6 +359,22 @@ async function getExistingOrderInfo(session: Session, name: string) {
         shopifyOrderLineItemId: item.shopifyOrderLineItemId,
         quantity: item.quantity,
         absorbCharges: item.absorbCharges,
+      });
+    }
+  }
+
+  for (const item of databaseCustomItems) {
+    if (isLineItemId(item.shopifyOrderLineItemId)) {
+      lineItemIds.add(item.shopifyOrderLineItemId);
+
+      customItemLineItemIds[item.uuid] = item.shopifyOrderLineItemId;
+      customItems.push({
+        uuid: item.uuid,
+        shopifyOrderLineItemId: item.shopifyOrderLineItemId,
+        quantity: item.quantity,
+        absorbCharges: item.absorbCharges,
+        name: item.name,
+        unitPrice: item.unitPrice,
       });
     }
   }
@@ -372,9 +427,11 @@ async function getExistingOrderInfo(session: Session, name: string) {
     orders,
     warnings,
     items,
+    customItems,
     hourlyLabourCharges,
     fixedPriceLabourCharges,
     itemLineItemIds,
+    customItemLineItemIds,
     hourlyLabourChargeLineItemIds,
     fixedPriceLabourChargeLineItemIds,
   };
@@ -395,11 +452,18 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
 
   const hourlyLabourCharges = charges.filter(hasPropertyValue('type', 'hourly-labour'));
   const fixedPriceLabourCharges = charges.filter(hasPropertyValue('type', 'fixed-price-labour'));
-  const { lineItems, customSales } = getWorkOrderLineItems(items, hourlyLabourCharges, fixedPriceLabourCharges, {
-    labourSku: labourLineItemSKU,
-  });
+  const { lineItems, customSales } = getWorkOrderLineItems(
+    items.filter(hasPropertyValue('type', 'product')),
+    items.filter(hasPropertyValue('type', 'custom-item')),
+    hourlyLabourCharges,
+    fixedPriceLabourCharges,
+    {
+      labourSku: labourLineItemSKU,
+    },
+  );
 
   const itemLineItemIds: Record<string, ID> = {};
+  const customItemLineItemIds: Record<string, ID> = {};
   const hourlyLabourChargeLineItemIds: Record<string, ID> = {};
   const fixedPriceLabourChargeLineItemIds: Record<string, ID> = {};
 
@@ -407,12 +471,20 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     return {
       calculatedDraftOrder: null,
       itemLineItemIds,
+      customItemLineItemIds,
       hourlyLabourChargeLineItemIds,
       fixedPriceLabourChargeLineItemIds,
     };
   }
 
   const graphql = new Graphql(session);
+
+  let customerId = null;
+  if (calculateWorkOrder.customerId) {
+    const { customer } = await gql.customer.get.run(graphql, { id: calculateWorkOrder.customerId });
+    customerId = customer?.id ?? null;
+  }
+
   const result = await gql.calculate.draftOrderCalculate.run(graphql, {
     input: {
       lineItems: [
@@ -429,7 +501,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
           taxable: customSale.taxable,
         })),
       ],
-      purchasingEntity: calculateWorkOrder.customerId ? { customerId: calculateWorkOrder.customerId } : null,
+      purchasingEntity: customerId ? { customerId } : null,
       appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
     },
   });
@@ -448,6 +520,8 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
       for (const uuid of getUuidsFromCustomAttributes(lineItem.customAttributes)) {
         if (uuid.type === 'item') {
           itemLineItemIds[uuid.uuid] = id;
+        } else if (uuid.type === 'custom-item') {
+          customItemLineItemIds[uuid.uuid] = id;
         } else if (uuid.type === 'hourly') {
           hourlyLabourChargeLineItemIds[uuid.uuid] = id;
         } else if (uuid.type === 'fixed') {
@@ -464,15 +538,27 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
   return {
     calculatedDraftOrder,
     itemLineItemIds,
+    customItemLineItemIds,
     hourlyLabourChargeLineItemIds,
     fixedPriceLabourChargeLineItemIds,
 
-    items: items.map<WorkOrderItem>(item => ({
+    items: items.filter(hasPropertyValue('type', 'product')).map<WorkOrderItem>(item => ({
       shopifyOrderLineItemId:
         itemLineItemIds[item.uuid] ?? never('every item should be represented in the calculated draft order'),
       uuid: item.uuid,
       quantity: item.quantity,
       absorbCharges: item.absorbCharges,
+    })),
+
+    customItems: items.filter(hasPropertyValue('type', 'custom-item')).map<WorkOrderCustomItem>(item => ({
+      shopifyOrderLineItemId:
+        customItemLineItemIds[item.uuid] ??
+        never('every custom item should be represented in the calculated draft order'),
+      uuid: item.uuid,
+      quantity: item.quantity,
+      absorbCharges: item.absorbCharges,
+      name: item.name,
+      unitPrice: item.unitPrice,
     })),
 
     hourlyLabourCharges: charges
@@ -527,10 +613,12 @@ function getLineItemPriceInformation(
   xd: string,
   lineItem: (OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds)['lineItems'][number],
   items: WorkOrderItem[],
+  customItems: WorkOrderCustomItem[],
   hourlyLabourCharges: WorkOrderHourlyLabourCharge[],
   fixedPriceLabourCharges: WorkOrderFixedPriceLabourCharge[],
 ) {
   const itemPrices: Record<string, Money> = {};
+  const customItemPrices: Record<string, Money> = {};
   const hourlyLabourChargePrices: Record<string, Money> = {};
   const fixedPriceLabourChargePrices: Record<string, Money> = {};
 
@@ -544,6 +632,7 @@ function getLineItemPriceInformation(
   // next, we determine the price of every thing contained in this line item (items, charges, etc)
 
   const lineItemItems = items.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
+  const lineItemCustomItems = customItems.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
   const lineItemHourlyCharges = hourlyLabourCharges.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
   const lineItemFixedCharges = fixedPriceLabourCharges.filter(hasPropertyValue('shopifyOrderLineItemId', lineItem.id));
 
@@ -575,21 +664,40 @@ function getLineItemPriceInformation(
   remainingLineItemPrice = maxMoney(remainingLineItemPrice, ZERO_MONEY);
 
   // 2) the remainder goes to the items (distributed by quantity)
-  let remainingItemQuantity = sum(lineItemItems.map(li => Math.max(1, li.quantity)));
+  let remainingItemQuantity = sum([...lineItemItems, ...lineItemCustomItems].map(li => Math.max(1, li.quantity)));
 
-  for (const item of lineItemItems) {
-    const itemPrice = BigDecimal.fromMoney(remainingLineItemPrice)
-      .divide(BigDecimal.fromString(remainingItemQuantity.toFixed(0)))
-      .multiply(BigDecimal.fromString(Math.max(1, item.quantity).toFixed(0)))
-      .round(2, RoundingMode.FLOOR)
-      .toMoney();
+  for (const [type, items] of [
+    ['product', lineItemItems],
+    ['custom-item', lineItemCustomItems],
+  ] as const) {
+    for (const item of items) {
+      const itemPrice = BigDecimal.fromMoney(remainingLineItemPrice)
+        .divide(BigDecimal.fromString(remainingItemQuantity.toFixed(0)))
+        .multiply(BigDecimal.fromString(Math.max(1, item.quantity).toFixed(0)))
+        .round(2, RoundingMode.FLOOR)
+        .toMoney();
 
-    itemPrices[item.uuid] = itemPrice;
-    remainingItemQuantity -= item.quantity;
-    remainingLineItemPrice = subtractMoney(remainingLineItemPrice, itemPrice);
+      if (type === 'product') {
+        itemPrices[item.uuid] = itemPrice;
+      } else if (type === 'custom-item') {
+        customItemPrices[item.uuid] = itemPrice;
+      } else {
+        return type satisfies never;
+      }
+
+      remainingItemQuantity -= item.quantity;
+      remainingLineItemPrice = subtractMoney(remainingLineItemPrice, itemPrice);
+    }
   }
 
-  return { lineItemDiscount, itemPrices, hourlyLabourChargePrices, fixedPriceLabourChargePrices, warnings };
+  return {
+    lineItemDiscount,
+    itemPrices,
+    customItemPrices,
+    hourlyLabourChargePrices,
+    fixedPriceLabourChargePrices,
+    warnings,
+  };
 }
 
 type OrderWithAllLineItems = Awaited<ReturnType<typeof getOrdersWithAllLineItems>>[number];
@@ -624,7 +732,7 @@ async function getOrdersWithAllLineItems(graphql: Graphql, orderIds: ID[]) {
   }));
 }
 
-function assignMoneyDictionary(a: Record<string, Money>, b: Record<string, Money>) {
+function mergeIntoMoneyDictionary(a: Record<string, Money>, b: Record<string, Money>) {
   for (const [key, value] of Object.entries(b)) {
     a[key] = addMoney(a[key] ?? ZERO_MONEY, value);
   }

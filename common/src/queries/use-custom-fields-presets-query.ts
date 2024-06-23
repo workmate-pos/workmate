@@ -5,8 +5,12 @@ import {
   FetchCustomFieldsPresetsResponse,
 } from '@web/controllers/api/custom-fields-presets.js';
 
-export const useCustomFieldsPresetsQuery = ({ fetch, type }: { fetch: Fetch; type: CustomFieldsPresetType }) =>
+export const useCustomFieldsPresetsQuery = (
+  { fetch, type }: { fetch: Fetch; type: CustomFieldsPresetType },
+  options?: { staleTime?: number; enabled?: boolean; refetchOnMount?: boolean | 'always' },
+) =>
   useQuery({
+    ...options,
     queryKey: ['custom-fields-presets', type],
     queryFn: async () => {
       const response = await fetch(`/api/custom-fields-presets/${encodeURIComponent(type)}`);
@@ -16,7 +20,15 @@ export const useCustomFieldsPresetsQuery = ({ fetch, type }: { fetch: Fetch; typ
       }
 
       const { presets }: FetchCustomFieldsPresetsResponse = await response.json();
-      return presets;
+
+      const defaultCustomFieldPresets = presets.filter(preset => preset.default);
+      const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
+      const defaultCustomFields = Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']));
+
+      return {
+        presets,
+        defaultCustomFields,
+      };
     },
   });
 

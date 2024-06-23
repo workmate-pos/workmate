@@ -59,6 +59,7 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const [{ id: purchaseOrderId } = never()] = await db.purchaseOrder.upsert({
       shop,
       name,
+      placedDate: createPurchaseOrder.placedDate,
       status: createPurchaseOrder.status,
       vendorName: createPurchaseOrder.vendorName,
       locationId: createPurchaseOrder.locationId,
@@ -76,15 +77,17 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const oldLineItemUuids = new Set(existingPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
 
     await Promise.all([
-      ...[...oldLineItemUuids]
-        .filter(oldUuid => !newLineItemUuids.has(oldUuid))
-        .map(uuid => db.purchaseOrder.removeLineItem({ purchaseOrderId, uuid })),
+      db.purchaseOrder.removeLineItemsByUuids({
+        purchaseOrderId,
+        uuids: [...oldLineItemUuids].filter(oldUuid => !newLineItemUuids.has(oldUuid)),
+      }),
       db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
+      db.purchaseOrder.removeLineItemCustomFields({ purchaseOrderId }),
       db.purchaseOrder.removeAssignedEmployees({ purchaseOrderId }),
     ]);
 
-    await Promise.all([
-      ...createPurchaseOrder.lineItems.map(lineItem =>
+    const createLineItemsPromise = Promise.all(
+      createPurchaseOrder.lineItems.map(lineItem =>
         db.purchaseOrder.upsertLineItem({
           uuid: lineItem.uuid,
           productVariantId: lineItem.productVariantId,
@@ -94,6 +97,23 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
           unitCost: lineItem.unitCost,
           shopifyOrderLineItemId: lineItem.shopifyOrderLineItem?.id,
         }),
+      ),
+    );
+
+    await Promise.all([
+      createLineItemsPromise.then(() =>
+        Promise.all(
+          createPurchaseOrder.lineItems.flatMap(lineItem =>
+            Object.entries(lineItem.customFields).map(([key, value]) =>
+              db.purchaseOrder.insertLineItemCustomField({
+                purchaseOrderId,
+                purchaseOrderLineItemUuid: lineItem.uuid,
+                key,
+                value,
+              }),
+            ),
+          ),
+        ),
       ),
       ...Object.entries(createPurchaseOrder.customFields).map(([key, value]) =>
         db.purchaseOrder.insertCustomField({ purchaseOrderId, key, value }),
@@ -258,7 +278,7 @@ async function adjustShopifyInventory(
   try {
     // TODO: Perhaps enable inventory tracking first? Then show all vendor items in the product list rather than only tracked ones
     const { inventoryAdjustQuantities } = await gql.inventory.adjust.run(graphql, {
-      input: { name: 'available', reason: 'correction', changes },
+      input: { name: 'available', reason: 'other', changes },
     });
 
     if (!inventoryAdjustQuantities) {

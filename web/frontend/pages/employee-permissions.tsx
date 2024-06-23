@@ -8,7 +8,6 @@ import { useEmployeeMutation } from '@work-orders/common/queries/use-employee-mu
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
-
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { Int } from '@web/schemas/generated/pagination-options.js';
 
@@ -104,6 +103,8 @@ function EmployeePermissions() {
     'read_purchase_orders',
     'write_purchase_orders',
     'cycle_count',
+    'read_stock_transfers',
+    'write_stock_transfers',
   ] as const satisfies readonly PermissionNode[];
 
   return (

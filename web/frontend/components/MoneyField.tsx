@@ -29,7 +29,7 @@ export function MoneyField({ id, onChange, value, min, max, prefix, ...props }: 
     <TextField
       {...props}
       id={id}
-      type={'currency'}
+      type={'number'}
       min={min}
       prefix={prefix ?? '$'}
       max={max}

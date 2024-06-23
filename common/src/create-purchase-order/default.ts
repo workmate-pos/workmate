@@ -8,6 +8,7 @@ export const defaultCreatePurchaseOrder = (base: BaseCreatePurchaseOrder): Creat
   ...base,
   name: null,
   note: '',
+  placedDate: null,
   locationId: null,
   customFields: {},
   employeeAssignments: [],

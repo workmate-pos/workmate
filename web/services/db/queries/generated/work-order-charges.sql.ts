@@ -267,6 +267,7 @@ export interface IGetHourlyLabourChargesResult {
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;
+  workOrderCustomItemUuid: string | null;
   workOrderId: number;
   workOrderItemUuid: string | null;
 }
@@ -306,6 +307,7 @@ export interface IGetFixedPriceLabourChargesResult {
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;
+  workOrderCustomItemUuid: string | null;
   workOrderId: number;
   workOrderItemUuid: string | null;
 }
@@ -348,6 +350,7 @@ export interface IGetHourlyLabourChargesByUuidsResult {
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;
+  workOrderCustomItemUuid: string | null;
   workOrderId: number;
   workOrderItemUuid: string | null;
 }
@@ -389,6 +392,7 @@ export interface IGetFixedPriceLabourChargesByUuidsResult {
   shopifyOrderLineItemId: string | null;
   updatedAt: Date;
   uuid: string;
+  workOrderCustomItemUuid: string | null;
   workOrderId: number;
   workOrderItemUuid: string | null;
 }

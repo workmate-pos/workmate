@@ -13,4 +13,5 @@ export const defaultCreateProduct: CreateProduct = {
   costPrice: null,
   vendor: null,
   locationId: null,
+  serviceType: null,
 };

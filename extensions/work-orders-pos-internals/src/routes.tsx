@@ -11,14 +11,13 @@ import { ServiceSelector } from './screens/popups/ServiceSelector.js';
 import { ItemConfig } from './screens/popups/ItemConfig.js';
 import { EmployeeLabourConfig } from './screens/popups/EmployeeLabourConfig.js';
 import { ItemChargeConfig } from './screens/popups/ItemChargeConfig.js';
-import { WorkOrder, WorkOrderProps } from './screens/WorkOrder.js';
+import { WorkOrder } from './screens/WorkOrder.js';
 import { ImportOrderSelector } from './screens/ImportOrderSelector.js';
 import { PaymentOverview } from './screens/popups/PaymentOverview.js';
 import {
   CustomFieldConfig,
   CustomFieldConfigProps,
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldConfig.js';
-import { ImportPreset, ImportPresetProps } from '@work-orders/common-pos/screens/custom-fields/ImportPreset.js';
 import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 import { ProductCreator, ProductCreatorProps } from '@work-orders/common-pos/screens/product-creator/ProductCreator.js';
 import { PrintOverview } from './screens/popups/PrintOverview.js';
@@ -33,6 +32,12 @@ import { PurchaseOrderStatusSelector } from './screens/popups/PurchaseOrderStatu
 import { ItemSelector } from './screens/popups/ItemSelector.js';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
 import { NewWorkOrder } from './screens/NewWorkOrder.js';
+import { EditPreset, EditPresetProps } from '@work-orders/common-pos/screens/custom-fields/EditPreset.js';
+import {
+  SelectPresetToEdit,
+  SelectPresetToEditProps,
+} from '@work-orders/common-pos/screens/custom-fields/SelectPresetToEdit.js';
+import { SelectPreset, SelectPresetProps } from '@work-orders/common-pos/screens/custom-fields/SelectPreset.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -46,8 +51,8 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   WorkOrder: {
-    title: 'Work order',
-    Component: (props: WorkOrderProps) => <WorkOrder {...props} />,
+    title: 'Work Order',
+    Component: WorkOrder,
   },
   NewWorkOrder: {
     title: 'New Work Order',
@@ -127,13 +132,23 @@ export const { Router, useRouter } = createRouter({
       <CustomFieldConfig {...props} useRouter={useRouter} />
     ),
   },
-  ImportPreset: {
-    title: 'Import Preset',
-    Component: (props: Omit<ImportPresetProps, 'useRouter'>) => <ImportPreset {...props} useRouter={useRouter} />,
+  EditPreset: {
+    title: 'Edit Preset',
+    Component: (props: Omit<EditPresetProps, 'useRouter'>) => <EditPreset {...props} useRouter={useRouter} />,
+  },
+  SelectPresetToEdit: {
+    title: 'Edit Preset',
+    Component: (props: Omit<SelectPresetToEditProps, 'useRouter'>) => (
+      <SelectPresetToEdit {...props} useRouter={useRouter} />
+    ),
   },
   SavePreset: {
     title: 'Save Preset',
     Component: (props: Omit<SavePresetProps, 'useRouter'>) => <SavePreset {...props} useRouter={useRouter} />,
+  },
+  SelectPreset: {
+    title: 'Select Preset',
+    Component: (props: Omit<SelectPresetProps, 'useRouter'>) => <SelectPreset {...props} useRouter={useRouter} />,
   },
   ProductCreator: {
     title: 'Create Product',

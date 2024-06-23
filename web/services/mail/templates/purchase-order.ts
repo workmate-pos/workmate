@@ -6,6 +6,8 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ShopSettings } from '../../../schemas/generated/shop-settings.js';
 import { Liquid } from 'liquidjs';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
+import { getVendors } from '../../vendors/get.js';
+import { Session } from '@shopify/shopify-api';
 
 export async function getRenderedPurchaseOrderTemplate(
   printTemplate: ShopSettings['purchaseOrderPrintTemplates'][string],
@@ -30,7 +32,14 @@ export type PurchaseOrderTemplateData = {
   shipFrom: string | null;
   shipTo: string | null;
   locationName: string | null;
+  /**
+   * TODO: Remove in the future
+   */
   vendorName: string | null;
+  vendor: {
+    name: string;
+    metafields: Record<string, string>;
+  } | null;
   note: string;
   discount: string | null;
   tax: string | null;
@@ -51,11 +60,16 @@ export type PurchaseOrderLineItemTemplateData = {
 };
 
 export async function getPurchaseOrderTemplateData(
-  shop: string,
+  session: Session,
   purchaseOrderName: string,
   clientDate: string,
 ): Promise<PurchaseOrderTemplateData> {
-  const purchaseOrder = await getPurchaseOrder({ shop }, purchaseOrderName);
+  const { shop } = session;
+
+  const [purchaseOrder, vendors] = await Promise.all([
+    getPurchaseOrder({ shop }, purchaseOrderName),
+    getVendors(session),
+  ]);
 
   if (!purchaseOrder) {
     throw new HttpError('Purchase order not found', 404);
@@ -68,6 +82,16 @@ export async function getPurchaseOrderTemplateData(
     shipTo: purchaseOrder.shipTo,
     locationName: purchaseOrder.location?.name ?? null,
     vendorName: purchaseOrder.vendorName,
+    vendor: purchaseOrder.vendorName
+      ? {
+          name: purchaseOrder.vendorName,
+          metafields: Object.fromEntries(
+            vendors
+              .find(vendor => vendor.name === purchaseOrder.vendorName)
+              ?.customer?.metafields?.nodes?.map(({ namespace, key, value }) => [`${namespace}.${key}`, value]) ?? [],
+          ),
+        }
+      : null,
     note: purchaseOrder.note,
     discount: purchaseOrder.discount,
     tax: purchaseOrder.tax,

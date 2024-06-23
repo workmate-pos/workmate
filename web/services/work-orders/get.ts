@@ -71,65 +71,97 @@ async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string, Shopi
 }
 
 async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> {
-  const items = await db.workOrder.getItems({ workOrderId });
+  const [items, allItemCustomFields, customItems, allCustomItemCustomFields] = await Promise.all([
+    db.workOrder.getItems({ workOrderId }),
+    db.workOrder.getItemCustomFields({ workOrderId }),
+    db.workOrder.getCustomItems({ workOrderId }),
+    db.workOrder.getCustomItemCustomFields({ workOrderId }),
+  ]);
 
   const lineItemIds = unique(
-    items
+    [...items, ...customItems]
       .map(item => {
         assertGidOrNull(item.shopifyOrderLineItemId);
         return item.shopifyOrderLineItemId;
       })
       .filter(isNonNullable),
   );
-  const lineItemById = await getLineItemsById(lineItemIds);
 
-  const purchaseOrderLineItems = lineItemIds.length
-    ? await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemIds({
-        shopifyOrderLineItemIds: lineItemIds,
-      })
-    : [];
+  const [lineItemById, purchaseOrderLineItems] = await Promise.all([
+    getLineItemsById(lineItemIds),
+    lineItemIds.length
+      ? await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemIds({
+          shopifyOrderLineItemIds: lineItemIds,
+        })
+      : [],
+  ]);
 
   const purchaseOrderIds = unique(purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId));
 
   const purchaseOrders = purchaseOrderIds.length ? await db.purchaseOrder.getMany({ purchaseOrderIds }) : [];
   const purchaseOrderById = indexBy(purchaseOrders, po => String(po.id));
 
-  return items.map<WorkOrderItem>(item => {
-    assertGidOrNull(item.shopifyOrderLineItemId);
-    assertGid(item.productVariantId);
+  return [
+    ...items.map<WorkOrderItem>(item => {
+      assertGidOrNull(item.shopifyOrderLineItemId);
+      assertGid(item.productVariantId);
 
-    const itemPurchaseOrderLineItems = purchaseOrderLineItems.filter(
-      li => li.shopifyOrderLineItemId === item.shopifyOrderLineItemId && item.shopifyOrderLineItemId !== null,
-    );
+      const itemCustomFields = allItemCustomFields.filter(cf => cf.workOrderItemUuid === item.uuid);
 
-    const itemPurchaseOrders = itemPurchaseOrderLineItems.map(
-      poLineItem => purchaseOrderById[poLineItem.purchaseOrderId] ?? never('fk'),
-    );
+      const itemPurchaseOrderLineItems = purchaseOrderLineItems.filter(
+        li => li.shopifyOrderLineItemId === item.shopifyOrderLineItemId && item.shopifyOrderLineItemId !== null,
+      );
 
-    return {
-      uuid: item.uuid,
-      shopifyOrderLineItem: item.shopifyOrderLineItemId
-        ? lineItemById[item.shopifyOrderLineItemId] ?? never('fk')
-        : null,
-      purchaseOrders: itemPurchaseOrders.map(po => ({
-        name: po.name,
-        items: itemPurchaseOrderLineItems
-          .filter(li => li.purchaseOrderId === po.id)
-          .map(li => {
-            assertMoney(li.unitCost);
+      const itemPurchaseOrders = itemPurchaseOrderLineItems.map(
+        poLineItem => purchaseOrderById[poLineItem.purchaseOrderId] ?? never('fk'),
+      );
 
-            return {
-              unitCost: li.unitCost,
-              quantity: li.quantity as Int,
-              availableQuantity: li.availableQuantity as Int,
-            };
-          }),
-      })),
-      productVariantId: item.productVariantId,
-      quantity: item.quantity as Int,
-      absorbCharges: item.absorbCharges,
-    };
-  });
+      return {
+        type: 'product',
+        uuid: item.uuid,
+        shopifyOrderLineItem: item.shopifyOrderLineItemId
+          ? lineItemById[item.shopifyOrderLineItemId] ?? never('fk')
+          : null,
+        purchaseOrders: itemPurchaseOrders.map(po => ({
+          name: po.name,
+          items: itemPurchaseOrderLineItems
+            .filter(li => li.purchaseOrderId === po.id)
+            .map(li => {
+              assertMoney(li.unitCost);
+
+              return {
+                unitCost: li.unitCost,
+                quantity: li.quantity as Int,
+                availableQuantity: li.availableQuantity as Int,
+              };
+            }),
+        })),
+        productVariantId: item.productVariantId,
+        quantity: item.quantity as Int,
+        absorbCharges: item.absorbCharges,
+        customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
+      };
+    }),
+    ...customItems.map<WorkOrderItem>(item => {
+      assertGidOrNull(item.shopifyOrderLineItemId);
+      assertMoney(item.unitPrice);
+
+      const itemCustomFields = allCustomItemCustomFields.filter(cf => cf.workOrderCustomItemUuid === item.uuid);
+
+      return {
+        type: 'custom-item',
+        uuid: item.uuid,
+        shopifyOrderLineItem: item.shopifyOrderLineItemId
+          ? lineItemById[item.shopifyOrderLineItemId] ?? never('fk')
+          : null,
+        name: item.name,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity as Int,
+        absorbCharges: item.absorbCharges,
+        customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
+      };
+    }),
+  ];
 }
 
 async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge[]> {
@@ -157,7 +189,11 @@ async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge
       return {
         type: 'fixed-price-labour',
         uuid: charge.uuid,
-        workOrderItemUuid: charge.workOrderItemUuid,
+        workOrderItem: charge.workOrderItemUuid
+          ? { type: 'product', uuid: charge.workOrderItemUuid }
+          : charge.workOrderCustomItemUuid
+            ? { type: 'custom-item', uuid: charge.workOrderCustomItemUuid }
+            : null,
         shopifyOrderLineItem: charge.shopifyOrderLineItemId
           ? lineItemById[charge.shopifyOrderLineItemId] ?? never()
           : null,
@@ -177,7 +213,11 @@ async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge
       return {
         type: 'hourly-labour',
         uuid: charge.uuid,
-        workOrderItemUuid: charge.workOrderItemUuid,
+        workOrderItem: charge.workOrderItemUuid
+          ? { type: 'product', uuid: charge.workOrderItemUuid }
+          : charge.workOrderCustomItemUuid
+            ? { type: 'custom-item', uuid: charge.workOrderCustomItemUuid }
+            : null,
         shopifyOrderLineItem: charge.shopifyOrderLineItemId
           ? lineItemById[charge.shopifyOrderLineItemId] ?? never()
           : null,

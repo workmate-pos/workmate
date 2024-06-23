@@ -18,6 +18,7 @@ import {
   DraftOrderLineItem,
   useDraftOrderLineItemsQuery,
 } from '@work-orders/common/queries/use-draft-order-line-items-query.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 /**
  * Similar to ProductSelector, but shows line items of a specific order to be able to link to them.
@@ -26,6 +27,8 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
   const fetch = useAuthenticatedFetch();
 
   const isDraftOrder = parseGid(orderId).objectName === 'DraftOrder';
+
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
   const orderQuery = useOrderQuery({ fetch, id: orderId }, { enabled: !isDraftOrder });
   const draftOrderQuery = useDraftOrderQuery({ fetch, id: orderId }, { enabled: isDraftOrder });
@@ -46,9 +49,15 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
 
   const router = useRouter();
   const screen = useScreen();
-  screen.setIsLoading(orderQuery.isLoading || orderLineItemsQuery.isLoading);
 
-  if (currentOrderQuery.isError || (!currentOrderQuery.isLoading && !currentOrder)) {
+  const isLoading = orderQuery.isLoading || orderLineItemsQuery.isLoading || customFieldsPresetsQuery.isLoading;
+  screen.setIsLoading(isLoading);
+
+  if (isLoading) {
+    return null;
+  }
+
+  if (currentOrderQuery.isError || !currentOrder) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text color="TextCritical" variant="body">
@@ -58,11 +67,21 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
     );
   }
 
-  if (currentLineItemsQuery.isError || (!currentLineItemsQuery.isLoading && !currentLineItems)) {
+  if (currentLineItemsQuery.isError || !currentLineItems) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text color="TextCritical" variant="body">
           {extractErrorMessage(currentLineItemsQuery.error, 'Error loading order line items')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (customFieldsPresetsQuery.isError || !customFieldsPresetsQuery.data) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(customFieldsPresetsQuery.error, 'Error loading custom fields presets')}
         </Text>
       </Stack>
     );
@@ -104,6 +123,7 @@ export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave:
                     orderId: currentOrder.id,
                     id: li.id,
                   },
+                  customFields: customFieldsPresetsQuery.data.defaultCustomFields,
                 };
               }),
           );

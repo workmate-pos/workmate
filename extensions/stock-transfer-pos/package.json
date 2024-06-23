@@ -1,0 +1,19 @@
+{
+  "name": "stock-transfer-pos",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "author": "Tim van Dam",
+  "dependencies": {
+    "@work-orders/common": "file:../../common",
+    "@work-orders/common-pos": "file:../common-pos",
+    "uuid": "^9.0.1"
+  },
+  "scripts": {
+    "clean": "rm -fr node_modules"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.8"
+  }
+}

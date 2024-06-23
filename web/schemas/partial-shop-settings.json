@@ -42,6 +42,10 @@
       "type": "string",
       "minLength": 1
     },
+    "stockTransferIdFormat": {
+      "type": "string",
+      "minLength": 1
+    },
     "discountShortcuts": {
       "type": "array",
       "items": {

@@ -2,13 +2,13 @@ import { List, ListRowLeftSide, Stack, Text } from '@shopify/retail-ui-extension
 import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { getTotalPriceForCharges } from '../create-work-order/charges.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { CreateWorkOrderCharge } from '../types.js';
-import { useWorkOrderOrders } from '../hooks/use-work-order-orders.js';
+import { useWorkOrderOrders } from '@work-orders/common/queries/use-work-order-orders.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 
 /**
  * A list of clickable EmployeeLabour items.
@@ -19,14 +19,14 @@ export function EmployeeLabourList({
   onClick,
 }: {
   workOrderName: string | null;
-  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>[];
-  onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItemUuid'>) => void;
+  charges: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItem'>[];
+  onClick: (labour: DiscriminatedUnionOmit<CreateWorkOrderCharge & { employeeId: ID }, 'workOrderItem'>) => void;
 }) {
   const currencyFormatter = useCurrencyFormatter();
 
   const fetch = useAuthenticatedFetch();
   const employeeQueries = useEmployeeQueries({ fetch, ids: charges.map(e => e.employeeId).filter(isNonNullable) });
-  const { workOrderQuery, getChargeOrder } = useWorkOrderOrders(workOrderName);
+  const { workOrderQuery, getChargeOrder } = useWorkOrderOrders({ fetch, workOrderName });
 
   const screen = useScreen();
   screen.setIsLoading(workOrderQuery.isLoading || Object.values(employeeQueries).some(q => q.isLoading));

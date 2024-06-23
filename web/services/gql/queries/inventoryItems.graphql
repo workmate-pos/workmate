@@ -1,5 +1,18 @@
 fragment InventoryItemFragment on InventoryItem {
   id
+  variant {
+    title
+    image {
+      url
+    }
+    product {
+      title
+      hasOnlyDefaultVariant
+      featuredImage {
+        url
+      }
+    }
+  }
   unitCost {
     amount
   }

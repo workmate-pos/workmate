@@ -3,7 +3,7 @@ import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/que
 import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
-import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
+import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
@@ -11,12 +11,16 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 
 export function ProductSelector({
   onSelect,
@@ -42,6 +46,13 @@ export function ProductSelector({
         .join(' AND '),
     },
   });
+
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const screen = useScreen();
+
+  const isLoading = customFieldsPresetsQuery.isLoading;
+  screen.setIsLoading(isLoading);
 
   const currencyFormatter = useCurrencyFormatter();
 
@@ -69,33 +80,73 @@ export function ProductSelector({
     />
   );
 
-  const rows = getProductVariantRows(
+  const rows = useProductVariantRows(
     productVariantsQuery.data?.pages?.[page - 1] ?? [],
     internalOnSelect,
     currencyFormatter,
   );
 
+  if (isLoading) {
+    return null;
+  }
+
+  if (customFieldsPresetsQuery.isError || !customFieldsPresetsQuery.data) {
+    return (
+      <ResponsiveStack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(
+            customFieldsPresetsQuery.error,
+            'An error occurred while loading default custom field presets',
+          )}
+        </Text>
+      </ResponsiveStack>
+    );
+  }
+
   return (
     <ScrollView>
-      <Button
-        title={'New Product'}
-        variant={'primary'}
-        onPress={() => {
-          router.push('ProductCreator', {
-            initialProduct: {},
-            onCreate: product =>
-              internalOnSelect(
-                {
-                  quantity: product.quantity,
-                  uuid: uuid(),
-                  productVariantId: product.productVariantId,
-                  absorbCharges: false,
-                },
-                [],
-              ),
-          });
-        }}
-      />
+      <ResponsiveGrid columns={2}>
+        <Button
+          title={'New Product'}
+          variant={'primary'}
+          onPress={() =>
+            router.push('ProductCreator', {
+              initialProduct: {},
+              onCreate: product =>
+                internalOnSelect(
+                  {
+                    type: 'product',
+                    quantity: product.quantity,
+                    uuid: uuid(),
+                    productVariantId: product.productVariantId,
+                    absorbCharges: false,
+                    customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                  },
+                  [],
+                ),
+            })
+          }
+        />
+        <Button
+          title={'Custom Product'}
+          variant={'primary'}
+          onPress={async () => {
+            await router.popCurrent();
+            internalOnSelect(
+              {
+                type: 'custom-item',
+                quantity: 1 as Int,
+                absorbCharges: false,
+                customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                uuid: uuid(),
+                name: 'Unnamed product',
+                unitPrice: BigDecimal.ONE.toMoney(),
+              },
+              [],
+            );
+          }}
+        />
+      </ResponsiveGrid>
 
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">
@@ -136,11 +187,18 @@ export function ProductSelector({
   );
 }
 
-function getProductVariantRows(
+function useProductVariantRows(
   productVariants: ProductVariant[],
   onSelect: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
+  const fetch = useAuthenticatedFetch();
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  if (!customFieldsPresetsQuery.data) {
+    return [];
+  }
+
   return productVariants.map(variant => {
     const displayName = getProductVariantName(variant) ?? 'Unknown product';
 
@@ -161,12 +219,18 @@ function getProductVariantRows(
 
         onSelect(
           {
+            type: 'product',
             uuid: itemUuid,
             productVariantId: variant.id,
             quantity: 1 as Int,
             absorbCharges: false,
+            customFields: customFieldsPresetsQuery.data.defaultCustomFields,
           },
-          defaultCharges.map(charge => ({ ...charge, uuid: uuid(), workOrderItemUuid: itemUuid })),
+          defaultCharges.map(charge => ({
+            ...charge,
+            uuid: uuid(),
+            workOrderItem: { type: 'product', uuid: itemUuid },
+          })),
         );
       },
       leftSide: {

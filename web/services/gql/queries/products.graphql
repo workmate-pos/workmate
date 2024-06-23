@@ -96,6 +96,7 @@ fragment ProductFragment on Product {
   featuredImage {
     url
   }
+  tags
   description
   productType
   serviceType: metafield(namespace: "$app", key: "service-type") {

@@ -1,7 +1,7 @@
 import { Liquid } from 'liquidjs';
 import { db } from '../../db/db.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -48,9 +48,11 @@ export async function getWorkOrderTemplateData(
       tax,
       orderDiscount,
       itemPrices,
+      customItemPrices,
       fixedPriceLabourChargePrices,
       hourlyLabourChargePrices,
       itemLineItemIds,
+      customItemLineItemIds,
       fixedPriceLabourChargeLineItemIds,
       hourlyLabourChargeLineItemIds,
       lineItems,
@@ -103,7 +105,11 @@ export async function getWorkOrderTemplateData(
     date: clientDate,
     dueDate: clientDueDate,
     shopifyOrderNames: workOrder.orders.filter(hasPropertyValue('type', 'ORDER')).map(order => order.name),
-    purchaseOrderNames: unique(workOrder.items.flatMap(item => item.purchaseOrders.map(po => po.name))),
+    purchaseOrderNames: unique(
+      workOrder.items
+        .filter(hasPropertyValue('type', 'product'))
+        .flatMap(item => item.purchaseOrders.map(po => po.name)),
+    ),
     customer: {
       name: customer.displayName,
       address: customer.address,
@@ -114,12 +120,34 @@ export async function getWorkOrderTemplateData(
     hiddenNote: workOrder.internalNote,
     customFields: workOrder.customFields,
     items: workOrder.items.map<WorkOrderTemplateItem>(item => {
-      const lineItemId = itemLineItemIds[item.uuid];
+      const {
+        lineItemId,
+        totalPrice = never('smth wrong with calculate'),
+        purchaseOrders,
+      } = (() => {
+        if (item.type === 'product') {
+          return {
+            totalPrice: itemPrices[item.uuid],
+            lineItemId: itemLineItemIds[item.uuid],
+            purchaseOrders: item.purchaseOrders,
+          };
+        }
+
+        if (item.type === 'custom-item') {
+          return {
+            totalPrice: customItemPrices[item.uuid],
+            lineItemId: customItemLineItemIds[item.uuid],
+            purchaseOrders: [],
+          };
+        }
+
+        return item satisfies never;
+      })();
+
       const lineItem = lineItems.find(li => li.id === lineItemId) ?? null;
 
-      const purchaseOrderNames = item.purchaseOrders.map(po => po.name);
+      const purchaseOrderNames = purchaseOrders.map(po => po.name);
 
-      const totalPrice = itemPrices[item.uuid] ?? never('smth wrong with calculate');
       const unitPrice = (() => {
         if (item.quantity === 0) return totalPrice;
         return BigDecimal.fromMoney(totalPrice)
@@ -130,14 +158,17 @@ export async function getWorkOrderTemplateData(
 
       return {
         name: lineItem?.name ?? 'Unknown product',
-        charges: workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid)).map(getChargeTemplateData),
+        charges: workOrder.charges
+          .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid))
+          .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
+          .map(getChargeTemplateData),
         sku: lineItem?.sku ?? null,
         fullyPaid: lineItem?.order?.fullyPaid ?? false,
         shopifyOrderName: lineItem?.order?.name ?? null,
         purchaseOrderNames,
         purchaseOrderQuantities: {
-          orderedQuantity: sum(item.purchaseOrders.flatMap(po => po.items.map(item => item.quantity))),
-          availableQuantity: sum(item.purchaseOrders.flatMap(po => po.items.map(item => item.availableQuantity))),
+          orderedQuantity: sum(purchaseOrders.flatMap(po => po.items.map(item => item.quantity))),
+          availableQuantity: sum(purchaseOrders.flatMap(po => po.items.map(item => item.availableQuantity))),
         },
         quantity: item.quantity,
         description: lineItem?.variant?.product?.description ?? '',
@@ -145,7 +176,7 @@ export async function getWorkOrderTemplateData(
         unitPrice: round(unitPrice),
       };
     }),
-    charges: workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null)).map(getChargeTemplateData),
+    charges: workOrder.charges.filter(hasPropertyValue('workOrderItem', null)).map(getChargeTemplateData),
     fullyPaid: lineItems.every(lineItem => lineItem.order?.fullyPaid ?? false),
     outstanding: round(outstanding),
     paid: round(paid),

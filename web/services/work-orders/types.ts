@@ -30,11 +30,21 @@ export type WorkOrderDiscount =
 export type WorkOrderItem = {
   uuid: string;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
-  productVariantId: ID;
   quantity: Int;
   absorbCharges: boolean;
-  purchaseOrders: WorkOrderPurchaseOrder[];
-};
+  customFields: Record<string, string>;
+} & (
+  | {
+      type: 'product';
+      purchaseOrders: WorkOrderPurchaseOrder[];
+      productVariantId: ID;
+    }
+  | {
+      type: 'custom-item';
+      name: string;
+      unitPrice: Money;
+    }
+);
 
 export type WorkOrderPurchaseOrder = {
   name: string;
@@ -52,7 +62,10 @@ export type WorkOrderCharge = FixedPriceLabour | HourlyLabour;
 export type FixedPriceLabour = {
   type: 'fixed-price-labour';
   uuid: string;
-  workOrderItemUuid: string | null;
+  workOrderItem: {
+    type: 'product' | 'custom-item';
+    uuid: string;
+  } | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;
@@ -64,7 +77,10 @@ export type FixedPriceLabour = {
 export type HourlyLabour = {
   type: 'hourly-labour';
   uuid: string;
-  workOrderItemUuid: string | null;
+  workOrderItem: {
+    type: 'product' | 'custom-item';
+    uuid: string;
+  } | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;

@@ -14,6 +14,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { v4 as uuid } from 'uuid';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
 /**
  * List of line items in an order to select from.
@@ -53,6 +54,8 @@ export function SelectOrderProductModal({
     locationId: null,
   });
 
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
   const [selectedLineItems, setSelectedLineItems] = useState<typeof lineItems>([]);
 
   let title = 'Select Order Products';
@@ -70,6 +73,11 @@ export function SelectOrderProductModal({
       primaryAction={{
         content: 'Select products',
         onAction: () => {
+          if (!customFieldsPresetsQuery.data) {
+            setToastAction({ content: 'Loading default custom fields... Try again momentarily' });
+            return;
+          }
+
           onSelect(
             selectedLineItems.map(li => {
               const productVariant = productVariantQueries[li.variant.id]?.data;
@@ -88,6 +96,7 @@ export function SelectOrderProductModal({
                   orderId,
                   id: li.id,
                 },
+                customFields: customFieldsPresetsQuery.data.defaultCustomFields,
               };
             }),
           );

@@ -6,16 +6,20 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { Route, UseRouter } from '../router.js';
-import { ImportPresetProps } from './ImportPreset.js';
 import { SavePresetProps } from './SavePreset.js';
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
+import { SelectPresetToEditProps } from './SelectPresetToEdit.js';
+import { EditPresetProps } from './EditPreset.js';
+import { SelectPresetProps } from './SelectPreset.js';
 
 export type CustomFieldConfigProps = {
   initialCustomFields: Record<string, string>;
   onSave: (customFields: Record<string, string>) => void;
   useRouter: UseRouter<{
-    ImportPreset: Route<ImportPresetProps>;
+    EditPreset: Route<EditPresetProps>;
     SavePreset: Route<SavePresetProps>;
+    SelectPresetToEdit: Route<SelectPresetToEditProps>;
+    SelectPreset: Route<SelectPresetProps>;
   }>;
   type: CustomFieldsPresetType;
 };
@@ -61,42 +65,45 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
   return (
     <ScrollView>
       <ResponsiveGrid columns={2}>
-        <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center' }}>
+        <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center' }} paddingVertical={'ExtraLarge'}>
           <Text variant="headingLarge">Custom Fields</Text>
         </ResponsiveStack>
-        <ResponsiveStack
-          direction={'horizontal'}
-          alignment={'flex-end'}
-          sm={{ alignment: 'center', paddingVertical: 'Small' }}
-        >
+        <ResponsiveGrid columns={4} grow>
           <Button
             title={'Save as Preset'}
             type={'plain'}
-            isDisabled={!isNonEmptyArray(Object.keys(customFields))}
+            isDisabled={Object.keys(customFields).length === 0}
             onPress={() => {
               const keys = Object.keys(customFields);
-
-              if (isNonEmptyArray(keys)) {
-                router.push('SavePreset', {
-                  keys,
-                  useRouter,
-                  type,
-                });
-              }
+              router.push('SavePreset', {
+                keys,
+                useRouter,
+                type,
+              });
             }}
           />
           <Button
             title={'Import Preset'}
             type={'plain'}
             onPress={() => {
-              router.push('ImportPreset', {
-                onImport: ({ keys }) => overrideOrMergeDialog.show(keys),
+              router.push('SelectPreset', {
+                onSelect: ({ keys }) => overrideOrMergeDialog.show(keys),
                 useRouter,
                 type,
               });
             }}
           />
-        </ResponsiveStack>
+          <Button
+            title={'Edit Preset'}
+            type={'plain'}
+            onPress={() => {
+              router.push('SelectPresetToEdit', {
+                useRouter,
+                type,
+              });
+            }}
+          />
+        </ResponsiveGrid>
       </ResponsiveGrid>
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
@@ -158,10 +165,6 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
       </Stack>
     </ScrollView>
   );
-}
-
-function isNonEmptyArray<T>(value: T[]): value is [T, ...T[]] {
-  return value.length > 0;
 }
 
 /**

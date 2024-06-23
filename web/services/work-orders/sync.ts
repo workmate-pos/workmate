@@ -67,9 +67,10 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
     throw new Error(`Work order with id ${workOrderId} not found`);
   }
 
-  const [customFields, items, hourlyLabourCharges, fixedPriceLabourCharges] = await Promise.all([
+  const [customFields, items, customItems, hourlyLabourCharges, fixedPriceLabourCharges] = await Promise.all([
     db.workOrder.getCustomFields({ workOrderId }),
     db.workOrder.getItems({ workOrderId }),
+    db.workOrder.getCustomItems({ workOrderId }),
     db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
     db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
   ]);
@@ -86,25 +87,54 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
 
   const graphql = new Graphql(session);
 
+  assertGid(workOrder.customerId);
+
+  const { customer } = await gql.customer.get.run(graphql, { id: workOrder.customerId });
+  const customerId = customer?.id ?? null;
+
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
   const lineItemToLinkFilter = (el: { shopifyOrderLineItemId: string | null }) =>
     !isLineItemId(el.shopifyOrderLineItemId);
 
   const draftItems = items.filter(lineItemToLinkFilter);
+  const draftCustomItems = customItems.filter(lineItemToLinkFilter);
   const draftHourlyLabourCharges = hourlyLabourCharges.filter(lineItemToLinkFilter);
   const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(lineItemToLinkFilter);
 
+  const mapWorkOrderItem = <T extends { workOrderItemUuid: string | null; workOrderCustomItemUuid: string | null }>(
+    charge: T,
+  ) => {
+    const { workOrderCustomItemUuid, workOrderItemUuid, ...rest } = charge;
+
+    if (workOrderItemUuid && workOrderCustomItemUuid) {
+      // impossible by design of create-work-order.json
+      throw new Error('Cannot have both workOrderItemUuid and workOrderCustomItemUuid');
+    }
+
+    let workOrderItem = null;
+
+    if (workOrderItemUuid) {
+      workOrderItem = { type: 'product', uuid: workOrderItemUuid } as const;
+    } else if (workOrderCustomItemUuid) {
+      workOrderItem = { type: 'custom-item', uuid: workOrderCustomItemUuid } as const;
+    }
+
+    return {
+      ...charge,
+      workOrderItem,
+    };
+  };
+
   const { lineItems, customSales } = getWorkOrderLineItems(
     draftItems,
-    draftHourlyLabourCharges,
-    draftFixedPriceLabourCharges,
+    draftCustomItems,
+    draftHourlyLabourCharges.map(mapWorkOrderItem),
+    draftFixedPriceLabourCharges.map(mapWorkOrderItem),
     { labourSku: labourLineItemSKU },
   );
 
   const discount = getWorkOrderDiscount(workOrder);
-
-  assertGid(workOrder.customerId);
 
   const input = {
     customAttributes: getCustomAttributeArrayFromObject(
@@ -128,7 +158,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
       })),
     ],
     note: workOrder.note,
-    purchasingEntity: workOrder.customerId ? { customerId: workOrder.customerId } : null,
+    purchasingEntity: customerId ? { customerId } : null,
     appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
   } as const satisfies DraftOrderInput;
 

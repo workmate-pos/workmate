@@ -4,10 +4,10 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { Stack, Text, useCartSubscription, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { defaultCreateWorkOrder } from '../create-work-order/default.js';
 import { WorkOrder } from './WorkOrder.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useEffect } from 'react';
+import { defaultCreateWorkOrder } from '@work-orders/common/create-work-order/default.js';
 
 /**
  * A wrapper around WorkOrder that shows a loading indicator while loading defaults etc.
@@ -19,9 +19,12 @@ export function NewWorkOrder() {
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const settingsQuery = useSettingsQuery({ fetch });
-  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'WORK_ORDER' });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery(
+    { fetch, type: 'WORK_ORDER' },
+    { refetchOnMount: 'always' },
+  );
 
-  const isLoading = settingsQuery.isLoading || customFieldsPresetsQuery.isLoading;
+  const isLoading = settingsQuery.isLoading || customFieldsPresetsQuery.isFetching;
 
   const screen = useScreen();
   screen.setIsLoading(isLoading);
@@ -70,16 +73,12 @@ export function NewWorkOrder() {
     status: settingsQuery.data.settings.defaultStatus,
   });
 
-  const defaultCustomFieldPresets = customFieldsPresetsQuery.data.filter(preset => preset.default);
-  const defaultCustomFieldKeys = defaultCustomFieldPresets.flatMap(preset => preset.keys);
-  const defaultCustomFields = Object.fromEntries(defaultCustomFieldKeys.map(key => [key, '']));
-
   return (
     <WorkOrder
       initial={{
         ...createWorkOrder,
         customFields: {
-          ...defaultCustomFields,
+          ...customFieldsPresetsQuery.data.defaultCustomFields,
           ...createWorkOrder.customFields,
         },
         customerId: defaultCustomerId,

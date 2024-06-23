@@ -8,8 +8,11 @@ import { useState } from 'react';
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { useRouter } from '../../routes.js';
+import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 
-export function PrintOverview({ name, dueDate }: { name: string; dueDate: Date }) {
+export function PrintOverview({ name, dueDateUtc }: { name: string; dueDateUtc: Date }) {
+  const dueDateLocal = new Date(dueDateUtc.getTime() + dueDateUtc.getTimezoneOffset() * MINUTE_IN_MS);
+
   const fetch = useAuthenticatedFetch();
 
   const settingsQuery = useSettingsQuery({ fetch });
@@ -42,7 +45,7 @@ export function PrintOverview({ name, dueDate }: { name: string; dueDate: Date }
       {
         workOrderName: name,
         date: new Date().toLocaleDateString(),
-        dueDate: new Date(dueDate).toLocaleDateString(),
+        dueDate: dueDateLocal.toLocaleDateString(),
         templateName: selectedTemplate,
       },
       {

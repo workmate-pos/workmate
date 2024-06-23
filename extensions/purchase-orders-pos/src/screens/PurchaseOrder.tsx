@@ -1,5 +1,6 @@
 import {
   Banner,
+  DateField,
   List,
   ListRow,
   ScrollView,
@@ -9,7 +10,7 @@ import {
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
+import { CreatePurchaseOrder, DateTime, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -42,6 +43,9 @@ import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+
+const TODAY_DATE = new Date();
+TODAY_DATE.setHours(0, 0, 0, 0);
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to draft SO line items
@@ -147,6 +151,8 @@ export function PurchaseOrder({
     screen.setTitle(createPurchaseOrder.name ?? 'New purchase order');
   }, [createPurchaseOrder]);
 
+  const placedDateIsToday = createPurchaseOrder.placedDate === TODAY_DATE.toISOString();
+
   return (
     <Form disabled={purchaseOrderMutation.isLoading}>
       <ScrollView>
@@ -201,6 +207,29 @@ export function PurchaseOrder({
                 });
               }}
               value={titleCase(createPurchaseOrder.status)}
+            />
+
+            <DateField
+              label={'Placed Date'}
+              value={createPurchaseOrder.placedDate ?? undefined}
+              onChange={(placedDate: string) => {
+                const date = placedDate ? new Date(placedDate) : null;
+                const isoString = date ? (date.toISOString() as DateTime) : null;
+                dispatch.setPartial({ placedDate: isoString });
+              }}
+              disabled={purchaseOrderMutation.isLoading}
+              action={
+                createPurchaseOrder.placedDate
+                  ? {
+                      label: 'Remove',
+                      onPress: () => dispatch.setPartial({ placedDate: null }),
+                    }
+                  : {
+                      label: 'Today',
+                      onPress: () => dispatch.setPartial({ placedDate: TODAY_DATE.toISOString() as DateTime }),
+                      disabled: placedDateIsToday,
+                    }
+              }
             />
           </ResponsiveGrid>
         </Stack>

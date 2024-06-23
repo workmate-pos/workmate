@@ -1,6 +1,6 @@
 import { db } from '../db/db.js';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { inTransaction } from '../db/client.js';
@@ -33,12 +33,14 @@ export async function cleanOrphanedDraftOrders<T>(
     }
 
     const graphql = new Graphql(session);
-    await gql.draftOrder.removeMany.run(graphql, {
-      ids: orphanedDraftOrders.map(({ orderId }) => {
-        assertGid(orderId);
-        return orderId;
-      }),
-    });
+    await gql.draftOrder.removeMany
+      .run(graphql, {
+        ids: orphanedDraftOrders.map(({ orderId }) => {
+          assertGid(orderId);
+          return orderId;
+        }),
+      })
+      .catch(error => sentryErr(error));
   }
 
   return await fn().then(

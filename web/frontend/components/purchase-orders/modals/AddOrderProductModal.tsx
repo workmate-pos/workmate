@@ -11,7 +11,7 @@ import { SelectOrderProductModal } from '@web/frontend/components/purchase-order
 
 /**
  * List of orders to select from.
- * Clicking an order will open a modal to select individual products from that order.
+ * Clicking an order will open a modal to select individualw products from that order.
  */
 export function AddOrderProductModal({
   open,

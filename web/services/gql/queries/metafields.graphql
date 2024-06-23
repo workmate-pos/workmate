@@ -22,6 +22,18 @@ mutation updateDefinition($definition: MetafieldDefinitionUpdateInput!) {
   }
 }
 
+mutation pin($id: ID!) {
+  metafieldDefinitionPin(definitionId: $id) {
+    userErrors {
+      field
+      message
+    }
+    pinnedDefinition {
+      id
+    }
+  }
+}
+
 query getDefinition($namespace: String!, $key: String, $ownerType: MetafieldOwnerType!) {
   metafieldDefinitions(first: 1, namespace: $namespace, key: $key, ownerType: $ownerType) {
     nodes {

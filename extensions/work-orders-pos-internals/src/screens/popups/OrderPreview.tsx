@@ -27,8 +27,8 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { defaultCreateWorkOrder } from '../../create-work-order/default.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { defaultCreateWorkOrder } from '@work-orders/common/create-work-order/default.js';
 
 export function OrderPreview({
   orderId,

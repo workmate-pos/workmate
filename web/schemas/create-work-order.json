@@ -35,23 +35,68 @@
     "items": {
       "type": "array",
       "items": {
-        "type": "object",
-        "properties": {
-          "uuid": {
-            "type": "string"
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "uuid": {
+                "type": "string"
+              },
+              "quantity": {
+                "$ref": "scalars.json#/definitions/Int"
+              },
+              "absorbCharges": {
+                "type": "boolean"
+              },
+              "customFields": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "type": {
+                "const": "product"
+              },
+              "productVariantId": {
+                "$ref": "scalars.json#/definitions/ID"
+              }
+            },
+            "required": ["uuid", "quantity", "absorbCharges", "customFields", "type", "productVariantId"],
+            "additionalProperties": false
           },
-          "productVariantId": {
-            "$ref": "scalars.json#/definitions/ID"
-          },
-          "quantity": {
-            "$ref": "scalars.json#/definitions/Int"
-          },
-          "absorbCharges": {
-            "type": "boolean"
+          {
+            "type": "object",
+            "properties": {
+              "uuid": {
+                "type": "string"
+              },
+              "quantity": {
+                "$ref": "scalars.json#/definitions/Int"
+              },
+              "absorbCharges": {
+                "type": "boolean"
+              },
+              "customFields": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "type": {
+                "const": "custom-item"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "unitPrice": {
+                "$ref": "scalars.json#/definitions/Money"
+              }
+            },
+            "required": ["uuid", "quantity", "absorbCharges", "customFields", "type", "name", "unitPrice"],
+            "additionalProperties": false
           }
-        },
-        "required": ["uuid", "productVariantId", "quantity", "absorbCharges"],
-        "additionalProperties": false
+        ]
       }
     },
     "charges": {
@@ -68,14 +113,23 @@
               "uuid": {
                 "type": "string"
               },
-              "workOrderItemUuid": {
+              "workOrderItem": {
                 "anyOf": [
                   {
                     "const": null
                   },
                   {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": ["product", "custom-item"]
+                      },
+                      "uuid": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["type", "uuid"],
+                    "additionalProperties": false
                   }
                 ]
               },
@@ -112,7 +166,7 @@
             "required": [
               "type",
               "uuid",
-              "workOrderItemUuid",
+              "workOrderItem",
               "employeeId",
               "name",
               "rate",
@@ -133,14 +187,23 @@
               "uuid": {
                 "type": "string"
               },
-              "workOrderItemUuid": {
+              "workOrderItem": {
                 "anyOf": [
                   {
                     "const": null
                   },
                   {
-                    "type": "string",
-                    "minLength": 1
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "enum": ["product", "custom-item"]
+                      },
+                      "uuid": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["type", "uuid"],
+                    "additionalProperties": false
                   }
                 ]
               },
@@ -171,7 +234,7 @@
             "required": [
               "type",
               "uuid",
-              "workOrderItemUuid",
+              "workOrderItem",
               "employeeId",
               "name",
               "amount",

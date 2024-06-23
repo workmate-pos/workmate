@@ -8,6 +8,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 import fetch from 'node-fetch';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { db } from '../db/db.js';
+import { getVendors } from '../vendors/get.js';
 
 export async function sendPurchaseOrderWebhook(session: Session, name: string) {
   const purchaseOrder = await getPurchaseOrder(session, name);
@@ -16,15 +17,17 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
     throw new Error(`Purchase order with name ${name} not found`);
   }
 
-  const {
-    purchaseOrderWebhook: { endpointUrl },
-  } = await getShopSettings(session.shop);
+  const [
+    {
+      purchaseOrderWebhook: { endpointUrl },
+    },
+    [{ id, createdAt, updatedAt } = never()],
+    vendors,
+  ] = await Promise.all([getShopSettings(session.shop), db.purchaseOrder.get({ name }), getVendors(session)]);
 
   if (!endpointUrl) {
     return;
   }
-
-  const [{ id } = never()] = await db.purchaseOrder.get({ name });
 
   const url = new URL(endpointUrl);
 
@@ -48,6 +51,7 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
       id,
       customFields: purchaseOrder.customFields,
       name: purchaseOrder.name,
+      placedDate: purchaseOrder.placedDate,
       deposited: purchaseOrder.deposited,
       discount: purchaseOrder.discount,
       employeeAssignments: purchaseOrder.employeeAssignments.map(ea => ({
@@ -69,7 +73,16 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
       tax: purchaseOrder.tax,
       subtotal: subtotal.toMoney(),
       total,
-      vendorName: purchaseOrder.vendorName,
+      vendor: purchaseOrder.vendorName
+        ? {
+            name: purchaseOrder.vendorName,
+            metafields: Object.fromEntries(
+              vendors
+                .find(vendor => vendor.name === purchaseOrder.vendorName)
+                ?.customer?.metafields?.nodes?.map(({ namespace, key, value }) => [`${namespace}.${key}`, value]) ?? [],
+            ),
+          }
+        : null,
       lineItems: await Promise.all(
         purchaseOrder.lineItems.map(async lineItem => {
           const productVariant = lineItem.productVariant;
@@ -105,6 +118,8 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
           };
         }),
       ),
+      createdAt: createdAt.toISOString(),
+      updatedAt: updatedAt.toISOString(),
     },
   };
 

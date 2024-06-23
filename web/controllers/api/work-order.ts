@@ -126,7 +126,7 @@ export default class WorkOrderController {
     const workOrder = await getWorkOrder(session, name);
 
     if (!workOrder) {
-      throw new HttpError('Work order not found', 404);
+      throw new HttpError(`Work order ${name} not found`, 404);
     }
 
     return res.json(workOrder);

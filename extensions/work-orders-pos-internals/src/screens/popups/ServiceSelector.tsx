@@ -4,9 +4,8 @@ import { uuid } from '../../util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
-import { productVariantDefaultChargeToCreateWorkOrderCharge } from '../../dto/product-variant-default-charges.js';
+import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { getTotalPriceForCharges } from '../../create-work-order/charges.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -15,7 +14,6 @@ import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
-import { WIPCreateWorkOrder } from '../../create-work-order/reducer.js';
 import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
@@ -23,6 +21,12 @@ import {
 } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
 type OnSelect = (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 
@@ -51,6 +55,13 @@ export function ServiceSelector({
       ].join(' AND '),
     },
   });
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const screen = useScreen();
+
+  const isLoading = customFieldsPresetsQuery.isLoading;
+  screen.setIsLoading(isLoading);
+
   const currencyFormatter = useCurrencyFormatter();
 
   const [page, setPage] = useState(1);
@@ -69,22 +80,63 @@ export function ServiceSelector({
 
   const router = useRouter();
 
+  if (isLoading) {
+    return null;
+  }
+
+  if (customFieldsPresetsQuery.isError || !customFieldsPresetsQuery.data) {
+    return (
+      <ResponsiveStack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(
+            customFieldsPresetsQuery.error,
+            'An error occurred while loading default custom field presets',
+          )}
+        </Text>
+      </ResponsiveStack>
+    );
+  }
+
   return (
     <ScrollView>
-      <Button
-        title={'Add labour to line item'}
-        variant={'primary'}
-        onPress={() =>
-          router.push('ItemSelector', {
-            filter: 'can-add-labour',
-            onSelect: async item => {
-              await router.popCurrent();
-              onAddLabourToItem(item);
-            },
-            items: createWorkOrder.items,
-          })
-        }
-      />
+      <ResponsiveGrid columns={2}>
+        <Button
+          title={'New Service'}
+          variant={'primary'}
+          onPress={() =>
+            router.push('ProductCreator', {
+              initialProduct: {},
+              service: true,
+              onCreate: product =>
+                onSelect({
+                  item: {
+                    type: 'product',
+                    uuid: uuid(),
+                    productVariantId: product.productVariantId,
+                    absorbCharges: product.serviceType === QUANTITY_ADJUSTING_SERVICE,
+                    customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                    quantity: product.quantity,
+                  },
+                  charges: [],
+                }),
+            })
+          }
+        />
+        <Button
+          title={'Add labour to line item'}
+          variant={'primary'}
+          onPress={() =>
+            router.push('ItemSelector', {
+              filter: 'can-add-labour',
+              onSelect: async item => {
+                await router.popCurrent();
+                onAddLabourToItem(item);
+              },
+              items: createWorkOrder.items,
+            })
+          }
+        />
+      </ResponsiveGrid>
 
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">
@@ -130,7 +182,14 @@ function useProductVariantRows(
   onSelect: OnSelect,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
 ): ListRow[] {
+  const fetch = useAuthenticatedFetch();
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
   const router = useRouter();
+
+  if (!customFieldsPresetsQuery.data) {
+    return [];
+  }
 
   return productVariants
     .map<ListRow | null>(variant => {
@@ -164,15 +223,20 @@ function useProductVariantRows(
 
           onSelect({
             item: {
+              type: 'product',
               uuid: itemUuid,
               productVariantId: variant.id,
               quantity: 1 as Int,
               absorbCharges: type === QUANTITY_ADJUSTING_SERVICE,
+              customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             },
             charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
               ...charge,
               uuid: uuid(),
-              workOrderItemUuid: itemUuid,
+              workOrderItem: {
+                type: 'product',
+                uuid: itemUuid,
+              },
             })),
           });
         },

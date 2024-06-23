@@ -1,7 +1,7 @@
 /** Types generated for queries found in "services/db/queries/custom-field-presets.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
-export type CustomFieldsPresetType = 'PURCHASE_ORDER' | 'WORK_ORDER';
+export type CustomFieldsPresetType = 'LINE_ITEM' | 'PURCHASE_ORDER' | 'WORK_ORDER';
 
 export type stringArray = (string)[];
 
@@ -41,6 +41,46 @@ const getCustomFieldsPresetsIR: any = {"usedParamSet":{"shop":true,"type":true},
  * ```
  */
 export const getCustomFieldsPresets = new PreparedQuery<IGetCustomFieldsPresetsParams,IGetCustomFieldsPresetsResult>(getCustomFieldsPresetsIR);
+
+
+/** 'GetCustomFieldsPreset' parameters type */
+export interface IGetCustomFieldsPresetParams {
+  name: string;
+  shop: string;
+  type: CustomFieldsPresetType;
+}
+
+/** 'GetCustomFieldsPreset' return type */
+export interface IGetCustomFieldsPresetResult {
+  createdAt: Date;
+  default: boolean;
+  id: number;
+  keys: stringArray | null;
+  name: string;
+  shop: string;
+  type: CustomFieldsPresetType;
+  updatedAt: Date;
+}
+
+/** 'GetCustomFieldsPreset' query type */
+export interface IGetCustomFieldsPresetQuery {
+  params: IGetCustomFieldsPresetParams;
+  result: IGetCustomFieldsPresetResult;
+}
+
+const getCustomFieldsPresetIR: any = {"usedParamSet":{"shop":true,"type":true,"name":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":48,"b":53}]},{"name":"type","required":true,"transform":{"type":"scalar"},"locs":[{"a":68,"b":73}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":88,"b":93}]}],"statement":"SELECT *\nFROM \"CustomFieldsPreset\"\nWHERE shop = :shop!\n  AND type = :type!\n  AND name = :name!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT *
+ * FROM "CustomFieldsPreset"
+ * WHERE shop = :shop!
+ *   AND type = :type!
+ *   AND name = :name!
+ * ```
+ */
+export const getCustomFieldsPreset = new PreparedQuery<IGetCustomFieldsPresetParams,IGetCustomFieldsPresetResult>(getCustomFieldsPresetIR);
 
 
 /** 'UpsertCustomFieldsPreset' parameters type */

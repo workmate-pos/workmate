@@ -53,12 +53,13 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
       discountType: createWorkOrder.discount?.type,
     });
 
-    for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
-      await db.workOrder.insertCustomField({ workOrderId: workOrder.id, key, value });
-    }
-
     await upsertItems(session, createWorkOrder, workOrder.id, []);
     await upsertCharges(session, createWorkOrder, workOrder.id, [], []);
+
+    await Promise.all([
+      insertWorkOrderCustomFields(workOrder.id, createWorkOrder.customFields),
+      insertItemCustomFields(workOrder.id, createWorkOrder.items),
+    ]);
 
     await syncWorkOrder(session, workOrder.id);
 
@@ -100,14 +101,11 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
         discountType: createWorkOrder.discount?.type,
       });
 
-      await db.workOrder.removeCustomFields({ workOrderId });
-      for (const [key, value] of Object.entries(createWorkOrder.customFields)) {
-        await db.workOrder.insertCustomField({ workOrderId, key, value });
-      }
-
       const currentItems = await db.workOrder.getItems({ workOrderId });
       const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
       const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
+
+      await removeCustomFields(workOrderId);
 
       await upsertItems(session, createWorkOrder, workOrderId, currentItems);
       await upsertCharges(session, createWorkOrder, workOrderId, currentHourlyCharges, currentFixedPriceCharges);
@@ -115,11 +113,43 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       await deleteCharges(createWorkOrder, workOrderId, currentHourlyCharges, currentFixedPriceCharges);
       await deleteItems(createWorkOrder, workOrderId, currentItems);
 
+      await Promise.all([
+        insertWorkOrderCustomFields(workOrderId, createWorkOrder.customFields),
+        insertItemCustomFields(workOrderId, createWorkOrder.items),
+      ]);
+
       await syncWorkOrder(session, workOrderId);
 
       return workOrder;
     }),
   );
+}
+
+async function removeCustomFields(workOrderId: number) {
+  await db.workOrder.removeCustomFields({ workOrderId });
+  await db.workOrder.removeItemCustomFields({ workOrderId });
+}
+
+async function insertWorkOrderCustomFields(workOrderId: number, customFields: Record<string, string>) {
+  if (Object.keys(customFields).length === 0) {
+    return;
+  }
+
+  await db.workOrder.insertCustomFields({
+    customFields: Object.entries(customFields).map(([key, value]) => ({ workOrderId, key, value })),
+  });
+}
+
+async function insertItemCustomFields(workOrderId: number, items: CreateWorkOrder['items']) {
+  const customFields = items.flatMap(({ customFields, uuid: workOrderItemUuid }) =>
+    Object.entries(customFields).map(([key, value]) => ({ workOrderId, workOrderItemUuid, key, value })),
+  );
+
+  if (customFields.length === 0) {
+    return;
+  }
+
+  await db.workOrder.insertItemCustomFields({ customFields });
 }
 
 async function ensureRequiredDatabaseDataExists(session: Session, createWorkOrder: CreateWorkOrder) {
@@ -145,24 +175,43 @@ async function upsertItems(
 ) {
   const itemsByUuid = Object.fromEntries(currentItems.map(item => [item.uuid, item]));
 
-  await ensureProductVariantsExist(session, unique(createWorkOrder.items.map(item => item.productVariantId)));
-
   if (!createWorkOrder.items.length) {
     return;
   }
 
-  await db.workOrder.upsertItems({
-    items: createWorkOrder.items.map(item => ({
-      shopifyOrderLineItemId: itemsByUuid[item.uuid]?.shopifyOrderLineItemId ?? null,
-      productVariantId: item.productVariantId,
-      absorbCharges: item.absorbCharges,
-      quantity: item.quantity,
-      uuid: item.uuid,
-      workOrderId,
-    })),
-  });
+  const productItems = createWorkOrder.items.filter(hasPropertyValue('type', 'product'));
+  const customItems = createWorkOrder.items.filter(hasPropertyValue('type', 'custom-item'));
+
+  await ensureProductVariantsExist(session, unique(productItems.map(item => item.productVariantId)));
+
+  await Promise.all([
+    productItems.length &&
+      db.workOrder.upsertItems({
+        items: productItems.map(({ productVariantId, absorbCharges, quantity, uuid }) => ({
+          shopifyOrderLineItemId: itemsByUuid[uuid]?.shopifyOrderLineItemId ?? null,
+          productVariantId,
+          absorbCharges,
+          workOrderId,
+          quantity,
+          uuid,
+        })),
+      }),
+    customItems.length &&
+      db.workOrder.upsertCustomItems({
+        items: customItems.map(({ name, unitPrice, absorbCharges, quantity, uuid }) => ({
+          shopifyOrderLineItemId: itemsByUuid[uuid]?.shopifyOrderLineItemId ?? null,
+          absorbCharges,
+          workOrderId,
+          unitPrice,
+          quantity,
+          uuid,
+          name,
+        })),
+      }),
+  ]);
 }
 
+// TODO: Proper linking to work order item / custom item
 async function upsertCharges(
   session: Session,
   createWorkOrder: CreateWorkOrder,
@@ -191,7 +240,11 @@ async function upsertCharges(
     name: charge.name,
     rate: charge.rate,
     hours: charge.hours,
-    workOrderItemUuid: charge.workOrderItemUuid,
+    workOrderItemUuid: [charge.workOrderItem].filter(isNonNullable).filter(hasPropertyValue('type', 'product'))[0]
+      ?.uuid,
+    workOrderCustomItemUuid: [charge.workOrderItem]
+      .filter(isNonNullable)
+      .filter(hasPropertyValue('type', 'custom-item'))[0]?.uuid,
     shopifyOrderLineItemId: currentHourlyChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null,
     uuid: charge.uuid,
     rateLocked: charge.rateLocked,
@@ -206,7 +259,11 @@ async function upsertCharges(
       employeeId: charge.employeeId,
       name: charge.name,
       amount: charge.amount,
-      workOrderItemUuid: charge.workOrderItemUuid,
+      workOrderItemUuid: [charge.workOrderItem].filter(isNonNullable).filter(hasPropertyValue('type', 'product'))[0]
+        ?.uuid,
+      workOrderCustomItemUuid: [charge.workOrderItem]
+        .filter(isNonNullable)
+        .filter(hasPropertyValue('type', 'custom-item'))[0]?.uuid,
       shopifyOrderLineItemId: currentFixedPriceChargeByUuid[charge.uuid]?.shopifyOrderLineItemId ?? null,
       uuid: charge.uuid,
       amountLocked: charge.amountLocked,

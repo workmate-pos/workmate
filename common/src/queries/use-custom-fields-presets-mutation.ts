@@ -14,9 +14,9 @@ export const useCustomFieldsPresetsMutation = (
 
   return useMutation({
     ...options,
-    mutationFn: async ({ name, ...input }: { name: string } & UpsertCustomFieldsPreset) => {
+    mutationFn: async ({ currentName, ...input }: { currentName?: string } & UpsertCustomFieldsPreset) => {
       const response = await fetch(
-        `/api/custom-fields-presets/${encodeURIComponent(type)}/${encodeURIComponent(name)}`,
+        `/api/custom-fields-presets/${encodeURIComponent(type)}/${encodeURIComponent(currentName ?? input.name)}`,
         {
           method: 'POST',
           body: JSON.stringify(input),
@@ -25,7 +25,7 @@ export const useCustomFieldsPresetsMutation = (
       );
 
       if (!response.ok) {
-        throw new Error(`Failed to mutate custom fields preset '${name}'`);
+        throw new Error(`Failed to mutate custom fields preset '${currentName}'`);
       }
 
       const body: UpsertCustomFieldsPresetResponse = await response.json();

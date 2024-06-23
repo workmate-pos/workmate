@@ -13,6 +13,7 @@ import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-tool
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
+import { DateTime } from '../../schemas/generated/create-purchase-order.js';
 
 export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
   const [purchaseOrder] = await db.purchaseOrder.get({ name, shop });
@@ -49,6 +50,7 @@ export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: st
   return await awaitNested({
     name: purchaseOrder.name,
     status: purchaseOrder.status,
+    placedDate: purchaseOrder.placedDate ? (purchaseOrder.placedDate.toISOString() as DateTime) : null,
     location: getLocation(purchaseOrder.locationId),
     vendorName: purchaseOrder.vendorName,
     shipFrom: purchaseOrder.shipFrom,
@@ -114,7 +116,10 @@ export async function getPurchaseOrderInfoPage(
 }
 
 async function getPurchaseOrderLineItems(purchaseOrderId: number) {
-  const lineItems = await db.purchaseOrder.getLineItems({ purchaseOrderId });
+  const [lineItems, allLineItemCustomFields] = await Promise.all([
+    db.purchaseOrder.getLineItems({ purchaseOrderId }),
+    db.purchaseOrder.getLineItemCustomFields({ purchaseOrderId }),
+  ]);
 
   const productVariantIds = unique(lineItems.map(({ productVariantId }) => productVariantId));
   const productVariants = productVariantIds.length ? await db.productVariants.getMany({ productVariantIds }) : [];
@@ -137,6 +142,8 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
   const orderById = indexBy(orders, o => o.orderId);
 
   return lineItems.map(({ uuid, quantity, availableQuantity, productVariantId, shopifyOrderLineItemId, unitCost }) => {
+    const lineItemCustomFields = allLineItemCustomFields.filter(cf => cf.purchaseOrderLineItemUuid === uuid);
+
     const productVariant = productVariantById[productVariantId] ?? never('fk');
     const product = productById[productVariant.productId] ?? never('fk');
 
@@ -188,6 +195,7 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
           },
         };
       })(),
+      customFields: Object.fromEntries(lineItemCustomFields.map(({ key, value }) => [key, value])),
       unitCost,
       quantity,
       availableQuantity,

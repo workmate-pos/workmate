@@ -25,6 +25,11 @@ const purchaseOrderFormatters: Formatters = {
   id: ({ shop }) => getNextPurchaseOrderIdForShop(shop).then(String),
 };
 
+const stockTransferFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getNextStockTransferIdForShop(shop).then(String),
+};
+
 async function applyFormatters<Arg>(
   format: string,
   formatters: Record<string, (arg: Arg) => Promise<string> | string>,
@@ -51,6 +56,11 @@ export async function getNewWorkOrderName(shop: string) {
 export async function getNewPurchaseOrderName(shop: string) {
   const settings = await getShopSettings(shop);
   return await applyFormatters(settings.purchaseOrderIdFormat, purchaseOrderFormatters, { shop });
+}
+
+export async function getNewStockTransferName(shop: string) {
+  const settings = await getShopSettings(shop);
+  return await applyFormatters(settings.stockTransferIdFormat, stockTransferFormatters, { shop });
 }
 
 async function getNextWorkOrderIdForShop(shop: string) {
@@ -91,6 +101,26 @@ async function createPurchaseOrderIdSequenceForShopIfNotExists(shop: string) {
 
 function getPurchaseOrderIdSequenceNameForShop(shop: string) {
   return `IdSeq_PO_${shop}`;
+}
+
+async function getNextStockTransferIdForShop(shop: string) {
+  await createStockTransferIdSequenceForShopIfNotExists(shop);
+  const [{ id } = never('Sequence not found')] = await db.sequence.getNextSequenceValue({
+    sequenceName: getStockTransferIdSequenceNameForShop(shop),
+  });
+
+  return id;
+}
+
+async function createStockTransferIdSequenceForShopIfNotExists(shop: string) {
+  const query = `CREATE SEQUENCE IF NOT EXISTS "${getStockTransferIdSequenceNameForShop(shop)}" AS INTEGER;`;
+
+  using client = await useClient();
+  await client.query(query);
+}
+
+function getStockTransferIdSequenceNameForShop(shop: string) {
+  return `IdSeq_ST_${shop}`;
 }
 
 export function assertValidFormatString(format: string) {

@@ -14,6 +14,12 @@ import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decima
 import { useCreateProductReducer } from './reducer.js';
 import { UseRouter } from '../router.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import {
+  FIXED_PRICE_SERVICE,
+  getProductServiceType,
+  QUANTITY_ADJUSTING_SERVICE,
+} from '@work-orders/common/metafields/product-service-type.js';
+import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 
 export type CreatedProduct = {
   shopifyOrderLineItem: null;
@@ -21,31 +27,40 @@ export type CreatedProduct = {
   availableQuantity: Int;
   quantity: Int;
   unitCost: Money;
+  serviceType: typeof FIXED_PRICE_SERVICE | typeof QUANTITY_ADJUSTING_SERVICE | null;
 };
 
 export type ProductCreatorProps = {
   initialProduct: Partial<CreateProduct>;
   onCreate: (product: CreatedProduct) => void;
   useRouter: UseRouter;
+  service?: boolean;
 };
 
-export function ProductCreator({ initialProduct, onCreate, useRouter }: ProductCreatorProps) {
-  const [createProduct, dispatch, hasUnsavedChanges] = useCreateProductReducer(initialProduct);
-  const [quantity, setQuantity] = useState<Int>(1 as Int);
-  const { Form, isValid } = useForm();
+export function ProductCreator({ initialProduct, onCreate, useRouter, service = false }: ProductCreatorProps) {
+  const [createProduct, dispatch, hasUnsavedChanges] = useCreateProductReducer({
+    ...initialProduct,
+    serviceType: service ? FIXED_PRICE_SERVICE : QUANTITY_ADJUSTING_SERVICE,
+    costPrice: service ? null : initialProduct.costPrice,
+  });
 
+  const [quantity, setQuantity] = useState<Int>(1 as Int);
+
+  const { Form, isValid } = useForm();
   const router = useRouter();
 
   const fetch = useAuthenticatedFetch();
   const createProductMutation = useCreateProductMutation(
     { fetch },
     {
-      onSuccess: ({ product }) => {
+      onSuccess: async ({ product }) => {
         let unitCost = BigDecimal.ZERO.toMoney();
 
         if (product.variant.inventoryItem.unitCost) {
           unitCost = BigDecimal.fromDecimal(product.variant.inventoryItem.unitCost.amount).toMoney();
         }
+
+        await router.popCurrent();
 
         onCreate({
           shopifyOrderLineItem: null,
@@ -53,8 +68,8 @@ export function ProductCreator({ initialProduct, onCreate, useRouter }: ProductC
           availableQuantity: 0 as Int,
           quantity,
           unitCost,
+          serviceType: getProductServiceType(product.variant.product.serviceType?.value),
         });
-        router.popCurrent();
       },
     },
   );
@@ -62,12 +77,15 @@ export function ProductCreator({ initialProduct, onCreate, useRouter }: ProductC
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
   const screen = useScreen();
+
+  const title = `Create ${service ? 'Service' : 'Product'}`;
+  screen.setTitle(title);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   return (
     <ScrollView>
       <Stack direction={'horizontal'} alignment={'center'}>
-        <Text variant={'headingLarge'}>Create Product</Text>
+        <Text variant={'headingLarge'}>{title}</Text>
       </Stack>
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
@@ -94,17 +112,21 @@ export function ProductCreator({ initialProduct, onCreate, useRouter }: ProductC
               value={createProduct.productType ?? ''}
               onChange={(value: string) => dispatch.setPartial({ productType: value || null })}
             />
-            <FormMoneyField
-              label={'Price'}
-              value={createProduct.price}
-              onChange={price => dispatch.setPartial({ price: price ?? createProduct.price })}
-              required
-            />
-            <FormMoneyField
-              label={'Cost'}
-              value={createProduct.costPrice}
-              onChange={costPrice => dispatch.setPartial({ costPrice })}
-            />
+            {createProduct.serviceType !== QUANTITY_ADJUSTING_SERVICE && (
+              <FormMoneyField
+                label={'Price'}
+                value={createProduct.price}
+                onChange={price => dispatch.setPartial({ price: price ?? createProduct.price })}
+                required
+              />
+            )}
+            {!service && (
+              <FormMoneyField
+                label={'Cost'}
+                value={createProduct.costPrice}
+                onChange={costPrice => dispatch.setPartial({ costPrice })}
+              />
+            )}
             <FormDecimalField
               label={'Selection Quantity'}
               value={BigDecimal.fromString(String(quantity)).toDecimal()}
@@ -112,6 +134,35 @@ export function ProductCreator({ initialProduct, onCreate, useRouter }: ProductC
               postprocessor={roundingPostProcessor(0)}
               inputMode={'numeric'}
             />
+
+            {service && createProduct.serviceType && (
+              <FormButton
+                title={createProduct.serviceType}
+                onPress={() => {
+                  if (!createProduct.serviceType) {
+                    return;
+                  }
+
+                  const newServiceType = (
+                    {
+                      [QUANTITY_ADJUSTING_SERVICE]: FIXED_PRICE_SERVICE,
+                      [FIXED_PRICE_SERVICE]: QUANTITY_ADJUSTING_SERVICE,
+                    } as const
+                  )[createProduct.serviceType];
+
+                  const newPrice =
+                    newServiceType === QUANTITY_ADJUSTING_SERVICE ? BigDecimal.ONE.toMoney() : createProduct.price;
+
+                  const newCostPrice = newServiceType === QUANTITY_ADJUSTING_SERVICE ? null : createProduct.costPrice;
+
+                  dispatch.setPartial({
+                    serviceType: newServiceType,
+                    price: newPrice,
+                    costPrice: newCostPrice,
+                  });
+                }}
+              />
+            )}
           </ResponsiveGrid>
         </Form>
       </Stack>
