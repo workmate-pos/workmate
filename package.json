@@ -39,7 +39,7 @@
     "extensions:work-orders-pos-internals:build": "cd extensions/work-orders-pos-internals && npm run build",
     "extensions:work-orders-pos-internals:clean": "cd extensions/work-orders-pos-internals && npm run clean",
     "admin:install": "npm ci && npm run web:install && npm run web:frontend:install && npm run common:install && npm run work-order-shopify-order:install",
-    "admin:build": "npm run work-order-shopify-order:build && npm run web:build && npm run common:build && npm run web:frontend:build",
+    "admin:build": "npm run work-order-shopify-order:build && npm run web:build && npm run common:build && npm run common:build && npm run web:frontend:build",
     "admin:clean": "npm run work-order-shopify-order:clean && npm run web:clean && npm run web:frontend:clean && npm run common:clean",
     "all:install": "npm run admin:install && npm run extensions:install",
     "all:build": "npm run admin:build && npm run extensions:build",

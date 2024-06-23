@@ -23,8 +23,6 @@ export class InstallableMetaobjectService extends InstallableService {
           const { metaobjectDefinitionByType: existingMetaobjectDefinition } =
             await gql.metaobjects.getDefinitionByType.run(graphql, { type: definition.type });
 
-          let result;
-
           if (existingMetaobjectDefinition) {
             const oldKeys = existingMetaobjectDefinition.fieldDefinitions.map(fd => fd.key);
             const newKeys = definition.fieldDefinitions.map(fd => fd.key);
@@ -68,7 +66,7 @@ export class InstallableMetaobjectService extends InstallableService {
               };
             });
 
-            const updateResult = await gql.metaobjects.updateDefinition.run(graphql, {
+            await gql.metaobjects.updateDefinition.run(graphql, {
               id: existingMetaobjectDefinition.id,
               definition: {
                 description: definition.description,
@@ -80,18 +78,11 @@ export class InstallableMetaobjectService extends InstallableService {
                 resetFieldOrder: true,
               },
             });
-
-            result = updateResult.metaobjectDefinitionUpdate;
           } else {
-            const createResult = await gql.metaobjects.createDefinition.run(graphql, { definition });
-            result = createResult.metaobjectDefinitionCreate;
+            await gql.metaobjects.createDefinition.run(graphql, { definition });
           }
 
-          if (result?.userErrors?.length) {
-            sentryErr(`Failed to create metaobject definition '${definition.type}'`, result.userErrors);
-          } else {
-            console.log(`Created metaobject definition '${definition.type}'`);
-          }
+          console.log(`Created metaobject definition '${definition.type}'`);
         })
         .map(promise => promise.catch(error => sentryErr(error))),
     );

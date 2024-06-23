@@ -2,9 +2,6 @@ import { Frame, IndexTable, Page, SkeletonBodyText } from '@shopify/polaris';
 import { TitleBar } from '@shopify/app-bridge-react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState } from 'react';
-import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
-import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { NumberField } from '../components/NumberField.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -13,6 +10,9 @@ import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { Int } from '@web/schemas/generated/pagination-options.js';
+import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
+import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export default function () {
   return (
