@@ -10,6 +10,44 @@ mutation adjust($input: InventoryAdjustQuantitiesInput!) {
   }
 }
 
+mutation adjustIncomingAvailable(
+  $reason: String!,
+  $availableChanges: [InventoryChangeInput!]!,
+  $incomingChanges: [InventoryChangeInput!]!,
+) {
+  adjustAvailable: inventoryAdjustQuantities(
+    input: {
+      reason: $reason,
+      name: "available",
+      changes: $availableChanges,
+    }
+  ) {
+    userErrors {
+      field
+      message
+    }
+    inventoryAdjustmentGroup {
+      id
+    }
+  }
+
+  adjustIncoming: inventoryAdjustQuantities(
+    input: {
+      reason: $reason,
+      name: "incoming",
+      changes: $incomingChanges,
+    }
+  ) {
+    userErrors {
+      field
+      message
+    }
+    inventoryAdjustmentGroup {
+      id
+    }
+  }
+}
+
 mutation setOnHand($input: InventorySetOnHandQuantitiesInput!) {
   inventorySetOnHandQuantities(input: $input) {
     userErrors {
