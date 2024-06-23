@@ -4,7 +4,7 @@
   "type": "module",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "vite build",
+    "build": "npm install && vite build",
     "dev": "vite",
     "clean": "rm -fr dist node_modules"
   },

@@ -12,7 +12,6 @@ import {
   CustomFieldConfig,
   CustomFieldConfigProps,
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldConfig.js';
-import { ImportPreset, ImportPresetProps } from '@work-orders/common-pos/screens/custom-fields/ImportPreset.js';
 import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 import { PrintOverview } from './screens/PrintOverview.js';
 import { OrderProductSelector } from './screens/popups/OrderProductSelector.js';
@@ -54,10 +53,6 @@ export const { Router, useRouter } = createRouter({
     Component: (props: Omit<CustomFieldConfigProps, 'useRouter'>) => (
       <CustomFieldConfig {...props} useRouter={useRouter} />
     ),
-  },
-  ImportPreset: {
-    title: 'Import Preset',
-    Component: (props: Omit<ImportPresetProps, 'useRouter'>) => <ImportPreset {...props} useRouter={useRouter} />,
   },
   SavePreset: {
     title: 'Save Preset',
