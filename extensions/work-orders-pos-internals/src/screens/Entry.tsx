@@ -56,7 +56,7 @@ export function Entry() {
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'WORK_ORDER' });
 
-  const rows = useWorkOrderRows(workOrderInfoQuery.data?.pages ?? []);
+  const rows = useWorkOrderRows(workOrderInfoQuery.data?.pages?.flat(1) ?? []);
 
   const screen = useScreen();
   screen.setIsLoading(settingsQuery.isLoading || customFieldsPresetsQuery.isLoading);

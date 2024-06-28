@@ -28,7 +28,7 @@ export function Entry() {
     query,
     customFieldFilters,
   });
-  const purchaseOrders = purchaseOrderInfoQuery.data?.pages ?? [];
+  const purchaseOrders = purchaseOrderInfoQuery.data?.pages?.flat(1) ?? [];
 
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });

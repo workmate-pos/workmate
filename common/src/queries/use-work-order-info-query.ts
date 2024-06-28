@@ -35,7 +35,7 @@ export const useWorkOrderInfoQuery = (
   options?: UseInfiniteQueryOptions<
     WorkOrderInfo[],
     unknown,
-    WorkOrderInfo,
+    WorkOrderInfo[],
     WorkOrderInfo[],
     (
       | string
@@ -118,11 +118,11 @@ export const useWorkOrderInfoQuery = (
       return pages.flat(1).length;
     },
     select: ({ pages, pageParams }) => ({
-      pages: pages.flat(1),
+      pages: pages.filter(page => page.length > 0),
       pageParams,
     }),
     onSuccess(workOrders) {
-      for (const workOrder of workOrders.pages) {
+      for (const workOrder of workOrders.pages.flat(1)) {
         queryClient.setQueryData(['work-order', workOrder.name], { workOrder } satisfies UseQueryData<
           typeof useWorkOrderQuery
         >);
