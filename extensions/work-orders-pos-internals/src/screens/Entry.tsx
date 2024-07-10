@@ -1,10 +1,8 @@
-import { Button, List, ListRow, ScrollView, Selectable, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { OverdueStatus, useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
+import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
-import { useCustomerQueries, useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
+import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
 import { useState } from 'react';
-import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { ID } from '@web/services/gql/queries/generated/schema.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -16,10 +14,6 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
-import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
-import { PaymentStatus, PurchaseOrderStatus } from '@web/schemas/generated/work-order-pagination-options.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { getPurchaseOrderBadges } from '../util/badges.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -27,15 +21,10 @@ import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-ca
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { DAY_IN_MS, MINUTE_IN_MS, SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
+import { WorkOrderFiltersDisplay, WorkOrderFiltersObj } from './popups/WorkOrderFilters.js';
 
 export function Entry() {
-  const [status, setStatus] = useState<string | null>(null);
-  const [customerId, setCustomerId] = useState<ID | null>(null);
-  const [employeeIds, setEmployeeIds] = useState<ID[]>([]);
-  const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null);
-  const [overdueStatus, setOverdueStatus] = useState<OverdueStatus | null>(null);
-  const [purchaseOrderStatus, setPurchaseOrderStatus] = useState<PurchaseOrderStatus | null>(null);
+  const [filters, setFilters] = useState<WorkOrderFiltersObj>({ customFieldFilters: [], employeeIds: [] });
 
   const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
@@ -43,16 +32,8 @@ export function Entry() {
   const workOrderInfoQuery = useWorkOrderInfoQuery({
     fetch,
     query,
-    employeeIds,
-    status: status ?? undefined,
-    customerId: customerId ?? undefined,
-    paymentStatus: paymentStatus ?? undefined,
-    overdueStatus: overdueStatus ?? undefined,
-    purchaseOrderStatus: purchaseOrderStatus ?? undefined,
-    customFieldFilters,
+    ...filters,
   });
-  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
-  const customerQuery = useCustomerQuery({ fetch, id: customerId });
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'WORK_ORDER' });
 
@@ -85,204 +66,9 @@ export function Entry() {
           {workOrderInfoQuery.isRefetching ? 'Reloading...' : ' '}
         </Text>
       </Stack>
-      <ResponsiveStack
-        direction={'horizontal'}
-        alignment={'space-between'}
-        sm={{ direction: 'vertical', alignment: 'flex-start' }}
-      >
-        <ResponsiveStack direction={'horizontal'} flexWrap={'wrap'} sm={{ direction: 'vertical', flexWrap: undefined }}>
-          <Button
-            title={'Filter status'}
-            type={'plain'}
-            onPress={() =>
-              router.push('StatusSelector', {
-                onSelect: status => setStatus(status),
-              })
-            }
-          />
-          <Button
-            title={'Filter payment status'}
-            type={'plain'}
-            onPress={() =>
-              router.push('PaymentStatusSelector', {
-                onSelect: status => setPaymentStatus(status),
-              })
-            }
-          />
-          <Button
-            title={'Filter overdue status'}
-            type={'plain'}
-            onPress={() =>
-              router.push('OverdueStatusSelector', {
-                onSelect: status => setOverdueStatus(status),
-              })
-            }
-          />
-          <Button
-            title={'Filter purchase order status'}
-            type={'plain'}
-            onPress={() =>
-              router.push('PurchaseOrderStatusSelector', {
-                onSelect: status => setPurchaseOrderStatus(status),
-              })
-            }
-          />
-          <Button
-            title={'Filter customer'}
-            type={'plain'}
-            onPress={() =>
-              router.push('CustomerSelector', {
-                onSelect: customer => setCustomerId(customer),
-              })
-            }
-          />
-          <Button
-            title={'Filter employees'}
-            type={'plain'}
-            onPress={() =>
-              router.push('EmployeeSelector', {
-                selected: employeeIds,
-                onSelect: id => setEmployeeIds(c => [...c, id]),
-                onDeselect: id => setEmployeeIds(c => c.filter(e => e !== id)),
-              })
-            }
-          />
-          <Button
-            title={'Filter custom fields'}
-            type={'plain'}
-            onPress={() =>
-              router.push('CustomFieldFilterConfig', {
-                onSave: setCustomFieldFilters,
-                initialFilters: customFieldFilters,
-              })
-            }
-          />
-        </ResponsiveStack>
-        <ResponsiveStack direction={'horizontal'} flexWrap={'wrap'} sm={{ direction: 'vertical', flexWrap: undefined }}>
-          {status && (
-            <Selectable onPress={() => setStatus(null)}>
-              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                <Text color={'TextCritical'}>Clear status</Text>
-              </Stack>
-            </Selectable>
-          )}
-          {paymentStatus && (
-            <Selectable onPress={() => setPaymentStatus(null)}>
-              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                <Text color={'TextCritical'}>Clear payment status</Text>
-              </Stack>
-            </Selectable>
-          )}
-          {overdueStatus && (
-            <Selectable onPress={() => setOverdueStatus(null)}>
-              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                <Text color={'TextCritical'}>Clear overdue status</Text>
-              </Stack>
-            </Selectable>
-          )}
-          {purchaseOrderStatus && (
-            <Selectable onPress={() => setPurchaseOrderStatus(null)}>
-              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                <Text color={'TextCritical'}>Clear purchase order status</Text>
-              </Stack>
-            </Selectable>
-          )}
-          {customerId && (
-            <Selectable onPress={() => setCustomerId(null)}>
-              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                <Text color={'TextCritical'}>Clear customer</Text>
-              </Stack>
-            </Selectable>
-          )}
-          {employeeIds.length > 0 && (
-            <Selectable onPress={() => setEmployeeIds([])}>
-              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                <Text color={'TextCritical'}>Clear employees</Text>
-              </Stack>
-            </Selectable>
-          )}
-          {customFieldFilters.length > 0 && (
-            <Selectable onPress={() => setCustomFieldFilters([])}>
-              <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
-                <Text color={'TextCritical'}>Clear custom fields</Text>
-              </Stack>
-            </Selectable>
-          )}
-        </ResponsiveStack>
-      </ResponsiveStack>
-      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-        {status && (
-          <>
-            <Text variant={'sectionHeader'}>Status:</Text>
-            <Text variant={'captionRegular'} color={'TextSubdued'}>
-              {status}
-            </Text>
-          </>
-        )}
-      </Stack>
-      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-        {paymentStatus && (
-          <>
-            <Text variant={'sectionHeader'}>Payment Status:</Text>
-            <Text variant={'captionRegular'} color={'TextSubdued'}>
-              {titleCase(paymentStatus)}
-            </Text>
-          </>
-        )}
-      </Stack>
-      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-        {overdueStatus && (
-          <>
-            <Text variant={'sectionHeader'}>Overdue Status:</Text>
-            <Text variant={'captionRegular'} color={'TextSubdued'}>
-              {titleCase(overdueStatus)}
-            </Text>
-          </>
-        )}
-      </Stack>
-      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-        {purchaseOrderStatus && (
-          <>
-            <Text variant={'sectionHeader'}>Purchase Order Status:</Text>
-            <Text variant={'captionRegular'} color={'TextSubdued'}>
-              {titleCase(purchaseOrderStatus)}
-            </Text>
-          </>
-        )}
-      </Stack>
-      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-        {customerId && (
-          <>
-            <Text variant={'sectionHeader'}>Customer:</Text>
-            <Text variant={'captionRegular'} color={'TextSubdued'}>
-              {customerQuery.data?.displayName ?? 'Unknown customer'}
-            </Text>
-          </>
-        )}
-      </Stack>
-      <Stack direction={'horizontal'} spacing={5} flexWrap={'wrap'}>
-        {employeeIds.length > 0 && <Text variant={'sectionHeader'}>Employees:</Text>}
-        {employeeIds.map(id => (
-          <Text key={id} variant={'captionRegular'} color={'TextSubdued'}>
-            {employeeQueries[id]?.data?.name ?? 'Unknown employee'}
-          </Text>
-        ))}
-      </Stack>
+      <Button title={'Filters'} onPress={() => router.push('WorkOrderFilters', { filters, onChange: setFilters })} />
+      <WorkOrderFiltersDisplay filters={filters} />
 
-      <ResponsiveStack direction={'vertical'} spacing={1} paddingVertical={'ExtraSmall'}>
-        {customFieldFilters.length > 0 && (
-          <>
-            <Text variant="body" color="TextSubdued">
-              Custom Fields:
-            </Text>
-            {customFieldFilters.map((filter, i) => (
-              <Text key={i} variant="body" color="TextSubdued">
-                • {getCustomFieldFilterText(filter)}
-              </Text>
-            ))}
-          </>
-        )}
-      </ResponsiveStack>
       <ControlledSearchBar
         value={query}
         onTextChange={(query: string) => setQuery(query, query === '')}

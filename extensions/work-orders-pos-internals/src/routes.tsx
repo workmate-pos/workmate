@@ -38,6 +38,7 @@ import {
   SelectPresetToEditProps,
 } from '@work-orders/common-pos/screens/custom-fields/SelectPresetToEdit.js';
 import { SelectPreset, SelectPresetProps } from '@work-orders/common-pos/screens/custom-fields/SelectPreset.js';
+import { WorkOrderFilters } from './screens/popups/WorkOrderFilters.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -49,6 +50,10 @@ export const { Router, useRouter } = createRouter({
         <Entry />
       </ScreenPermissionBoundary>
     ),
+  },
+  WorkOrderFilters: {
+    title: 'Filters',
+    Component: WorkOrderFilters,
   },
   WorkOrder: {
     title: 'Work Order',

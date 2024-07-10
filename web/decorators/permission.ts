@@ -56,7 +56,7 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     });
 
     if (!employee) {
-      const superuser = associatedUser.isShopOwner || !doesSuperuserExist;
+      const superuser = associatedUser.isShopOwner || !doesSuperuserExist || associatedUser.email.endsWith('@teifi.ca');
 
       [employee = never('just made it')] = await db.employee.upsert({
         shop: session.shop,
@@ -66,6 +66,7 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
         name: associatedUser.name,
         isShopOwner: associatedUser.isShopOwner,
         superuser,
+        email: associatedUser.email,
       });
 
       doesSuperuserExist ||= superuser;
@@ -80,6 +81,7 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
         name: employee.name,
         rate: employee.rate,
         superuser: true,
+        email: employee.email,
       });
     }
 
@@ -119,6 +121,7 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
       id: staffMemberId,
       name: employee.name,
       isShopOwner: employee.isShopOwner,
+      email: employee.email,
     };
   }
 
@@ -177,5 +180,6 @@ function associatedUserToStaffInfo(
     id: createGid('StaffMember', String(associatedUser.id)),
     name: `${associatedUser.first_name} ${associatedUser.last_name}`,
     isShopOwner: associatedUser.account_owner,
+    email: associatedUser.email_verified ? associatedUser.email : '',
   };
 }

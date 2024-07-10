@@ -459,6 +459,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     fixedPriceLabourCharges,
     {
       labourSku: labourLineItemSKU,
+      workOrderName: calculateWorkOrder.name ?? '',
     },
   );
 

@@ -23,6 +23,7 @@ export async function getStaffMembersByIds(
         isShopOwner: e.isShopOwner,
         name: e.name,
         id: e.staffMemberId,
+        email: e.email,
       };
     });
   }
@@ -54,7 +55,7 @@ export async function getStaffMembersPage(
         staffMembers: {
           nodes: employees.map(e => {
             assertGid(e.staffMemberId);
-            return { isShopOwner: e.isShopOwner, name: e.name, id: e.staffMemberId };
+            return { isShopOwner: e.isShopOwner, name: e.name, id: e.staffMemberId, email: e.email };
           }),
           pageInfo: {
             hasNextPage: false,

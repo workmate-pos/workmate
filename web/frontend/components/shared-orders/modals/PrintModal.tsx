@@ -34,6 +34,10 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
   const printTemplatesKey = props.type === 'work-order' ? 'workOrderPrintTemplates' : 'purchaseOrderPrintTemplates';
   const printTemplates = settingsQuery.data?.settings[printTemplatesKey] ?? {};
 
+  const isLoading = [settingsQuery, purchaseOrderPrintJobMutation, workOrderPrintJobMutation].some(
+    query => query.isLoading,
+  );
+
   return (
     <Modal open={open} title={'Print'} onClose={onClose}>
       <ResourceList
@@ -91,7 +95,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
             </Text>
           </ResourceItem>
         )}
-        loading={purchaseOrderPrintJobMutation.isLoading}
+        loading={isLoading}
       />
     </Modal>
   );

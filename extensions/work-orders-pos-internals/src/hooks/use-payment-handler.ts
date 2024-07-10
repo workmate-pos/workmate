@@ -50,7 +50,7 @@ export const usePaymentHandler = () => {
       items.filter(hasPropertyValue('type', 'custom-item')),
       charges.filter(hasPropertyValue('type', 'hourly-labour')),
       charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
-      { labourSku },
+      { labourSku, workOrderName },
     );
 
     await cart.clearCart();
@@ -65,12 +65,12 @@ export const usePaymentHandler = () => {
       await cart.setCustomer({ id: Number(parseGid(customerId).id) });
     }
 
-    for (const { quantity, title, unitPrice, taxable } of customSales) {
-      await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });
-    }
-
     for (const { productVariantId, quantity } of lineItems) {
       await cart.addLineItem(Number(parseGid(productVariantId).id), quantity);
+    }
+
+    for (const { quantity, title, unitPrice, taxable } of customSales) {
+      await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });
     }
 
     const bulkAddLineItemProperties: SetLineItemPropertiesInput[] = [];

@@ -11,8 +11,8 @@ WHERE shop = COALESCE(:shop, shop)
   AND name ILIKE COALESCE(:query, '%');
 
 /* @name upsert */
-INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")
-VALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!)
+INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId", email)
+VALUES (:shop!, :superuser!, :permissions!, :rate, :name!, :isShopOwner!, :staffMemberId!, :email!)
 ON CONFLICT ("staffMemberId")
   DO UPDATE
   SET shop          = EXCLUDED.shop,
@@ -20,7 +20,8 @@ ON CONFLICT ("staffMemberId")
       permissions   = EXCLUDED.permissions,
       rate          = EXCLUDED.rate,
       name          = EXCLUDED.name,
-      "isShopOwner" = EXCLUDED."isShopOwner"
+      "isShopOwner" = EXCLUDED."isShopOwner",
+      email         = EXCLUDED.email
 RETURNING *;
 
 /*

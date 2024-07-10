@@ -158,8 +158,8 @@ model WorkOrderFixedPriceLabourCharge {
   amountLocked Boolean
   removeLocked Boolean
 
-  createdAt                      DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt                      DateTime             @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([workOrderId, uuid])
 }
@@ -282,6 +282,7 @@ model Employee {
   superuser   Boolean
   permissions PermissionNode[]
   rate        String?
+  email       String
 
   name        String
   isShopOwner Boolean
