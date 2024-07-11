@@ -65,12 +65,12 @@ export const usePaymentHandler = () => {
       await cart.setCustomer({ id: Number(parseGid(customerId).id) });
     }
 
-    for (const { productVariantId, quantity } of lineItems) {
-      await cart.addLineItem(Number(parseGid(productVariantId).id), quantity);
-    }
-
     for (const { quantity, title, unitPrice, taxable } of customSales) {
       await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });
+    }
+
+    for (const { productVariantId, quantity } of lineItems) {
+      await cart.addLineItem(Number(parseGid(productVariantId).id), quantity);
     }
 
     const bulkAddLineItemProperties: SetLineItemPropertiesInput[] = [];
