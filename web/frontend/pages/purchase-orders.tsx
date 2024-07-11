@@ -18,7 +18,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
@@ -38,6 +38,7 @@ function PurchaseOrders() {
   const app = useAppBridge();
 
   const [query, setQuery, internalQuery] = useDebouncedState('');
+  const [page, setPage] = useState(0);
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
 
   const [toast, setToastAction] = useToast();
@@ -48,7 +49,17 @@ function PurchaseOrders() {
     query,
     customFieldFilters: [],
   });
-  const purchaseOrders = purchaseOrderInfoQuery.data?.pages ?? [];
+  const purchaseOrders = purchaseOrderInfoQuery.data?.pages?.[page] ?? [];
+
+  useEffect(() => {
+    if (purchaseOrderInfoQuery.data?.pages.length === 1) {
+      purchaseOrderInfoQuery.fetchNextPage();
+    }
+  }, [purchaseOrderInfoQuery.data?.pages.length]);
+
+  useEffect(() => {
+    purchaseOrderInfoQuery.fetchNextPage();
+  }, []);
 
   const settingsQuery = useSettingsQuery({ fetch });
 
@@ -59,6 +70,9 @@ function PurchaseOrders() {
   const redirectToPurchaseOrder = (purchaseOrderName: 'new' | string) => {
     Redirect.create(app).dispatch(Redirect.Action.APP, `/purchase-orders/${encodeURIComponent(purchaseOrderName)}`);
   };
+
+  const shouldFetchNextPage = purchaseOrderInfoQuery.data && page === purchaseOrderInfoQuery.data.pages.length - 2;
+  const hasNextPage = !purchaseOrderInfoQuery.isFetching && page < (purchaseOrderInfoQuery.data?.pages.length ?? 0) - 1;
 
   return (
     <>
@@ -108,6 +122,18 @@ function PurchaseOrders() {
             </EmptyState>
           </Card>
         }
+        pagination={{
+          hasNext: hasNextPage,
+          hasPrevious: page > 0,
+          onPrevious: () => setPage(page => page - 1),
+          onNext: () => {
+            if (shouldFetchNextPage) {
+              purchaseOrderInfoQuery.fetchNextPage();
+            }
+
+            setPage(page => page + 1);
+          },
+        }}
       >
         {purchaseOrders.map((purchaseOrder, i) => (
           <IndexTable.Row

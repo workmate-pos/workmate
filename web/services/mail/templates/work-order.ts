@@ -56,6 +56,7 @@ export async function getWorkOrderTemplateData(
       fixedPriceLabourChargeLineItemIds,
       hourlyLabourChargeLineItemIds,
       lineItems,
+      missingProductVariantIds,
     },
   ] = await Promise.all([
     db.customers.get({ customerId: workOrder.customerId }),
@@ -119,63 +120,65 @@ export async function getWorkOrderTemplateData(
     note: workOrder.note,
     hiddenNote: workOrder.internalNote,
     customFields: workOrder.customFields,
-    items: workOrder.items.map<WorkOrderTemplateItem>(item => {
-      const {
-        lineItemId,
-        totalPrice = never('smth wrong with calculate'),
-        purchaseOrders,
-      } = (() => {
-        if (item.type === 'product') {
-          return {
-            totalPrice: itemPrices[item.uuid],
-            lineItemId: itemLineItemIds[item.uuid],
-            purchaseOrders: item.purchaseOrders,
-          };
-        }
+    items: workOrder.items
+      .filter(item => item.type !== 'product' || !missingProductVariantIds.includes(item.productVariantId))
+      .map<WorkOrderTemplateItem>(item => {
+        const {
+          lineItemId,
+          totalPrice = never('smth wrong with calculate'),
+          purchaseOrders,
+        } = (() => {
+          if (item.type === 'product') {
+            return {
+              totalPrice: itemPrices[item.uuid],
+              lineItemId: itemLineItemIds[item.uuid],
+              purchaseOrders: item.purchaseOrders,
+            };
+          }
 
-        if (item.type === 'custom-item') {
-          return {
-            totalPrice: customItemPrices[item.uuid],
-            lineItemId: customItemLineItemIds[item.uuid],
-            purchaseOrders: [],
-          };
-        }
+          if (item.type === 'custom-item') {
+            return {
+              totalPrice: customItemPrices[item.uuid],
+              lineItemId: customItemLineItemIds[item.uuid],
+              purchaseOrders: [],
+            };
+          }
 
-        return item satisfies never;
-      })();
+          return item satisfies never;
+        })();
 
-      const lineItem = lineItems.find(li => li.id === lineItemId) ?? null;
+        const lineItem = lineItems.find(li => li.id === lineItemId) ?? null;
 
-      const purchaseOrderNames = purchaseOrders.map(po => po.name);
+        const purchaseOrderNames = purchaseOrders.map(po => po.name);
 
-      const unitPrice = (() => {
-        if (item.quantity === 0) return totalPrice;
-        return BigDecimal.fromMoney(totalPrice)
-          .divide(BigDecimal.fromString(item.quantity.toFixed(0)))
-          .round(2, RoundingMode.CEILING)
-          .toMoney();
-      })();
+        const unitPrice = (() => {
+          if (item.quantity === 0) return totalPrice;
+          return BigDecimal.fromMoney(totalPrice)
+            .divide(BigDecimal.fromString(item.quantity.toFixed(0)))
+            .round(2, RoundingMode.CEILING)
+            .toMoney();
+        })();
 
-      return {
-        name: lineItem?.name ?? 'Unknown product',
-        charges: workOrder.charges
-          .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid))
-          .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
-          .map(getChargeTemplateData),
-        sku: lineItem?.sku ?? null,
-        fullyPaid: lineItem?.order?.fullyPaid ?? false,
-        shopifyOrderName: lineItem?.order?.name ?? null,
-        purchaseOrderNames,
-        purchaseOrderQuantities: {
-          orderedQuantity: sum(purchaseOrders.flatMap(po => po.items.map(item => item.quantity))),
-          availableQuantity: sum(purchaseOrders.flatMap(po => po.items.map(item => item.availableQuantity))),
-        },
-        quantity: item.quantity,
-        description: lineItem?.variant?.product?.description ?? '',
-        totalPrice: round(totalPrice),
-        unitPrice: round(unitPrice),
-      };
-    }),
+        return {
+          name: lineItem?.name ?? 'Unknown product',
+          charges: workOrder.charges
+            .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid))
+            .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
+            .map(getChargeTemplateData),
+          sku: lineItem?.sku ?? null,
+          fullyPaid: lineItem?.order?.fullyPaid ?? false,
+          shopifyOrderName: lineItem?.order?.name ?? null,
+          purchaseOrderNames,
+          purchaseOrderQuantities: {
+            orderedQuantity: sum(purchaseOrders.flatMap(po => po.items.map(item => item.quantity))),
+            availableQuantity: sum(purchaseOrders.flatMap(po => po.items.map(item => item.availableQuantity))),
+          },
+          quantity: item.quantity,
+          description: lineItem?.variant?.product?.description ?? '',
+          totalPrice: round(totalPrice),
+          unitPrice: round(unitPrice),
+        };
+      }),
     charges: workOrder.charges.filter(hasPropertyValue('workOrderItem', null)).map(getChargeTemplateData),
     fullyPaid: lineItems.every(lineItem => lineItem.order?.fullyPaid ?? false),
     outstanding: round(outstanding),

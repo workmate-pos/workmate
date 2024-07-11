@@ -50,7 +50,7 @@ export const usePaymentHandler = () => {
       items.filter(hasPropertyValue('type', 'custom-item')),
       charges.filter(hasPropertyValue('type', 'hourly-labour')),
       charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
-      { labourSku },
+      { labourSku, workOrderName },
     );
 
     await cart.clearCart();

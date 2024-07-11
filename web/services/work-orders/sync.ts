@@ -131,7 +131,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
     draftCustomItems,
     draftHourlyLabourCharges.map(mapWorkOrderItem),
     draftFixedPriceLabourCharges.map(mapWorkOrderItem),
-    { labourSku: labourLineItemSKU },
+    { labourSku: labourLineItemSKU, workOrderName: workOrder.name },
   );
 
   const discount = getWorkOrderDiscount(workOrder);

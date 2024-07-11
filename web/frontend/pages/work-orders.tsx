@@ -18,7 +18,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
@@ -41,6 +41,7 @@ function WorkOrders() {
   const app = useAppBridge();
 
   const [query, setQuery, internalQuery] = useDebouncedState('');
+  const [page, setPage] = useState(0);
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
 
   const [toast, setToastAction] = useToast();
@@ -51,7 +52,13 @@ function WorkOrders() {
     query,
     customFieldFilters: [],
   });
-  const workOrders = workOrderInfoQuery.data?.pages ?? [];
+  const workOrders = workOrderInfoQuery.data?.pages?.[page] ?? [];
+
+  useEffect(() => {
+    if (workOrderInfoQuery.data?.pages.length === 1) {
+      workOrderInfoQuery.fetchNextPage();
+    }
+  }, [workOrderInfoQuery.data?.pages.length]);
 
   const customerIds = unique(workOrders.map(workOrder => workOrder.customerId));
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
@@ -65,6 +72,9 @@ function WorkOrders() {
   const redirectToWorkOrder = (workOrderName: 'new' | string) => {
     Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrderName)}`);
   };
+
+  const shouldFetchNextPage = workOrderInfoQuery.data && page === workOrderInfoQuery.data.pages.length - 2;
+  const hasNextPage = !workOrderInfoQuery.isFetching && page < (workOrderInfoQuery.data?.pages.length ?? 0) - 1;
 
   return (
     <>
@@ -98,21 +108,35 @@ function WorkOrders() {
           { title: 'PO #' },
         ]}
         itemCount={workOrders.length}
-        loading={workOrderInfoQuery.isLoading}
+        loading={workOrderInfoQuery.isFetchingNextPage}
         emptyState={
-          <Card>
-            <EmptyState
-              heading={'Work Order'}
-              image={emptyState}
-              action={{
-                content: 'Create work order',
-                onAction: () => redirectToWorkOrder('new'),
-              }}
-            >
-              Track and manage your inventory.
-            </EmptyState>
-          </Card>
+          !workOrderInfoQuery.isFetchingNextPage && (
+            <Card>
+              <EmptyState
+                heading={'Work Order'}
+                image={emptyState}
+                action={{
+                  content: 'Create work order',
+                  onAction: () => redirectToWorkOrder('new'),
+                }}
+              >
+                Track and manage your inventory.
+              </EmptyState>
+            </Card>
+          )
         }
+        pagination={{
+          hasNext: hasNextPage,
+          hasPrevious: page > 0,
+          onPrevious: () => setPage(page => page - 1),
+          onNext: () => {
+            if (shouldFetchNextPage) {
+              workOrderInfoQuery.fetchNextPage();
+            }
+
+            setPage(page => page + 1);
+          },
+        }}
       >
         {workOrders.map((workOrder, i) => (
           <IndexTable.Row

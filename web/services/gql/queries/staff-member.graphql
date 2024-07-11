@@ -29,6 +29,7 @@ query getManyForDatabase($ids: [ID!]!) {
 fragment StaffMemberFragment on StaffMember {
   id
   name
+  email
   isShopOwner
 }
 

@@ -16,7 +16,7 @@ export const usePurchaseOrderInfoPageQuery = (
   options?: UseInfiniteQueryOptions<
     PurchaseOrderInfo[],
     unknown,
-    PurchaseOrderInfo,
+    PurchaseOrderInfo[],
     PurchaseOrderInfo[],
     (
       | string
@@ -56,7 +56,7 @@ export const usePurchaseOrderInfoPageQuery = (
       return pages.flat(1).length;
     },
     select: ({ pages, pageParams }) => ({
-      pages: pages.flat(1),
+      pages: pages.filter(page => page.length > 0),
       pageParams,
     }),
   });

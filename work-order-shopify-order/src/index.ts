@@ -87,6 +87,7 @@ export function getWorkOrderLineItems(
   fixedPriceLabourCharges: FixedPriceLabourCharge[],
   options: {
     labourSku: string;
+    workOrderName: string;
   },
 ): { lineItems: LineItem[]; customSales: CustomSale[] } {
   const charges = getUniquelyNamedCharges(getChargesWithTypes(hourlyLabourCharges, fixedPriceLabourCharges));
@@ -151,12 +152,14 @@ export function getWorkOrderLineItems(
       unitPrice = totalCost.divide(quantityBigDecimal).round(2, RoundingMode.CEILING).toMoney();
     }
 
+    const customAttributes = getItemCustomAttributes({ ...item, type: 'custom-item' }, charges, options);
+
     customSales.push({
       title: name,
       quantity,
       taxable: true,
       unitPrice,
-      customAttributes: getItemCustomAttributes({ ...item, type: 'custom-item' }, charges, options),
+      customAttributes,
     });
   }
 
@@ -192,11 +195,35 @@ export function getWorkOrderLineItems(
     });
   }
 
+  const lineItems = Object.values(lineItemByVariantId).map(lineItem => ({
+    ...lineItem,
+    quantity: Math.max(1, lineItem.quantity),
+  }));
+
+  // receipts don't support order level custom attributes (yet, hopefully) so we store it in the first line item for now
+  if (lineItems.length) {
+    // pos does this in reverse order 🙂
+    const firstLineItem = lineItems.at(-1);
+
+    if (firstLineItem) {
+      firstLineItem.customAttributes = {
+        ...firstLineItem.customAttributes,
+        [FIRST_LINE_ITEM_WORK_ORDER_CUSTOM_ATTRIBUTE_NAME]: options.workOrderName,
+      };
+    }
+  } else if (customSales.length) {
+    const firstCustomSale = customSales.at(-1);
+
+    if (firstCustomSale) {
+      firstCustomSale.customAttributes = {
+        ...firstCustomSale.customAttributes,
+        [FIRST_LINE_ITEM_WORK_ORDER_CUSTOM_ATTRIBUTE_NAME]: options.workOrderName,
+      };
+    }
+  }
+
   return {
-    lineItems: Object.values(lineItemByVariantId).map(lineItem => ({
-      ...lineItem,
-      quantity: Math.max(1, lineItem.quantity),
-    })),
+    lineItems,
     customSales,
   };
 }
@@ -242,6 +269,7 @@ const CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_custom_item_uuid
 const HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_hourly_charge_uuid:';
 const FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_fixed_charge_uuid:';
 export const WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = 'Work Order';
+const FIRST_LINE_ITEM_WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = '_wm_id';
 
 export function getWorkOrderOrderCustomAttributes(workOrder: { name: string; customFields: Record<string, string> }) {
   return {
