@@ -11,6 +11,9 @@ export type stringArray = (string)[];
 
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
+  companyContactId?: string | null | void;
+  companyId?: string | null | void;
+  companyLocationId?: string | null | void;
   customerId: string;
   derivedFromOrderId?: string | null | void;
   discountAmount?: string | null | void;
@@ -25,6 +28,9 @@ export interface IUpsertParams {
 
 /** 'Upsert' return type */
 export interface IUpsertResult {
+  companyContactId: string | null;
+  companyId: string | null;
+  companyLocationId: string | null;
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
@@ -46,19 +52,26 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"note":true,"internalNote":true,"discountAmount":true,"discountType":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":206,"b":211}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":214,"b":219}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":222,"b":229}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":232,"b":240}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":243,"b":254}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":257,"b":275}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":278,"b":283}]},{"name":"internalNote","required":true,"transform":{"type":"scalar"},"locs":[{"a":286,"b":299}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":302,"b":316}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":327,"b":339}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", note, \"internalNote\",\n                         \"discountAmount\",\n                         \"discountType\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :internalNote!, :discountAmount,\n        :discountType)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note,\n                                           \"internalNote\"       = EXCLUDED.\"internalNote\",\n                                           \"discountAmount\"     = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"       = EXCLUDED.\"discountType\"\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"companyId":true,"companyLocationId":true,"companyContactId":true,"derivedFromOrderId":true,"note":true,"internalNote":true,"discountAmount":true,"discountType":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":310,"b":315}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":318,"b":323}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":326,"b":333}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":336,"b":344}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":347,"b":358}]},{"name":"companyId","required":false,"transform":{"type":"scalar"},"locs":[{"a":361,"b":370}]},{"name":"companyLocationId","required":false,"transform":{"type":"scalar"},"locs":[{"a":373,"b":390}]},{"name":"companyContactId","required":false,"transform":{"type":"scalar"},"locs":[{"a":393,"b":409}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":412,"b":430}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":433,"b":438}]},{"name":"internalNote","required":true,"transform":{"type":"scalar"},"locs":[{"a":449,"b":462}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":473,"b":487}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":498,"b":510}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"companyId\", \"companyLocationId\", \"companyContactId\",\n                         \"derivedFromOrderId\", note,\n                         \"internalNote\",\n                         \"discountAmount\",\n                         \"discountType\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId, :derivedFromOrderId, :note!,\n        :internalNote!,\n        :discountAmount,\n        :discountType)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"companyId\"          = EXCLUDED.\"companyId\",\n                                           \"companyLocationId\"  = EXCLUDED.\"companyLocationId\",\n                                           \"companyContactId\"   = EXCLUDED.\"companyContactId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note,\n                                           \"internalNote\"       = EXCLUDED.\"internalNote\",\n                                           \"discountAmount\"     = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"       = EXCLUDED.\"discountType\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "internalNote",
+ * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId", "companyLocationId", "companyContactId",
+ *                          "derivedFromOrderId", note,
+ *                          "internalNote",
  *                          "discountAmount",
  *                          "discountType")
- * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :internalNote!, :discountAmount,
+ * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId, :derivedFromOrderId, :note!,
+ *         :internalNote!,
+ *         :discountAmount,
  *         :discountType)
  * ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
  *                                            "dueDate"            = EXCLUDED."dueDate",
  *                                            "customerId"         = EXCLUDED."customerId",
+ *                                            "companyId"          = EXCLUDED."companyId",
+ *                                            "companyLocationId"  = EXCLUDED."companyLocationId",
+ *                                            "companyContactId"   = EXCLUDED."companyContactId",
  *                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
  *                                            note                 = EXCLUDED.note,
  *                                            "internalNote"       = EXCLUDED."internalNote",
@@ -86,14 +99,14 @@ export interface IUpdateDiscountQuery {
   result: IUpdateDiscountResult;
 }
 
-const updateDiscountIR: any = {"usedParamSet":{"discountAmount":true,"discountType":true,"id":true},"params":[{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":44,"b":58}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":86,"b":98}]},{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":111,"b":114}]}],"statement":"UPDATE \"WorkOrder\"\n  SET \"discountAmount\" = :discountAmount,\n      \"discountType\"   = :discountType\nWHERE id = :id!"};
+const updateDiscountIR: any = {"usedParamSet":{"discountAmount":true,"discountType":true,"id":true},"params":[{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":42,"b":56}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":82,"b":94}]},{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":107,"b":110}]}],"statement":"UPDATE \"WorkOrder\"\nSET \"discountAmount\" = :discountAmount,\n    \"discountType\"   = :discountType\nWHERE id = :id!"};
 
 /**
  * Query generated from SQL:
  * ```
  * UPDATE "WorkOrder"
- *   SET "discountAmount" = :discountAmount,
- *       "discountType"   = :discountType
+ * SET "discountAmount" = :discountAmount,
+ *     "discountType"   = :discountType
  * WHERE id = :id!
  * ```
  */
@@ -118,13 +131,14 @@ export interface IInsertCustomFieldsQuery {
   result: IInsertCustomFieldsResult;
 }
 
-const insertCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":83,"b":95}]}],"statement":"INSERT INTO \"WorkOrderCustomField\" (\"workOrderId\", key, value)\nVALUES (0, '', ''), :customFields OFFSET 1"};
+const insertCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":83,"b":95}]}],"statement":"INSERT INTO \"WorkOrderCustomField\" (\"workOrderId\", key, value)\nVALUES (0, '', ''), :customFields\nOFFSET 1"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
- * VALUES (0, '', ''), :customFields OFFSET 1
+ * VALUES (0, '', ''), :customFields
+ * OFFSET 1
  * ```
  */
 export const insertCustomFields = new PreparedQuery<IInsertCustomFieldsParams,IInsertCustomFieldsResult>(insertCustomFieldsIR);
@@ -210,13 +224,14 @@ export interface IInsertItemCustomFieldsQuery {
   result: IInsertItemCustomFieldsResult;
 }
 
-const insertItemCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"workOrderItemUuid","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":127,"b":139}]}],"statement":"INSERT INTO \"WorkOrderItemCustomField\" (\"workOrderId\", \"workOrderItemUuid\", key, value)\nVALUES (0, gen_random_uuid(), '', ''), :customFields OFFSET 1"};
+const insertItemCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"workOrderItemUuid","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":127,"b":139}]}],"statement":"INSERT INTO \"WorkOrderItemCustomField\" (\"workOrderId\", \"workOrderItemUuid\", key, value)\nVALUES (0, gen_random_uuid(), '', ''), :customFields\nOFFSET 1"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderItemCustomField" ("workOrderId", "workOrderItemUuid", key, value)
- * VALUES (0, gen_random_uuid(), '', ''), :customFields OFFSET 1
+ * VALUES (0, gen_random_uuid(), '', ''), :customFields
+ * OFFSET 1
  * ```
  */
 export const insertItemCustomFields = new PreparedQuery<IInsertItemCustomFieldsParams,IInsertItemCustomFieldsResult>(insertItemCustomFieldsIR);
@@ -430,6 +445,9 @@ export interface IGetParams {
 
 /** 'Get' return type */
 export interface IGetResult {
+  companyContactId: string | null;
+  companyId: string | null;
+  companyLocationId: string | null;
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
@@ -472,6 +490,9 @@ export interface IGetByIdParams {
 
 /** 'GetById' return type */
 export interface IGetByIdResult {
+  companyContactId: string | null;
+  companyId: string | null;
+  companyLocationId: string | null;
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
@@ -815,12 +836,13 @@ export interface IUpsertCustomItemsQuery {
   result: IUpsertCustomItemsResult;
 }
 
-const upsertCustomItemsIR: any = {"usedParamSet":{"items":true},"params":[{"name":"items","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"uuid","required":true},{"name":"workOrderId","required":true},{"name":"shopifyOrderLineItemId","required":false},{"name":"quantity","required":true},{"name":"name","required":true},{"name":"unitPrice","required":true},{"name":"absorbCharges","required":true}]},"locs":[{"a":183,"b":188}]}],"statement":"INSERT INTO \"WorkOrderCustomItem\" (uuid, \"workOrderId\", \"shopifyOrderLineItemId\", quantity, name, \"unitPrice\", \"absorbCharges\")\nVALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items\nOFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\nDO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\nquantity = EXCLUDED.quantity,\nname = EXCLUDED.name,\n\"unitPrice\" = EXCLUDED.\"unitPrice\",\n\"absorbCharges\" = EXCLUDED.\"absorbCharges\""};
+const upsertCustomItemsIR: any = {"usedParamSet":{"items":true},"params":[{"name":"items","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"uuid","required":true},{"name":"workOrderId","required":true},{"name":"shopifyOrderLineItemId","required":false},{"name":"quantity","required":true},{"name":"name","required":true},{"name":"unitPrice","required":true},{"name":"absorbCharges","required":true}]},"locs":[{"a":218,"b":223}]}],"statement":"INSERT INTO \"WorkOrderCustomItem\" (uuid, \"workOrderId\", \"shopifyOrderLineItemId\", quantity, name, \"unitPrice\",\n                                   \"absorbCharges\")\nVALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items\nOFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\nDO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\nquantity = EXCLUDED.quantity,\nname = EXCLUDED.name,\n\"unitPrice\" = EXCLUDED.\"unitPrice\",\n\"absorbCharges\" = EXCLUDED.\"absorbCharges\""};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "WorkOrderCustomItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, name, "unitPrice", "absorbCharges")
+ * INSERT INTO "WorkOrderCustomItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, name, "unitPrice",
+ *                                    "absorbCharges")
  * VALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items
  * OFFSET 1
  * ON CONFLICT ("workOrderId", uuid)

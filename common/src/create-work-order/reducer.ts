@@ -18,6 +18,12 @@ export type CreateWorkOrderAction =
   | ({
       type: 'setPartial';
     } & Partial<CreateWorkOrder>)
+  | ({
+      type: 'setCompany';
+    } & Pick<CreateWorkOrder, 'companyId' | 'companyLocationId' | 'companyContactId' | 'customerId'>)
+  | ({
+      type: 'setCustomer';
+    } & Pick<CreateWorkOrder, 'customerId'>)
   | {
       /**
        * Make sure to upsert charges before adding items
@@ -105,12 +111,20 @@ function createWorkOrderReducer(
   const { workOrder } = action;
 
   switch (action.type) {
+    case 'setCompany':
+    case 'setCustomer':
     case 'setPartial':
     case 'set': {
       const { type, workOrder, ...partial } = action;
       const partialNotUndefined: Partial<WIPCreateWorkOrder> = Object.fromEntries(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );
+
+      if (action.type === 'setCustomer') {
+        partialNotUndefined.companyId = null;
+        partialNotUndefined.companyLocationId = null;
+        partialNotUndefined.companyContactId = null;
+      }
 
       return { ...createWorkOrder, ...partialNotUndefined };
     }

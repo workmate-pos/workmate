@@ -1,12 +1,19 @@
 /* @name upsert */
-INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "internalNote",
+INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId", "companyLocationId", "companyContactId",
+                         "derivedFromOrderId", note,
+                         "internalNote",
                          "discountAmount",
                          "discountType")
-VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :internalNote!, :discountAmount,
+VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId, :derivedFromOrderId, :note!,
+        :internalNote!,
+        :discountAmount,
         :discountType)
 ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
                                            "dueDate"            = EXCLUDED."dueDate",
                                            "customerId"         = EXCLUDED."customerId",
+                                           "companyId"          = EXCLUDED."companyId",
+                                           "companyLocationId"  = EXCLUDED."companyLocationId",
+                                           "companyContactId"   = EXCLUDED."companyContactId",
                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
                                            note                 = EXCLUDED.note,
                                            "internalNote"       = EXCLUDED."internalNote",
@@ -16,8 +23,8 @@ RETURNING *;
 
 /* @name updateDiscount */
 UPDATE "WorkOrder"
-  SET "discountAmount" = :discountAmount,
-      "discountType"   = :discountType
+SET "discountAmount" = :discountAmount,
+    "discountType"   = :discountType
 WHERE id = :id!;
 
 /*
@@ -25,7 +32,8 @@ WHERE id = :id!;
   @param customFields -> ((workOrderId!, key!, value!)...)
 */
 INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
-VALUES (0, '', ''), :customFields OFFSET 1;
+VALUES (0, '', ''), :customFields
+OFFSET 1;
 
 /* @name removeCustomFields */
 DELETE
@@ -42,7 +50,8 @@ WHERE "workOrderId" = :workOrderId!;
   @param customFields -> ((workOrderId!, workOrderItemUuid!, key!, value!)...)
 */
 INSERT INTO "WorkOrderItemCustomField" ("workOrderId", "workOrderItemUuid", key, value)
-VALUES (0, gen_random_uuid(), '', ''), :customFields OFFSET 1;
+VALUES (0, gen_random_uuid(), '', ''), :customFields
+OFFSET 1;
 
 /* @name removeItemCustomFields */
 DELETE
@@ -202,7 +211,8 @@ quantity = EXCLUDED.quantity,
   @name upsertCustomItems
   @param items -> ((uuid!, workOrderId!, shopifyOrderLineItemId, quantity!, name!, unitPrice!, absorbCharges!)...)
 */
-INSERT INTO "WorkOrderCustomItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, name, "unitPrice", "absorbCharges")
+INSERT INTO "WorkOrderCustomItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, name, "unitPrice",
+                                   "absorbCharges")
 VALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items
 OFFSET 1
 ON CONFLICT ("workOrderId", uuid)

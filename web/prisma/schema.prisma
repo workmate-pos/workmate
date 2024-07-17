@@ -46,6 +46,10 @@ model WorkOrder {
   customer   Customer? @relation(fields: [customerId], references: [customerId])
   customerId String
 
+  companyId         String?
+  companyContactId  String?
+  companyLocationId String?
+
   derivedFromOrder   ShopifyOrder? @relation(fields: [derivedFromOrderId], references: [orderId])
   derivedFromOrderId String?
 

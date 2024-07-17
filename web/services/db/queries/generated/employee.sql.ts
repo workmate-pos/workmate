@@ -150,7 +150,8 @@ export interface IUpsertManyParams {
     rate: string | null | void,
     name: string,
     isShopOwner: boolean,
-    staffMemberId: string
+    staffMemberId: string,
+    email: string
   })[];
 }
 
@@ -174,13 +175,13 @@ export interface IUpsertManyQuery {
   result: IUpsertManyResult;
 }
 
-const upsertManyIR: any = {"usedParamSet":{"employees":true},"params":[{"name":"employees","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"shop","required":true},{"name":"superuser","required":true},{"name":"permissions","required":true},{"name":"rate","required":false},{"name":"name","required":true},{"name":"isShopOwner","required":true},{"name":"staffMemberId","required":true}]},"locs":[{"a":168,"b":177}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\")\nVALUES ('', FALSE, ARRAY[] :: \"PermissionNode\"[], '', '', FALSE, ''), :employees OFFSET 1\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = EXCLUDED.shop,\n      superuser     = EXCLUDED.superuser,\n      permissions   = EXCLUDED.permissions,\n      rate          = EXCLUDED.rate,\n      name          = EXCLUDED.name,\n      \"isShopOwner\" = EXCLUDED.\"isShopOwner\"\nRETURNING *"};
+const upsertManyIR: any = {"usedParamSet":{"employees":true},"params":[{"name":"employees","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"shop","required":true},{"name":"superuser","required":true},{"name":"permissions","required":true},{"name":"rate","required":false},{"name":"name","required":true},{"name":"isShopOwner","required":true},{"name":"staffMemberId","required":true},{"name":"email","required":true}]},"locs":[{"a":179,"b":188}]}],"statement":"INSERT INTO \"Employee\" (shop, superuser, permissions, rate, name, \"isShopOwner\", \"staffMemberId\", email)\nVALUES ('', FALSE, ARRAY[] :: \"PermissionNode\"[], '', '', FALSE, '', ''), :employees OFFSET 1\nON CONFLICT (\"staffMemberId\")\n  DO UPDATE\n  SET shop          = EXCLUDED.shop,\n      superuser     = EXCLUDED.superuser,\n      permissions   = EXCLUDED.permissions,\n      rate          = EXCLUDED.rate,\n      name          = EXCLUDED.name,\n      \"isShopOwner\" = EXCLUDED.\"isShopOwner\",\n      email         = EXCLUDED.email\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")
- * VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', '', FALSE, ''), :employees OFFSET 1
+ * INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId", email)
+ * VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', '', FALSE, '', ''), :employees OFFSET 1
  * ON CONFLICT ("staffMemberId")
  *   DO UPDATE
  *   SET shop          = EXCLUDED.shop,
@@ -188,7 +189,8 @@ const upsertManyIR: any = {"usedParamSet":{"employees":true},"params":[{"name":"
  *       permissions   = EXCLUDED.permissions,
  *       rate          = EXCLUDED.rate,
  *       name          = EXCLUDED.name,
- *       "isShopOwner" = EXCLUDED."isShopOwner"
+ *       "isShopOwner" = EXCLUDED."isShopOwner",
+ *       email         = EXCLUDED.email
  * RETURNING *
  * ```
  */

@@ -26,10 +26,10 @@ RETURNING *;
 
 /*
   @name upsertMany
-  @param employees -> ((shop!, superuser!, permissions!, rate, name!, isShopOwner!, staffMemberId!)...)
+  @param employees -> ((shop!, superuser!, permissions!, rate, name!, isShopOwner!, staffMemberId!, email!)...)
 */
-INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId")
-VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', '', FALSE, ''), :employees OFFSET 1
+INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId", email)
+VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', '', FALSE, '', ''), :employees OFFSET 1
 ON CONFLICT ("staffMemberId")
   DO UPDATE
   SET shop          = EXCLUDED.shop,
@@ -37,7 +37,8 @@ ON CONFLICT ("staffMemberId")
       permissions   = EXCLUDED.permissions,
       rate          = EXCLUDED.rate,
       name          = EXCLUDED.name,
-      "isShopOwner" = EXCLUDED."isShopOwner"
+      "isShopOwner" = EXCLUDED."isShopOwner",
+      email         = EXCLUDED.email
 RETURNING *;
 
 /*

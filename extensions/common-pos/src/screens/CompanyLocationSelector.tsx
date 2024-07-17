@@ -1,21 +1,22 @@
-import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
-import type { Location } from '@work-orders/common/queries/use-locations-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { UseRouter } from './router.js';
 import { BaseLocationSelector } from './BaseLocationSelector.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { CompanyLocation, useCompanyLocationsQuery } from '@work-orders/common/queries/use-company-locations-query.js';
 
-export type LocationSelectorProps = {
-  onSelect: (location: Location) => void;
+export type CompanyLocationSelectorProps = {
+  companyId: ID;
+  onSelect: (location: CompanyLocation) => void;
   useRouter: UseRouter;
 };
 
-export function LocationSelector({ onSelect, useRouter }: LocationSelectorProps) {
+export function CompanyLocationSelector({ companyId, onSelect, useRouter }: CompanyLocationSelectorProps) {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
 
-  const locationsQuery = useLocationsQuery({ fetch, params: { query } });
+  const locationsQuery = useCompanyLocationsQuery(companyId, { fetch, params: { query } });
   const locations = locationsQuery.data?.pages.flat() ?? [];
 
   return (

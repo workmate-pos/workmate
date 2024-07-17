@@ -39,6 +39,11 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/SelectPresetToEdit.js';
 import { SelectPreset, SelectPresetProps } from '@work-orders/common-pos/screens/custom-fields/SelectPreset.js';
 import { WorkOrderFilters } from './screens/popups/WorkOrderFilters.js';
+import { CompanySelector } from './screens/popups/CompanySelector.js';
+import {
+  CompanyLocationSelector,
+  CompanyLocationSelectorProps,
+} from '@work-orders/common-pos/screens/CompanyLocationSelector.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -98,6 +103,16 @@ export const { Router, useRouter } = createRouter({
   CustomerSelector: {
     title: 'Select Customer',
     Component: CustomerSelector,
+  },
+  CompanySelector: {
+    title: 'Select Company',
+    Component: CompanySelector,
+  },
+  CompanyLocationSelector: {
+    title: 'Select Company Location',
+    Component: (props: Omit<CompanyLocationSelectorProps, 'useRouter'>) => (
+      <CompanyLocationSelector {...props} useRouter={useRouter} />
+    ),
   },
   DiscountSelector: {
     title: 'Select Discount',

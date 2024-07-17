@@ -13,7 +13,13 @@ export const useCalculatedDraftOrderQuery = (
     customerId,
     charges,
     discount,
-  }: { fetch: Fetch } & Pick<CalculateWorkOrder, 'name' | 'items' | 'charges' | 'customerId' | 'discount'>,
+    companyLocationId,
+    companyContactId,
+    companyId,
+  }: { fetch: Fetch } & Pick<
+    CalculateWorkOrder,
+    'name' | 'items' | 'charges' | 'customerId' | 'discount' | 'companyLocationId' | 'companyContactId' | 'companyId'
+  >,
   options?: UseQueryOptions<
     CalculateDraftOrderResponse,
     unknown,
@@ -25,13 +31,26 @@ export const useCalculatedDraftOrderQuery = (
       | CalculateWorkOrder['customerId']
       | CalculateWorkOrder['charges']
       | CalculateWorkOrder['discount']
+      | CalculateWorkOrder['companyLocationId']
+      | CalculateWorkOrder['companyContactId']
+      | CalculateWorkOrder['companyId']
     )[]
   >,
 ) => {
   const query = useQuery({
     ...options,
     staleTime: WEEK_IN_MS,
-    queryKey: ['calculated-draft-order', name, items, customerId, charges, discount],
+    queryKey: [
+      'calculated-draft-order',
+      name,
+      items,
+      customerId,
+      charges,
+      discount,
+      companyLocationId,
+      companyContactId,
+      companyId,
+    ],
     queryFn: async () => {
       const response = await fetch('/api/work-order/calculate-draft-order', {
         method: 'POST',
@@ -41,6 +60,9 @@ export const useCalculatedDraftOrderQuery = (
           customerId,
           charges,
           discount,
+          companyLocationId,
+          companyContactId,
+          companyId,
         } satisfies CalculateWorkOrder),
         headers: { 'Content-Type': 'application/json' },
       });

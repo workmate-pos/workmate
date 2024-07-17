@@ -15,6 +15,9 @@ export type WorkOrder = {
   orders: WorkOrderOrder[];
   customFields: Record<string, string>;
   discount: WorkOrderDiscount | null;
+  companyId: ID | null;
+  companyLocationId: ID | null;
+  companyContactId: ID | null;
 };
 
 export type WorkOrderDiscount =

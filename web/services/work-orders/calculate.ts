@@ -33,6 +33,9 @@ import {
 } from '../db/queries/generated/work-order-charges.sql.js';
 import { getMissingNonPaidWorkOrderProduct, validateCalculateWorkOrder } from './validate.js';
 import { v4 as uuid } from 'uuid';
+import { assertGidOrNull } from '../../util/assertions.js';
+import { MailingAddressInput } from '../gql/queries/generated/schema.js';
+import { getMailingAddressInput, getMailingAddressInputsForCompanyLocation } from '../draft-orders/util.js';
 
 type CalculateWorkOrderResult = {
   outstanding: Money;
@@ -486,6 +489,16 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     customerId = customer?.id ?? null;
   }
 
+  const { companyId, companyLocationId, companyContactId } = calculateWorkOrder;
+
+  assertGidOrNull(companyId);
+  assertGidOrNull(companyLocationId);
+  assertGidOrNull(companyContactId);
+
+  const { billingAddress = null, shippingAddress = null } = companyLocationId
+    ? await getMailingAddressInputsForCompanyLocation(session, companyLocationId)
+    : {};
+
   const result = await gql.calculate.draftOrderCalculate.run(graphql, {
     input: {
       lineItems: [
@@ -502,7 +515,14 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
           taxable: customSale.taxable,
         })),
       ],
-      purchasingEntity: customerId ? { customerId } : null,
+      billingAddress,
+      shippingAddress,
+      purchasingEntity:
+        companyId && companyContactId && companyLocationId
+          ? { purchasingCompany: { companyId, companyContactId, companyLocationId } }
+          : customerId
+            ? { customerId }
+            : null,
       appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
     },
   });

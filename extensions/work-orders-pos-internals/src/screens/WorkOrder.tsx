@@ -48,6 +48,8 @@ import {
   useCreateWorkOrderReducer,
   WIPCreateWorkOrder,
 } from '@work-orders/common/create-work-order/reducer.js';
+import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
+import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -227,10 +229,25 @@ function WorkOrderProperties({
   const derivedFromOrderQuery = useOrderQuery({ fetch, id: createWorkOrder.derivedFromOrderId });
   const derivedFromOrder = derivedFromOrderQuery.data?.order;
 
+  const companyQuery = useCompanyQuery(
+    { fetch, id: createWorkOrder.companyId! },
+    { enabled: !!createWorkOrder.companyId },
+  );
+  const company = companyQuery.data;
+
   const customerQuery = useCustomerQuery({ fetch, id: createWorkOrder.customerId });
   const customer = customerQuery.data;
 
+  const companyLocationQuery = useCompanyLocationQuery(
+    // TODO: Change name to companyLocationId
+    { fetch, id: createWorkOrder.companyLocationId! },
+    { enabled: !!createWorkOrder.companyLocationId },
+  );
+  const companyLocation = companyLocationQuery.data;
+
   // TODO: Make Previous Order and Previous Work Orders clickable to view history (wrap in selectable or make it a button?)
+
+  const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
 
   const router = useRouter();
 
@@ -257,11 +274,60 @@ function WorkOrderProperties({
         onFocus={() => router.push('StatusSelector', { onSelect: status => dispatch.setPartial({ status }) })}
         value={createWorkOrder.status}
       />
+      {createWorkOrder.companyId && (
+        <FormStringField
+          label={'Company'}
+          onFocus={() =>
+            router.push('CompanySelector', {
+              onSelect: (companyId, customerId) => dispatch.setPartial({ companyId, customerId }),
+            })
+          }
+          disabled={hasOrder}
+          value={
+            createWorkOrder.companyId === null
+              ? ''
+              : companyQuery.isLoading
+                ? 'Loading...'
+                : company?.name ?? 'Unknown company'
+          }
+        />
+      )}
+      {createWorkOrder.companyId && (
+        <FormStringField
+          label={'Location'}
+          required
+          onFocus={() => {
+            if (!createWorkOrder.companyId) return;
+
+            router.push('CompanyLocationSelector', {
+              companyId: createWorkOrder.companyId,
+              onSelect: location => dispatch.setPartial({ companyLocationId: location.id }),
+            });
+          }}
+          disabled={hasOrder}
+          value={
+            !createWorkOrder.companyLocationId
+              ? 'No location selected'
+              : companyLocationQuery.isLoading
+                ? 'Loading...'
+                : companyLocation?.name ?? 'Unknown location'
+          }
+        />
+      )}
       <FormStringField
         label={'Customer'}
         required
-        onFocus={() => router.push('CustomerSelector', { onSelect: customerId => dispatch.setPartial({ customerId }) })}
-        disabled={workOrder?.orders.some(order => order.type === 'ORDER') ?? false}
+        onFocus={() =>
+          router.push('CustomerSelector', {
+            onSelect: customerId => dispatch.setCustomer({ customerId }),
+            onSelectCompany: () =>
+              router.push('CompanySelector', {
+                onSelect: (companyId, customerId, companyContactId, companyLocationId) =>
+                  dispatch.setCompany({ companyId, customerId, companyContactId, companyLocationId }),
+              }),
+          })
+        }
+        disabled={hasOrder}
         value={
           createWorkOrder.customerId === null
             ? ''
@@ -288,7 +354,17 @@ function WorkOrderItems({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'charges',
+        'discount',
+        'customerId',
+        'companyLocationId',
+        'companyContactId',
+        'companyId',
+      ),
     },
     { enabled: router.isCurrent },
   );
@@ -513,7 +589,17 @@ function WorkOrderMoneySummary({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'charges',
+        'discount',
+        'customerId',
+        'companyLocationId',
+        'companyContactId',
+        'companyId',
+      ),
     },
     { enabled: router.isCurrent },
   );
@@ -625,7 +711,17 @@ function useItemRows(
   const calculatedWorkOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'customerId', 'charges', 'discount'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'customerId',
+        'charges',
+        'discount',
+        'companyLocationId',
+        'companyContactId',
+        'companyId',
+      ),
     },
     { keepPreviousData: true, enabled: router.isCurrent },
   );

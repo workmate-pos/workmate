@@ -33,11 +33,17 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
 
   assertGid(workOrder.customerId);
   assertGidOrNull(workOrder.derivedFromOrderId);
+  assertGidOrNull(workOrder.companyId);
+  assertGidOrNull(workOrder.companyLocationId);
+  assertGidOrNull(workOrder.companyContactId);
 
   return await awaitNested({
     name: workOrder.name,
     status: workOrder.status,
     customerId: workOrder.customerId,
+    companyId: workOrder.companyId,
+    companyLocationId: workOrder.companyLocationId,
+    companyContactId: workOrder.companyContactId,
     dueDate: workOrder.dueDate.toISOString() as DateTime,
     derivedFromOrderId: workOrder.derivedFromOrderId,
     note: workOrder.note,

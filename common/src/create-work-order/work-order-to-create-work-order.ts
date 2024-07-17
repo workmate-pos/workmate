@@ -14,6 +14,9 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
     charges: workOrder.charges.map(mapCharge),
     customFields: workOrder.customFields,
     discount: workOrder.discount,
+    companyId: workOrder.companyId,
+    companyLocationId: workOrder.companyLocationId,
+    companyContactId: workOrder.companyContactId,
   };
 }
 

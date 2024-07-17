@@ -18,6 +18,8 @@ import { mg } from '../../services/mail/mailgun.js';
 import { renderHtmlToPdfCustomFile } from '../../services/mail/html-pdf/renderer.js';
 import { getRenderedWorkOrderTemplate, getWorkOrderTemplateData } from '../../services/mail/templates/work-order.js';
 import { WorkOrderPrintJob } from '../../schemas/generated/work-order-print-job.js';
+import { CreateWorkOrderOrder } from '../../schemas/generated/create-work-order-order.js';
+import { createWorkOrderOrder } from '../../services/work-orders/create-order.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -49,6 +51,21 @@ export default class WorkOrderController {
     const workOrder = await getWorkOrder(session, name);
 
     return res.json(workOrder ?? never());
+  }
+
+  @Post('/create-order')
+  @BodySchema('create-work-order-order')
+  @Authenticated()
+  @Permission('write_work_orders')
+  async createWorkOrderOrder(
+    req: Request<unknown, unknown, CreateWorkOrderOrder>,
+    res: Response<CreateWorkOrderOrderResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+
+    await createWorkOrderOrder(session, req.body);
+
+    return res.json({ success: true });
   }
 
   @Post('/request')
@@ -95,6 +112,9 @@ export default class WorkOrderController {
       customFields: {},
       discount: null,
       internalNote: '',
+      companyContactId: null,
+      companyLocationId: null,
+      companyId: null,
     });
 
     return res.json({ name });
@@ -184,3 +204,5 @@ export type FetchWorkOrderInfoPageResponse = Awaited<ReturnType<typeof getWorkOr
 export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
 
 export type PrintWorkOrderResponse = { success: true };
+
+export type CreateWorkOrderOrderResponse = { success: true };

@@ -60,7 +60,17 @@ export function ItemChargeConfig({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'charges',
+        'discount',
+        'customerId',
+        'companyLocationId',
+        'companyContactId',
+        'companyId',
+      ),
       items: useMemo(
         () =>
           [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(

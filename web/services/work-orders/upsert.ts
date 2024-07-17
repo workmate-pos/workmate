@@ -22,6 +22,8 @@ import { ensureEmployeesExist } from '../employee/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 
+// TODO: Support deleted customer/company
+
 export async function upsertWorkOrder(
   session: Session,
   user: LocalsTeifiUser | null,
@@ -45,6 +47,9 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
       name: await getNewWorkOrderName(session.shop),
       derivedFromOrderId: createWorkOrder.derivedFromOrderId,
       customerId: createWorkOrder.customerId,
+      companyId: createWorkOrder.companyId,
+      companyLocationId: createWorkOrder.companyLocationId,
+      companyContactId: createWorkOrder.companyContactId,
       dueDate: new Date(createWorkOrder.dueDate),
       status: createWorkOrder.status,
       note: createWorkOrder.note,
@@ -80,8 +85,13 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       const currentLinkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId: workOrder.id });
       const hasOrder = currentLinkedOrders.some(hasPropertyValue('orderType', 'ORDER'));
 
+      // TODO: Move to validation
       if (createWorkOrder.customerId !== workOrder.customerId && hasOrder) {
         throw new HttpError('Cannot change customer after an order has been created', 400);
+      }
+
+      if (createWorkOrder.companyId !== workOrder.companyId && hasOrder) {
+        throw new HttpError('Cannot change company after an order has been created', 400);
       }
 
       // nothing illegal, so we can upsert and delete items/charges safely
@@ -93,6 +103,10 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
         shop: session.shop,
         status: createWorkOrder.status,
         customerId: createWorkOrder.customerId,
+        // TODO:  checkt if they exist
+        companyId: createWorkOrder.companyId,
+        companyLocationId: createWorkOrder.companyLocationId,
+        companyContactId: createWorkOrder.companyContactId,
         dueDate: new Date(createWorkOrder.dueDate),
         derivedFromOrderId: createWorkOrder.derivedFromOrderId,
         note: createWorkOrder.note,

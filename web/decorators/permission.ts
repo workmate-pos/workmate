@@ -5,7 +5,7 @@ import { Session } from '@shopify/shopify-api';
 import { IGetManyResult, PermissionNode } from '../services/db/queries/generated/employee.sql.js';
 import { db } from '../services/db/db.js';
 import { gql } from '../services/gql/gql.js';
-import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import jwt from 'jsonwebtoken';
 import type { Request, Response } from 'express-serve-static-core';
@@ -13,19 +13,33 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { hasReadUsersScope } from '../services/shop.js';
+import { assertMoneyOrNull } from '../util/assertions.js';
 
 export const permissionNodes = [
-  'read_settings',
-  'write_settings',
+  'cycle_count',
+  'read_app_plan',
   'read_employees',
+  'read_purchase_orders',
+  'read_settings',
+  'read_stock_transfers',
+  'read_work_orders',
+  'write_app_plan',
   'write_employees',
+  'write_purchase_orders',
+  'write_settings',
+  'write_stock_transfers',
+  'write_work_orders',
+] as const satisfies readonly PermissionNode[];
+
+// TODO: Configurable per store !!!
+export const defaultPermissionNodes: PermissionNode[] = [
+  'read_employees',
+  'read_settings',
   'read_work_orders',
   'write_work_orders',
-  'read_app_plan',
-  'write_app_plan',
   'read_purchase_orders',
-  'write_purchase_orders',
-] as const satisfies readonly PermissionNode[];
+  'read_stock_transfers',
+];
 
 export function isPermissionNode(node: string): node is PermissionNode {
   for (const n of permissionNodes) {
@@ -58,21 +72,24 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     if (!employee) {
       const superuser = associatedUser.isShopOwner || !doesSuperuserExist || associatedUser.email.endsWith('@teifi.ca');
 
-      [employee = never('just made it')] = await db.employee.upsert({
-        shop: session.shop,
-        staffMemberId: employeeId,
-        permissions: [],
-        rate: null,
-        name: associatedUser.name,
-        isShopOwner: associatedUser.isShopOwner,
-        superuser,
-        email: associatedUser.email,
-      });
+      [employee = never('just made it')] = await createNewEmployees(session.shop, [
+        {
+          employeeId,
+          name: associatedUser.name,
+          isShopOwner: associatedUser.isShopOwner,
+          superuser,
+          email: associatedUser.email,
+        },
+      ]);
 
       doesSuperuserExist ||= superuser;
     }
 
+    assertGid(employee.staffMemberId);
+    assertMoneyOrNull(employee.rate);
+
     if (!doesSuperuserExist) {
+      console.log('creating superuser xddddd', employee);
       [employee = never('just made it')] = await db.employee.upsert({
         shop: session.shop,
         staffMemberId: employee.staffMemberId,
@@ -182,4 +199,30 @@ function associatedUserToStaffInfo(
     isShopOwner: associatedUser.account_owner,
     email: associatedUser.email_verified ? associatedUser.email : '',
   };
+}
+
+export async function createNewEmployees(
+  shop: string,
+  employees: {
+    employeeId: ID;
+    name: string;
+    isShopOwner: boolean;
+    superuser: boolean;
+    email: string;
+  }[],
+) {
+  if (!employees.length) return [];
+
+  return await db.employee.upsertMany({
+    employees: employees.map(({ employeeId: staffMemberId, name, isShopOwner, superuser, email }) => ({
+      shop,
+      staffMemberId,
+      name,
+      isShopOwner,
+      superuser,
+      email,
+      permissions: defaultPermissionNodes,
+      rate: null,
+    })),
+  });
 }

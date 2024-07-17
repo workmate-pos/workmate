@@ -1,0 +1,98 @@
+#TODO: Support different buyers, follow buying restrictions etc
+
+query exists($id: ID!) {
+  company(id: $id) {
+    id
+  }
+}
+
+query getPage($first: Int = 10, $after: String, $query: String) {
+  companies(first: $first, after: $after, query: $query) {
+    nodes {
+      ...CompanyFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+query get($id: ID!) {
+  company(id: $id) {
+    ...CompanyFragment
+  }
+}
+
+query getMany($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    __typename
+    ...CompanyFragment
+  }
+}
+
+fragment CompanyFragment on Company {
+  id
+  name
+  mainContact {
+    ...CompanyContactFragment
+  }
+}
+
+fragment CompanyContactFragment on CompanyContact {
+  id
+  customer {
+    id
+    displayName
+    email
+    phone
+  }
+}
+
+query getCompanyLocations($id: ID!, $first: Int = 25, $after: String, $query: String) {
+  company(id: $id) {
+    locations(first: $first, after: $after, sortKey: RELEVANCE, query: $query) {
+      nodes {
+        ...LocationFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+query getCompanyLocation($id: ID!) {
+  companyLocation(id: $id) {
+    ...LocationFragment
+  }
+}
+
+fragment LocationFragment on CompanyLocation {
+  id
+  name
+  billingAddress {
+    ...CompanyAddressFragment
+  }
+  shippingAddress {
+    ...CompanyAddressFragment
+  }
+}
+
+fragment CompanyAddressFragment on CompanyAddress {
+  formattedAddress
+  address1
+  address2
+  city
+  companyName
+  countryCode
+  firstName
+  lastName
+  phone
+  province
+  zip
+  id
+  country
+  province
+}
