@@ -6,13 +6,7 @@ import { gql } from '../../services/gql/gql.js';
 import { db } from '../../services/db/db.js';
 import { getShopSettings } from '../../services/settings.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import {
-  Permission,
-  isPermissionNode,
-  LocalsTeifiUser,
-  defaultPermissionNodes,
-  createNewEmployees,
-} from '../../decorators/permission.js';
+import { Permission, isPermissionNode, LocalsTeifiUser, createNewEmployees } from '../../decorators/permission.js';
 import { indexBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
