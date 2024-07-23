@@ -7,6 +7,7 @@ import { Company, useCompaniesQuery } from '@work-orders/common/queries/use-comp
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { SHOPIFY_B2B_PLANS } from '../../util/shopify-plans.js';
 
 export function CompanySelector({
   onSelect,
@@ -22,11 +23,7 @@ export function CompanySelector({
 
   const storePropertiesQuery = useStorePropertiesQuery({ fetch });
   const storeProperties = storePropertiesQuery.data?.storeProperties;
-  const canSelectCompany =
-    !!storeProperties &&
-    ['SHOPIFY_PLUS', 'SHOPIFY_PLUS_PARTNER_SANDBOX', 'DEVELOPMENT', 'PARTNER_DEVELOPMENT'].includes(
-      storeProperties.plan,
-    );
+  const canSelectCompany = !!storeProperties && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
 
   const rows = useCompanyRows(companies, onSelect);
 
@@ -34,7 +31,7 @@ export function CompanySelector({
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text variant="body" color="TextSubdued">
-          This store does not support companies
+          Your Shopify plan does not support B2B features
         </Text>
       </Stack>
     );

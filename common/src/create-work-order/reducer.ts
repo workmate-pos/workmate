@@ -56,7 +56,9 @@ export type CreateWorkOrderAction =
       type: 'set';
     } & WIPCreateWorkOrder);
 
-type CreateWorkOrderActionWithWorkOrder = CreateWorkOrderAction & { workOrder: WorkOrder | null };
+type CreateWorkOrderActionWithWorkOrder = CreateWorkOrderAction & {
+  workOrder: WorkOrder | null;
+};
 
 export type CreateWorkOrderDispatchProxy = {
   [type in CreateWorkOrderAction['type']]: (args: Omit<CreateWorkOrderAction & { type: type }, 'type'>) => void;
@@ -87,7 +89,9 @@ export const useCreateWorkOrderReducer = (
     () =>
       new Proxy<CreateWorkOrderDispatchProxy>({} as CreateWorkOrderDispatchProxy, {
         get: (target, prop) => (args: DiscriminatedUnionOmit<CreateWorkOrderAction, 'type'>) => {
-          if (!workOrderRef.current === undefined) {
+          const workOrder = workOrderRef.current;
+
+          if (workOrder === undefined) {
             throw new Error('Cannot modify work order because it has not been loaded yet');
           }
 
@@ -95,7 +99,7 @@ export const useCreateWorkOrderReducer = (
           dispatchCreateWorkOrder({
             type: prop,
             ...args,
-            workOrder: workOrderRef.current,
+            workOrder,
           } as CreateWorkOrderActionWithWorkOrder);
         },
       }),
@@ -235,7 +239,7 @@ function shouldMergeItems(
   const itemIsInOrder = (item: { type: 'product' | 'custom-item'; uuid: string }) =>
     workOrder?.items.some(
       oi => oi.type === item.type && oi.uuid === item.uuid && isOrderId(oi.shopifyOrderLineItem?.orderId),
-    );
+    ) ?? false;
 
   // do not allow merging if either item is in an order
   if ([a, b].some(itemIsInOrder)) {

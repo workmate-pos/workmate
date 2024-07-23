@@ -44,7 +44,7 @@ export default class CustomerController {
     return res.json({ customers });
   }
 
-  @Get('/id/:id')
+  @Get('/:id')
   async fetchCustomer(req: Request<{ id: ID }>, res: Response<FetchCustomerResponse>) {
     const session: Session = res.locals.shopify.session;
     const { id } = req.params;

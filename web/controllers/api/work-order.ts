@@ -20,6 +20,7 @@ import { getRenderedWorkOrderTemplate, getWorkOrderTemplateData } from '../../se
 import { WorkOrderPrintJob } from '../../schemas/generated/work-order-print-job.js';
 import { CreateWorkOrderOrder } from '../../schemas/generated/create-work-order-order.js';
 import { createWorkOrderOrder } from '../../services/work-orders/create-order.js';
+import { syncShopifyOrders } from '../../services/shopify-order/sync.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -63,7 +64,8 @@ export default class WorkOrderController {
   ) {
     const session: Session = res.locals.shopify.session;
 
-    await createWorkOrderOrder(session, req.body);
+    const id = await createWorkOrderOrder(session, req.body);
+    await syncShopifyOrders(session, [id]);
 
     return res.json({ success: true });
   }

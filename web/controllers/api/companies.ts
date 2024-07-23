@@ -47,7 +47,7 @@ export default class CompaniesController {
     return res.json({ companies });
   }
 
-  @Get('/id/:id')
+  @Get('/:id')
   async fetchCompany(req: Request<{ id: ID }>, res: Response<FetchCompanyResponse>) {
     const session: Session = res.locals.shopify.session;
     const { id } = req.params;
@@ -58,7 +58,7 @@ export default class CompaniesController {
     return res.json({ company });
   }
 
-  @Get('/id/:id/locations')
+  @Get('/:id/locations')
   @QuerySchema('pagination-options')
   async fetchCompanyLocations(
     req: Request<{ id: string }, unknown, unknown, PaginationOptions>,

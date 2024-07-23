@@ -63,13 +63,18 @@ type OpenConfigPopup = {
 
 export function WorkOrder({ initial }: WorkOrderProps) {
   const fetch = useAuthenticatedFetch();
-  const workOrderQuery = useWorkOrderQuery({ fetch, name: initial.name });
+  const [name, setName] = useState(initial.name);
+  const workOrderQuery = useWorkOrderQuery({ fetch, name });
 
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(
     initial,
-    workOrderQuery.data?.workOrder,
+    !workOrderQuery.isFetching ? workOrderQuery.data?.workOrder : undefined,
     { useRef, useState, useReducer },
   );
+
+  if (name !== createWorkOrder.name) {
+    setName(createWorkOrder.name);
+  }
 
   const router = useRouter();
   const screen = useScreen();
@@ -239,7 +244,6 @@ function WorkOrderProperties({
   const customer = customerQuery.data;
 
   const companyLocationQuery = useCompanyLocationQuery(
-    // TODO: Change name to companyLocationId
     { fetch, id: createWorkOrder.companyLocationId! },
     { enabled: !!createWorkOrder.companyLocationId },
   );
@@ -728,7 +732,7 @@ function useItemRows(
 
   const screen = useScreen();
 
-  screen.setIsLoading(workOrderQuery.isLoading);
+  screen.setIsLoading(workOrderQuery.isFetching);
 
   const queryFilter = (lineItem?: CalculateDraftOrderResponse['lineItems'][number] | null) => {
     if (!lineItem || !query) {

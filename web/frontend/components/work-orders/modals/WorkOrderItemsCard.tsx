@@ -84,7 +84,17 @@ function ProductsList({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'customerId', 'items', 'charges', 'discount'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'customerId',
+        'items',
+        'charges',
+        'discount',
+        'companyLocationId',
+        'companyId',
+        'companyContactId',
+      ),
     },
     { enabled: false, keepPreviousData: true },
   );

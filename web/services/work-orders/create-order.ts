@@ -38,5 +38,14 @@ export async function createWorkOrderOrder(session: Session, createWorkOrderOrde
     throw new HttpError('Failed to create order', 500);
   }
 
-  await gql.draftOrder.complete.run(graphql, { id: response.result.draftOrder.id, paymentPending: true });
+  const { draftOrderComplete } = await gql.draftOrder.complete.run(graphql, {
+    id: response.result.draftOrder.id,
+    paymentPending: true,
+  });
+
+  if (!draftOrderComplete?.draftOrder?.order?.id) {
+    throw new HttpError('Failed to complete order', 500);
+  }
+
+  return draftOrderComplete.draftOrder.order.id;
 }

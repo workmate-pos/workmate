@@ -21,7 +21,7 @@ export const useCompanyLocationsQuery = (
   const queryClient = useQueryClient();
 
   const query = createPaginatedQuery({
-    endpoint: `/api/companies/id/${encodeURIComponent(parseGid(id).id)}/locations`,
+    endpoint: `/api/companies/${encodeURIComponent(parseGid(id).id)}/locations`,
     queryKeyFn: ({ query }: PaginationOptions) => ['company-locations', query],
     extractPage: (response: FetchCompanyLocationsResponse) => response.locations,
     cursorParamName: 'after',

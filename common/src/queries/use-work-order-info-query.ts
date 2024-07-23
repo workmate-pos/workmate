@@ -121,12 +121,5 @@ export const useWorkOrderInfoQuery = (
       pages: pages.filter(page => page.length > 0),
       pageParams,
     }),
-    onSuccess(workOrders) {
-      for (const workOrder of workOrders.pages.flat(1)) {
-        queryClient.setQueryData(['work-order', workOrder.name], { workOrder } satisfies UseQueryData<
-          typeof useWorkOrderQuery
-        >);
-      }
-    },
   });
 };

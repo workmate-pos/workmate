@@ -7,6 +7,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
+import { SHOPIFY_B2B_PLANS } from '../../util/shopify-plans.js';
 
 export function CustomerSelector({
   onSelect,
@@ -24,11 +25,7 @@ export function CustomerSelector({
 
   const storePropertiesQuery = useStorePropertiesQuery({ fetch });
   const storeProperties = storePropertiesQuery.data?.storeProperties;
-  const canSelectCompany =
-    !!storeProperties &&
-    ['SHOPIFY_PLUS', 'SHOPIFY_PLUS_PARTNER_SANDBOX', 'DEVELOPMENT', 'PARTNER_DEVELOPMENT'].includes(
-      storeProperties.plan,
-    );
+  const canSelectCompany = !!storeProperties && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
 
   const rows = getCustomerRows(customers, onSelect);
 

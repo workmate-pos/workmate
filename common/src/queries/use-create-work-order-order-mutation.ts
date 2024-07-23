@@ -27,11 +27,9 @@ export const useCreateWorkOrderOrderMutation = (
       return result;
     },
     onSuccess(...args) {
-      const [_, createWorkOrderOrder] = args;
-
-      queryClient.invalidateQueries(['work-order', createWorkOrderOrder.name]);
-      queryClient.invalidateQueries(['work-order-info', createWorkOrderOrder.name]);
-      queryClient.invalidateQueries(['calculated-draft-order', createWorkOrderOrder.name]);
+      queryClient.invalidateQueries(['work-order']);
+      queryClient.invalidateQueries(['work-order-info']);
+      queryClient.invalidateQueries(['calculated-draft-order']);
 
       options?.onSuccess?.(...args);
     },

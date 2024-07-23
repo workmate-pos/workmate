@@ -32,7 +32,17 @@ export function WorkOrderSummary({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'charges',
+        'discount',
+        'customerId',
+        'companyLocationId',
+        'companyId',
+        'companyContactId',
+      ),
     },
     { enabled: false },
   );

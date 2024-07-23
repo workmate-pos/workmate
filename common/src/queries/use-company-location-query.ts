@@ -19,7 +19,7 @@ export const useCompanyLocationQuery = (
       const response = await fetch(`/api/companies/location/${encodeURIComponent(parseGid(id).id)}`);
 
       if (!response.ok) {
-        throw new Error('Failed to fetch companie location');
+        throw new Error('Failed to fetch company location');
       }
 
       const results: FetchCompanyLocationResponse = await response.json();

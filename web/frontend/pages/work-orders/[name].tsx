@@ -125,7 +125,10 @@ function WorkOrderLoader() {
 
   return (
     <>
-      <WorkOrder initialCreateWorkOrder={createWorkOrder} workOrder={workOrderQuery.data?.workOrder ?? undefined} />
+      <WorkOrder
+        initialCreateWorkOrder={createWorkOrder}
+        workOrder={!workOrderQuery.isFetching ? workOrderQuery.data?.workOrder ?? undefined : undefined}
+      />
       {toast}
     </>
   );
@@ -194,7 +197,17 @@ function WorkOrder({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'customerId', 'items', 'charges', 'discount'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'customerId',
+        'items',
+        'charges',
+        'discount',
+        'companyLocationId',
+        'companyId',
+        'companyContactId',
+      ),
     },
     { enabled: !isModalOpen },
   );

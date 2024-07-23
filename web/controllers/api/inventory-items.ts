@@ -64,7 +64,7 @@ export default class InventoryItemsController {
     return res.json({ inventoryItems });
   }
 
-  @Get('/id/:locationId/:id')
+  @Get('/:locationId/:id')
   async fetchInventoryItem(
     req: Request<{ locationId: ID; inventoryItemId: ID }>,
     res: Response<FetchInventoryItemResponse>,
