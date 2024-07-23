@@ -6,7 +6,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 
 const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID'];
 
-if (process.env.NODE_ENV === 'production' && process.env.npm_lifecycle_event === 'build' && !process.env.CI) {
+if (!('NO_INTERCOM' in process.env) && process.env.npm_lifecycle_event === 'build' && !process.env.CI) {
   for (const envVar of requiredEnvVars) {
     if (!process.env[envVar]) {
       throw new Error(`${envVar} environment variable is required to build the frontend app`);
