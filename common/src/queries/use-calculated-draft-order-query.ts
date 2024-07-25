@@ -82,7 +82,7 @@ export const useCalculatedDraftOrderQuery = (
 
     getItemLineItem: ({ uuid, type }: DiscriminatedUnionPick<CalculateWorkOrder['items'][number], 'type' | 'uuid'>) => {
       if (!calculatedDraftOrder) {
-        return null;
+        return undefined;
       }
 
       const { lineItems, itemLineItemIds, customItemLineItemIds } = calculatedDraftOrder;
@@ -102,9 +102,25 @@ export const useCalculatedDraftOrderQuery = (
       return lineItems.find(li => li.id === lineItemByUuid[uuid]) ?? null;
     },
 
+    getItemPrice: ({ uuid, type }: Pick<CalculateWorkOrder['items'][number], 'uuid' | 'type'>) => {
+      if (!calculatedDraftOrder) {
+        return undefined;
+      }
+
+      if (type === 'product') {
+        return calculatedDraftOrder.itemPrices[uuid];
+      }
+
+      if (type === 'custom-item') {
+        return calculatedDraftOrder.customItemPrices[uuid];
+      }
+
+      return type satisfies never;
+    },
+
     getChargeLineItem: (charge: DiscriminatedUnionPick<CalculateWorkOrder['charges'][number], 'type' | 'uuid'>) => {
       if (!calculatedDraftOrder) {
-        return null;
+        return undefined;
       }
 
       if (charge.type === 'hourly-labour') {
@@ -120,7 +136,7 @@ export const useCalculatedDraftOrderQuery = (
 
     getChargePrice: (charge: DiscriminatedUnionPick<CalculateWorkOrder['charges'][number], 'type' | 'uuid'>) => {
       if (!calculatedDraftOrder) {
-        return null;
+        return undefined;
       }
 
       if (charge.type === 'hourly-labour') {

@@ -15,6 +15,7 @@ mutation complete($id: ID!, $paymentPending: Boolean) {
       id
       order {
         id
+        name
       }
     }
     userErrors {

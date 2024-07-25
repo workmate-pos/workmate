@@ -68,8 +68,6 @@ export function PaymentOverview({ name }: { name: string }) {
 
   const isLoading = paymentHandler.isLoading || createWorkOrderOrderMutation.isLoading;
 
-  // TODO: Fix invalidation not working -- rest seems to work
-
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(`Payment Overview - ${name}`);
@@ -155,9 +153,9 @@ export function PaymentOverview({ name }: { name: string }) {
         charges: selectedCharges.map(charge => pick(charge, 'type', 'uuid')),
       },
       {
-        onSuccess() {
+        onSuccess(result) {
           router.popCurrent();
-          toast.show('Created order!');
+          toast.show(`Created order ${result.name}!`);
         },
       },
     );

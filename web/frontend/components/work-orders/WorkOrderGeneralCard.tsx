@@ -8,17 +8,23 @@ import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { useState } from 'react';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { DateModal } from '@web/frontend/components/shared-orders/modals/DateModal.js';
+import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
+import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
 
 export function WorkOrderGeneralCard({
   createWorkOrder,
   dispatch,
   disabled,
   onCustomerSelectorClick,
+  onCompanySelectorClick,
+  onCompanyLocationSelectorClick,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
   dispatch: CreateWorkOrderDispatchProxy;
   disabled: boolean;
   onCustomerSelectorClick: () => void;
+  onCompanySelectorClick: () => void;
+  onCompanyLocationSelectorClick: () => void;
 }) {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
 
@@ -26,8 +32,22 @@ export function WorkOrderGeneralCard({
   const fetch = useAuthenticatedFetch({ setToastAction });
 
   const customerQuery = useCustomerQuery({ fetch, id: createWorkOrder.customerId });
+  const customer = customerQuery.data;
+
   const derivedFromOrderQuery = useOrderQuery({ fetch, id: createWorkOrder.derivedFromOrderId });
   const derivedFromOrder = derivedFromOrderQuery.data?.order;
+
+  const companyQuery = useCompanyQuery(
+    { fetch, id: createWorkOrder.companyId! },
+    { enabled: !!createWorkOrder.companyId },
+  );
+  const company = companyQuery.data;
+
+  const companyLocationQuery = useCompanyLocationQuery(
+    { fetch, id: createWorkOrder.companyLocationId! },
+    { enabled: !!createWorkOrder.companyLocationId },
+  );
+  const companyLocation = companyLocationQuery.data;
 
   const dueDateUtc = new Date(createWorkOrder.dueDate);
   const dueDateLocal = new Date(dueDateUtc.getTime() - dueDateUtc.getTimezoneOffset() * MINUTE_IN_MS);
@@ -68,14 +88,50 @@ export function WorkOrderGeneralCard({
             />
           )}
 
+          {createWorkOrder.companyId && (
+            <TextField
+              label={'Company'}
+              autoComplete={'off'}
+              requiredIndicator
+              loading={!!createWorkOrder.companyId && companyQuery.isLoading}
+              disabled={disabled}
+              readOnly
+              value={
+                createWorkOrder.companyId === null
+                  ? ''
+                  : companyQuery.isLoading
+                    ? 'Loading...'
+                    : company?.name ?? 'Unknown company'
+              }
+              onFocus={() => onCompanySelectorClick()}
+            />
+          )}
+
+          {createWorkOrder.companyId && (
+            <TextField
+              label={'Location'}
+              autoComplete={'off'}
+              requiredIndicator
+              loading={!!createWorkOrder.companyLocationId && companyLocationQuery.isLoading}
+              disabled={disabled}
+              readOnly
+              value={
+                createWorkOrder.companyLocationId === null
+                  ? ''
+                  : companyLocationQuery.isLoading
+                    ? 'Loading...'
+                    : companyLocation?.name ?? 'Unknown location'
+              }
+              onFocus={() => onCompanyLocationSelectorClick()}
+            />
+          )}
+
           <TextField
             label={'Customer'}
             autoComplete={'off'}
             requiredIndicator
             value={
-              createWorkOrder.customerId && !customerQuery.isLoading
-                ? customerQuery.data?.displayName ?? 'Unknown Customer'
-                : ''
+              createWorkOrder.customerId && !customerQuery.isLoading ? customer?.displayName ?? 'Unknown Customer' : ''
             }
             loading={!!createWorkOrder.customerId && customerQuery.isLoading}
             onFocus={() => onCustomerSelectorClick()}

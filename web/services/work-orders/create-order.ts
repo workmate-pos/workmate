@@ -43,9 +43,9 @@ export async function createWorkOrderOrder(session: Session, createWorkOrderOrde
     paymentPending: true,
   });
 
-  if (!draftOrderComplete?.draftOrder?.order?.id) {
+  if (!draftOrderComplete?.draftOrder?.order) {
     throw new HttpError('Failed to complete order', 500);
   }
 
-  return draftOrderComplete.draftOrder.order.id;
+  return draftOrderComplete.draftOrder.order;
 }

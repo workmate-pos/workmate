@@ -19,6 +19,7 @@ export async function validateCreateWorkOrder(session: Session, createWorkOrder:
   assertUniqueFixedPriceLabourChargeUuids(createWorkOrder);
   assertPositiveItemQuantities(createWorkOrder);
   assertValidChargeItemUuids(createWorkOrder);
+  assertValidCompanyDetails(createWorkOrder);
 
   await assertValidWorkOrderName(session, createWorkOrder);
   await assertNonPaidWorkOrderItemProductsExist(session, createWorkOrder);
@@ -113,6 +114,24 @@ function assertValidChargeItemUuids(createWorkOrder: Pick<CreateWorkOrder, 'item
       }
     } else {
       return charge satisfies never;
+    }
+  }
+}
+
+function assertValidCompanyDetails(
+  createWorkOrder: Pick<CreateWorkOrder, 'companyId' | 'companyLocationId' | 'companyContactId'>,
+) {
+  // Either all company fields or none are set
+
+  const companyFields = [
+    createWorkOrder.companyId,
+    createWorkOrder.companyLocationId,
+    createWorkOrder.companyContactId,
+  ];
+
+  if (companyFields.some(value => value === null)) {
+    if (!companyFields.every(value => value === null)) {
+      throw new HttpError('All company fields must be set', 400);
     }
   }
 }

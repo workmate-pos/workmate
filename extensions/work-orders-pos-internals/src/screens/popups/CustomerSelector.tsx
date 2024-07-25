@@ -7,7 +7,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
-import { SHOPIFY_B2B_PLANS } from '../../util/shopify-plans.js';
+import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 
 export function CustomerSelector({
   onSelect,

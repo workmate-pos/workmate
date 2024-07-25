@@ -296,7 +296,7 @@ function WorkOrderProperties({
           }
         />
       )}
-      {createWorkOrder.companyId && (
+      {createWorkOrder.companyLocationId && (
         <FormStringField
           label={'Location'}
           required

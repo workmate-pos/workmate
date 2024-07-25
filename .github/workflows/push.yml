@@ -21,4 +21,5 @@ jobs:
       extensions_install_command: npm run all:install && npm run all:build
       custom_build_args: |
         VITE_INTERCOM_APP_ID=${{ vars.VITE_INTERCOM_APP_ID }}
+        NODE_ENV=production
     secrets: inherit

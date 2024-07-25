@@ -7,7 +7,7 @@ import { Company, useCompaniesQuery } from '@work-orders/common/queries/use-comp
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { SHOPIFY_B2B_PLANS } from '../../util/shopify-plans.js';
+import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 
 export function CompanySelector({
   onSelect,

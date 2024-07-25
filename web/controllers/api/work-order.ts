@@ -11,7 +11,7 @@ import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order
 import { sessionStorage } from '../../index.js';
 import { calculateWorkOrder } from '../../services/work-orders/calculate.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { mg } from '../../services/mail/mailgun.js';
@@ -64,10 +64,10 @@ export default class WorkOrderController {
   ) {
     const session: Session = res.locals.shopify.session;
 
-    const id = await createWorkOrderOrder(session, req.body);
+    const { name, id } = await createWorkOrderOrder(session, req.body);
     await syncShopifyOrders(session, [id]);
 
-    return res.json({ success: true });
+    return res.json({ name, id });
   }
 
   @Post('/request')
@@ -207,4 +207,7 @@ export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWo
 
 export type PrintWorkOrderResponse = { success: true };
 
-export type CreateWorkOrderOrderResponse = { success: true };
+export type CreateWorkOrderOrderResponse = {
+  name: string;
+  id: ID;
+};

@@ -51,6 +51,9 @@ import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orde
 import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/CreateOrderModal.js';
+import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';
+import { CompanyLocationSelectorModal } from '@web/frontend/components/work-orders/modals/CompanyLocationSelectorModal.js';
 
 export default function () {
   return (
@@ -180,6 +183,9 @@ function WorkOrder({
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
   const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
+  const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
+  const [isCompanySelectorModalOpen, setIsCompanySelectorModalOpen] = useState(false);
+  const [isCompanyLocationSelectorModalOpen, setIsCompanyLocationSelectorModalOpen] = useState(false);
 
   const isModalOpen = [
     isCustomerSelectorModalOpen,
@@ -190,6 +196,9 @@ function WorkOrder({
     isAddProductModalOpen,
     isAddServiceModalOpen,
     isSelectCustomFieldPresetToEditModalOpen,
+    isCreateOrderModalOpen,
+    isCompanySelectorModalOpen,
+    isCompanyLocationSelectorModalOpen,
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
@@ -272,6 +281,8 @@ function WorkOrder({
             dispatch={dispatch}
             disabled={workOrderMutation.isLoading}
             onCustomerSelectorClick={() => setIsCustomerSelectorModalOpen(true)}
+            onCompanySelectorClick={() => setIsCompanySelectorModalOpen(true)}
+            onCompanyLocationSelectorClick={() => setIsCompanyLocationSelectorModalOpen(true)}
           />
 
           <WorkOrderCustomFieldsCard
@@ -288,7 +299,7 @@ function WorkOrder({
         <WorkOrderItemsCard
           createWorkOrder={createWorkOrder}
           dispatch={dispatch}
-          workOrder={workOrder!}
+          workOrder={workOrder ?? null}
           disabled={workOrderMutation.isLoading}
           onAddProductClick={() => setIsAddProductModalOpen(true)}
           onAddServiceClick={() => setIsAddServiceModalOpen(true)}
@@ -302,6 +313,7 @@ function WorkOrder({
           onSave={() => workOrderMutation.mutate(createWorkOrder)}
           isSaving={workOrderMutation.isLoading}
           onPrint={() => setIsPrintModalOpen(true)}
+          onCreateOrder={() => setIsCreateOrderModalOpen(true)}
         />
       </BlockStack>
 
@@ -310,6 +322,7 @@ function WorkOrder({
           open={isCustomerSelectorModalOpen}
           onClose={() => setIsCustomerSelectorModalOpen(false)}
           onSelect={customerId => dispatch.setPartial({ customerId })}
+          onSelectCompany={() => setIsCompanySelectorModalOpen(true)}
           setToastAction={setToastAction}
         />
       )}
@@ -440,6 +453,40 @@ function WorkOrder({
           setToastAction={setToastAction}
           name={customFieldPresetNameToEdit}
           type="WORK_ORDER"
+        />
+      )}
+
+      {isCreateOrderModalOpen && (
+        <CreateOrderModal
+          workOrder={workOrder ?? null}
+          open={isCreateOrderModalOpen}
+          onClose={() => setIsCreateOrderModalOpen(false)}
+          setToastAction={setToastAction}
+        />
+      )}
+
+      {isCompanySelectorModalOpen && (
+        <CompanySelectorModal
+          open={isCompanySelectorModalOpen}
+          onClose={() => setIsCompanySelectorModalOpen(false)}
+          onSelect={(companyId, customerId, companyContactId) => {
+            dispatch.setCompany({ companyId, companyContactId, customerId, companyLocationId: null });
+            setIsCompanyLocationSelectorModalOpen(true);
+          }}
+          setToastAction={setToastAction}
+        />
+      )}
+
+      {isCompanyLocationSelectorModalOpen && createWorkOrder.companyId && (
+        <CompanyLocationSelectorModal
+          open={isCompanyLocationSelectorModalOpen}
+          onClose={() => setIsCompanyLocationSelectorModalOpen(false)}
+          onSelect={companyLocationId => {
+            const { companyId, companyContactId, customerId } = createWorkOrder;
+            dispatch.setCompany({ companyLocationId, companyContactId, companyId, customerId: customerId! });
+          }}
+          setToastAction={setToastAction}
+          companyId={createWorkOrder.companyId}
         />
       )}
 
