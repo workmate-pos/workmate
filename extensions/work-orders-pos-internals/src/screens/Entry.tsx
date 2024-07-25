@@ -131,8 +131,6 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
 
   const router = useRouter();
-  const screen = useScreen();
-  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isFetching));
 
   return workOrders.flatMap<ListRow>(workOrder => {
     const workOrderQuery = workOrderQueries[workOrder.name];
