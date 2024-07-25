@@ -1,7 +1,6 @@
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { useState } from 'react';
 import { useCompaniesQuery } from '@work-orders/common/queries/use-companies-query.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
@@ -26,6 +25,7 @@ export function CompanySelectorModal({
   const companiesQuery = useCompaniesQuery({ fetch, params: { query } });
   const companies = companiesQuery.data?.pages.flat() ?? [];
 
+  // TODO: Wait for this before doing company queries
   const storePropertiesQuery = useStorePropertiesQuery({ fetch });
   const storeProperties = storePropertiesQuery.data?.storeProperties;
 
