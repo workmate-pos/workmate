@@ -1,0 +1,24 @@
+query getCatalogPrices($id: ID!, $first: Int, $after: String, $query: String) {
+  catalog(id: $id) {
+    ...CatalogFragment
+  }
+}
+
+fragment CatalogFragment on Catalog {
+  priceList {
+    prices(first: $first, after: $after, query: $query) {
+      nodes {
+        variant {
+          id
+        }
+        price {
+          amount
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

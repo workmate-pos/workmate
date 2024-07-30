@@ -23,4 +23,6 @@ export const roundMoney = (a: Money, decimals: number, roundingMode?: RoundingMo
   BigDecimal.fromMoney(a).round(decimals, roundingMode).toMoney();
 export const maxMoney = (...[arg, ...args]: [Money, ...Money[]]) =>
   BigDecimal.max(BigDecimal.fromMoney(arg), ...args.map(money => BigDecimal.fromMoney(money))).toMoney();
+export const minMoney = (...[arg, ...args]: [Money, ...Money[]]) =>
+  BigDecimal.min(BigDecimal.fromMoney(arg), ...args.map(money => BigDecimal.fromMoney(money))).toMoney();
 export const ZERO_MONEY = BigDecimal.ZERO.round(2).toMoney();

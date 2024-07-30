@@ -1,0 +1,3 @@
+-- AlterEnum
+ALTER TYPE "ShopifyPlan" ADD VALUE 'SHOPIFY_STARTER';
+ALTER TYPE "ShopifyPlan" ADD VALUE 'TRIAL';

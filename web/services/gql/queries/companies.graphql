@@ -53,7 +53,7 @@ query getCompanyLocations($id: ID!, $first: Int = 25, $after: String, $query: St
   company(id: $id) {
     locations(first: $first, after: $after, sortKey: RELEVANCE, query: $query) {
       nodes {
-        ...LocationFragment
+        ...CompanyLocationFragment
       }
       pageInfo {
         hasNextPage
@@ -65,11 +65,11 @@ query getCompanyLocations($id: ID!, $first: Int = 25, $after: String, $query: St
 
 query getCompanyLocation($id: ID!) {
   companyLocation(id: $id) {
-    ...LocationFragment
+    ...CompanyLocationFragment
   }
 }
 
-fragment LocationFragment on CompanyLocation {
+fragment CompanyLocationFragment on CompanyLocation {
   id
   name
   billingAddress {
@@ -77,6 +77,22 @@ fragment LocationFragment on CompanyLocation {
   }
   shippingAddress {
     ...CompanyAddressFragment
+  }
+}
+
+query getCompanyLocationCatalogPage($id: ID!, $first: Int = 50, $after: String) {
+  companyLocation(id: $id) {
+    catalogs(first: $first, after: $after) {
+      nodes {
+        id
+        title
+        status
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
   }
 }
 

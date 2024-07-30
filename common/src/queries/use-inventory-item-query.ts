@@ -9,7 +9,7 @@ import { withResolvers } from '@teifi-digital/shopify-app-toolbox/promise';
 // TODO: Make batcher support grouping natively
 const useInventoryItemBatcher = (fetch: Fetch) =>
   useBatcher({
-    name: 'inventory-items',
+    key: 'inventory-items',
     maxSize: 25,
     handler: async (ids: { inventoryItemId: ID; locationId: ID | null }[]) => {
       if (ids.length === 0) {

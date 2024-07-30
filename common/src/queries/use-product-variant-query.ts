@@ -7,7 +7,7 @@ import { UseQueryData } from './react-query.js';
 
 const useProductVariantBatcher = (fetch: Fetch) =>
   useBatcher({
-    name: 'product-variants',
+    key: 'product-variants',
     maxSize: 10,
     handler: async (ids: ID[]) => {
       if (ids.length === 0) {

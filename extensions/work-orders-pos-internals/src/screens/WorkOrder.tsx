@@ -422,6 +422,7 @@ function WorkOrderItems({
                   setOpenConfigPopup({ type: item.type, uuid: item.uuid, configType: 'item' });
                 }
               },
+              companyLocationId: createWorkOrder.companyLocationId,
             })
           }
         />

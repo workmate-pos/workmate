@@ -6,7 +6,7 @@ import { useBatcher } from '../batcher/use-batcher.js';
 
 const useCompanyBatcher = (fetch: Fetch) =>
   useBatcher({
-    name: 'companies',
+    key: 'companies',
     maxSize: 10,
     handler: async (ids: ID[]) => {
       if (ids.length === 0) {

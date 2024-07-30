@@ -14,7 +14,7 @@ export function BatchProvider({ children }: { children: ReactNode }) {
 }
 
 export type Batches = {
-  [name: string]: Map<any, Batch<any, any>>;
+  [name: string]: Batch<any, any>;
 };
 
 export type Batch<Param, Result> = {

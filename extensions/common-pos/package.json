@@ -32,6 +32,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@teifi-digital/shopify-app-toolbox": "^0.0.56",
     "@work-orders/common": "file:../../common"
   }
 }
