@@ -37,4 +37,5 @@ fragment DatabaseStaffMemberFragment on StaffMember {
   id
   name
   isShopOwner
+  email
 }

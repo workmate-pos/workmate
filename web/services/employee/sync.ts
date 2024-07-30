@@ -67,7 +67,7 @@ async function upsertEmployees(shop: string, employees: gql.staffMember.Database
   }
 
   await db.employee.upsertMany({
-    employees: employees.map(({ id: staffMemberId, name, isShopOwner }) => ({
+    employees: employees.map(({ id: staffMemberId, name, isShopOwner, email }) => ({
       shop,
       name,
       staffMemberId,
@@ -75,6 +75,7 @@ async function upsertEmployees(shop: string, employees: gql.staffMember.Database
       isShopOwner,
       permissions: [],
       superuser: isShopOwner,
+      email,
     })),
   });
 }
