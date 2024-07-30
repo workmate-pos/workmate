@@ -393,6 +393,7 @@ function WorkOrder({
       {isAddProductModalOpen && (
         <AddProductModal
           outputType="WORK_ORDER"
+          companyLocationId={createWorkOrder.companyLocationId}
           productType="PRODUCT"
           open={isAddProductModalOpen}
           setToastAction={setToastAction}

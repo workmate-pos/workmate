@@ -40,7 +40,6 @@ import {
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
-import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import {
@@ -50,6 +49,8 @@ import {
 } from '@work-orders/common/create-work-order/reducer.js';
 import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
 import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -265,7 +266,7 @@ function WorkOrderProperties({
           value={derivedFromOrder ? derivedFromOrder.name : 'Loading...'}
         />
       )}
-      {derivedFromOrder && derivedFromOrder.workOrders?.length > 0 && (
+      {derivedFromOrder && derivedFromOrder.workOrders.length > 0 && (
         <FormStringField
           label="Previous Work Orders"
           disabled
@@ -464,6 +465,11 @@ function WorkOrderItems({
         />
       )}
 
+      <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="HalfPoint">
+        <Text variant="body" color="TextSubdued">
+          {calculatedDraftOrderQuery.isFetching ? 'Loading...' : ' '}
+        </Text>
+      </Stack>
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length > 0 ? (
         <List data={rows} imageDisplayStrategy={'always'}></List>
@@ -713,6 +719,10 @@ function useItemRows(
   const currencyFormatter = useCurrencyFormatter();
 
   const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
+  const productVariantQueries = useProductVariantQueries({
+    fetch,
+    ids: createWorkOrder.items.filter(hasPropertyValue('type', 'product')).map(item => item.productVariantId),
+  });
   const calculatedWorkOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
@@ -728,15 +738,15 @@ function useItemRows(
         'companyId',
       ),
     },
-    { keepPreviousData: true, enabled: router.isCurrent },
+    { enabled: router.isCurrent },
   );
 
   const screen = useScreen();
 
   screen.setIsLoading(workOrderQuery.isFetching);
 
-  const queryFilter = (lineItem?: CalculateDraftOrderResponse['lineItems'][number] | null) => {
-    if (!lineItem || !query) {
+  const queryFilter = (lineItem?: { name?: string | null } | null) => {
+    if (!lineItem?.name || !query) {
       return true;
     }
 
@@ -747,12 +757,14 @@ function useItemRows(
     .map(item => {
       return {
         item,
+        productVariant: item.type === 'product' ? productVariantQueries[item.productVariantId]?.data : null,
         lineItem: calculatedWorkOrderQuery.getItemLineItem(item),
-        // TODO: Also load product vraiant to prevent showing hte loading text
       };
     })
-    .filter(({ lineItem }) => queryFilter(lineItem))
-    .map<ListRow>(({ item, lineItem }) => {
+    .filter(({ productVariant, lineItem }) => queryFilter({ name: lineItem?.name ?? productVariant?.title }))
+    .map<ListRow>(({ item, lineItem, productVariant }) => {
+      const variant = lineItem?.variant ?? productVariant;
+
       if (
         item.type === 'product' &&
         !lineItem?.order &&
@@ -774,7 +786,7 @@ function useItemRows(
       }
 
       const isMutableService =
-        getProductServiceType(lineItem?.variant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
+        getProductServiceType(variant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
 
       const purchaseOrders = (() => {
         if (item.type === 'product') {
@@ -829,14 +841,22 @@ function useItemRows(
         [lineItem, ...chargeLineItems].map(lineItem => lineItem?.order?.name).filter(isNonNullable),
       );
 
+      const label =
+        lineItem?.name ??
+        getProductVariantName(variant) ??
+        (calculatedWorkOrderQuery.isFetching ? 'Loading...' : 'Unknown item');
+      const sku = lineItem?.sku ?? variant?.sku;
+      const imageUrl = lineItem?.image?.url ?? variant?.image?.url ?? variant?.product?.featuredImage?.url;
+
+      const disabled = !lineItem;
+
       return {
         id: item.uuid,
         leftSide: {
-          label: lineItem?.name ?? (calculatedWorkOrderQuery.isFetching ? 'Loading...' : 'Unknown item'),
-          subtitle: lineItem?.sku ? [lineItem.sku] : undefined,
+          label,
+          subtitle: sku ? [sku] : undefined,
           image: {
-            source:
-              lineItem?.image?.url ?? lineItem?.variant?.image?.url ?? lineItem?.variant?.product?.featuredImage?.url,
+            source: imageUrl,
             badge: !isMutableService ? item.quantity : undefined,
           },
           badges: [
@@ -845,10 +865,14 @@ function useItemRows(
           ],
         },
         rightSide: {
-          label: currencyFormatter(totalPrice.toMoney()),
-          showChevron: true,
+          label: lineItem ? currencyFormatter(totalPrice.toMoney()) : '',
+          showChevron: !disabled,
         },
         onPress() {
+          if (disabled) {
+            return;
+          }
+
           if (charges.length > 0 || isMutableService) {
             router.push('ItemChargeConfig', {
               item,

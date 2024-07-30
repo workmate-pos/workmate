@@ -10,6 +10,7 @@ import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { DateModal } from '@web/frontend/components/shared-orders/modals/DateModal.js';
 import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
 import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
+import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 
 export function WorkOrderGeneralCard({
   createWorkOrder,
@@ -52,6 +53,11 @@ export function WorkOrderGeneralCard({
   const dueDateUtc = new Date(createWorkOrder.dueDate);
   const dueDateLocal = new Date(dueDateUtc.getTime() - dueDateUtc.getTimezoneOffset() * MINUTE_IN_MS);
 
+  const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
+  const { workOrder } = workOrderQuery.data ?? {};
+
+  const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
+
   return (
     <>
       <Card>
@@ -76,9 +82,9 @@ export function WorkOrderGeneralCard({
             />
           )}
 
-          {createWorkOrder.derivedFromOrderId && (
+          {createWorkOrder.derivedFromOrderId && (derivedFromOrder?.workOrders?.length ?? 0) > 0 && (
             <TextField
-              label={'Previous Order'}
+              label={'Previous Work Order'}
               autoComplete={'off'}
               requiredIndicator
               value={derivedFromOrder?.workOrders.map(workOrder => workOrder.name).join(' • ') ?? ''}
@@ -94,7 +100,7 @@ export function WorkOrderGeneralCard({
               autoComplete={'off'}
               requiredIndicator
               loading={!!createWorkOrder.companyId && companyQuery.isLoading}
-              disabled={disabled}
+              disabled={disabled || hasOrder}
               readOnly
               value={
                 createWorkOrder.companyId === null
@@ -113,7 +119,7 @@ export function WorkOrderGeneralCard({
               autoComplete={'off'}
               requiredIndicator
               loading={!!createWorkOrder.companyLocationId && companyLocationQuery.isLoading}
-              disabled={disabled}
+              disabled={disabled || hasOrder}
               readOnly
               value={
                 createWorkOrder.companyLocationId === null
@@ -135,7 +141,7 @@ export function WorkOrderGeneralCard({
             }
             loading={!!createWorkOrder.customerId && customerQuery.isLoading}
             onFocus={() => onCustomerSelectorClick()}
-            disabled={disabled}
+            disabled={disabled || hasOrder}
             readOnly
           />
 

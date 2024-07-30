@@ -12,7 +12,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
@@ -22,8 +22,6 @@ import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/c
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useCompanyLocationCatalogsQuery } from '@work-orders/common/queries/use-company-location-catalogs-query.js';
-import { useCatalogVariantPricesQueries } from '@work-orders/common/queries/use-catalog-variant-prices-query.js';
 
 export function ProductSelector({
   onSelect,
@@ -85,11 +83,13 @@ export function ProductSelector({
     />
   );
 
+  const shouldShowPrice = companyLocationId === null;
+
   const rows = useProductVariantRows(
     productVariantsQuery.data?.pages?.[page - 1] ?? [],
     internalOnSelect,
     currencyFormatter,
-    companyLocationId,
+    shouldShowPrice,
   );
 
   if (isLoading) {
@@ -197,33 +197,10 @@ function useProductVariantRows(
   productVariants: ProductVariant[],
   onSelect: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
-  companyLocationId: ID | null,
+  shouldShowPrice: boolean,
 ): ListRow[] {
   const fetch = useAuthenticatedFetch();
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
-
-  const companyLocationCatalogsQuery = useCompanyLocationCatalogsQuery(companyLocationId!, {
-    fetch,
-    options: { enabled: !!companyLocationId },
-    params: {},
-  });
-  const companyLocationCatalogIds = companyLocationCatalogsQuery.data?.pages.flat() ?? [];
-
-  useEffect(() => {
-    if (companyLocationCatalogsQuery.hasNextPage && !companyLocationCatalogsQuery.isFetchingNextPage) {
-      companyLocationCatalogsQuery.fetchNextPage();
-    }
-  }, [companyLocationCatalogsQuery.isFetchingNextPage, companyLocationCatalogsQuery.hasNextPage]);
-
-  const productVariantIds = productVariants.map(pv => pv.id);
-  const catalogVariantPricesQueries = useCatalogVariantPricesQueries({
-    fetch,
-    catalogIds: companyLocationCatalogIds,
-    productVariantIds,
-  });
-
-  const screen = useScreen();
-  screen.setIsLoading(companyLocationCatalogsQuery.isFetching);
 
   if (!customFieldsPresetsQuery.data) {
     return [];
@@ -236,15 +213,13 @@ function useProductVariantRows(
 
     const defaultCharges = variant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
 
-    const variantPrice = companyLocationId ? catalogVariantPricesQueries[variant.id]?.data : variant.price;
-
-    const label = variantPrice
+    const label = shouldShowPrice
       ? currencyFormatter(
           BigDecimal.fromMoney(variant.price)
             .add(BigDecimal.fromMoney(getTotalPriceForCharges(defaultCharges)))
             .toMoney(),
         )
-      : 'Loading...';
+      : '';
 
     return {
       id: variant.id,

@@ -94,6 +94,14 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
         throw new HttpError('Cannot change company after an order has been created', 400);
       }
 
+      if (createWorkOrder.companyLocationId !== workOrder.companyLocationId && hasOrder) {
+        throw new HttpError('Cannot change company location after an order has been created', 400);
+      }
+
+      if (createWorkOrder.companyId !== workOrder.companyId && hasOrder) {
+        throw new HttpError('Cannot change company after an order has been created', 400);
+      }
+
       // nothing illegal, so we can upsert and delete items/charges safely
 
       await ensureRequiredDatabaseDataExists(session, createWorkOrder);

@@ -8,7 +8,6 @@ import { Session } from '@shopify/shopify-api';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { ShopifyPlan } from '../../decorators/shopify-plan.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
 @Authenticated()
 @ShopifyPlan(['SHOPIFY_PLUS', 'SHOPIFY_PLUS_PARTNER_SANDBOX'])
@@ -96,35 +95,6 @@ export default class CompaniesController {
 
     return res.json({ location });
   }
-
-  @Get('/location/:locationId/catalogs')
-  @QuerySchema('pagination-options')
-  async fetchCompanyCatalogs(
-    req: Request<{ locationId: string }, unknown, unknown, PaginationOptions>,
-    res: Response<FetchCompanyLocationCatalogsResponse>,
-  ) {
-    const session: Session = res.locals.shopify.session;
-    const paginationOptions = req.query;
-    const id = createGid('CompanyLocation', req.params.locationId);
-
-    const graphql = new Graphql(session);
-    const response = await gql.companies.getCompanyLocationCatalogPage.run(graphql, {
-      id,
-      first: paginationOptions.first,
-      after: paginationOptions.after,
-    });
-
-    if (!response.companyLocation) {
-      throw new HttpError('Company location not found', 404);
-    }
-
-    const ids = response.companyLocation.catalogs.nodes
-      .filter(hasPropertyValue('status', 'ACTIVE'))
-      .map(node => node.id);
-    const pageInfo = response.companyLocation.catalogs.pageInfo;
-
-    return res.json({ ids, pageInfo });
-  }
 }
 
 export type FetchCompaniesResponse = {
@@ -147,9 +117,4 @@ export type FetchCompanyLocationsResponse = {
 
 export type FetchCompanyLocationResponse = {
   location: gql.companies.CompanyLocationFragment.Result | null;
-};
-
-export type FetchCompanyLocationCatalogsResponse = {
-  ids: ID[];
-  pageInfo: { hasNextPage: boolean; endCursor?: string | null };
 };

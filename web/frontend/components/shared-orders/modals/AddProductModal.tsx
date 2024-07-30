@@ -63,6 +63,10 @@ type AddProductModalPropsBase = {
    * Product type filter, workmate specific.
    */
   productType: 'PRODUCT' | 'SERVICE';
+  /**
+   * Company location id. If set, will filter by their catalogs and prices.
+   */
+  companyLocationId?: ID | null;
 };
 
 /**
@@ -77,6 +81,7 @@ export function AddProductModal({
   locationId,
   vendorName,
   productType,
+  companyLocationId,
 }: AddProductModalProps) {
   const [page, setPage] = useState(0);
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
@@ -141,6 +146,8 @@ export function AddProductModal({
     PRODUCT: 'product',
     SERVICE: 'service',
   }[productType];
+
+  const shouldShowPrice = companyLocationId === null;
 
   return (
     <Modal open={open} onClose={onClose} title={`Add ${titleCase(thing)}`}>
@@ -302,7 +309,7 @@ export function AddProductModal({
                     {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
                   </InlineStack>
                   <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                    {currencyFormatter(totalPrice)}
+                    {shouldShowPrice && currencyFormatter(totalPrice)}
                   </Text>
                 </InlineStack>
                 <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>

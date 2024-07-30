@@ -21,10 +21,11 @@ import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.j
 import { useState } from 'react';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { hasNestedPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { WorkOrderItemModal } from '@web/frontend/components/work-orders/modals/WorkOrderItemModal.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 
 export function WorkOrderItemsCard({
   createWorkOrder,
@@ -81,6 +82,10 @@ function ProductsList({
   const fetch = useAuthenticatedFetch({ setToastAction });
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
+  const productVariantQueries = useProductVariantQueries({
+    fetch,
+    ids: createWorkOrder.items.filter(hasPropertyValue('type', 'product')).map(item => item.productVariantId),
+  });
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
@@ -130,11 +135,18 @@ function ProductsList({
             return item satisfies never;
           })();
           const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
+          const variant =
+            itemLineItem?.variant ??
+            (item.type === 'product' ? productVariantQueries[item.productVariantId]?.data : null);
 
           const canRemove = !!itemLineItem?.order;
 
-          const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
-          const imageUrl = itemLineItem?.image?.url;
+          const name =
+            itemLineItem?.name ??
+            getProductVariantName(variant) ??
+            (calculatedDraftOrderQuery.isFetching ? 'Loading...' : 'Unknown item');
+          const sku = itemLineItem?.sku ?? variant?.sku;
+          const imageUrl = itemLineItem?.image?.url ?? variant?.image?.url ?? variant?.product?.featuredImage?.url;
 
           const charges = createWorkOrder.charges
             .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
@@ -183,7 +195,7 @@ function ProductsList({
                     {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
                   </InlineStack>
                   <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                    {currencyFormatter(totalPrice)}
+                    {!!itemLineItem && currencyFormatter(totalPrice)}
                   </Text>
                 </InlineStack>
                 <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
@@ -195,7 +207,7 @@ function ProductsList({
                   </Box>
                 )}
                 <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                  {itemLineItem?.sku}
+                  {sku}
                 </Text>
               </BlockStack>
             </ResourceItem>
