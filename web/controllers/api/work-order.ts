@@ -21,6 +21,7 @@ import { WorkOrderPrintJob } from '../../schemas/generated/work-order-print-job.
 import { CreateWorkOrderOrder } from '../../schemas/generated/create-work-order-order.js';
 import { createWorkOrderOrder } from '../../services/work-orders/create-order.js';
 import { syncShopifyOrders } from '../../services/shopify-order/sync.js';
+import { cleanOrphanedDraftOrders } from '../../services/work-orders/clean-orphaned-draft-orders.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -64,10 +65,10 @@ export default class WorkOrderController {
   ) {
     const session: Session = res.locals.shopify.session;
 
-    const { name, id } = await createWorkOrderOrder(session, req.body);
-    await syncShopifyOrders(session, [id]);
+    const { order, workOrder } = await createWorkOrderOrder(session, req.body);
+    await cleanOrphanedDraftOrders(session, workOrder.id, () => syncShopifyOrders(session, [order.id]));
 
-    return res.json({ name, id });
+    return res.json(order);
   }
 
   @Post('/request')
@@ -117,6 +118,7 @@ export default class WorkOrderController {
       companyContactId: null,
       companyLocationId: null,
       companyId: null,
+      paymentTerms: null,
     });
 
     return res.json({ name });

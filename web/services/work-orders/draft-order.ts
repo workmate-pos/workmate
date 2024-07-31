@@ -1,4 +1,10 @@
-import { DraftOrderInput, Int } from '../gql/queries/generated/schema.js';
+import {
+  DateTime,
+  DraftOrderInput,
+  Int,
+  PaymentTermsInput,
+  type PaymentTermsType,
+} from '../gql/queries/generated/schema.js';
 import {
   getCustomAttributeArrayFromObject,
   getWorkOrderLineItems,
@@ -9,12 +15,13 @@ import { db } from '../db/db.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
-import { getWorkOrderDiscount } from './get.js';
+import { getWorkOrderDiscount, getWorkOrderPaymentTerms } from './get.js';
 import { getMailingAddressInputsForCompanyLocation } from '../draft-orders/util.js';
 import { Session } from '@shopify/shopify-api';
 import { gql } from '../gql/gql.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { IGetResult } from '../db/queries/generated/work-order.sql.js';
 
 export async function getWorkOrderDraftOrderInput(
   session: Session,
@@ -158,7 +165,37 @@ export async function getWorkOrderDraftOrderInput(
           ? { customerId }
           : null,
     appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
+    paymentTerms: await getPaymentTerms(session, workOrder),
   };
+}
+
+async function getPaymentTerms(session: Session, workOrder: IGetResult): Promise<PaymentTermsInput | null> {
+  const paymentTerms = getWorkOrderPaymentTerms(workOrder);
+
+  if (paymentTerms === null || paymentTerms.templateId === null || workOrder.companyId === null) {
+    return null;
+  }
+
+  const [isNet, isFixed] = await Promise.all([
+    isPaymentTermTemplateType(session, paymentTerms.templateId, 'NET'),
+    isPaymentTermTemplateType(session, paymentTerms.templateId, 'FIXED'),
+  ]);
+
+  return {
+    paymentTermsTemplateId: paymentTerms.templateId,
+    paymentSchedules: [
+      {
+        issuedAt: isNet ? (new Date().toISOString() as DateTime) : null,
+        dueAt: isFixed ? paymentTerms.date : null,
+      },
+    ],
+  };
+}
+
+async function isPaymentTermTemplateType(session: Session, templateId: ID, type: PaymentTermsType) {
+  const graphql = new Graphql(session);
+  const { paymentTermsTemplates } = await gql.paymentTerms.getTemplates.run(graphql, { type });
+  return paymentTermsTemplates.some(hasPropertyValue('id', templateId));
 }
 
 function isLineItemId(id: string | null): id is ID {

@@ -218,6 +218,8 @@ export interface ICreateNewWorkOrderResult {
   internalNote: string;
   name: string;
   note: string;
+  paymentFixedDueDate: Date | null;
+  paymentTermsTemplateId: string | null;
   shop: string;
   status: string;
   updatedAt: Date;

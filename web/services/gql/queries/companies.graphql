@@ -72,6 +72,12 @@ query getCompanyLocation($id: ID!) {
 fragment CompanyLocationFragment on CompanyLocation {
   id
   name
+  buyerExperienceConfiguration {
+    paymentTermsTemplate {
+      id
+    }
+    payNowOnly
+  }
   billingAddress {
     ...CompanyAddressFragment
   }

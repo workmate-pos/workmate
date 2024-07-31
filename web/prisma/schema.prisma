@@ -50,6 +50,10 @@ model WorkOrder {
   companyContactId  String?
   companyLocationId String?
 
+  paymentTermsTemplateId String?
+  // Only applicable for FIXED terms
+  paymentFixedDueDate DateTime?
+
   derivedFromOrder   ShopifyOrder? @relation(fields: [derivedFromOrderId], references: [orderId])
   derivedFromOrderId String?
 

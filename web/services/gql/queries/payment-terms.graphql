@@ -1,0 +1,14 @@
+query getTemplates($type: PaymentTermsType!) {
+  paymentTermsTemplates(paymentTermsType: $type) {
+    ...PaymentTermsTemplateFragment
+  }
+}
+
+fragment PaymentTermsTemplateFragment on PaymentTermsTemplate {
+  id
+  name
+  translatedName
+  paymentTermsType
+  description
+  dueInDays
+}

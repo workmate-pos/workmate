@@ -56,6 +56,8 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
       internalNote: createWorkOrder.internalNote,
       discountAmount: createWorkOrder.discount?.value,
       discountType: createWorkOrder.discount?.type,
+      paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
+      paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
     });
 
     await upsertItems(session, createWorkOrder, workOrder.id, []);
@@ -121,6 +123,8 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
         internalNote: createWorkOrder.internalNote,
         discountAmount: createWorkOrder.discount?.value,
         discountType: createWorkOrder.discount?.type,
+        paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
+        paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
       });
 
       const currentItems = await db.workOrder.getItems({ workOrderId });

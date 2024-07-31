@@ -11,6 +11,7 @@ import {
   WorkOrderInfo,
   WorkOrderItem,
   WorkOrderOrder,
+  WorkOrderPaymentTerms,
 } from './types.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
@@ -53,6 +54,7 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     orders: getWorkOrderOrders(workOrder.id),
     customFields: getWorkOrderCustomFields(workOrder.id),
     discount: getWorkOrderDiscount(workOrder),
+    paymentTerms: getWorkOrderPaymentTerms(workOrder),
   });
 }
 
@@ -281,6 +283,21 @@ export function getWorkOrderDiscount(
   }
 
   return workOrder.discountType satisfies never;
+}
+
+export function getWorkOrderPaymentTerms(
+  workOrder: Pick<IGetResult, 'id' | 'paymentTermsTemplateId' | 'paymentFixedDueDate'>,
+): WorkOrderPaymentTerms | null {
+  if (workOrder.paymentTermsTemplateId === null) {
+    return null;
+  }
+
+  assertGid(workOrder.paymentTermsTemplateId);
+
+  return {
+    templateId: workOrder.paymentTermsTemplateId,
+    date: (workOrder.paymentFixedDueDate?.toISOString() ?? null) as DateTime | null,
+  };
 }
 
 /**

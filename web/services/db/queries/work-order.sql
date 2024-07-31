@@ -1,24 +1,32 @@
 /* @name upsert */
-INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId", "companyLocationId", "companyContactId",
+INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId", "companyLocationId",
+                         "companyContactId",
                          "derivedFromOrderId", note,
                          "internalNote",
                          "discountAmount",
-                         "discountType")
-VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId, :derivedFromOrderId, :note!,
+                         "discountType",
+                         "paymentTermsTemplateId",
+                         "paymentFixedDueDate")
+VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId,
+        :derivedFromOrderId, :note!,
         :internalNote!,
         :discountAmount,
-        :discountType)
-ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
-                                           "dueDate"            = EXCLUDED."dueDate",
-                                           "customerId"         = EXCLUDED."customerId",
-                                           "companyId"          = EXCLUDED."companyId",
-                                           "companyLocationId"  = EXCLUDED."companyLocationId",
-                                           "companyContactId"   = EXCLUDED."companyContactId",
-                                           "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
-                                           note                 = EXCLUDED.note,
-                                           "internalNote"       = EXCLUDED."internalNote",
-                                           "discountAmount"     = EXCLUDED."discountAmount",
-                                           "discountType"       = EXCLUDED."discountType"
+        :discountType,
+        :paymentTermsTemplateId,
+        :paymentFixedDueDate)
+ON CONFLICT ("shop", "name") DO UPDATE SET status                = EXCLUDED.status,
+                                           "dueDate"             = EXCLUDED."dueDate",
+                                           "customerId"          = EXCLUDED."customerId",
+                                           "companyId"           = EXCLUDED."companyId",
+                                           "companyLocationId"   = EXCLUDED."companyLocationId",
+                                           "companyContactId"    = EXCLUDED."companyContactId",
+                                           "derivedFromOrderId"  = EXCLUDED."derivedFromOrderId",
+                                           note                  = EXCLUDED.note,
+                                           "internalNote"        = EXCLUDED."internalNote",
+                                           "discountAmount"      = EXCLUDED."discountAmount",
+                                           "discountType"        = EXCLUDED."discountType",
+                                           "paymentTermsTemplateId" = EXCLUDED."paymentTermsTemplateId",
+                                           "paymentFixedDueDate" = EXCLUDED."paymentFixedDueDate"
 RETURNING *;
 
 /* @name updateDiscount */
