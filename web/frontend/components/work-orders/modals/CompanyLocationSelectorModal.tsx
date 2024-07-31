@@ -2,7 +2,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
-import { useCompanyLocationsQuery } from '@work-orders/common/queries/use-company-locations-query.js';
+import { CompanyLocation, useCompanyLocationsQuery } from '@work-orders/common/queries/use-company-locations-query.js';
 import { Filters, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 
 export function CompanyLocationSelectorModal({
@@ -14,7 +14,7 @@ export function CompanyLocationSelectorModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSelect: (locationId: ID) => void;
+  onSelect: (location: CompanyLocation) => void;
   setToastAction: ToastActionCallable;
   companyId: ID;
 }) {
@@ -53,7 +53,7 @@ export function CompanyLocationSelectorModal({
             <ResourceItem
               id={location.id}
               onClick={() => {
-                onSelect(location.id);
+                onSelect(location);
                 onClose();
               }}
             >

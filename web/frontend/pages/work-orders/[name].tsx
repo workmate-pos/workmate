@@ -54,6 +54,9 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/CreateOrderModal.js';
 import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';
 import { CompanyLocationSelectorModal } from '@web/frontend/components/work-orders/modals/CompanyLocationSelectorModal.js';
+import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
+import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { PaymentTermsSelectorModal } from '@web/frontend/components/work-orders/modals/PaymentTermsSelectorModal.js';
 
 export default function () {
   return (
@@ -130,7 +133,7 @@ function WorkOrderLoader() {
     <>
       <WorkOrder
         initialCreateWorkOrder={createWorkOrder}
-        workOrder={!workOrderQuery.isFetching ? workOrderQuery.data?.workOrder ?? undefined : undefined}
+        workOrder={!workOrderQuery.isFetching ? workOrderQuery.data?.workOrder ?? null : undefined}
       />
       {toast}
     </>
@@ -186,6 +189,7 @@ function WorkOrder({
   const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
   const [isCompanySelectorModalOpen, setIsCompanySelectorModalOpen] = useState(false);
   const [isCompanyLocationSelectorModalOpen, setIsCompanyLocationSelectorModalOpen] = useState(false);
+  const [isPaymentTermsSelectorModalOpen, setIsPaymentTermsSelectorModalOpen] = useState(false);
 
   const isModalOpen = [
     isCustomerSelectorModalOpen,
@@ -199,6 +203,7 @@ function WorkOrder({
     isCreateOrderModalOpen,
     isCompanySelectorModalOpen,
     isCompanyLocationSelectorModalOpen,
+    isPaymentTermsSelectorModalOpen,
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
@@ -283,6 +288,7 @@ function WorkOrder({
             onCustomerSelectorClick={() => setIsCustomerSelectorModalOpen(true)}
             onCompanySelectorClick={() => setIsCompanySelectorModalOpen(true)}
             onCompanyLocationSelectorClick={() => setIsCompanyLocationSelectorModalOpen(true)}
+            onPaymentTermsSelectorClick={() => setIsPaymentTermsSelectorModalOpen(true)}
           />
 
           <WorkOrderCustomFieldsCard
@@ -471,7 +477,13 @@ function WorkOrder({
           open={isCompanySelectorModalOpen}
           onClose={() => setIsCompanySelectorModalOpen(false)}
           onSelect={(companyId, customerId, companyContactId) => {
-            dispatch.setCompany({ companyId, companyContactId, customerId, companyLocationId: null });
+            dispatch.setCompany({
+              companyId,
+              companyContactId,
+              customerId,
+              companyLocationId: null,
+              paymentTerms: null,
+            });
             setIsCompanyLocationSelectorModalOpen(true);
           }}
           setToastAction={setToastAction}
@@ -482,12 +494,35 @@ function WorkOrder({
         <CompanyLocationSelectorModal
           open={isCompanyLocationSelectorModalOpen}
           onClose={() => setIsCompanyLocationSelectorModalOpen(false)}
-          onSelect={companyLocationId => {
+          onSelect={location => {
+            const paymentTerms = location.buyerExperienceConfiguration?.paymentTermsTemplate?.id
+              ? {
+                  templateId: location.buyerExperienceConfiguration.paymentTermsTemplate.id,
+                  date: new Date(Date.now() + 30 * DAY_IN_MS).toISOString() as DateTime,
+                }
+              : null;
+
             const { companyId, companyContactId, customerId } = createWorkOrder;
-            dispatch.setCompany({ companyLocationId, companyContactId, companyId, customerId: customerId! });
+            dispatch.setCompany({
+              companyLocationId: location.id,
+              companyContactId,
+              companyId,
+              customerId: customerId!,
+              paymentTerms,
+            });
           }}
           setToastAction={setToastAction}
           companyId={createWorkOrder.companyId}
+        />
+      )}
+
+      {isPaymentTermsSelectorModalOpen && (
+        <PaymentTermsSelectorModal
+          open={isPaymentTermsSelectorModalOpen}
+          onClose={() => setIsPaymentTermsSelectorModalOpen(false)}
+          onSelect={paymentTerms => dispatch.setPartial({ paymentTerms })}
+          setToastAction={setToastAction}
+          initialPaymentTerms={createWorkOrder.paymentTerms}
         />
       )}
 

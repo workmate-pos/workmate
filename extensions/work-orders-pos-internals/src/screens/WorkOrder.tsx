@@ -32,14 +32,14 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { DateTime, WorkOrderPaymentTerms } from '@web/schemas/generated/create-work-order.js';
 import { getPurchaseOrderBadge } from '../util/badges.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
-import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
+import { DAY_IN_MS, MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import {
@@ -51,6 +51,10 @@ import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.j
 import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { Session } from '@shopify/retail-ui-extensions';
+import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -250,11 +254,53 @@ function WorkOrderProperties({
   );
   const companyLocation = companyLocationQuery.data;
 
+  const paymentTermsQueries = usePaymentTermsTemplatesQueries({
+    fetch,
+    types: [...paymentTermTypes],
+  });
+  const paymentTermsTemplates = Object.values(paymentTermsQueries)
+    .flatMap(query => query.data)
+    .filter(isNonNullable);
+
   // TODO: Make Previous Order and Previous Work Orders clickable to view history (wrap in selectable or make it a button?)
 
   const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
 
   const router = useRouter();
+
+  const openCompanySelector = () => {
+    router.push('CompanySelector', {
+      onSelect: ({ companyId, customerId, companyContactId }) => {
+        dispatch.setCompany({ companyId, customerId, companyContactId, companyLocationId: null, paymentTerms: null });
+        openCompanyLocationSelector(companyId);
+      },
+    });
+  };
+
+  const openCompanyLocationSelector = (companyId: ID | null = createWorkOrder.companyId) => {
+    if (!companyId) return;
+
+    router.push('CompanyLocationSelector', {
+      companyId,
+      onSelect: location => {
+        const paymentTerms: WorkOrderPaymentTerms | null = (() => {
+          if (!location.buyerExperienceConfiguration?.paymentTermsTemplate) {
+            return null;
+          }
+
+          return {
+            templateId: location.buyerExperienceConfiguration.paymentTermsTemplate.id,
+            date: new Date(Date.now() + 30 * DAY_IN_MS).toISOString() as DateTime,
+          };
+        })();
+
+        return dispatch.setPartial({
+          companyLocationId: location.id,
+          paymentTerms,
+        });
+      },
+    });
+  };
 
   return (
     <ResponsiveGrid columns={4} grow>
@@ -282,11 +328,7 @@ function WorkOrderProperties({
       {createWorkOrder.companyId && (
         <FormStringField
           label={'Company'}
-          onFocus={() =>
-            router.push('CompanySelector', {
-              onSelect: (companyId, customerId) => dispatch.setPartial({ companyId, customerId }),
-            })
-          }
+          onFocus={() => openCompanySelector()}
           disabled={hasOrder}
           value={
             createWorkOrder.companyId === null
@@ -297,18 +339,11 @@ function WorkOrderProperties({
           }
         />
       )}
-      {createWorkOrder.companyLocationId && (
+      {createWorkOrder.companyId && (
         <FormStringField
           label={'Location'}
           required
-          onFocus={() => {
-            if (!createWorkOrder.companyId) return;
-
-            router.push('CompanyLocationSelector', {
-              companyId: createWorkOrder.companyId,
-              onSelect: location => dispatch.setPartial({ companyLocationId: location.id }),
-            });
-          }}
+          onFocus={() => openCompanyLocationSelector()}
           disabled={hasOrder}
           value={
             !createWorkOrder.companyLocationId
@@ -319,17 +354,55 @@ function WorkOrderProperties({
           }
         />
       )}
+      {!!createWorkOrder.companyId && (
+        <FormStringField
+          label={'Payment Terms'}
+          required
+          onFocus={() => {
+            router.push('PaymentTermsSelector', {
+              companyLocationId: createWorkOrder.companyLocationId,
+              initialPaymentTerms: createWorkOrder.paymentTerms,
+              onSelect: paymentTerms => dispatch.setPartial({ paymentTerms }),
+              disabled: hasOrder,
+            });
+          }}
+          disabled={hasOrder}
+          value={((): string => {
+            if (createWorkOrder.paymentTerms === null) {
+              return 'No terms';
+            }
+
+            const isLoading = Object.values(paymentTermsQueries).some(query => query.isLoading);
+
+            const template = paymentTermsTemplates.find(
+              hasPropertyValue('id', createWorkOrder.paymentTerms.templateId),
+            );
+
+            if (!template && isLoading) {
+              return 'Loading...';
+            }
+
+            if (!template) {
+              return 'Unknown';
+            }
+
+            if (template.paymentTermsType === 'FIXED') {
+              return createWorkOrder.paymentTerms.date
+                ? `Due ${new Date(createWorkOrder.paymentTerms.date).toLocaleDateString()}`
+                : 'Due on unknown date';
+            }
+
+            return template.name;
+          })()}
+        />
+      )}
       <FormStringField
         label={'Customer'}
         required
         onFocus={() =>
           router.push('CustomerSelector', {
             onSelect: customerId => dispatch.setCustomer({ customerId }),
-            onSelectCompany: () =>
-              router.push('CompanySelector', {
-                onSelect: (companyId, customerId, companyContactId, companyLocationId) =>
-                  dispatch.setCompany({ companyId, customerId, companyContactId, companyLocationId }),
-              }),
+            onSelectCompany: () => openCompanySelector(),
           })
         }
         disabled={hasOrder}

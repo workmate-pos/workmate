@@ -17,6 +17,7 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
     companyId: workOrder.companyId,
     companyLocationId: workOrder.companyLocationId,
     companyContactId: workOrder.companyContactId,
+    paymentTerms: workOrder.paymentTerms,
   };
 }
 

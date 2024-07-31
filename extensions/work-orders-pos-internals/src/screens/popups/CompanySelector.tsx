@@ -9,11 +9,9 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 
-export function CompanySelector({
-  onSelect,
-}: {
-  onSelect: (companyId: ID, customerId: ID, companyContactId: ID, companyLocationId: ID) => void;
-}) {
+type CompanySelectorOnSelect = (company: { companyId: ID; customerId: ID; companyContactId: ID }) => void;
+
+export function CompanySelector({ onSelect }: { onSelect: CompanySelectorOnSelect }) {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
@@ -76,10 +74,7 @@ export function CompanySelector({
   );
 }
 
-function useCompanyRows(
-  companies: Company[],
-  onSelect: (companyId: ID, customerId: ID, companyContactId: ID, companyLocationId: ID) => void,
-): ListRow[] {
+function useCompanyRows(companies: Company[], onSelect: CompanySelectorOnSelect): ListRow[] {
   const router = useRouter();
 
   return companies.map<ListRow>(company => {
@@ -92,12 +87,13 @@ function useCompanyRows(
           return;
         }
 
-        const { mainContact } = company;
+        const { id: companyId, mainContact } = company;
 
         await router.popCurrent();
-        router.push('CompanyLocationSelector', {
-          companyId: company.id,
-          onSelect: location => onSelect(company.id, mainContact.customer.id, mainContact.id, location.id),
+        onSelect({
+          companyId,
+          customerId: mainContact.customer.id,
+          companyContactId: mainContact.id,
         });
       },
       leftSide: {

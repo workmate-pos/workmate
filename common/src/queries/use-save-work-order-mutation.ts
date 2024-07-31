@@ -57,6 +57,10 @@ function validateWorkOrder(createWorkOrder: Nullable<CreateWorkOrder>): asserts 
     'customFields',
   ];
 
+  if (createWorkOrder.companyId !== null) {
+    requiredKeys.push('companyLocationId', 'companyContactId');
+  }
+
   for (const key of requiredKeys) {
     if (createWorkOrder[key] === null) {
       errors[key] = 'This field is required';

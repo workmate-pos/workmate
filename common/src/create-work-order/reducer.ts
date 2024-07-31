@@ -20,7 +20,7 @@ export type CreateWorkOrderAction =
     } & Partial<CreateWorkOrder>)
   | ({
       type: 'setCompany';
-    } & Pick<CreateWorkOrder, 'companyId' | 'companyLocationId' | 'companyContactId' | 'customerId'>)
+    } & Pick<CreateWorkOrder, 'companyId' | 'companyLocationId' | 'companyContactId' | 'customerId' | 'paymentTerms'>)
   | ({
       type: 'setCustomer';
     } & Pick<CreateWorkOrder, 'customerId'>)

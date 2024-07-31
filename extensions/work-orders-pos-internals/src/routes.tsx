@@ -44,6 +44,7 @@ import {
   CompanyLocationSelector,
   CompanyLocationSelectorProps,
 } from '@work-orders/common-pos/screens/CompanyLocationSelector.js';
+import { PaymentTermsSelector } from './screens/popups/PaymentTermsSelector.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -187,5 +188,9 @@ export const { Router, useRouter } = createRouter({
   ItemSelector: {
     title: 'Select item',
     Component: ItemSelector,
+  },
+  PaymentTermsSelector: {
+    title: 'Select Payment Terms',
+    Component: PaymentTermsSelector,
   },
 });

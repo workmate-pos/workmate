@@ -11,6 +11,9 @@ import { DateModal } from '@web/frontend/components/shared-orders/modals/DateMod
 import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
 import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
+import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
 
 export function WorkOrderGeneralCard({
   createWorkOrder,
@@ -19,6 +22,7 @@ export function WorkOrderGeneralCard({
   onCustomerSelectorClick,
   onCompanySelectorClick,
   onCompanyLocationSelectorClick,
+  onPaymentTermsSelectorClick,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
   dispatch: CreateWorkOrderDispatchProxy;
@@ -26,6 +30,7 @@ export function WorkOrderGeneralCard({
   onCustomerSelectorClick: () => void;
   onCompanySelectorClick: () => void;
   onCompanyLocationSelectorClick: () => void;
+  onPaymentTermsSelectorClick: () => void;
 }) {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
 
@@ -57,6 +62,39 @@ export function WorkOrderGeneralCard({
   const { workOrder } = workOrderQuery.data ?? {};
 
   const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
+
+  const paymentTermsQueries = usePaymentTermsTemplatesQueries({
+    fetch,
+    types: [...paymentTermTypes],
+  });
+  const paymentTermsTemplates = Object.values(paymentTermsQueries)
+    .flatMap(query => query.data)
+    .filter(isNonNullable);
+
+  const paymentTermsText = (() => {
+    if (!createWorkOrder.paymentTerms) return 'No payment terms';
+
+    const isLoading = Object.values(paymentTermsQueries).some(query => query.isLoading);
+    const selectedTemplate = paymentTermsTemplates.find(
+      hasPropertyValue('id', createWorkOrder.paymentTerms.templateId),
+    );
+
+    if (!selectedTemplate || isLoading) {
+      return 'Loading...';
+    }
+
+    if (!selectedTemplate) {
+      return 'Unknown';
+    }
+
+    if (selectedTemplate.paymentTermsType === 'FIXED') {
+      return createWorkOrder.paymentTerms.date
+        ? `Due ${new Date(createWorkOrder.paymentTerms.date).toLocaleDateString()}`
+        : 'Due on unknown date';
+    }
+
+    return selectedTemplate.name;
+  })();
 
   return (
     <>
@@ -129,6 +167,18 @@ export function WorkOrderGeneralCard({
                     : companyLocation?.name ?? 'Unknown location'
               }
               onFocus={() => onCompanyLocationSelectorClick()}
+            />
+          )}
+
+          {createWorkOrder.companyId && (
+            <TextField
+              label={'Payment Terms'}
+              autoComplete="off"
+              requiredIndicator
+              disabled={disabled || hasOrder}
+              readOnly
+              onFocus={() => onPaymentTermsSelectorClick()}
+              value={paymentTermsText}
             />
           )}
 
