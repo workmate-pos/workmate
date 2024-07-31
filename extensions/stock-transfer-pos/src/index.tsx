@@ -13,7 +13,7 @@ import { useEffect, useState } from 'react';
 
 function SmartGridTile() {
   return (
-    <AppProvider appUrl={process.env.APP_URL!}>
+    <AppProvider appUrl={"https://work-orders-staging.teifi.dev"!}>
       <ReactQueryProvider>
         <TileWithNotifications />
       </ReactQueryProvider>
@@ -67,7 +67,7 @@ function TileWithNotifications() {
 
 function SmartGridModal() {
   return (
-    <AppProvider appUrl={process.env.APP_URL!}>
+    <AppProvider appUrl={"https://work-orders-staging.teifi.dev"!}>
       <ReactQueryProvider>
         <DialogProvider>
           <ScreenSizeProvider>

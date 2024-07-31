@@ -327,7 +327,7 @@ function WorkOrder({
         <CustomerSelectorModal
           open={isCustomerSelectorModalOpen}
           onClose={() => setIsCustomerSelectorModalOpen(false)}
-          onSelect={customerId => dispatch.setPartial({ customerId })}
+          onSelect={customerId => dispatch.setCustomer({ customerId })}
           onSelectCompany={() => setIsCompanySelectorModalOpen(true)}
           setToastAction={setToastAction}
         />

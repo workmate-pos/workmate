@@ -14,7 +14,7 @@ const SmartGridModal = () => {
   const queryClient = new QueryClient();
 
   return (
-    <AppProvider appUrl={process.env.APP_URL!}>
+    <AppProvider appUrl={"https://work-orders-staging.teifi.dev"!}>
       <ScreenSizeProvider>
         <QueryClientProvider client={queryClient}>
           <DialogProvider>
