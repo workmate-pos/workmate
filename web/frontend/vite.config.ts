@@ -1,5 +1,5 @@
 import { defineConfig, HmrOptions, loadEnv } from 'vite';
-import { dirname } from 'path';
+import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
@@ -59,6 +59,9 @@ export default defineConfig(({ mode }) => {
     define,
     resolve: {
       preserveSymlinks: true,
+      alias: {
+        '@work-orders/common': resolve(__dirname, '../../common/src'),
+      },
     },
     server: {
       host: 'localhost',

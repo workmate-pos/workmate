@@ -44,17 +44,6 @@ export default class CustomerController {
     return res.json({ customers });
   }
 
-  @Get('/:id')
-  async fetchCustomer(req: Request<{ id: ID }>, res: Response<FetchCustomerResponse>) {
-    const session: Session = res.locals.shopify.session;
-    const { id } = req.params;
-
-    const graphql = new Graphql(session);
-    const { customer } = await gql.customer.get.run(graphql, { id });
-
-    return res.json({ customer });
-  }
-
   @Get('/metafields')
   async fetchCustomerMetafields(req: Request, res: Response<FetchCustomerMetafieldsResponse>) {
     const session: Session = res.locals.shopify.session;
@@ -74,6 +63,17 @@ export default class CustomerController {
         name,
       })),
     });
+  }
+
+  @Get('/:id')
+  async fetchCustomer(req: Request<{ id: ID }>, res: Response<FetchCustomerResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { id } = req.params;
+
+    const graphql = new Graphql(session);
+    const { customer } = await gql.customer.get.run(graphql, { id });
+
+    return res.json({ customer });
   }
 }
 

@@ -2,8 +2,8 @@
   "name": "work-orders-backend",
   "displayName": "Work Orders",
   "version": "1.0.0",
+  "sideEffects": false,
   "license": "UNLICENSED",
-  "exports": "./dist/index.js",
   "type": "module",
   "scripts": {
     "clean": "rm -fr dist node_modules",
@@ -27,6 +27,8 @@
     "dev:watch": "concurrently -k -p \"[{name}]\" -n \"pgtyped,graphql-codegen\" -c \"blue.bold,pink.bold\" \"npm run pgtyped:watch\" \"npm run graphql-codegen:watch\""
   },
   "dependencies": {
+    "@conform-to/react": "^1.1.5",
+    "@conform-to/zod": "^1.1.5",
     "@pgtyped/runtime": "^2.3.0",
     "@prisma/client": "^5.5.2",
     "@sentry/node": "^7.74.1",
@@ -42,6 +44,7 @@
     "https-proxy-agent": "^7.0.4",
     "liquidjs": "^10.10.1",
     "mailgun.js": "^10.2.1",
+    "multer": "^1.4.5-lts.1",
     "node-fetch": "^3.3.2",
     "pg": "^8.11.3",
     "pg-format": "^1.0.4",
@@ -49,7 +52,8 @@
     "tiny-invariant": "^1.3.1",
     "ts-pattern": "^5.2.0",
     "uuid": "^9.0.1",
-    "work-order-shopify-order": "file:../work-order-shopify-order"
+    "work-order-shopify-order": "file:../work-order-shopify-order",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@pgtyped/cli": "^2.3.0",
@@ -59,6 +63,7 @@
     "@types/cors": "^2.8.15",
     "@types/express": "^4.17.20",
     "@types/jsonwebtoken": "^9.0.4",
+    "@types/multer": "^1.4.11",
     "@types/node": "^20.8.7",
     "@types/pg": "^8.10.9",
     "@types/pg-format": "^1.0.4",

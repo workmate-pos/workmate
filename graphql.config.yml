@@ -14,6 +14,7 @@ extensions:
       Money: "`${ number}`"
       Decimal: "`${ number}`"
       DateTime: "string"
+      HTML: "string"
     requiredTypes:
       - "MoneyV2"
       - "Attribute"

@@ -32,7 +32,7 @@ export const fixedPriceLabourChargeMetaobject = {
         key: 'customize-amount',
         type: 'boolean',
         description: 'Whether the amount can be changed by inside of POS',
-        required: true,
+        // required: true,
       },
       {
         name: 'Removable',
@@ -45,6 +45,7 @@ export const fixedPriceLabourChargeMetaobject = {
   },
   parse(metaobject: gql.products.FixedPriceLabourChargeFragment.Result) {
     return {
+      id: metaobject.id,
       type: 'fixed-price-labour-charge',
       name: metaobject.name?.value ?? never(),
       amount: parseMoney(metaobject.amount?.value),

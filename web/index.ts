@@ -15,6 +15,7 @@ import { runMigrations } from './services/db/migrations/index.js';
 import { ApiVersion } from '@shopify/shopify-api';
 import { restResources } from '@shopify/shopify-api/rest/admin/2024-01';
 import { shopifyPlanHandler, ShopifyPlanKey } from './decorators/shopify-plan.js';
+import { formBodyHandler, FormBodyKey } from './decorators/form-body.js';
 
 await registerEnumTypes();
 
@@ -26,6 +27,7 @@ installableSegmentService.register();
 registerDecorator(AppPlanKey, appPlanHandler);
 registerDecorator(PermissionKey, permissionHandler);
 registerDecorator(ShopifyPlanKey, shopifyPlanHandler);
+registerDecorator(FormBodyKey, formBodyHandler);
 
 export const sessionStorage = new ShopifySessionStorage();
 

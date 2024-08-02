@@ -4,6 +4,12 @@ query getProduct($id: ID!) {
   }
 }
 
+query get($id: ID!) {
+  productVariant(id: $id) {
+    ...ProductVariantFragment
+  }
+}
+
 query getPage(
   $first: Int = 10,
   $after: String,
@@ -74,6 +80,7 @@ fragment ProductVariantFragment on ProductVariant {
   }
   requiresComponents
   defaultCharges: metafield(namespace: "$app", key: "default-charges") {
+    id
     references(first: 10) {
       nodes {
         __typename
@@ -93,6 +100,7 @@ fragment ProductFragment on Product {
   title
   handle
   hasOnlyDefaultVariant
+  descriptionHtml
   featuredImage {
     url
   }
@@ -100,6 +108,7 @@ fragment ProductFragment on Product {
   description
   productType
   serviceType: metafield(namespace: "$app", key: "service-type") {
+    id
     value
   }
 }
@@ -122,6 +131,7 @@ query getProductVariantComponents($id: ID!) {
 }
 
 fragment FixedPriceLabourChargeFragment on Metaobject {
+  id
   type
   name: field(key: "name") {
     value
@@ -138,6 +148,7 @@ fragment FixedPriceLabourChargeFragment on Metaobject {
 }
 
 fragment HourlyLabourChargeFragment on Metaobject {
+  id
   type
   name: field(key: "name") {
     value
@@ -194,5 +205,29 @@ fragment DatabaseProductVariantFragment on ProductVariant {
   }
   inventoryItem {
     id
+  }
+}
+
+mutation updateVariant($input: ProductVariantInput!) {
+  productVariantUpdate(input: $input) {
+    productVariant {
+      ...ProductVariantFragment
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+mutation updateProduct($input: ProductInput!) {
+  productUpdate(input: $input) {
+    product {
+      id
+    }
+    userErrors {
+      field
+      message
+    }
   }
 }

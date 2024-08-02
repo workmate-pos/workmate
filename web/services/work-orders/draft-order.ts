@@ -166,6 +166,7 @@ export async function getWorkOrderDraftOrderInput(
           : null,
     appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
     paymentTerms: await getPaymentTerms(session, workOrder),
+    reserveInventoryUntil: null,
   };
 }
 

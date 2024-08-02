@@ -62,6 +62,7 @@ export async function ensureMetafieldDefinitionExists(
   }
 
   if (definition.pin) {
+    // This can fail if there are already many pinned, so just ignore the error
     await gql.metafields.pin
       .run(graphql, {
         id: result.metafieldDefinitionCreate.createdDefinition.id,

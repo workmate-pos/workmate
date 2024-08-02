@@ -57,6 +57,7 @@ export const hourlyLabourChargeMetaobject = {
   },
   parse(metaobject: gql.products.HourlyLabourChargeFragment.Result) {
     return {
+      id: metaobject.id,
       type: 'hourly-labour-charge',
       name: metaobject.name?.value ?? never(),
       rate: parseMoney(metaobject.rate?.value),

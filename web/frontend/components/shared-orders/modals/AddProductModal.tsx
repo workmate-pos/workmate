@@ -150,7 +150,18 @@ export function AddProductModal({
   const shouldShowPrice = companyLocationId === null;
 
   return (
-    <Modal open={open} onClose={onClose} title={`Add ${titleCase(thing)}`}>
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={`Add ${titleCase(thing)}`}
+      secondaryActions={[
+        {
+          content: 'Reload',
+          onAction: () => productVariantsQuery.refetch(),
+          loading: productVariantsQuery.isRefetching,
+        },
+      ]}
+    >
       {(location || vendorName) && (
         <Modal.Section>
           <InlineStack align={'center'}>

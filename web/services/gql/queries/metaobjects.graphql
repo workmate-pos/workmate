@@ -1,5 +1,8 @@
 mutation createDefinition($definition: MetaobjectDefinitionCreateInput!) {
   metaobjectDefinitionCreate(definition: $definition) {
+    metaobjectDefinition {
+      id
+    }
     userErrors {
       field
       message
@@ -10,6 +13,7 @@ mutation createDefinition($definition: MetaobjectDefinitionCreateInput!) {
 mutation updateDefinition($id: ID!, $definition: MetaobjectDefinitionUpdateInput!) {
   metaobjectDefinitionUpdate(id: $id, definition: $definition) {
     metaobjectDefinition {
+      id
       type
     }
     userErrors {
@@ -35,5 +39,94 @@ mutation deleteDefinition($id: ID!) {
       field
       message
     }
+  }
+}
+
+query getPage($first: Int = 10, $after: String, $type: String!) {
+  metaobjects(first: $first, after: $after, type: $type) {
+    nodes {
+      ...MetaobjectFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+query get($id: ID!) {
+  metaobject(id: $id) {
+    ...MetaobjectFragment
+  }
+}
+
+mutation update($id: ID!, $input: MetaobjectUpdateInput!) {
+  metaobjectUpdate(id: $id, metaobject: $input) {
+    metaobject {
+      ...MetaobjectFragment
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+mutation create($input: MetaobjectCreateInput!) {
+  metaobjectCreate(metaobject: $input) {
+    metaobject {
+      ...MetaobjectFragment
+    }
+    userErrors {
+      field
+      message
+    }
+  }
+}
+
+fragment MetaobjectFragment on Metaobject {
+  id
+  ...FixedPriceLabourChargeFragment
+  ...HourlyLabourChargeFragment
+}
+
+
+fragment FixedPriceLabourChargeFragment on Metaobject {
+  id
+  type
+  name: field(key: "name") {
+    value
+  }
+  amount: field(key: "amount") {
+    value
+  }
+  customizeAmount: field(key: "customize-amount") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
+  }
+}
+
+fragment HourlyLabourChargeFragment on Metaobject {
+  id
+  type
+  name: field(key: "name") {
+    value
+  }
+  rate: field(key: "rate") {
+    value
+  }
+  hours: field(key: "hours") {
+    value
+  }
+  customizeRate: field(key: "customize-rate") {
+    value
+  }
+  customizeHours: field(key: "customize-hours") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
   }
 }

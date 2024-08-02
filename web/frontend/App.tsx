@@ -28,6 +28,10 @@ export default function App() {
                     destination: '/purchase-orders',
                   },
                   {
+                    label: 'Services & Labour',
+                    destination: '/services-and-labour',
+                  },
+                  {
                     label: 'Employee Rates',
                     destination: '/employee-rates',
                   },
