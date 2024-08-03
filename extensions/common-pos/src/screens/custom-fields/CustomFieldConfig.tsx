@@ -15,8 +15,6 @@ import { CustomField } from '../../components/CustomField.js';
 import { DropdownProps } from '../Dropdown.js';
 import { CustomFieldValuesConfigProps } from './CustomFieldValuesConfig.js';
 
-// TODO: Configuring list of options - segmented "All values" or "List of options"
-
 export type CustomFieldConfigProps = {
   initialCustomFields: Record<string, string>;
   onSave: (customFields: Record<string, string>) => void;
