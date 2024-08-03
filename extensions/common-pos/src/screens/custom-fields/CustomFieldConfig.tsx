@@ -11,6 +11,11 @@ import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-prese
 import { SelectPresetToEditProps } from './SelectPresetToEdit.js';
 import { EditPresetProps } from './EditPreset.js';
 import { SelectPresetProps } from './SelectPreset.js';
+import { CustomField } from '../../components/CustomField.js';
+import { DropdownProps } from '../Dropdown.js';
+import { CustomFieldValuesConfigProps } from './CustomFieldValuesConfig.js';
+
+// TODO: Configuring list of options - segmented "All values" or "List of options"
 
 export type CustomFieldConfigProps = {
   initialCustomFields: Record<string, string>;
@@ -20,6 +25,8 @@ export type CustomFieldConfigProps = {
     SavePreset: Route<SavePresetProps>;
     SelectPresetToEdit: Route<SelectPresetToEditProps>;
     SelectPreset: Route<SelectPresetProps>;
+    Dropdown: Route<DropdownProps<string>>;
+    CustomFieldValuesConfig: Route<CustomFieldValuesConfigProps>;
   }>;
   type: CustomFieldsPresetType;
 };
@@ -107,30 +114,41 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
       </ResponsiveGrid>
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
-        <ResponsiveGrid columns={2}>
-          {Object.entries(customFields).flatMap(([key, value]) => [
-            <TextField
-              key={`${key}-value`}
-              label={key}
-              value={value}
-              onChange={(value: string) => {
-                setHasUnsavedChanges(true);
-                setCustomFields({
-                  ...customFields,
-                  [key]: value,
-                });
-              }}
-            />,
-            <Button
-              key={`${key}-remove-button`}
-              title={'Remove'}
-              type={'destructive'}
-              onPress={() => {
-                setHasUnsavedChanges(true);
-                setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)));
-              }}
-            />,
-          ])}
+        <ResponsiveGrid columns={1}>
+          {Object.entries(customFields).flatMap(([key, value]) => (
+            <ResponsiveGrid columns={2}>
+              <CustomField
+                key={`${key}-value`}
+                name={key}
+                value={value}
+                onChange={value => {
+                  setHasUnsavedChanges(true);
+                  setCustomFields({
+                    ...customFields,
+                    [key]: value,
+                  });
+                }}
+                useRouter={useRouter}
+              />
+
+              <ResponsiveGrid columns={2}>
+                <Button
+                  key={`${key}-remove-button`}
+                  title={'Remove'}
+                  type={'destructive'}
+                  onPress={() => {
+                    setHasUnsavedChanges(true);
+                    setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)));
+                  }}
+                />
+                <Button
+                  key={`${key}-manage`}
+                  title={'Values'}
+                  onPress={() => router.push('CustomFieldValuesConfig', { name: key, useRouter })}
+                />
+              </ResponsiveGrid>
+            </ResponsiveGrid>
+          ))}
         </ResponsiveGrid>
         {Object.keys(customFields).length === 0 && (
           <Stack direction="horizontal" alignment="center" paddingVertical={'Large'}>

@@ -6,10 +6,12 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { UpsertCustomFieldsPreset } from '../../schemas/generated/upsert-custom-fields-preset.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { unit } from '../../services/db/unit-of-work.js';
+import { Permission } from '../../decorators/permission.js';
 
 @Authenticated()
 export default class CustomFieldsPresetsController {
   @Get('/:type')
+  @Permission('read_settings')
   async fetchCustomFieldsPresets(req: Request<{ type: string }>, res: Response<FetchCustomFieldsPresetsResponse>) {
     const { shop }: Session = res.locals.shopify.session;
     const { type } = req.params;
@@ -30,6 +32,7 @@ export default class CustomFieldsPresetsController {
 
   @Post('/:type/:currentName')
   @BodySchema('upsert-custom-fields-preset')
+  @Permission('write_settings')
   async upsertCustomFieldsPreset(
     req: Request<{ type: string; currentName: string }, unknown, UpsertCustomFieldsPreset>,
     res: Response<UpsertCustomFieldsPresetResponse>,
@@ -41,6 +44,10 @@ export default class CustomFieldsPresetsController {
     assertValidPresetType(type);
 
     await unit(async () => {
+      if (isDefault) {
+        await db.customFieldPresets.undefaultCustomFieldsPresets({ shop, type });
+      }
+
       await db.customFieldPresets.removeCustomFieldsPreset({ shop, name: currentName, type });
       await db.customFieldPresets.upsertCustomFieldsPreset({ shop, name, keys, type, default: isDefault });
     });
@@ -49,6 +56,7 @@ export default class CustomFieldsPresetsController {
   }
 
   @Delete('/:type/:name')
+  @Permission('write_settings')
   async deleteCustomFieldsPreset(
     req: Request<{ type: string; name: string }>,
     res: Response<DeleteCustomFieldsPresetResponse>,

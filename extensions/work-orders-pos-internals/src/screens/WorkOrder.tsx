@@ -48,6 +48,8 @@ import {
   useCreateWorkOrderReducer,
   WIPCreateWorkOrder,
 } from '@work-orders/common/create-work-order/reducer.js';
+import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
+import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -408,14 +410,15 @@ function WorkOrderCustomFields({
 
   return (
     <ResponsiveGrid columns={4}>
-      {Object.entries(createWorkOrder.customFields).map(([key, value]) => (
-        <FormStringField
+      {Object.keys(createWorkOrder.customFields).map(key => (
+        <CustomField
           key={key}
-          label={key}
-          value={value}
+          name={key}
+          value={createWorkOrder.customFields[key] ?? ''}
           onChange={(value: string) =>
             dispatch.setPartial({ customFields: { ...createWorkOrder.customFields, [key]: value } })
           }
+          useRouter={useRouter}
         />
       ))}
 
