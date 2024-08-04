@@ -18,9 +18,10 @@ import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@web/frontend/components/shared-orders/CustomFieldsList.js';
 import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
-import { ImportCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/ImportCustomFieldPresetModal.js';
+import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
+import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 
 export function PurchaseOrderLineItemModal({
   initialProduct,
@@ -41,15 +42,15 @@ export function PurchaseOrderLineItemModal({
 }) {
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
-  const [isImportCustomFieldPresetModalOpen, setIsImportCustomFieldPresetModalOpen] = useState(false);
-  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
+  const [isCustomFieldPresetsModalOpen, setIsCustomFieldPresetsModalOpen] = useState(false);
+  const [isFieldValuesModalOpen, setIsFieldValuesModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   const isSubModalOpen = [
     isNewCustomFieldModalOpen,
     isSaveCustomFieldPresetModalOpen,
-    isImportCustomFieldPresetModalOpen,
-    isSelectCustomFieldPresetToEditModalOpen,
+    isCustomFieldPresetsModalOpen,
+    isFieldValuesModalOpen,
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
@@ -168,11 +169,11 @@ export function PurchaseOrderLineItemModal({
         <Modal.Section>
           <CustomFieldsList
             customFields={product.customFields}
-            onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
+            onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
-            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
             onUpdate={customFields => setProduct(product => ({ ...product, customFields }))}
+            onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
           />
         </Modal.Section>
       </Modal>
@@ -198,11 +199,19 @@ export function PurchaseOrderLineItemModal({
         />
       )}
 
-      {isImportCustomFieldPresetModalOpen && (
-        <ImportCustomFieldPresetModal
+      {isFieldValuesModalOpen && (
+        <CustomFieldValuesSelectorModal
+          names={Object.keys(product.customFields)}
+          open={isFieldValuesModalOpen}
+          onClose={() => setIsFieldValuesModalOpen(false)}
+        />
+      )}
+
+      {isCustomFieldPresetsModalOpen && (
+        <CustomFieldPresetsModal
           type={'LINE_ITEM'}
-          open={isImportCustomFieldPresetModalOpen && !customFieldPresetNameToEdit}
-          onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
+          open={isCustomFieldPresetsModalOpen && !customFieldPresetNameToEdit}
+          onClose={() => setIsCustomFieldPresetsModalOpen(false)}
           onOverride={fieldNames =>
             setProduct(product => ({
               ...product,
@@ -222,16 +231,6 @@ export function PurchaseOrderLineItemModal({
           }}
           onEdit={presetName => setCustomFieldPresetNameToEdit(presetName)}
           setToastAction={setToastAction}
-        />
-      )}
-
-      {isSelectCustomFieldPresetToEditModalOpen && (
-        <SelectCustomFieldPresetModal
-          open={isSelectCustomFieldPresetToEditModalOpen}
-          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
-          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
-          setToastAction={setToastAction}
-          type="LINE_ITEM"
         />
       )}
 

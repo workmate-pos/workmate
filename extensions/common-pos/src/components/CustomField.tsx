@@ -3,6 +3,7 @@ import { Route, UseRouter } from '../screens/router.js';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
 import { DropdownProps } from '../screens/Dropdown.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 export function CustomField({
   name,
@@ -20,7 +21,7 @@ export function CustomField({
   const fetch = useAuthenticatedFetch();
   const router = useRouter();
 
-  const customFieldValueOptionsQuery = useCustomFieldValueOptionsQuery({ fetch, name: name });
+  const customFieldValueOptionsQuery = useCustomFieldValueOptionsQuery({ fetch, name });
 
   return (
     <FormStringField
@@ -31,10 +32,12 @@ export function CustomField({
         const options = customFieldValueOptionsQuery.data;
 
         if (options && options.length > 0) {
+          const clearValue = 'Clear Value';
+
           router.push('Dropdown', {
             title: name,
-            options: customFieldValueOptionsQuery.data ?? [],
-            onSelect: onChange,
+            options: unique([clearValue, value, ...options]),
+            onSelect: selected => onChange(selected === clearValue ? '' : selected),
             useRouter,
           });
         }

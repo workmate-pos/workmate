@@ -1,23 +1,24 @@
 import { BlockStack, Button, ButtonGroup, InlineStack, Text, TextField } from '@shopify/polaris';
+import { CustomField } from '@web/frontend/components/shared-orders/CustomField.js';
 
 export type CustomFieldsListProps = {
   customFields: Record<string, string>;
   onUpdate: (customFields: Record<string, string>) => void;
   disabled?: boolean;
-  onImportPresetClick: () => void;
+  onPresetsClick: () => void;
   onSavePresetClick: () => void;
-  onEditPresetClick: () => void;
   onAddCustomFieldClick: () => void;
+  onFieldValuesClick: () => void;
 };
 
 export function CustomFieldsList({
   customFields,
   onUpdate,
   disabled,
-  onImportPresetClick,
+  onPresetsClick,
   onSavePresetClick,
-  onEditPresetClick,
   onAddCustomFieldClick,
+  onFieldValuesClick,
 }: CustomFieldsListProps) {
   return (
     <BlockStack gap={'400'}>
@@ -26,11 +27,11 @@ export function CustomFieldsList({
           Custom Fields
         </Text>
         <ButtonGroup>
-          <Button variant={'plain'} onClick={() => onEditPresetClick()} disabled={disabled}>
-            Edit preset
+          <Button variant={'plain'} onClick={() => onFieldValuesClick()} disabled={disabled}>
+            Field Values
           </Button>
-          <Button variant={'plain'} onClick={() => onImportPresetClick()} disabled={disabled}>
-            Import preset
+          <Button variant={'plain'} onClick={() => onPresetsClick()} disabled={disabled}>
+            Presets
           </Button>
           <Button
             variant={'plain'}
@@ -43,26 +44,12 @@ export function CustomFieldsList({
       </InlineStack>
 
       {Object.entries(customFields).map(([key, value]) => (
-        <TextField
-          key={key}
-          autoComplete={'off'}
-          label={key}
+        <CustomField
+          name={key}
           value={value}
-          onChange={(value: string) => onUpdate({ ...customFields, [key]: value })}
-          labelAction={
-            !disabled
-              ? {
-                  content: 'Remove',
-                  onAction: () => {
-                    const filteredCustomFields = Object.fromEntries(
-                      Object.entries(customFields).filter(([k]) => k !== key),
-                    );
-                    onUpdate(filteredCustomFields);
-                  },
-                }
-              : undefined
-          }
           disabled={disabled}
+          onChange={value => onUpdate({ ...customFields, [key]: value })}
+          onRemove={() => onUpdate(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)))}
         />
       ))}
 

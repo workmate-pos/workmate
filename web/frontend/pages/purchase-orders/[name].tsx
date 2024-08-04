@@ -32,7 +32,7 @@ import { PurchaseOrderPrintModal } from '@web/frontend/components/purchase-order
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 import { VendorSelectorModal } from '@web/frontend/components/shared-orders/modals/VendorSelectorModal.js';
 import { AddEmployeeModal } from '@web/frontend/components/shared-orders/modals/AddEmployeeModal.js';
-import { ImportCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/ImportCustomFieldPresetModal.js';
+import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
 import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
 import { PurchaseOrderGeneralCard } from '@web/frontend/components/purchase-orders/PurchaseOrderGeneralCard.js';
@@ -48,6 +48,7 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
 import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
+import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 
 export default function () {
   return (
@@ -195,14 +196,14 @@ function PurchaseOrder({
 
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
-  const [isImportCustomFieldPresetModalOpen, setIsImportCustomFieldPresetModalOpen] = useState(false);
+  const [isCustomFieldPresetsModalOpen, setIsCustomFieldPresetsModalOpen] = useState(false);
+  const [isFieldValuesModalOpen, setIsFieldValuesModalOpen] = useState(false);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isVendorSelectorModalOpen, setIsVendorSelectorModalOpen] = useState(false);
   const [isLocationSelectorModalOpen, setIsLocationSelectorModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isAddOrderProductModalOpen, setIsAddOrderProductModalOpen] = useState(false);
-  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   if (!settingsQuery.data) {
@@ -274,10 +275,10 @@ function PurchaseOrder({
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isLoading}
-            onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
-            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
+            onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
+            onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
           />
         </InlineGrid>
 
@@ -364,11 +365,11 @@ function PurchaseOrder({
         />
       )}
 
-      {isImportCustomFieldPresetModalOpen && (
-        <ImportCustomFieldPresetModal
+      {isCustomFieldPresetsModalOpen && (
+        <CustomFieldPresetsModal
           type={'PURCHASE_ORDER'}
-          open={isImportCustomFieldPresetModalOpen}
-          onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
+          open={isCustomFieldPresetsModalOpen}
+          onClose={() => setIsCustomFieldPresetsModalOpen(false)}
           onOverride={fieldNames => {
             dispatch.setPartial({
               customFields: Object.fromEntries(
@@ -388,6 +389,14 @@ function PurchaseOrder({
           }}
           onEdit={presetName => setCustomFieldPresetNameToEdit(presetName)}
           setToastAction={setToastAction}
+        />
+      )}
+
+      {isFieldValuesModalOpen && (
+        <CustomFieldValuesSelectorModal
+          names={Object.keys(createPurchaseOrder.customFields)}
+          open={isFieldValuesModalOpen}
+          onClose={() => setIsFieldValuesModalOpen(false)}
         />
       )}
 
@@ -449,16 +458,6 @@ function PurchaseOrder({
           setToastAction={setToastAction}
           onClose={() => setIsAddOrderProductModalOpen(false)}
           onAdd={products => dispatch.addProducts({ products })}
-        />
-      )}
-
-      {isSelectCustomFieldPresetToEditModalOpen && (
-        <SelectCustomFieldPresetModal
-          open={isSelectCustomFieldPresetToEditModalOpen && !customFieldPresetNameToEdit}
-          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
-          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
-          setToastAction={setToastAction}
-          type="PURCHASE_ORDER"
         />
       )}
 

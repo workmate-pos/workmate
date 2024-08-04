@@ -107,26 +107,15 @@ export function CustomFieldValuesConfig({ name, useRouter }: CustomFieldValuesCo
           type={'primary'}
           isLoading={isLoading}
           onPress={() => {
+            const onSuccess = () => {
+              toast.show('Saved custom field options!');
+              router.popCurrent();
+            };
+
             if (tab === 'allow-any-value') {
-              deleteCustomFieldValueOptionsMutation.mutate(
-                { name },
-                {
-                  onSuccess() {
-                    toast.show('Saved custom field options!');
-                    router.popCurrent();
-                  },
-                },
-              );
+              deleteCustomFieldValueOptionsMutation.mutate({ name }, { onSuccess });
             } else if (tab === 'choose-from-options') {
-              saveCustomFieldValueOptionsMutation.mutate(
-                { name, values: options },
-                {
-                  onSuccess() {
-                    toast.show('Saved custom field options!');
-                    router.popCurrent();
-                  },
-                },
-              );
+              saveCustomFieldValueOptionsMutation.mutate({ name, values: options }, { onSuccess });
             } else {
               return tab satisfies never;
             }
@@ -157,7 +146,7 @@ function ChooseFromOptions({
 
   useEffect(() => {
     setChangedOptions(options);
-  }, [options.length]);
+  }, [options]);
 
   return (
     <ResponsiveGrid columns={3}>
@@ -169,10 +158,11 @@ function ChooseFromOptions({
             setChangedOptions([...changedOptions.slice(0, i), option, ...changedOptions.slice(i + 1)])
           }
           onBlur={() => {
-            if (option.trim().length > 0) {
-              setOptions([...changedOptions.slice(0, i), option, ...changedOptions.slice(i + 1)]);
-            } else {
+            const shouldDelete = option.trim().length === 0;
+            if (shouldDelete) {
               setOptions([...changedOptions.slice(0, i), ...changedOptions.slice(i + 1)]);
+            } else {
+              setOptions(changedOptions);
             }
           }}
         />
