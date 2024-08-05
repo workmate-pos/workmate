@@ -91,8 +91,6 @@ export function WorkOrderItemModal({
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
-  // TODO: Support custom items
-
   const initialItem =
     createWorkOrder.items.filter(hasPropertyValue('type', itemType)).find(hasPropertyValue('uuid', itemUuid)) ??
     never('Invalid item');

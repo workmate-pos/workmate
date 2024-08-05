@@ -22,7 +22,7 @@ export function CompanyLocationSelector({ companyId, onSelect, useRouter }: Comp
   return (
     <BaseLocationSelector
       locations={locations}
-      onSelect={onSelect}
+      selection={{ type: 'select', onSelect }}
       query={query}
       onQuery={query => setQuery(query, !query)}
       onLoadMore={locationsQuery.fetchNextPage}

@@ -4,10 +4,13 @@ import { UseRouter } from './router.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import type { Location } from '@work-orders/common/queries/use-locations-query.js';
 import { CompanyLocation } from '@work-orders/common/queries/use-company-locations-query.js';
+import { P, match } from 'ts-pattern';
+import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
+import { useState } from 'react';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export type BaseLocationSelectorProps<T extends Location | CompanyLocation> = {
   locations: T[];
-  onSelect: (location: T) => void;
   query: string;
   onQuery: (query: string) => void;
   onLoadMore: () => void;
@@ -17,11 +20,16 @@ export type BaseLocationSelectorProps<T extends Location | CompanyLocation> = {
   useRouter: UseRouter;
   isError: boolean;
   error: unknown;
+  selection: LocationSelectOptions<T>;
 };
+
+export type LocationSelectOptions<T extends Location | CompanyLocation> =
+  | { type: 'select'; onSelect: (location: T) => void }
+  // Toggle uses ID since it is possible that an unloaded location is in the initial selection.
+  | { type: 'toggle'; onSelection: (locations: ID[]) => void; initialSelection?: ID[] };
 
 export function BaseLocationSelector<const T extends Location | CompanyLocation>({
   locations,
-  onSelect,
   query,
   onQuery,
   useRouter,
@@ -31,8 +39,9 @@ export function BaseLocationSelector<const T extends Location | CompanyLocation>
   isError,
   error,
   onLoadMore,
+  selection,
 }: BaseLocationSelectorProps<T>) {
-  const rows = getLocationRows(useRouter, locations, onSelect);
+  const rows = useLocationRows(useRouter, locations, selection);
 
   return (
     <ScrollView>
@@ -75,15 +84,17 @@ export function BaseLocationSelector<const T extends Location | CompanyLocation>
   );
 }
 
-function getLocationRows<T extends Location | CompanyLocation>(
+function useLocationRows<T extends Location | CompanyLocation>(
   useRouter: BaseLocationSelectorProps<T>['useRouter'],
   locations: T[],
-  onSelect: BaseLocationSelectorProps<T>['onSelect'],
+  props: LocationSelectOptions<T>,
 ) {
+  const [selection, setSelection] = useState<ID[]>(props.type === 'toggle' ? props.initialSelection ?? [] : []);
+
   const router = useRouter();
 
   return locations.map<ListRow>(location => {
-    let subtitle: ListRow['leftSide']['subtitle'] = undefined;
+    let subtitle: ListRow['leftSide']['subtitle'];
 
     if ('address' in location) {
       subtitle = getFormattedAddressSubtitle(location.address.formatted);
@@ -99,21 +110,36 @@ function getLocationRows<T extends Location | CompanyLocation>(
     return {
       id: location.id,
       onPress: () => {
-        router.popCurrent();
-        onSelect(location);
+        if ('onSelect' in props) {
+          router.popCurrent();
+          props.onSelect(location);
+        } else if ('onSelection' in props) {
+          const newSelection = selection.includes(location.id)
+            ? selection.filter(id => id !== location.id)
+            : [...selection, location.id];
+
+          setSelection(newSelection);
+          props.onSelection(newSelection);
+        } else {
+          return props satisfies never;
+        }
       },
       leftSide: {
         label: location.name,
         subtitle,
       },
-      rightSide: { showChevron: true },
+      rightSide: {
+        showChevron: props.type === 'select',
+        toggleSwitch: props.type === 'toggle' ? { value: selection.includes(location.id) } : undefined,
+      },
     };
   });
 }
 
 function getFormattedAddressSubtitle(formattedAddress: string[]): ListRow['leftSide']['subtitle'] {
-  if (formattedAddress.length === 0) return ['No address'] as const;
-  if (formattedAddress.length === 1) return [formattedAddress[0]!] as const;
-  if (formattedAddress.length === 2) return [formattedAddress[0]!, formattedAddress[1]!] as const;
-  return [formattedAddress[0]!, formattedAddress[1]!, formattedAddress[2]!] as const;
+  return match(formattedAddress)
+    .with([P._, P._, P._], identity)
+    .with([P._, P._], identity)
+    .with([P._], identity)
+    .otherwise(() => undefined);
 }

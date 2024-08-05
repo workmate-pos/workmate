@@ -51,6 +51,7 @@ import {
   CustomFieldValuesConfigProps,
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldValuesConfig.js';
 import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
+import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -119,6 +120,12 @@ export const { Router, useRouter } = createRouter({
     title: 'Select Company Location',
     Component: (props: Omit<CompanyLocationSelectorProps, 'useRouter'>) => (
       <CompanyLocationSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  LocationSelector: {
+    title: 'Select Location',
+    Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
+      <LocationSelector {...props} useRouter={useRouter} />
     ),
   },
   DiscountSelector: {

@@ -3,14 +3,11 @@ import type { Location } from '@work-orders/common/queries/use-locations-query.j
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { UseRouter } from './router.js';
-import { BaseLocationSelector } from './BaseLocationSelector.js';
+import { BaseLocationSelector, LocationSelectOptions } from './BaseLocationSelector.js';
 
-export type LocationSelectorProps = {
-  onSelect: (location: Location) => void;
-  useRouter: UseRouter;
-};
+export type LocationSelectorProps = { useRouter: UseRouter; selection: LocationSelectOptions<Location> };
 
-export function LocationSelector({ onSelect, useRouter }: LocationSelectorProps) {
+export function LocationSelector({ useRouter, selection }: LocationSelectorProps) {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
@@ -21,7 +18,6 @@ export function LocationSelector({ onSelect, useRouter }: LocationSelectorProps)
   return (
     <BaseLocationSelector
       locations={locations}
-      onSelect={onSelect}
       query={query}
       onQuery={query => setQuery(query, !query)}
       onLoadMore={locationsQuery.fetchNextPage}
@@ -31,6 +27,7 @@ export function LocationSelector({ onSelect, useRouter }: LocationSelectorProps)
       useRouter={useRouter}
       isError={locationsQuery.isError}
       error={locationsQuery.error}
+      selection={selection}
     />
   );
 }
