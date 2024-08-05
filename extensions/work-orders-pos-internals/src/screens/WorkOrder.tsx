@@ -491,6 +491,11 @@ function WorkOrderItems({
           onPress={() =>
             router.push('ProductSelector', {
               onSelect: ({ item, charges }) => {
+                if (item.type === 'custom-item') {
+                  // TODO: get rid of this once its supported
+                  item.customFields = {};
+                }
+
                 dispatch.addItems({ items: [item] });
                 dispatch.updateItemCharges({ item, charges });
 

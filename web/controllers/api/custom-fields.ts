@@ -20,9 +20,24 @@ export default class CustomFieldsController {
     const { shop }: Session = res.locals.shopify.session;
     const { name } = req.params;
 
-    const options = await getCustomFieldValueOptions({ shop, name });
+    const [options] = await getCustomFieldValueOptions({ shop, name });
 
-    return res.json({ options });
+    return res.json({ options: options?.values ?? [] });
+  }
+
+  @Get('/fields')
+  @Permission('read_settings')
+  async fetchCustomFieldNames(req: Request, res: Response<FetchCustomFieldNamesResponse>) {
+    const { shop }: Session = res.locals.shopify.session;
+
+    const options = await getCustomFieldValueOptions({ shop });
+
+    return res.json({
+      fields: options.map(option => ({
+        name: option.name,
+        options: option.values,
+      })),
+    });
   }
 
   @Post('/field/:name')
@@ -61,6 +76,13 @@ export default class CustomFieldsController {
 
 export type FetchCustomFieldValueOptionsResponse = {
   options: string[];
+};
+
+export type FetchCustomFieldNamesResponse = {
+  fields: {
+    name: string;
+    options: string[];
+  }[];
 };
 
 export type DeleteCustomFieldValueOptionsResponse = {

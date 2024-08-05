@@ -167,9 +167,14 @@ async function insertWorkOrderCustomFields(workOrderId: number, customFields: Re
 }
 
 async function insertItemCustomFields(workOrderId: number, items: CreateWorkOrder['items']) {
-  const customFields = items.flatMap(({ customFields, uuid: workOrderItemUuid }) =>
-    Object.entries(customFields).map(([key, value]) => ({ workOrderId, workOrderItemUuid, key, value })),
-  );
+  // TODO: Fix this - support custom fields on custom items (first migrate database discriminated unions to jsonb with zod + safeql)
+  //       -> also do this for labour (decreases duplicated code by a shit ton)
+  // TODO: Once done, add back custom fields (ItemConfig: itemType !== 'custom-item', WorkOrder: item.type !== 'custom-item')
+  const customFields = items
+    .filter(hasPropertyValue('type', 'custom-item'))
+    .flatMap(({ customFields, uuid: workOrderItemUuid }) =>
+      Object.entries(customFields).map(([key, value]) => ({ workOrderId, workOrderItemUuid, key, value })),
+    );
 
   if (customFields.length === 0) {
     return;

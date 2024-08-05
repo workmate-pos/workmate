@@ -4,6 +4,8 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
 import { DropdownProps } from '../screens/Dropdown.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
 
 export function CustomField({
   name,
@@ -36,7 +38,7 @@ export function CustomField({
 
           router.push('Dropdown', {
             title: name,
-            options: unique([clearValue, value, ...options]),
+            options: unique([clearValue, value.trim() || null, ...options].filter(isNonNullable)),
             onSelect: selected => onChange(selected === clearValue ? '' : selected),
             useRouter,
           });

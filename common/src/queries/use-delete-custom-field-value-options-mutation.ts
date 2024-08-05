@@ -6,6 +6,7 @@ import {
 } from '@web/controllers/api/custom-fields.js';
 import { UseQueryData } from './react-query.js';
 import { useCustomFieldValueOptionsQuery } from './use-custom-field-value-options-query.js';
+import { useAllCustomFieldValueOptionsQuery } from './use-all-custom-field-value-options-query.js';
 
 export const useDeleteCustomFieldValueOptionsMutation = ({ fetch }: { fetch: Fetch }) => {
   const queryClient = useQueryClient();
@@ -29,6 +30,21 @@ export const useDeleteCustomFieldValueOptionsMutation = ({ fetch }: { fetch: Fet
           ['custom-field-value-options', input.name],
           [] satisfies UseQueryData<typeof useCustomFieldValueOptionsQuery>,
         );
+
+        type AllCustomFieldValueOptionsData = UseQueryData<typeof useAllCustomFieldValueOptionsQuery>;
+
+        const allCustomFieldValueOptions = queryClient.getQueryData<AllCustomFieldValueOptionsData>([
+          'all-custom-field-value-options',
+        ]);
+
+        if (allCustomFieldValueOptions) {
+          queryClient.setQueryData(
+            ['all-custom-field-value-options'],
+            allCustomFieldValueOptions.filter(field => field.name !== input.name),
+          );
+        } else {
+          queryClient.invalidateQueries(['all-custom-field-value-options']);
+        }
       }
     },
   });

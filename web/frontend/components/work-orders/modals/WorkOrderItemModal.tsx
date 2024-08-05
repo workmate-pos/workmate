@@ -21,6 +21,7 @@ import {
   Button,
   Collapsible,
   Divider,
+  FormLayout,
   Icon,
   InlineStack,
   Modal,
@@ -28,6 +29,7 @@ import {
   ResourceList,
   SkeletonBodyText,
   Text,
+  TextField,
 } from '@shopify/polaris';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
@@ -47,13 +49,14 @@ import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/moda
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
 import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { CaretUpMinor } from '@shopify/polaris-icons';
-import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
+import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
+import { MoneyField } from '@web/frontend/components/MoneyField.js';
 
 export function WorkOrderItemModal({
   createWorkOrder,
-  itemUuid,
+  item: { type: itemType, uuid: itemUuid },
   workOrder,
   open,
   onClose,
@@ -61,7 +64,7 @@ export function WorkOrderItemModal({
   onSave,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
-  itemUuid: string;
+  item: { type: 'product' | 'custom-item'; uuid: string };
   workOrder: WorkOrder | null;
   open: boolean;
   onClose: () => void;
@@ -89,15 +92,19 @@ export function WorkOrderItemModal({
   ].some(Boolean);
 
   // TODO: Support custom items
+
+  const initialItem =
+    createWorkOrder.items.filter(hasPropertyValue('type', itemType)).find(hasPropertyValue('uuid', itemUuid)) ??
+    never('Invalid item');
+
   const initialCharges =
     createWorkOrder.charges
       .filter(hasNestedPropertyValue('workOrderItem.type', 'product' as 'product' | 'custom-item'))
       .filter(hasNestedPropertyValue('workOrderItem.uuid', itemUuid)) ?? [];
+
   const shouldShowCharges = initialCharges.length > 0 || forceShowCharges;
 
-  const [item, setItem] = useState(
-    createWorkOrder.items.find(hasPropertyValue('uuid', itemUuid)) ?? never('Invalid UUID'),
-  );
+  const [item, setItem] = useState(initialItem);
   const [generalCharge, setGeneralCharge] = useState(extractInitialGeneralCharge(initialCharges));
   const [employeeCharges, setEmployeeCharges] = useState(
     initialCharges.filter(hasNonNullableProperty('employeeId')) ?? [],
@@ -139,6 +146,9 @@ export function WorkOrderItemModal({
   const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
 
   const readonly = !!itemLineItem?.order;
+  const canAddLabour =
+    item.type === 'custom-item' ||
+    getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE;
 
   return (
     <>
@@ -156,25 +166,24 @@ export function WorkOrderItemModal({
           },
         }}
         secondaryActions={[
-          ...(shouldShowCharges
-            ? [
-                {
-                  content: 'Remove Labour',
-                  onAction: () => {
-                    onSave(item, []);
-                    setForceShowCharges(false);
-                  },
+          shouldShowCharges
+            ? {
+                content: 'Remove Labour',
+                onAction: () => {
+                  onSave(item, []);
+                  setForceShowCharges(false);
                 },
-              ]
-            : [
-                {
-                  content: 'Add Labour',
-                  onAction: () => {
-                    setForceShowCharges(true);
-                  },
-                  disabled: readonly,
+              }
+            : null,
+          shouldShowCharges && canAddLabour
+            ? {
+                content: 'Add Labour',
+                onAction: () => {
+                  setForceShowCharges(true);
                 },
-              ]),
+                disabled: readonly,
+              }
+            : null,
           {
             content: 'Cancel',
             onAction: onClose,
@@ -189,13 +198,43 @@ export function WorkOrderItemModal({
             disabled: readonly,
             destructive: true,
           },
-        ]}
+        ].filter(isNonNullable)}
       >
         {!!itemLineItem?.order && (
           <Modal.Section>
             <Box>
               <Badge tone={'info'}>{itemLineItem.order.name}</Badge>
             </Box>
+          </Modal.Section>
+        )}
+
+        {item.type === 'custom-item' && (
+          <Modal.Section>
+            <FormLayout>
+              <TextField
+                label={'Name'}
+                autoComplete="off"
+                value={item.name}
+                onChange={name => setItem({ ...item, name: name.trim() || 'Unnamed item' })}
+                requiredIndicator
+              />
+
+              <MoneyField
+                label={'Unit Price'}
+                autoComplete="off"
+                min={0}
+                value={item.unitPrice}
+                onChange={unitPrice =>
+                  setItem({
+                    ...item,
+                    unitPrice: BigDecimal.isValid(unitPrice)
+                      ? BigDecimal.fromString(unitPrice).toMoney()
+                      : BigDecimal.ZERO.toMoney(),
+                  })
+                }
+                requiredIndicator
+              />
+            </FormLayout>
           </Modal.Section>
         )}
 

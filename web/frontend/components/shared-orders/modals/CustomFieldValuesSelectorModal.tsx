@@ -9,16 +9,22 @@ export function CustomFieldValuesSelectorModal({
   names,
   open,
   onClose,
+  isLoading,
+  allowCreateNew,
 }: {
   names: string[];
   open: boolean;
   onClose: () => void;
+  isLoading?: boolean;
+  allowCreateNew?: boolean;
 }) {
   const [name, setName] = useState<string>();
+  const [newName, setNewName] = useState<string>();
+  const newNameError = newName && names.includes(newName) ? 'Custom field already exists' : undefined;
 
   return (
     <>
-      <Modal open={open} title={'Custom Field Values'} onClose={onClose}>
+      <Modal open={open && !name} title={'Custom Field Values'} onClose={onClose} loading={isLoading}>
         {names.length === 0 && (
           <Modal.Section>
             <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
@@ -34,6 +40,29 @@ export function CustomFieldValuesSelectorModal({
                 <Button onClick={() => setName(name)}>{name}</Button>
               ))}
             </InlineGrid>
+          </Modal.Section>
+        )}
+
+        {allowCreateNew && (
+          <Modal.Section>
+            <TextField
+              label={'New Custom Field'}
+              autoComplete="off"
+              onChange={setNewName}
+              value={newName}
+              error={newNameError}
+              connectedRight={
+                <Button
+                  disabled={!newName || newName.trim().length === 0 || !!newNameError}
+                  onClick={() => {
+                    setNewName(undefined);
+                    setName(newName);
+                  }}
+                >
+                  Create
+                </Button>
+              }
+            />
           </Modal.Section>
         )}
       </Modal>

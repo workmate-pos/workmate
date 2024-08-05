@@ -1,6 +1,6 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { Dispatch, SetStateAction, useState } from 'react';
-import { ContextualSaveBar, Frame, BlockStack, Page, Tabs, Box, Divider } from '@shopify/polaris';
+import { ContextualSaveBar, Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
 import { Loading, useAppBridge } from '@shopify/app-bridge-react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
@@ -21,7 +21,7 @@ import { Redirect } from '@shopify/app-bridge/actions';
 import { WorkOrderRequestSettings } from '@web/frontend/components/settings/sections/WorkOrderRequestSettings.js';
 import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
 import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
-import { WorkOrderCustomFieldsSettings } from '@web/frontend/components/settings/sections/WorkOrderCustomFieldsSettings.js';
+import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
 
 export default function () {
   return (
@@ -119,7 +119,7 @@ function Settings() {
           <Divider />
           <WorkOrderRequestSettings settings={settings} setSettings={setSettings} />
           <Divider />
-          <WorkOrderCustomFieldsSettings />
+          <CustomFieldSettings type="WORK_ORDER" />
         </>
       ),
     },
@@ -135,13 +135,13 @@ function Settings() {
           <Divider />
           <CustomerMetafieldSettings settings={settings} setSettings={setSettings} />
           <Divider />
-          <PurchaseOrderCustomFieldsSettings />
+          <CustomFieldSettings type="PURCHASE_ORDER" />
         </>
       ),
     },
     {
       name: 'Line Items',
-      tab: <LineItemCustomFieldSettings />,
+      tab: <CustomFieldSettings type="LINE_ITEM" />,
     },
     {
       name: 'Stock Transfers',
@@ -156,6 +156,10 @@ function Settings() {
           <EmailSettings settings={settings} setSettings={setSettings} />
         </>
       ),
+    },
+    {
+      name: 'Custom Fields',
+      tab: <CustomFieldSettings />,
     },
     {
       name: 'Integrations',

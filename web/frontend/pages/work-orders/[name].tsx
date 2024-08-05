@@ -46,7 +46,6 @@ import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrd
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -183,8 +182,6 @@ function WorkOrder({
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
   const [isCustomFieldPresetsModalOpen, setIsCustomFieldPresetsModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
-  const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
   const [isFieldValuesModalOpen, setIsFieldValuesModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
   const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
@@ -198,8 +195,6 @@ function WorkOrder({
     isSaveCustomFieldPresetModalOpen,
     isCustomFieldPresetsModalOpen,
     isPrintModalOpen,
-    isAddProductModalOpen,
-    isAddServiceModalOpen,
     isFieldValuesModalOpen,
     isCreateOrderModalOpen,
     isCompanySelectorModalOpen,
@@ -308,8 +303,6 @@ function WorkOrder({
           dispatch={dispatch}
           workOrder={workOrder ?? null}
           disabled={workOrderMutation.isLoading}
-          onAddProductClick={() => setIsAddProductModalOpen(true)}
-          onAddServiceClick={() => setIsAddServiceModalOpen(true)}
           isLoading={calculatedDraftOrderQuery.isLoading}
         />
 
@@ -402,53 +395,6 @@ function WorkOrder({
           onClose={() => setIsPrintModalOpen(false)}
           setToastAction={setToastAction}
           createWorkOrder={createWorkOrder}
-        />
-      )}
-
-      {isAddProductModalOpen && (
-        <AddProductModal
-          outputType="WORK_ORDER"
-          companyLocationId={createWorkOrder.companyLocationId}
-          productType="PRODUCT"
-          open={isAddProductModalOpen}
-          setToastAction={setToastAction}
-          onClose={() => setIsAddProductModalOpen(false)}
-          onAdd={(items, charges) => {
-            dispatch.addItems({ items });
-
-            const chargesByItem = groupBy(
-              charges.filter(hasNonNullableProperty('workOrderItem')),
-              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
-            );
-
-            for (const charges of Object.values(chargesByItem)) {
-              const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
-            }
-          }}
-        />
-      )}
-
-      {isAddServiceModalOpen && (
-        <AddProductModal
-          outputType="WORK_ORDER"
-          productType="SERVICE"
-          open={isAddServiceModalOpen}
-          setToastAction={setToastAction}
-          onClose={() => setIsAddServiceModalOpen(false)}
-          onAdd={(items, charges) => {
-            dispatch.addItems({ items });
-
-            const chargesByItem = groupBy(
-              charges.filter(hasNonNullableProperty('workOrderItem')),
-              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
-            );
-
-            for (const charges of Object.values(chargesByItem)) {
-              const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
-            }
-          }}
         />
       )}
 

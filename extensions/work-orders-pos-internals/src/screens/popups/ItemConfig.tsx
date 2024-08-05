@@ -194,20 +194,22 @@ export function ItemConfig({
               value={item.quantity}
             />
           </Stack>
-          <Stack direction="vertical" spacing={2}>
-            <Text variant="body" color="TextSubdued">
-              Custom Fields
-            </Text>
-            <CustomFieldsList
-              customFields={item.customFields}
-              onSave={customFields => {
-                setHasUnsavedChanges(true);
-                setItem({ ...item, customFields });
-              }}
-              type={'LINE_ITEM'}
-              useRouter={useRouter}
-            />
-          </Stack>
+          {itemType !== 'custom-item' && (
+            <Stack direction="vertical" spacing={2}>
+              <Text variant="body" color="TextSubdued">
+                Custom Fields
+              </Text>
+              <CustomFieldsList
+                customFields={item.customFields}
+                onSave={customFields => {
+                  setHasUnsavedChanges(true);
+                  setItem({ ...item, customFields });
+                }}
+                type={'LINE_ITEM'}
+                useRouter={useRouter}
+              />
+            </Stack>
+          )}
           <Stack direction="vertical" flex={1} alignment="flex-end">
             {readonly && <Button title="Back" onPress={() => router.popCurrent()} />}
             {!readonly && (

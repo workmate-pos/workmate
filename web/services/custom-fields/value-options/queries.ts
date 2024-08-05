@@ -1,13 +1,13 @@
 import { sql, sqlOne } from '../../db/sql-tag.js';
 
-export async function getCustomFieldValueOptions({ shop, name }: { shop: string; name: string }) {
-  const [options] = await sql<{ values: string[] | null }>`
-    SELECT values
+export async function getCustomFieldValueOptions({ shop, name }: { shop: string; name?: string }) {
+  const options = await sql<{ name: string; values: string[] | null }>`
+    SELECT name, values
     FROM "CustomFieldValueOptions"
     WHERE shop = ${shop}
-      AND name = ${name};`;
+      AND name = COALESCE(${name ?? null}, name);`;
 
-  return options?.values ?? [];
+  return options.map(option => ({ ...option, values: option.values ?? [] }));
 }
 
 export async function upsertCustomFieldValueOptions({
