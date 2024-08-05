@@ -35,6 +35,8 @@ import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/c
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
+import { Redirect } from '@shopify/app-bridge/actions';
 
 type AddProductModalProps = AddProductModalPropsBase &
   (
@@ -87,6 +89,7 @@ export function AddProductModal({
   const [page, setPage] = useState(0);
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
 
+  const app = useAppBridge();
   const fetch = useAuthenticatedFetch({ setToastAction });
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
@@ -119,6 +122,8 @@ export function AddProductModal({
       },
     },
   });
+
+  const navigate = useNavigate();
 
   const allProductVariants =
     productVariantsQuery.data?.pages
@@ -162,6 +167,12 @@ export function AddProductModal({
             onAction: () => productVariantsQuery.refetch(),
             loading: productVariantsQuery.isRefetching,
           },
+          productType === 'SERVICE'
+            ? {
+                content: 'Create Service',
+                onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/service/new'),
+              }
+            : null,
           outputType === 'WORK_ORDER' && productType === 'PRODUCT'
             ? {
                 content: 'Custom Product',

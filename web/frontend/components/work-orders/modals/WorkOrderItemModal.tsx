@@ -175,7 +175,7 @@ export function WorkOrderItemModal({
                 },
               }
             : null,
-          shouldShowCharges && canAddLabour
+          canAddLabour
             ? {
                 content: 'Add Labour',
                 onAction: () => {
