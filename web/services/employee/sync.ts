@@ -84,7 +84,6 @@ async function upsertEmployees(shop: string, employees: gql.staffMember.Database
       })),
   );
 
-  // TODO: Fix email
   await db.employee.upsertMany({
     employees: knownEmployees.map(databaseEmployee => {
       const {
