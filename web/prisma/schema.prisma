@@ -639,6 +639,18 @@ model CustomFieldsPreset {
   @@unique([shop, type, name])
 }
 
+// Users can specify a list of options for custom field names.
+// This is done on a per-name basis and (currently) spans line items, purchase orders, and work orders.
+model CustomFieldValueOptions {
+  id Int @id @default(autoincrement())
+
+  shop   String
+  name   String
+  values String[]
+
+  @@unique([shop, name])
+}
+
 enum CustomFieldsPresetType {
   WORK_ORDER
   PURCHASE_ORDER

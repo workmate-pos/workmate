@@ -55,6 +55,8 @@ import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Session } from '@shopify/retail-ui-extensions';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
+import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
+import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -568,14 +570,15 @@ function WorkOrderCustomFields({
 
   return (
     <ResponsiveGrid columns={4}>
-      {Object.entries(createWorkOrder.customFields).map(([key, value]) => (
-        <FormStringField
+      {Object.keys(createWorkOrder.customFields).map(key => (
+        <CustomField
           key={key}
-          label={key}
-          value={value}
+          name={key}
+          value={createWorkOrder.customFields[key] ?? ''}
           onChange={(value: string) =>
             dispatch.setPartial({ customFields: { ...createWorkOrder.customFields, [key]: value } })
           }
+          useRouter={useRouter}
         />
       ))}
 

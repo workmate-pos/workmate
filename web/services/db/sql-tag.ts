@@ -14,7 +14,7 @@ export async function sql<T extends QueryResultRow = never>(strings: TemplateStr
 }
 
 export async function sqlOne<T extends QueryResultRow = never>(strings: TemplateStringsArray, ...values: unknown[]) {
-  const rows = await sql(strings, ...values);
+  const rows = await sql<T>(strings, ...values);
 
   if (rows.length !== 1) {
     throw new Error(`Expected 1 row, received ${rows.length}`);

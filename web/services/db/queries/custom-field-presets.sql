@@ -24,3 +24,10 @@ FROM "CustomFieldsPreset"
 WHERE shop = :shop!
   AND type = :type!
   AND name = :name!;
+
+/* @name undefaultCustomFieldsPresets */
+UPDATE "CustomFieldsPreset"
+SET "default" = FALSE
+WHERE shop = :shop!
+  AND type = :type!
+  AND "default" = TRUE;

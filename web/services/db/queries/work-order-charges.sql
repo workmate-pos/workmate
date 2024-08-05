@@ -24,10 +24,12 @@ ON CONFLICT ("workOrderId", uuid)
 */
 INSERT INTO "WorkOrderHourlyLabourCharge" ("workOrderId", "employeeId", name, rate, hours, "workOrderItemUuid",
                                            "workOrderCustomItemUuid",
-                                          "shopifyOrderLineItemId", uuid, "rateLocked", "hoursLocked", "removeLocked")
-VALUES (0, NULL, '', '', '', gen_random_uuid(), gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE, FALSE), :charges OFFSET 1
-ON CONFLICT ("workOrderId", uuid) DO UPDATE
-  SET "employeeId" = EXCLUDED."employeeId",
+                                           "shopifyOrderLineItemId", uuid, "rateLocked", "hoursLocked", "removeLocked")
+VALUES (0, NULL, '', '', '', gen_random_uuid(), gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE, FALSE), :charges
+OFFSET 1
+ON CONFLICT ("workOrderId", uuid)
+DO UPDATE
+SET "employeeId" = EXCLUDED."employeeId",
       name                     = EXCLUDED.name,
       rate                     = EXCLUDED.rate,
       hours                    = EXCLUDED.hours,
@@ -63,7 +65,8 @@ ON CONFLICT ("workOrderId", uuid)
 INSERT INTO "WorkOrderFixedPriceLabourCharge" ("workOrderId", "employeeId", name, amount, "workOrderItemUuid",
                                                "workOrderCustomItemUuid",
                                                "shopifyOrderLineItemId", uuid, "amountLocked", "removeLocked")
-VALUES (0, NULL, '', '', gen_random_uuid(), gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE), :charges OFFSET 1
+VALUES (0, NULL, '', '', gen_random_uuid(), gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE), :charges
+OFFSET 1
 ON CONFLICT ("workOrderId", uuid)
 DO UPDATE
 SET "employeeId" = EXCLUDED."employeeId",

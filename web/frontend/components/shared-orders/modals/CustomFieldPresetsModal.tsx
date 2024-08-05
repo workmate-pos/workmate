@@ -5,7 +5,7 @@ import { Filters, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
 
-export function ImportCustomFieldPresetModal({
+export function CustomFieldPresetsModal({
   open,
   onOverride,
   onMerge,
@@ -67,7 +67,7 @@ export function ImportCustomFieldPresetModal({
                 },
               },
               {
-                content: 'Override',
+                content: 'Clear & Import',
                 onAction: () => {
                   onOverride([...preset.keys]);
                   setToastAction({ content: 'Imported preset' });
@@ -75,7 +75,7 @@ export function ImportCustomFieldPresetModal({
                 },
               },
               {
-                content: 'Merge',
+                content: 'Import',
                 onAction: () => {
                   onMerge([...preset.keys]);
                   setToastAction({ content: 'Imported preset' });

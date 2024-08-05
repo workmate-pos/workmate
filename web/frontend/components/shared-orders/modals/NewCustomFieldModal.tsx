@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { BlockStack, Modal, TextField } from '@shopify/polaris';
+import { CustomField } from '@web/frontend/components/shared-orders/CustomField.js';
 
 export function NewCustomFieldModal({
   open,
@@ -42,11 +43,11 @@ export function NewCustomFieldModal({
             onChange={(value: string) => setFieldName(value)}
             error={existingFields.includes(fieldName) ? 'Field already exists' : undefined}
           />
-          <TextField
-            label={'Field Value'}
-            autoComplete={'off'}
+          <CustomField
+            name={fieldName ?? 'New Field'}
             value={fieldValue}
-            onChange={(value: string) => setFieldValue(value)}
+            onChange={setFieldValue}
+            disabled={!fieldName}
           />
         </BlockStack>
       </Modal.Section>

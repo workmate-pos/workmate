@@ -31,8 +31,8 @@ RETURNING *;
 INSERT INTO "Employee" (shop, superuser, permissions, rate, name, "isShopOwner", "staffMemberId", email)
 VALUES ('', FALSE, ARRAY[] :: "PermissionNode"[], '', '', FALSE, '', ''), :employees OFFSET 1
 ON CONFLICT ("staffMemberId")
-  DO UPDATE
-  SET shop          = EXCLUDED.shop,
+DO UPDATE
+SET shop          = EXCLUDED.shop,
       superuser     = EXCLUDED.superuser,
       permissions   = EXCLUDED.permissions,
       rate          = EXCLUDED.rate,

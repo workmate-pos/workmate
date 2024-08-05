@@ -45,10 +45,11 @@ import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-for
 import { CustomFieldsList } from '@web/frontend/components/shared-orders/CustomFieldsList.js';
 import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
-import { ImportCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/ImportCustomFieldPresetModal.js';
+import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { CaretUpMinor } from '@shopify/polaris-icons';
 import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
+import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 
 export function WorkOrderItemModal({
   createWorkOrder,
@@ -74,16 +75,16 @@ export function WorkOrderItemModal({
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
-  const [isImportCustomFieldPresetModalOpen, setIsImportCustomFieldPresetModalOpen] = useState(false);
-  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
+  const [isCustomFieldPresetsModalOpen, setIsCustomFieldPresetsModalOpen] = useState(false);
+  const [isFieldValuesModalOpen, setIsFieldValuesModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   const isSubModalOpen = [
     isAddEmployeeModalOpen,
     isNewCustomFieldModalOpen,
     isSaveCustomFieldPresetModalOpen,
-    isImportCustomFieldPresetModalOpen,
-    isSelectCustomFieldPresetToEditModalOpen,
+    isCustomFieldPresetsModalOpen,
+    isFieldValuesModalOpen,
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
@@ -230,11 +231,11 @@ export function WorkOrderItemModal({
         <Modal.Section>
           <CustomFieldsList
             customFields={item.customFields}
-            onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
+            onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
-            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
             onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
+            onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
           />
         </Modal.Section>
       </Modal>
@@ -296,11 +297,11 @@ export function WorkOrderItemModal({
         />
       )}
 
-      {isImportCustomFieldPresetModalOpen && (
-        <ImportCustomFieldPresetModal
+      {isCustomFieldPresetsModalOpen && (
+        <CustomFieldPresetsModal
           type={'LINE_ITEM'}
-          open={isImportCustomFieldPresetModalOpen && !customFieldPresetNameToEdit}
-          onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
+          open={isCustomFieldPresetsModalOpen && !customFieldPresetNameToEdit}
+          onClose={() => setIsCustomFieldPresetsModalOpen(false)}
           onOverride={fieldNames =>
             setItem(item => ({
               ...item,
@@ -323,13 +324,11 @@ export function WorkOrderItemModal({
         />
       )}
 
-      {isSelectCustomFieldPresetToEditModalOpen && (
-        <SelectCustomFieldPresetModal
-          open={isSelectCustomFieldPresetToEditModalOpen}
-          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
-          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
-          setToastAction={setToastAction}
-          type="LINE_ITEM"
+      {isFieldValuesModalOpen && (
+        <CustomFieldValuesSelectorModal
+          names={Object.keys(createWorkOrder.customFields)}
+          open={isFieldValuesModalOpen}
+          onClose={() => setIsFieldValuesModalOpen(false)}
         />
       )}
 

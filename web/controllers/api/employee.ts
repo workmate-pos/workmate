@@ -113,6 +113,7 @@ export default class EmployeeController {
           superuser,
           shop,
           rate,
+          email: staffMember.email,
         };
       }),
     });

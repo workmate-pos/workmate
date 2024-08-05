@@ -6,28 +6,28 @@ export function PurchaseOrderCustomFieldsCard({
   createPurchaseOrder,
   dispatch,
   disabled,
-  onImportPresetClick,
   onSavePresetClick,
   onAddCustomFieldClick,
-  onEditPresetClick,
+  onPresetsClick,
+  onFieldValuesClick,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
-  onImportPresetClick: () => void;
   onSavePresetClick: () => void;
   onAddCustomFieldClick: () => void;
-  onEditPresetClick: () => void;
+  onPresetsClick: () => void;
+  onFieldValuesClick: () => void;
 }) {
   return (
     <CustomFieldsCard
       customFields={createPurchaseOrder.customFields}
       onUpdate={(customFields: Record<string, string>) => dispatch.setPartial({ customFields })}
       disabled={disabled}
-      onImportPresetClick={onImportPresetClick}
       onSavePresetClick={onSavePresetClick}
-      onEditPresetClick={onEditPresetClick}
       onAddCustomFieldClick={onAddCustomFieldClick}
+      onPresetsClick={onPresetsClick}
+      onFieldValuesClick={onFieldValuesClick}
     />
   );
 }
