@@ -207,13 +207,17 @@ export function PaymentOverview({ name }: { name: string }) {
           type={'primary'}
         />
 
-        <Button
-          title={'Create Payment'}
-          isLoading={paymentHandler.isLoading}
-          isDisabled={isLoading || (selectedItems.length === 0 && selectedCharges.length === 0)}
-          onPress={() => pay()}
-          type={'primary'}
-        />
+        {!workOrder.companyId && (
+          <Button
+            title={'Create Payment'}
+            isLoading={paymentHandler.isLoading}
+            isDisabled={
+              isLoading || !!workOrder.companyId || (selectedItems.length === 0 && selectedCharges.length === 0)
+            }
+            onPress={() => pay()}
+            type={'primary'}
+          />
+        )}
       </ResponsiveGrid>
     </ScrollView>
   );

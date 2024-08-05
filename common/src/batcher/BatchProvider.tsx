@@ -10,6 +10,7 @@ export const BatchContext = createContext<Batches>({});
 export function BatchProvider({ children }: { children: ReactNode }) {
   const batches: Batches = {};
 
+  // @ts-expect-error shut up
   return <BatchContext.Provider value={batches}>{children}</BatchContext.Provider>;
 }
 

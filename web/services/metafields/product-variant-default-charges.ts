@@ -1,7 +1,5 @@
 import { fixedPriceLabourChargeMetaobject } from '../metaobjects/fixed-price-labour-charge.js';
 import { hourlyLabourChargeMetaobject } from '../metaobjects/hourly-labour-charge.js';
-import { gql } from '../gql/gql.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import type { MetafieldDefinitionInputWithNamespace } from './index.js';
 import { ensureMetaobjectDefinitionExists } from '../metaobjects/installable-metaobject-service.js';

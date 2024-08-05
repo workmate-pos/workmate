@@ -49,9 +49,7 @@ export async function ensureMetaobjectDefinitionExists(
     const updatedKeys = newKeys.filter(key => oldKeys.includes(key));
 
     const deleteFieldDefinitions: MetaobjectFieldDefinitionOperationInput[] = deletedKeys.map(key => ({
-      delete: {
-        key,
-      },
+      delete: { key },
     }));
 
     const updateFieldDefinitions: MetaobjectFieldDefinitionOperationInput[] = updatedKeys.map(key => {
@@ -83,11 +81,17 @@ export async function ensureMetaobjectDefinitionExists(
       };
     });
 
+    const fieldDefinitions = [...deleteFieldDefinitions, ...updateFieldDefinitions, ...createFieldDefinitions];
+
+    if (fieldDefinitions.length === 0) {
+      return existingMetaobjectDefinition.id;
+    }
+
     const { metaobjectDefinitionUpdate } = await gql.metaobjects.updateDefinition.run(graphql, {
       id: existingMetaobjectDefinition.id,
       definition: {
         description: definition.description,
-        fieldDefinitions: [...deleteFieldDefinitions, ...updateFieldDefinitions, ...createFieldDefinitions],
+        fieldDefinitions,
         access: definition.access,
         capabilities: definition.capabilities,
         name: definition.name,
