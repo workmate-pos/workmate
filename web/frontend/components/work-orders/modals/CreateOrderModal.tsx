@@ -53,6 +53,7 @@ export function CreateOrderModal({
         'companyLocationId',
         'companyContactId',
         'companyId',
+        'paymentTerms',
       )
     : null;
 

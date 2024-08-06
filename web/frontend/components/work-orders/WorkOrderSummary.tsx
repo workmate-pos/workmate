@@ -44,6 +44,7 @@ export function WorkOrderSummary({
         'companyLocationId',
         'companyId',
         'companyContactId',
+        'paymentTerms',
       ),
     },
     { enabled: false },

@@ -174,6 +174,7 @@ function ProductsList({
         'companyLocationId',
         'companyId',
         'companyContactId',
+        'paymentTerms',
       ),
     },
     { enabled: false, keepPreviousData: true },

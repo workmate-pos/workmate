@@ -123,6 +123,7 @@ export function WorkOrderItemModal({
         'companyLocationId',
         'companyId',
         'companyContactId',
+        'paymentTerms',
       ),
     },
     { enabled: false },

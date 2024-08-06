@@ -1,18 +1,8 @@
 import { useExtensionApi, useStatefulSubscribableCart } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useRef, useState } from 'react';
-import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { SetLineItemPropertiesInput } from '@shopify/retail-ui-extensions';
-import {
-  getCustomAttributeObjectFromArray,
-  getWorkOrderLineItems,
-  getWorkOrderOrderCustomAttributes,
-  WorkOrderItem,
-} from '@work-orders/work-order-shopify-order';
-import { WorkOrderCharge } from '@web/services/work-orders/types.js';
-import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { getCustomAttributeObjectFromArray } from '@work-orders/work-order-shopify-order';
 import { DraftOrderInput } from '@web/services/gql/queries/generated/schema.js';
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
@@ -32,8 +22,8 @@ export const usePaymentHandler = () => {
     await cart.clearCart();
     await cart.addCartProperties(getCustomAttributeObjectFromArray([...(draftOrderInput.customAttributes ?? [])]));
 
-    if (draftOrderInput.customerId) {
-      const id = Number(parseGid(draftOrderInput.customerId).id);
+    if (draftOrderInput.purchasingEntity?.customerId) {
+      const id = Number(parseGid(draftOrderInput.purchasingEntity?.customerId).id);
       await cart.setCustomer({ id });
     }
 

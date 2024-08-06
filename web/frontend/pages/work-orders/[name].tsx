@@ -44,12 +44,8 @@ import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-ca
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
-import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
-import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
-import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/CreateOrderModal.js';
 import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';
 import { CompanyLocationSelectorModal } from '@web/frontend/components/work-orders/modals/CompanyLocationSelectorModal.js';
@@ -217,6 +213,7 @@ function WorkOrder({
         'companyLocationId',
         'companyId',
         'companyContactId',
+        'paymentTerms',
       ),
     },
     { enabled: !isModalOpen },
