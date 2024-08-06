@@ -22,6 +22,7 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { DAY_IN_MS, MINUTE_IN_MS, SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { WorkOrderFiltersDisplay, WorkOrderFiltersObj } from './popups/WorkOrderFilters.js';
+import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 
 export function Entry() {
   const [filters, setFilters] = useState<WorkOrderFiltersObj>({ customFieldFilters: [], employeeIds: [] });
@@ -120,11 +121,20 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
 
   const calculateWorkOrderQueries = useCalculateWorkOrderQueries({
     fetch,
-    workOrders: workOrders.map(wo => {
-      const { items, charges, customerId, discount, companyLocationId, companyId, companyContactId } =
-        workOrderToCreateWorkOrder(wo);
-      return { name: wo.name, items, charges, customerId, discount, companyLocationId, companyId, companyContactId };
-    }),
+    workOrders: workOrders.map(wo => ({
+      ...pick(
+        workOrderToCreateWorkOrder(wo),
+        'items',
+        'charges',
+        'customerId',
+        'discount',
+        'companyLocationId',
+        'companyId',
+        'companyContactId',
+        'paymentTerms',
+      ),
+      name: wo.name,
+    })),
   });
 
   const customerIds = unique(workOrderInfos.map(info => info.customerId));

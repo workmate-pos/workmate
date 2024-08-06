@@ -97,8 +97,7 @@ model WorkOrderItem {
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [productVariantId])
 
   /// Absorb charges means that one line item will be created for this item + all charges by changing the quantity of the line item.
-  /// It is assumed that the item's price is 1.00.
-  /// Quantity does not matter in this case.
+  /// Quantity does not matter in this case as it is determined dynamically based on the unit price and total price.
   absorbCharges Boolean
   quantity      Int
 

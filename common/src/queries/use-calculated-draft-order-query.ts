@@ -16,9 +16,18 @@ export const useCalculatedDraftOrderQuery = (
     companyLocationId,
     companyContactId,
     companyId,
+    paymentTerms,
   }: { fetch: Fetch } & Pick<
     CalculateWorkOrder,
-    'name' | 'items' | 'charges' | 'customerId' | 'discount' | 'companyLocationId' | 'companyContactId' | 'companyId'
+    | 'name'
+    | 'items'
+    | 'charges'
+    | 'customerId'
+    | 'discount'
+    | 'companyLocationId'
+    | 'companyContactId'
+    | 'companyId'
+    | 'paymentTerms'
   >,
   options?: UseQueryOptions<
     CalculateDraftOrderResponse,
@@ -34,6 +43,7 @@ export const useCalculatedDraftOrderQuery = (
       | CalculateWorkOrder['companyLocationId']
       | CalculateWorkOrder['companyContactId']
       | CalculateWorkOrder['companyId']
+      | CalculateWorkOrder['paymentTerms']
     )[]
   >,
 ) => {
@@ -50,6 +60,7 @@ export const useCalculatedDraftOrderQuery = (
       companyLocationId,
       companyContactId,
       companyId,
+      paymentTerms,
     ],
     queryFn: async () => {
       const response = await fetch('/api/work-order/calculate-draft-order', {
@@ -63,6 +74,7 @@ export const useCalculatedDraftOrderQuery = (
           companyLocationId,
           companyContactId,
           companyId,
+          paymentTerms,
         } satisfies CalculateWorkOrder),
         headers: { 'Content-Type': 'application/json' },
       });

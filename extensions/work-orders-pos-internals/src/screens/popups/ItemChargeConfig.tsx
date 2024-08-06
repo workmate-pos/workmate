@@ -70,6 +70,7 @@ export function ItemChargeConfig({
         'companyLocationId',
         'companyContactId',
         'companyId',
+        'paymentTerms',
       ),
       items: useMemo(
         () =>

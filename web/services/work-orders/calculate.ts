@@ -8,8 +8,10 @@ import {
   getCustomAttributeArrayFromObject,
   getUuidsFromCustomAttributes,
   getWorkOrderLineItems,
+  WorkOrderProductItem,
+  WorkOrderCustomItem,
 } from '@work-orders/work-order-shopify-order';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getShopSettings } from '../settings.js';
 import { db } from '../db/db.js';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -35,6 +37,14 @@ import { getMissingNonPaidWorkOrderProduct, validateCalculateWorkOrder } from '.
 import { assertGidOrNull } from '../../util/assertions.js';
 import { getMailingAddressInputsForCompanyLocation } from '../draft-orders/util.js';
 import { randomBytes } from 'node:crypto';
+import {
+  DraftOrderAppliedDiscount,
+  DraftOrderAppliedDiscountInput,
+  Int,
+  type String,
+} from '../gql/queries/generated/schema.js';
+import { getWorkOrder, getWorkOrderPaymentTerms } from './get.js';
+import { getDraftOrderInputForExistingWorkOrder, getDraftOrderInputForWorkOrder } from './draft-order.js';
 
 type CalculateWorkOrderResult = {
   outstanding: Money;
@@ -64,6 +74,8 @@ type CalculateWorkOrderResult = {
     name: string;
     sku: string | null;
     unitPrice: Money;
+    quantity: Int;
+    taxable: boolean;
     image: {
       url: string;
     } | null;
@@ -72,17 +84,18 @@ type CalculateWorkOrderResult = {
       name: string;
       fullyPaid: boolean;
     } | null;
+    customAttributes: { key: String; value: String | null }[];
   }[];
 };
 
-type WorkOrderItem = {
+type WOItem = {
   shopifyOrderLineItemId: string | null;
   uuid: string;
   quantity: number;
   absorbCharges: boolean;
 };
 
-type WorkOrderCustomItem = {
+type WOCustomItem = {
   shopifyOrderLineItemId: string | null;
   uuid: string;
   quantity: number;
@@ -91,14 +104,14 @@ type WorkOrderCustomItem = {
   unitPrice: string;
 };
 
-type WorkOrderHourlyLabourCharge = {
+type WOHourlyLabourCharge = {
   shopifyOrderLineItemId: string | null;
   uuid: string;
   hours: string;
   rate: string;
 };
 
-type WorkOrderFixedPriceLabourCharge = {
+type WOFixedPriceLabourCharge = {
   shopifyOrderLineItemId: string | null;
   uuid: string;
   amount: string;
@@ -114,6 +127,7 @@ type WorkOrderFixedPriceLabourCharge = {
 export async function calculateWorkOrder(
   session: Session,
   calculateWorkOrder: CalculateWorkOrder,
+  options: { includeExistingOrders: boolean },
 ): Promise<CalculateWorkOrderResult> {
   await validateCalculateWorkOrder(session, calculateWorkOrder, true);
 
@@ -146,12 +160,12 @@ export async function calculateWorkOrder(
   // All orders involved in the WO, including all their line items. These will be processed to compute everything.
   const orders: (OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds)[] = [];
 
-  const items: WorkOrderItem[] = [];
-  const customItems: WorkOrderCustomItem[] = [];
-  const hourlyLabourCharges: WorkOrderHourlyLabourCharge[] = [];
-  const fixedPriceLabourCharges: WorkOrderFixedPriceLabourCharge[] = [];
+  const items: WOItem[] = [];
+  const customItems: WOCustomItem[] = [];
+  const hourlyLabourCharges: WOHourlyLabourCharge[] = [];
+  const fixedPriceLabourCharges: WOFixedPriceLabourCharge[] = [];
 
-  if (name) {
+  if (name && options.includeExistingOrders) {
     const existingInfo = await getExistingOrderInfo(session, name);
 
     orders.push(...existingInfo.orders);
@@ -243,6 +257,9 @@ export async function calculateWorkOrder(
               }
             : null,
         unitPrice: decimalToMoney(lineItem.discountedUnitPriceSet.shopMoney.amount),
+        quantity: lineItem.quantity,
+        taxable: lineItem.taxable,
+        customAttributes: lineItem.customAttributes,
       });
 
       const lineItemPriceInfo = getLineItemPriceInformation(
@@ -279,7 +296,7 @@ export async function calculateWorkOrder(
     .filter(lineItemId => !knownLineItemIds.has(lineItemId));
 
   if (missingLineItemIds.length > 0) {
-    warnings.push(`${missingLineItemIds.length} line items were not found - excluding them from price calculations.`);
+    warnings.push(`${missingLineItemIds.length} line items were not found - excluding them.`);
   }
 
   return {
@@ -446,30 +463,26 @@ type CalculatedDraftOrderWithFakeIds = NonNullable<
  * Uses the `draftOrderCalculate` mutation and creates dictionaries mapping items/charges to line items.
  */
 async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder: CalculateWorkOrder) {
-  const { shop } = session;
-  const { labourLineItemSKU } = await getShopSettings(shop);
-
-  const { items, charges, discount } = calculateWorkOrder;
-
-  const hourlyLabourCharges = charges.filter(hasPropertyValue('type', 'hourly-labour'));
-  const fixedPriceLabourCharges = charges.filter(hasPropertyValue('type', 'fixed-price-labour'));
-  const { lineItems, customSales } = getWorkOrderLineItems(
-    items.filter(hasPropertyValue('type', 'product')),
-    items.filter(hasPropertyValue('type', 'custom-item')),
-    hourlyLabourCharges,
-    fixedPriceLabourCharges,
-    {
-      labourSku: labourLineItemSKU,
-      workOrderName: calculateWorkOrder.name ?? '',
-    },
-  );
+  const draftOrderInput = await getDraftOrderInputForWorkOrder(session, {
+    items: calculateWorkOrder.items,
+    charges: calculateWorkOrder.charges,
+    discount: calculateWorkOrder.discount,
+    note: null,
+    workOrderName: calculateWorkOrder.name,
+    customFields: null,
+    customerId: calculateWorkOrder.customerId,
+    paymentTerms: calculateWorkOrder.paymentTerms,
+    companyContactId: calculateWorkOrder.companyContactId,
+    companyLocationId: calculateWorkOrder.companyLocationId,
+    companyId: calculateWorkOrder.companyId,
+  });
 
   const itemLineItemIds: Record<string, ID> = {};
   const customItemLineItemIds: Record<string, ID> = {};
   const hourlyLabourChargeLineItemIds: Record<string, ID> = {};
   const fixedPriceLabourChargeLineItemIds: Record<string, ID> = {};
 
-  if (lineItems.length === 0 && customSales.length === 0) {
+  if (!draftOrderInput.lineItems?.length) {
     return {
       calculatedDraftOrder: null,
       itemLineItemIds,
@@ -480,50 +493,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
   }
 
   const graphql = new Graphql(session);
-
-  let customerId = null;
-  if (calculateWorkOrder.customerId) {
-    const { customer } = await gql.customer.get.run(graphql, { id: calculateWorkOrder.customerId });
-    customerId = customer?.id ?? null;
-  }
-
-  const { companyId, companyLocationId, companyContactId } = calculateWorkOrder;
-
-  assertGidOrNull(companyId);
-  assertGidOrNull(companyLocationId);
-  assertGidOrNull(companyContactId);
-
-  const { billingAddress = null, shippingAddress = null } = companyLocationId
-    ? await getMailingAddressInputsForCompanyLocation(session, companyLocationId)
-    : {};
-
-  const result = await gql.calculate.draftOrderCalculate.run(graphql, {
-    input: {
-      lineItems: [
-        ...lineItems.map(lineItem => ({
-          variantId: lineItem.productVariantId,
-          customAttributes: getCustomAttributeArrayFromObject(lineItem.customAttributes),
-          quantity: lineItem.quantity,
-        })),
-        ...customSales.map(customSale => ({
-          title: customSale.title,
-          customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
-          quantity: customSale.quantity,
-          originalUnitPrice: customSale.unitPrice,
-          taxable: customSale.taxable,
-        })),
-      ],
-      billingAddress,
-      shippingAddress,
-      purchasingEntity:
-        companyId && companyContactId && companyLocationId
-          ? { purchasingCompany: { companyId, companyContactId, companyLocationId } }
-          : customerId
-            ? { customerId }
-            : null,
-      appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
-    },
-  });
+  const result = await gql.calculate.draftOrderCalculate.run(graphql, { input: draftOrderInput });
 
   if (!result.draftOrderCalculate?.calculatedDraftOrder) {
     throw new HttpError('Calculation failed', 400);
@@ -561,7 +531,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     hourlyLabourChargeLineItemIds,
     fixedPriceLabourChargeLineItemIds,
 
-    items: items.filter(hasPropertyValue('type', 'product')).map<WorkOrderItem>(item => ({
+    items: calculateWorkOrder.items.filter(hasPropertyValue('type', 'product')).map<WOItem>(item => ({
       shopifyOrderLineItemId:
         itemLineItemIds[item.uuid] ?? never('every item should be represented in the calculated draft order'),
       uuid: item.uuid,
@@ -569,7 +539,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
       absorbCharges: item.absorbCharges,
     })),
 
-    customItems: items.filter(hasPropertyValue('type', 'custom-item')).map<WorkOrderCustomItem>(item => ({
+    customItems: calculateWorkOrder.items.filter(hasPropertyValue('type', 'custom-item')).map<WOCustomItem>(item => ({
       shopifyOrderLineItemId:
         customItemLineItemIds[item.uuid] ??
         never('every custom item should be represented in the calculated draft order'),
@@ -580,9 +550,9 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
       unitPrice: item.unitPrice,
     })),
 
-    hourlyLabourCharges: charges
+    hourlyLabourCharges: calculateWorkOrder.charges
       .filter(hasPropertyValue('type', 'hourly-labour'))
-      .map<WorkOrderHourlyLabourCharge>(charge => ({
+      .map<WOHourlyLabourCharge>(charge => ({
         uuid: charge.uuid,
         shopifyOrderLineItemId:
           hourlyLabourChargeLineItemIds[charge.uuid] ??
@@ -591,9 +561,9 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
         rate: charge.rate,
       })),
 
-    fixedPriceLabourCharges: charges
+    fixedPriceLabourCharges: calculateWorkOrder.charges
       .filter(hasPropertyValue('type', 'fixed-price-labour'))
-      .map<WorkOrderFixedPriceLabourCharge>(charge => ({
+      .map<WOFixedPriceLabourCharge>(charge => ({
         uuid: charge.uuid,
         shopifyOrderLineItemId:
           fixedPriceLabourChargeLineItemIds[charge.uuid] ??
@@ -630,10 +600,10 @@ function getOrderPriceInformation(order: OrderWithAllLineItems | CalculatedDraft
 
 function getLineItemPriceInformation(
   lineItem: (OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds)['lineItems'][number],
-  items: WorkOrderItem[],
-  customItems: WorkOrderCustomItem[],
-  hourlyLabourCharges: WorkOrderHourlyLabourCharge[],
-  fixedPriceLabourCharges: WorkOrderFixedPriceLabourCharge[],
+  items: WOItem[],
+  customItems: WOCustomItem[],
+  hourlyLabourCharges: WOHourlyLabourCharge[],
+  fixedPriceLabourCharges: WOFixedPriceLabourCharge[],
 ) {
   const itemPrices: Record<string, Money> = {};
   const customItemPrices: Record<string, Money> = {};

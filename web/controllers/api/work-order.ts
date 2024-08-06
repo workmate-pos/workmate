@@ -22,6 +22,10 @@ import { CreateWorkOrderOrder } from '../../schemas/generated/create-work-order-
 import { createWorkOrderOrder } from '../../services/work-orders/create-order.js';
 import { syncShopifyOrders } from '../../services/shopify-order/sync.js';
 import { cleanOrphanedDraftOrders } from '../../services/work-orders/clean-orphaned-draft-orders.js';
+import { PlanWorkOrderOrder } from '../../schemas/generated/plan-work-order-order.js';
+import { getDraftOrderInputForExistingWorkOrder } from '../../services/work-orders/draft-order.js';
+import { DraftOrderInput } from '../../services/gql/queries/generated/schema.js';
+import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -34,7 +38,7 @@ export default class WorkOrderController {
   ) {
     const session: Session = res.locals.shopify.session;
 
-    const calculatedDraft = await calculateWorkOrder(session, req.body);
+    const calculatedDraft = await calculateWorkOrder(session, req.body, { includeExistingOrders: true });
 
     return res.json(calculatedDraft);
   }
@@ -69,6 +73,41 @@ export default class WorkOrderController {
     await cleanOrphanedDraftOrders(session, workOrder.id, () => syncShopifyOrders(session, [order.id]));
 
     return res.json(order);
+  }
+
+  /**
+   * Similar to calculate and create order.
+   * This endpoint creates a DraftOrderInput, which can be used by POS
+   * to populate the cart.
+   */
+  @Get('/plan-order')
+  @QuerySchema('plan-work-order-order')
+  @Authenticated()
+  @Permission('write_work_orders')
+  async planWorkOrderOrder(
+    req: Request<unknown, unknown, unknown, PlanWorkOrderOrder>,
+    res: Response<PlanWorkOrderOrderResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const { name, chargeUuids = [], itemUuids = [], itemTypes = [], chargeTypes = [] } = req.query;
+
+    if (chargeUuids.length !== chargeTypes.length) {
+      throw new HttpError('Charge UUIDs and charge types must be the same length', 400);
+    }
+
+    if (itemUuids.length !== itemTypes.length) {
+      throw new HttpError('Item UUIDs and item types must be the same length', 400);
+    }
+
+    const selectedItems = [...zip(itemTypes, itemUuids)].map(([type, uuid]) => ({ type, uuid }));
+    const selectedCharges = [...zip(chargeTypes, chargeUuids)].map(([type, uuid]) => ({ type, uuid }));
+
+    const draftOrderInput = await getDraftOrderInputForExistingWorkOrder(session, name, {
+      selectedItems,
+      selectedCharges,
+    });
+
+    return res.json(draftOrderInput);
   }
 
   @Post('/request')
@@ -213,3 +252,5 @@ export type CreateWorkOrderOrderResponse = {
   name: string;
   id: ID;
 };
+
+export type PlanWorkOrderOrderResponse = DraftOrderInput;

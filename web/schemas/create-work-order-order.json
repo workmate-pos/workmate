@@ -39,6 +39,6 @@
       }
     }
   },
-  "required": ["name", "items"],
+  "required": ["name", "items", "charges"],
   "additionalProperties": false
 }

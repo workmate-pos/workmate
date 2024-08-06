@@ -10,7 +10,7 @@ import {
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { syncShopifyOrders } from '../shopify-order/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
-import { getWorkOrderDraftOrderInput } from './draft-order.js';
+import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
 
 export type SyncWorkOrdersOptions = {
   /**
@@ -56,49 +56,54 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], o
  * Syncs a work order to Shopify by creating a new draft order for any draft/unlinked line items, and updating custom attributes of existing orders.
  */
 export async function syncWorkOrder(session: Session, workOrderId: number, options?: SyncWorkOrdersOptions) {
-  const [input, [workOrder], customFields] = await Promise.all([
-    getWorkOrderDraftOrderInput(session, workOrderId, {
-      mustHaveUnlinkedItems: options?.onlySyncIfUnlinked ?? defaultSyncWorkOrdersOptions.onlySyncIfUnlinked,
-    }),
+  const [[workOrder], customFields, ...itemsAndCharges] = await Promise.all([
     db.workOrder.getById({ id: workOrderId }),
     db.workOrder.getCustomFields({ workOrderId }),
+    db.workOrder.getItems({ workOrderId }),
+    db.workOrder.getCustomItems({ workOrderId }),
+    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
+    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
   ]);
-
-  if (input === null) {
-    return;
-  }
 
   if (!workOrder) {
     throw new Error(`Work order with id ${workOrderId} not found`);
   }
 
+  const onlySyncIfUnlinked = options?.onlySyncIfUnlinked ?? defaultSyncWorkOrdersOptions.onlySyncIfUnlinked;
+  const hasUnlinked = itemsAndCharges.flat().some(hasPropertyValue('shopifyOrderLineItemId', null));
+  const shouldSync = !onlySyncIfUnlinked || hasUnlinked;
+
+  const input = await getDraftOrderInputForExistingWorkOrder(session, workOrder.name);
+
   const graphql = new Graphql(session);
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
-  if ((input.lineItems?.length ?? 0) === 0) {
-    // No line items, so we should delete all draft orders since draft orders don't support 0 line items.
-    const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(o => {
-      assertGid(o.orderId);
-      return o.orderId;
-    });
+  if (shouldSync) {
+    if (!input.lineItems?.length) {
+      // No line items, so we should delete all draft orders since draft orders don't support 0 line items.
+      const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(o => {
+        assertGid(o.orderId);
+        return o.orderId;
+      });
 
-    if (draftOrderIds.length > 0) {
-      await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
+      if (draftOrderIds.length > 0) {
+        await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
+      }
+    } else {
+      const draftOrderId = linkedOrders.find(hasPropertyValue('orderType', 'DRAFT_ORDER'))?.orderId ?? null;
+
+      assertGidOrNull(draftOrderId);
+
+      const { result } = draftOrderId
+        ? await gql.draftOrder.update.run(graphql, { id: draftOrderId, input })
+        : await gql.draftOrder.create.run(graphql, { input });
+
+      if (!result?.draftOrder) {
+        throw new Error('Failed to create/update draft order');
+      }
+
+      await syncShopifyOrders(session, [result.draftOrder?.id]);
     }
-  } else {
-    const draftOrderId = linkedOrders.find(hasPropertyValue('orderType', 'DRAFT_ORDER'))?.orderId ?? null;
-
-    assertGidOrNull(draftOrderId);
-
-    const { result } = draftOrderId
-      ? await gql.draftOrder.update.run(graphql, { id: draftOrderId, input })
-      : await gql.draftOrder.create.run(graphql, { input });
-
-    if (!result?.draftOrder) {
-      throw new Error('Failed to create/update draft order');
-    }
-
-    await syncShopifyOrders(session, [result.draftOrder?.id]);
   }
 
   if (options?.updateCustomAttributes ?? defaultSyncWorkOrdersOptions.updateCustomAttributes) {

@@ -60,7 +60,7 @@ export async function getWorkOrderTemplateData(
     },
   ] = await Promise.all([
     db.customers.get({ customerId: workOrder.customerId }),
-    calculateWorkOrder(session, workOrder),
+    calculateWorkOrder(session, workOrder, { includeExistingOrders: true }),
   ]);
 
   const paid = subtractMoney(total, outstanding);

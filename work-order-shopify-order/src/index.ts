@@ -7,31 +7,35 @@ import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
-export type WorkOrderItem = {
+type WorkOrderItemBase = {
   uuid: string;
   quantity: number;
   /**
    * When charges are absorbed, the line item for this item will adjust its quantity such that the price covers
    * all linked charges. The charges will not have their own line item.
    * This is used for mutable services, i.e. services that don't have a fixed price.
-   * This assumes that the price of the product is 1.00.
-   * The item quantity does not change the line item quantity, but is reported as-is in the custom attribute.
+   * This uses the unit price of the product variant to calculate what the quantity should be.
+   * The item quantity (above) does not change the line item quantity, but is reported as-is in the custom attribute.
    */
   absorbCharges: boolean;
-} & (
-  | {
-      type: 'product';
-      productVariantId: string;
-    }
-  | {
-      type: 'custom-item';
-      name: string;
-      unitPrice: string;
-    }
-);
+};
 
-export type WorkOrderProductItem = Omit<WorkOrderItem & { type: 'product' }, 'type'>;
-export type WorkOrderCustomItem = Omit<WorkOrderItem & { type: 'custom-item' }, 'type'>;
+export type WorkOrderProductItem = WorkOrderItemBase & {
+  type: 'product';
+  productVariantId: string;
+  /**
+   * Product variant unit price. Only required if absorbCharges is true.
+   */
+  unitPrice?: string;
+};
+
+export type WorkOrderCustomItem = WorkOrderItemBase & {
+  type: 'custom-item';
+  name: string;
+  unitPrice: string;
+};
+
+export type WorkOrderItem = WorkOrderProductItem | WorkOrderCustomItem;
 
 type BaseCharge = {
   uuid: string;
@@ -43,17 +47,17 @@ type BaseCharge = {
 };
 
 export type HourlyLabourCharge = BaseCharge & {
+  type: 'hourly-labour';
   hours: string;
   rate: string;
 };
 
 export type FixedPriceLabourCharge = BaseCharge & {
+  type: 'fixed-price-labour';
   amount: string;
 };
 
-type LabourCharge =
-  | (HourlyLabourCharge & { type: 'hourly-labour-charge' })
-  | (FixedPriceLabourCharge & { type: 'fixed-price-labour-charge' });
+export type WorkOrderLabourCharge = HourlyLabourCharge | FixedPriceLabourCharge;
 
 export type LineItem = {
   productVariantId: ID;
@@ -81,8 +85,8 @@ export type CustomSale = {
  * Includes a bunch of custom attributes to be able to identify line items.
  */
 export function getWorkOrderLineItems(
-  productItems: WorkOrderProductItem[],
-  customItems: WorkOrderCustomItem[],
+  productItems: Omit<WorkOrderProductItem, 'type'>[],
+  customItems: Omit<WorkOrderCustomItem, 'type'>[],
   hourlyLabourCharges: HourlyLabourCharge[],
   fixedPriceLabourCharges: FixedPriceLabourCharge[],
   options: {
@@ -96,7 +100,7 @@ export function getWorkOrderLineItems(
   const lineItemByVariantId: Record<ID, LineItem> = {};
 
   for (const item of productItems) {
-    const { productVariantId, quantity, absorbCharges } = item;
+    const { productVariantId, quantity, absorbCharges, unitPrice } = item;
 
     assertGid(productVariantId);
 
@@ -112,6 +116,10 @@ export function getWorkOrderLineItems(
     };
 
     if (absorbCharges) {
+      if (!unitPrice) {
+        throw new Error('Must provide unit price when absorbing charges');
+      }
+
       const absorbedCharges = charges
         .filter(hasNestedPropertyValue('workOrderItem.type', 'product'))
         .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
@@ -120,7 +128,9 @@ export function getWorkOrderLineItems(
         ...absorbedCharges.map(getChargeUnitPrice).map(money => BigDecimal.fromMoney(money)),
       );
 
-      lineItem.quantity += Number(totalChargeCost.round(0, RoundingMode.CEILING).toString());
+      const quantityBigDecimal = BigDecimal.fromString(quantity.toFixed(0));
+
+      lineItem.quantity += Number(totalChargeCost.divide(quantityBigDecimal).round(0, RoundingMode.CEILING).toString());
     } else {
       lineItem.quantity += quantity;
     }
@@ -231,14 +241,14 @@ export function getWorkOrderLineItems(
 function getChargesWithTypes(
   hourlyLabourCharges: HourlyLabourCharge[],
   fixedPriceLabourCharges: FixedPriceLabourCharge[],
-): LabourCharge[] {
+): WorkOrderLabourCharge[] {
   return [
-    ...hourlyLabourCharges.map(charge => ({ ...charge, type: 'hourly-labour-charge' }) as const),
-    ...fixedPriceLabourCharges.map(charge => ({ ...charge, type: 'fixed-price-labour-charge' }) as const),
+    ...hourlyLabourCharges.map(charge => ({ ...charge, type: 'hourly-labour' }) as const),
+    ...fixedPriceLabourCharges.map(charge => ({ ...charge, type: 'fixed-price-labour' }) as const),
   ];
 }
 
-function getUniquelyNamedCharges(charges: LabourCharge[]) {
+function getUniquelyNamedCharges(charges: WorkOrderLabourCharge[]) {
   // ensure charge names are unique by adding "(count)" to every duplicate name
   const chargesByName = groupByKey(charges, 'name');
 
@@ -278,7 +288,11 @@ export function getWorkOrderOrderCustomAttributes(workOrder: { name: string; cus
   };
 }
 
-function getItemCustomAttributes(item: WorkOrderItem, charges: LabourCharge[], options: { labourSku: string }) {
+function getItemCustomAttributes(
+  item: WorkOrderItem,
+  charges: WorkOrderLabourCharge[],
+  options: { labourSku: string },
+) {
   const customAttributes: Record<string, string> = {};
 
   if (item.type === 'product') {
@@ -311,9 +325,7 @@ function getItemCustomAttributes(item: WorkOrderItem, charges: LabourCharge[], o
 }
 
 function getChargeCustomAttributes(
-  charge:
-    | ({ type: 'hourly-labour-charge' } & HourlyLabourCharge)
-    | ({ type: 'fixed-price-labour-charge' } & FixedPriceLabourCharge),
+  charge: ({ type: 'hourly-labour' } & HourlyLabourCharge) | ({ type: 'fixed-price-labour' } & FixedPriceLabourCharge),
   options: { labourSku: string },
   quantity: number,
 ): Record<string, string> {
@@ -343,10 +355,10 @@ export function getCustomItemUuidCustomAttributeKey(item: { uuid: string }) {
   return `${CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${item.uuid}`;
 }
 
-export function getChargeUuidCustomAttributeKey(charge: Pick<LabourCharge, 'uuid' | 'type'>) {
+export function getChargeUuidCustomAttributeKey(charge: Pick<WorkOrderLabourCharge, 'uuid' | 'type'>) {
   const prefix = {
-    'hourly-labour-charge': HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    'fixed-price-labour-charge': FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    'hourly-labour': HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    'fixed-price-labour': FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
   }[charge.type];
 
   return `${prefix}${charge.uuid}`;
@@ -357,7 +369,7 @@ const ABSORBED_CHARGE_SEPARATOR = ':';
 /**
  * When charges are absorbed, their custom attribute keys are prefixed by the charge uuid key.
  */
-function getAbsorbedChargeCustomAttributeKey(charge: LabourCharge, key: string) {
+function getAbsorbedChargeCustomAttributeKey(charge: WorkOrderLabourCharge, key: string) {
   if (getUuidFromCustomAttributeKey(key) !== null) {
     // uuids are not absorbed so we can identify absorbed charges
     return key;
@@ -437,4 +449,8 @@ export function getAbsorbedUuidsFromCustomAttributes(customAttributes: { key: st
 
 export function getCustomAttributeArrayFromObject(obj: Record<string, string>): { key: string; value: string }[] {
   return Object.entries(obj).map(([key, value]) => ({ key, value }));
+}
+
+export function getCustomAttributeObjectFromArray(customAttributes: { key: string; value: string | null }[]) {
+  return customAttributes.reduce((acc, { key, value }) => ({ ...acc, [key]: value || '' }), {});
 }
