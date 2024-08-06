@@ -265,16 +265,18 @@ export function WorkOrderItemModal({
           </Modal.Section>
         )}
 
-        <Modal.Section>
-          <CustomFieldsList
-            customFields={item.customFields}
-            onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
-            onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
-            onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
-            onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
-            onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
-          />
-        </Modal.Section>
+        {itemType !== 'custom-item' && (
+          <Modal.Section>
+            <CustomFieldsList
+              customFields={item.customFields}
+              onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
+              onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
+              onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
+              onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
+              onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
+            />
+          </Modal.Section>
+        )}
       </Modal>
 
       {isAddEmployeeModalOpen && (
