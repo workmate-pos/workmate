@@ -129,6 +129,12 @@ export function WorkOrderItemsCard({
               const [charge = never()] = charges;
               dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
             }
+
+            const [item] = items;
+            if (item) {
+              setIsAddServiceModalOpen(false);
+              setEditItem(item);
+            }
           }}
         />
       )}

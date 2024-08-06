@@ -2,7 +2,7 @@ import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.j
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { WorkOrder } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { Dispatch, SetStateAction, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
@@ -100,8 +100,6 @@ export function WorkOrderItemModal({
       .filter(hasNestedPropertyValue('workOrderItem.type', 'product' as 'product' | 'custom-item'))
       .filter(hasNestedPropertyValue('workOrderItem.uuid', itemUuid)) ?? [];
 
-  const shouldShowCharges = initialCharges.length > 0 || forceShowCharges;
-
   const [item, setItem] = useState(initialItem);
   const [generalCharge, setGeneralCharge] = useState(extractInitialGeneralCharge(initialCharges));
   const [employeeCharges, setEmployeeCharges] = useState(
@@ -145,9 +143,13 @@ export function WorkOrderItemModal({
   const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
 
   const readonly = !!itemLineItem?.order;
+  const isServiceItem = getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== null;
+  const canRemoveLabour = !isServiceItem;
   const canAddLabour =
     item.type === 'custom-item' ||
     getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE;
+
+  const shouldShowCharges = initialCharges.length > 0 || isServiceItem || forceShowCharges;
 
   return (
     <>
@@ -165,16 +167,17 @@ export function WorkOrderItemModal({
           },
         }}
         secondaryActions={[
-          shouldShowCharges
+          canRemoveLabour && shouldShowCharges
             ? {
                 content: 'Remove Labour',
                 onAction: () => {
-                  onSave(item, []);
+                  setGeneralCharge(null);
+                  setEmployeeCharges([]);
                   setForceShowCharges(false);
                 },
               }
             : null,
-          canAddLabour
+          canAddLabour && !shouldShowCharges
             ? {
                 content: 'Add Labour',
                 onAction: () => {
