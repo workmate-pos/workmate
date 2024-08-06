@@ -15,9 +15,9 @@ import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-w
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { groupBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
@@ -496,17 +496,30 @@ function WorkOrderItems({
           action={'button'}
           onPress={() =>
             router.push('ProductSelector', {
-              onSelect: ({ item, charges }) => {
-                if (item.type === 'custom-item') {
-                  // TODO: get rid of this once its supported
-                  item.customFields = {};
+              onSelect: ({ items, charges }) => {
+                // TODO: get rid of this once its supported
+                for (const item of items) {
+                  if (item.type === 'custom-item') {
+                    item.customFields = {};
+                  }
                 }
 
-                dispatch.addItems({ items: [item] });
-                dispatch.updateItemCharges({ item, charges });
+                dispatch.addItems({ items });
 
-                if (item.type === 'custom-item') {
-                  setOpenConfigPopup({ type: item.type, uuid: item.uuid, configType: 'item' });
+                const chargesByItem = groupBy(
+                  charges.filter(hasNonNullableProperty('workOrderItem')),
+                  charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
+                );
+
+                for (const charges of Object.values(chargesByItem)) {
+                  const [charge] = charges;
+                  if (!charge) continue;
+                  dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
+                }
+
+                const customItem = items.find(hasPropertyValue('type', 'custom-item'));
+                if (customItem) {
+                  setOpenConfigPopup({ type: customItem.type, uuid: customItem.uuid, configType: 'item' });
                 }
               },
               companyLocationId: createWorkOrder.companyLocationId,

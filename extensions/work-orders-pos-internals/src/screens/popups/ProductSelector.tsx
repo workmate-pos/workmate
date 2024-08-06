@@ -1,7 +1,7 @@
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '../../util/uuid.js';
-import { Int } from '@web/schemas/generated/create-work-order.js';
+import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -14,7 +14,10 @@ import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-s
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
-import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
+import {
+  getProductServiceType,
+  SERVICE_METAFIELD_VALUE_TAG_NAME,
+} from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -34,7 +37,7 @@ export function ProductSelector({
   inventoryLocationIds: initialInventoryLocationIds,
   onInventoryLocationIdsChange,
 }: {
-  onSelect: (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
+  onSelect: (arg: { items: CreateWorkOrderItem[]; charges: CreateWorkOrderCharge[] }) => void;
   companyLocationId: ID | null;
   inventoryLocationIds: ID[];
   onInventoryLocationIdsChange: Dispatch<SetStateAction<ID[]>>;
@@ -74,12 +77,12 @@ export function ProductSelector({
   const currencyFormatter = useCurrencyFormatter();
 
   const internalOnSelect = (
-    lineItem: CreateWorkOrderItem,
+    items: CreateWorkOrderItem[],
     charges: CreateWorkOrderCharge[],
     name: string = 'Product',
   ) => {
     setQuery('', true);
-    onSelect({ item: lineItem, charges });
+    onSelect({ items, charges });
     toast.show(`${name} added to cart`, { duration: 750 });
   };
 
@@ -135,14 +138,16 @@ export function ProductSelector({
               initialProduct: {},
               onCreate: product =>
                 internalOnSelect(
-                  {
-                    type: 'product',
-                    quantity: product.quantity,
-                    uuid: uuid(),
-                    productVariantId: product.productVariantId,
-                    absorbCharges: false,
-                    customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                  },
+                  [
+                    {
+                      type: 'product',
+                      quantity: product.quantity,
+                      uuid: uuid(),
+                      productVariantId: product.productVariantId,
+                      absorbCharges: false,
+                      customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                    },
+                  ],
                   [],
                 ),
             })
@@ -154,15 +159,17 @@ export function ProductSelector({
           onPress={async () => {
             await router.popCurrent();
             internalOnSelect(
-              {
-                type: 'custom-item',
-                quantity: 1 as Int,
-                absorbCharges: false,
-                customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                uuid: uuid(),
-                name: 'Unnamed product',
-                unitPrice: BigDecimal.ONE.toMoney(),
-              },
+              [
+                {
+                  type: 'custom-item',
+                  quantity: 1 as Int,
+                  absorbCharges: false,
+                  customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                  uuid: uuid(),
+                  name: 'Unnamed product',
+                  unitPrice: BigDecimal.ONE.toMoney(),
+                },
+              ],
               [],
             );
           }}
@@ -229,7 +236,7 @@ export function ProductSelector({
 
 function useProductVariantRows(
   productVariants: ProductVariant[],
-  onSelect: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
+  onSelect: (lineItems: CreateWorkOrderItem[], defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
   locationIds: ID[],
   shouldShowPrice: boolean,
@@ -238,7 +245,10 @@ function useProductVariantRows(
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
   const locationQueries = useLocationQueries({ fetch, ids: locationIds });
-  const inventoryItemIds = productVariants.map(pv => pv.inventoryItem.id);
+  const inventoryItemIds = productVariants.flatMap(pv => [
+    pv.inventoryItem.id,
+    ...pv.productVariantComponents.map(pvc => pvc.productVariant.inventoryItem.id),
+  ]);
   const inventoryItemQueries = useUnbatchedInventoryItemQueries({
     fetch,
     inventoryItems: locationIds.flatMap(locationId => inventoryItemIds.map(id => ({ id, locationId }))),
@@ -248,16 +258,18 @@ function useProductVariantRows(
     return [];
   }
 
-  return productVariants.map(variant => {
-    const displayName = getProductVariantName(variant) ?? 'Unknown product';
+  return productVariants.map(productVariant => {
+    const productVariants = productVariant.requiresComponents
+      ? productVariant.productVariantComponents
+      : [{ productVariant, quantity: 1 as Int }];
 
-    const imageUrl = variant.image?.url ?? variant.product.featuredImage?.url;
-
-    const defaultCharges = variant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
+    const displayName = getProductVariantName(productVariant) ?? 'Unknown product';
+    const imageUrl = productVariant.image?.url ?? productVariant.product.featuredImage?.url;
+    const defaultCharges = productVariant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
 
     const label = shouldShowPrice
       ? currencyFormatter(
-          BigDecimal.fromMoney(variant.price)
+          BigDecimal.fromMoney(productVariant.price)
             .add(BigDecimal.fromMoney(getTotalPriceForCharges(defaultCharges)))
             .toMoney(),
         )
@@ -265,43 +277,64 @@ function useProductVariantRows(
 
     const inventorySubtitles = locationIds.map(locationId => {
       const locationQuery = locationQueries[locationId];
-      const inventoryItemQuery = inventoryItemQueries[variant.inventoryItem.id]?.[locationId];
+      const itemQueries = productVariants.map(
+        pv => inventoryItemQueries[pv.productVariant.inventoryItem.id]?.[locationId]!,
+      );
 
-      if (!locationQuery || !inventoryItemQuery) {
+      if (!locationQuery || Object.values(itemQueries).some(query => !query)) {
         return 'Something went wrong loading inventory state';
       }
 
-      if (locationQuery.isLoading || inventoryItemQuery.isLoading) {
+      if (locationQuery.isLoading || Object.values(itemQueries).some(query => query.isLoading)) {
         return 'Loading...';
       }
 
-      if (!locationQuery.data || !inventoryItemQuery.data) {
+      if (!locationQuery.data || Object.values(itemQueries).some(query => !query.data)) {
         return 'N/A';
       }
 
-      return `${locationQuery.data.name}: ${inventoryItemQuery.data.inventoryLevel?.quantities.find(hasPropertyValue('name', 'available'))?.quantity ?? 'N/A'}`;
+      // Available quantity depends on all the product variants in the current bundle
+      const availableQuantity = Math.min(
+        0,
+        ...itemQueries.map((query, i) => {
+          const { quantity } = productVariants[i]!;
+          const inventoryItem = query.data!;
+          const available =
+            inventoryItem.inventoryLevel?.quantities.find(hasPropertyValue('name', 'available'))?.quantity ?? NaN;
+
+          return Math.floor(available / quantity);
+        }),
+      );
+
+      return `${locationQuery.data.name}: ${Number.isNaN(availableQuantity) ? 'N/A' : availableQuantity}`;
     });
 
     return {
-      id: variant.id,
+      id: productVariant.id,
       onPress: () => {
-        const itemUuid = uuid();
+        const charges: CreateWorkOrder['charges'][number][] = [];
+        const items = productVariants.map(pv => {
+          const itemUuid = uuid();
 
-        onSelect(
-          {
+          for (const charge of pv.productVariant.defaultCharges) {
+            const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
+            charges.push({
+              ...defaultCharge,
+              uuid: uuid(),
+              workOrderItem: { type: 'product', uuid: itemUuid },
+            });
+          }
+
+          return {
             type: 'product',
             uuid: itemUuid,
-            productVariantId: variant.id,
-            quantity: 1 as Int,
-            absorbCharges: false,
+            productVariantId: pv.productVariant.id,
+            quantity: pv.quantity,
             customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-          },
-          defaultCharges.map(charge => ({
-            ...charge,
-            uuid: uuid(),
-            workOrderItem: { type: 'product', uuid: itemUuid },
-          })),
-        );
+            absorbCharges: false,
+          } as const;
+        });
+        onSelect(items, charges);
       },
       leftSide: {
         label: displayName,

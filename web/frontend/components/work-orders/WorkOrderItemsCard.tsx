@@ -89,6 +89,13 @@ export function WorkOrderItemsCard({
           setToastAction={setToastAction}
           onClose={() => setIsAddProductModalOpen(false)}
           onAdd={(items, charges) => {
+            // TODO: get rid of this once its supported
+            for (const item of items) {
+              if (item.type === 'custom-item') {
+                item.customFields = {};
+              }
+            }
+
             dispatch.addItems({ items });
 
             const chargesByItem = groupBy(
