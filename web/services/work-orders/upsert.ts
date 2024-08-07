@@ -171,7 +171,7 @@ async function insertItemCustomFields(workOrderId: number, items: CreateWorkOrde
   //       -> also do this for labour (decreases duplicated code by a shit ton)
   // TODO: Once done, add back custom fields (ItemConfig, WorkOrderItemModal: itemType !== 'custom-item', WorkOrder: item.type !== 'custom-item')
   const customFields = items
-    .filter(hasPropertyValue('type', 'custom-item'))
+    .filter(hasPropertyValue('type', 'product'))
     .flatMap(({ customFields, uuid: workOrderItemUuid }) =>
       Object.entries(customFields).map(([key, value]) => ({ workOrderId, workOrderItemUuid, key, value })),
     );
