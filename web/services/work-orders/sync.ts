@@ -11,6 +11,7 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { syncShopifyOrders } from '../shopify-order/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
+import { getWorkOrder, getWorkOrderCharges, getWorkOrderCustomFields, getWorkOrderItems } from './queries.js';
 
 export type SyncWorkOrdersOptions = {
   /**
@@ -56,13 +57,11 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], o
  * Syncs a work order to Shopify by creating a new draft order for any draft/unlinked line items, and updating custom attributes of existing orders.
  */
 export async function syncWorkOrder(session: Session, workOrderId: number, options?: SyncWorkOrdersOptions) {
-  const [[workOrder], customFields, ...itemsAndCharges] = await Promise.all([
-    db.workOrder.getById({ id: workOrderId }),
-    db.workOrder.getCustomFields({ workOrderId }),
-    db.workOrder.getItems({ workOrderId }),
-    db.workOrder.getCustomItems({ workOrderId }),
-    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
-    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
+  const [workOrder, customFields, items, charges] = await Promise.all([
+    getWorkOrder({ id: workOrderId }),
+    getWorkOrderCustomFields(workOrderId),
+    getWorkOrderItems(workOrderId),
+    getWorkOrderCharges(workOrderId),
   ]);
 
   if (!workOrder) {
@@ -70,7 +69,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
   }
 
   const onlySyncIfUnlinked = options?.onlySyncIfUnlinked ?? defaultSyncWorkOrdersOptions.onlySyncIfUnlinked;
-  const hasUnlinked = itemsAndCharges.flat().some(hasPropertyValue('shopifyOrderLineItemId', null));
+  const hasUnlinked = [...items, ...charges].flat().some(hasPropertyValue('shopifyOrderLineItemId', null));
   const shouldSync = !onlySyncIfUnlinked || hasUnlinked;
 
   const input = await getDraftOrderInputForExistingWorkOrder(session, workOrder.name);

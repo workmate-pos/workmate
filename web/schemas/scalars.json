@@ -23,7 +23,7 @@
     "Int": {
       "title": "Int",
       "type": "integer",
-      "tsType": "number & { __brand: 'Int' }"
+      "tsType": "number"
     },
     "DateTime": {
       "description": "ISO 8601 formatted string",

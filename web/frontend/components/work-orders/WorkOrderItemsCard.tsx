@@ -29,7 +29,7 @@ import {
 } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { WorkOrderItemModal } from '@web/frontend/components/work-orders/modals/WorkOrderItemModal.js';
-import { WorkOrder } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
@@ -43,7 +43,7 @@ export function WorkOrderItemsCard({
   isLoading,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
-  workOrder: WorkOrder | null;
+  workOrder: DetailedWorkOrder | null;
   dispatch: CreateWorkOrderDispatchProxy;
   disabled: boolean;
   isLoading: boolean;
@@ -160,7 +160,7 @@ function ProductsList({
   setEditItem,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
-  workOrder: WorkOrder | null;
+  workOrder: DetailedWorkOrder | null;
   dispatch: CreateWorkOrderDispatchProxy;
   disabled: boolean;
   editItem: CreateWorkOrder['items'][number] | null;

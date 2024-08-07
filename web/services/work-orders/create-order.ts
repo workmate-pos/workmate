@@ -5,6 +5,7 @@ import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
 import { db } from '../db/db.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { gql } from '../gql/gql.js';
+import { getWorkOrder } from './queries.js';
 
 /**
  * Creates an order for the given work order items.
@@ -17,7 +18,7 @@ import { gql } from '../gql/gql.js';
 export async function createWorkOrderOrder(session: Session, createWorkOrderOrder: CreateWorkOrderOrder) {
   const graphql = new Graphql(session);
 
-  const [workOrder] = await db.workOrder.get({ shop: session.shop, name: createWorkOrderOrder.name });
+  const workOrder = await getWorkOrder({ shop: session.shop, name: createWorkOrderOrder.name });
 
   if (!workOrder) {
     throw new HttpError('Work order not found', 404);

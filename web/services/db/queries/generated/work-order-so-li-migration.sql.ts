@@ -244,33 +244,13 @@ const createNewWorkOrderIR: any = {"usedParamSet":{"shop":true,"name":true,"cust
 export const createNewWorkOrder = new PreparedQuery<ICreateNewWorkOrderParams,ICreateNewWorkOrderResult>(createNewWorkOrderIR);
 
 
-/** 'CreateNewWorkOrderItem' parameters type */
-export interface ICreateNewWorkOrderItemParams {
-  absorbCharges: boolean;
-  productVariantId?: string | null | void;
-  quantity: number;
-  shopifyOrderLineItemId?: string | null | void;
-  uuid: string;
-  workOrderId: number;
-}
+/** Query 'CreateNewWorkOrderItem' is invalid, so its result is assigned type 'never'.
+ *  */
+export type ICreateNewWorkOrderItemResult = never;
 
-/** 'CreateNewWorkOrderItem' return type */
-export interface ICreateNewWorkOrderItemResult {
-  absorbCharges: boolean;
-  createdAt: Date;
-  productVariantId: string;
-  quantity: number;
-  shopifyOrderLineItemId: string | null;
-  updatedAt: Date;
-  uuid: string;
-  workOrderId: number;
-}
-
-/** 'CreateNewWorkOrderItem' query type */
-export interface ICreateNewWorkOrderItemQuery {
-  params: ICreateNewWorkOrderItemParams;
-  result: ICreateNewWorkOrderItemResult;
-}
+/** Query 'CreateNewWorkOrderItem' is invalid, so its parameters are assigned type 'never'.
+ *  */
+export type ICreateNewWorkOrderItemParams = never;
 
 const createNewWorkOrderItemIR: any = {"usedParamSet":{"workOrderId":true,"uuid":true,"shopifyOrderLineItemId":true,"productVariantId":true,"absorbCharges":true,"quantity":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":131,"b":143}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":146,"b":151}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":154,"b":176}]},{"name":"productVariantId","required":false,"transform":{"type":"scalar"},"locs":[{"a":179,"b":195}]},{"name":"absorbCharges","required":true,"transform":{"type":"scalar"},"locs":[{"a":198,"b":212}]},{"name":"quantity","required":true,"transform":{"type":"scalar"},"locs":[{"a":215,"b":224}]}],"statement":"INSERT INTO \"WorkOrderItem\" (\"workOrderId\", uuid, \"shopifyOrderLineItemId\", \"productVariantId\", \"absorbCharges\", quantity)\nVALUES (:workOrderId!, :uuid!, :shopifyOrderLineItemId, :productVariantId, :absorbCharges!, :quantity!)\nRETURNING *"};
 
@@ -285,26 +265,13 @@ const createNewWorkOrderItemIR: any = {"usedParamSet":{"workOrderId":true,"uuid"
 export const createNewWorkOrderItem = new PreparedQuery<ICreateNewWorkOrderItemParams,ICreateNewWorkOrderItemResult>(createNewWorkOrderItemIR);
 
 
-/** 'CreateNewWorkOrderHourlyLabourCharge' parameters type */
-export interface ICreateNewWorkOrderHourlyLabourChargeParams {
-  employeeId?: string | null | void;
-  hours?: string | null | void;
-  name?: string | null | void;
-  rate?: string | null | void;
-  shopifyOrderLineItemId?: string | null | void;
-  uuid: string;
-  workOrderId: number;
-  workOrderItemUuid?: string | null | void;
-}
+/** Query 'CreateNewWorkOrderHourlyLabourCharge' is invalid, so its result is assigned type 'never'.
+ *  */
+export type ICreateNewWorkOrderHourlyLabourChargeResult = never;
 
-/** 'CreateNewWorkOrderHourlyLabourCharge' return type */
-export type ICreateNewWorkOrderHourlyLabourChargeResult = void;
-
-/** 'CreateNewWorkOrderHourlyLabourCharge' query type */
-export interface ICreateNewWorkOrderHourlyLabourChargeQuery {
-  params: ICreateNewWorkOrderHourlyLabourChargeParams;
-  result: ICreateNewWorkOrderHourlyLabourChargeResult;
-}
+/** Query 'CreateNewWorkOrderHourlyLabourCharge' is invalid, so its parameters are assigned type 'never'.
+ *  */
+export type ICreateNewWorkOrderHourlyLabourChargeParams = never;
 
 const createNewWorkOrderHourlyLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"uuid":true,"workOrderItemUuid":true,"shopifyOrderLineItemId":true,"employeeId":true,"name":true,"rate":true,"hours":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":197,"b":209}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":212,"b":217}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":220,"b":237}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":240,"b":262}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":265,"b":275}]},{"name":"name","required":false,"transform":{"type":"scalar"},"locs":[{"a":278,"b":282}]},{"name":"rate","required":false,"transform":{"type":"scalar"},"locs":[{"a":285,"b":289}]},{"name":"hours","required":false,"transform":{"type":"scalar"},"locs":[{"a":292,"b":297}]}],"statement":"INSERT INTO \"WorkOrderHourlyLabourCharge\" (\"workOrderId\", uuid, \"workOrderItemUuid\", \"shopifyOrderLineItemId\", \"employeeId\", name, rate, hours, \"hoursLocked\", \"rateLocked\", \"removeLocked\")\nVALUES (:workOrderId!, :uuid!, :workOrderItemUuid, :shopifyOrderLineItemId, :employeeId, :name, :rate, :hours, FALSE, FALSE, FALSE)"};
 
@@ -318,25 +285,13 @@ const createNewWorkOrderHourlyLabourChargeIR: any = {"usedParamSet":{"workOrderI
 export const createNewWorkOrderHourlyLabourCharge = new PreparedQuery<ICreateNewWorkOrderHourlyLabourChargeParams,ICreateNewWorkOrderHourlyLabourChargeResult>(createNewWorkOrderHourlyLabourChargeIR);
 
 
-/** 'CreateNewWorkOrderFixedPriceLabourCharge' parameters type */
-export interface ICreateNewWorkOrderFixedPriceLabourChargeParams {
-  amount?: string | null | void;
-  employeeId?: string | null | void;
-  name?: string | null | void;
-  shopifyOrderLineItemId?: string | null | void;
-  uuid: string;
-  workOrderId: number;
-  workOrderItemUuid?: string | null | void;
-}
+/** Query 'CreateNewWorkOrderFixedPriceLabourCharge' is invalid, so its result is assigned type 'never'.
+ *  */
+export type ICreateNewWorkOrderFixedPriceLabourChargeResult = never;
 
-/** 'CreateNewWorkOrderFixedPriceLabourCharge' return type */
-export type ICreateNewWorkOrderFixedPriceLabourChargeResult = void;
-
-/** 'CreateNewWorkOrderFixedPriceLabourCharge' query type */
-export interface ICreateNewWorkOrderFixedPriceLabourChargeQuery {
-  params: ICreateNewWorkOrderFixedPriceLabourChargeParams;
-  result: ICreateNewWorkOrderFixedPriceLabourChargeResult;
-}
+/** Query 'CreateNewWorkOrderFixedPriceLabourCharge' is invalid, so its parameters are assigned type 'never'.
+ *  */
+export type ICreateNewWorkOrderFixedPriceLabourChargeParams = never;
 
 const createNewWorkOrderFixedPriceLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"uuid":true,"workOrderItemUuid":true,"shopifyOrderLineItemId":true,"employeeId":true,"name":true,"amount":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":183,"b":195}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":198,"b":203}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":206,"b":223}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":226,"b":248}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":251,"b":261}]},{"name":"name","required":false,"transform":{"type":"scalar"},"locs":[{"a":264,"b":268}]},{"name":"amount","required":false,"transform":{"type":"scalar"},"locs":[{"a":271,"b":277}]}],"statement":"INSERT INTO \"WorkOrderFixedPriceLabourCharge\" (\"workOrderId\", uuid, \"workOrderItemUuid\", \"shopifyOrderLineItemId\", \"employeeId\", name, amount, \"amountLocked\", \"removeLocked\")\nVALUES (:workOrderId!, :uuid!, :workOrderItemUuid, :shopifyOrderLineItemId, :employeeId, :name, :amount, FALSE, FALSE)"};
 

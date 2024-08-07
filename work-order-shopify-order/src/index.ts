@@ -1,4 +1,4 @@
-// TODO: Move to common
+// TODO: Move web / ... / draft-order.ts since thats now the source of truth for all orders
 
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertMoney, BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -40,10 +40,7 @@ export type WorkOrderItem = WorkOrderProductItem | WorkOrderCustomItem;
 type BaseCharge = {
   uuid: string;
   name: string;
-  workOrderItem: {
-    uuid: string;
-    type: 'product' | 'custom-item';
-  } | null;
+  workOrderItemUuid: string | null;
 };
 
 export type HourlyLabourCharge = BaseCharge & {
@@ -120,9 +117,7 @@ export function getWorkOrderLineItems(
         throw new Error('Must provide unit price when absorbing charges');
       }
 
-      const absorbedCharges = charges
-        .filter(hasNestedPropertyValue('workOrderItem.type', 'product'))
-        .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+      const absorbedCharges = charges.filter(hasNestedPropertyValue('workOrderItemUuid', item.uuid));
 
       const totalChargeCost = BigDecimal.sum(
         ...absorbedCharges.map(getChargeUnitPrice).map(money => BigDecimal.fromMoney(money)),
@@ -145,9 +140,7 @@ export function getWorkOrderLineItems(
     let { unitPrice } = item;
 
     if (absorbCharges) {
-      const absorbedCharges = charges
-        .filter(hasNestedPropertyValue('workOrderItem.type', 'custom-item'))
-        .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+      const absorbedCharges = charges.filter(hasNestedPropertyValue('workOrderItemUuid', item.uuid));
 
       const totalChargeCost = BigDecimal.sum(
         ...absorbedCharges.map(getChargeUnitPrice).map(money => BigDecimal.fromMoney(money)),
@@ -174,21 +167,9 @@ export function getWorkOrderLineItems(
   }
 
   for (const charge of charges) {
-    let isAbsorbed = false;
-
-    if (charge.workOrderItem) {
-      if (charge.workOrderItem?.type === 'product') {
-        isAbsorbed = productItems
-          .filter(hasPropertyValue('uuid', charge.workOrderItem?.uuid ?? ''))
-          .some(hasPropertyValue('absorbCharges', true));
-      } else if (charge.workOrderItem?.type === 'custom-item') {
-        isAbsorbed = customItems
-          .filter(hasPropertyValue('uuid', charge.workOrderItem?.uuid ?? ''))
-          .some(hasPropertyValue('absorbCharges', true));
-      } else {
-        return charge.workOrderItem.type satisfies never;
-      }
-    }
+    const isAbsorbed =
+      charge.workOrderItemUuid !== null &&
+      [...productItems, ...customItems].some(hasPropertyValue('uuid', charge.workOrderItemUuid));
 
     if (isAbsorbed) {
       continue;
@@ -303,9 +284,7 @@ function getItemCustomAttributes(
     return item satisfies never;
   }
 
-  const linkedCharges = charges
-    .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
-    .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+  const linkedCharges = charges.filter(hasNestedPropertyValue('workOrderItemUuid', item.uuid));
 
   if (item.absorbCharges) {
     for (const absorbedCharge of linkedCharges) {
@@ -334,14 +313,8 @@ function getChargeCustomAttributes(
     _wm_sku: options.labourSku,
   };
 
-  if (charge.workOrderItem) {
-    if (charge.workOrderItem.type === 'product') {
-      customAttributes._wm_linked_to_item_uuid = String(quantity);
-    } else if (charge.workOrderItem.type === 'custom-item') {
-      customAttributes._wm_linked_to_custom_item_uuid = String(quantity);
-    } else {
-      return charge.workOrderItem.type satisfies never;
-    }
+  if (charge.workOrderItemUuid) {
+    customAttributes._wm_linked_to_item_uuid = String(quantity);
   }
 
   return customAttributes;
@@ -398,7 +371,17 @@ export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
       continue;
     }
 
-    return { type, uuid };
+    // Accept the old custom attributes but convert them to the new type system
+    const newType = (
+      {
+        item: 'item',
+        'custom-item': 'item',
+        hourly: 'charge',
+        fixed: 'charge',
+      } as const
+    )[type];
+
+    return { type: newType, uuid };
   }
 
   return null;

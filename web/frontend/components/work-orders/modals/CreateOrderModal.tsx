@@ -13,7 +13,7 @@ import {
 import { useState } from 'react';
 import { ToastActionCallable, useAuthenticatedFetch } from '@teifi-digital/shopify-app-react';
 import { useCreateWorkOrderOrderMutation } from '@work-orders/common/queries/use-create-work-order-order-mutation.js';
-import { WorkOrder, WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder, DetailedWorkOrderCharge, DetailedWorkOrderItem } from '@web/services/work-orders/types.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
@@ -35,7 +35,7 @@ export function CreateOrderModal({
   open: boolean;
   onClose: () => void;
   setToastAction: ToastActionCallable;
-  workOrder: WorkOrder | null;
+  workOrder: DetailedWorkOrder | null;
 }) {
   const fetch = useAuthenticatedFetch(setToastAction);
   const app = useAppBridge();
@@ -65,8 +65,8 @@ export function CreateOrderModal({
     { enabled: !!calculateWorkOrder },
   );
 
-  const [selectedItems, setSelectedItems] = useState<WorkOrderItem[]>([]);
-  const [selectedCharges, setSelectedCharges] = useState<WorkOrderCharge[]>([]);
+  const [selectedItems, setSelectedItems] = useState<DetailedWorkOrderItem[]>([]);
+  const [selectedCharges, setSelectedCharges] = useState<DetailedWorkOrderCharge[]>([]);
 
   const items = useListItems(
     workOrder,
@@ -191,12 +191,12 @@ export function CreateOrderModal({
 }
 
 function useListItems(
-  workOrder: WorkOrder | null,
+  workOrder: DetailedWorkOrder | null,
   calculatedDraftOrderQuery: ReturnType<typeof useCalculatedDraftOrderQuery>,
-  selectedItems: WorkOrderItem[],
-  selectedCharges: WorkOrderCharge[],
-  setSelectedItems: (items: WorkOrderItem[]) => void,
-  setSelectedCharges: (charges: WorkOrderCharge[]) => void,
+  selectedItems: DetailedWorkOrderItem[],
+  selectedCharges: DetailedWorkOrderCharge[],
+  setSelectedItems: (items: DetailedWorkOrderItem[]) => void,
+  setSelectedCharges: (charges: DetailedWorkOrderCharge[]) => void,
   setToastAction: ToastActionCallable,
 ) {
   const fetch = useAuthenticatedFetch(setToastAction);
@@ -257,7 +257,7 @@ function useListItems(
     return rows;
   });
 
-  function getChargeRow(charge: WorkOrderCharge): Row {
+  function getChargeRow(charge: DetailedWorkOrderCharge): Row {
     const employeeQuery = charge.employeeId ? employeeQueries[charge.employeeId] : undefined;
     const employee = employeeQuery?.data;
 
@@ -296,10 +296,10 @@ function useListItems(
   return [...itemsWithCharges, ...unlinkedChargeRows];
 }
 
-function getItemId(item: WorkOrderItem) {
+function getItemId(item: DetailedWorkOrderItem) {
   return `item-${item.uuid}`;
 }
 
-function getChargeId(charge: WorkOrderCharge) {
+function getChargeId(charge: DetailedWorkOrderCharge) {
   return `charge-${charge.type}-${charge.uuid}`;
 }

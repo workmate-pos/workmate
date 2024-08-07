@@ -141,25 +141,8 @@
               "uuid": {
                 "type": "string"
               },
-              "workOrderItem": {
-                "anyOf": [
-                  {
-                    "const": null
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "enum": ["product", "custom-item"]
-                      },
-                      "uuid": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["type", "uuid"],
-                    "additionalProperties": false
-                  }
-                ]
+              "workOrderItemUuid": {
+                "anyOf": [{ "const": null }, { "type": "string" }]
               },
               "employeeId": {
                 "anyOf": [
@@ -194,7 +177,7 @@
             "required": [
               "type",
               "uuid",
-              "workOrderItem",
+              "workOrderItemUuid",
               "employeeId",
               "name",
               "rate",
@@ -215,25 +198,8 @@
               "uuid": {
                 "type": "string"
               },
-              "workOrderItem": {
-                "anyOf": [
-                  {
-                    "const": null
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "enum": ["product", "custom-item"]
-                      },
-                      "uuid": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["type", "uuid"],
-                    "additionalProperties": false
-                  }
-                ]
+              "workOrderItemUuid": {
+                "anyOf": [{ "const": null }, { "type": "string" }]
               },
               "employeeId": {
                 "anyOf": [
@@ -262,7 +228,7 @@
             "required": [
               "type",
               "uuid",
-              "workOrderItem",
+              "workOrderItemUuid",
               "employeeId",
               "name",
               "amount",

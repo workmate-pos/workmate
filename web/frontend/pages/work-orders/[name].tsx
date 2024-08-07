@@ -28,7 +28,7 @@ import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-qu
 import { useCreateWorkOrderReducer, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { defaultCreateWorkOrder } from '@work-orders/common/create-work-order/default.js';
-import { WorkOrder as WorkOrderType } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder as WorkOrderType } from '@web/services/work-orders/types.js';
 import {
   SaveWorkOrderValidationErrors,
   useSaveWorkOrderMutation,

@@ -1,6 +1,6 @@
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
-import { WorkOrder } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -65,7 +65,7 @@ export function WorkOrderItemModal({
 }: {
   createWorkOrder: WIPCreateWorkOrder;
   item: { type: 'product' | 'custom-item'; uuid: string };
-  workOrder: WorkOrder | null;
+  workOrder: DetailedWorkOrder | null;
   open: boolean;
   onClose: () => void;
   setToastAction: ToastActionCallable;

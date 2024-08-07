@@ -26,6 +26,5 @@ extensions:
     brandedScalars:
       - "ID"
       - "Money"
-      - "Int"
       - "DateTime"
       - "Decimal"

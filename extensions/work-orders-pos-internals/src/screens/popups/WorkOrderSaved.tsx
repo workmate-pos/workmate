@@ -1,9 +1,9 @@
 import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { WorkOrder } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
 
-export function WorkOrderSaved({ workOrder }: { workOrder: WorkOrder }) {
+export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) {
   const title = `Work order ${workOrder.name} saved`;
 
   const router = useRouter();

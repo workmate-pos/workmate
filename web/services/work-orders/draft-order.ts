@@ -7,15 +7,11 @@ import {
   PurchasingEntityInput,
 } from '../gql/queries/generated/schema.js';
 import {
-  FixedPriceLabourCharge,
   getCustomAttributeArrayFromObject,
   getWorkOrderLineItems,
   getWorkOrderOrderCustomAttributes,
-  HourlyLabourCharge,
-  WorkOrderCustomItem,
   WorkOrderItem,
   WorkOrderLabourCharge,
-  WorkOrderProductItem,
 } from '@work-orders/work-order-shopify-order';
 import { getShopSettings } from '../settings.js';
 import { db } from '../db/db.js';
@@ -28,17 +24,22 @@ import { Session } from '@shopify/shopify-api';
 import { gql } from '../gql/gql.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { IGetResult } from '../db/queries/generated/work-order.sql.js';
 import { match, P } from 'ts-pattern';
 import { httpError } from '../../util/http-error.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 import { WorkOrderDiscount } from './types.js';
+import {
+  getWorkOrder,
+  getWorkOrderCharges,
+  getWorkOrderCustomFields,
+  getWorkOrderItems,
+  WorkOrder,
+} from './queries.js';
 
-export type SelectedItem = { type: 'product' | 'custom-item'; uuid: string };
-export type SelectedCharge = { type: 'hourly-labour' | 'fixed-price-labour'; uuid: string };
+export type SelectedItem = { uuid: string };
+export type SelectedCharge = { uuid: string };
 
 /**
  * Plan an order for some items and charges of a work order.
@@ -56,10 +57,7 @@ export async function getDraftOrderInputForExistingWorkOrder(
     newCharges?: WorkOrderLabourCharge[];
   },
 ) {
-  const [databaseWorkOrder] = await db.workOrder.get({
-    shop: session.shop,
-    name: workOrderName,
-  });
+  const databaseWorkOrder = await getWorkOrder({ shop: session.shop, name: workOrderName });
 
   if (!databaseWorkOrder) {
     throw new HttpError('Work order not found', 404);
@@ -83,61 +81,52 @@ export async function getDraftOrderInputForExistingWorkOrder(
   assertGidOrNull(companyLocationId);
   assertGidOrNull(companyContactId);
 
-  const [{ labourLineItemSKU }, workOrder] = await Promise.all([
-    getShopSettings(session.shop),
-    awaitNested({
-      customFields: db.workOrder.getCustomFields({ workOrderId }),
-      items: db.workOrder.getItems({ workOrderId }),
-      customItems: db.workOrder.getCustomItems({ workOrderId }),
-      hourlyLabourCharges: db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
-      fixedPriceLabourCharges: db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
-    }),
-  ]);
+  const workOrder = await awaitNested({
+    customFields: getWorkOrderCustomFields(workOrderId),
+    items: getWorkOrderItems(workOrderId),
+    charges: getWorkOrderCharges(workOrderId),
+  });
 
-  const availableItems = workOrder.items.filter(notInOrder).map(merge({ type: 'product' }));
-  const availableCustomItems = workOrder.customItems.filter(notInOrder).map(merge({ type: 'custom-item' }));
-  const availableHourlyCharges = workOrder.hourlyLabourCharges.filter(notInOrder).map(merge({ type: 'hourly-labour' }));
-  const availableFixedPriceCharges = workOrder.fixedPriceLabourCharges
-    .filter(notInOrder)
-    .map(merge({ type: 'fixed-price-labour' }));
+  const availableItems = workOrder.items.filter(notInOrder);
+  const availableCharges = workOrder.charges.filter(notInOrder);
 
-  const selectedItems = options?.selectedItems ?? [
-    ...availableItems.map(item => ({ type: 'product', uuid: item.uuid }) as const),
-    ...availableCustomItems.map(item => ({ type: 'custom-item', uuid: item.uuid }) as const),
-  ];
-
-  const selectedCharges = options?.selectedCharges ?? [
-    ...availableHourlyCharges.map(charge => ({ type: 'hourly-labour', uuid: charge.uuid }) as const),
-    ...availableFixedPriceCharges.map(charge => ({ type: 'fixed-price-labour', uuid: charge.uuid }) as const),
-  ];
+  const selectedItems = options?.selectedItems ?? availableItems;
+  const selectedCharges = options?.selectedCharges ?? availableCharges;
 
   const selectedWorkOrderItems = selectedItems.map(
-    ({ type, uuid }) =>
-      match(type)
-        .with('product', () => availableItems.find(hasPropertyValue('uuid', uuid)))
-        .with('custom-item', () => availableCustomItems.find(hasPropertyValue('uuid', uuid)))
-        .exhaustive() ?? httpError('Item not found', 404),
+    ({ uuid }) => availableItems.find(hasPropertyValue('uuid', uuid)) ?? httpError('Item not found', 404),
   );
-
   const selectedWorkOrderCharges = selectedCharges.map(
-    charge =>
-      match(charge)
-        .with({ type: 'hourly-labour' }, () => availableHourlyCharges.find(hasPropertyValue('uuid', charge.uuid)))
-        .with({ type: 'fixed-price-labour' }, () =>
-          availableFixedPriceCharges.find(hasPropertyValue('uuid', charge.uuid)),
-        )
-        .exhaustive() ?? httpError('Charge not found', 404),
+    ({ uuid }) => availableCharges.find(hasPropertyValue('uuid', uuid)) ?? httpError('Charge not found', 404),
   );
 
   const items = selectedWorkOrderItems.map(item => {
     return match(item)
       .returnType<WorkOrderItem>()
-      .with({ type: 'product' }, (item): WorkOrderProductItem => {
-        return pick(item, 'uuid', 'quantity', 'absorbCharges', 'type', 'productVariantId');
-      })
       .with(
-        { type: 'custom-item' },
-        (item): WorkOrderCustomItem => pick(item, 'uuid', 'quantity', 'absorbCharges', 'type', 'name', 'unitPrice'),
+        {
+          uuid: P.select('uuid'),
+          data: {
+            type: P.select('type', 'product'),
+            quantity: P.select('quantity'),
+            absorbCharges: P.select('absorbCharges'),
+            productVariantId: P.select('productVariantId'),
+          },
+        },
+        identity,
+      )
+      .with(
+        {
+          uuid: P.select('uuid'),
+          data: {
+            type: P.select('type', 'custom-item'),
+            quantity: P.select('quantity'),
+            absorbCharges: P.select('absorbCharges'),
+            name: P.select('name'),
+            unitPrice: P.select('unitPrice'),
+          },
+        },
+        identity,
       )
       .exhaustive();
   });
@@ -146,18 +135,29 @@ export async function getDraftOrderInputForExistingWorkOrder(
     match(charge)
       .returnType<WorkOrderLabourCharge>()
       .with(
-        { type: 'hourly-labour' },
-        (labour): HourlyLabourCharge => ({
-          ...pick(labour, 'type', 'uuid', 'name', 'hours', 'rate'),
-          workOrderItem: getWorkOrderItem(labour),
-        }),
+        {
+          uuid: P.select('uuid'),
+          workOrderItemUuid: P.select('workOrderItemUuid'),
+          data: {
+            type: P.select('type', 'hourly-labour'),
+            name: P.select('name'),
+            hours: P.select('hours'),
+            rate: P.select('rate'),
+          },
+        },
+        identity,
       )
       .with(
-        { type: 'fixed-price-labour' },
-        (labour): FixedPriceLabourCharge => ({
-          ...pick(labour, 'type', 'uuid', 'name', 'amount'),
-          workOrderItem: getWorkOrderItem(labour),
-        }),
+        {
+          uuid: P.select('uuid'),
+          workOrderItemUuid: P.select('workOrderItemUuid'),
+          data: {
+            type: P.select('type', 'fixed-price-labour'),
+            name: P.select('name'),
+            amount: P.select('amount'),
+          },
+        },
+        identity,
       )
       .exhaustive(),
   );
@@ -313,7 +313,7 @@ export async function getDraftOrderInputForWorkOrder(
 
 async function getPaymentTerms(
   session: Session,
-  workOrder: Pick<IGetResult, 'id' | 'companyId' | 'paymentTermsTemplateId' | 'paymentFixedDueDate'>,
+  workOrder: Pick<WorkOrder, 'id' | 'companyId' | 'paymentTermsTemplateId' | 'paymentFixedDueDate'>,
 ): Promise<PaymentTermsInput | null> {
   const paymentTerms = getWorkOrderPaymentTerms(workOrder);
 
@@ -345,23 +345,4 @@ async function isPaymentTermTemplateType(session: Session, templateId: ID, type:
 
 function notInOrder(item: { shopifyOrderLineItemId: string | null }) {
   return !isLineItemId(item.shopifyOrderLineItemId);
-}
-
-function merge<const A>(a: A) {
-  return <const B>(b: B) => ({ ...a, ...b });
-}
-
-/**
- * Create a nice object referencing which item a charge is linked to + the necessary assertions
- */
-export function getWorkOrderItem(charge: { workOrderItemUuid: string | null; workOrderCustomItemUuid: string | null }) {
-  return match(charge)
-    .returnType<{ uuid: string; type: 'product' | 'custom-item' } | null>()
-    .with({ workOrderCustomItemUuid: P.nonNullable, workOrderItemUuid: P.nonNullable }, () =>
-      httpError('Invalid charge - cannot be linked to product item and custom item at the same time', 500),
-    )
-    .with({ workOrderItemUuid: P.nullish, workOrderCustomItemUuid: P.nullish }, () => null)
-    .with({ workOrderCustomItemUuid: P.string.select('uuid') }, merge({ type: 'custom-item' }))
-    .with({ workOrderItemUuid: P.string.select('uuid') }, merge({ type: 'product' }))
-    .exhaustive();
 }

@@ -9,8 +9,8 @@ import { ShopSettings } from '../../../schemas/generated/shop-settings.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { calculateWorkOrder } from '../../work-orders/calculate.js';
 import { Session } from '@shopify/shopify-api';
-import { getWorkOrder } from '../../work-orders/get.js';
-import { WorkOrderCharge } from '../../work-orders/types.js';
+import { getDetailedWorkOrder } from '../../work-orders/get.js';
+import { DetailedWorkOrderCharge } from '../../work-orders/types.js';
 import { subtractMoney } from '../../../util/money.js';
 
 export async function getRenderedWorkOrderTemplate(
@@ -33,7 +33,7 @@ export async function getWorkOrderTemplateData(
   clientDate: string,
   clientDueDate: string,
 ): Promise<WorkOrderTemplateData> {
-  const workOrder = await getWorkOrder(session, workOrderName);
+  const workOrder = await getDetailedWorkOrder(session, workOrderName);
 
   if (!workOrder) {
     throw new HttpError(`Work order ${workOrderName} not found`, 404);
@@ -48,13 +48,9 @@ export async function getWorkOrderTemplateData(
       tax,
       orderDiscount,
       itemPrices,
-      customItemPrices,
-      fixedPriceLabourChargePrices,
-      hourlyLabourChargePrices,
+      chargePrices,
       itemLineItemIds,
-      customItemLineItemIds,
-      fixedPriceLabourChargeLineItemIds,
-      hourlyLabourChargeLineItemIds,
+      chargeLineItemIds,
       lineItems,
       missingProductVariantIds,
     },
@@ -65,21 +61,11 @@ export async function getWorkOrderTemplateData(
 
   const paid = subtractMoney(total, outstanding);
 
-  function getChargeTemplateData(charge: WorkOrderCharge): WorkOrderTemplateCharge {
-    const lineItemIdRecord = {
-      'fixed-price-labour': fixedPriceLabourChargeLineItemIds,
-      'hourly-labour': hourlyLabourChargeLineItemIds,
-    }[charge.type];
-
-    const lineItemId = lineItemIdRecord[charge.uuid];
+  function getChargeTemplateData(charge: DetailedWorkOrderCharge): WorkOrderTemplateCharge {
+    const lineItemId = chargeLineItemIds[charge.uuid];
     const lineItem = lineItems.find(li => li.id === lineItemId);
 
-    const priceRecord = {
-      'fixed-price-labour': fixedPriceLabourChargePrices,
-      'hourly-labour': hourlyLabourChargePrices,
-    }[charge.type];
-
-    const totalPrice = priceRecord[charge.uuid] ?? never('calculate wrong?');
+    const totalPrice = chargePrices[charge.uuid] ?? never('calculate wrong?');
 
     let details = '';
 
@@ -127,25 +113,11 @@ export async function getWorkOrderTemplateData(
           lineItemId,
           totalPrice = never('smth wrong with calculate'),
           purchaseOrders,
-        } = (() => {
-          if (item.type === 'product') {
-            return {
-              totalPrice: itemPrices[item.uuid],
-              lineItemId: itemLineItemIds[item.uuid],
-              purchaseOrders: item.purchaseOrders,
-            };
-          }
-
-          if (item.type === 'custom-item') {
-            return {
-              totalPrice: customItemPrices[item.uuid],
-              lineItemId: customItemLineItemIds[item.uuid],
-              purchaseOrders: [],
-            };
-          }
-
-          return item satisfies never;
-        })();
+        } = {
+          totalPrice: itemPrices[item.uuid],
+          lineItemId: itemLineItemIds[item.uuid],
+          purchaseOrders: item.type === 'product' ? item.purchaseOrders : [],
+        };
 
         const lineItem = lineItems.find(li => li.id === lineItemId) ?? null;
 
@@ -162,8 +134,7 @@ export async function getWorkOrderTemplateData(
         return {
           name: lineItem?.name ?? 'Unknown product',
           charges: workOrder.charges
-            .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid))
-            .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
+            .filter(hasNestedPropertyValue('workOrderItemUuid', item.uuid))
             .map(getChargeTemplateData),
           sku: lineItem?.sku ?? null,
           fullyPaid: lineItem?.order?.fullyPaid ?? false,
@@ -179,7 +150,7 @@ export async function getWorkOrderTemplateData(
           unitPrice: round(unitPrice),
         };
       }),
-    charges: workOrder.charges.filter(hasPropertyValue('workOrderItem', null)).map(getChargeTemplateData),
+    charges: workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null)).map(getChargeTemplateData),
     fullyPaid: lineItems.every(lineItem => lineItem.order?.fullyPaid ?? false),
     outstanding: round(outstanding),
     paid: round(paid),

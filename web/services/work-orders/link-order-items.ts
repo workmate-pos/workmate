@@ -4,6 +4,13 @@ import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Session } from '@shopify/shopify-api';
 import { gql } from '../gql/gql.js';
+import {
+  getWorkOrder,
+  getWorkOrderChargesByUuids,
+  getWorkOrderItemsByUuids,
+  setWorkOrderChargeShopifyOrderLineItemIds,
+  setWorkOrderItemShopifyOrderLineItemIds,
+} from './queries.js';
 
 type Order = { id: ID; customAttributes: { key: string; value: string | null }[] };
 type LineItem =
@@ -17,7 +24,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
     return;
   }
 
-  const [workOrder] = await db.workOrder.get({ shop: session.shop, name: workOrderName });
+  const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName });
 
   if (!workOrder) {
     throw new Error(`Work order with name ${workOrderName} not found`);
@@ -27,9 +34,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
 
   await Promise.all([
     linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
-    linkCustomItems(lineItems, workOrder.id),
-    linkHourlyLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
-    linkFixedPriceLabourCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
+    linkCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
   ]);
 
   if (errors.length) {
@@ -38,16 +43,18 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
 }
 
 async function linkItems(lineItems: LineItem[], workOrderId: number) {
+  // TODO: Eventually get rid of this distinction
   const lineItemIdByItemUuid = getLineItemIdsByUuids(lineItems, 'item');
 
   const uuids = Object.keys(lineItemIdByItemUuid);
 
-  const items = uuids.length ? await db.workOrder.getItemsByUuids({ workOrderId, uuids }) : [];
-  for (const { uuid, shopifyOrderLineItemId: previousShopifyOrderLineItemId } of items) {
+  const items = await getWorkOrderItemsByUuids({ workOrderId, uuids });
+  // TODO: parallel
+  for (const { uuid, shopifyOrderLineItemId: previousShopifyOrderLineItemId, data } of items) {
     const shopifyOrderLineItemId = lineItemIdByItemUuid[uuid] ?? never();
-    await db.workOrder.setItemShopifyOrderLineItemId({ workOrderId, uuid, shopifyOrderLineItemId });
+    await setWorkOrderItemShopifyOrderLineItemIds(workOrderId, [{ uuid, shopifyOrderLineItemId }]);
 
-    if (previousShopifyOrderLineItemId) {
+    if (data.type === 'product' && previousShopifyOrderLineItemId) {
       // if this work order item was previously linked to a different line item, we should also re-link purchase order line items.
       // this is handy when a draft order is converted to a real order/when a new draft order is created (e.g. when changing a work order)
 
@@ -68,63 +75,16 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
   }
 }
 
-async function linkCustomItems(lineItems: LineItem[], workOrderId: number) {
-  const lineItemIdByItemUuid = getLineItemIdsByUuids(lineItems, 'custom-item');
+async function linkCharges(lineItems: LineItem[], workOrderId: number) {
+  const lineItemByChargeUuid = getLineItemIdsByUuids(lineItems, 'charge');
 
-  const uuids = Object.keys(lineItemIdByItemUuid);
+  const uuids = Object.keys(lineItemByChargeUuid);
 
-  const items = uuids.length ? await db.workOrder.getCustomItemsByUuids({ workOrderId, uuids }) : [];
-  for (const { uuid } of items) {
-    const shopifyOrderLineItemId = lineItemIdByItemUuid[uuid] ?? never();
-    await db.workOrder.setCustomItemShopifyOrderLineItemId({ workOrderId, uuid, shopifyOrderLineItemId });
-  }
-
-  if (items.length !== uuids.length) {
-    throw new Error('Did not find all item uuids from a Shopify Order in the database');
-  }
-}
-
-async function linkHourlyLabourCharges(lineItems: LineItem[], workOrderId: number) {
-  const lineItemIdByHourlyChargeUuid = getLineItemIdsByUuids(lineItems, 'hourly');
-
-  const uuids = Object.keys(lineItemIdByHourlyChargeUuid);
-
-  const charges = uuids.length ? await db.workOrderCharges.getHourlyLabourChargesByUuids({ workOrderId, uuids }) : [];
-  for (const { uuid } of charges) {
-    const shopifyOrderLineItemId = lineItemIdByHourlyChargeUuid[uuid] ?? never();
-    await db.workOrderCharges.setHourlyLabourChargeShopifyOrderLineItemId({
-      workOrderId,
-      uuid,
-      shopifyOrderLineItemId,
-    });
-  }
-
-  if (charges.length !== uuids.length) {
-    throw new Error('Did not find all hourly labour charge uuids from a Shopify Order in the database');
-  }
-}
-
-async function linkFixedPriceLabourCharges(lineItems: LineItem[], workOrderId: number) {
-  const lineItemIdByFixedPriceChargeUuid = getLineItemIdsByUuids(lineItems, 'fixed');
-
-  const uuids = Object.keys(lineItemIdByFixedPriceChargeUuid);
-
-  const charges = uuids.length
-    ? await db.workOrderCharges.getFixedPriceLabourChargesByUuids({ workOrderId, uuids })
-    : [];
-
-  for (const { uuid } of charges) {
-    const shopifyOrderLineItemId = lineItemIdByFixedPriceChargeUuid[uuid] ?? never();
-    await db.workOrderCharges.setFixedPriceLabourChargeShopifyOrderLineItemId({
-      workOrderId,
-      uuid,
-      shopifyOrderLineItemId,
-    });
-  }
-
-  if (charges.length !== uuids.length) {
-    throw new Error('Did not find all fixed price labour charge uuids from a Shopify Order in the database');
-  }
+  const charges = await getWorkOrderChargesByUuids({ workOrderId, uuids });
+  await setWorkOrderChargeShopifyOrderLineItemIds(
+    workOrderId,
+    charges.map(({ uuid }) => ({ uuid, shopifyOrderLineItemId: lineItemByChargeUuid[uuid] ?? never() })),
+  );
 }
 
 export function getLineItemIdsByUuids(

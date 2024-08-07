@@ -4,7 +4,7 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { WorkOrder, WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder, DetailedWorkOrderCharge, DetailedWorkOrderItem } from '@web/services/work-orders/types.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -36,8 +36,8 @@ export function PaymentOverview({ name }: { name: string }) {
 
   const createWorkOrderOrderMutation = useCreateWorkOrderOrderMutation({ fetch });
 
-  const [selectedItems, setSelectedItems] = useState<WorkOrderItem[]>([]);
-  const [selectedCharges, setSelectedCharges] = useState<WorkOrderCharge[]>([]);
+  const [selectedItems, setSelectedItems] = useState<DetailedWorkOrderItem[]>([]);
+  const [selectedCharges, setSelectedCharges] = useState<DetailedWorkOrderCharge[]>([]);
 
   const calculateWorkOrderQuery = useCalculateWorkOrder({ fetch, workOrder });
   const planOrderQuery = usePlanOrder({ fetch, workOrder, selectedItems, selectedCharges });
@@ -199,12 +199,12 @@ export function PaymentOverview({ name }: { name: string }) {
 }
 
 function useItemRows(
-  workOrder: WorkOrder | null,
+  workOrder: DetailedWorkOrder | null,
   calculatedDraftOrderQuery: ReturnType<typeof useCalculatedDraftOrderQuery>,
-  selectedItems: WorkOrderItem[],
-  selectedCharges: WorkOrderCharge[],
-  setSelectedItems: (items: WorkOrderItem[]) => void,
-  setSelectedCharges: (charges: WorkOrderCharge[]) => void,
+  selectedItems: DetailedWorkOrderItem[],
+  selectedCharges: DetailedWorkOrderCharge[],
+  setSelectedItems: (items: DetailedWorkOrderItem[]) => void,
+  setSelectedCharges: (charges: DetailedWorkOrderCharge[]) => void,
   isLoading: boolean,
 ) {
   const fetch = useAuthenticatedFetch();
@@ -283,7 +283,7 @@ function useItemRows(
 
   const unlinkedChargeRows = unlinkedCharges.map<ListRow>(charge => getChargeRow(charge));
 
-  function getChargeRow(charge: WorkOrderCharge): ListRow {
+  function getChargeRow(charge: DetailedWorkOrderCharge): ListRow {
     const employeeQuery = charge.employeeId ? employeeQueries[charge.employeeId] : undefined;
     const employee = employeeQuery?.data;
 
@@ -325,7 +325,7 @@ function useItemRows(
   return [...itemRows, ...unlinkedChargeRows];
 }
 
-const useCalculateWorkOrder = ({ fetch, workOrder }: { fetch: Fetch; workOrder?: WorkOrder | null }) => {
+const useCalculateWorkOrder = ({ fetch, workOrder }: { fetch: Fetch; workOrder?: DetailedWorkOrder | null }) => {
   const calculateWorkOrder = workOrder
     ? {
         ...pick(
@@ -359,9 +359,9 @@ const usePlanOrder = ({
   selectedCharges,
 }: {
   fetch: Fetch;
-  workOrder?: WorkOrder | null;
-  selectedItems: WorkOrderItem[];
-  selectedCharges: WorkOrderCharge[];
+  workOrder?: DetailedWorkOrder | null;
+  selectedItems: DetailedWorkOrderItem[];
+  selectedCharges: DetailedWorkOrderCharge[];
 }) => {
   return usePlanWorkOrderOrderQuery(
     {

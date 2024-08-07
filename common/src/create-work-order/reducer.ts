@@ -2,7 +2,7 @@ import type { DiscriminatedUnionOmit } from '@work-orders/common/types/Discrimin
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { v4 as uuid } from 'uuid';
 import type { useReducer, useRef, useState } from 'react';
-import { WorkOrder } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
@@ -57,7 +57,7 @@ export type CreateWorkOrderAction =
     } & WIPCreateWorkOrder);
 
 type CreateWorkOrderActionWithWorkOrder = CreateWorkOrderAction & {
-  workOrder: WorkOrder | null;
+  workOrder: DetailedWorkOrder | null;
 };
 
 export type CreateWorkOrderDispatchProxy = {
@@ -75,7 +75,7 @@ export type UseCreateWorkOrderReactContext = {
  */
 export const useCreateWorkOrderReducer = (
   initialCreateWorkOrder: WIPCreateWorkOrder,
-  workOrder: WorkOrder | undefined | null,
+  workOrder: DetailedWorkOrder | undefined | null,
   { useState, useRef, useReducer }: UseCreateWorkOrderReactContext,
 ) => {
   const [createWorkOrder, dispatchCreateWorkOrder] = useReducer(createWorkOrderReducer, initialCreateWorkOrder);
@@ -211,7 +211,7 @@ function shouldMergeItems(
   a: CreateWorkOrder['items'][number],
   b: CreateWorkOrder['items'][number],
   charges: CreateWorkOrder['charges'][number][],
-  workOrder: WorkOrder | null,
+  workOrder: DetailedWorkOrder | null,
 ) {
   if (a.type !== b.type) {
     return false;
@@ -252,7 +252,7 @@ function shouldMergeItems(
 function getMergedItems(
   items: CreateWorkOrder['items'][number][],
   charges: CreateWorkOrder['charges'][number][],
-  workOrder: WorkOrder | null,
+  workOrder: DetailedWorkOrder | null,
 ) {
   const merged: CreateWorkOrder['items'][number][] = [];
 
