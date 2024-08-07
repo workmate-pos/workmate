@@ -6,7 +6,7 @@ import { useQueries, useQuery } from 'react-query';
 
 const useEmployeeBatcher = (fetch: Fetch) =>
   useBatcher({
-    name: 'employees',
+    key: 'employees',
     maxSize: 25,
     handler: async (ids: ID[]) => {
       if (ids.length === 0) {

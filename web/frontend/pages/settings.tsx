@@ -21,6 +21,7 @@ import { Redirect } from '@shopify/app-bridge/actions';
 import { WorkOrderRequestSettings } from '@web/frontend/components/settings/sections/WorkOrderRequestSettings.js';
 import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
 import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
+import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
 
 export default function () {
   return (
@@ -117,6 +118,8 @@ function Settings() {
           <RatesSettings settings={settings} setSettings={setSettings} />
           <Divider />
           <WorkOrderRequestSettings settings={settings} setSettings={setSettings} />
+          <Divider />
+          <CustomFieldSettings type="WORK_ORDER" />
         </>
       ),
     },
@@ -131,8 +134,14 @@ function Settings() {
           />
           <Divider />
           <CustomerMetafieldSettings settings={settings} setSettings={setSettings} />
+          <Divider />
+          <CustomFieldSettings type="PURCHASE_ORDER" />
         </>
       ),
+    },
+    {
+      name: 'Line Items',
+      tab: <CustomFieldSettings type="LINE_ITEM" />,
     },
     {
       name: 'Stock Transfers',
@@ -147,6 +156,10 @@ function Settings() {
           <EmailSettings settings={settings} setSettings={setSettings} />
         </>
       ),
+    },
+    {
+      name: 'Custom Fields',
+      tab: <CustomFieldSettings />,
     },
     {
       name: 'Integrations',

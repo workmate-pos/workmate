@@ -32,7 +32,9 @@ import {
   IGetHourlyLabourChargesResult,
 } from '../db/queries/generated/work-order-charges.sql.js';
 import { getMissingNonPaidWorkOrderProduct, validateCalculateWorkOrder } from './validate.js';
-import { v4 as uuid } from 'uuid';
+import { assertGidOrNull } from '../../util/assertions.js';
+import { getMailingAddressInputsForCompanyLocation } from '../draft-orders/util.js';
+import { randomBytes } from 'node:crypto';
 
 type CalculateWorkOrderResult = {
   outstanding: Money;
@@ -244,7 +246,6 @@ export async function calculateWorkOrder(
       });
 
       const lineItemPriceInfo = getLineItemPriceInformation(
-        calculateWorkOrder.name ?? 'no work order',
         lineItem,
         items,
         customItems,
@@ -486,6 +487,16 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     customerId = customer?.id ?? null;
   }
 
+  const { companyId, companyLocationId, companyContactId } = calculateWorkOrder;
+
+  assertGidOrNull(companyId);
+  assertGidOrNull(companyLocationId);
+  assertGidOrNull(companyContactId);
+
+  const { billingAddress = null, shippingAddress = null } = companyLocationId
+    ? await getMailingAddressInputsForCompanyLocation(session, companyLocationId)
+    : {};
+
   const result = await gql.calculate.draftOrderCalculate.run(graphql, {
     input: {
       lineItems: [
@@ -502,7 +513,14 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
           taxable: customSale.taxable,
         })),
       ],
-      purchasingEntity: customerId ? { customerId } : null,
+      billingAddress,
+      shippingAddress,
+      purchasingEntity:
+        companyId && companyContactId && companyLocationId
+          ? { purchasingCompany: { companyId, companyContactId, companyLocationId } }
+          : customerId
+            ? { customerId }
+            : null,
       appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
     },
   });
@@ -516,7 +534,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     lineItems: result.draftOrderCalculate.calculatedDraftOrder.lineItems.map(lineItem => {
       // `draftOrderCalculate` does not give line items ids, but we need those to map between items/charges and line items.
       // so just create a random one
-      const id = createGid('CalculatedDraftLineItem', uuid());
+      const id = createGid('CalculatedDraftLineItem', randomBytes(8).join(''));
 
       for (const uuid of getUuidsFromCustomAttributes(lineItem.customAttributes)) {
         if (uuid.type === 'item') {
@@ -611,7 +629,6 @@ function getOrderPriceInformation(order: OrderWithAllLineItems | CalculatedDraft
 }
 
 function getLineItemPriceInformation(
-  xd: string,
   lineItem: (OrderWithAllLineItems | CalculatedDraftOrderWithFakeIds)['lineItems'][number],
   items: WorkOrderItem[],
   customItems: WorkOrderCustomItem[],

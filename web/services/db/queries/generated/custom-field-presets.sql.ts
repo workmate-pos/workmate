@@ -147,3 +147,33 @@ const removeCustomFieldsPresetIR: any = {"usedParamSet":{"shop":true,"type":true
 export const removeCustomFieldsPreset = new PreparedQuery<IRemoveCustomFieldsPresetParams,IRemoveCustomFieldsPresetResult>(removeCustomFieldsPresetIR);
 
 
+/** 'UndefaultCustomFieldsPresets' parameters type */
+export interface IUndefaultCustomFieldsPresetsParams {
+  shop: string;
+  type: CustomFieldsPresetType;
+}
+
+/** 'UndefaultCustomFieldsPresets' return type */
+export type IUndefaultCustomFieldsPresetsResult = void;
+
+/** 'UndefaultCustomFieldsPresets' query type */
+export interface IUndefaultCustomFieldsPresetsQuery {
+  params: IUndefaultCustomFieldsPresetsParams;
+  result: IUndefaultCustomFieldsPresetsResult;
+}
+
+const undefaultCustomFieldsPresetsIR: any = {"usedParamSet":{"shop":true,"type":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":63,"b":68}]},{"name":"type","required":true,"transform":{"type":"scalar"},"locs":[{"a":83,"b":88}]}],"statement":"UPDATE \"CustomFieldsPreset\"\nSET \"default\" = FALSE\nWHERE shop = :shop!\n  AND type = :type!\n  AND \"default\" = TRUE"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * UPDATE "CustomFieldsPreset"
+ * SET "default" = FALSE
+ * WHERE shop = :shop!
+ *   AND type = :type!
+ *   AND "default" = TRUE
+ * ```
+ */
+export const undefaultCustomFieldsPresets = new PreparedQuery<IUndefaultCustomFieldsPresetsParams,IUndefaultCustomFieldsPresetsResult>(undefaultCustomFieldsPresetsIR);
+
+

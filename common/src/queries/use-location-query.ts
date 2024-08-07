@@ -6,7 +6,7 @@ import { FetchLocationsByIdResponse } from '@web/controllers/api/locations.js';
 
 const useLocationBatcher = (fetch: Fetch) =>
   useBatcher({
-    name: 'locations',
+    key: 'locations',
     maxSize: 10,
     handler: async (ids: ID[]) => {
       if (ids.length === 0) {

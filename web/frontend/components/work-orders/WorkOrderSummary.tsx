@@ -17,6 +17,7 @@ export function WorkOrderSummary({
   onSave,
   isSaving,
   onPrint,
+  onCreateOrder,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
   hasUnsavedChanges: boolean;
@@ -24,6 +25,7 @@ export function WorkOrderSummary({
   onSave: () => void;
   isSaving: boolean;
   onPrint: () => void;
+  onCreateOrder: () => void;
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -32,7 +34,17 @@ export function WorkOrderSummary({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'charges',
+        'discount',
+        'customerId',
+        'companyLocationId',
+        'companyId',
+        'companyContactId',
+      ),
     },
     { enabled: false },
   );
@@ -169,7 +181,16 @@ export function WorkOrderSummary({
               Print
             </Button>
           </Tooltip>
-          <Button variant={'primary'} onClick={() => onSave()} loading={isSaving}>
+          <Tooltip
+            active={hasUnsavedChanges}
+            content={'You must save your work order before you can create orders for it'}
+            dismissOnMouseOut
+          >
+            <Button disabled={disabled || hasUnsavedChanges} onClick={() => onCreateOrder()}>
+              Create Unpaid Order
+            </Button>
+          </Tooltip>
+          <Button variant={'primary'} disabled={disabled} onClick={() => onSave()} loading={isSaving}>
             Save
           </Button>
         </ButtonGroup>

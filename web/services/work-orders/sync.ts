@@ -1,19 +1,16 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
-import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import {
   getCustomAttributeArrayFromObject,
-  getWorkOrderLineItems,
   getWorkOrderOrderCustomAttributes,
 } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { getShopSettings } from '../settings.js';
-import { getWorkOrderDiscount } from './get.js';
 import { syncShopifyOrders } from '../shopify-order/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
-import { DraftOrderInput, Int } from '../gql/queries/generated/schema.js';
+import { getWorkOrderDraftOrderInput } from './draft-order.js';
 
 export type SyncWorkOrdersOptions = {
   /**
@@ -59,110 +56,26 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], o
  * Syncs a work order to Shopify by creating a new draft order for any draft/unlinked line items, and updating custom attributes of existing orders.
  */
 export async function syncWorkOrder(session: Session, workOrderId: number, options?: SyncWorkOrdersOptions) {
-  const { labourLineItemSKU } = await getShopSettings(session.shop);
+  const [input, [workOrder], customFields] = await Promise.all([
+    getWorkOrderDraftOrderInput(session, workOrderId, {
+      mustHaveUnlinkedItems: options?.onlySyncIfUnlinked ?? defaultSyncWorkOrdersOptions.onlySyncIfUnlinked,
+    }),
+    db.workOrder.getById({ id: workOrderId }),
+    db.workOrder.getCustomFields({ workOrderId }),
+  ]);
 
-  const [workOrder] = await db.workOrder.getById({ id: workOrderId });
+  if (input === null) {
+    return;
+  }
 
   if (!workOrder) {
     throw new Error(`Work order with id ${workOrderId} not found`);
   }
 
-  const [customFields, items, customItems, hourlyLabourCharges, fixedPriceLabourCharges] = await Promise.all([
-    db.workOrder.getCustomFields({ workOrderId }),
-    db.workOrder.getItems({ workOrderId }),
-    db.workOrder.getCustomItems({ workOrderId }),
-    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
-    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
-  ]);
-
-  if (options?.onlySyncIfUnlinked ?? defaultSyncWorkOrdersOptions.onlySyncIfUnlinked) {
-    const hasUnlinkedItems = [...items, ...hourlyLabourCharges, ...fixedPriceLabourCharges].some(
-      el => el.shopifyOrderLineItemId === null,
-    );
-
-    if (!hasUnlinkedItems) {
-      return;
-    }
-  }
-
   const graphql = new Graphql(session);
-
-  assertGid(workOrder.customerId);
-
-  const { customer } = await gql.customer.get.run(graphql, { id: workOrder.customerId });
-  const customerId = customer?.id ?? null;
-
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
-  const lineItemToLinkFilter = (el: { shopifyOrderLineItemId: string | null }) =>
-    !isLineItemId(el.shopifyOrderLineItemId);
-
-  const draftItems = items.filter(lineItemToLinkFilter);
-  const draftCustomItems = customItems.filter(lineItemToLinkFilter);
-  const draftHourlyLabourCharges = hourlyLabourCharges.filter(lineItemToLinkFilter);
-  const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(lineItemToLinkFilter);
-
-  const mapWorkOrderItem = <T extends { workOrderItemUuid: string | null; workOrderCustomItemUuid: string | null }>(
-    charge: T,
-  ) => {
-    const { workOrderCustomItemUuid, workOrderItemUuid, ...rest } = charge;
-
-    if (workOrderItemUuid && workOrderCustomItemUuid) {
-      // impossible by design of create-work-order.json
-      throw new Error('Cannot have both workOrderItemUuid and workOrderCustomItemUuid');
-    }
-
-    let workOrderItem = null;
-
-    if (workOrderItemUuid) {
-      workOrderItem = { type: 'product', uuid: workOrderItemUuid } as const;
-    } else if (workOrderCustomItemUuid) {
-      workOrderItem = { type: 'custom-item', uuid: workOrderCustomItemUuid } as const;
-    }
-
-    return {
-      ...charge,
-      workOrderItem,
-    };
-  };
-
-  const { lineItems, customSales } = getWorkOrderLineItems(
-    draftItems,
-    draftCustomItems,
-    draftHourlyLabourCharges.map(mapWorkOrderItem),
-    draftFixedPriceLabourCharges.map(mapWorkOrderItem),
-    { labourSku: labourLineItemSKU, workOrderName: workOrder.name },
-  );
-
-  const discount = getWorkOrderDiscount(workOrder);
-
-  const input = {
-    customAttributes: getCustomAttributeArrayFromObject(
-      getWorkOrderOrderCustomAttributes({
-        name: workOrder.name,
-        customFields: Object.fromEntries(customFields.map(({ key, value }) => [key, value])),
-      }),
-    ),
-    lineItems: [
-      ...lineItems.map(lineItem => ({
-        variantId: lineItem.productVariantId,
-        quantity: lineItem.quantity as Int,
-        customAttributes: getCustomAttributeArrayFromObject(lineItem.customAttributes),
-      })),
-      ...customSales.map(customSale => ({
-        title: customSale.title,
-        quantity: customSale.quantity as Int,
-        customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
-        originalUnitPrice: customSale.unitPrice,
-        taxable: customSale.taxable,
-      })),
-    ],
-    note: workOrder.note,
-    purchasingEntity: customerId ? { customerId } : null,
-    appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
-  } as const satisfies DraftOrderInput;
-
-  if (input.lineItems.length === 0) {
+  if ((input.lineItems?.length ?? 0) === 0) {
     // No line items, so we should delete all draft orders since draft orders don't support 0 line items.
     const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(o => {
       assertGid(o.orderId);
@@ -205,8 +118,4 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
       }),
     );
   }
-}
-
-function isLineItemId(id: string | null): id is ID {
-  return id !== null && parseGid(id).objectName === 'LineItem';
 }

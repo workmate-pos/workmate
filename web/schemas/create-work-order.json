@@ -22,6 +22,34 @@
     "customerId": {
       "$ref": "scalars.json#/definitions/ID"
     },
+    "companyId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "companyLocationId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "companyContactId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "paymentTerms": {
+      "anyOf": [
+        { "const": null },
+        {
+          "title": "work-order-payment-terms",
+          "type": "object",
+          "properties": {
+            "templateId": {
+              "$ref": "scalars.json#/definitions/ID"
+            },
+            "date": {
+              "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+            }
+          },
+          "additionalProperties": false,
+          "required": ["templateId", "date"]
+        }
+      ]
+    },
     "derivedFromOrderId": {
       "description": "A Shopify Order ID from which this work order was derived",
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
@@ -293,7 +321,11 @@
     "items",
     "charges",
     "customFields",
-    "discount"
+    "discount",
+    "companyId",
+    "companyLocationId",
+    "companyContactId",
+    "paymentTerms"
   ],
   "additionalProperties": false
 }

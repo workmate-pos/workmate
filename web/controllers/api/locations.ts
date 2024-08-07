@@ -44,7 +44,7 @@ export default class LocationsController {
     return res.json({ locations });
   }
 
-  @Get('/id/:id')
+  @Get('/:id')
   async fetchLocation(req: Request<{ id: ID }>, res: Response<FetchLocationResponse>) {
     const session: Session = res.locals.shopify.session;
     const { id } = req.params;

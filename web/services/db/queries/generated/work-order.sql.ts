@@ -11,6 +11,9 @@ export type stringArray = (string)[];
 
 /** 'Upsert' parameters type */
 export interface IUpsertParams {
+  companyContactId?: string | null | void;
+  companyId?: string | null | void;
+  companyLocationId?: string | null | void;
   customerId: string;
   derivedFromOrderId?: string | null | void;
   discountAmount?: string | null | void;
@@ -19,12 +22,17 @@ export interface IUpsertParams {
   internalNote: string;
   name: string;
   note: string;
+  paymentFixedDueDate?: DateOrString | null | void;
+  paymentTermsTemplateId?: string | null | void;
   shop: string;
   status: string;
 }
 
 /** 'Upsert' return type */
 export interface IUpsertResult {
+  companyContactId: string | null;
+  companyId: string | null;
+  companyLocationId: string | null;
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
@@ -35,6 +43,8 @@ export interface IUpsertResult {
   internalNote: string;
   name: string;
   note: string;
+  paymentFixedDueDate: Date | null;
+  paymentTermsTemplateId: string | null;
   shop: string;
   status: string;
   updatedAt: Date;
@@ -46,24 +56,39 @@ export interface IUpsertQuery {
   result: IUpsertResult;
 }
 
-const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"derivedFromOrderId":true,"note":true,"internalNote":true,"discountAmount":true,"discountType":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":206,"b":211}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":214,"b":219}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":222,"b":229}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":232,"b":240}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":243,"b":254}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":257,"b":275}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":278,"b":283}]},{"name":"internalNote","required":true,"transform":{"type":"scalar"},"locs":[{"a":286,"b":299}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":302,"b":316}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":327,"b":339}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"derivedFromOrderId\", note, \"internalNote\",\n                         \"discountAmount\",\n                         \"discountType\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :internalNote!, :discountAmount,\n        :discountType)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status               = EXCLUDED.status,\n                                           \"dueDate\"            = EXCLUDED.\"dueDate\",\n                                           \"customerId\"         = EXCLUDED.\"customerId\",\n                                           \"derivedFromOrderId\" = EXCLUDED.\"derivedFromOrderId\",\n                                           note                 = EXCLUDED.note,\n                                           \"internalNote\"       = EXCLUDED.\"internalNote\",\n                                           \"discountAmount\"     = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"       = EXCLUDED.\"discountType\"\nRETURNING *"};
+const upsertIR: any = {"usedParamSet":{"shop":true,"name":true,"status":true,"dueDate":true,"customerId":true,"companyId":true,"companyLocationId":true,"companyContactId":true,"derivedFromOrderId":true,"note":true,"internalNote":true,"discountAmount":true,"discountType":true,"paymentTermsTemplateId":true,"paymentFixedDueDate":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":434,"b":439}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":442,"b":447}]},{"name":"status","required":true,"transform":{"type":"scalar"},"locs":[{"a":450,"b":457}]},{"name":"dueDate","required":true,"transform":{"type":"scalar"},"locs":[{"a":460,"b":468}]},{"name":"customerId","required":true,"transform":{"type":"scalar"},"locs":[{"a":471,"b":482}]},{"name":"companyId","required":false,"transform":{"type":"scalar"},"locs":[{"a":485,"b":494}]},{"name":"companyLocationId","required":false,"transform":{"type":"scalar"},"locs":[{"a":497,"b":514}]},{"name":"companyContactId","required":false,"transform":{"type":"scalar"},"locs":[{"a":517,"b":533}]},{"name":"derivedFromOrderId","required":false,"transform":{"type":"scalar"},"locs":[{"a":544,"b":562}]},{"name":"note","required":true,"transform":{"type":"scalar"},"locs":[{"a":565,"b":570}]},{"name":"internalNote","required":true,"transform":{"type":"scalar"},"locs":[{"a":581,"b":594}]},{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":605,"b":619}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":630,"b":642}]},{"name":"paymentTermsTemplateId","required":false,"transform":{"type":"scalar"},"locs":[{"a":653,"b":675}]},{"name":"paymentFixedDueDate","required":false,"transform":{"type":"scalar"},"locs":[{"a":686,"b":705}]}],"statement":"INSERT INTO \"WorkOrder\" (shop, name, status, \"dueDate\", \"customerId\", \"companyId\", \"companyLocationId\",\n                         \"companyContactId\",\n                         \"derivedFromOrderId\", note,\n                         \"internalNote\",\n                         \"discountAmount\",\n                         \"discountType\",\n                         \"paymentTermsTemplateId\",\n                         \"paymentFixedDueDate\")\nVALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId,\n        :derivedFromOrderId, :note!,\n        :internalNote!,\n        :discountAmount,\n        :discountType,\n        :paymentTermsTemplateId,\n        :paymentFixedDueDate)\nON CONFLICT (\"shop\", \"name\") DO UPDATE SET status                = EXCLUDED.status,\n                                           \"dueDate\"             = EXCLUDED.\"dueDate\",\n                                           \"customerId\"          = EXCLUDED.\"customerId\",\n                                           \"companyId\"           = EXCLUDED.\"companyId\",\n                                           \"companyLocationId\"   = EXCLUDED.\"companyLocationId\",\n                                           \"companyContactId\"    = EXCLUDED.\"companyContactId\",\n                                           \"derivedFromOrderId\"  = EXCLUDED.\"derivedFromOrderId\",\n                                           note                  = EXCLUDED.note,\n                                           \"internalNote\"        = EXCLUDED.\"internalNote\",\n                                           \"discountAmount\"      = EXCLUDED.\"discountAmount\",\n                                           \"discountType\"        = EXCLUDED.\"discountType\",\n                                           \"paymentTermsTemplateId\" = EXCLUDED.\"paymentTermsTemplateId\",\n                                           \"paymentFixedDueDate\" = EXCLUDED.\"paymentFixedDueDate\"\nRETURNING *"};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "derivedFromOrderId", note, "internalNote",
+ * INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId", "companyLocationId",
+ *                          "companyContactId",
+ *                          "derivedFromOrderId", note,
+ *                          "internalNote",
  *                          "discountAmount",
- *                          "discountType")
- * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :derivedFromOrderId, :note!, :internalNote!, :discountAmount,
- *         :discountType)
- * ON CONFLICT ("shop", "name") DO UPDATE SET status               = EXCLUDED.status,
- *                                            "dueDate"            = EXCLUDED."dueDate",
- *                                            "customerId"         = EXCLUDED."customerId",
- *                                            "derivedFromOrderId" = EXCLUDED."derivedFromOrderId",
- *                                            note                 = EXCLUDED.note,
- *                                            "internalNote"       = EXCLUDED."internalNote",
- *                                            "discountAmount"     = EXCLUDED."discountAmount",
- *                                            "discountType"       = EXCLUDED."discountType"
+ *                          "discountType",
+ *                          "paymentTermsTemplateId",
+ *                          "paymentFixedDueDate")
+ * VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId,
+ *         :derivedFromOrderId, :note!,
+ *         :internalNote!,
+ *         :discountAmount,
+ *         :discountType,
+ *         :paymentTermsTemplateId,
+ *         :paymentFixedDueDate)
+ * ON CONFLICT ("shop", "name") DO UPDATE SET status                = EXCLUDED.status,
+ *                                            "dueDate"             = EXCLUDED."dueDate",
+ *                                            "customerId"          = EXCLUDED."customerId",
+ *                                            "companyId"           = EXCLUDED."companyId",
+ *                                            "companyLocationId"   = EXCLUDED."companyLocationId",
+ *                                            "companyContactId"    = EXCLUDED."companyContactId",
+ *                                            "derivedFromOrderId"  = EXCLUDED."derivedFromOrderId",
+ *                                            note                  = EXCLUDED.note,
+ *                                            "internalNote"        = EXCLUDED."internalNote",
+ *                                            "discountAmount"      = EXCLUDED."discountAmount",
+ *                                            "discountType"        = EXCLUDED."discountType",
+ *                                            "paymentTermsTemplateId" = EXCLUDED."paymentTermsTemplateId",
+ *                                            "paymentFixedDueDate" = EXCLUDED."paymentFixedDueDate"
  * RETURNING *
  * ```
  */
@@ -86,14 +111,14 @@ export interface IUpdateDiscountQuery {
   result: IUpdateDiscountResult;
 }
 
-const updateDiscountIR: any = {"usedParamSet":{"discountAmount":true,"discountType":true,"id":true},"params":[{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":44,"b":58}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":86,"b":98}]},{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":111,"b":114}]}],"statement":"UPDATE \"WorkOrder\"\n  SET \"discountAmount\" = :discountAmount,\n      \"discountType\"   = :discountType\nWHERE id = :id!"};
+const updateDiscountIR: any = {"usedParamSet":{"discountAmount":true,"discountType":true,"id":true},"params":[{"name":"discountAmount","required":false,"transform":{"type":"scalar"},"locs":[{"a":42,"b":56}]},{"name":"discountType","required":false,"transform":{"type":"scalar"},"locs":[{"a":82,"b":94}]},{"name":"id","required":true,"transform":{"type":"scalar"},"locs":[{"a":107,"b":110}]}],"statement":"UPDATE \"WorkOrder\"\nSET \"discountAmount\" = :discountAmount,\n    \"discountType\"   = :discountType\nWHERE id = :id!"};
 
 /**
  * Query generated from SQL:
  * ```
  * UPDATE "WorkOrder"
- *   SET "discountAmount" = :discountAmount,
- *       "discountType"   = :discountType
+ * SET "discountAmount" = :discountAmount,
+ *     "discountType"   = :discountType
  * WHERE id = :id!
  * ```
  */
@@ -118,13 +143,14 @@ export interface IInsertCustomFieldsQuery {
   result: IInsertCustomFieldsResult;
 }
 
-const insertCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":83,"b":95}]}],"statement":"INSERT INTO \"WorkOrderCustomField\" (\"workOrderId\", key, value)\nVALUES (0, '', ''), :customFields OFFSET 1"};
+const insertCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":83,"b":95}]}],"statement":"INSERT INTO \"WorkOrderCustomField\" (\"workOrderId\", key, value)\nVALUES (0, '', ''), :customFields\nOFFSET 1"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
- * VALUES (0, '', ''), :customFields OFFSET 1
+ * VALUES (0, '', ''), :customFields
+ * OFFSET 1
  * ```
  */
 export const insertCustomFields = new PreparedQuery<IInsertCustomFieldsParams,IInsertCustomFieldsResult>(insertCustomFieldsIR);
@@ -210,13 +236,14 @@ export interface IInsertItemCustomFieldsQuery {
   result: IInsertItemCustomFieldsResult;
 }
 
-const insertItemCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"workOrderItemUuid","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":127,"b":139}]}],"statement":"INSERT INTO \"WorkOrderItemCustomField\" (\"workOrderId\", \"workOrderItemUuid\", key, value)\nVALUES (0, gen_random_uuid(), '', ''), :customFields OFFSET 1"};
+const insertItemCustomFieldsIR: any = {"usedParamSet":{"customFields":true},"params":[{"name":"customFields","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"workOrderItemUuid","required":true},{"name":"key","required":true},{"name":"value","required":true}]},"locs":[{"a":127,"b":139}]}],"statement":"INSERT INTO \"WorkOrderItemCustomField\" (\"workOrderId\", \"workOrderItemUuid\", key, value)\nVALUES (0, gen_random_uuid(), '', ''), :customFields\nOFFSET 1"};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderItemCustomField" ("workOrderId", "workOrderItemUuid", key, value)
- * VALUES (0, gen_random_uuid(), '', ''), :customFields OFFSET 1
+ * VALUES (0, gen_random_uuid(), '', ''), :customFields
+ * OFFSET 1
  * ```
  */
 export const insertItemCustomFields = new PreparedQuery<IInsertItemCustomFieldsParams,IInsertItemCustomFieldsResult>(insertItemCustomFieldsIR);
@@ -430,6 +457,9 @@ export interface IGetParams {
 
 /** 'Get' return type */
 export interface IGetResult {
+  companyContactId: string | null;
+  companyId: string | null;
+  companyLocationId: string | null;
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
@@ -440,6 +470,8 @@ export interface IGetResult {
   internalNote: string;
   name: string;
   note: string;
+  paymentFixedDueDate: Date | null;
+  paymentTermsTemplateId: string | null;
   shop: string;
   status: string;
   updatedAt: Date;
@@ -472,6 +504,9 @@ export interface IGetByIdParams {
 
 /** 'GetById' return type */
 export interface IGetByIdResult {
+  companyContactId: string | null;
+  companyId: string | null;
+  companyLocationId: string | null;
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
@@ -482,6 +517,8 @@ export interface IGetByIdResult {
   internalNote: string;
   name: string;
   note: string;
+  paymentFixedDueDate: Date | null;
+  paymentTermsTemplateId: string | null;
   shop: string;
   status: string;
   updatedAt: Date;
@@ -815,12 +852,13 @@ export interface IUpsertCustomItemsQuery {
   result: IUpsertCustomItemsResult;
 }
 
-const upsertCustomItemsIR: any = {"usedParamSet":{"items":true},"params":[{"name":"items","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"uuid","required":true},{"name":"workOrderId","required":true},{"name":"shopifyOrderLineItemId","required":false},{"name":"quantity","required":true},{"name":"name","required":true},{"name":"unitPrice","required":true},{"name":"absorbCharges","required":true}]},"locs":[{"a":183,"b":188}]}],"statement":"INSERT INTO \"WorkOrderCustomItem\" (uuid, \"workOrderId\", \"shopifyOrderLineItemId\", quantity, name, \"unitPrice\", \"absorbCharges\")\nVALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items\nOFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\nDO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\nquantity = EXCLUDED.quantity,\nname = EXCLUDED.name,\n\"unitPrice\" = EXCLUDED.\"unitPrice\",\n\"absorbCharges\" = EXCLUDED.\"absorbCharges\""};
+const upsertCustomItemsIR: any = {"usedParamSet":{"items":true},"params":[{"name":"items","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"uuid","required":true},{"name":"workOrderId","required":true},{"name":"shopifyOrderLineItemId","required":false},{"name":"quantity","required":true},{"name":"name","required":true},{"name":"unitPrice","required":true},{"name":"absorbCharges","required":true}]},"locs":[{"a":218,"b":223}]}],"statement":"INSERT INTO \"WorkOrderCustomItem\" (uuid, \"workOrderId\", \"shopifyOrderLineItemId\", quantity, name, \"unitPrice\",\n                                   \"absorbCharges\")\nVALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items\nOFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\nDO UPDATE SET \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\nquantity = EXCLUDED.quantity,\nname = EXCLUDED.name,\n\"unitPrice\" = EXCLUDED.\"unitPrice\",\n\"absorbCharges\" = EXCLUDED.\"absorbCharges\""};
 
 /**
  * Query generated from SQL:
  * ```
- * INSERT INTO "WorkOrderCustomItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, name, "unitPrice", "absorbCharges")
+ * INSERT INTO "WorkOrderCustomItem" (uuid, "workOrderId", "shopifyOrderLineItemId", quantity, name, "unitPrice",
+ *                                    "absorbCharges")
  * VALUES (gen_random_uuid(), 0, NULL, 0, '', '', FALSE), :items
  * OFFSET 1
  * ON CONFLICT ("workOrderId", uuid)

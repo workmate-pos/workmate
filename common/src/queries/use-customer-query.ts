@@ -6,7 +6,7 @@ import { useBatcher } from '../batcher/use-batcher.js';
 
 const useCustomerBatcher = (fetch: Fetch) =>
   useBatcher({
-    name: 'customers',
+    key: 'customers',
     maxSize: 10,
     handler: async (ids: ID[]) => {
       if (ids.length === 0) {

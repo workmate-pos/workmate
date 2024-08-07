@@ -1,4 +1,4 @@
-import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import type { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { v4 as uuid } from 'uuid';
 import type { useReducer, useRef, useState } from 'react';
@@ -18,6 +18,12 @@ export type CreateWorkOrderAction =
   | ({
       type: 'setPartial';
     } & Partial<CreateWorkOrder>)
+  | ({
+      type: 'setCompany';
+    } & Pick<CreateWorkOrder, 'companyId' | 'companyLocationId' | 'companyContactId' | 'customerId' | 'paymentTerms'>)
+  | ({
+      type: 'setCustomer';
+    } & Pick<CreateWorkOrder, 'customerId'>)
   | {
       /**
        * Make sure to upsert charges before adding items
@@ -50,7 +56,9 @@ export type CreateWorkOrderAction =
       type: 'set';
     } & WIPCreateWorkOrder);
 
-type CreateWorkOrderActionWithWorkOrder = CreateWorkOrderAction & { workOrder: WorkOrder | null };
+type CreateWorkOrderActionWithWorkOrder = CreateWorkOrderAction & {
+  workOrder: WorkOrder | null;
+};
 
 export type CreateWorkOrderDispatchProxy = {
   [type in CreateWorkOrderAction['type']]: (args: Omit<CreateWorkOrderAction & { type: type }, 'type'>) => void;
@@ -81,7 +89,9 @@ export const useCreateWorkOrderReducer = (
     () =>
       new Proxy<CreateWorkOrderDispatchProxy>({} as CreateWorkOrderDispatchProxy, {
         get: (target, prop) => (args: DiscriminatedUnionOmit<CreateWorkOrderAction, 'type'>) => {
-          if (!workOrderRef.current === undefined) {
+          const workOrder = workOrderRef.current;
+
+          if (workOrder === undefined) {
             throw new Error('Cannot modify work order because it has not been loaded yet');
           }
 
@@ -89,7 +99,7 @@ export const useCreateWorkOrderReducer = (
           dispatchCreateWorkOrder({
             type: prop,
             ...args,
-            workOrder: workOrderRef.current,
+            workOrder,
           } as CreateWorkOrderActionWithWorkOrder);
         },
       }),
@@ -105,12 +115,20 @@ function createWorkOrderReducer(
   const { workOrder } = action;
 
   switch (action.type) {
+    case 'setCompany':
+    case 'setCustomer':
     case 'setPartial':
     case 'set': {
       const { type, workOrder, ...partial } = action;
       const partialNotUndefined: Partial<WIPCreateWorkOrder> = Object.fromEntries(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );
+
+      if (action.type === 'setCustomer') {
+        partialNotUndefined.companyId = null;
+        partialNotUndefined.companyLocationId = null;
+        partialNotUndefined.companyContactId = null;
+      }
 
       return { ...createWorkOrder, ...partialNotUndefined };
     }
@@ -221,7 +239,7 @@ function shouldMergeItems(
   const itemIsInOrder = (item: { type: 'product' | 'custom-item'; uuid: string }) =>
     workOrder?.items.some(
       oi => oi.type === item.type && oi.uuid === item.uuid && isOrderId(oi.shopifyOrderLineItem?.orderId),
-    );
+    ) ?? false;
 
   // do not allow merging if either item is in an order
   if ([a, b].some(itemIsInOrder)) {

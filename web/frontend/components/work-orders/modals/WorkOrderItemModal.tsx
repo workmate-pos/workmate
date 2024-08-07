@@ -21,6 +21,7 @@ import {
   Button,
   Collapsible,
   Divider,
+  FormLayout,
   Icon,
   InlineStack,
   Modal,
@@ -28,6 +29,7 @@ import {
   ResourceList,
   SkeletonBodyText,
   Text,
+  TextField,
 } from '@shopify/polaris';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
@@ -45,14 +47,16 @@ import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-for
 import { CustomFieldsList } from '@web/frontend/components/shared-orders/CustomFieldsList.js';
 import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
-import { ImportCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/ImportCustomFieldPresetModal.js';
+import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { CaretUpMinor } from '@shopify/polaris-icons';
-import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
+import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
+import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
+import { MoneyField } from '@web/frontend/components/MoneyField.js';
 
 export function WorkOrderItemModal({
   createWorkOrder,
-  itemUuid,
+  item: { type: itemType, uuid: itemUuid },
   workOrder,
   open,
   onClose,
@@ -60,7 +64,7 @@ export function WorkOrderItemModal({
   onSave,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
-  itemUuid: string;
+  item: { type: 'product' | 'custom-item'; uuid: string };
   workOrder: WorkOrder | null;
   open: boolean;
   onClose: () => void;
@@ -74,29 +78,31 @@ export function WorkOrderItemModal({
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
-  const [isImportCustomFieldPresetModalOpen, setIsImportCustomFieldPresetModalOpen] = useState(false);
-  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
+  const [isCustomFieldPresetsModalOpen, setIsCustomFieldPresetsModalOpen] = useState(false);
+  const [isFieldValuesModalOpen, setIsFieldValuesModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   const isSubModalOpen = [
     isAddEmployeeModalOpen,
     isNewCustomFieldModalOpen,
     isSaveCustomFieldPresetModalOpen,
-    isImportCustomFieldPresetModalOpen,
-    isSelectCustomFieldPresetToEditModalOpen,
+    isCustomFieldPresetsModalOpen,
+    isFieldValuesModalOpen,
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
-  // TODO: Support custom items
+  const initialItem =
+    createWorkOrder.items.filter(hasPropertyValue('type', itemType)).find(hasPropertyValue('uuid', itemUuid)) ??
+    never('Invalid item');
+
   const initialCharges =
     createWorkOrder.charges
       .filter(hasNestedPropertyValue('workOrderItem.type', 'product' as 'product' | 'custom-item'))
       .filter(hasNestedPropertyValue('workOrderItem.uuid', itemUuid)) ?? [];
+
   const shouldShowCharges = initialCharges.length > 0 || forceShowCharges;
 
-  const [item, setItem] = useState(
-    createWorkOrder.items.find(hasPropertyValue('uuid', itemUuid)) ?? never('Invalid UUID'),
-  );
+  const [item, setItem] = useState(initialItem);
   const [generalCharge, setGeneralCharge] = useState(extractInitialGeneralCharge(initialCharges));
   const [employeeCharges, setEmployeeCharges] = useState(
     initialCharges.filter(hasNonNullableProperty('employeeId')) ?? [],
@@ -107,7 +113,17 @@ export function WorkOrderItemModal({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'customerId', 'items', 'charges', 'discount'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'customerId',
+        'items',
+        'charges',
+        'discount',
+        'companyLocationId',
+        'companyId',
+        'companyContactId',
+      ),
     },
     { enabled: false },
   );
@@ -128,6 +144,9 @@ export function WorkOrderItemModal({
   const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
 
   const readonly = !!itemLineItem?.order;
+  const canAddLabour =
+    item.type === 'custom-item' ||
+    getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE;
 
   return (
     <>
@@ -145,25 +164,24 @@ export function WorkOrderItemModal({
           },
         }}
         secondaryActions={[
-          ...(shouldShowCharges
-            ? [
-                {
-                  content: 'Remove Labour',
-                  onAction: () => {
-                    onSave(item, []);
-                    setForceShowCharges(false);
-                  },
+          shouldShowCharges
+            ? {
+                content: 'Remove Labour',
+                onAction: () => {
+                  onSave(item, []);
+                  setForceShowCharges(false);
                 },
-              ]
-            : [
-                {
-                  content: 'Add Labour',
-                  onAction: () => {
-                    setForceShowCharges(true);
-                  },
-                  disabled: readonly,
+              }
+            : null,
+          canAddLabour
+            ? {
+                content: 'Add Labour',
+                onAction: () => {
+                  setForceShowCharges(true);
                 },
-              ]),
+                disabled: readonly,
+              }
+            : null,
           {
             content: 'Cancel',
             onAction: onClose,
@@ -178,13 +196,43 @@ export function WorkOrderItemModal({
             disabled: readonly,
             destructive: true,
           },
-        ]}
+        ].filter(isNonNullable)}
       >
         {!!itemLineItem?.order && (
           <Modal.Section>
             <Box>
               <Badge tone={'info'}>{itemLineItem.order.name}</Badge>
             </Box>
+          </Modal.Section>
+        )}
+
+        {item.type === 'custom-item' && (
+          <Modal.Section>
+            <FormLayout>
+              <TextField
+                label={'Name'}
+                autoComplete="off"
+                value={item.name}
+                onChange={name => setItem({ ...item, name: name.trim() || 'Unnamed item' })}
+                requiredIndicator
+              />
+
+              <MoneyField
+                label={'Unit Price'}
+                autoComplete="off"
+                min={0}
+                value={item.unitPrice}
+                onChange={unitPrice =>
+                  setItem({
+                    ...item,
+                    unitPrice: BigDecimal.isValid(unitPrice)
+                      ? BigDecimal.fromString(unitPrice).toMoney()
+                      : BigDecimal.ZERO.toMoney(),
+                  })
+                }
+                requiredIndicator
+              />
+            </FormLayout>
           </Modal.Section>
         )}
 
@@ -217,16 +265,18 @@ export function WorkOrderItemModal({
           </Modal.Section>
         )}
 
-        <Modal.Section>
-          <CustomFieldsList
-            customFields={item.customFields}
-            onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
-            onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
-            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
-            onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
-            onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
-          />
-        </Modal.Section>
+        {itemType !== 'custom-item' && (
+          <Modal.Section>
+            <CustomFieldsList
+              customFields={item.customFields}
+              onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
+              onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
+              onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
+              onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
+              onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
+            />
+          </Modal.Section>
+        )}
       </Modal>
 
       {isAddEmployeeModalOpen && (
@@ -286,11 +336,11 @@ export function WorkOrderItemModal({
         />
       )}
 
-      {isImportCustomFieldPresetModalOpen && (
-        <ImportCustomFieldPresetModal
+      {isCustomFieldPresetsModalOpen && (
+        <CustomFieldPresetsModal
           type={'LINE_ITEM'}
-          open={isImportCustomFieldPresetModalOpen && !customFieldPresetNameToEdit}
-          onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
+          open={isCustomFieldPresetsModalOpen && !customFieldPresetNameToEdit}
+          onClose={() => setIsCustomFieldPresetsModalOpen(false)}
           onOverride={fieldNames =>
             setItem(item => ({
               ...item,
@@ -313,13 +363,11 @@ export function WorkOrderItemModal({
         />
       )}
 
-      {isSelectCustomFieldPresetToEditModalOpen && (
-        <SelectCustomFieldPresetModal
-          open={isSelectCustomFieldPresetToEditModalOpen}
-          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
-          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
-          setToastAction={setToastAction}
-          type="LINE_ITEM"
+      {isFieldValuesModalOpen && (
+        <CustomFieldValuesSelectorModal
+          names={Object.keys(createWorkOrder.customFields)}
+          open={isFieldValuesModalOpen}
+          onClose={() => setIsFieldValuesModalOpen(false)}
         />
       )}
 

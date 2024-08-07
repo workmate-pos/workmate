@@ -205,6 +205,9 @@ export interface ICreateNewWorkOrderParams {
 
 /** 'CreateNewWorkOrder' return type */
 export interface ICreateNewWorkOrderResult {
+  companyContactId: string | null;
+  companyId: string | null;
+  companyLocationId: string | null;
   createdAt: Date;
   customerId: string;
   derivedFromOrderId: string | null;
@@ -215,6 +218,8 @@ export interface ICreateNewWorkOrderResult {
   internalNote: string;
   name: string;
   note: string;
+  paymentFixedDueDate: Date | null;
+  paymentTermsTemplateId: string | null;
   shop: string;
   status: string;
   updatedAt: Date;

@@ -16,6 +16,9 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
+import { useCreateWorkOrderOrderMutation } from '@work-orders/common/queries/use-create-work-order-order-mutation.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { useRouter } from '../../routes.js';
 
 /**
  * Page that allows initializing payments for line items.
@@ -34,7 +37,17 @@ export function PaymentOverview({ name }: { name: string }) {
   const customer = customerQuery.data;
 
   const calculateWorkOrder = workOrder
-    ? pick(workOrderToCreateWorkOrder(workOrder), 'name', 'items', 'charges', 'discount', 'customerId')
+    ? pick(
+        workOrderToCreateWorkOrder(workOrder),
+        'name',
+        'items',
+        'charges',
+        'discount',
+        'customerId',
+        'companyLocationId',
+        'companyContactId',
+        'companyId',
+      )
     : null;
 
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
@@ -45,19 +58,25 @@ export function PaymentOverview({ name }: { name: string }) {
     { enabled: !!calculateWorkOrder },
   );
 
+  const createWorkOrderOrderMutation = useCreateWorkOrderOrderMutation({ fetch });
+
   const [selectedItems, setSelectedItems] = useState<WorkOrderItem[]>([]);
   const [selectedCharges, setSelectedCharges] = useState<WorkOrderCharge[]>([]);
 
   const paymentHandler = usePaymentHandler();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
+  const isLoading = paymentHandler.isLoading || createWorkOrderOrderMutation.isLoading;
+
+  const router = useRouter();
   const screen = useScreen();
   screen.setTitle(`Payment Overview - ${name}`);
   screen.setIsLoading(
     workOrderQuery.isFetching ||
       settingsQuery.isFetching ||
       calculatedDraftOrderQuery.isFetching ||
-      customerQuery.isFetching,
+      customerQuery.isFetching ||
+      isLoading,
   );
 
   const rows = useItemRows(
@@ -67,7 +86,7 @@ export function PaymentOverview({ name }: { name: string }) {
     selectedCharges,
     setSelectedItems,
     setSelectedCharges,
-    paymentHandler.isLoading,
+    isLoading,
   );
 
   if (workOrderQuery.isError) {
@@ -121,6 +140,27 @@ export function PaymentOverview({ name }: { name: string }) {
     });
   };
 
+  const createOrder = () => {
+    if (selectedItems.length === 0 && selectedCharges.length === 0) {
+      toast.show('You must select at least one item or charge to create an order');
+      return;
+    }
+
+    createWorkOrderOrderMutation.mutate(
+      {
+        name: workOrder.name,
+        items: selectedItems.map(item => pick(item, 'type', 'uuid')),
+        charges: selectedCharges.map(charge => pick(charge, 'type', 'uuid')),
+      },
+      {
+        onSuccess(result) {
+          router.popCurrent();
+          toast.show(`Created order ${result.name}!`);
+        },
+      },
+    );
+  };
+
   const selectableItems = workOrder.items.filter(
     item => calculatedDraftOrderQuery.getItemLineItem(item)?.order === null,
   );
@@ -137,7 +177,7 @@ export function PaymentOverview({ name }: { name: string }) {
       {selectedItems.length === selectableItems.length && selectedCharges.length === selectableCharges.length ? (
         <Button
           title={'Deselect all items'}
-          isDisabled={paymentHandler.isLoading || !canChangeSelection}
+          isDisabled={isLoading || !canChangeSelection}
           type={'plain'}
           onPress={() => {
             setSelectedItems([]);
@@ -147,7 +187,7 @@ export function PaymentOverview({ name }: { name: string }) {
       ) : (
         <Button
           title={'Select all items'}
-          isDisabled={paymentHandler.isLoading || !canChangeSelection}
+          isDisabled={isLoading || !canChangeSelection}
           type={'plain'}
           onPress={() => {
             setSelectedItems(selectableItems);
@@ -158,13 +198,27 @@ export function PaymentOverview({ name }: { name: string }) {
       <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'}>
         <List data={rows} imageDisplayStrategy={'always'} isLoadingMore={false} onEndReached={() => {}} />
       </ResponsiveStack>
-      <Button
-        title={'Create Payment'}
-        isLoading={paymentHandler.isLoading}
-        isDisabled={selectedItems.length === 0 && selectedCharges.length === 0}
-        onPress={() => pay()}
-        type={'primary'}
-      />
+      <ResponsiveGrid columns={2}>
+        <Button
+          title={'Create Order'}
+          isLoading={createWorkOrderOrderMutation.isLoading}
+          isDisabled={isLoading || (selectedItems.length === 0 && selectedCharges.length === 0)}
+          onPress={() => createOrder()}
+          type={'primary'}
+        />
+
+        {!workOrder.companyId && (
+          <Button
+            title={'Create Payment'}
+            isLoading={paymentHandler.isLoading}
+            isDisabled={
+              isLoading || !!workOrder.companyId || (selectedItems.length === 0 && selectedCharges.length === 0)
+            }
+            onPress={() => pay()}
+            type={'primary'}
+          />
+        )}
+      </ResponsiveGrid>
     </ScrollView>
   );
 }
@@ -176,7 +230,7 @@ function useItemRows(
   selectedCharges: WorkOrderCharge[],
   setSelectedItems: (items: WorkOrderItem[]) => void,
   setSelectedCharges: (charges: WorkOrderCharge[]) => void,
-  isLoadingPayment: boolean,
+  isLoading: boolean,
 ) {
   const fetch = useAuthenticatedFetch();
 
@@ -228,7 +282,7 @@ function useItemRows(
       rightSide: {
         toggleSwitch: {
           value: selectedItems.includes(item),
-          disabled: isLoadingPayment || !itemLineItem || !!itemLineItem.order || !itemPrice,
+          disabled: isLoading || !itemLineItem || !!itemLineItem.order || !itemPrice,
         },
       },
       onPress() {
@@ -280,7 +334,7 @@ function useItemRows(
       rightSide: {
         toggleSwitch: {
           value: selectedCharges.includes(charge),
-          disabled: isLoadingPayment || !chargeLineItem || !!chargeLineItem.order || !chargePrice,
+          disabled: isLoading || !chargeLineItem || !!chargeLineItem.order || !chargePrice,
         },
       },
       onPress() {

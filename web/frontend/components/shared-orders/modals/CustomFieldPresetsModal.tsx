@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Filters, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
-export function ImportCustomFieldPresetModal({
+export function CustomFieldPresetsModal({
   open,
   onOverride,
   onMerge,
@@ -16,8 +17,8 @@ export function ImportCustomFieldPresetModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onOverride: (fieldNames: string[]) => void;
-  onMerge: (fieldNames: string[]) => void;
+  onOverride?: (fieldNames: string[]) => void;
+  onMerge?: (fieldNames: string[]) => void;
   onEdit: (presetName: string) => void;
   setToastAction: ToastActionCallable;
   type: CustomFieldsPresetType;
@@ -36,7 +37,7 @@ export function ImportCustomFieldPresetModal({
   });
 
   return (
-    <Modal open={open} title={'Import Custom Field Preset'} onClose={onClose}>
+    <Modal open={open} title={'Custom Field Presets'} onClose={onClose}>
       <ResourceList
         items={filteredPresets}
         resourceName={{ plural: 'presets', singular: 'preset' }}
@@ -66,23 +67,27 @@ export function ImportCustomFieldPresetModal({
                   onClose();
                 },
               },
-              {
-                content: 'Override',
-                onAction: () => {
-                  onOverride([...preset.keys]);
-                  setToastAction({ content: 'Imported preset' });
-                  onClose();
-                },
-              },
-              {
-                content: 'Merge',
-                onAction: () => {
-                  onMerge([...preset.keys]);
-                  setToastAction({ content: 'Imported preset' });
-                  onClose();
-                },
-              },
-            ]}
+              onOverride
+                ? {
+                    content: 'Clear & Import',
+                    onAction: () => {
+                      onOverride([...preset.keys]);
+                      setToastAction({ content: 'Imported preset' });
+                      onClose();
+                    },
+                  }
+                : null,
+              onMerge
+                ? {
+                    content: 'Import',
+                    onAction: () => {
+                      onMerge([...preset.keys]);
+                      setToastAction({ content: 'Imported preset' });
+                      onClose();
+                    },
+                  }
+                : null,
+            ].filter(isNonNullable)}
           >
             <InlineStack gap={'200'}>
               <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>

@@ -13,7 +13,13 @@ export const useCalculatedDraftOrderQuery = (
     customerId,
     charges,
     discount,
-  }: { fetch: Fetch } & Pick<CalculateWorkOrder, 'name' | 'items' | 'charges' | 'customerId' | 'discount'>,
+    companyLocationId,
+    companyContactId,
+    companyId,
+  }: { fetch: Fetch } & Pick<
+    CalculateWorkOrder,
+    'name' | 'items' | 'charges' | 'customerId' | 'discount' | 'companyLocationId' | 'companyContactId' | 'companyId'
+  >,
   options?: UseQueryOptions<
     CalculateDraftOrderResponse,
     unknown,
@@ -25,13 +31,26 @@ export const useCalculatedDraftOrderQuery = (
       | CalculateWorkOrder['customerId']
       | CalculateWorkOrder['charges']
       | CalculateWorkOrder['discount']
+      | CalculateWorkOrder['companyLocationId']
+      | CalculateWorkOrder['companyContactId']
+      | CalculateWorkOrder['companyId']
     )[]
   >,
 ) => {
   const query = useQuery({
     ...options,
     staleTime: WEEK_IN_MS,
-    queryKey: ['calculated-draft-order', name, items, customerId, charges, discount],
+    queryKey: [
+      'calculated-draft-order',
+      name,
+      items,
+      customerId,
+      charges,
+      discount,
+      companyLocationId,
+      companyContactId,
+      companyId,
+    ],
     queryFn: async () => {
       const response = await fetch('/api/work-order/calculate-draft-order', {
         method: 'POST',
@@ -41,6 +60,9 @@ export const useCalculatedDraftOrderQuery = (
           customerId,
           charges,
           discount,
+          companyLocationId,
+          companyContactId,
+          companyId,
         } satisfies CalculateWorkOrder),
         headers: { 'Content-Type': 'application/json' },
       });
@@ -60,7 +82,7 @@ export const useCalculatedDraftOrderQuery = (
 
     getItemLineItem: ({ uuid, type }: DiscriminatedUnionPick<CalculateWorkOrder['items'][number], 'type' | 'uuid'>) => {
       if (!calculatedDraftOrder) {
-        return null;
+        return undefined;
       }
 
       const { lineItems, itemLineItemIds, customItemLineItemIds } = calculatedDraftOrder;
@@ -80,9 +102,25 @@ export const useCalculatedDraftOrderQuery = (
       return lineItems.find(li => li.id === lineItemByUuid[uuid]) ?? null;
     },
 
+    getItemPrice: ({ uuid, type }: Pick<CalculateWorkOrder['items'][number], 'uuid' | 'type'>) => {
+      if (!calculatedDraftOrder) {
+        return undefined;
+      }
+
+      if (type === 'product') {
+        return calculatedDraftOrder.itemPrices[uuid];
+      }
+
+      if (type === 'custom-item') {
+        return calculatedDraftOrder.customItemPrices[uuid];
+      }
+
+      return type satisfies never;
+    },
+
     getChargeLineItem: (charge: DiscriminatedUnionPick<CalculateWorkOrder['charges'][number], 'type' | 'uuid'>) => {
       if (!calculatedDraftOrder) {
-        return null;
+        return undefined;
       }
 
       if (charge.type === 'hourly-labour') {
@@ -98,7 +136,7 @@ export const useCalculatedDraftOrderQuery = (
 
     getChargePrice: (charge: DiscriminatedUnionPick<CalculateWorkOrder['charges'][number], 'type' | 'uuid'>) => {
       if (!calculatedDraftOrder) {
-        return null;
+        return undefined;
       }
 
       if (charge.type === 'hourly-labour') {

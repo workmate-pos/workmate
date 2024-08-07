@@ -11,13 +11,17 @@ import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order
 import { sessionStorage } from '../../index.js';
 import { calculateWorkOrder } from '../../services/work-orders/calculate.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { mg } from '../../services/mail/mailgun.js';
 import { renderHtmlToPdfCustomFile } from '../../services/mail/html-pdf/renderer.js';
 import { getRenderedWorkOrderTemplate, getWorkOrderTemplateData } from '../../services/mail/templates/work-order.js';
 import { WorkOrderPrintJob } from '../../schemas/generated/work-order-print-job.js';
+import { CreateWorkOrderOrder } from '../../schemas/generated/create-work-order-order.js';
+import { createWorkOrderOrder } from '../../services/work-orders/create-order.js';
+import { syncShopifyOrders } from '../../services/shopify-order/sync.js';
+import { cleanOrphanedDraftOrders } from '../../services/work-orders/clean-orphaned-draft-orders.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -49,6 +53,22 @@ export default class WorkOrderController {
     const workOrder = await getWorkOrder(session, name);
 
     return res.json(workOrder ?? never());
+  }
+
+  @Post('/create-order')
+  @BodySchema('create-work-order-order')
+  @Authenticated()
+  @Permission('write_work_orders')
+  async createWorkOrderOrder(
+    req: Request<unknown, unknown, CreateWorkOrderOrder>,
+    res: Response<CreateWorkOrderOrderResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+
+    const { order, workOrder } = await createWorkOrderOrder(session, req.body);
+    await cleanOrphanedDraftOrders(session, workOrder.id, () => syncShopifyOrders(session, [order.id]));
+
+    return res.json(order);
   }
 
   @Post('/request')
@@ -95,6 +115,10 @@ export default class WorkOrderController {
       customFields: {},
       discount: null,
       internalNote: '',
+      companyContactId: null,
+      companyLocationId: null,
+      companyId: null,
+      paymentTerms: null,
     });
 
     return res.json({ name });
@@ -184,3 +208,8 @@ export type FetchWorkOrderInfoPageResponse = Awaited<ReturnType<typeof getWorkOr
 export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
 
 export type PrintWorkOrderResponse = { success: true };
+
+export type CreateWorkOrderOrderResponse = {
+  name: string;
+  id: ID;
+};

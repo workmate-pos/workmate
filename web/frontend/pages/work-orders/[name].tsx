@@ -38,19 +38,25 @@ import { CustomerSelectorModal } from '@web/frontend/components/shared-orders/mo
 import { WorkOrderCustomFieldsCard } from '@web/frontend/components/work-orders/WorkOrderCustomFieldsCard.js';
 import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
-import { ImportCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/ImportCustomFieldPresetModal.js';
+import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { WorkOrderPrintModal } from '@web/frontend/components/work-orders/modals/WorkOrderPrintModal.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
-import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/modals/WorkOrderItemsCard.js';
+import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/CreateOrderModal.js';
+import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';
+import { CompanyLocationSelectorModal } from '@web/frontend/components/work-orders/modals/CompanyLocationSelectorModal.js';
+import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
+import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { PaymentTermsSelectorModal } from '@web/frontend/components/work-orders/modals/PaymentTermsSelectorModal.js';
+import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 
 export default function () {
   return (
@@ -125,7 +131,10 @@ function WorkOrderLoader() {
 
   return (
     <>
-      <WorkOrder initialCreateWorkOrder={createWorkOrder} workOrder={workOrderQuery.data?.workOrder ?? undefined} />
+      <WorkOrder
+        initialCreateWorkOrder={createWorkOrder}
+        workOrder={!workOrderQuery.isFetching ? workOrderQuery.data?.workOrder ?? null : undefined}
+      />
       {toast}
     </>
   );
@@ -171,22 +180,26 @@ function WorkOrder({
   const [isCustomerSelectorModalOpen, setIsCustomerSelectorModalOpen] = useState(false);
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
-  const [isImportCustomFieldPresetModalOpen, setIsImportCustomFieldPresetModalOpen] = useState(false);
+  const [isCustomFieldPresetsModalOpen, setIsCustomFieldPresetsModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
-  const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
-  const [isSelectCustomFieldPresetToEditModalOpen, setIsSelectCustomFieldPresetToEditModalOpen] = useState(false);
+  const [isFieldValuesModalOpen, setIsFieldValuesModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
+  const [isCreateOrderModalOpen, setIsCreateOrderModalOpen] = useState(false);
+  const [isCompanySelectorModalOpen, setIsCompanySelectorModalOpen] = useState(false);
+  const [isCompanyLocationSelectorModalOpen, setIsCompanyLocationSelectorModalOpen] = useState(false);
+  const [isPaymentTermsSelectorModalOpen, setIsPaymentTermsSelectorModalOpen] = useState(false);
 
   const isModalOpen = [
     isCustomerSelectorModalOpen,
     isNewCustomFieldModalOpen,
     isSaveCustomFieldPresetModalOpen,
-    isImportCustomFieldPresetModalOpen,
+    isCustomFieldPresetsModalOpen,
     isPrintModalOpen,
-    isAddProductModalOpen,
-    isAddServiceModalOpen,
-    isSelectCustomFieldPresetToEditModalOpen,
+    isFieldValuesModalOpen,
+    isCreateOrderModalOpen,
+    isCompanySelectorModalOpen,
+    isCompanyLocationSelectorModalOpen,
+    isPaymentTermsSelectorModalOpen,
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
@@ -194,7 +207,17 @@ function WorkOrder({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'customerId', 'items', 'charges', 'discount'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'customerId',
+        'items',
+        'charges',
+        'discount',
+        'companyLocationId',
+        'companyId',
+        'companyContactId',
+      ),
     },
     { enabled: !isModalOpen },
   );
@@ -259,6 +282,9 @@ function WorkOrder({
             dispatch={dispatch}
             disabled={workOrderMutation.isLoading}
             onCustomerSelectorClick={() => setIsCustomerSelectorModalOpen(true)}
+            onCompanySelectorClick={() => setIsCompanySelectorModalOpen(true)}
+            onCompanyLocationSelectorClick={() => setIsCompanyLocationSelectorModalOpen(true)}
+            onPaymentTermsSelectorClick={() => setIsPaymentTermsSelectorModalOpen(true)}
           />
 
           <WorkOrderCustomFieldsCard
@@ -267,18 +293,16 @@ function WorkOrder({
             disabled={workOrderMutation.isLoading}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
-            onImportPresetClick={() => setIsImportCustomFieldPresetModalOpen(true)}
-            onEditPresetClick={() => setIsSelectCustomFieldPresetToEditModalOpen(true)}
+            onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
+            onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
           />
         </InlineGrid>
 
         <WorkOrderItemsCard
           createWorkOrder={createWorkOrder}
           dispatch={dispatch}
-          workOrder={workOrder!}
+          workOrder={workOrder ?? null}
           disabled={workOrderMutation.isLoading}
-          onAddProductClick={() => setIsAddProductModalOpen(true)}
-          onAddServiceClick={() => setIsAddServiceModalOpen(true)}
           isLoading={calculatedDraftOrderQuery.isLoading}
         />
 
@@ -289,6 +313,7 @@ function WorkOrder({
           onSave={() => workOrderMutation.mutate(createWorkOrder)}
           isSaving={workOrderMutation.isLoading}
           onPrint={() => setIsPrintModalOpen(true)}
+          onCreateOrder={() => setIsCreateOrderModalOpen(true)}
         />
       </BlockStack>
 
@@ -296,7 +321,8 @@ function WorkOrder({
         <CustomerSelectorModal
           open={isCustomerSelectorModalOpen}
           onClose={() => setIsCustomerSelectorModalOpen(false)}
-          onSelect={customerId => dispatch.setPartial({ customerId })}
+          onSelect={customerId => dispatch.setCustomer({ customerId })}
+          onSelectCompany={() => setIsCompanySelectorModalOpen(true)}
           setToastAction={setToastAction}
         />
       )}
@@ -328,11 +354,11 @@ function WorkOrder({
         />
       )}
 
-      {isImportCustomFieldPresetModalOpen && (
-        <ImportCustomFieldPresetModal
+      {isCustomFieldPresetsModalOpen && (
+        <CustomFieldPresetsModal
           type={'WORK_ORDER'}
-          open={isImportCustomFieldPresetModalOpen && !customFieldPresetNameToEdit}
-          onClose={() => setIsImportCustomFieldPresetModalOpen(false)}
+          open={isCustomFieldPresetsModalOpen && !customFieldPresetNameToEdit}
+          onClose={() => setIsCustomFieldPresetsModalOpen(false)}
           onEdit={presetName => setCustomFieldPresetNameToEdit(presetName)}
           onOverride={fieldNames => {
             dispatch.setPartial({
@@ -355,68 +381,20 @@ function WorkOrder({
         />
       )}
 
+      {isFieldValuesModalOpen && (
+        <CustomFieldValuesSelectorModal
+          names={Object.keys(createWorkOrder.customFields)}
+          open={isFieldValuesModalOpen}
+          onClose={() => setIsFieldValuesModalOpen(false)}
+        />
+      )}
+
       {isPrintModalOpen && (
         <WorkOrderPrintModal
           open={isPrintModalOpen}
           onClose={() => setIsPrintModalOpen(false)}
           setToastAction={setToastAction}
           createWorkOrder={createWorkOrder}
-        />
-      )}
-
-      {isAddProductModalOpen && (
-        <AddProductModal
-          outputType="WORK_ORDER"
-          productType="PRODUCT"
-          open={isAddProductModalOpen}
-          setToastAction={setToastAction}
-          onClose={() => setIsAddProductModalOpen(false)}
-          onAdd={(items, charges) => {
-            dispatch.addItems({ items });
-
-            const chargesByItem = groupBy(
-              charges.filter(hasNonNullableProperty('workOrderItem')),
-              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
-            );
-
-            for (const charges of Object.values(chargesByItem)) {
-              const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
-            }
-          }}
-        />
-      )}
-
-      {isAddServiceModalOpen && (
-        <AddProductModal
-          outputType="WORK_ORDER"
-          productType="SERVICE"
-          open={isAddServiceModalOpen}
-          setToastAction={setToastAction}
-          onClose={() => setIsAddServiceModalOpen(false)}
-          onAdd={(items, charges) => {
-            dispatch.addItems({ items });
-
-            const chargesByItem = groupBy(
-              charges.filter(hasNonNullableProperty('workOrderItem')),
-              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
-            );
-
-            for (const charges of Object.values(chargesByItem)) {
-              const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
-            }
-          }}
-        />
-      )}
-
-      {isSelectCustomFieldPresetToEditModalOpen && (
-        <SelectCustomFieldPresetModal
-          open={isSelectCustomFieldPresetToEditModalOpen && !customFieldPresetNameToEdit}
-          onClose={() => setIsSelectCustomFieldPresetToEditModalOpen(false)}
-          onSelect={({ name }) => setCustomFieldPresetNameToEdit(name)}
-          setToastAction={setToastAction}
-          type="WORK_ORDER"
         />
       )}
 
@@ -427,6 +405,69 @@ function WorkOrder({
           setToastAction={setToastAction}
           name={customFieldPresetNameToEdit}
           type="WORK_ORDER"
+        />
+      )}
+
+      {isCreateOrderModalOpen && (
+        <CreateOrderModal
+          workOrder={workOrder ?? null}
+          open={isCreateOrderModalOpen}
+          onClose={() => setIsCreateOrderModalOpen(false)}
+          setToastAction={setToastAction}
+        />
+      )}
+
+      {isCompanySelectorModalOpen && (
+        <CompanySelectorModal
+          open={isCompanySelectorModalOpen}
+          onClose={() => setIsCompanySelectorModalOpen(false)}
+          onSelect={(companyId, customerId, companyContactId) => {
+            dispatch.setCompany({
+              companyId,
+              companyContactId,
+              customerId,
+              companyLocationId: null,
+              paymentTerms: null,
+            });
+            setIsCompanyLocationSelectorModalOpen(true);
+          }}
+          setToastAction={setToastAction}
+        />
+      )}
+
+      {isCompanyLocationSelectorModalOpen && createWorkOrder.companyId && (
+        <CompanyLocationSelectorModal
+          open={isCompanyLocationSelectorModalOpen}
+          onClose={() => setIsCompanyLocationSelectorModalOpen(false)}
+          onSelect={location => {
+            const paymentTerms = location.buyerExperienceConfiguration?.paymentTermsTemplate?.id
+              ? {
+                  templateId: location.buyerExperienceConfiguration.paymentTermsTemplate.id,
+                  date: new Date(Date.now() + 30 * DAY_IN_MS).toISOString() as DateTime,
+                }
+              : null;
+
+            const { companyId, companyContactId, customerId } = createWorkOrder;
+            dispatch.setCompany({
+              companyLocationId: location.id,
+              companyContactId,
+              companyId,
+              customerId: customerId!,
+              paymentTerms,
+            });
+          }}
+          setToastAction={setToastAction}
+          companyId={createWorkOrder.companyId}
+        />
+      )}
+
+      {isPaymentTermsSelectorModalOpen && (
+        <PaymentTermsSelectorModal
+          open={isPaymentTermsSelectorModalOpen}
+          onClose={() => setIsPaymentTermsSelectorModalOpen(false)}
+          onSelect={paymentTerms => dispatch.setPartial({ paymentTerms })}
+          setToastAction={setToastAction}
+          initialPaymentTerms={createWorkOrder.paymentTerms}
         />
       )}
 

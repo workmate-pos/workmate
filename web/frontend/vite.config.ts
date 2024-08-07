@@ -1,12 +1,12 @@
 import { defineConfig, HmrOptions, loadEnv } from 'vite';
-import { dirname } from 'path';
+import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID'];
 
-if (process.env.npm_lifecycle_event === 'build' && !process.env.CI) {
+if (process.env.NODE_ENV === 'production' && process.env.npm_lifecycle_event === 'build' && !process.env.CI) {
   for (const envVar of requiredEnvVars) {
     if (!process.env[envVar]) {
       throw new Error(`${envVar} environment variable is required to build the frontend app`);
@@ -59,6 +59,9 @@ export default defineConfig(({ mode }) => {
     define,
     resolve: {
       preserveSymlinks: true,
+      alias: {
+        '@work-orders/common': resolve(__dirname, '../../common/src'),
+      },
     },
     server: {
       host: 'localhost',

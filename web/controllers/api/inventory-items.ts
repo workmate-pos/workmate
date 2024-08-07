@@ -3,9 +3,10 @@ import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
 import type { Request, Response } from 'express-serve-static-core';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { InventoryItemPaginationOptions } from '../../schemas/generated/inventory-item-pagination-options.js';
 import { InventoryItemIds } from '../../schemas/generated/inventory-item-ids.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 @Authenticated()
 export default class InventoryItemsController {
@@ -64,16 +65,24 @@ export default class InventoryItemsController {
     return res.json({ inventoryItems });
   }
 
-  @Get('/id/:locationId/:id')
+  @Get('/:locationId/:inventoryItemId')
   async fetchInventoryItem(
-    req: Request<{ locationId: ID; inventoryItemId: ID }>,
+    req: Request<{ locationId: string; inventoryItemId: string }>,
     res: Response<FetchInventoryItemResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
     const { locationId, inventoryItemId } = req.params;
 
+    if (!isGid(locationId)) {
+      throw new HttpError('Invalid location id', 400);
+    }
+
+    if (!isGid(inventoryItemId)) {
+      throw new HttpError('Invalid inventory item id', 400);
+    }
+
     const graphql = new Graphql(session);
-    const { inventoryItem } = locationId
+    const { inventoryItem } = isGid(locationId)
       ? await gql.inventoryItems.getWithLocationInventoryLevel.run(graphql, { id: inventoryItemId, locationId })
       : await gql.inventoryItems.get.run(graphql, { id: inventoryItemId, locationId }).then(result => ({
           inventoryItem: result.inventoryItem ? { ...result.inventoryItem, inventoryLevel: null } : null,

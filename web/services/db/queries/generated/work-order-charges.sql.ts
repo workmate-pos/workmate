@@ -12,6 +12,7 @@ export interface IUpsertHourlyLabourChargeParams {
   removeLocked: boolean;
   shopifyOrderLineItemId?: string | null | void;
   uuid: string;
+  workOrderCustomItemUuid?: string | null | void;
   workOrderId: number;
   workOrderItemUuid?: string | null | void;
 }
@@ -25,26 +26,29 @@ export interface IUpsertHourlyLabourChargeQuery {
   result: IUpsertHourlyLabourChargeResult;
 }
 
-const upsertHourlyLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"employeeId":true,"name":true,"rate":true,"hours":true,"workOrderItemUuid":true,"shopifyOrderLineItemId":true,"uuid":true,"rateLocked":true,"hoursLocked":true,"removeLocked":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":240,"b":252}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":255,"b":265}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":268,"b":273}]},{"name":"rate","required":true,"transform":{"type":"scalar"},"locs":[{"a":276,"b":281}]},{"name":"hours","required":true,"transform":{"type":"scalar"},"locs":[{"a":284,"b":290}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":293,"b":310}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":313,"b":335}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":338,"b":343}]},{"name":"rateLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":354,"b":365}]},{"name":"hoursLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":368,"b":380}]},{"name":"removeLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":383,"b":396}]}],"statement":"INSERT INTO \"WorkOrderHourlyLabourCharge\" (\"workOrderId\", \"employeeId\", name, rate, hours, \"workOrderItemUuid\",\n                                           \"shopifyOrderLineItemId\", uuid, \"rateLocked\", \"hoursLocked\", \"removeLocked\")\nVALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,\n        :rateLocked!, :hoursLocked!, :removeLocked!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"             = EXCLUDED.\"employeeId\",\n      name                     = EXCLUDED.name,\n      rate                     = EXCLUDED.rate,\n      hours                    = EXCLUDED.hours,\n      \"workOrderItemUuid\"      = EXCLUDED.\"workOrderItemUuid\",\n      \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n      \"rateLocked\"             = EXCLUDED.\"rateLocked\",\n      \"hoursLocked\"            = EXCLUDED.\"hoursLocked\",\n      \"removeLocked\"           = EXCLUDED.\"removeLocked\""};
+const upsertHourlyLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"employeeId":true,"name":true,"rate":true,"hours":true,"workOrderItemUuid":true,"workOrderCustomItemUuid":true,"shopifyOrderLineItemId":true,"uuid":true,"rateLocked":true,"hoursLocked":true,"removeLocked":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":310,"b":322}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":325,"b":335}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":338,"b":343}]},{"name":"rate","required":true,"transform":{"type":"scalar"},"locs":[{"a":346,"b":351}]},{"name":"hours","required":true,"transform":{"type":"scalar"},"locs":[{"a":354,"b":360}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":363,"b":380}]},{"name":"workOrderCustomItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":383,"b":406}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":417,"b":439}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":442,"b":447}]},{"name":"rateLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":458,"b":469}]},{"name":"hoursLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":472,"b":484}]},{"name":"removeLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":487,"b":500}]}],"statement":"INSERT INTO \"WorkOrderHourlyLabourCharge\" (\"workOrderId\", \"employeeId\", name, rate, hours, \"workOrderItemUuid\",\n                                           \"workOrderCustomItemUuid\",\n                                           \"shopifyOrderLineItemId\", uuid, \"rateLocked\", \"hoursLocked\", \"removeLocked\")\nVALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :workOrderCustomItemUuid,\n        :shopifyOrderLineItemId, :uuid!,\n        :rateLocked!, :hoursLocked!, :removeLocked!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"              = EXCLUDED.\"employeeId\",\n      name                      = EXCLUDED.name,\n      rate                      = EXCLUDED.rate,\n      hours                     = EXCLUDED.hours,\n      \"workOrderItemUuid\"       = EXCLUDED.\"workOrderItemUuid\",\n      \"workOrderCustomItemUuid\" = EXCLUDED.\"workOrderCustomItemUuid\",\n      \"shopifyOrderLineItemId\"  = EXCLUDED.\"shopifyOrderLineItemId\",\n      \"rateLocked\"              = EXCLUDED.\"rateLocked\",\n      \"hoursLocked\"             = EXCLUDED.\"hoursLocked\",\n      \"removeLocked\"            = EXCLUDED.\"removeLocked\""};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderHourlyLabourCharge" ("workOrderId", "employeeId", name, rate, hours, "workOrderItemUuid",
+ *                                            "workOrderCustomItemUuid",
  *                                            "shopifyOrderLineItemId", uuid, "rateLocked", "hoursLocked", "removeLocked")
- * VALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,
+ * VALUES (:workOrderId!, :employeeId, :name!, :rate!, :hours!, :workOrderItemUuid, :workOrderCustomItemUuid,
+ *         :shopifyOrderLineItemId, :uuid!,
  *         :rateLocked!, :hoursLocked!, :removeLocked!)
  * ON CONFLICT ("workOrderId", uuid)
  *   DO UPDATE
- *   SET "employeeId"             = EXCLUDED."employeeId",
- *       name                     = EXCLUDED.name,
- *       rate                     = EXCLUDED.rate,
- *       hours                    = EXCLUDED.hours,
- *       "workOrderItemUuid"      = EXCLUDED."workOrderItemUuid",
- *       "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
- *       "rateLocked"             = EXCLUDED."rateLocked",
- *       "hoursLocked"            = EXCLUDED."hoursLocked",
- *       "removeLocked"           = EXCLUDED."removeLocked"
+ *   SET "employeeId"              = EXCLUDED."employeeId",
+ *       name                      = EXCLUDED.name,
+ *       rate                      = EXCLUDED.rate,
+ *       hours                     = EXCLUDED.hours,
+ *       "workOrderItemUuid"       = EXCLUDED."workOrderItemUuid",
+ *       "workOrderCustomItemUuid" = EXCLUDED."workOrderCustomItemUuid",
+ *       "shopifyOrderLineItemId"  = EXCLUDED."shopifyOrderLineItemId",
+ *       "rateLocked"              = EXCLUDED."rateLocked",
+ *       "hoursLocked"             = EXCLUDED."hoursLocked",
+ *       "removeLocked"            = EXCLUDED."removeLocked"
  * ```
  */
 export const upsertHourlyLabourCharge = new PreparedQuery<IUpsertHourlyLabourChargeParams,IUpsertHourlyLabourChargeResult>(upsertHourlyLabourChargeIR);
@@ -59,6 +63,7 @@ export interface IUpsertHourlyLabourChargesParams {
     rate: string,
     hours: string,
     workOrderItemUuid: string | null | void,
+    workOrderCustomItemUuid: string | null | void,
     shopifyOrderLineItemId: string | null | void,
     uuid: string,
     rateLocked: boolean,
@@ -76,21 +81,24 @@ export interface IUpsertHourlyLabourChargesQuery {
   result: IUpsertHourlyLabourChargesResult;
 }
 
-const upsertHourlyLabourChargesIR: any = {"usedParamSet":{"charges":true},"params":[{"name":"charges","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"employeeId","required":false},{"name":"name","required":true},{"name":"rate","required":true},{"name":"hours","required":true},{"name":"workOrderItemUuid","required":false},{"name":"shopifyOrderLineItemId","required":false},{"name":"uuid","required":true},{"name":"rateLocked","required":true},{"name":"hoursLocked","required":true},{"name":"removeLocked","required":true}]},"locs":[{"a":327,"b":334}]}],"statement":"INSERT INTO \"WorkOrderHourlyLabourCharge\" (\"workOrderId\", \"employeeId\", name, rate, hours, \"workOrderItemUuid\",\n                                           \"shopifyOrderLineItemId\", uuid, \"rateLocked\", \"hoursLocked\", \"removeLocked\")\nVALUES (0, NULL, '', '', '', gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE, FALSE), :charges OFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"             = EXCLUDED.\"employeeId\",\n      name                     = EXCLUDED.name,\n      rate                     = EXCLUDED.rate,\n      hours                    = EXCLUDED.hours,\n      \"workOrderItemUuid\"      = EXCLUDED.\"workOrderItemUuid\",\n      \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n      \"rateLocked\"             = EXCLUDED.\"rateLocked\",\n      \"hoursLocked\"            = EXCLUDED.\"hoursLocked\",\n      \"removeLocked\"           = EXCLUDED.\"removeLocked\""};
+const upsertHourlyLabourChargesIR: any = {"usedParamSet":{"charges":true},"params":[{"name":"charges","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"employeeId","required":false},{"name":"name","required":true},{"name":"rate","required":true},{"name":"hours","required":true},{"name":"workOrderItemUuid","required":false},{"name":"workOrderCustomItemUuid","required":false},{"name":"shopifyOrderLineItemId","required":false},{"name":"uuid","required":true},{"name":"rateLocked","required":true},{"name":"hoursLocked","required":true},{"name":"removeLocked","required":true}]},"locs":[{"a":416,"b":423}]}],"statement":"INSERT INTO \"WorkOrderHourlyLabourCharge\" (\"workOrderId\", \"employeeId\", name, rate, hours, \"workOrderItemUuid\",\n                                           \"workOrderCustomItemUuid\",\n                                           \"shopifyOrderLineItemId\", uuid, \"rateLocked\", \"hoursLocked\", \"removeLocked\")\nVALUES (0, NULL, '', '', '', gen_random_uuid(), gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE, FALSE), :charges\nOFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\nDO UPDATE\nSET \"employeeId\" = EXCLUDED.\"employeeId\",\n      name                     = EXCLUDED.name,\n      rate                     = EXCLUDED.rate,\n      hours                    = EXCLUDED.hours,\n      \"workOrderItemUuid\"      = EXCLUDED.\"workOrderItemUuid\",\n      \"workOrderCustomItemUuid\"      = EXCLUDED.\"workOrderCustomItemUuid\",\n      \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n      \"rateLocked\"             = EXCLUDED.\"rateLocked\",\n      \"hoursLocked\"            = EXCLUDED.\"hoursLocked\",\n      \"removeLocked\"           = EXCLUDED.\"removeLocked\""};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderHourlyLabourCharge" ("workOrderId", "employeeId", name, rate, hours, "workOrderItemUuid",
+ *                                            "workOrderCustomItemUuid",
  *                                            "shopifyOrderLineItemId", uuid, "rateLocked", "hoursLocked", "removeLocked")
- * VALUES (0, NULL, '', '', '', gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE, FALSE), :charges OFFSET 1
+ * VALUES (0, NULL, '', '', '', gen_random_uuid(), gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE, FALSE), :charges
+ * OFFSET 1
  * ON CONFLICT ("workOrderId", uuid)
- *   DO UPDATE
- *   SET "employeeId"             = EXCLUDED."employeeId",
+ * DO UPDATE
+ * SET "employeeId" = EXCLUDED."employeeId",
  *       name                     = EXCLUDED.name,
  *       rate                     = EXCLUDED.rate,
  *       hours                    = EXCLUDED.hours,
  *       "workOrderItemUuid"      = EXCLUDED."workOrderItemUuid",
+ *       "workOrderCustomItemUuid"      = EXCLUDED."workOrderCustomItemUuid",
  *       "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
  *       "rateLocked"             = EXCLUDED."rateLocked",
  *       "hoursLocked"            = EXCLUDED."hoursLocked",
@@ -109,6 +117,7 @@ export interface IUpsertFixedPriceLabourChargeParams {
   removeLocked: boolean;
   shopifyOrderLineItemId?: string | null | void;
   uuid: string;
+  workOrderCustomItemUuid?: string | null | void;
   workOrderId: number;
   workOrderItemUuid?: string | null | void;
 }
@@ -122,24 +131,27 @@ export interface IUpsertFixedPriceLabourChargeQuery {
   result: IUpsertFixedPriceLabourChargeResult;
 }
 
-const upsertFixedPriceLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"employeeId":true,"name":true,"amount":true,"workOrderItemUuid":true,"shopifyOrderLineItemId":true,"uuid":true,"amountLocked":true,"removeLocked":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":230,"b":242}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":245,"b":255}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":258,"b":263}]},{"name":"amount","required":true,"transform":{"type":"scalar"},"locs":[{"a":266,"b":273}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":276,"b":293}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":296,"b":318}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":321,"b":326}]},{"name":"amountLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":337,"b":350}]},{"name":"removeLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":353,"b":366}]}],"statement":"INSERT INTO \"WorkOrderFixedPriceLabourCharge\" (\"workOrderId\", \"employeeId\", name, amount, \"workOrderItemUuid\",\n                                               \"shopifyOrderLineItemId\", uuid, \"amountLocked\", \"removeLocked\")\nVALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,\n        :amountLocked!, :removeLocked!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"             = EXCLUDED.\"employeeId\",\n      name                     = EXCLUDED.name,\n      amount                   = EXCLUDED.amount,\n      \"workOrderItemUuid\"      = EXCLUDED.\"workOrderItemUuid\",\n      \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n      \"amountLocked\"           = EXCLUDED.\"amountLocked\",\n      \"removeLocked\"           = EXCLUDED.\"removeLocked\""};
+const upsertFixedPriceLabourChargeIR: any = {"usedParamSet":{"workOrderId":true,"employeeId":true,"name":true,"amount":true,"workOrderItemUuid":true,"workOrderCustomItemUuid":true,"shopifyOrderLineItemId":true,"uuid":true,"amountLocked":true,"removeLocked":true},"params":[{"name":"workOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":304,"b":316}]},{"name":"employeeId","required":false,"transform":{"type":"scalar"},"locs":[{"a":319,"b":329}]},{"name":"name","required":true,"transform":{"type":"scalar"},"locs":[{"a":332,"b":337}]},{"name":"amount","required":true,"transform":{"type":"scalar"},"locs":[{"a":340,"b":347}]},{"name":"workOrderItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":350,"b":367}]},{"name":"workOrderCustomItemUuid","required":false,"transform":{"type":"scalar"},"locs":[{"a":370,"b":393}]},{"name":"shopifyOrderLineItemId","required":false,"transform":{"type":"scalar"},"locs":[{"a":404,"b":426}]},{"name":"uuid","required":true,"transform":{"type":"scalar"},"locs":[{"a":429,"b":434}]},{"name":"amountLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":445,"b":458}]},{"name":"removeLocked","required":true,"transform":{"type":"scalar"},"locs":[{"a":461,"b":474}]}],"statement":"INSERT INTO \"WorkOrderFixedPriceLabourCharge\" (\"workOrderId\", \"employeeId\", name, amount, \"workOrderItemUuid\",\n                                               \"workOrderCustomItemUuid\",\n                                               \"shopifyOrderLineItemId\", uuid, \"amountLocked\", \"removeLocked\")\nVALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :workOrderCustomItemUuid,\n        :shopifyOrderLineItemId, :uuid!,\n        :amountLocked!, :removeLocked!)\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"              = EXCLUDED.\"employeeId\",\n      name                      = EXCLUDED.name,\n      amount                    = EXCLUDED.amount,\n      \"workOrderItemUuid\"       = EXCLUDED.\"workOrderItemUuid\",\n      \"workOrderCustomItemUuid\" = EXCLUDED.\"workOrderCustomItemUuid\",\n      \"shopifyOrderLineItemId\"  = EXCLUDED.\"shopifyOrderLineItemId\",\n      \"amountLocked\"            = EXCLUDED.\"amountLocked\",\n      \"removeLocked\"            = EXCLUDED.\"removeLocked\""};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderFixedPriceLabourCharge" ("workOrderId", "employeeId", name, amount, "workOrderItemUuid",
+ *                                                "workOrderCustomItemUuid",
  *                                                "shopifyOrderLineItemId", uuid, "amountLocked", "removeLocked")
- * VALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :shopifyOrderLineItemId, :uuid!,
+ * VALUES (:workOrderId!, :employeeId, :name!, :amount!, :workOrderItemUuid, :workOrderCustomItemUuid,
+ *         :shopifyOrderLineItemId, :uuid!,
  *         :amountLocked!, :removeLocked!)
  * ON CONFLICT ("workOrderId", uuid)
  *   DO UPDATE
- *   SET "employeeId"             = EXCLUDED."employeeId",
- *       name                     = EXCLUDED.name,
- *       amount                   = EXCLUDED.amount,
- *       "workOrderItemUuid"      = EXCLUDED."workOrderItemUuid",
- *       "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
- *       "amountLocked"           = EXCLUDED."amountLocked",
- *       "removeLocked"           = EXCLUDED."removeLocked"
+ *   SET "employeeId"              = EXCLUDED."employeeId",
+ *       name                      = EXCLUDED.name,
+ *       amount                    = EXCLUDED.amount,
+ *       "workOrderItemUuid"       = EXCLUDED."workOrderItemUuid",
+ *       "workOrderCustomItemUuid" = EXCLUDED."workOrderCustomItemUuid",
+ *       "shopifyOrderLineItemId"  = EXCLUDED."shopifyOrderLineItemId",
+ *       "amountLocked"            = EXCLUDED."amountLocked",
+ *       "removeLocked"            = EXCLUDED."removeLocked"
  * ```
  */
 export const upsertFixedPriceLabourCharge = new PreparedQuery<IUpsertFixedPriceLabourChargeParams,IUpsertFixedPriceLabourChargeResult>(upsertFixedPriceLabourChargeIR);
@@ -153,6 +165,7 @@ export interface IUpsertFixedPriceLabourChargesParams {
     name: string,
     amount: string,
     workOrderItemUuid: string | null | void,
+    workOrderCustomItemUuid: string | null | void,
     shopifyOrderLineItemId: string | null | void,
     uuid: string,
     amountLocked: boolean,
@@ -169,20 +182,23 @@ export interface IUpsertFixedPriceLabourChargesQuery {
   result: IUpsertFixedPriceLabourChargesResult;
 }
 
-const upsertFixedPriceLabourChargesIR: any = {"usedParamSet":{"charges":true},"params":[{"name":"charges","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"employeeId","required":false},{"name":"name","required":true},{"name":"amount","required":true},{"name":"workOrderItemUuid","required":false},{"name":"shopifyOrderLineItemId","required":false},{"name":"uuid","required":true},{"name":"amountLocked","required":true},{"name":"removeLocked","required":true}]},"locs":[{"a":306,"b":313}]}],"statement":"INSERT INTO \"WorkOrderFixedPriceLabourCharge\" (\"workOrderId\", \"employeeId\", name, amount, \"workOrderItemUuid\",\n                                               \"shopifyOrderLineItemId\", uuid, \"amountLocked\", \"removeLocked\")\nVALUES (0, NULL, '', '', gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE), :charges OFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\n  DO UPDATE\n  SET \"employeeId\"             = EXCLUDED.\"employeeId\",\n      name                     = EXCLUDED.name,\n      amount                   = EXCLUDED.amount,\n      \"workOrderItemUuid\"      = EXCLUDED.\"workOrderItemUuid\",\n      \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n      \"amountLocked\"           = EXCLUDED.\"amountLocked\",\n      \"removeLocked\"           = EXCLUDED.\"removeLocked\""};
+const upsertFixedPriceLabourChargesIR: any = {"usedParamSet":{"charges":true},"params":[{"name":"charges","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"workOrderId","required":true},{"name":"employeeId","required":false},{"name":"name","required":true},{"name":"amount","required":true},{"name":"workOrderItemUuid","required":false},{"name":"workOrderCustomItemUuid","required":false},{"name":"shopifyOrderLineItemId","required":false},{"name":"uuid","required":true},{"name":"amountLocked","required":true},{"name":"removeLocked","required":true}]},"locs":[{"a":399,"b":406}]}],"statement":"INSERT INTO \"WorkOrderFixedPriceLabourCharge\" (\"workOrderId\", \"employeeId\", name, amount, \"workOrderItemUuid\",\n                                               \"workOrderCustomItemUuid\",\n                                               \"shopifyOrderLineItemId\", uuid, \"amountLocked\", \"removeLocked\")\nVALUES (0, NULL, '', '', gen_random_uuid(), gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE), :charges\nOFFSET 1\nON CONFLICT (\"workOrderId\", uuid)\nDO UPDATE\nSET \"employeeId\" = EXCLUDED.\"employeeId\",\n      name                     = EXCLUDED.name,\n     amount                   = EXCLUDED.amount,\n      \"workOrderItemUuid\"      = EXCLUDED.\"workOrderItemUuid\",\n      \"workOrderCustomItemUuid\"      = EXCLUDED.\"workOrderCustomItemUuid\",\n      \"shopifyOrderLineItemId\" = EXCLUDED.\"shopifyOrderLineItemId\",\n      \"amountLocked\"           = EXCLUDED.\"amountLocked\",\n      \"removeLocked\"           = EXCLUDED.\"removeLocked\""};
 
 /**
  * Query generated from SQL:
  * ```
  * INSERT INTO "WorkOrderFixedPriceLabourCharge" ("workOrderId", "employeeId", name, amount, "workOrderItemUuid",
+ *                                                "workOrderCustomItemUuid",
  *                                                "shopifyOrderLineItemId", uuid, "amountLocked", "removeLocked")
- * VALUES (0, NULL, '', '', gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE), :charges OFFSET 1
+ * VALUES (0, NULL, '', '', gen_random_uuid(), gen_random_uuid(), NULL, gen_random_uuid(), FALSE, FALSE), :charges
+ * OFFSET 1
  * ON CONFLICT ("workOrderId", uuid)
- *   DO UPDATE
- *   SET "employeeId"             = EXCLUDED."employeeId",
+ * DO UPDATE
+ * SET "employeeId" = EXCLUDED."employeeId",
  *       name                     = EXCLUDED.name,
- *       amount                   = EXCLUDED.amount,
+ *      amount                   = EXCLUDED.amount,
  *       "workOrderItemUuid"      = EXCLUDED."workOrderItemUuid",
+ *       "workOrderCustomItemUuid"      = EXCLUDED."workOrderCustomItemUuid",
  *       "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
  *       "amountLocked"           = EXCLUDED."amountLocked",
  *       "removeLocked"           = EXCLUDED."removeLocked"

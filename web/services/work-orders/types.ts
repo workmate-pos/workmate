@@ -15,6 +15,10 @@ export type WorkOrder = {
   orders: WorkOrderOrder[];
   customFields: Record<string, string>;
   discount: WorkOrderDiscount | null;
+  companyId: ID | null;
+  companyLocationId: ID | null;
+  companyContactId: ID | null;
+  paymentTerms: WorkOrderPaymentTerms | null;
 };
 
 export type WorkOrderDiscount =
@@ -26,6 +30,11 @@ export type WorkOrderDiscount =
       type: 'PERCENTAGE';
       value: Decimal;
     };
+
+export type WorkOrderPaymentTerms = {
+  templateId: ID;
+  date: DateTime | null;
+};
 
 export type WorkOrderItem = {
   uuid: string;

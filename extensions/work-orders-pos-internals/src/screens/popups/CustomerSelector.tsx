@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useCustomersQuery, Customer } from '@work-orders/common/queries/use-customers-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -6,18 +6,44 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
+import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 
-export function CustomerSelector({ onSelect }: { onSelect: (id: ID) => void }) {
+export function CustomerSelector({
+  onSelect,
+  onSelectCompany,
+}: {
+  onSelect: (id: ID) => void;
+  onSelectCompany?: () => void;
+}) {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();
+
   const customersQuery = useCustomersQuery({ fetch, params: { query } });
   const customers = customersQuery.data?.pages.flat() ?? [];
 
+  const storePropertiesQuery = useStorePropertiesQuery({ fetch });
+  const storeProperties = storePropertiesQuery.data?.storeProperties;
+  const canSelectCompany = !!storeProperties && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
+
   const rows = getCustomerRows(customers, onSelect);
+
+  const router = useRouter();
 
   return (
     <ScrollView>
+      {onSelectCompany && canSelectCompany && (
+        <Stack direction="vertical" paddingVertical="ExtraSmall">
+          <Button
+            title="Select Company"
+            onPress={async () => {
+              await router.popCurrent();
+              onSelectCompany();
+            }}
+          />
+        </Stack>
+      )}
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">
           {customersQuery.isRefetching ? 'Reloading...' : ' '}

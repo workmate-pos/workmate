@@ -2,14 +2,14 @@ import { useQueries, useQuery } from 'react-query';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import { Fetch } from './fetch.js';
 import { useBatcher } from '../batcher/use-batcher.js';
-import { FetchInventoryItemsByIdResponse } from '@web/controllers/api/inventory-items.js';
+import { FetchInventoryItemResponse, FetchInventoryItemsByIdResponse } from '@web/controllers/api/inventory-items.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { withResolvers } from '@teifi-digital/shopify-app-toolbox/promise';
 
 // TODO: Make batcher support grouping natively
 const useInventoryItemBatcher = (fetch: Fetch) =>
   useBatcher({
-    name: 'inventory-items',
+    key: 'inventory-items',
     maxSize: 25,
     handler: async (ids: { inventoryItemId: ID; locationId: ID | null }[]) => {
       if (ids.length === 0) {
@@ -111,6 +111,44 @@ export const useInventoryItemQueries = (
     })),
   );
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));
+};
+
+/**
+ * `useInventoryItemQueries` without batching. The advantage is the ability to use many different locations.
+ */
+export const useUnbatchedInventoryItemQueries = ({
+  fetch,
+  inventoryItems,
+}: {
+  fetch: Fetch;
+  inventoryItems: { id: ID; locationId: ID }[];
+}) => {
+  const queries = useQueries(
+    inventoryItems.map(({ id, locationId }) => ({
+      queryKey: ['inventory-item', id, locationId],
+      queryFn: async () => {
+        const response = await fetch(
+          `/api/inventory-items/${encodeURIComponent(locationId)}/${encodeURIComponent(id)}/`,
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch inventory item (${response.status})`);
+        }
+
+        const { inventoryItem }: FetchInventoryItemResponse = await response.json();
+        return inventoryItem;
+      },
+    })),
+  );
+
+  const inventoryItemQueriesByIdByLocation: Record<ID, Record<ID, (typeof queries)[number]>> = {};
+
+  for (const [i, { id, locationId }] of inventoryItems.entries()) {
+    const inventoryItemQueriesByLocation = (inventoryItemQueriesByIdByLocation[id] ??= {});
+    inventoryItemQueriesByLocation[locationId ?? 'null'] = queries[i]!;
+  }
+
+  return inventoryItemQueriesByIdByLocation;
 };
 
 export type InventoryItem = FetchInventoryItemsByIdResponse['inventoryItems'][number];

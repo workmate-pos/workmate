@@ -39,6 +39,19 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/SelectPresetToEdit.js';
 import { SelectPreset, SelectPresetProps } from '@work-orders/common-pos/screens/custom-fields/SelectPreset.js';
 import { WorkOrderFilters } from './screens/popups/WorkOrderFilters.js';
+import { CompanySelector } from './screens/popups/CompanySelector.js';
+import {
+  CompanyLocationSelector,
+  CompanyLocationSelectorProps,
+} from '@work-orders/common-pos/screens/CompanyLocationSelector.js';
+import { PaymentTermsSelector } from './screens/popups/PaymentTermsSelector.js';
+import { Dropdown, DropdownProps } from '@work-orders/common-pos/screens/Dropdown.js';
+import {
+  CustomFieldValuesConfig,
+  CustomFieldValuesConfigProps,
+} from '@work-orders/common-pos/screens/custom-fields/CustomFieldValuesConfig.js';
+import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
+import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -99,6 +112,22 @@ export const { Router, useRouter } = createRouter({
     title: 'Select Customer',
     Component: CustomerSelector,
   },
+  CompanySelector: {
+    title: 'Select Company',
+    Component: CompanySelector,
+  },
+  CompanyLocationSelector: {
+    title: 'Select Company Location',
+    Component: (props: Omit<CompanyLocationSelectorProps, 'useRouter'>) => (
+      <CompanyLocationSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  LocationSelector: {
+    title: 'Select Location',
+    Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
+      <LocationSelector {...props} useRouter={useRouter} />
+    ),
+  },
   DiscountSelector: {
     title: 'Select Discount',
     Component: DiscountSelector,
@@ -130,6 +159,20 @@ export const { Router, useRouter } = createRouter({
   PaymentOverview: {
     title: 'Payments',
     Component: PaymentOverview,
+  },
+  Dropdown: {
+    title: 'Dropdown',
+    Component: <const T extends string>(props: Omit<DropdownProps<T>, 'useRouter'>) => (
+      <Dropdown {...props} useRouter={useRouter} />
+    ),
+  },
+  CustomFieldValuesConfig: {
+    title: 'Custom Field Values',
+    Component: (props: Omit<CustomFieldValuesConfigProps, 'useRouter'>) => (
+      <PermissionBoundary permissions={['read_settings', 'write_settings']}>
+        <CustomFieldValuesConfig {...props} useRouter={useRouter} />
+      </PermissionBoundary>
+    ),
   },
   CustomFieldConfig: {
     title: 'Custom Fields',
@@ -172,5 +215,9 @@ export const { Router, useRouter } = createRouter({
   ItemSelector: {
     title: 'Select item',
     Component: ItemSelector,
+  },
+  PaymentTermsSelector: {
+    title: 'Select Payment Terms',
+    Component: PaymentTermsSelector,
   },
 });

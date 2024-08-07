@@ -9,38 +9,42 @@ export const useCalculateWorkOrderQueries = ({
   workOrders,
 }: {
   fetch: Fetch;
-  workOrders: {
+  workOrders: ({
     name: string;
-    items: CreateWorkOrder['items'];
-    customerId: CreateWorkOrder['customerId'];
-    charges: CreateWorkOrder['charges'];
-    discount: CreateWorkOrder['discount'];
-  }[];
+  } & Pick<
+    CreateWorkOrder,
+    'items' | 'charges' | 'discount' | 'customerId' | 'companyLocationId' | 'companyContactId' | 'companyId'
+  >)[];
 }) => {
   const queries = useQueries(
-    workOrders.map(({ name, items, customerId, charges, discount }) => ({
-      queryKey: ['calculated-work-order', name, items, customerId, charges, discount],
-      queryFn: async () => {
-        const response = await fetch('/api/work-order/calculate-draft-order', {
-          method: 'POST',
-          body: JSON.stringify({
-            name,
-            items,
-            customerId,
-            charges,
-            discount,
-          } satisfies CalculateWorkOrder),
-          headers: { 'Content-Type': 'application/json' },
-        });
+    workOrders.map(
+      ({ name, items, customerId, charges, discount, companyLocationId, companyContactId, companyId }) => ({
+        queryKey: ['calculated-work-order', name, items, customerId, charges, discount],
+        queryFn: async () => {
+          const response = await fetch('/api/work-order/calculate-draft-order', {
+            method: 'POST',
+            body: JSON.stringify({
+              name,
+              items,
+              customerId,
+              charges,
+              discount,
+              companyLocationId,
+              companyContactId,
+              companyId,
+            } satisfies CalculateWorkOrder),
+            headers: { 'Content-Type': 'application/json' },
+          });
 
-        if (!response.ok) {
-          throw new Error('Failed to calculate work order');
-        }
+          if (!response.ok) {
+            throw new Error('Failed to calculate work order');
+          }
 
-        const result: CalculateDraftOrderResponse = await response.json();
-        return result;
-      },
-    })),
+          const result: CalculateDraftOrderResponse = await response.json();
+          return result;
+        },
+      }),
+    ),
   );
 
   return Object.fromEntries(workOrders.map(({ name }, i) => [name, queries[i]!]));

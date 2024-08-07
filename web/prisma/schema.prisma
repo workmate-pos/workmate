@@ -46,6 +46,14 @@ model WorkOrder {
   customer   Customer? @relation(fields: [customerId], references: [customerId])
   customerId String
 
+  companyId         String?
+  companyContactId  String?
+  companyLocationId String?
+
+  paymentTermsTemplateId String?
+  // Only applicable for FIXED terms
+  paymentFixedDueDate DateTime?
+
   derivedFromOrder   ShopifyOrder? @relation(fields: [derivedFromOrderId], references: [orderId])
   derivedFromOrderId String?
 
@@ -376,10 +384,12 @@ enum ShopifyPlan {
   SHOPIFY_PLUS_PARTNER_SANDBOX
   PARTNER_DEVELOPMENT
   ADVANCED_SHOPIFY
+  SHOPIFY_STARTER
   BASIC_SHOPIFY
   SHOPIFY_PLUS
   DEVELOPMENT
   SHOPIFY
+  TRIAL
   STAFF
 }
 
@@ -627,6 +637,18 @@ model CustomFieldsPreset {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([shop, type, name])
+}
+
+// Users can specify a list of options for custom field names.
+// This is done on a per-name basis and (currently) spans line items, purchase orders, and work orders.
+model CustomFieldValueOptions {
+  id Int @id @default(autoincrement())
+
+  shop   String
+  name   String
+  values String[]
+
+  @@unique([shop, name])
 }
 
 enum CustomFieldsPresetType {

@@ -48,18 +48,6 @@ export const db = {
 };
 
 /**
- * Sql tagged template that automatically uses the correct client.
- * Pgtyped will automatically create types whenever you this tag.
- */
-export const sql = <T extends { params: any; result: any }>(arr: TemplateStringsArray) => {
-  const preparedQuery = sqlTaggedTemplate<T>(arr);
-  return async (param: T['params']): Promise<T['result'][]> => {
-    using client = await useClient();
-    return preparedQuery.run(param, client);
-  };
-};
-
-/**
  * Wrap an object of prepared queries such that their client is automatically provided.
  */
 function wrapPreparedQueries<const T extends PreparedQueries>(queries: T): WrappedPreparedQueries<T> {

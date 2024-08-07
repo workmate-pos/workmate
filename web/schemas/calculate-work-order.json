@@ -9,6 +9,15 @@
     "customerId": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
     },
+    "companyId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "companyLocationId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "companyContactId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
     "charges": {
       "$ref": "create-work-order.json#/properties/charges"
     },
@@ -19,6 +28,15 @@
       "$ref": "create-work-order.json#/properties/discount"
     }
   },
-  "required": ["name", "customerId", "charges", "items", "discount"],
+  "required": [
+    "name",
+    "customerId",
+    "charges",
+    "items",
+    "discount",
+    "companyId",
+    "companyLocationId",
+    "companyContactId"
+  ],
   "additionalProperties": false
 }

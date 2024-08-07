@@ -18,31 +18,41 @@ import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fet
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
-import { useState } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { hasNestedPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import {
+  hasNestedPropertyValue,
+  hasNonNullableProperty,
+  hasPropertyValue,
+  isNonNullable,
+} from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { WorkOrderItemModal } from '@web/frontend/components/work-orders/modals/WorkOrderItemModal.js';
 import { WorkOrder } from '@web/services/work-orders/types.js';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
+import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
+import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export function WorkOrderItemsCard({
   createWorkOrder,
   workOrder,
   dispatch,
   disabled,
-  onAddProductClick,
-  onAddServiceClick,
   isLoading,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
   workOrder: WorkOrder | null;
   dispatch: CreateWorkOrderDispatchProxy;
   disabled: boolean;
-  onAddProductClick: () => void;
-  onAddServiceClick: () => void;
   isLoading: boolean;
 }) {
+  const [toast, setToastAction] = useToast();
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState<CreateWorkOrder['items'][number] | null>(null);
+
   return (
     <Card>
       <BlockStack gap={'400'}>
@@ -52,16 +62,78 @@ export function WorkOrderItemsCard({
           </Text>
           <Box>{isLoading && <Spinner size={'small'} />}</Box>
         </InlineStack>
-        <ProductsList createWorkOrder={createWorkOrder} dispatch={dispatch} workOrder={workOrder} disabled={disabled} />
+        <ProductsList
+          createWorkOrder={createWorkOrder}
+          dispatch={dispatch}
+          workOrder={workOrder}
+          disabled={disabled}
+          editItem={editItem}
+          setEditItem={setEditItem}
+        />
         <ButtonGroup fullWidth>
-          <Button onClick={() => onAddProductClick()} disabled={disabled}>
+          <Button onClick={() => setIsAddProductModalOpen(true)} disabled={disabled}>
             Add Product
           </Button>
-          <Button onClick={() => onAddServiceClick()} disabled={disabled}>
+          <Button onClick={() => setIsAddServiceModalOpen(true)} disabled={disabled}>
             Add Service
           </Button>
         </ButtonGroup>
       </BlockStack>
+
+      {isAddProductModalOpen && (
+        <AddProductModal
+          outputType="WORK_ORDER"
+          companyLocationId={createWorkOrder.companyLocationId}
+          productType="PRODUCT"
+          open={isAddProductModalOpen}
+          setToastAction={setToastAction}
+          onClose={() => setIsAddProductModalOpen(false)}
+          onAdd={(items, charges) => {
+            dispatch.addItems({ items });
+
+            const chargesByItem = groupBy(
+              charges.filter(hasNonNullableProperty('workOrderItem')),
+              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
+            );
+
+            for (const charges of Object.values(chargesByItem)) {
+              const [charge = never()] = charges;
+              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
+            }
+
+            const customItem = items.find(hasPropertyValue('type', 'custom-item'));
+
+            if (customItem) {
+              setEditItem(customItem);
+            }
+          }}
+        />
+      )}
+
+      {isAddServiceModalOpen && (
+        <AddProductModal
+          outputType="WORK_ORDER"
+          productType="SERVICE"
+          open={isAddServiceModalOpen}
+          setToastAction={setToastAction}
+          onClose={() => setIsAddServiceModalOpen(false)}
+          onAdd={(items, charges) => {
+            dispatch.addItems({ items });
+
+            const chargesByItem = groupBy(
+              charges.filter(hasNonNullableProperty('workOrderItem')),
+              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
+            );
+
+            for (const charges of Object.values(chargesByItem)) {
+              const [charge = never()] = charges;
+              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
+            }
+          }}
+        />
+      )}
+
+      {toast}
     </Card>
   );
 }
@@ -71,29 +143,45 @@ function ProductsList({
   workOrder,
   dispatch,
   disabled,
+  editItem,
+  setEditItem,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
   workOrder: WorkOrder | null;
   dispatch: CreateWorkOrderDispatchProxy;
   disabled: boolean;
+  editItem: CreateWorkOrder['items'][number] | null;
+  setEditItem: Dispatch<SetStateAction<CreateWorkOrder['items'][number] | null>>;
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
+  const productVariantQueries = useProductVariantQueries({
+    fetch,
+    ids: createWorkOrder.items.filter(hasPropertyValue('type', 'product')).map(item => item.productVariantId),
+  });
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'customerId', 'items', 'charges', 'discount'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'customerId',
+        'items',
+        'charges',
+        'discount',
+        'companyLocationId',
+        'companyId',
+        'companyContactId',
+      ),
     },
     { enabled: false, keepPreviousData: true },
   );
 
-  const [modalItem, setModalItem] = useState<CreateWorkOrder['items'][number] | null>(null);
-
   const onItemClick = (item: CreateWorkOrder['items'][number]) => {
     if (disabled) return;
-    setModalItem(item);
+    setEditItem(item);
   };
 
   const onItemRemove = (item: CreateWorkOrder['items'][number]) => {
@@ -120,11 +208,18 @@ function ProductsList({
             return item satisfies never;
           })();
           const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
+          const variant =
+            itemLineItem?.variant ??
+            (item.type === 'product' ? productVariantQueries[item.productVariantId]?.data : null);
 
           const canRemove = !!itemLineItem?.order;
 
-          const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
-          const imageUrl = itemLineItem?.image?.url;
+          const name =
+            itemLineItem?.name ??
+            getProductVariantName(variant) ??
+            (calculatedDraftOrderQuery.isFetching ? 'Loading...' : 'Unknown item');
+          const sku = itemLineItem?.sku ?? variant?.sku;
+          const imageUrl = itemLineItem?.image?.url ?? variant?.image?.url ?? variant?.product?.featuredImage?.url;
 
           const charges = createWorkOrder.charges
             .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
@@ -173,7 +268,7 @@ function ProductsList({
                     {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
                   </InlineStack>
                   <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                    {currencyFormatter(totalPrice)}
+                    {!!itemLineItem && currencyFormatter(totalPrice)}
                   </Text>
                 </InlineStack>
                 <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
@@ -185,7 +280,7 @@ function ProductsList({
                   </Box>
                 )}
                 <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                  {itemLineItem?.sku}
+                  {sku}
                 </Text>
               </BlockStack>
             </ResourceItem>
@@ -193,13 +288,13 @@ function ProductsList({
         }}
       />
 
-      {modalItem && (
+      {editItem && (
         <WorkOrderItemModal
           createWorkOrder={createWorkOrder}
-          itemUuid={modalItem.uuid}
+          item={editItem}
           workOrder={workOrder}
-          open={!!modalItem}
-          onClose={() => setModalItem(null)}
+          open={!!editItem}
+          onClose={() => setEditItem(null)}
           setToastAction={setToastAction}
           onSave={(item, charges) => {
             dispatch.updateItem({ item });

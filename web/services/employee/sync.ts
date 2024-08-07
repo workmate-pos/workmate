@@ -6,6 +6,8 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { hasReadUsersScope } from '../shop.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { createNewEmployees } from '../../decorators/permission.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export async function ensureEmployeesExist(session: Session, employeeIds: ID[]) {
   if (employeeIds.length === 0) {
@@ -66,16 +68,43 @@ async function upsertEmployees(shop: string, employees: gql.staffMember.Database
     return;
   }
 
+  const employeeIds = employees.map(e => e.id);
+  const knownEmployees = await db.employee.getMany({ shop, employeeIds });
+
+  await createNewEmployees(
+    shop,
+    employees
+      .filter(employee => !(employee.id in knownEmployees))
+      .map(employee => ({
+        employeeId: employee.id,
+        name: employee.name,
+        isShopOwner: employee.isShopOwner,
+        superuser: employee.isShopOwner,
+        email: employee.email,
+      })),
+  );
+
   await db.employee.upsertMany({
-    employees: employees.map(({ id: staffMemberId, name, isShopOwner, email }) => ({
-      shop,
-      name,
-      staffMemberId,
-      rate: null,
-      isShopOwner,
-      permissions: [],
-      superuser: isShopOwner,
-      email,
-    })),
+    employees: knownEmployees.map(databaseEmployee => {
+      const {
+        id: staffMemberId,
+        isShopOwner,
+        name,
+        email,
+      } = employees.find(employee => employee.id === databaseEmployee.staffMemberId) ?? never();
+
+      const { permissions, rate, superuser } = databaseEmployee;
+
+      return {
+        shop,
+        staffMemberId,
+        isShopOwner,
+        name,
+        rate,
+        email,
+        permissions: permissions ?? [],
+        superuser: superuser || isShopOwner,
+      };
+    }),
   });
 }

@@ -5,28 +5,28 @@ export function WorkOrderCustomFieldsCard({
   createWorkOrder,
   dispatch,
   disabled,
-  onImportPresetClick,
   onSavePresetClick,
-  onEditPresetClick,
   onAddCustomFieldClick,
+  onPresetsClick,
+  onFieldValuesClick,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
   dispatch: CreateWorkOrderDispatchProxy;
   disabled: boolean;
-  onImportPresetClick: () => void;
   onSavePresetClick: () => void;
   onAddCustomFieldClick: () => void;
-  onEditPresetClick: () => void;
+  onPresetsClick: () => void;
+  onFieldValuesClick: () => void;
 }) {
   return (
     <CustomFieldsCard
       customFields={createWorkOrder.customFields}
       onUpdate={(customFields: Record<string, string>) => dispatch.setPartial({ customFields })}
       disabled={disabled}
-      onImportPresetClick={onImportPresetClick}
+      onPresetsClick={onPresetsClick}
       onSavePresetClick={onSavePresetClick}
-      onEditPresetClick={onEditPresetClick}
       onAddCustomFieldClick={onAddCustomFieldClick}
+      onFieldValuesClick={onFieldValuesClick}
     />
   );
 }

@@ -9,6 +9,21 @@ mutation create($input: DraftOrderInput!) {
   }
 }
 
+mutation complete($id: ID!, $paymentPending: Boolean) {
+  draftOrderComplete(id: $id, paymentPending: $paymentPending) {
+    draftOrder {
+      id
+      order {
+        id
+        name
+      }
+    }
+    userErrors {
+      ...UserErrorFragment
+    }
+  }
+}
+
 mutation update($id: ID!, $input: DraftOrderInput!) {
   result: draftOrderUpdate(id: $id, input: $input) {
     draftOrder {

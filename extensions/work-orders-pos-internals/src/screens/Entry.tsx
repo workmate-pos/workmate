@@ -121,8 +121,9 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const calculateWorkOrderQueries = useCalculateWorkOrderQueries({
     fetch,
     workOrders: workOrders.map(wo => {
-      const { items, charges, customerId, discount } = workOrderToCreateWorkOrder(wo);
-      return { name: wo.name, items, charges, customerId, discount };
+      const { items, charges, customerId, discount, companyLocationId, companyId, companyContactId } =
+        workOrderToCreateWorkOrder(wo);
+      return { name: wo.name, items, charges, customerId, discount, companyLocationId, companyId, companyContactId };
     }),
   });
 
@@ -130,8 +131,6 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
 
   const router = useRouter();
-  const screen = useScreen();
-  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isFetching));
 
   return workOrders.flatMap<ListRow>(workOrder => {
     const workOrderQuery = workOrderQueries[workOrder.name];

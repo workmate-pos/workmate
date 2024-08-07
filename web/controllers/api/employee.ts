@@ -6,7 +6,7 @@ import { gql } from '../../services/gql/gql.js';
 import { db } from '../../services/db/db.js';
 import { getShopSettings } from '../../services/settings.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { Permission, isPermissionNode, LocalsTeifiUser } from '../../decorators/permission.js';
+import { Permission, isPermissionNode, LocalsTeifiUser, createNewEmployees } from '../../decorators/permission.js';
 import { indexBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
@@ -14,6 +14,8 @@ import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getStaffMembersByIds, getStaffMembersPage } from '../../services/staff-members.js';
 import { intercom, IntercomUser } from '../../services/intercom.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { assertMoneyOrNull } from '../../util/assertions.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -107,10 +109,10 @@ export default class EmployeeController {
           isShopOwner: staffMember.isShopOwner,
           staffMemberId: employeeId,
           name: staffMember.name,
+          email: staffMember.email,
           superuser,
           shop,
           rate,
-          email: staffMember.email,
         };
       }),
     });
@@ -126,18 +128,39 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
 
   const staffMemberIds = staffMembers.map(e => e.id);
   const employees = await db.employee.getMany({ employeeIds: staffMemberIds });
-  const { defaultRate } = await getShopSettings(shop);
+  const knownEmployeeIds = new Set(employees.map(e => e.staffMemberId));
 
+  employees.push(
+    ...(await createNewEmployees(
+      shop,
+      staffMembers
+        .filter(staffMember => !knownEmployeeIds.has(staffMember.id))
+        .map(staffMember => ({
+          employeeId: staffMember.id,
+          name: staffMember.name,
+          isShopOwner: staffMember.isShopOwner,
+          superuser: staffMember.isShopOwner,
+          email: staffMember.email,
+        })),
+    )),
+  );
+
+  const { defaultRate } = await getShopSettings(shop);
   const employeeRecord = indexBy(employees, e => e.staffMemberId);
 
   return staffMembers.map(staffMember => {
-    const employee = staffMember && employeeRecord[staffMember.id];
+    const employee = employeeRecord[staffMember.id] ?? never('just made it');
+
+    assertMoneyOrNull(employee.rate);
+
+    const rate = employee.rate ?? defaultRate;
+    const isDefaultRate = rate === null;
 
     return {
       ...staffMember,
       ...employee,
-      rate: (employee?.rate ?? defaultRate) as Money,
-      isDefaultRate: employee?.rate === null || employee?.rate === undefined,
+      rate,
+      isDefaultRate,
     };
   });
 }

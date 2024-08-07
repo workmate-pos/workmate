@@ -12,7 +12,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { useState } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
@@ -21,15 +21,32 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useUnbatchedInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
+import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { match, P } from 'ts-pattern';
+import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 
 export function ProductSelector({
   onSelect,
+  companyLocationId,
+  inventoryLocationIds: initialInventoryLocationIds,
+  onInventoryLocationIdsChange,
 }: {
   onSelect: (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
+  companyLocationId: ID | null;
+  inventoryLocationIds: ID[];
+  onInventoryLocationIdsChange: Dispatch<SetStateAction<ID[]>>;
 }) {
-  const [query, setQuery] = useDebouncedState('');
-
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
+
+  const [query, setQuery] = useDebouncedState('');
+  const [inventoryLocationIds, _setInventoryLocationIds] = useState<ID[]>(initialInventoryLocationIds);
+  const setInventoryLocationIds: Dispatch<SetStateAction<ID[]>> = arg => {
+    onInventoryLocationIdsChange(arg);
+    _setInventoryLocationIds(arg);
+  };
 
   const fetch = useAuthenticatedFetch();
   const productVariantsQuery = useProductVariantsQuery({
@@ -80,10 +97,14 @@ export function ProductSelector({
     />
   );
 
+  const shouldShowPrice = companyLocationId === null;
+
   const rows = useProductVariantRows(
     productVariantsQuery.data?.pages?.[page - 1] ?? [],
     internalOnSelect,
     currencyFormatter,
+    inventoryLocationIds,
+    shouldShowPrice,
   );
 
   if (isLoading) {
@@ -105,7 +126,7 @@ export function ProductSelector({
 
   return (
     <ScrollView>
-      <ResponsiveGrid columns={2}>
+      <ResponsiveGrid columns={3}>
         <Button
           title={'New Product'}
           variant={'primary'}
@@ -146,6 +167,25 @@ export function ProductSelector({
             );
           }}
         />
+        <ResponsiveGrid columns={1} spacing={2}>
+          <Button
+            title={'Select Locations'}
+            onPress={() =>
+              router.push('LocationSelector', {
+                selection: {
+                  type: 'toggle',
+                  onSelection: setInventoryLocationIds,
+                  initialSelection: inventoryLocationIds,
+                },
+              })
+            }
+          />
+          {inventoryLocationIds.length > 3 && (
+            <Text variant={'bodyMd'} color={'TextWarning'}>
+              At most 3 locations can be shown, but you have selected {inventoryLocationIds.length}.
+            </Text>
+          )}
+        </ResponsiveGrid>
       </ResponsiveGrid>
 
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>
@@ -191,9 +231,18 @@ function useProductVariantRows(
   productVariants: ProductVariant[],
   onSelect: (lineItem: CreateWorkOrderItem, defaultCharges: CreateWorkOrderCharge[], name?: string) => void,
   currencyFormatter: ReturnType<typeof useCurrencyFormatter>,
+  locationIds: ID[],
+  shouldShowPrice: boolean,
 ): ListRow[] {
   const fetch = useAuthenticatedFetch();
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const locationQueries = useLocationQueries({ fetch, ids: locationIds });
+  const inventoryItemIds = productVariants.map(pv => pv.inventoryItem.id);
+  const inventoryItemQueries = useUnbatchedInventoryItemQueries({
+    fetch,
+    inventoryItems: locationIds.flatMap(locationId => inventoryItemIds.map(id => ({ id, locationId }))),
+  });
 
   if (!customFieldsPresetsQuery.data) {
     return [];
@@ -206,11 +255,32 @@ function useProductVariantRows(
 
     const defaultCharges = variant.defaultCharges.map(productVariantDefaultChargeToCreateWorkOrderCharge);
 
-    const label = currencyFormatter(
-      BigDecimal.fromMoney(variant.price)
-        .add(BigDecimal.fromMoney(getTotalPriceForCharges(defaultCharges)))
-        .toMoney(),
-    );
+    const label = shouldShowPrice
+      ? currencyFormatter(
+          BigDecimal.fromMoney(variant.price)
+            .add(BigDecimal.fromMoney(getTotalPriceForCharges(defaultCharges)))
+            .toMoney(),
+        )
+      : '';
+
+    const inventorySubtitles = locationIds.map(locationId => {
+      const locationQuery = locationQueries[locationId];
+      const inventoryItemQuery = inventoryItemQueries[variant.inventoryItem.id]?.[locationId];
+
+      if (!locationQuery || !inventoryItemQuery) {
+        return 'Something went wrong loading inventory state';
+      }
+
+      if (locationQuery.isLoading || inventoryItemQuery.isLoading) {
+        return 'Loading...';
+      }
+
+      if (!locationQuery.data || !inventoryItemQuery.data) {
+        return 'N/A';
+      }
+
+      return `${locationQuery.data.name}: ${inventoryItemQuery.data.inventoryLevel?.quantities.find(hasPropertyValue('name', 'available'))?.quantity ?? 'N/A'}`;
+    });
 
     return {
       id: variant.id,
@@ -235,7 +305,7 @@ function useProductVariantRows(
       },
       leftSide: {
         label: displayName,
-        subtitle: variant.product.description ? [variant.product.description] : undefined,
+        subtitle: trimSubtitles(inventorySubtitles),
         image: { source: imageUrl },
       },
       rightSide: {
@@ -244,4 +314,12 @@ function useProductVariantRows(
       },
     };
   });
+}
+
+function trimSubtitles(subtitles: string[]): ListRow['leftSide']['subtitle'] {
+  return match(subtitles.slice(0, 3))
+    .with([P._, P._, P._], identity)
+    .with([P._, P._], identity)
+    .with([P._], identity)
+    .otherwise(() => undefined);
 }

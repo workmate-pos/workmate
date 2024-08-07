@@ -32,15 +32,14 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { DateTime, WorkOrderPaymentTerms } from '@web/schemas/generated/create-work-order.js';
 import { getPurchaseOrderBadge } from '../util/badges.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
-import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
-import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
+import { DAY_IN_MS, MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import {
@@ -48,6 +47,16 @@ import {
   useCreateWorkOrderReducer,
   WIPCreateWorkOrder,
 } from '@work-orders/common/create-work-order/reducer.js';
+import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
+import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { Session } from '@shopify/retail-ui-extensions';
+import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
+import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
+import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -61,13 +70,18 @@ type OpenConfigPopup = {
 
 export function WorkOrder({ initial }: WorkOrderProps) {
   const fetch = useAuthenticatedFetch();
-  const workOrderQuery = useWorkOrderQuery({ fetch, name: initial.name });
+  const [name, setName] = useState(initial.name);
+  const workOrderQuery = useWorkOrderQuery({ fetch, name });
 
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(
     initial,
-    workOrderQuery.data?.workOrder,
+    !workOrderQuery.isFetching ? workOrderQuery.data?.workOrder : undefined,
     { useRef, useState, useReducer },
   );
+
+  if (name !== createWorkOrder.name) {
+    setName(createWorkOrder.name);
+  }
 
   const router = useRouter();
   const screen = useScreen();
@@ -227,12 +241,68 @@ function WorkOrderProperties({
   const derivedFromOrderQuery = useOrderQuery({ fetch, id: createWorkOrder.derivedFromOrderId });
   const derivedFromOrder = derivedFromOrderQuery.data?.order;
 
+  const companyQuery = useCompanyQuery(
+    { fetch, id: createWorkOrder.companyId! },
+    { enabled: !!createWorkOrder.companyId },
+  );
+  const company = companyQuery.data;
+
   const customerQuery = useCustomerQuery({ fetch, id: createWorkOrder.customerId });
   const customer = customerQuery.data;
 
+  const companyLocationQuery = useCompanyLocationQuery(
+    { fetch, id: createWorkOrder.companyLocationId! },
+    { enabled: !!createWorkOrder.companyLocationId },
+  );
+  const companyLocation = companyLocationQuery.data;
+
+  const paymentTermsQueries = usePaymentTermsTemplatesQueries({
+    fetch,
+    types: [...paymentTermTypes],
+  });
+  const paymentTermsTemplates = Object.values(paymentTermsQueries)
+    .flatMap(query => query.data)
+    .filter(isNonNullable);
+
   // TODO: Make Previous Order and Previous Work Orders clickable to view history (wrap in selectable or make it a button?)
 
+  const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
+
   const router = useRouter();
+
+  const openCompanySelector = () => {
+    router.push('CompanySelector', {
+      onSelect: ({ companyId, customerId, companyContactId }) => {
+        dispatch.setCompany({ companyId, customerId, companyContactId, companyLocationId: null, paymentTerms: null });
+        openCompanyLocationSelector(companyId);
+      },
+    });
+  };
+
+  const openCompanyLocationSelector = (companyId: ID | null = createWorkOrder.companyId) => {
+    if (!companyId) return;
+
+    router.push('CompanyLocationSelector', {
+      companyId,
+      onSelect: location => {
+        const paymentTerms: WorkOrderPaymentTerms | null = (() => {
+          if (!location.buyerExperienceConfiguration?.paymentTermsTemplate) {
+            return null;
+          }
+
+          return {
+            templateId: location.buyerExperienceConfiguration.paymentTermsTemplate.id,
+            date: new Date(Date.now() + 30 * DAY_IN_MS).toISOString() as DateTime,
+          };
+        })();
+
+        return dispatch.setPartial({
+          companyLocationId: location.id,
+          paymentTerms,
+        });
+      },
+    });
+  };
 
   return (
     <ResponsiveGrid columns={4} grow>
@@ -244,7 +314,7 @@ function WorkOrderProperties({
           value={derivedFromOrder ? derivedFromOrder.name : 'Loading...'}
         />
       )}
-      {derivedFromOrder && derivedFromOrder.workOrders?.length > 0 && (
+      {derivedFromOrder && derivedFromOrder.workOrders.length > 0 && (
         <FormStringField
           label="Previous Work Orders"
           disabled
@@ -257,11 +327,87 @@ function WorkOrderProperties({
         onFocus={() => router.push('StatusSelector', { onSelect: status => dispatch.setPartial({ status }) })}
         value={createWorkOrder.status}
       />
+      {createWorkOrder.companyId && (
+        <FormStringField
+          label={'Company'}
+          onFocus={() => openCompanySelector()}
+          disabled={hasOrder}
+          value={
+            createWorkOrder.companyId === null
+              ? ''
+              : companyQuery.isLoading
+                ? 'Loading...'
+                : company?.name ?? 'Unknown company'
+          }
+        />
+      )}
+      {createWorkOrder.companyId && (
+        <FormStringField
+          label={'Location'}
+          required
+          onFocus={() => openCompanyLocationSelector()}
+          disabled={hasOrder}
+          value={
+            !createWorkOrder.companyLocationId
+              ? 'No location selected'
+              : companyLocationQuery.isLoading
+                ? 'Loading...'
+                : companyLocation?.name ?? 'Unknown location'
+          }
+        />
+      )}
+      {!!createWorkOrder.companyId && (
+        <FormStringField
+          label={'Payment Terms'}
+          required
+          onFocus={() => {
+            router.push('PaymentTermsSelector', {
+              companyLocationId: createWorkOrder.companyLocationId,
+              initialPaymentTerms: createWorkOrder.paymentTerms,
+              onSelect: paymentTerms => dispatch.setPartial({ paymentTerms }),
+              disabled: hasOrder,
+            });
+          }}
+          disabled={hasOrder}
+          value={((): string => {
+            if (createWorkOrder.paymentTerms === null) {
+              return 'No terms';
+            }
+
+            const isLoading = Object.values(paymentTermsQueries).some(query => query.isLoading);
+
+            const template = paymentTermsTemplates.find(
+              hasPropertyValue('id', createWorkOrder.paymentTerms.templateId),
+            );
+
+            if (!template && isLoading) {
+              return 'Loading...';
+            }
+
+            if (!template) {
+              return 'Unknown';
+            }
+
+            if (template.paymentTermsType === 'FIXED') {
+              return createWorkOrder.paymentTerms.date
+                ? `Due ${new Date(createWorkOrder.paymentTerms.date).toLocaleDateString()}`
+                : 'Due on unknown date';
+            }
+
+            return template.name;
+          })()}
+        />
+      )}
       <FormStringField
         label={'Customer'}
         required
-        onFocus={() => router.push('CustomerSelector', { onSelect: customerId => dispatch.setPartial({ customerId }) })}
-        disabled={workOrder?.orders.some(order => order.type === 'ORDER') ?? false}
+        onFocus={() =>
+          router.push('CustomerSelector', {
+            onSelect: customerId => dispatch.setCustomer({ customerId }),
+            onSelectCompany: () => openCompanySelector(),
+          })
+        }
+        disabled={hasOrder}
         value={
           createWorkOrder.customerId === null
             ? ''
@@ -288,7 +434,17 @@ function WorkOrderItems({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'charges',
+        'discount',
+        'customerId',
+        'companyLocationId',
+        'companyContactId',
+        'companyId',
+      ),
     },
     { enabled: router.isCurrent },
   );
@@ -325,6 +481,11 @@ function WorkOrderItems({
 
   const rows = useItemRows(createWorkOrder, dispatch, query, setOpenConfigPopup);
 
+  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const [inventoryLocationIds, setInventoryLocationIds] = useState<ID[]>([
+    createGid('Location', session.currentSession.locationId),
+  ]);
+
   return (
     <ResponsiveGrid columns={1}>
       <ResponsiveGrid columns={2}>
@@ -335,6 +496,11 @@ function WorkOrderItems({
           onPress={() =>
             router.push('ProductSelector', {
               onSelect: ({ item, charges }) => {
+                if (item.type === 'custom-item') {
+                  // TODO: get rid of this once its supported
+                  item.customFields = {};
+                }
+
                 dispatch.addItems({ items: [item] });
                 dispatch.updateItemCharges({ item, charges });
 
@@ -342,6 +508,9 @@ function WorkOrderItems({
                   setOpenConfigPopup({ type: item.type, uuid: item.uuid, configType: 'item' });
                 }
               },
+              companyLocationId: createWorkOrder.companyLocationId,
+              onInventoryLocationIdsChange: setInventoryLocationIds,
+              inventoryLocationIds,
             })
           }
         />
@@ -383,6 +552,11 @@ function WorkOrderItems({
         />
       )}
 
+      <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="HalfPoint">
+        <Text variant="body" color="TextSubdued">
+          {calculatedDraftOrderQuery.isFetching ? 'Loading...' : ' '}
+        </Text>
+      </Stack>
       <ControlledSearchBar placeholder="Search items" value={query} onTextChange={setQuery} onSearch={() => {}} />
       {rows.length > 0 ? (
         <List data={rows} imageDisplayStrategy={'always'}></List>
@@ -408,14 +582,15 @@ function WorkOrderCustomFields({
 
   return (
     <ResponsiveGrid columns={4}>
-      {Object.entries(createWorkOrder.customFields).map(([key, value]) => (
-        <FormStringField
+      {Object.keys(createWorkOrder.customFields).map(key => (
+        <CustomField
           key={key}
-          label={key}
-          value={value}
+          name={key}
+          value={createWorkOrder.customFields[key] ?? ''}
           onChange={(value: string) =>
             dispatch.setPartial({ customFields: { ...createWorkOrder.customFields, [key]: value } })
           }
+          useRouter={useRouter}
         />
       ))}
 
@@ -513,7 +688,17 @@ function WorkOrderMoneySummary({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'charges', 'discount', 'customerId'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'charges',
+        'discount',
+        'customerId',
+        'companyLocationId',
+        'companyContactId',
+        'companyId',
+      ),
     },
     { enabled: router.isCurrent },
   );
@@ -622,20 +807,34 @@ function useItemRows(
   const currencyFormatter = useCurrencyFormatter();
 
   const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
+  const productVariantQueries = useProductVariantQueries({
+    fetch,
+    ids: createWorkOrder.items.filter(hasPropertyValue('type', 'product')).map(item => item.productVariantId),
+  });
   const calculatedWorkOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(createWorkOrder, 'name', 'items', 'customerId', 'charges', 'discount'),
+      ...pick(
+        createWorkOrder,
+        'name',
+        'items',
+        'customerId',
+        'charges',
+        'discount',
+        'companyLocationId',
+        'companyContactId',
+        'companyId',
+      ),
     },
-    { keepPreviousData: true, enabled: router.isCurrent },
+    { enabled: router.isCurrent },
   );
 
   const screen = useScreen();
 
-  screen.setIsLoading(workOrderQuery.isLoading);
+  screen.setIsLoading(workOrderQuery.isFetching);
 
-  const queryFilter = (lineItem?: CalculateDraftOrderResponse['lineItems'][number] | null) => {
-    if (!lineItem || !query) {
+  const queryFilter = (lineItem?: { name?: string | null } | null) => {
+    if (!lineItem?.name || !query) {
       return true;
     }
 
@@ -646,12 +845,14 @@ function useItemRows(
     .map(item => {
       return {
         item,
+        productVariant: item.type === 'product' ? productVariantQueries[item.productVariantId]?.data : null,
         lineItem: calculatedWorkOrderQuery.getItemLineItem(item),
-        // TODO: Also load product vraiant to prevent showing hte loading text
       };
     })
-    .filter(({ lineItem }) => queryFilter(lineItem))
-    .map<ListRow>(({ item, lineItem }) => {
+    .filter(({ productVariant, lineItem }) => queryFilter({ name: lineItem?.name ?? productVariant?.title }))
+    .map<ListRow>(({ item, lineItem, productVariant }) => {
+      const variant = lineItem?.variant ?? productVariant;
+
       if (
         item.type === 'product' &&
         !lineItem?.order &&
@@ -673,7 +874,7 @@ function useItemRows(
       }
 
       const isMutableService =
-        getProductServiceType(lineItem?.variant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
+        getProductServiceType(variant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
 
       const purchaseOrders = (() => {
         if (item.type === 'product') {
@@ -728,14 +929,22 @@ function useItemRows(
         [lineItem, ...chargeLineItems].map(lineItem => lineItem?.order?.name).filter(isNonNullable),
       );
 
+      const label =
+        lineItem?.name ??
+        getProductVariantName(variant) ??
+        (calculatedWorkOrderQuery.isFetching ? 'Loading...' : 'Unknown item');
+      const sku = lineItem?.sku ?? variant?.sku;
+      const imageUrl = lineItem?.image?.url ?? variant?.image?.url ?? variant?.product?.featuredImage?.url;
+
+      const disabled = !lineItem;
+
       return {
         id: item.uuid,
         leftSide: {
-          label: lineItem?.name ?? (calculatedWorkOrderQuery.isFetching ? 'Loading...' : 'Unknown item'),
-          subtitle: lineItem?.sku ? [lineItem.sku] : undefined,
+          label,
+          subtitle: sku ? [sku] : undefined,
           image: {
-            source:
-              lineItem?.image?.url ?? lineItem?.variant?.image?.url ?? lineItem?.variant?.product?.featuredImage?.url,
+            source: imageUrl,
             badge: !isMutableService ? item.quantity : undefined,
           },
           badges: [
@@ -744,10 +953,14 @@ function useItemRows(
           ],
         },
         rightSide: {
-          label: currencyFormatter(totalPrice.toMoney()),
-          showChevron: true,
+          label: lineItem ? currencyFormatter(totalPrice.toMoney()) : '',
+          showChevron: !disabled,
         },
         onPress() {
+          if (disabled) {
+            return;
+          }
+
           if (charges.length > 0 || isMutableService) {
             router.push('ItemChargeConfig', {
               item,
