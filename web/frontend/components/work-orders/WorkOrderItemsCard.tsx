@@ -89,8 +89,6 @@ export function WorkOrderItemsCard({
           setToastAction={setToastAction}
           onClose={() => setIsAddProductModalOpen(false)}
           onAdd={(items, charges) => {
-            dispatch.addItems({ items });
-
             const chargesByItem = groupBy(
               charges.filter(hasNonNullableProperty('workOrderItemUuid')),
               charge => charge.workOrderItemUuid,
@@ -98,8 +96,10 @@ export function WorkOrderItemsCard({
 
             for (const charges of Object.values(chargesByItem)) {
               const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges: [charge] });
+              dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges });
             }
+
+            dispatch.addItems({ items });
 
             const customItem = items.find(hasPropertyValue('type', 'custom-item'));
 
@@ -118,8 +118,6 @@ export function WorkOrderItemsCard({
           setToastAction={setToastAction}
           onClose={() => setIsAddServiceModalOpen(false)}
           onAdd={(items, charges) => {
-            dispatch.addItems({ items });
-
             const chargesByItem = groupBy(
               charges.filter(hasNonNullableProperty('workOrderItemUuid')),
               charge => charge.workOrderItemUuid,
@@ -127,8 +125,10 @@ export function WorkOrderItemsCard({
 
             for (const charges of Object.values(chargesByItem)) {
               const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges: [charge] });
+              dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges });
             }
+
+            dispatch.addItems({ items });
 
             const [item] = items;
             if (item) {

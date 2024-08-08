@@ -321,7 +321,7 @@ function useProductVariantRows(
             charges.push({
               ...defaultCharge,
               uuid: uuid(),
-              workOrderItem: { type: 'product', uuid: itemUuid },
+              workOrderItemUuid: itemUuid,
             });
           }
 

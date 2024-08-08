@@ -491,7 +491,7 @@ function WorkOrderItems({
                 for (const charges of Object.values(chargesByItem)) {
                   const [charge] = charges;
                   if (!charge) continue;
-                  dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges: [charge] });
+                  dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges });
                 }
 
                 const customItem = items.find(hasPropertyValue('type', 'custom-item'));
