@@ -201,21 +201,7 @@ function WorkOrder({
 
   // all nested useCalculatedDraftOrderQuery's are disabled s.t. only this one fetches when no modals are opened
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'customerId',
-        'items',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: !isModalOpen },
   );
 

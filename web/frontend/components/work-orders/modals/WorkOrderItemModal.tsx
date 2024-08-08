@@ -102,27 +102,9 @@ export function WorkOrderItemModal({
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const settingsQuery = useSettingsQuery({ fetch });
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'customerId',
-        'items',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-        'paymentTerms',
-      ),
-    },
-    { enabled: false },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({ fetch, ...createWorkOrder }, { enabled: false });
 
-  const itemLineItemId = calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
-  const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
+  const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
   const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
 

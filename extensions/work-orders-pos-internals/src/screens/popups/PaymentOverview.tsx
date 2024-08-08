@@ -228,7 +228,7 @@ function useItemRows(
     const rows: ListRow[] = [];
 
     const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
-    const itemPrice = calculatedDraftOrder.itemPrices[item.uuid];
+    const itemPrice = calculatedDraftOrderQuery.getItemPrice(item);
     const itemCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
     rows.push({

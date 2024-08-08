@@ -168,21 +168,7 @@ function ProductsList({
     ids: createWorkOrder.items.filter(hasPropertyValue('type', 'product')).map(item => item.productVariantId),
   });
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'customerId',
-        'items',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: false, keepPreviousData: true },
   );
 
@@ -203,8 +189,7 @@ function ProductsList({
         resourceName={{ singular: 'product', plural: 'products' }}
         resolveItemId={item => item.uuid}
         renderItem={item => {
-          const itemLineItemId = calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
-          const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
+          const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
           const variant =
             itemLineItem?.variant ??
             (item.type === 'product' ? productVariantQueries[item.productVariantId]?.data : null);
@@ -220,8 +205,8 @@ function ProductsList({
 
           const charges = createWorkOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
-          const itemPrice = calculatedDraftOrderQuery.data?.itemPrices[item.uuid];
-          const chargePrices = charges.map(charge => calculatedDraftOrderQuery.data?.chargePrices[charge.uuid]);
+          const itemPrice = calculatedDraftOrderQuery.getItemPrice(item);
+          const chargePrices = charges.map(charge => calculatedDraftOrderQuery.getChargePrice(charge));
 
           const totalPrice = BigDecimal.sum(
             ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),

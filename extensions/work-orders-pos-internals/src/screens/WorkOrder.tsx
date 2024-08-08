@@ -430,21 +430,7 @@ function WorkOrderItems({
   const fetch = useAuthenticatedFetch();
 
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: router.isCurrent },
   );
 
@@ -547,7 +533,7 @@ function WorkOrderItems({
         />
       </ResponsiveGrid>
 
-      {(calculatedDraftOrderQuery.data?.missingProductVariantIds?.length ?? 0) > 0 && (
+      {!!calculatedDraftOrderQuery.data?.missingProductVariantIds?.length && (
         <Banner
           title={
             'This work order contains products which have likely been deleted. Please remove them to save this work order'
@@ -691,21 +677,7 @@ function WorkOrderMoneySummary({
 
   // this calculation automatically accounts for paid-for items
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: router.isCurrent },
   );
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
@@ -818,21 +790,7 @@ function useItemRows(
     ids: createWorkOrder.items.filter(hasPropertyValue('type', 'product')).map(item => item.productVariantId),
   });
   const calculatedWorkOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'customerId',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: router.isCurrent },
   );
 
@@ -895,9 +853,9 @@ function useItemRows(
         return [];
       })();
 
-      const itemPrice = calculatedWorkOrderQuery.data?.itemPrices[item.uuid];
+      const itemPrice = calculatedWorkOrderQuery.getItemPrice(item);
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
-      const chargePrices = charges.map(charge => calculatedWorkOrderQuery.data?.chargePrices[charge.uuid]);
+      const chargePrices = charges.map(calculatedWorkOrderQuery.getChargePrice);
       const totalPrice = BigDecimal.sum(
         ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),
       );

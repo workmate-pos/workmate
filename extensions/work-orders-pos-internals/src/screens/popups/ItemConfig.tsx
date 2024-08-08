@@ -42,18 +42,7 @@ export function ItemConfig({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-        'paymentTerms',
-      ),
+      ...createWorkOrder,
       items: useMemo(
         () =>
           [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
@@ -100,8 +89,7 @@ export function ItemConfig({
     return null;
   }
 
-  const itemLineItemId = calculatedDraftOrder?.itemLineItemIds[item.uuid];
-  const itemLineItem = calculatedDraftOrder?.lineItems.find(li => li.id === itemLineItemId);
+  const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
   if (!calculatedDraftOrder || !itemLineItem) {
     return (

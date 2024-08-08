@@ -55,18 +55,7 @@ export function ItemChargeConfig({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-        'paymentTerms',
-      ),
+      ...createWorkOrder,
       items: useMemo(
         () =>
           [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
@@ -138,8 +127,7 @@ export function ItemChargeConfig({
     return null;
   }
 
-  const itemLineItemId = calculatedDraftOrder?.itemLineItemIds[item.uuid];
-  const itemLineItem = calculatedDraftOrder?.lineItems.find(li => li.id === itemLineItemId);
+  const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
   if (!calculatedDraftOrder || !itemLineItem) {
     return (
@@ -173,10 +161,10 @@ export function ItemChargeConfig({
   const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
   const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabourCharges.length > 0;
 
-  const basePrice = calculatedDraftOrder.itemPrices[item.uuid] ?? BigDecimal.ZERO.toMoney();
+  const basePrice = calculatedDraftOrderQuery.getItemPrice(item) ?? BigDecimal.ZERO.toMoney();
 
   const chargePrices = itemCharges.map(
-    charge => calculatedDraftOrder.chargePrices[charge.uuid] ?? BigDecimal.ZERO.toMoney(),
+    charge => calculatedDraftOrderQuery.getChargePrice(charge) ?? BigDecimal.ZERO.toMoney(),
   );
   const chargesPrice = BigDecimal.sum(...chargePrices.map(price => BigDecimal.fromMoney(price))).toMoney();
   const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(chargesPrice)).toMoney();

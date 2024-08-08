@@ -58,10 +58,7 @@ export function CreateOrderModal({
     : null;
 
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...calculateWorkOrder!,
-    },
+    { fetch, ...calculateWorkOrder! },
     { enabled: !!calculateWorkOrder },
   );
 
