@@ -53,9 +53,7 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Session } from '@shopify/retail-ui-extensions';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
-import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
 import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
 
 export type WorkOrderProps = {
@@ -497,24 +495,17 @@ function WorkOrderItems({
           onPress={() =>
             router.push('ProductSelector', {
               onSelect: ({ items, charges }) => {
-                // TODO: get rid of this once its supported
-                for (const item of items) {
-                  if (item.type === 'custom-item') {
-                    item.customFields = {};
-                  }
-                }
-
                 dispatch.addItems({ items });
 
                 const chargesByItem = groupBy(
-                  charges.filter(hasNonNullableProperty('workOrderItem')),
-                  charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
+                  charges.filter(hasNonNullableProperty('workOrderItemUuid')),
+                  charge => charge.workOrderItemUuid,
                 );
 
                 for (const charges of Object.values(chargesByItem)) {
                   const [charge] = charges;
                   if (!charge) continue;
-                  dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
+                  dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges: [charge] });
                 }
 
                 const customItem = items.find(hasPropertyValue('type', 'custom-item'));
@@ -904,35 +895,9 @@ function useItemRows(
         return [];
       })();
 
-      const charges =
-        createWorkOrder.charges?.filter(
-          charge => charge.workOrderItem?.uuid === item.uuid && charge.workOrderItem?.type === item.type,
-        ) ?? [];
-
-      const itemPrice = (() => {
-        if (item.type === 'product') {
-          return calculatedWorkOrderQuery.data?.itemPrices[item.uuid];
-        }
-
-        if (item.type === 'custom-item') {
-          return calculatedWorkOrderQuery.data?.customItemPrices[item.uuid];
-        }
-
-        return item satisfies never;
-      })();
-
-      const chargePrices = charges.map(charge => {
-        if (charge.type === 'hourly-labour') {
-          return calculatedWorkOrderQuery.data?.hourlyLabourChargePrices[charge.uuid];
-        }
-
-        if (charge.type === 'fixed-price-labour') {
-          return calculatedWorkOrderQuery.data?.fixedPriceLabourChargePrices[charge.uuid];
-        }
-
-        return charge satisfies never;
-      });
-
+      const itemPrice = calculatedWorkOrderQuery.data?.itemPrices[item.uuid];
+      const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
+      const chargePrices = charges.map(charge => calculatedWorkOrderQuery.data?.chargePrices[charge.uuid]);
       const totalPrice = BigDecimal.sum(
         ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),
       );

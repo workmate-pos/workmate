@@ -89,23 +89,16 @@ export function WorkOrderItemsCard({
           setToastAction={setToastAction}
           onClose={() => setIsAddProductModalOpen(false)}
           onAdd={(items, charges) => {
-            // TODO: get rid of this once its supported
-            for (const item of items) {
-              if (item.type === 'custom-item') {
-                item.customFields = {};
-              }
-            }
-
             dispatch.addItems({ items });
 
             const chargesByItem = groupBy(
-              charges.filter(hasNonNullableProperty('workOrderItem')),
-              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
+              charges.filter(hasNonNullableProperty('workOrderItemUuid')),
+              charge => charge.workOrderItemUuid,
             );
 
             for (const charges of Object.values(chargesByItem)) {
               const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
+              dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges: [charge] });
             }
 
             const customItem = items.find(hasPropertyValue('type', 'custom-item'));
@@ -128,13 +121,13 @@ export function WorkOrderItemsCard({
             dispatch.addItems({ items });
 
             const chargesByItem = groupBy(
-              charges.filter(hasNonNullableProperty('workOrderItem')),
-              charge => `${charge.workOrderItem.type}-${charge.workOrderItem.uuid}`,
+              charges.filter(hasNonNullableProperty('workOrderItemUuid')),
+              charge => charge.workOrderItemUuid,
             );
 
             for (const charges of Object.values(chargesByItem)) {
               const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: charge.workOrderItem, charges: [charge] });
+              dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges: [charge] });
             }
 
             const [item] = items;
@@ -210,17 +203,7 @@ function ProductsList({
         resourceName={{ singular: 'product', plural: 'products' }}
         resolveItemId={item => item.uuid}
         renderItem={item => {
-          const itemLineItemId = (() => {
-            if (item.type === 'product') {
-              return calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
-            }
-
-            if (item.type === 'custom-item') {
-              return calculatedDraftOrderQuery.data?.customItemLineItemIds[item.uuid];
-            }
-
-            return item satisfies never;
-          })();
+          const itemLineItemId = calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
           const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
           const variant =
             itemLineItem?.variant ??
@@ -235,31 +218,10 @@ function ProductsList({
           const sku = itemLineItem?.sku ?? variant?.sku;
           const imageUrl = itemLineItem?.image?.url ?? variant?.image?.url ?? variant?.product?.featuredImage?.url;
 
-          const charges = createWorkOrder.charges
-            .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
-            .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+          const charges = createWorkOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
-          const itemPrice = (() => {
-            if (item.type === 'product') {
-              return calculatedDraftOrderQuery.data?.itemPrices[item.uuid];
-            }
-
-            if (item.type === 'custom-item') {
-              return calculatedDraftOrderQuery.data?.customItemPrices[item.uuid];
-            }
-
-            return item satisfies never;
-          })();
-
-          const chargePrices = charges.map(charge => {
-            if (charge.type === 'hourly-labour') {
-              return calculatedDraftOrderQuery.data?.hourlyLabourChargePrices[charge.uuid];
-            } else if (charge.type === 'fixed-price-labour') {
-              return calculatedDraftOrderQuery.data?.fixedPriceLabourChargePrices[charge.uuid];
-            }
-
-            return charge satisfies never;
-          });
+          const itemPrice = calculatedDraftOrderQuery.data?.itemPrices[item.uuid];
+          const chargePrices = charges.map(charge => calculatedDraftOrderQuery.data?.chargePrices[charge.uuid]);
 
           const totalPrice = BigDecimal.sum(
             ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),

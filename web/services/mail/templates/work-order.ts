@@ -134,7 +134,7 @@ export async function getWorkOrderTemplateData(
         return {
           name: lineItem?.name ?? 'Unknown product',
           charges: workOrder.charges
-            .filter(hasNestedPropertyValue('workOrderItemUuid', item.uuid))
+            .filter(hasPropertyValue('workOrderItemUuid', item.uuid))
             .map(getChargeTemplateData),
           sku: lineItem?.sku ?? null,
           fullyPaid: lineItem?.order?.fullyPaid ?? false,

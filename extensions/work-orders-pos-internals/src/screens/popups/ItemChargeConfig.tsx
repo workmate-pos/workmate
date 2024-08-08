@@ -31,22 +31,17 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 
 export function ItemChargeConfig({
-  item: { uuid: itemUuid, type: itemType },
+  item: { uuid: itemUuid },
   createWorkOrder,
   dispatch,
 }: {
-  item: { type: 'product' | 'custom-item'; uuid: string };
+  item: { uuid: string };
   createWorkOrder: WIPCreateWorkOrder;
   dispatch: CreateWorkOrderDispatchProxy;
 }) {
-  const initialItem = createWorkOrder.items
-    .filter(hasPropertyValue('type', itemType))
-    .find(hasPropertyValue('uuid', itemUuid));
+  const initialItem = createWorkOrder.items.find(hasPropertyValue('uuid', itemUuid));
 
-  const initialItemCharges =
-    createWorkOrder.charges
-      .filter(hasNestedPropertyValue('workOrderItem.type', itemType))
-      .filter(hasNestedPropertyValue('workOrderItem.uuid', itemUuid)) ?? [];
+  const initialItemCharges = createWorkOrder.charges.filter(hasPropertyValue('workOrderItemUuid', itemUuid)) ?? [];
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [item, setItem] = useState(initialItem);
@@ -82,15 +77,13 @@ export function ItemChargeConfig({
       charges: useMemo(
         () =>
           [
-            ...createWorkOrder.charges.filter(
-              x => !(x.workOrderItem?.uuid === item?.uuid && x.workOrderItem?.type === item?.type),
-            ),
+            ...createWorkOrder.charges.filter(x => x.workOrderItemUuid !== item?.uuid),
             generalLabourCharge,
             ...employeeLabourCharges,
           ]
             .filter(isNonNullable)
-            .map(charge => ({ ...charge, workOrderItem: item ? { type: item.type, uuid: item.uuid } : null }))
-            .filter(hasNonNullableProperty('workOrderItem')),
+            .map(charge => ({ ...charge, workOrderItemUuid: item?.uuid ?? null }))
+            .filter(hasNonNullableProperty('workOrderItemUuid')),
         [generalLabourCharge, employeeLabourCharges, item],
       ),
     },
@@ -145,17 +138,7 @@ export function ItemChargeConfig({
     return null;
   }
 
-  const itemLineItemId = (() => {
-    if (item.type === 'product') {
-      return calculatedDraftOrder?.itemLineItemIds[item.uuid];
-    }
-
-    if (item.type === 'custom-item') {
-      return calculatedDraftOrder?.customItemLineItemIds[item.uuid];
-    }
-
-    return item satisfies never;
-  })();
+  const itemLineItemId = calculatedDraftOrder?.itemLineItemIds[item.uuid];
   const itemLineItem = calculatedDraftOrder?.lineItems.find(li => li.id === itemLineItemId);
 
   if (!calculatedDraftOrder || !itemLineItem) {
@@ -190,30 +173,11 @@ export function ItemChargeConfig({
   const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
   const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabourCharges.length > 0;
 
-  const basePrice =
-    (() => {
-      if (item.type === 'product') {
-        return calculatedDraftOrder.itemPrices[item.uuid];
-      }
+  const basePrice = calculatedDraftOrder.itemPrices[item.uuid] ?? BigDecimal.ZERO.toMoney();
 
-      if (item.type === 'custom-item') {
-        return calculatedDraftOrder.customItemPrices[item.uuid];
-      }
-
-      return item satisfies never;
-    })() ?? BigDecimal.ZERO.toMoney();
-
-  const chargePrices = itemCharges.map(charge => {
-    if (charge.type === 'hourly-labour') {
-      return calculatedDraftOrder.hourlyLabourChargePrices[charge.uuid] ?? BigDecimal.ZERO.toMoney();
-    }
-
-    if (charge.type === 'fixed-price-labour') {
-      return calculatedDraftOrder.fixedPriceLabourChargePrices[charge.uuid] ?? BigDecimal.ZERO.toMoney();
-    }
-
-    return charge satisfies never;
-  });
+  const chargePrices = itemCharges.map(
+    charge => calculatedDraftOrder.chargePrices[charge.uuid] ?? BigDecimal.ZERO.toMoney(),
+  );
   const chargesPrice = BigDecimal.sum(...chargePrices.map(price => BigDecimal.fromMoney(price))).toMoney();
   const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(chargesPrice)).toMoney();
 
@@ -308,10 +272,7 @@ export function ItemChargeConfig({
                           uuid: uuid(),
                           name: settings?.labourLineItemName || 'Labour',
                           amount: BigDecimal.ZERO.toMoney(),
-                          workOrderItem: {
-                            uuid: item.uuid,
-                            type: 'product',
-                          },
+                          workOrderItemUuid: item.uuid,
                           amountLocked: false,
                           removeLocked: false,
                         } as const;
@@ -342,14 +303,7 @@ export function ItemChargeConfig({
                         setEmployeeLabourCharges(
                           employeeLabourCharges.map(l =>
                             l === labour
-                              ? {
-                                  ...updatedLabour,
-                                  uuid: l.uuid,
-                                  workOrderItem: {
-                                    type: 'product',
-                                    uuid: l.workOrderItem.uuid,
-                                  },
-                                }
+                              ? { ...updatedLabour, uuid: l.uuid, workOrderItemUuid: l.workOrderItemUuid }
                               : l,
                           ),
                         );
@@ -424,7 +378,7 @@ export function ItemChargeConfig({
   );
 }
 
-function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItem'>[]) {
+function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[]) {
   const generalLabours = labour.filter(hasPropertyValue('employeeId', null));
 
   if (generalLabours.length === 1) {

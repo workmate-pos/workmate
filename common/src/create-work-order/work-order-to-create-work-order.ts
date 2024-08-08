@@ -52,7 +52,7 @@ function mapCharge(charge: DetailedWorkOrder['charges'][number]): CreateWorkOrde
   if (charge.type === 'hourly-labour') {
     return {
       type: 'hourly-labour',
-      workOrderItem: charge.workOrderItem,
+      workOrderItemUuid: charge.workOrderItemUuid,
       employeeId: charge.employeeId,
       uuid: charge.uuid,
       hours: charge.hours,
@@ -67,7 +67,7 @@ function mapCharge(charge: DetailedWorkOrder['charges'][number]): CreateWorkOrde
   if (charge.type === 'fixed-price-labour') {
     return {
       type: 'fixed-price-labour',
-      workOrderItem: charge.workOrderItem,
+      workOrderItemUuid: charge.workOrderItemUuid,
       employeeId: charge.employeeId,
       amount: charge.amount,
       uuid: charge.uuid,

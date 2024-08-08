@@ -226,10 +226,7 @@ function useListItems(
   const itemsWithCharges: Row[] = workOrder.items.flatMap(item => {
     const rows: Row[] = [];
 
-    const itemCharges = workOrder.charges
-      .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
-      .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
-
+    const itemCharges = workOrder.charges.filter(hasNestedPropertyValue('workOrderItemUuid', item.uuid));
     const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
     const itemPrice = calculatedDraftOrderQuery.getItemPrice(item);
 
@@ -263,7 +260,7 @@ function useListItems(
 
     let name = charge.name;
 
-    if (charge.workOrderItem) {
+    if (charge.workOrderItemUuid !== null) {
       name = `⮑ ${name}`;
     }
 
@@ -290,7 +287,7 @@ function useListItems(
     };
   }
 
-  const unlinkedCharges = workOrder.charges.filter(hasPropertyValue('workOrderItem', null));
+  const unlinkedCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null));
   const unlinkedChargeRows = unlinkedCharges.map(getChargeRow);
 
   return [...itemsWithCharges, ...unlinkedChargeRows];
