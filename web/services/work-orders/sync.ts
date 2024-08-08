@@ -12,6 +12,7 @@ import { syncShopifyOrders } from '../shopify-order/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
 import { getWorkOrder, getWorkOrderCharges, getWorkOrderCustomFields, getWorkOrderItems } from './queries.js';
+import { inTransaction } from '../db/client.js';
 
 export type SyncWorkOrdersOptions = {
   /**
@@ -32,10 +33,10 @@ export type SyncWorkOrdersOptions = {
   updateCustomAttributes?: boolean;
 };
 
-const defaultSyncWorkOrdersOptions: SyncWorkOrdersOptions = {
+const defaultSyncWorkOrdersOptions = {
   onlySyncIfUnlinked: false,
   updateCustomAttributes: true,
-};
+} as const satisfies SyncWorkOrdersOptions;
 
 export async function syncWorkOrders(session: Session, workOrderIds: number[], options?: SyncWorkOrdersOptions) {
   if (workOrderIds.length === 0) {
@@ -57,6 +58,7 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], o
  * Syncs a work order to Shopify by creating a new draft order for any draft/unlinked line items, and updating custom attributes of existing orders.
  */
 export async function syncWorkOrder(session: Session, workOrderId: number, options?: SyncWorkOrdersOptions) {
+  // TODO: Fix loop with this and syncShopifyOrders
   const [workOrder, customFields, items, charges] = await Promise.all([
     getWorkOrder({ id: workOrderId }),
     getWorkOrderCustomFields(workOrderId),
@@ -69,7 +71,7 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
   }
 
   const onlySyncIfUnlinked = options?.onlySyncIfUnlinked ?? defaultSyncWorkOrdersOptions.onlySyncIfUnlinked;
-  const hasUnlinked = [...items, ...charges].flat().some(hasPropertyValue('shopifyOrderLineItemId', null));
+  const hasUnlinked = [...items, ...charges].some(hasPropertyValue('shopifyOrderLineItemId', null));
   const shouldSync = !onlySyncIfUnlinked || hasUnlinked;
 
   const input = await getDraftOrderInputForExistingWorkOrder(session, workOrder.name);
@@ -78,30 +80,35 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
   if (shouldSync) {
-    if (!input.lineItems?.length) {
-      // No line items, so we should delete all draft orders since draft orders don't support 0 line items.
-      const draftOrderIds = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER')).map(o => {
-        assertGid(o.orderId);
-        return o.orderId;
-      });
+    const linkedDraftOrders = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER'));
 
-      if (draftOrderIds.length > 0) {
-        await gql.draftOrder.removeMany.run(graphql, { ids: draftOrderIds });
+    const deleteDraftOrderIds = linkedDraftOrders.map(order => {
+      assertGid(order.orderId);
+      return order.orderId;
+    });
+
+    if (!!input.lineItems?.length) {
+      const updateDraftOrder = linkedDraftOrders[0];
+      const updateDraftOrderId = updateDraftOrder?.orderId ?? null;
+      assertGidOrNull(updateDraftOrderId);
+
+      if (updateDraftOrderId) {
+        deleteDraftOrderIds.splice(deleteDraftOrderIds.indexOf(updateDraftOrderId), 1);
       }
-    } else {
-      const draftOrderId = linkedOrders.find(hasPropertyValue('orderType', 'DRAFT_ORDER'))?.orderId ?? null;
 
-      assertGidOrNull(draftOrderId);
-
-      const { result } = draftOrderId
-        ? await gql.draftOrder.update.run(graphql, { id: draftOrderId, input })
+      const { result } = updateDraftOrderId
+        ? await gql.draftOrder.update.run(graphql, { id: updateDraftOrderId, input })
         : await gql.draftOrder.create.run(graphql, { input });
 
       if (!result?.draftOrder) {
         throw new Error('Failed to create/update draft order');
       }
 
-      await syncShopifyOrders(session, [result.draftOrder?.id]);
+      await syncShopifyOrders(session, [result.draftOrder.id]);
+    }
+
+    if (deleteDraftOrderIds.length > 0) {
+      await gql.draftOrder.removeMany.run(graphql, { ids: deleteDraftOrderIds });
     }
   }
 

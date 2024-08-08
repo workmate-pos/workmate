@@ -169,7 +169,8 @@ export function getWorkOrderLineItems(
   for (const charge of charges) {
     const isAbsorbed =
       charge.workOrderItemUuid !== null &&
-      [...productItems, ...customItems].some(hasPropertyValue('uuid', charge.workOrderItemUuid));
+      ([...productItems, ...customItems].find(hasPropertyValue('uuid', charge.workOrderItemUuid))?.absorbCharges ??
+        false);
 
     if (isAbsorbed) {
       continue;

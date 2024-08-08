@@ -43,7 +43,6 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
 }
 
 async function linkItems(lineItems: LineItem[], workOrderId: number) {
-  // TODO: Eventually get rid of this distinction
   const lineItemIdByItemUuid = getLineItemIdsByUuids(lineItems, 'item');
 
   const uuids = Object.keys(lineItemIdByItemUuid);
@@ -85,6 +84,10 @@ async function linkCharges(lineItems: LineItem[], workOrderId: number) {
     workOrderId,
     charges.map(({ uuid }) => ({ uuid, shopifyOrderLineItemId: lineItemByChargeUuid[uuid] ?? never() })),
   );
+
+  if (charges.length !== uuids.length) {
+    throw new Error('Charges and line items do not match');
+  }
 }
 
 export function getLineItemIdsByUuids(

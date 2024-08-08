@@ -183,7 +183,7 @@ export function WorkOrderItemModal({
                 label={'Name'}
                 autoComplete="off"
                 value={item.name}
-                onChange={name => setItem({ ...item, name: name.trim() || 'Unnamed item' })}
+                onChange={name => setItem({ ...item, name: name || 'Unnamed item' })}
                 requiredIndicator
               />
 

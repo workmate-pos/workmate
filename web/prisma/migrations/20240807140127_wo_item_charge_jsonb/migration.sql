@@ -151,7 +151,7 @@ SELECT charge."workOrderId",
        charge."shopifyOrderLineItemId",
        COALESCE(charge."workOrderItemUuid", charge."workOrderCustomItemUuid"),
        jsonb_build_object(
-         'type', 'hourly-labour',
+         'type', 'fixed-price-labour',
          'employeeId', charge."employeeId",
          'name', charge.name,
          'removeLocked', charge."removeLocked",

@@ -64,7 +64,7 @@ export async function getWorkOrder(filters: MergeUnion<{ id: number } | { shop: 
       paymentTermsTemplateId,
     };
   } catch (error) {
-    sentryErr(error);
+    sentryErr(error, { workOrder });
     throw new HttpError('Unable to parse work order', 500);
   }
 }
@@ -87,7 +87,7 @@ export async function getWorkOrderCharges(workOrderId: number) {
   try {
     return charges.map(mapWorkOrderCharge);
   } catch (error) {
-    sentryErr(error);
+    sentryErr(error, { charges });
     throw new HttpError('Unable to parse work order charges', 500);
   }
 }
@@ -101,11 +101,10 @@ function mapWorkOrderCharge(charge: {
   createdAt: Date;
   updatedAt: Date;
 }) {
-  const { shopifyOrderLineItemId, workOrderItemUuid } = charge;
+  const { shopifyOrderLineItemId } = charge;
   assertGidOrNull(shopifyOrderLineItemId);
-  assertGidOrNull(workOrderItemUuid);
   const data = WorkOrderChargeData.parse(charge.data);
-  return { ...charge, shopifyOrderLineItemId, workOrderItemUuid, data };
+  return { ...charge, shopifyOrderLineItemId, data };
 }
 
 export async function getWorkOrderItems(workOrderId: number) {
@@ -125,7 +124,7 @@ export async function getWorkOrderItems(workOrderId: number) {
   try {
     return items.map(mapWorkOrderItem);
   } catch (error) {
-    sentryErr(error);
+    sentryErr(error, { items });
     throw new HttpError('Unable to parse work order items', 500);
   }
 }
@@ -179,13 +178,13 @@ export async function getWorkOrderItemsByUuids({ workOrderId, uuids }: { workOrd
     SELECT *
     FROM "WorkOrderItem"
     WHERE "workOrderId" = ${workOrderId}
-      AND "uuid" = ANY (${uuids} :: UUID[]);
+      AND "uuid" = ANY (${uuids} :: uuid[]);
   `;
 
   try {
     return items.map(mapWorkOrderItem);
   } catch (error) {
-    sentryErr(error);
+    sentryErr(error, { items });
     throw new HttpError('Unable to parse work order items', 500);
   }
 }
@@ -203,13 +202,13 @@ export async function getWorkOrderChargesByUuids({ workOrderId, uuids }: { workO
     SELECT *
     FROM "WorkOrderCharge"
     WHERE "workOrderId" = ${workOrderId}
-      AND "uuid" = ANY (${uuids} :: UUID[]);
+      AND "uuid" = ANY (${uuids} :: uuid[]);
   `;
 
   try {
     return charges.map(mapWorkOrderCharge);
   } catch (error) {
-    sentryErr(error);
+    sentryErr(error, { charges });
     throw new HttpError('Unable to parse work order charges', 500);
   }
 }
@@ -233,9 +232,9 @@ export async function upsertWorkOrderItems(
   await sql`
     INSERT INTO "WorkOrderItem" ("workOrderId", uuid, "shopifyOrderLineItemId", data)
     SELECT *
-    FROM UNNEST(${workOrderId},
+    FROM UNNEST(${workOrderId} :: int[],
                 ${uuid} :: uuid[],
-                ${unbrandedShopifyOrderLineItemId},
+                ${unbrandedShopifyOrderLineItemId} :: text[],
                 ${data.map(data => JSON.stringify(data))} :: jsonb[])
     ON CONFLICT ("workOrderId", uuid)
       DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
@@ -262,9 +261,9 @@ export async function upsertWorkOrderCharges(
   await sql`
     INSERT INTO "WorkOrderCharge" ("workOrderId", uuid, "shopifyOrderLineItemId", "workOrderItemUuid", data)
     SELECT *
-    FROM UNNEST(${workOrderId},
+    FROM UNNEST(${workOrderId} :: int[],
                 ${uuid} :: uuid[],
-                ${unbrandedShopifyOrderLineItemId},
+                ${unbrandedShopifyOrderLineItemId} :: text[],
                 ${workOrderItemUuid} :: uuid[],
                 ${data.map(data => JSON.stringify(data))} :: jsonb[])
     ON CONFLICT ("workOrderId", uuid)
@@ -291,7 +290,7 @@ export async function insertWorkOrderCustomFields(workOrderId: number, customFie
   await sql`
     INSERT INTO "WorkOrderCustomField" ("workOrderId", key, value)
     SELECT ${workOrderId}, *
-    FROM UNNEST(${Object.keys(customFields)}, ${Object.values(customFields)});`;
+    FROM UNNEST(${Object.keys(customFields)} :: text[], ${Object.values(customFields)} :: text[]);`;
 }
 
 export async function insertWorkOrderItemCustomFields(
@@ -311,7 +310,7 @@ export async function insertWorkOrderItemCustomFields(
   await sql`
     INSERT INTO "WorkOrderItemCustomField" ("workOrderId", "workOrderItemUuid", key, value)
     SELECT ${workOrderId}, *
-    FROM UNNEST(${uuid} :: uuid[], ${key}, ${value});`;
+    FROM UNNEST(${uuid} :: uuid[], ${key} :: text[], ${value} :: text[]);`;
 }
 
 export async function removeWorkOrderItems(workOrderId: number, uuids: string[]) {
@@ -353,7 +352,7 @@ export async function setWorkOrderItemShopifyOrderLineItemIds(
     WITH updated AS (
       UPDATE "WorkOrderItem" x
         SET "shopifyOrderLineItemId" = y."shopifyOrderLineItemId"
-        FROM UNNEST(${_shopifyOrderLineItemId}, ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
+        FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
         WHERE x."workOrderId" = ${workOrderId}
           AND x.uuid = y.uuid
         RETURNING 1)
@@ -385,7 +384,7 @@ export async function setWorkOrderChargeShopifyOrderLineItemIds(
     WITH updated AS (
       UPDATE "WorkOrderCharge" x
         SET "shopifyOrderLineItemId" = y."shopifyOrderLineItemId"
-        FROM UNNEST(${_shopifyOrderLineItemId}, ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
+        FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
         WHERE x."workOrderId" = ${workOrderId}
           AND x.uuid = y.uuid
         RETURNING 1)
