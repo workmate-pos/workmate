@@ -443,7 +443,7 @@ function getLineItemPriceInformation(
   // 1) determine the price of charges
   let remainingLineItemPrice = discountedTotal;
 
-  for (const charge of charges) {
+  for (const charge of lineItemCharges) {
     const originalChargeTotal = BigDecimal.fromMoney(getChargeUnitPrice(charge));
     const discountedChargeTotal = originalChargeTotal.multiply(discountFactor).round(2, RoundingMode.CEILING);
 
@@ -455,7 +455,7 @@ function getLineItemPriceInformation(
   remainingLineItemPrice = maxMoney(remainingLineItemPrice, ZERO_MONEY);
 
   // 2) the remainder goes to the items (distributed by quantity)
-  let remainingItemQuantity = sum(lineItemItems.map(li => Math.max(1, li.quantity)));
+  let remainingItemQuantity = sum(lineItemItems.map(item => Math.max(1, item.quantity)));
 
   for (const item of lineItemItems) {
     const itemPrice = BigDecimal.fromMoney(remainingLineItemPrice)

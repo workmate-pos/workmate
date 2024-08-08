@@ -308,11 +308,14 @@ function getChargeCustomAttributes(
 ): Record<string, string> {
   const customAttributes: Record<string, string> = {
     [getChargeUuidCustomAttributeKey(charge)]: String(quantity),
-    _wm_sku: options.labourSku,
   };
 
+  if (options.labourSku) {
+    customAttributes._wm_sku = options.labourSku;
+  }
+
   if (charge.workOrderItemUuid) {
-    customAttributes._wm_linked_to_item_uuid = String(quantity);
+    customAttributes._wm_linked_to_item_uuid = charge.workOrderItemUuid;
   }
 
   return customAttributes;

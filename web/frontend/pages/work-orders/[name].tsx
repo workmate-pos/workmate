@@ -164,9 +164,7 @@ function WorkOrder({
         setToastAction({ content: message });
         dispatch.set(workOrderToCreateWorkOrder(workOrder));
         setHasUnsavedChanges(false);
-        if (createWorkOrder.name === null) {
-          Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrder.name)}`);
-        }
+        Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrder.name)}`);
       },
     },
   );
