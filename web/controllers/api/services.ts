@@ -205,6 +205,19 @@ export default class ServicesController {
     }
 
     if (productVariant) {
+      const { productVariantUpdate } = await gql.products.updateVariant.run(graphql, {
+        input: {
+          id: productVariantId,
+          sku,
+          price,
+          metafields: productVariantMetafields,
+        },
+      });
+
+      if (!productVariantUpdate?.productVariant) {
+        throw new HttpError('Failed to update service product variant', 500);
+      }
+
       const { productUpdate } = await gql.products.updateProduct.run(graphql, {
         input: {
           id: productVariant.product.id,
@@ -217,14 +230,6 @@ export default class ServicesController {
 
       if (!productUpdate?.product) {
         throw new HttpError('Failed to update product', 500);
-      }
-
-      const { productVariantUpdate } = await gql.products.updateVariant.run(graphql, {
-        input: { id: productVariantId, sku, price, metafields: productVariantMetafields },
-      });
-
-      if (!productVariantUpdate?.productVariant) {
-        throw new HttpError('Failed to update service product variant', 500);
       }
 
       return res.json({

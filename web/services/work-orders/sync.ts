@@ -12,7 +12,6 @@ import { syncShopifyOrders } from '../shopify-order/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
 import { getWorkOrder, getWorkOrderCharges, getWorkOrderCustomFields, getWorkOrderItems } from './queries.js';
-import { inTransaction } from '../db/client.js';
 
 export type SyncWorkOrdersOptions = {
   /**
@@ -58,7 +57,6 @@ export async function syncWorkOrders(session: Session, workOrderIds: number[], o
  * Syncs a work order to Shopify by creating a new draft order for any draft/unlinked line items, and updating custom attributes of existing orders.
  */
 export async function syncWorkOrder(session: Session, workOrderId: number, options?: SyncWorkOrdersOptions) {
-  // TODO: Fix loop with this and syncShopifyOrders
   const [workOrder, customFields, items, charges] = await Promise.all([
     getWorkOrder({ id: workOrderId }),
     getWorkOrderCustomFields(workOrderId),
