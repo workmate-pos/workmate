@@ -1,6 +1,5 @@
 import * as shopifySession from './queries/generated/shopify-session.sql.js';
 import * as workOrder from './queries/generated/work-order.sql.js';
-import * as workOrderCharges from './queries/generated/work-order-charges.sql.js';
 import * as employee from './queries/generated/employee.sql.js';
 import * as types from './queries/generated/types.sql.js';
 import * as sequence from './queries/generated/sequence.sql.js';
@@ -15,7 +14,7 @@ import * as productVariants from './queries/generated/product-variants.sql.js';
 import * as shopifyOrder from './queries/generated/shopify-order.sql.js';
 import * as customFieldPresets from './queries/generated/custom-field-presets.sql.js';
 import * as appMigration from './queries/generated/app-migration.sql.js';
-import { PreparedQuery, sql as sqlTaggedTemplate } from '@pgtyped/runtime';
+import { PreparedQuery } from '@pgtyped/runtime';
 import { useClient } from './client.js';
 
 /**

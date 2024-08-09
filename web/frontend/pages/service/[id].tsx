@@ -24,7 +24,7 @@ import {
 import { useParams } from 'react-router-dom';
 import { useServiceQuery } from '@work-orders/common/queries/use-service-query.js';
 import { createGid, ID, isGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { SubmissionResult, useForm } from '@conform-to/react';
+import { useForm } from '@conform-to/react';
 import { match, P } from 'ts-pattern';
 import { useServiceMutation } from '@work-orders/common/queries/use-service-mutation.js';
 import { parseWithZod } from '@conform-to/zod';
@@ -48,7 +48,6 @@ import {
 } from '@work-orders/common/metafields/product-service-type.js';
 import { useAppBridge } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 import { LabourTabs, LabourType } from '@web/frontend/components/LabourTabs.js';
 
 export default function Service() {
@@ -218,22 +217,26 @@ export default function Service() {
                       error={fields.type.errors?.join(', ')}
                     />
 
-                    {type === 'fixed' && (
-                      <TextField
-                        label={'Price'}
-                        autoComplete="off"
-                        value={price}
-                        onChange={money => {
-                          if (BigDecimal.isValid(money)) {
-                            setPrice(BigDecimal.fromString(money).toMoney());
-                          }
-                        }}
-                        name={fields.price.name}
-                        requiredIndicator={fields.price.required}
-                        error={fields.price.errors?.join(', ')}
-                        prefix={'$'}
-                      />
-                    )}
+                    <TextField
+                      label={'Price'}
+                      autoComplete="off"
+                      value={price}
+                      onChange={money => {
+                        if (BigDecimal.isValid(money)) {
+                          setPrice(BigDecimal.fromString(money).toMoney());
+                        }
+                      }}
+                      name={fields.price.name}
+                      requiredIndicator={fields.price.required}
+                      error={fields.price.errors?.join(', ')}
+                      prefix={'$'}
+                      helpText={
+                        type === 'dynamic'
+                          ? 'Dynamic services change their line item quantity to cover the cost of additional labour and services.' +
+                            ' To prevent rounding, set the price to a low value like $1.00, $0.10, or $0.01.'
+                          : ''
+                      }
+                    />
 
                     {type === 'dynamic' && (
                       <>

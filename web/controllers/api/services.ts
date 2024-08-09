@@ -24,7 +24,7 @@ import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { UpsertService } from '../../schemas/upsert-service.js';
 import { FormBody } from '../../decorators/form-body.js';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import {
   baseProductVariantDefaultChargesMetafield,
   getProductVariantDefaultChargesMetafield,
@@ -129,7 +129,7 @@ export default class ServicesController {
     const session: Session = res.locals.shopify.session;
     const graphql = new Graphql(session);
 
-    const { productVariantId, sku, type, title, description } = submission.value;
+    const { productVariantId, sku, type, title, description, price } = submission.value;
 
     const serviceType = match(type)
       .returnType<ProductServiceType>()
@@ -137,11 +137,6 @@ export default class ServicesController {
       .with('dynamic', () => QUANTITY_ADJUSTING_SERVICE)
       .exhaustive();
     const tags: string[] = [SERVICE_METAFIELD_VALUE_TAG_NAME[serviceType]];
-
-    const price = match(submission.value)
-      .with({ type: 'fixed', price: P.select() }, identity)
-      .with({ type: 'dynamic' }, () => BigDecimal.ONE.toMoney())
-      .exhaustive();
 
     const defaultChargeIds = match(submission.value)
       .with({ type: 'fixed' }, () => null)
@@ -275,9 +270,15 @@ type ServiceProductVariant = ProductVariantFragmentWithMetafields & { errors: st
 
 function getServiceProductVariantErrors(productVariant: gql.products.ProductVariantFragment.Result) {
   return match(productVariant)
-    .with({ price: P.not('1.00'), product: { serviceType: { value: QUANTITY_ADJUSTING_SERVICE } } }, () => [
-      'Dynamic services must have a unit price of $1.00 - save to repair',
-    ])
+    .with(
+      {
+        price: P.select(P.when(price => BigDecimal.fromMoney(price).compare(BigDecimal.ONE) > 0)),
+        product: { serviceType: { value: QUANTITY_ADJUSTING_SERVICE } },
+      },
+      price => [
+        `Dynamic services with a price of $${BigDecimal.fromMoney(price).round(2, RoundingMode.CEILING)} may cause excessive rounding. Use $1.00, $0.10, or $0.01 instead.`,
+      ],
+    )
     .otherwise(() => null);
 }
 

@@ -1,4 +1,4 @@
-import type { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { v4 as uuid } from 'uuid';
 import type { useReducer, useRef, useState } from 'react';
