@@ -193,7 +193,10 @@ export function PurchaseOrder({
               label={'Location'}
               onFocus={() => {
                 router.push('LocationSelector', {
-                  onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
+                  selection: {
+                    type: 'select',
+                    onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
+                  },
                 });
               }}
               disabled={!!createPurchaseOrder.name && createPurchaseOrder.locationId !== null}
@@ -590,7 +593,10 @@ const useAddProductPrerequisitesDialog = (
       });
     } else if (!hasLocation) {
       router.push('LocationSelector', {
-        onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
+        selection: {
+          type: 'select',
+          onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
+        },
       });
     } else {
       if (!createPurchaseOrder.locationId) {
