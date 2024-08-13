@@ -21,7 +21,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useStockTransferPageQuery } from '@work-orders/common/queries/use-stock-transfer-page-query.js';
 import { Int } from '@web/schemas/generated/create-stock-transfer.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { StockTransfer } from '@web/services/stock-transfers/types.js';
+import { DetailedStockTransfer } from '@web/services/stock-transfers/types.js';
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer-line-item-status-badge-props.js';
@@ -178,7 +178,7 @@ function Transfers({ fromLocationId, toLocationId }: { fromLocationId?: ID; toLo
   );
 }
 
-function useStockTransferRows(stockTransfers: StockTransfer[]): ListRow[] {
+function useStockTransferRows(stockTransfers: DetailedStockTransfer[]): ListRow[] {
   const router = useRouter();
 
   const fetch = useAuthenticatedFetch();

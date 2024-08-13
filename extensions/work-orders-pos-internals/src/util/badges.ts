@@ -5,7 +5,7 @@ import type {
 import type { BadgeVariant, BadgeStatus } from '@shopify/retail-ui-extensions/src/components/Badge/Badge.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { BadgeProps } from '@shopify/retail-ui-extensions-react';
-import { WorkOrderPurchaseOrder } from '@web/services/work-orders/types.js';
+import { WorkOrderPurchaseOrder, WorkOrderTransferOrder } from '@web/services/work-orders/types.js';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
 
 export function getStatusText(status: OrderDisplayFinancialStatus | OrderDisplayFulfillmentStatus): string {
@@ -101,4 +101,34 @@ export function getPurchaseOrderBadges(
   }
 
   return Object.values(purchaseOrderByName).map(purchaseOrder => getPurchaseOrderBadge(purchaseOrder, includeQuantity));
+}
+
+export function getTransferOrderBadge(transferOrder: WorkOrderTransferOrder, includeQuantity: boolean): BadgeProps {
+  const { name, items } = transferOrder;
+
+  let variant: BadgeVariant = 'success';
+
+  if (items.some(item => item.status === 'PENDING')) {
+    variant = 'warning';
+  }
+
+  if (items.some(item => item.status === 'IN_TRANSIT')) {
+    variant = 'highlight';
+  }
+
+  let text = titleCase(name);
+
+  const incomingTransferOrderItemCount = sum(
+    transferOrder.items
+      .filter(item => item.status === 'PENDING' || item.status === 'IN_TRANSIT')
+      .map(item => item.quantity),
+  );
+  const transferOrderItemCount = sum(transferOrder.items.map(item => item.quantity));
+
+  if (includeQuantity) {
+    text = `${incomingTransferOrderItemCount}/${transferOrderItemCount} • ${text}`;
+  }
+  const status = incomingTransferOrderItemCount < transferOrderItemCount ? 'partial' : 'empty';
+
+  return { variant, text, status };
 }

@@ -4,7 +4,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getNewPurchaseOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
-import { getPurchaseOrder } from './get.js';
+import { getDetailedPurchaseOrder } from './get.js';
 import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { gql } from '../gql/gql.js';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
@@ -22,8 +22,19 @@ import { ensureEmployeesExist } from '../employee/sync.js';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { validateCreatePurchaseOrder } from './validate.js';
+import {
+  insertPurchaseOrderAssignedEmployees,
+  insertPurchaseOrderCustomFields,
+  insertPurchaseOrderLineItemCustomFields,
+  removePurchaseOrderAssignedEmployees,
+  removePurchaseOrderCustomFields,
+  removePurchaseOrderLineItemCustomFields,
+  removePurchaseOrderLineItemsByUuids,
+  upsertPurchaseOrderLineItems,
+  upsertPurchaseOrder,
+} from './queries.js';
 
-export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
+export async function upsertCreatePurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
 
   return await unit(async () => {
@@ -32,7 +43,7 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
 
     const isNew = createPurchaseOrder.name === null;
-    const existingPurchaseOrder = isNew ? null : await getPurchaseOrder(session, name);
+    const existingPurchaseOrder = isNew ? null : await getDetailedPurchaseOrder(session, name);
 
     const productVariantIds = createPurchaseOrder.lineItems.map(({ productVariantId }) => productVariantId);
     await ensureProductVariantsExist(session, productVariantIds);
@@ -56,21 +67,10 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     assertNoIllegalLineItems(createPurchaseOrder);
     assertNoIllegalLineItemChanges(createPurchaseOrder, existingPurchaseOrder?.lineItems ?? []);
 
-    const [{ id: purchaseOrderId } = never()] = await db.purchaseOrder.upsert({
+    const { id: purchaseOrderId } = await upsertPurchaseOrder({
+      ...createPurchaseOrder,
       shop,
       name,
-      placedDate: createPurchaseOrder.placedDate,
-      status: createPurchaseOrder.status,
-      vendorName: createPurchaseOrder.vendorName,
-      locationId: createPurchaseOrder.locationId,
-      note: createPurchaseOrder.note,
-      shipFrom: createPurchaseOrder.shipFrom,
-      shipTo: createPurchaseOrder.shipTo,
-      deposited: createPurchaseOrder.deposited,
-      paid: createPurchaseOrder.paid,
-      discount: createPurchaseOrder.discount,
-      tax: createPurchaseOrder.tax,
-      shipping: createPurchaseOrder.shipping,
     });
 
     const newLineItemUuids = new Set(createPurchaseOrder.lineItems.map(li => li.uuid));
@@ -79,50 +79,25 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
     const uuids = [...oldLineItemUuids].filter(oldUuid => !newLineItemUuids.has(oldUuid));
 
     await Promise.all([
-      uuids.length && db.purchaseOrder.removeLineItemsByUuids({ purchaseOrderId, uuids }),
-      db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
-      db.purchaseOrder.removeLineItemCustomFields({ purchaseOrderId }),
-      db.purchaseOrder.removeAssignedEmployees({ purchaseOrderId }),
+      removePurchaseOrderLineItemsByUuids(purchaseOrderId, uuids),
+      removePurchaseOrderCustomFields(purchaseOrderId),
+      removePurchaseOrderLineItemCustomFields(purchaseOrderId),
+      removePurchaseOrderAssignedEmployees(purchaseOrderId),
     ]);
-
-    const createLineItemsPromise = Promise.all(
-      createPurchaseOrder.lineItems.map(lineItem =>
-        db.purchaseOrder.upsertLineItem({
-          uuid: lineItem.uuid,
-          productVariantId: lineItem.productVariantId,
-          purchaseOrderId: purchaseOrderId,
-          availableQuantity: lineItem.availableQuantity,
-          quantity: lineItem.quantity,
-          unitCost: lineItem.unitCost,
-          shopifyOrderLineItemId: lineItem.shopifyOrderLineItem?.id,
-        }),
-      ),
-    );
 
     await Promise.all([
-      createLineItemsPromise.then(() =>
-        Promise.all(
-          createPurchaseOrder.lineItems.flatMap(lineItem =>
-            Object.entries(lineItem.customFields).map(([key, value]) =>
-              db.purchaseOrder.insertLineItemCustomField({
-                purchaseOrderId,
-                purchaseOrderLineItemUuid: lineItem.uuid,
-                key,
-                value,
-              }),
-            ),
-          ),
-        ),
-      ),
-      ...Object.entries(createPurchaseOrder.customFields).map(([key, value]) =>
-        db.purchaseOrder.insertCustomField({ purchaseOrderId, key, value }),
-      ),
-      ...createPurchaseOrder.employeeAssignments.map(employee =>
-        db.purchaseOrder.insertAssignedEmployee({ employeeId: employee.employeeId, purchaseOrderId }),
-      ),
+      upsertPurchaseOrderLineItems(
+        purchaseOrderId,
+        createPurchaseOrder.lineItems.map(lineItem => ({
+          ...lineItem,
+          shopifyOrderLineItemId: lineItem.shopifyOrderLineItem?.id ?? null,
+        })),
+      ).then(() => insertPurchaseOrderLineItemCustomFields(purchaseOrderId, createPurchaseOrder.lineItems)),
+      insertPurchaseOrderCustomFields(purchaseOrderId, createPurchaseOrder.customFields),
+      insertPurchaseOrderAssignedEmployees(purchaseOrderId, createPurchaseOrder.employeeAssignments),
     ]);
 
-    const newPurchaseOrder = (await getPurchaseOrder(session, name)) ?? never('We just made it');
+    const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name)) ?? never('We just made it');
 
     await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
     await adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
@@ -213,7 +188,7 @@ function assertNoIllegalLineItemChanges(
         throw new HttpError('Cannot change product variant for (partially) received line items', 400);
       }
 
-      if (newLineItem.shopifyOrderLineItem !== oldLineItem.shopifyOrderLineItem) {
+      if (newLineItem.shopifyOrderLineItem?.id !== oldLineItem.shopifyOrderLineItem?.id) {
         // this may be fine
         throw new HttpError('Cannot change linked order line item for (partially) received line items', 400);
       }

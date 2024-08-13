@@ -4,7 +4,7 @@ import { escapeLike } from '../db/like.js';
 import { db } from '../db/db.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
 import { assertGidOrNull, assertInt, assertMoneyOrNull } from '../../util/assertions.js';
-import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
@@ -14,9 +14,16 @@ import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
 import { DateTime } from '../../schemas/generated/create-purchase-order.js';
+import {
+  getPurchaseOrder,
+  getPurchaseOrderAssignedEmployees,
+  getPurchaseOrderCustomFields,
+  getPurchaseOrderLineItemCustomFields,
+  getPurchaseOrderLineItems,
+} from './queries.js';
 
-export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
-  const [purchaseOrder] = await db.purchaseOrder.get({ name, shop });
+export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
+  const purchaseOrder = await getPurchaseOrder({ shop, name });
 
   if (!purchaseOrder) {
     return null;
@@ -61,9 +68,9 @@ export async function getPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: st
     shipping: purchaseOrder.shipping,
     deposited: purchaseOrder.deposited,
     paid: purchaseOrder.paid,
-    customFields: getPurchaseOrderCustomFields(purchaseOrder.id),
-    lineItems: getPurchaseOrderLineItems(purchaseOrder.id),
-    employeeAssignments: getPurchaseOrderEmployeeAssignments(purchaseOrder.id),
+    customFields: getPurchaseOrderCustomFieldsRecord(purchaseOrder.id),
+    lineItems: getDetailedPurchaseOrderLineItems(purchaseOrder.id),
+    employeeAssignments: getDetailedPurchaseOrderEmployeeAssignments(purchaseOrder.id),
     linkedOrders: linkedOrders.map(({ orderId: id, name, orderType }) => ({
       id,
       name,
@@ -111,14 +118,14 @@ export async function getPurchaseOrderInfoPage(
   });
 
   return await Promise.all(
-    names.map(({ name }) => getPurchaseOrder(session, name).then(purchaseOrder => purchaseOrder ?? never())),
+    names.map(({ name }) => getDetailedPurchaseOrder(session, name).then(purchaseOrder => purchaseOrder ?? never())),
   );
 }
 
-async function getPurchaseOrderLineItems(purchaseOrderId: number) {
-  const [lineItems, allLineItemCustomFields] = await Promise.all([
-    db.purchaseOrder.getLineItems({ purchaseOrderId }),
-    db.purchaseOrder.getLineItemCustomFields({ purchaseOrderId }),
+async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
+  const [lineItems, lineItemCustomFields] = await Promise.all([
+    getPurchaseOrderLineItems(purchaseOrderId),
+    getPurchaseOrderLineItemCustomFields(purchaseOrderId),
   ]);
 
   const productVariantIds = unique(lineItems.map(({ productVariantId }) => productVariantId));
@@ -142,8 +149,6 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
   const orderById = indexBy(orders, o => o.orderId);
 
   return lineItems.map(({ uuid, quantity, availableQuantity, productVariantId, shopifyOrderLineItemId, unitCost }) => {
-    const lineItemCustomFields = allLineItemCustomFields.filter(cf => cf.purchaseOrderLineItemUuid === uuid);
-
     const productVariant = productVariantById[productVariantId] ?? never('fk');
     const product = productById[productVariant.productId] ?? never('fk');
 
@@ -195,7 +200,9 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
           },
         };
       })(),
-      customFields: Object.fromEntries(lineItemCustomFields.map(({ key, value }) => [key, value])),
+      customFields: Object.fromEntries(
+        lineItemCustomFields.filter(cf => cf.purchaseOrderLineItemUuid === uuid).map(({ key, value }) => [key, value]),
+      ),
       unitCost,
       quantity,
       availableQuantity,
@@ -203,13 +210,13 @@ async function getPurchaseOrderLineItems(purchaseOrderId: number) {
   });
 }
 
-async function getPurchaseOrderCustomFields(purchaseOrderId: number) {
-  const customFields = await db.purchaseOrder.getCustomFields({ purchaseOrderId });
+async function getPurchaseOrderCustomFieldsRecord(purchaseOrderId: number) {
+  const customFields = await getPurchaseOrderCustomFields(purchaseOrderId);
   return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
 }
 
-async function getPurchaseOrderEmployeeAssignments(purchaseOrderId: number) {
-  const employeeAssignments = await db.purchaseOrder.getAssignedEmployees({ purchaseOrderId });
+async function getDetailedPurchaseOrderEmployeeAssignments(purchaseOrderId: number) {
+  const employeeAssignments = await getPurchaseOrderAssignedEmployees(purchaseOrderId);
 
   const employeeIds = employeeAssignments.map(({ employeeId }) => employeeId);
   const employees = employeeIds.length ? await db.employee.getMany({ employeeIds }) : [];

@@ -36,8 +36,7 @@ export async function getWorkOrder(filters: MergeUnion<{ id: number } | { shop: 
     FROM "WorkOrder"
     WHERE shop = COALESCE(${filters?.shop ?? null}, shop)
       AND name = COALESCE(${filters?.name ?? null}, name)
-      AND id = COALESCE(${filters?.id ?? null}, id);
-  `;
+      AND id = COALESCE(${filters?.id ?? null}, id);`;
 
   if (!workOrder) {
     return null;

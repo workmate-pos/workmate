@@ -4,7 +4,7 @@ export type Nest<T extends object> = { [K in keyof T]: T[K][] };
 
 /**
  * The opposite of postgres' UNNEST.
- * Takes an array of objects and returns an array of properties.
+ * Takes an array of objects and returns an object of arrays.
  */
 export function nest<T extends object>(items: NonEmptyArray<T>): Nest<T> {
   const [item] = items;

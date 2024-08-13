@@ -16,8 +16,6 @@ import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.
 export async function validateCreateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder, superuser: boolean) {
   assertValidUuids(createWorkOrder);
   assertUniqueUuids(createWorkOrder);
-  assertUniqueHourlyLabourChargeUuids(createWorkOrder);
-  assertUniqueFixedPriceLabourChargeUuids(createWorkOrder);
   assertPositiveItemQuantities(createWorkOrder);
   assertValidChargeItemUuids(createWorkOrder);
   assertValidCompanyDetails(createWorkOrder);
@@ -36,8 +34,6 @@ export async function validateCalculateWorkOrder(
 ) {
   assertValidUuids(calculateWorkOrder);
   assertUniqueUuids(calculateWorkOrder);
-  assertUniqueHourlyLabourChargeUuids(calculateWorkOrder);
-  assertUniqueFixedPriceLabourChargeUuids(calculateWorkOrder);
   assertPositiveItemQuantities(calculateWorkOrder);
   assertValidChargeItemUuids(calculateWorkOrder);
 
@@ -66,30 +62,6 @@ function assertUniqueUuids(createWorkOrder: Pick<CreateWorkOrder, 'items' | 'cha
 
   if (chargeUuidsSet.size !== chargeUuids.length) {
     throw new HttpError('Work order charges must have unique uuids', 400);
-  }
-}
-
-function assertUniqueHourlyLabourChargeUuids(createWorkOrder: Pick<CreateWorkOrder, 'charges'>) {
-  const hourlyLabourChargeUuids = createWorkOrder.charges
-    .filter(hasPropertyValue('type', 'hourly-labour'))
-    .map(charge => charge.uuid);
-
-  const hourlyLabourChargeUuidsSet = new Set(hourlyLabourChargeUuids);
-
-  if (hourlyLabourChargeUuidsSet.size !== hourlyLabourChargeUuids.length) {
-    throw new HttpError('Hourly labour charges must have unique uuids', 400);
-  }
-}
-
-function assertUniqueFixedPriceLabourChargeUuids(createWorkOrder: Pick<CreateWorkOrder, 'charges'>) {
-  const fixedPriceLabourChargeUuids = createWorkOrder.charges
-    .filter(hasPropertyValue('type', 'fixed-price-labour'))
-    .map(charge => charge.uuid);
-
-  const fixedPriceLabourChargeUuidsSet = new Set(fixedPriceLabourChargeUuids);
-
-  if (fixedPriceLabourChargeUuidsSet.size !== fixedPriceLabourChargeUuids.length) {
-    throw new HttpError('Fixed price labour charges must have unique uuids', 400);
   }
 }
 

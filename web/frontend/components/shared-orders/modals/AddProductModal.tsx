@@ -231,8 +231,6 @@ export function AddProductModal({
             const name = getProductVariantName(productVariant) ?? `Unknown ${thing}`;
             const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
 
-            // TODO: Do this on pos too
-
             // the product variants to add. will be more than 1 if this PV is a bundle
             const productVariants = productVariant.requiresComponents
               ? productVariant.productVariantComponents

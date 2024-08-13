@@ -28,6 +28,8 @@ import { Tone } from '@shopify/polaris/build/ts/src/components/Badge/index.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function PurchaseOrderProductsCard({
   createPurchaseOrder,
@@ -113,9 +115,22 @@ function ProductsList({
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
   const orderIds = unique(
-    createPurchaseOrder.lineItems.map(li => li.shopifyOrderLineItem?.orderId).filter(isNonNullable),
+    createPurchaseOrder.lineItems
+      .map(li => li.shopifyOrderLineItem?.orderId)
+      .filter(isNonNullable)
+      .filter(id => parseGid(id).objectName === 'Order'),
   );
-  const orderQueries = useOrderQueries({ fetch, ids: orderIds });
+  const draftOrderIds = unique(
+    createPurchaseOrder.lineItems
+      .map(li => li.shopifyOrderLineItem?.orderId)
+      .filter(isNonNullable)
+      .filter(id => parseGid(id).objectName === 'DraftOrder'),
+  );
+
+  const orderQueries = {
+    ...useOrderQueries({ fetch, ids: orderIds }),
+    ...useDraftOrderQueries({ fetch, ids: draftOrderIds }),
+  };
 
   const isLoading =
     Object.values(productVariantQueries).some(query => query.isLoading) ||
@@ -144,7 +159,6 @@ function ProductsList({
           const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
 
           const orderQuery = item.shopifyOrderLineItem ? orderQueries[item.shopifyOrderLineItem.orderId] : null;
-          const order = orderQuery?.data?.order;
 
           let quantityBadgeTone: Tone | undefined;
 
@@ -168,7 +182,7 @@ function ProductsList({
               disabled={disabled}
               shortcutActions={canRemove ? [{ content: 'Remove', onAction: () => onLineItemRemove(item) }] : []}
             >
-              {(!productVariant || (orderQuery && !order)) && (
+              {(!productVariant || !orderQuery?.data?.order) && (
                 <InlineStack gap={'200'}>
                   <SkeletonThumbnail size={'small'} />
                   <BlockStack gap={'200'}>
@@ -198,9 +212,9 @@ function ProductsList({
                   <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
                     {name}
                   </Text>
-                  {order && (
+                  {orderQuery?.data?.order && (
                     <Box>
-                      <Badge tone={'info'}>{order.name}</Badge>
+                      <Badge tone={'info'}>{orderQuery?.data?.order?.name}</Badge>
                     </Box>
                   )}
                   <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>

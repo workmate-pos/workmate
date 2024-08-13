@@ -15,7 +15,6 @@ import { ensureShopifyOrdersExist } from '../shopify-order/sync.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureEmployeesExist } from '../employee/sync.js';
-import { assertGidOrNull } from '../../util/assertions.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 import {
   getWorkOrder,

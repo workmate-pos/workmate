@@ -436,6 +436,11 @@ model StockTransferLineItem {
   // The status of this line item. Line item can be split to have different statuses.
   status StockTransferLineItemStatus
 
+  // The SO line item that this stock transfer line item will fulfill
+  shopifyOrderLineItemId String?
+  // We require the order id as well, as the GraphQL API does not link line item to order id, only the other way around
+  shopifyOrderId String?
+
   // The quantity pending/sent/received/rejected depending on the status.
   // Line item is split if there are multiple statuses.
   quantity Int

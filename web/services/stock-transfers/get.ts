@@ -5,9 +5,10 @@ import { escapeLike } from '../db/like.js';
 import { StockTransferPaginationOptions } from '../../schemas/generated/stock-transfer-pagination-options.js';
 import { StockTransferCountOptions } from '../../schemas/generated/stock-transfer-count-options.js';
 import { Int } from '../../schemas/generated/create-stock-transfer.js';
+import { getStockTransfer, getStockTransferLineItems } from './queries.js';
 
-export async function getStockTransfer(session: Session, name: string) {
-  const [stockTransfer] = await db.stockTransfers.get({ shop: session.shop, name });
+export async function getDetailedStockTransfer(session: Session, name: string) {
+  const stockTransfer = await getStockTransfer({ shop: session.shop, name });
 
   if (!stockTransfer) {
     throw new Error(`Stock transfer with name ${name} not found`);
@@ -18,7 +19,7 @@ export async function getStockTransfer(session: Session, name: string) {
   assertGid(fromLocationId);
   assertGid(toLocationId);
 
-  const lineItems = await db.stockTransfers.getLineItems({ stockTransferId: stockTransfer.id });
+  const lineItems = await getStockTransferLineItems(stockTransfer.id);
 
   return {
     name,
@@ -56,7 +57,7 @@ export async function getStockTransferPage(session: Session, paginationOptions: 
     toLocationId: paginationOptions.toLocationId ? createGid('Location', paginationOptions.toLocationId) : undefined,
   });
 
-  return Promise.all(stockTransfers.map(({ name }) => getStockTransfer(session, name)));
+  return Promise.all(stockTransfers.map(({ name }) => getDetailedStockTransfer(session, name)));
 }
 
 export async function getStockTransferCount(session: Session, countOptions: StockTransferCountOptions) {

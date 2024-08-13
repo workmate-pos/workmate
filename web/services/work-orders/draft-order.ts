@@ -14,7 +14,6 @@ import {
   WorkOrderLabourCharge,
 } from '@work-orders/work-order-shopify-order';
 import { getShopSettings } from '../settings.js';
-import { db } from '../db/db.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull, isLineItemId } from '../../util/assertions.js';
@@ -288,6 +287,7 @@ export async function getDraftOrderInputForWorkOrder(
         customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
         originalUnitPrice: customSale.unitPrice,
         taxable: customSale.taxable,
+        requiresShipping: false,
       })),
     ],
     note,

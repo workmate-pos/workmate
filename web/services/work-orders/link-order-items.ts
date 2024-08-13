@@ -1,6 +1,5 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getUuidFromCustomAttributeKey, WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
-import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Session } from '@shopify/shopify-api';
 import { gql } from '../gql/gql.js';
@@ -11,6 +10,9 @@ import {
   setWorkOrderChargeShopifyOrderLineItemIds,
   setWorkOrderItemShopifyOrderLineItemIds,
 } from './queries.js';
+import { replacePurchaseOrderLineItemShopifyOrderLineItemIds } from '../purchase-orders/queries.js';
+import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
+import { replaceStockTransferLineItemShopifyOrderLineItemIds } from '../stock-transfers/queries.js';
 
 type Order = { id: ID; customAttributes: { key: string; value: string | null }[] };
 type LineItem =
@@ -48,26 +50,26 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
   const uuids = Object.keys(lineItemIdByItemUuid);
 
   const items = await getWorkOrderItemsByUuids({ workOrderId, uuids });
-  // TODO: parallel
-  for (const { uuid, shopifyOrderLineItemId: previousShopifyOrderLineItemId, data } of items) {
-    const shopifyOrderLineItemId = lineItemIdByItemUuid[uuid] ?? never();
-    await setWorkOrderItemShopifyOrderLineItemIds(workOrderId, [{ uuid, shopifyOrderLineItemId }]);
 
-    if (data.type === 'product' && previousShopifyOrderLineItemId) {
-      // if this work order item was previously linked to a different line item, we should also re-link purchase order line items.
-      // this is handy when a draft order is converted to a real order/when a new draft order is created (e.g. when changing a work order)
+  const replacements = items
+    .filter(hasNonNullableProperty('shopifyOrderLineItemId'))
+    .map(({ uuid, shopifyOrderLineItemId }) => ({
+      currentShopifyOrderLineItemId: shopifyOrderLineItemId,
+      newShopifyOrderLineItemId: lineItemIdByItemUuid[uuid] ?? never(),
+    }));
 
-      for (const { purchaseOrderId, uuid } of await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemId({
-        shopifyOrderLineItemId: previousShopifyOrderLineItemId,
-      })) {
-        await db.purchaseOrder.setLineItemShopifyOrderLineItemId({
-          purchaseOrderId,
-          uuid,
-          shopifyOrderLineItemId,
-        });
-      }
-    }
-  }
+  await Promise.all([
+    setWorkOrderItemShopifyOrderLineItemIds(
+      workOrderId,
+      items.map(({ uuid }) => ({ uuid, shopifyOrderLineItemId: lineItemIdByItemUuid[uuid] ?? never() })),
+    ),
+
+    // items may have been linked to a purchase order line item. if so, we should update the purchase order line item's shopifyOrderLineItemId too.
+    replacePurchaseOrderLineItemShopifyOrderLineItemIds(replacements),
+
+    // the same applies to transfer order line items
+    replaceStockTransferLineItemShopifyOrderLineItemIds(replacements),
+  ]);
 
   if (items.length !== uuids.length) {
     throw new Error('Did not find all item uuids from a Shopify Order in the database');
@@ -75,14 +77,14 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
 }
 
 async function linkCharges(lineItems: LineItem[], workOrderId: number) {
-  const lineItemByChargeUuid = getLineItemIdsByUuids(lineItems, 'charge');
+  const lineItemIdByChargeUuid = getLineItemIdsByUuids(lineItems, 'charge');
 
-  const uuids = Object.keys(lineItemByChargeUuid);
+  const uuids = Object.keys(lineItemIdByChargeUuid);
 
   const charges = await getWorkOrderChargesByUuids({ workOrderId, uuids });
   await setWorkOrderChargeShopifyOrderLineItemIds(
     workOrderId,
-    charges.map(({ uuid }) => ({ uuid, shopifyOrderLineItemId: lineItemByChargeUuid[uuid] ?? never() })),
+    charges.map(({ uuid }) => ({ uuid, shopifyOrderLineItemId: lineItemIdByChargeUuid[uuid] ?? never() })),
   );
 
   if (charges.length !== uuids.length) {

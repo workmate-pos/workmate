@@ -49,6 +49,7 @@ export type DetailedWorkOrderItem = {
   | {
       type: 'product';
       purchaseOrders: WorkOrderPurchaseOrder[];
+      transferOrders: WorkOrderTransferOrder[];
       productVariantId: ID;
     }
   | {
@@ -67,6 +68,16 @@ export type WorkOrderPurchaseOrderItem = {
   unitCost: Money;
   quantity: Int;
   availableQuantity: Int;
+};
+
+export type WorkOrderTransferOrder = {
+  name: string;
+  items: WorkOrderTransferOrderItem[];
+};
+
+export type WorkOrderTransferOrderItem = {
+  status: 'PENDING' | 'IN_TRANSIT' | 'RECEIVED' | 'REJECTED';
+  quantity: Int;
 };
 
 export type DetailedWorkOrderCharge = FixedPriceLabour | HourlyLabour;

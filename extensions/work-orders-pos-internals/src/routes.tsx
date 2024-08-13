@@ -52,6 +52,9 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldValuesConfig.js';
 import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
 import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
+import { WorkOrderItemFulfillment } from './screens/popups/WorkOrderItemFulfillment.js';
+import { WorkOrderItemFulfillmentHelp } from './screens/popups/WorkOrderItemFulfillmentHelp.js';
+import { WorkOrderItemFulfillmentItem } from './screens/popups/WorkOrderItemFulfillmentItem.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -219,5 +222,17 @@ export const { Router, useRouter } = createRouter({
   PaymentTermsSelector: {
     title: 'Select Payment Terms',
     Component: PaymentTermsSelector,
+  },
+  WorkOrderItemFulfillment: {
+    title: 'Work Order Fulfillment',
+    Component: WorkOrderItemFulfillment,
+  },
+  WorkOrderItemFulfillmentHelp: {
+    title: 'Work Order Fulfillment Help',
+    Component: WorkOrderItemFulfillmentHelp,
+  },
+  WorkOrderItemFulfillmentItem: {
+    title: 'Work Order Fulfillment Item',
+    Component: WorkOrderItemFulfillmentItem,
   },
 });

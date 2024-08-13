@@ -4,9 +4,9 @@ import { Permission } from '../../decorators/permission.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
 import { Session } from '@shopify/shopify-api';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
-import { upsertPurchaseOrder } from '../../services/purchase-orders/upsert.js';
+import { upsertCreatePurchaseOrder } from '../../services/purchase-orders/upsert.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { getPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
+import { getDetailedPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
 import { PurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
@@ -32,8 +32,8 @@ export default class PurchaseOrdersController {
     const session: Session = res.locals.shopify.session;
     const createPurchaseOrder = req.body;
 
-    const { name } = await upsertPurchaseOrder(session, createPurchaseOrder);
-    const purchaseOrder = await getPurchaseOrder(session, name).then(po => po ?? never('We just made it XD'));
+    const { name } = await upsertCreatePurchaseOrder(session, createPurchaseOrder);
+    const purchaseOrder = await getDetailedPurchaseOrder(session, name).then(po => po ?? never('We just made it XD'));
 
     return res.json({ purchaseOrder });
   }
@@ -44,7 +44,7 @@ export default class PurchaseOrdersController {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
-    const purchaseOrder = await getPurchaseOrder(session, name);
+    const purchaseOrder = await getDetailedPurchaseOrder(session, name);
 
     if (!purchaseOrder) {
       throw new HttpError(`Purchase order ${name} not found`, 404);

@@ -33,14 +33,13 @@ import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { DateTime, WorkOrderPaymentTerms } from '@web/schemas/generated/create-work-order.js';
-import { getPurchaseOrderBadge } from '../util/badges.js';
+import { getPurchaseOrderBadge, getTransferOrderBadge } from '../util/badges.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
 import { DAY_IN_MS, MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import {
   CreateWorkOrderDispatchProxy,
@@ -168,6 +167,22 @@ export function WorkOrder({ initial }: WorkOrderProps) {
         flex={0}
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
+          <FormButton
+            title={'Fulfillment'}
+            type={'basic'}
+            action={'button'}
+            disabled={!createWorkOrder.name || hasUnsavedChanges}
+            onPress={() => {
+              const { name } = createWorkOrder;
+
+              if (!name) {
+                toast.show('You must save your work order before you can manage payments/print');
+                return;
+              }
+
+              router.push('WorkOrderItemFulfillment', { name });
+            }}
+          />
           <FormButton
             title={'Manage payments'}
             type={'basic'}
@@ -330,13 +345,7 @@ function WorkOrderProperties({
           label={'Company'}
           onFocus={() => openCompanySelector()}
           disabled={hasOrder}
-          value={
-            createWorkOrder.companyId === null
-              ? ''
-              : companyQuery.isLoading
-                ? 'Loading...'
-                : company?.name ?? 'Unknown company'
-          }
+          value={companyQuery.isLoading ? 'Loading...' : company?.name ?? 'Unknown company'}
         />
       )}
       {createWorkOrder.companyId && (
@@ -845,13 +854,20 @@ function useItemRows(
         if (item.type === 'product') {
           return (
             workOrderQuery.data?.workOrder?.items
-              .filter(hasPropertyValue('uuid', item.uuid))
-              .find(hasPropertyValue('type', item.type))?.purchaseOrders ?? []
+              .filter(hasPropertyValue('type', item.type))
+              .find(hasPropertyValue('uuid', item.uuid))?.purchaseOrders ?? []
           );
         }
 
         return [];
       })();
+
+      const transferOrders =
+        item.type === 'product'
+          ? workOrderQuery.data?.workOrder?.items
+              .filter(hasPropertyValue('type', item.type))
+              .find(hasPropertyValue('uuid', item.uuid))?.transferOrders ?? []
+          : [];
 
       const itemPrice = calculatedWorkOrderQuery.getItemPrice(item);
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
@@ -889,6 +905,7 @@ function useItemRows(
           badges: [
             ...orderNames.map<BadgeProps>(orderName => ({ text: orderName, variant: 'highlight' })),
             ...purchaseOrders.map<BadgeProps>(po => getPurchaseOrderBadge(po, true)),
+            ...transferOrders.map<BadgeProps>(to => getTransferOrderBadge(to, true)),
           ],
         },
         rightSide: {
