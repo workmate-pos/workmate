@@ -1,4 +1,4 @@
-// TODO: Move to common
+// TODO: Move web / ... / draft-order.ts since thats now the source of truth for all orders
 
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertMoney, BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -40,10 +40,7 @@ export type WorkOrderItem = WorkOrderProductItem | WorkOrderCustomItem;
 type BaseCharge = {
   uuid: string;
   name: string;
-  workOrderItem: {
-    uuid: string;
-    type: 'product' | 'custom-item';
-  } | null;
+  workOrderItemUuid: string | null;
 };
 
 export type HourlyLabourCharge = BaseCharge & {
@@ -120,9 +117,7 @@ export function getWorkOrderLineItems(
         throw new Error('Must provide unit price when absorbing charges');
       }
 
-      const absorbedCharges = charges
-        .filter(hasNestedPropertyValue('workOrderItem.type', 'product'))
-        .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+      const absorbedCharges = charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
       const totalChargeCost = BigDecimal.sum(
         ...absorbedCharges.map(getChargeUnitPrice).map(money => BigDecimal.fromMoney(money)),
@@ -145,9 +140,7 @@ export function getWorkOrderLineItems(
     let { unitPrice } = item;
 
     if (absorbCharges) {
-      const absorbedCharges = charges
-        .filter(hasNestedPropertyValue('workOrderItem.type', 'custom-item'))
-        .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+      const absorbedCharges = charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
       const totalChargeCost = BigDecimal.sum(
         ...absorbedCharges.map(getChargeUnitPrice).map(money => BigDecimal.fromMoney(money)),
@@ -174,21 +167,10 @@ export function getWorkOrderLineItems(
   }
 
   for (const charge of charges) {
-    let isAbsorbed = false;
-
-    if (charge.workOrderItem) {
-      if (charge.workOrderItem?.type === 'product') {
-        isAbsorbed = productItems
-          .filter(hasPropertyValue('uuid', charge.workOrderItem?.uuid ?? ''))
-          .some(hasPropertyValue('absorbCharges', true));
-      } else if (charge.workOrderItem?.type === 'custom-item') {
-        isAbsorbed = customItems
-          .filter(hasPropertyValue('uuid', charge.workOrderItem?.uuid ?? ''))
-          .some(hasPropertyValue('absorbCharges', true));
-      } else {
-        return charge.workOrderItem.type satisfies never;
-      }
-    }
+    const isAbsorbed =
+      charge.workOrderItemUuid !== null &&
+      ([...productItems, ...customItems].find(hasPropertyValue('uuid', charge.workOrderItemUuid))?.absorbCharges ??
+        false);
 
     if (isAbsorbed) {
       continue;
@@ -275,9 +257,12 @@ export function getChargeUnitPrice(
 }
 
 const ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_item_uuid:';
-const CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_custom_item_uuid:';
-const HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_hourly_charge_uuid:';
-const FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_fixed_charge_uuid:';
+const CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_charge_uuid:';
+
+const _DEPRECATED_CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_custom_item_uuid:';
+const _DEPRECATED_HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_hourly_charge_uuid:';
+const _DEPRECATED_FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX = '_wm_fixed_charge_uuid:';
+
 export const WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = 'Work Order';
 const FIRST_LINE_ITEM_WORK_ORDER_CUSTOM_ATTRIBUTE_NAME = '_wm_id';
 
@@ -295,17 +280,9 @@ function getItemCustomAttributes(
 ) {
   const customAttributes: Record<string, string> = {};
 
-  if (item.type === 'product') {
-    customAttributes[getItemUuidCustomAttributeKey({ uuid: item.uuid })] = String(item.quantity);
-  } else if (item.type === 'custom-item') {
-    customAttributes[getCustomItemUuidCustomAttributeKey({ uuid: item.uuid })] = String(item.quantity);
-  } else {
-    return item satisfies never;
-  }
+  customAttributes[getItemUuidCustomAttributeKey({ uuid: item.uuid })] = String(item.quantity);
 
-  const linkedCharges = charges
-    .filter(hasNestedPropertyValue('workOrderItem.type', item.type))
-    .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid));
+  const linkedCharges = charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
   if (item.absorbCharges) {
     for (const absorbedCharge of linkedCharges) {
@@ -331,17 +308,14 @@ function getChargeCustomAttributes(
 ): Record<string, string> {
   const customAttributes: Record<string, string> = {
     [getChargeUuidCustomAttributeKey(charge)]: String(quantity),
-    _wm_sku: options.labourSku,
   };
 
-  if (charge.workOrderItem) {
-    if (charge.workOrderItem.type === 'product') {
-      customAttributes._wm_linked_to_item_uuid = String(quantity);
-    } else if (charge.workOrderItem.type === 'custom-item') {
-      customAttributes._wm_linked_to_custom_item_uuid = String(quantity);
-    } else {
-      return charge.workOrderItem.type satisfies never;
-    }
+  if (options.labourSku) {
+    customAttributes._wm_sku = options.labourSku;
+  }
+
+  if (charge.workOrderItemUuid) {
+    customAttributes._wm_linked_to_item_uuid = charge.workOrderItemUuid;
   }
 
   return customAttributes;
@@ -351,17 +325,8 @@ export function getItemUuidCustomAttributeKey(item: { uuid: string }) {
   return `${ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${item.uuid}`;
 }
 
-export function getCustomItemUuidCustomAttributeKey(item: { uuid: string }) {
-  return `${CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${item.uuid}`;
-}
-
-export function getChargeUuidCustomAttributeKey(charge: Pick<WorkOrderLabourCharge, 'uuid' | 'type'>) {
-  const prefix = {
-    'hourly-labour': HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    'fixed-price-labour': FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-  }[charge.type];
-
-  return `${prefix}${charge.uuid}`;
+export function getChargeUuidCustomAttributeKey(charge: { uuid: string }) {
+  return `${CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX}${charge.uuid}`;
 }
 
 const ABSORBED_CHARGE_SEPARATOR = ':';
@@ -381,9 +346,12 @@ function getAbsorbedChargeCustomAttributeKey(charge: WorkOrderLabourCharge, key:
 export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
   const prefixes = {
     item: ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    'custom-item': CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    hourly: HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    fixed: FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    charge: CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+
+    // Backwards compatibility
+    'custom-item': _DEPRECATED_CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    hourly: _DEPRECATED_HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    fixed: _DEPRECATED_FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
   } as const;
 
   for (const [type, prefix] of entries(prefixes)) {
@@ -398,7 +366,19 @@ export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
       continue;
     }
 
-    return { type, uuid };
+    // Accept the old custom attributes but convert them to the new type system
+    const newType = (
+      {
+        item: 'item',
+        charge: 'charge',
+
+        'custom-item': 'item',
+        hourly: 'charge',
+        fixed: 'charge',
+      } as const
+    )[type];
+
+    return { type: newType, uuid };
   }
 
   return null;
@@ -407,9 +387,12 @@ export function getUuidFromCustomAttributeKey(customAttributeKey: string) {
 export function getAbsorbedUuidFromCustomAttributeKey(customAttributeKey: string) {
   const prefixes = [
     ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
-    FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+
+    // Backwards compatibility
+    _DEPRECATED_CUSTOM_ITEM_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    _DEPRECATED_HOURLY_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
+    _DEPRECATED_FIXED_CHARGE_UUID_LINE_ITEM_CUSTOM_ATTRIBUTE_PREFIX,
   ];
 
   for (const prefix of prefixes) {

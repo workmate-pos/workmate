@@ -16,6 +16,6 @@
     "typescript": "^5.4.2"
   },
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.37"
+    "@teifi-digital/shopify-app-toolbox": "^0.0.62"
   }
 }

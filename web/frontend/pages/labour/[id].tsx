@@ -165,7 +165,7 @@ export default function Labour() {
                       onChange={setRemovable}
                       name={fields.removable.name}
                       error={fields.removable.errors?.join(', ')}
-                      helpText={'If enabled, this labour cannot be removed from the work order once added'}
+                      helpText={'If enabled, this labour cannot be removed from a line item once added'}
                     />
 
                     <Select

@@ -44,7 +44,7 @@ export function NewCustomFieldModal({
             error={existingFields.includes(fieldName) ? 'Field already exists' : undefined}
           />
           <CustomField
-            name={fieldName ?? 'New Field'}
+            name={fieldName || 'New Field'}
             value={fieldValue}
             onChange={setFieldValue}
             disabled={!fieldName}

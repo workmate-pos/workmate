@@ -4,7 +4,7 @@ import { Request, Response } from 'express-serve-static-core';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import type { CreateWorkOrderRequest } from '../../schemas/generated/create-work-order-request.js';
-import { getWorkOrder, getWorkOrderInfoPage } from '../../services/work-orders/get.js';
+import { getDetailedWorkOrder, getWorkOrderInfoPage } from '../../services/work-orders/get.js';
 import { getShopSettings } from '../../services/settings.js';
 import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
@@ -54,7 +54,7 @@ export default class WorkOrderController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     const { name } = await upsertWorkOrder(session, user, createWorkOrder);
-    const workOrder = await getWorkOrder(session, name);
+    const workOrder = await getDetailedWorkOrder(session, name);
 
     return res.json(workOrder ?? never());
   }
@@ -188,7 +188,7 @@ export default class WorkOrderController {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
-    const workOrder = await getWorkOrder(session, name);
+    const workOrder = await getDetailedWorkOrder(session, name);
 
     if (!workOrder) {
       throw new HttpError(`Work order ${name} not found`, 404);
@@ -240,13 +240,13 @@ export default class WorkOrderController {
 
 export type CalculateDraftOrderResponse = Awaited<ReturnType<typeof calculateWorkOrder>>;
 
-export type CreateWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
+export type CreateWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getDetailedWorkOrder>>>;
 
 export type CreateWorkOrderRequestResponse = { name: string };
 
 export type FetchWorkOrderInfoPageResponse = Awaited<ReturnType<typeof getWorkOrderInfoPage>>;
 
-export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
+export type FetchWorkOrderResponse = NonNullable<Awaited<ReturnType<typeof getDetailedWorkOrder>>>;
 
 export type PrintWorkOrderResponse = { success: true };
 

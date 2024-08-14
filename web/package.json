@@ -34,7 +34,7 @@
     "@sentry/node": "^7.74.1",
     "@sinclair/typebox": "^0.32.15",
     "@teifi-digital/shopify-app-express": "^0.9.1",
-    "@teifi-digital/shopify-app-toolbox": "^0.0.58",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.62",
     "@ts-safeql/sql-tag": "^0.2.1",
     "@work-orders/common": "file:../common",
     "@work-orders/work-order-shopify-order": "file:../work-order-shopify-order",

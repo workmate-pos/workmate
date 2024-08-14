@@ -69,25 +69,20 @@ FROM "ShopifyOrder"
        INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
        LEFT JOIN "WorkOrderItem"
                  ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderItem"."shopifyOrderLineItemId"
-       LEFT JOIN "WorkOrderHourlyLabourCharge"
-                 ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderHourlyLabourCharge"."shopifyOrderLineItemId"
-       LEFT JOIN "WorkOrderFixedPriceLabourCharge"
-                 ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderFixedPriceLabourCharge"."shopifyOrderLineItemId"
+       LEFT JOIN "WorkOrderCharge"
+                 ON "ShopifyOrderLineItem"."lineItemId" = "WorkOrderCharge"."shopifyOrderLineItemId"
        INNER JOIN "WorkOrder" ON ("WorkOrderItem"."workOrderId" = "WorkOrder"."id" OR
-                                  "WorkOrderHourlyLabourCharge"."workOrderId" = "WorkOrder"."id" OR
-                                  "WorkOrderFixedPriceLabourCharge"."workOrderId" = "WorkOrder"."id")
+                                  "WorkOrderCharge"."workOrderId" = "WorkOrder"."id")
 WHERE "ShopifyOrder"."orderId" = :orderId!;
 
 /* @name getLinkedOrdersByWorkOrderId */
 SELECT DISTINCT so.*
 FROM "WorkOrder" wo
        LEFT JOIN "WorkOrderItem" woi ON wo.id = woi."workOrderId"
-       LEFT JOIN "WorkOrderHourlyLabourCharge" hlc ON wo.id = hlc."workOrderId"
-       LEFT JOIN "WorkOrderFixedPriceLabourCharge" fplc ON wo.id = fplc."workOrderId"
+       LEFT JOIN "WorkOrderCharge" woc ON wo.id = woc."workOrderId"
        INNER JOIN "ShopifyOrderLineItem" soli ON (
   woi."shopifyOrderLineItemId" = soli."lineItemId"
-    OR hlc."shopifyOrderLineItemId" = soli."lineItemId"
-    OR fplc."shopifyOrderLineItemId" = soli."lineItemId"
+    OR woc."shopifyOrderLineItemId" = soli."lineItemId"
   )
        INNER JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
 WHERE wo.id = :workOrderId!;

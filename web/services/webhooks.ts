@@ -13,6 +13,7 @@ import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopif
 import { syncProductServiceTypeTag } from './metafields/product-service-type-metafield.js';
 import { cleanManyOrphanedDraftOrders, cleanOrphanedDraftOrders } from './work-orders/clean-orphaned-draft-orders.js';
 import { unit } from './db/unit-of-work.js';
+import { getWorkOrder } from './work-orders/queries.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -75,7 +76,7 @@ export default {
       const workOrderName = body.note_attributes.find(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
 
       if (workOrderName) {
-        const [workOrder] = await db.workOrder.get({ shop: session.shop, name: workOrderName.value });
+        const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName.value });
 
         if (!workOrder) {
           // can happen if a merchant manually adds the attribute. if this happens often something is wrong

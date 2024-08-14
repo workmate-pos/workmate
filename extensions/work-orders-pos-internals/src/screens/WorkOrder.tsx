@@ -15,9 +15,9 @@ import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-w
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { Money } from '@web/services/gql/queries/generated/schema.js';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { groupBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
@@ -53,9 +53,7 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Session } from '@shopify/retail-ui-extensions';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
-import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
 import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
 
 export type WorkOrderProps = {
@@ -432,21 +430,7 @@ function WorkOrderItems({
   const fetch = useAuthenticatedFetch();
 
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: router.isCurrent },
   );
 
@@ -496,17 +480,23 @@ function WorkOrderItems({
           action={'button'}
           onPress={() =>
             router.push('ProductSelector', {
-              onSelect: ({ item, charges }) => {
-                if (item.type === 'custom-item') {
-                  // TODO: get rid of this once its supported
-                  item.customFields = {};
+              onSelect: ({ items, charges }) => {
+                dispatch.addItems({ items });
+
+                const chargesByItem = groupBy(
+                  charges.filter(hasNonNullableProperty('workOrderItemUuid')),
+                  charge => charge.workOrderItemUuid,
+                );
+
+                for (const charges of Object.values(chargesByItem)) {
+                  const [charge] = charges;
+                  if (!charge) continue;
+                  dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges });
                 }
 
-                dispatch.addItems({ items: [item] });
-                dispatch.updateItemCharges({ item, charges });
-
-                if (item.type === 'custom-item') {
-                  setOpenConfigPopup({ type: item.type, uuid: item.uuid, configType: 'item' });
+                const customItem = items.find(hasPropertyValue('type', 'custom-item'));
+                if (customItem) {
+                  setOpenConfigPopup({ type: customItem.type, uuid: customItem.uuid, configType: 'item' });
                 }
               },
               companyLocationId: createWorkOrder.companyLocationId,
@@ -543,7 +533,7 @@ function WorkOrderItems({
         />
       </ResponsiveGrid>
 
-      {(calculatedDraftOrderQuery.data?.missingProductVariantIds?.length ?? 0) > 0 && (
+      {!!calculatedDraftOrderQuery.data?.missingProductVariantIds?.length && (
         <Banner
           title={
             'This work order contains products which have likely been deleted. Please remove them to save this work order'
@@ -687,21 +677,7 @@ function WorkOrderMoneySummary({
 
   // this calculation automatically accounts for paid-for items
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: router.isCurrent },
   );
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
@@ -814,21 +790,7 @@ function useItemRows(
     ids: createWorkOrder.items.filter(hasPropertyValue('type', 'product')).map(item => item.productVariantId),
   });
   const calculatedWorkOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'customerId',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: router.isCurrent },
   );
 
@@ -891,35 +853,9 @@ function useItemRows(
         return [];
       })();
 
-      const charges =
-        createWorkOrder.charges?.filter(
-          charge => charge.workOrderItem?.uuid === item.uuid && charge.workOrderItem?.type === item.type,
-        ) ?? [];
-
-      const itemPrice = (() => {
-        if (item.type === 'product') {
-          return calculatedWorkOrderQuery.data?.itemPrices[item.uuid];
-        }
-
-        if (item.type === 'custom-item') {
-          return calculatedWorkOrderQuery.data?.customItemPrices[item.uuid];
-        }
-
-        return item satisfies never;
-      })();
-
-      const chargePrices = charges.map(charge => {
-        if (charge.type === 'hourly-labour') {
-          return calculatedWorkOrderQuery.data?.hourlyLabourChargePrices[charge.uuid];
-        }
-
-        if (charge.type === 'fixed-price-labour') {
-          return calculatedWorkOrderQuery.data?.fixedPriceLabourChargePrices[charge.uuid];
-        }
-
-        return charge satisfies never;
-      });
-
+      const itemPrice = calculatedWorkOrderQuery.getItemPrice(item);
+      const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
+      const chargePrices = charges.map(calculatedWorkOrderQuery.getChargePrice);
       const totalPrice = BigDecimal.sum(
         ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),
       );

@@ -2,8 +2,12 @@ import { Fetch } from './fetch.js';
 import { useQuery } from 'react-query';
 import { FetchCustomFieldValueOptionsResponse } from '@web/controllers/api/custom-fields.js';
 
-export const useCustomFieldValueOptionsQuery = ({ fetch, name }: { fetch: Fetch; name: string }) =>
+export const useCustomFieldValueOptionsQuery = (
+  { fetch, name }: { fetch: Fetch; name: string },
+  options?: { enabled?: boolean },
+) =>
   useQuery({
+    ...options,
     queryKey: ['custom-field-value-options', name],
     queryFn: async () => {
       const response = await fetch(`/api/custom-fields/field/${encodeURIComponent(name)}/options`);

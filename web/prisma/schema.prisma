@@ -52,7 +52,7 @@ model WorkOrder {
 
   paymentTermsTemplateId String?
   // Only applicable for FIXED terms
-  paymentFixedDueDate DateTime?
+  paymentFixedDueDate    DateTime?
 
   derivedFromOrder   ShopifyOrder? @relation(fields: [derivedFromOrderId], references: [orderId])
   derivedFromOrderId String?
@@ -66,13 +66,10 @@ model WorkOrder {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  items                   WorkOrderItem[]
-  fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
-  hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
-  customFields            WorkOrderCustomField[]
-  itemCustomFields        WorkOrderItemCustomField[]
-  customItems             WorkOrderCustomItem[]
-  customItemCustomFields  WorkOrderCustomItemCustomField[]
+  items                           WorkOrderItem[]
+  charges                         WorkOrderCharge[]
+  customFields                    WorkOrderCustomField[]
+  itemCustomFields                WorkOrderItemCustomField[]
 
   @@unique([shop, name])
 }
@@ -93,117 +90,40 @@ model WorkOrderItem {
   shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
   shopifyOrderLineItemId String?
 
-  productVariantId String
-  productVariant   ProductVariant @relation(fields: [productVariantId], references: [productVariantId])
+  data Json @db.JsonB
 
-  /// Absorb charges means that one line item will be created for this item + all charges by changing the quantity of the line item.
-  /// Quantity does not matter in this case as it is determined dynamically based on the unit price and total price.
-  absorbCharges Boolean
-  quantity      Int
-
-  hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
-  fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
-
-  createdAt    DateTime                   @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime                   @default(now()) @db.Timestamptz(3)
+  charges      WorkOrderCharge[]
   customFields WorkOrderItemCustomField[]
 
-  @@id([workOrderId, uuid])
-  @@index([shopifyOrderLineItemId])
-}
-
-model WorkOrderCustomItem {
-  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
-  workOrderId Int
-
-  uuid String @db.Uuid
-
-  shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
-  shopifyOrderLineItemId String?
-
-  name      String
-  unitPrice String
-
-  absorbCharges Boolean
-  quantity      Int
-
-  hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
-  fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
-
-  createdAt    DateTime                         @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime                         @default(now()) @db.Timestamptz(3)
-  customFields WorkOrderCustomItemCustomField[]
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([workOrderId, uuid])
   @@index([shopifyOrderLineItemId])
 }
 
-model WorkOrderFixedPriceLabourCharge {
+model WorkOrderCharge {
   workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
   workOrderId Int
 
   uuid String @db.Uuid
 
-  // Only set when this charge is added to some different line item.
-  workOrderItem     WorkOrderItem? @relation(fields: [workOrderId, workOrderItemUuid], references: [workOrderId, uuid])
-  workOrderItemUuid String?        @db.Uuid
-
-  workOrderCustomItem     WorkOrderCustomItem? @relation(fields: [workOrderId, workOrderCustomItemUuid], references: [workOrderId, uuid])
-  workOrderCustomItemUuid String?              @db.Uuid
-
+  // If this line item is paid, then this work order item is paid.
+  // Can also be set to a draft order line item in case there has not been a check out for this line item yet.
   shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
   shopifyOrderLineItemId String?
 
-  employee   Employee? @relation(fields: [employeeId], references: [staffMemberId])
-  employeeId String?
-
-  name   String
-  amount String
-
-  // If locked, only superusers can change it
-
-  amountLocked Boolean
-  removeLocked Boolean
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @default(now()) @db.Timestamptz(3)
-
-  @@id([workOrderId, uuid])
-}
-
-model WorkOrderHourlyLabourCharge {
-  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
-  workOrderId Int
-
-  uuid String @db.Uuid
-
-  // Only set when this charge is added to some different line item.
+  // Only set when this charge is added to some work order item.
   workOrderItem     WorkOrderItem? @relation(fields: [workOrderId, workOrderItemUuid], references: [workOrderId, uuid])
   workOrderItemUuid String?        @db.Uuid
 
-  workOrderCustomItem     WorkOrderCustomItem? @relation(fields: [workOrderId, workOrderCustomItemUuid], references: [workOrderId, uuid])
-  workOrderCustomItemUuid String?              @db.Uuid
+  data Json @db.JsonB
 
-  shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
-  shopifyOrderLineItemId String?
-
-  employee   Employee? @relation(fields: [employeeId], references: [staffMemberId])
-  employeeId String?
-
-  name  String
-  rate  String
-  hours String
-
-  // If locked, only superusers can change it
-
-  rateLocked   Boolean
-  hoursLocked  Boolean
-  removeLocked Boolean
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt                    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt                    DateTime           @default(now()) @db.Timestamptz(3)
 
   @@id([workOrderId, uuid])
+  @@index([shopifyOrderLineItemId])
 }
 
 model ShopifyOrder {
@@ -267,11 +187,9 @@ model ShopifyOrderLineItem {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  hourlyLabourCharges     WorkOrderHourlyLabourCharge[]
-  fixedPriceLabourCharges WorkOrderFixedPriceLabourCharge[]
-  workOrderItems          WorkOrderItem[]
-  purchaseOrderLineItems  PurchaseOrderLineItem[]
-  WorkOrderCustomItem     WorkOrderCustomItem[]
+  workOrderItems                  WorkOrderItem[]
+  workOrderCharges                WorkOrderCharge[]
+  purchaseOrderLineItems          PurchaseOrderLineItem[]
 
   @@index([orderId])
 }
@@ -294,12 +212,10 @@ model Employee {
   name        String
   isShopOwner Boolean
 
-  hourlyLabourCharges              WorkOrderHourlyLabourCharge[]
-  fixedPriceLabourCharges          WorkOrderFixedPriceLabourCharge[]
   purchaseOrderEmployeeAssignments PurchaseOrderEmployeeAssignment[]
 
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt                       DateTime                          @default(now()) @db.Timestamptz(3)
+  updatedAt                       DateTime                          @default(now()) @db.Timestamptz(3)
 
   @@index([shop])
 }
@@ -593,29 +509,10 @@ model WorkOrderItemCustomField {
   key   String
   value String
 
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt                    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt                    DateTime           @default(now()) @db.Timestamptz(3)
 
   @@unique([workOrderId, workOrderItemUuid, key])
-  @@index([key, value])
-}
-
-model WorkOrderCustomItemCustomField {
-  id Int @id @default(autoincrement())
-
-  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
-  workOrderId Int
-
-  workOrderCustomItem     WorkOrderCustomItem @relation(fields: [workOrderId, workOrderCustomItemUuid], references: [workOrderId, uuid])
-  workOrderCustomItemUuid String              @db.Uuid
-
-  key   String
-  value String
-
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @default(now()) @db.Timestamptz(3)
-
-  @@unique([workOrderId, workOrderCustomItemUuid, key])
   @@index([key, value])
 }
 
@@ -673,7 +570,6 @@ model ProductVariant {
 
   purchaseOrderLineItems PurchaseOrderLineItem[]
   shopifyOrderLineItems  ShopifyOrderLineItem[]
-  workOrderItems         WorkOrderItem[]
 }
 
 model Product {

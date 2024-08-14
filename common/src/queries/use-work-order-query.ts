@@ -1,14 +1,14 @@
 import { useQueries, useQuery, UseQueryOptions } from 'react-query';
 import type { FetchWorkOrderResponse } from '@web/controllers/api/work-order.js';
-import type { WorkOrder } from '@web/services/work-orders/types.js';
+import type { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { Fetch } from './fetch.js';
 
 export const useWorkOrderQuery = (
   { fetch, name }: { fetch: Fetch; name: string | null },
   options?: UseQueryOptions<
-    { workOrder: WorkOrder | null },
+    { workOrder: DetailedWorkOrder | null },
     unknown,
-    { workOrder: WorkOrder | null },
+    { workOrder: DetailedWorkOrder | null },
     (string | null)[]
   >,
 ) =>

@@ -31,24 +31,7 @@ export function WorkOrderSummary({
   const fetch = useAuthenticatedFetch({ setToastAction });
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-        'paymentTerms',
-      ),
-    },
-    { enabled: false },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({ fetch, ...createWorkOrder }, { enabled: false });
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
   let appliedDiscount = BigDecimal.ZERO;

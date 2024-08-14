@@ -2,7 +2,10 @@ import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ID, DateTime, Int, Money } from '../gql/queries/generated/schema.js';
 import { ShopifyOrderType } from '../db/queries/generated/shopify-order.sql.js';
 
-export type WorkOrder = {
+/**
+ * A work order with all available data.
+ */
+export type DetailedWorkOrder = {
   name: string;
   status: string;
   dueDate: DateTime;
@@ -10,8 +13,8 @@ export type WorkOrder = {
   internalNote: string;
   customerId: ID;
   derivedFromOrderId: ID | null;
-  items: WorkOrderItem[];
-  charges: WorkOrderCharge[];
+  items: DetailedWorkOrderItem[];
+  charges: DetailedWorkOrderCharge[];
   orders: WorkOrderOrder[];
   customFields: Record<string, string>;
   discount: WorkOrderDiscount | null;
@@ -36,7 +39,7 @@ export type WorkOrderPaymentTerms = {
   date: DateTime | null;
 };
 
-export type WorkOrderItem = {
+export type DetailedWorkOrderItem = {
   uuid: string;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   quantity: Int;
@@ -66,15 +69,12 @@ export type WorkOrderPurchaseOrderItem = {
   availableQuantity: Int;
 };
 
-export type WorkOrderCharge = FixedPriceLabour | HourlyLabour;
+export type DetailedWorkOrderCharge = FixedPriceLabour | HourlyLabour;
 
 export type FixedPriceLabour = {
   type: 'fixed-price-labour';
   uuid: string;
-  workOrderItem: {
-    type: 'product' | 'custom-item';
-    uuid: string;
-  } | null;
+  workOrderItemUuid: string | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;
@@ -86,10 +86,7 @@ export type FixedPriceLabour = {
 export type HourlyLabour = {
   type: 'hourly-labour';
   uuid: string;
-  workOrderItem: {
-    type: 'product' | 'custom-item';
-    uuid: string;
-  } | null;
+  workOrderItemUuid: string | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;
@@ -116,4 +113,4 @@ export type WorkOrderOrder = {
   type: ShopifyOrderType;
 };
 
-export type WorkOrderInfo = WorkOrder;
+export type WorkOrderInfo = DetailedWorkOrder;

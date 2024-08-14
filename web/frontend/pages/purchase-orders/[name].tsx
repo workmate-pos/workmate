@@ -162,12 +162,10 @@ function PurchaseOrder({
         setToastAction({ content: message });
         dispatch.set(createPurchaseOrderFromPurchaseOrder(purchaseOrder));
         setHasUnsavedChanges(false);
-        if (createPurchaseOrder.name === null) {
-          Redirect.create(app).dispatch(
-            Redirect.Action.APP,
-            `/purchase-orders/${encodeURIComponent(purchaseOrder.name)}`,
-          );
-        }
+        Redirect.create(app).dispatch(
+          Redirect.Action.APP,
+          `/purchase-orders/${encodeURIComponent(purchaseOrder.name)}`,
+        );
       },
     },
   );

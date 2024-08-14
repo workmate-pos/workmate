@@ -1,6 +1,6 @@
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
-import { WorkOrder } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -56,7 +56,7 @@ import { MoneyField } from '@web/frontend/components/MoneyField.js';
 
 export function WorkOrderItemModal({
   createWorkOrder,
-  item: { type: itemType, uuid: itemUuid },
+  item: { uuid: itemUuid },
   workOrder,
   open,
   onClose,
@@ -64,14 +64,14 @@ export function WorkOrderItemModal({
   onSave,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
-  item: { type: 'product' | 'custom-item'; uuid: string };
-  workOrder: WorkOrder | null;
+  item: { uuid: string };
+  workOrder: DetailedWorkOrder | null;
   open: boolean;
   onClose: () => void;
   setToastAction: ToastActionCallable;
   onSave: (
     item: CreateWorkOrder['items'][number],
-    charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItem'>[],
+    charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[],
   ) => void;
 }) {
   const [forceShowCharges, setForceShowCharges] = useState(false);
@@ -91,14 +91,8 @@ export function WorkOrderItemModal({
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
-  const initialItem =
-    createWorkOrder.items.filter(hasPropertyValue('type', itemType)).find(hasPropertyValue('uuid', itemUuid)) ??
-    never('Invalid item');
-
-  const initialCharges =
-    createWorkOrder.charges
-      .filter(hasNestedPropertyValue('workOrderItem.type', 'product' as 'product' | 'custom-item'))
-      .filter(hasNestedPropertyValue('workOrderItem.uuid', itemUuid)) ?? [];
+  const initialItem = createWorkOrder.items.find(hasPropertyValue('uuid', itemUuid)) ?? never('Invalid item');
+  const initialCharges = createWorkOrder.charges.filter(hasNestedPropertyValue('workOrderItemUuid', itemUuid)) ?? [];
 
   const [item, setItem] = useState(initialItem);
   const [generalCharge, setGeneralCharge] = useState(extractInitialGeneralCharge(initialCharges));
@@ -108,37 +102,9 @@ export function WorkOrderItemModal({
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const settingsQuery = useSettingsQuery({ fetch });
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'customerId',
-        'items',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-        'paymentTerms',
-      ),
-    },
-    { enabled: false },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({ fetch, ...createWorkOrder }, { enabled: false });
 
-  const itemLineItemId = (() => {
-    if (item.type === 'product') {
-      return calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
-    }
-
-    if (item.type === 'custom-item') {
-      return calculatedDraftOrderQuery.data?.customItemLineItemIds[item.uuid];
-    }
-
-    return item satisfies never;
-  })();
-  const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
+  const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
   const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
 
@@ -217,7 +183,7 @@ export function WorkOrderItemModal({
                 label={'Name'}
                 autoComplete="off"
                 value={item.name}
-                onChange={name => setItem({ ...item, name: name.trim() || 'Unnamed item' })}
+                onChange={name => setItem({ ...item, name: name || 'Unnamed item' })}
                 requiredIndicator
               />
 
@@ -269,18 +235,16 @@ export function WorkOrderItemModal({
           </Modal.Section>
         )}
 
-        {itemType !== 'custom-item' && (
-          <Modal.Section>
-            <CustomFieldsList
-              customFields={item.customFields}
-              onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
-              onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
-              onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
-              onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
-              onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
-            />
-          </Modal.Section>
-        )}
+        <Modal.Section>
+          <CustomFieldsList
+            customFields={item.customFields}
+            onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
+            onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
+            onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
+            onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
+            onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
+          />
+        </Modal.Section>
       </Modal>
 
       {isAddEmployeeModalOpen && (
@@ -304,11 +268,7 @@ export function WorkOrderItemModal({
                       name: settingsQuery.data?.settings?.labourLineItemName || 'Labour',
                       amount: BigDecimal.ZERO.toMoney(),
                       employeeId,
-                      workOrderItem: {
-                        uuid: itemUuid,
-                        // TODO: Support custom items
-                        type: 'product',
-                      },
+                      workOrderItemUuid: itemUuid,
                       amountLocked: false,
                       removeLocked: false,
                     }) as const,
@@ -393,7 +353,7 @@ export function WorkOrderItemModal({
  * @TODO: Shared with pos!!!
  */
 function extractInitialGeneralCharge(
-  charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItem'>[],
+  charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[],
 ) {
   const generalCharges = charges.filter(hasPropertyValue('employeeId', null));
 
@@ -417,7 +377,7 @@ function extractInitialGeneralCharge(
 }
 
 type LinkedEmployeeCharge = CreateWorkOrder['charges'][number] & {
-  workOrderItem: { type: 'product' | 'custom-item' };
+  workOrderItemUuid: string;
   employeeId: ID;
 };
 
@@ -565,7 +525,7 @@ function Charges({
                         return {
                           ...partialNewCharge,
                           uuid: charge.uuid,
-                          workOrderItem: charge.workOrderItem,
+                          workOrderItemUuid: charge.workOrderItemUuid,
                           employeeId: charge.employeeId,
                         };
                       }
@@ -574,7 +534,7 @@ function Charges({
                         return {
                           ...partialNewCharge,
                           uuid: charge.uuid,
-                          workOrderItem: charge.workOrderItem,
+                          workOrderItemUuid: charge.workOrderItemUuid,
                           employeeId: charge.employeeId,
                         };
                       }

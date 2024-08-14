@@ -28,7 +28,7 @@ import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-qu
 import { useCreateWorkOrderReducer, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { defaultCreateWorkOrder } from '@work-orders/common/create-work-order/default.js';
-import { WorkOrder as WorkOrderType } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder as WorkOrderType } from '@web/services/work-orders/types.js';
 import {
   SaveWorkOrderValidationErrors,
   useSaveWorkOrderMutation,
@@ -164,9 +164,7 @@ function WorkOrder({
         setToastAction({ content: message });
         dispatch.set(workOrderToCreateWorkOrder(workOrder));
         setHasUnsavedChanges(false);
-        if (createWorkOrder.name === null) {
-          Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrder.name)}`);
-        }
+        Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrder.name)}`);
       },
     },
   );
@@ -201,21 +199,7 @@ function WorkOrder({
 
   // all nested useCalculatedDraftOrderQuery's are disabled s.t. only this one fetches when no modals are opened
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'customerId',
-        'items',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-        'paymentTerms',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: !isModalOpen },
   );
 
