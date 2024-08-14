@@ -4,7 +4,7 @@ import { match } from 'ts-pattern';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { getWorkOrderItemFulfillmentBadges } from './WorkOrderItemFulfillment.js';
+import { getWorkOrderItemFulfillmentBadges } from './WorkOrderItemSourcing.js';
 import { SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
@@ -20,7 +20,7 @@ import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purcha
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 
 // TODO: Also show the current location inventory #, and then make it possible to config SO/PO/TO
-export function WorkOrderItemFulfillmentItem({ workOrderName, uuid }: { uuid: string; workOrderName: string }) {
+export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: string; workOrderName: string }) {
   const { session } = useExtensionApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
   const workOrderQuery = useWorkOrderQuery({ fetch, name: workOrderName }, { staleTime: 10 * SECOND_IN_MS });

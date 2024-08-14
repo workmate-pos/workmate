@@ -1,11 +1,11 @@
 import { ScrollView, Text } from '@shopify/retail-ui-extensions-react';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
-export function WorkOrderItemFulfillmentHelp() {
+export function WorkOrderItemSourcingHelp() {
   return (
     <ScrollView>
       <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'} spacing={1}>
-        <Text variant={'headingLarge'}>Work Order Fulfillment</Text>
+        <Text variant={'headingLarge'}>Work Order Sourcing</Text>
       </ResponsiveStack>
 
       <Text variant={'body'} color={'TextNeutral'}>

@@ -180,7 +180,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
                 return;
               }
 
-              router.push('WorkOrderItemFulfillment', { name });
+              router.push('WorkOrderItemSourcing', { name });
             }}
           />
           <FormButton

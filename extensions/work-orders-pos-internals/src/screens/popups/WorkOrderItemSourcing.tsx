@@ -42,7 +42,7 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
  * Transfer orders are used to transfer inventory from one location to the other.
  * Shopify orders can be created to commit in-stock inventory.
  */
-export function WorkOrderItemFulfillment({ name }: { name: string }) {
+export function WorkOrderItemSourcing({ name }: { name: string }) {
   const { toast, session } = useExtensionApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
 
@@ -85,7 +85,7 @@ export function WorkOrderItemFulfillment({ name }: { name: string }) {
         <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'} spacing={1}>
           <ResponsiveStack direction={'horizontal'} spacing={2} alignment={'space-between'} flexWrap={'wrap'}>
             <Text variant={'headingLarge'}>Work Order Sourcing</Text>
-            <Selectable onPress={() => router.push('WorkOrderItemFulfillmentHelp', {})}>
+            <Selectable onPress={() => router.push('WorkOrderItemSourcingHelp', {})}>
               <Text variant={'bodyMd'} color={'TextInteractive'}>
                 Help
               </Text>
@@ -337,7 +337,7 @@ function useItemListRows(name: string): ListRow[] {
       onPress: () => {
         // TODO : ability to open PO/TO from this menu
         // TODO : ability to open PO/TO from the entire page too (just a response grid of them below a header)
-        router.push('WorkOrderItemFulfillmentItem', { workOrderName: workOrder.name, uuid: item.uuid });
+        router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
       },
       leftSide: {
         label:

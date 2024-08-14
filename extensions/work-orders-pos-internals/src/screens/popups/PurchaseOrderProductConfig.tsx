@@ -119,7 +119,7 @@ export function PurchaseOrderProductConfig({
               </Stack>
             )}
 
-            {inventoryLevel?.quantities?.length === 0 && (
+            {!inventoryLevel?.quantities?.length && (
               <Stack direction={'horizontal'} alignment={'center'}>
                 <Text variant="body" color="TextSubdued">
                   No stock types found

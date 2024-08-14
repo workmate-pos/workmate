@@ -52,9 +52,9 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldValuesConfig.js';
 import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
 import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
-import { WorkOrderItemFulfillment } from './screens/popups/WorkOrderItemFulfillment.js';
-import { WorkOrderItemFulfillmentHelp } from './screens/popups/WorkOrderItemFulfillmentHelp.js';
-import { WorkOrderItemFulfillmentItem } from './screens/popups/WorkOrderItemFulfillmentItem.js';
+import { WorkOrderItemSourcing } from './screens/popups/WorkOrderItemSourcing.js';
+import { WorkOrderItemSourcingHelp } from './screens/popups/WorkOrderItemSourcingHelp.js';
+import { WorkOrderItemSourcingItem } from './screens/popups/WorkOrderItemSourcingItem.js';
 import { StockTransferEntry } from './screens/StockTransferEntry.js';
 import { StockTransfer } from './screens/StockTransfer.js';
 import { StockTransferProductSelector } from './screens/popups/StockTransferProductSelector.js';
@@ -242,17 +242,17 @@ export const { Router, useRouter } = createRouter({
     title: 'Select Payment Terms',
     Component: PaymentTermsSelector,
   },
-  WorkOrderItemFulfillment: {
-    title: 'Work Order Fulfillment',
-    Component: WorkOrderItemFulfillment,
+  WorkOrderItemSourcing: {
+    title: 'Work Order Sourcing',
+    Component: WorkOrderItemSourcing,
   },
-  WorkOrderItemFulfillmentHelp: {
-    title: 'Work Order Fulfillment Help',
-    Component: WorkOrderItemFulfillmentHelp,
+  WorkOrderItemSourcingHelp: {
+    title: 'Work Order Sourcing Help',
+    Component: WorkOrderItemSourcingHelp,
   },
-  WorkOrderItemFulfillmentItem: {
-    title: 'Work Order Fulfillment Item',
-    Component: WorkOrderItemFulfillmentItem,
+  WorkOrderItemSourcingItem: {
+    title: 'Work Order Sourcing Item',
+    Component: WorkOrderItemSourcingItem,
   },
   StockTransferEntry: {
     title: 'Stock Transfer',
