@@ -1,7 +1,7 @@
 import { Liquid } from 'liquidjs';
 import { db } from '../../db/db.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { hasNestedPropertyValue, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';

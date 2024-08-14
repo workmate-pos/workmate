@@ -6,6 +6,9 @@
       "type": "integer",
       "minimum": 0
     },
+    "type": {
+      "type": "string"
+    },
     "status": {
       "type": "string"
     },

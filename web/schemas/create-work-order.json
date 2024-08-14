@@ -6,6 +6,9 @@
       "description": "The name of the work order to update (if applicable). If not provided, a new work order will be created. Unique within a store.",
       "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
     },
+    "type": {
+      "type": "string"
+    },
     "status": {
       "type": "string",
       "minLength": 1
@@ -278,6 +281,7 @@
   },
   "required": [
     "name",
+    "type",
     "status",
     "dueDate",
     "note",

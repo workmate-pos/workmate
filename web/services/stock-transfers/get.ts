@@ -1,13 +1,13 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
-import { assertGid, createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { escapeLike } from '../db/like.js';
 import { StockTransferPaginationOptions } from '../../schemas/generated/stock-transfer-pagination-options.js';
 import { StockTransferCountOptions } from '../../schemas/generated/stock-transfer-count-options.js';
 import { Int } from '../../schemas/generated/create-stock-transfer.js';
 import { getStockTransfer, getStockTransferLineItems } from './queries.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getLineItemsById } from '../work-orders/get.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 

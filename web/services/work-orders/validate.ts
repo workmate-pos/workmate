@@ -12,6 +12,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.js';
+import { getShopSettings } from '../settings.js';
 
 export async function validateCreateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder, superuser: boolean) {
   assertValidUuids(createWorkOrder);
@@ -20,6 +21,8 @@ export async function validateCreateWorkOrder(session: Session, createWorkOrder:
   assertValidChargeItemUuids(createWorkOrder);
   assertValidCompanyDetails(createWorkOrder);
 
+  await assertNoIllegalTypeChanges(session, createWorkOrder);
+  await assertValidWorkOrderType(session, createWorkOrder);
   await assertValidWorkOrderName(session, createWorkOrder);
   await assertNonPaidWorkOrderItemProductsExist(session, createWorkOrder);
   await assertNoIllegalItemChanges(session, createWorkOrder);
@@ -117,6 +120,19 @@ function assertPositiveItemQuantities(createWorkOrder: Pick<CreateWorkOrder, 'it
   }
 }
 
+async function assertValidWorkOrderType(session: Session, createWorkOrder: Pick<CreateWorkOrder, 'name' | 'type'>) {
+  if (createWorkOrder.name !== null) {
+    // only check on initial creation
+    return;
+  }
+
+  const settings = await getShopSettings(session.shop);
+
+  if (!Object.keys(settings.workOrderTypes).includes(createWorkOrder.type)) {
+    throw new HttpError(`Unknown work order type '${createWorkOrder.type}'`, 400);
+  }
+}
+
 async function assertValidWorkOrderName(session: Session, createWorkOrder: Pick<CreateWorkOrder, 'name'>) {
   if (createWorkOrder.name) {
     // if a name is provided it must already exist (deciding the name in the request is not allowed)
@@ -193,6 +209,18 @@ export async function getMissingNonPaidWorkOrderProduct(
 
   const missingProductVariantIds = [...productVariantIds].filter(id => !existingProductVariantIds.has(id));
   return missingProductVariantIds;
+}
+
+async function assertNoIllegalTypeChanges(session: Session, createWorkOrder: Pick<CreateWorkOrder, 'name' | 'type'>) {
+  if (!createWorkOrder.name) {
+    return;
+  }
+
+  const { type } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+
+  if (type !== createWorkOrder.type) {
+    throw new HttpError('Cannot change work order type', 400);
+  }
 }
 
 async function assertNoIllegalItemChanges(session: Session, createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items'>) {

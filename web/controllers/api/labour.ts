@@ -23,7 +23,6 @@ import { Session } from '@shopify/shopify-api';
 import { ensureMetaobjectDefinitionExists } from '../../services/metaobjects/installable-metaobject-service.js';
 import { SubmissionResult } from '@conform-to/react';
 import { MetaobjectFieldInput } from '../../services/gql/queries/generated/schema.js';
-import { getShopType } from '../../services/shop.js';
 
 @Authenticated()
 export default class LabourController {

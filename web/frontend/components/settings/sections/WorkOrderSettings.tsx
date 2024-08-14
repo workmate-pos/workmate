@@ -1,7 +1,8 @@
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { Autocomplete, BlockStack, Icon, InlineStack, Tag, Text, TextField } from '@shopify/polaris';
+import { Autocomplete, BlockStack, Divider, Icon, InlineStack, Tag, Text, TextField } from '@shopify/polaris';
 import { CirclePlusMinor } from '@shopify/polaris-icons';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function WorkOrderSettings({
   settings,
@@ -86,28 +87,40 @@ export function WorkOrderSettings({
           />
         }
       />
-      <TextField
-        label="ID Format"
-        autoComplete="off"
-        requiredIndicator
-        helpText={
-          <>
-            You can use variables by surrounding them in curly braces.
-            <br />
-            Available variables:{' '}
-            <Text as="p" fontWeight="semibold">
-              {'{{id}}, {{year}}, {{month}}, {{day}}, {{hour}}, {{minute}}'}
-            </Text>
-          </>
-        }
-        value={settings.idFormat}
-        onChange={value =>
-          setSettings({
-            ...settings,
-            idFormat: value,
-          })
-        }
-      />
+
+      <Divider />
+
+      <BlockStack gap={'200'}>
+        <BlockStack gap={'100'}>
+          <Text as="h3" variant="headingMd">
+            Work Order ID Formats
+          </Text>
+          You can use variables by surrounding them in curly braces.
+          <br />
+          Available variables:{' '}
+          <Text as="p" fontWeight="semibold">
+            {'{{id}}, {{year}}, {{month}}, {{day}}, {{hour}}, {{minute}}'}
+          </Text>
+        </BlockStack>
+
+        {Object.entries(settings.workOrderTypes).map(([type, typeConfig]) => (
+          <TextField
+            label={`${titleCase(type)} ID Format`}
+            autoComplete="off"
+            requiredIndicator
+            value={typeConfig.idFormat}
+            onChange={value =>
+              setSettings({
+                ...settings,
+                workOrderTypes: {
+                  ...settings.workOrderTypes,
+                  [type]: { ...typeConfig, idFormat: value },
+                },
+              })
+            }
+          />
+        ))}
+      </BlockStack>
     </BlockStack>
   );
 }

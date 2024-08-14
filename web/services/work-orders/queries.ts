@@ -8,6 +8,7 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { escapeTransaction, stickyClient } from '../db/client.js';
 
 export type WorkOrder = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
 
@@ -31,6 +32,7 @@ export async function getWorkOrder(filters: MergeUnion<{ id: number } | { shop: 
     companyContactId: string | null;
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
+    type: string;
   }>`
     SELECT *
     FROM "WorkOrder"
@@ -398,4 +400,29 @@ export async function setWorkOrderChargeShopifyOrderLineItemIds(
     });
     throw new HttpError('Could not set shopify order line charge ids', 500);
   }
+}
+
+async function createWorkOrderTypeCounterIfNotExists({ shop, type }: { shop: string; type: string }) {
+  await sql`
+    INSERT INTO "WorkOrderTypeCounter" (shop, type, last_value)
+    SELECT ${shop}, ${type}, 0
+    ON CONFLICT DO NOTHING;`;
+}
+
+async function incrementWorkOrderTypeCounter({ shop, type }: { shop: string; type: string }) {
+  await createWorkOrderTypeCounterIfNotExists({ shop, type });
+
+  const { last_value } = await sqlOne<{ last_value: number }>`
+    UPDATE "WorkOrderTypeCounter"
+    SET last_value = last_value + 1
+    WHERE shop = ${shop}
+      AND type = ${type}
+    RETURNING last_value;`;
+
+  return last_value;
+}
+
+export async function getWorkOrderTypeCount({ shop, type }: { shop: string; type: string }) {
+  // important to use a non tx client here because we never want to rollback the counter
+  return await escapeTransaction(async () => await incrementWorkOrderTypeCounter({ shop, type }));
 }

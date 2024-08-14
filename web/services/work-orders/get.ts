@@ -58,6 +58,7 @@ export async function getDetailedWorkOrder(session: Session, name: string): Prom
 
   return await awaitNested({
     name: workOrder.name,
+    type: workOrder.type,
     status: workOrder.status,
     customerId: workOrder.customerId,
     companyId: workOrder.companyId,

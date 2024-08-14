@@ -50,6 +50,7 @@ function validateWorkOrder(createWorkOrder: Nullable<CreateWorkOrder>): asserts 
   const requiredKeys: (keyof CreateWorkOrder)[] = [
     'status',
     'customerId',
+    'type',
     'dueDate',
     'charges',
     'note',
@@ -86,6 +87,6 @@ export class SaveWorkOrderValidationErrors extends Error {
   ) {
     const invalid = Object.keys(errors).map(key => string.titleCase(key));
 
-    super(`Invalid values for ${invalid.join(', ')}`);
+    super(`Invalid value for ${invalid.join(', ')}`);
   }
 }

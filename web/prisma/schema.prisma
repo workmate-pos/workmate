@@ -38,6 +38,9 @@ model WorkOrder {
   shop String
   name String // E.g. WO-#1
 
+  // Work order type, e.g. layaway, quote, etc. Types change the behavior of work orders and can be configured through settings.
+  type String
+
   status       String
   dueDate      DateTime
   note         String
@@ -694,4 +697,15 @@ enum AppMigrationStatus {
   PENDING
   SUCCESS
   FAILURE
+}
+
+// Table used for storing counters for work order types.
+model WorkOrderTypeCounter {
+  id Int @id @default(autoincrement())
+
+  shop String
+  type String
+  last_value Int
+
+  @@unique([shop, type])
 }

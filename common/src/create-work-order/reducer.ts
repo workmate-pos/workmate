@@ -5,52 +5,53 @@ import type { useReducer, useRef, useState } from 'react';
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
-export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
+export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId' | 'type'> & {
   customerId: CreateWorkOrder['customerId'] | null;
+  type: CreateWorkOrder['type'] | null;
 };
 
 type ItemDescriptor = { uuid: string };
 
 export type CreateWorkOrderAction =
   | ({
-      type: 'setPartial';
-    } & Partial<CreateWorkOrder>)
+      actionType: 'setPartial';
+    } & Partial<WIPCreateWorkOrder>)
   | ({
-      type: 'setCompany';
+      actionType: 'setCompany';
     } & Pick<CreateWorkOrder, 'companyId' | 'companyLocationId' | 'companyContactId' | 'customerId' | 'paymentTerms'>)
   | ({
-      type: 'setCustomer';
+      actionType: 'setCustomer';
     } & Pick<CreateWorkOrder, 'customerId'>)
   | {
       /**
        * Make sure to upsert charges before adding items
        */
-      type: 'addItems';
+      actionType: 'addItems';
       items: CreateWorkOrder['items'][number][];
     }
   | {
-      type: 'removeItem';
+      actionType: 'removeItem';
       item: ItemDescriptor;
     }
   | {
       /**
        * Make sure to upsert charges before updating items
        */
-      type: 'updateItem';
+      actionType: 'updateItem';
       item: CreateWorkOrder['items'][number];
     }
   | {
-      type: 'updateItemCharges';
+      actionType: 'updateItemCharges';
       item: ItemDescriptor;
       charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[];
     }
   | {
-      type: 'updateItemCustomFields';
+      actionType: 'updateItemCustomFields';
       item: ItemDescriptor;
       customFields: Record<string, string>;
     }
   | ({
-      type: 'set';
+      actionType: 'set';
     } & WIPCreateWorkOrder);
 
 type CreateWorkOrderActionWithWorkOrder = CreateWorkOrderAction & {
@@ -58,7 +59,9 @@ type CreateWorkOrderActionWithWorkOrder = CreateWorkOrderAction & {
 };
 
 export type CreateWorkOrderDispatchProxy = {
-  [type in CreateWorkOrderAction['type']]: (args: Omit<CreateWorkOrderAction & { type: type }, 'type'>) => void;
+  [actionType in CreateWorkOrderAction['actionType']]: (
+    args: Omit<CreateWorkOrderAction & { actionType: actionType }, 'actionType'>,
+  ) => void;
 };
 
 export type UseCreateWorkOrderReactContext = {
@@ -85,7 +88,7 @@ export const useCreateWorkOrderReducer = (
   const [proxy] = useState(
     () =>
       new Proxy<CreateWorkOrderDispatchProxy>({} as CreateWorkOrderDispatchProxy, {
-        get: (target, prop) => (args: DiscriminatedUnionOmit<CreateWorkOrderAction, 'type'>) => {
+        get: (target, prop) => (args: DiscriminatedUnionOmit<CreateWorkOrderAction, 'actionType'>) => {
           const workOrder = workOrderRef.current;
 
           if (workOrder === undefined) {
@@ -94,7 +97,7 @@ export const useCreateWorkOrderReducer = (
 
           setHasUnsavedChanges(true);
           dispatchCreateWorkOrder({
-            type: prop,
+            actionType: prop,
             ...args,
             workOrder,
           } as CreateWorkOrderActionWithWorkOrder);
@@ -111,17 +114,17 @@ function createWorkOrderReducer(
 ): WIPCreateWorkOrder {
   const { workOrder } = action;
 
-  switch (action.type) {
+  switch (action.actionType) {
     case 'setCompany':
     case 'setCustomer':
     case 'setPartial':
     case 'set': {
-      const { type, workOrder, ...partial } = action;
+      const { actionType, workOrder, ...partial } = action;
       const partialNotUndefined: Partial<WIPCreateWorkOrder> = Object.fromEntries(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );
 
-      if (action.type === 'setCustomer') {
+      if (actionType === 'setCustomer') {
         partialNotUndefined.companyId = null;
         partialNotUndefined.companyLocationId = null;
         partialNotUndefined.companyContactId = null;

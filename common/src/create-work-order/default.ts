@@ -9,6 +9,7 @@ export type CreateWorkOrderBase = {
 export const defaultCreateWorkOrder = (base: CreateWorkOrderBase): WIPCreateWorkOrder => ({
   ...base,
   name: null,
+  type: null,
   note: '',
   internalNote: '',
   derivedFromOrderId: null,

@@ -4,6 +4,7 @@ import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.j
 export function workOrderToCreateWorkOrder(workOrder: DetailedWorkOrder): CreateWorkOrder {
   return {
     name: workOrder.name,
+    type: workOrder.type,
     derivedFromOrderId: workOrder.derivedFromOrderId,
     note: workOrder.note,
     internalNote: workOrder.internalNote,

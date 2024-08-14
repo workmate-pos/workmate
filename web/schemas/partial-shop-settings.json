@@ -2,6 +2,63 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "workOrderTypes": {
+      "type": "object",
+      "properties": {
+        "WORK_ORDER": {
+          "type": "object",
+          "properties": {
+            "idFormat": {
+              "type": "string"
+            }
+          },
+          "required": ["idFormat"],
+          "additionalProperties": false
+        },
+        "WARRANTY": {
+          "type": "object",
+          "properties": {
+            "idFormat": {
+              "type": "string"
+            }
+          },
+          "required": ["idFormat"],
+          "additionalProperties": false
+        },
+        "SALE": {
+          "type": "object",
+          "properties": {
+            "idFormat": {
+              "type": "string"
+            }
+          },
+          "required": ["idFormat"],
+          "additionalProperties": false
+        },
+        "BACK_ORDER": {
+          "type": "object",
+          "properties": {
+            "idFormat": {
+              "type": "string"
+            }
+          },
+          "required": ["idFormat"],
+          "additionalProperties": false
+        },
+        "LAYAWAY": {
+          "type": "object",
+          "properties": {
+            "idFormat": {
+              "type": "string"
+            }
+          },
+          "required": ["idFormat"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false,
+      "required": ["WORK_ORDER", "BACK_ORDER", "SALE", "LAYAWAY", "WARRANTY"]
+    },
     "purchaseOrderWebhook": {
       "type": "object",
       "properties": {
@@ -11,10 +68,6 @@
       },
       "required": ["endpointUrl"],
       "additionalProperties": false
-    },
-    "idFormat": {
-      "type": "string",
-      "minLength": 1
     },
     "statuses": {
       "type": "array",

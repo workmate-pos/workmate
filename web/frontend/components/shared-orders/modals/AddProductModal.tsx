@@ -35,7 +35,7 @@ import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/c
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
+import { useAppBridge } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
 
 type AddProductModalProps = AddProductModalPropsBase &
@@ -122,8 +122,6 @@ export function AddProductModal({
       },
     },
   });
-
-  const navigate = useNavigate();
 
   const allProductVariants =
     productVariantsQuery.data?.pages

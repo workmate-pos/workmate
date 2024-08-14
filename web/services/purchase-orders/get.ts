@@ -4,7 +4,7 @@ import { escapeLike } from '../db/like.js';
 import { db } from '../db/db.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
 import { assertGidOrNull, assertInt, assertMoneyOrNull } from '../../util/assertions.js';
-import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';

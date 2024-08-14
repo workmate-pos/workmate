@@ -1,11 +1,9 @@
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
-import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import {
   hasNestedPropertyValue,
   hasNonNullableProperty,
@@ -57,7 +55,6 @@ import { MoneyField } from '@web/frontend/components/MoneyField.js';
 export function WorkOrderItemModal({
   createWorkOrder,
   item: { uuid: itemUuid },
-  workOrder,
   open,
   onClose,
   setToastAction,
@@ -65,7 +62,6 @@ export function WorkOrderItemModal({
 }: {
   createWorkOrder: WIPCreateWorkOrder;
   item: { uuid: string };
-  workOrder: DetailedWorkOrder | null;
   open: boolean;
   onClose: () => void;
   setToastAction: ToastActionCallable;

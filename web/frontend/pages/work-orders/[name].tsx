@@ -41,7 +41,6 @@ import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orde
 import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { WorkOrderPrintModal } from '@web/frontend/components/work-orders/modals/WorkOrderPrintModal.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
@@ -53,6 +52,7 @@ import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { PaymentTermsSelectorModal } from '@web/frontend/components/work-orders/modals/PaymentTermsSelectorModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function () {
   return (
@@ -247,14 +247,28 @@ function WorkOrder({
           <Text as={'h1'} variant={'headingLg'} fontWeight={'bold'}>
             {createWorkOrder.name ?? 'New work order'}
           </Text>
-          <Select
-            label={'Status'}
-            requiredIndicator
-            options={settings.statuses}
-            onChange={status => dispatch.setPartial({ status })}
-            value={createWorkOrder.status}
-            disabled={workOrderMutation.isLoading}
-          />
+
+          <InlineStack gap={'200'}>
+            <Select
+              label={'Type'}
+              requiredIndicator
+              disabled={!settingsQuery.data || !!createWorkOrder.name || workOrderMutation.isLoading}
+              options={[
+                !createWorkOrder.type ? { label: 'None selected', value: '' } : null,
+                ...Object.keys(settings.workOrderTypes).map(type => ({ value: type, label: titleCase(type) })),
+              ].filter(isNonNullable)}
+              onChange={type => dispatch.setPartial({ type: type || null })}
+              value={createWorkOrder.type ?? ''}
+            />
+            <Select
+              label={'Status'}
+              requiredIndicator
+              options={settings.statuses}
+              onChange={status => dispatch.setPartial({ status })}
+              value={createWorkOrder.status}
+              disabled={workOrderMutation.isLoading}
+            />
+          </InlineStack>
         </InlineStack>
 
         <InlineGrid gap={'400'} columns={2}>

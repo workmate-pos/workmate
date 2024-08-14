@@ -16,17 +16,11 @@ import {
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import {
-  hasNestedPropertyValue,
-  hasNonNullableProperty,
-  hasPropertyValue,
-  isNonNullable,
-} from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { WorkOrderItemModal } from '@web/frontend/components/work-orders/modals/WorkOrderItemModal.js';
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
@@ -253,7 +247,6 @@ function ProductsList({
         <WorkOrderItemModal
           createWorkOrder={createWorkOrder}
           item={editItem}
-          workOrder={workOrder}
           open={!!editItem}
           onClose={() => setEditItem(null)}
           setToastAction={setToastAction}

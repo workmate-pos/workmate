@@ -21,12 +21,6 @@ export function CustomFieldValuesModal({ open, onClose, name }: { open: boolean;
   const saveCustomFieldValueOptionsMutation = useSaveCustomFieldValueOptionsMutation({ fetch });
   const deleteCustomFieldValueOptionsMutation = useDeleteCustomFieldValueOptionsMutation({ fetch });
 
-  const isLoading = [
-    customFieldValueOptionsQuery,
-    saveCustomFieldValueOptionsMutation,
-    deleteCustomFieldValueOptionsMutation,
-  ].some(query => query.isLoading);
-
   useEffect(() => {
     if (customFieldValueOptionsQuery.data) {
       setTab(customFieldValueOptionsQuery.data.length > 0 ? 'choose-from-options' : 'allow-any-value');

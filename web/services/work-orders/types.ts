@@ -7,6 +7,7 @@ import { ShopifyOrderType } from '../db/queries/generated/shopify-order.sql.js';
  */
 export type DetailedWorkOrder = {
   name: string;
+  type: string;
   status: string;
   dueDate: DateTime;
   note: string;

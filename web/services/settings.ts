@@ -58,20 +58,23 @@ export async function insertDefaultSettingsIfNotExists(shop: string) {
 }
 
 function assertValidSettings(settings: ShopSettings) {
-  for (const { idFormat, defaultStatus, statuses } of [
+  for (const idFormat of [
+    ...Object.values(settings.workOrderTypes).map(type => type.idFormat),
+    settings.purchaseOrderIdFormat,
+  ]) {
+    assertValidFormatString(idFormat);
+  }
+
+  for (const { defaultStatus, statuses } of [
     {
-      idFormat: settings.idFormat,
       defaultStatus: settings.defaultStatus,
       statuses: settings.statuses,
     },
     {
-      idFormat: settings.purchaseOrderIdFormat,
       defaultStatus: settings.defaultPurchaseOrderStatus,
       statuses: settings.purchaseOrderStatuses,
     },
   ]) {
-    assertValidFormatString(idFormat);
-
     if (!statuses.includes(defaultStatus)) {
       throw new HttpError('Invalid default status', 400);
     }

@@ -1,4 +1,4 @@
-import { Box, Frame, IndexTable, Page, SkeletonBodyText } from '@shopify/polaris';
+import { Frame, IndexTable, Page, SkeletonBodyText } from '@shopify/polaris';
 import { TitleBar } from '@shopify/app-bridge-react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState } from 'react';
@@ -10,7 +10,6 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { Int } from '@web/schemas/generated/pagination-options.js';
 import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export default function () {
   return (

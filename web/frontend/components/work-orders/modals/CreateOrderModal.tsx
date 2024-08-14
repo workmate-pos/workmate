@@ -127,7 +127,7 @@ export function CreateOrderModal({
     >
       <Modal.Section>
         <ResourceList
-          selectable
+          selectable={canChangeSelection}
           selectedItems={[
             ...selectedItems.map(item => getItemId(item)),
             ...selectedCharges.map(charge => getChargeId(charge)),

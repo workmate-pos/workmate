@@ -3,8 +3,10 @@ import { db } from './db/db.js';
 import { useClient } from './db/client.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { getWorkOrderTypeCount } from './work-orders/queries.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
-type Formatters = Record<string, ({ shop }: { shop: string }) => Promise<string> | string>;
+type Formatters<T = unknown> = Record<string, (t: T) => Promise<string> | string>;
 
 const baseFormatters: Formatters = {
   // TODO: adjust to local timezone (timezone setting? take from shopify?)
@@ -15,26 +17,22 @@ const baseFormatters: Formatters = {
   minute: () => new Date().getMinutes().toString(),
 };
 
-const workOrderFormatters: Formatters = {
+const workOrderFormatters: Formatters<{ shop: string; type: string }> = {
   ...baseFormatters,
-  id: ({ shop }) => getNextWorkOrderIdForShop(shop).then(String),
+  id: ({ shop, type }) => getWorkOrderTypeCount({ shop, type }).then(String),
 };
 
-const purchaseOrderFormatters: Formatters = {
+const purchaseOrderFormatters: Formatters<{ shop: string }> = {
   ...baseFormatters,
   id: ({ shop }) => getNextPurchaseOrderIdForShop(shop).then(String),
 };
 
-const stockTransferFormatters: Formatters = {
+const stockTransferFormatters: Formatters<{ shop: string }> = {
   ...baseFormatters,
   id: ({ shop }) => getNextStockTransferIdForShop(shop).then(String),
 };
 
-async function applyFormatters<Arg>(
-  format: string,
-  formatters: Record<string, (arg: Arg) => Promise<string> | string>,
-  arg: Arg,
-) {
+async function applyFormatters<Arg>(format: string, formatters: Formatters<Arg>, arg: Arg) {
   assertValidFormatString(format);
 
   for (const [key, formatter] of Object.entries(formatters)) {
@@ -48,9 +46,18 @@ async function applyFormatters<Arg>(
   return format;
 }
 
-export async function getNewWorkOrderName(shop: string) {
+export async function getNewWorkOrderName(shop: string, type: string) {
   const settings = await getShopSettings(shop);
-  return await applyFormatters(settings.idFormat, workOrderFormatters, { shop });
+
+  const [workOrderType] = Object.entries(settings.workOrderTypes)
+    .filter(([t]) => type === t)
+    .map(type => type[1]);
+
+  if (!workOrderType) {
+    throw new HttpError(`Unknown work order type '${type}'`, 400);
+  }
+
+  return await applyFormatters(workOrderType.idFormat, workOrderFormatters, { shop, type });
 }
 
 export async function getNewPurchaseOrderName(shop: string) {
@@ -61,26 +68,6 @@ export async function getNewPurchaseOrderName(shop: string) {
 export async function getNewStockTransferName(shop: string) {
   const settings = await getShopSettings(shop);
   return await applyFormatters(settings.stockTransferIdFormat, stockTransferFormatters, { shop });
-}
-
-async function getNextWorkOrderIdForShop(shop: string) {
-  await createWorkOrderIdSequenceForShopIfNotExists(shop);
-  const [{ id } = never('Sequence not found')] = await db.sequence.getNextSequenceValue({
-    sequenceName: getWorkOrderIdSequenceNameForShop(shop),
-  });
-
-  return id;
-}
-
-async function createWorkOrderIdSequenceForShopIfNotExists(shop: string) {
-  const query = `CREATE SEQUENCE IF NOT EXISTS "${getWorkOrderIdSequenceNameForShop(shop)}" AS INTEGER;`;
-
-  using client = await useClient();
-  await client.query(query);
-}
-
-function getWorkOrderIdSequenceNameForShop(shop: string) {
-  return `IdSeq_${shop}`;
 }
 
 async function getNextPurchaseOrderIdForShop(shop: string) {

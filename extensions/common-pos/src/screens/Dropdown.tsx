@@ -7,7 +7,7 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 
 export type DropdownProps<T extends string> = {
   title: string;
-  options: readonly T[];
+  options: readonly T[] | readonly { id: T; label: string }[];
   onSelect: (option: T) => void;
   disabled?: boolean;
   useRouter: UseRouter;
@@ -49,18 +49,29 @@ export function Dropdown<const T extends string>({
         )}
 
         {options
-          .filter(option => !query || option.toLowerCase().includes(query.toLowerCase()))
-          .map(option => (
-            <Button
-              key={option}
-              title={option}
-              onPress={() => {
-                onSelect(option);
-                router.popCurrent();
-              }}
-              isDisabled={disabled}
-            />
-          ))}
+          .filter(option => {
+            const label: string =
+              typeof option === 'object' && 'id' in option && 'label' in option ? option.label : option;
+            return !query || label.toLowerCase().includes(query.toLowerCase());
+          })
+          .map(option => {
+            const { id, label } =
+              typeof option === 'object' && 'id' in option && 'label' in option
+                ? option
+                : { id: option, label: option };
+
+            return (
+              <Button
+                key={id}
+                title={label}
+                onPress={() => {
+                  onSelect(id);
+                  router.popCurrent();
+                }}
+                isDisabled={disabled}
+              />
+            );
+          })}
       </ResponsiveGrid>
     </ScrollView>
   );

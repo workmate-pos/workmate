@@ -12,6 +12,10 @@ import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 export type WorkOrderFiltersObj = {
   status?: string;
@@ -21,6 +25,7 @@ export type WorkOrderFiltersObj = {
   overdueStatus?: OverdueStatus;
   purchaseOrderStatus?: PurchaseOrderStatus;
   customFieldFilters: CustomFieldFilter[];
+  type?: string;
 };
 
 export function WorkOrderFilters({
@@ -30,6 +35,12 @@ export function WorkOrderFilters({
   filters: WorkOrderFiltersObj;
   onChange: Dispatch<SetStateAction<WorkOrderFiltersObj>>;
 }) {
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
+
+  const screen = useScreen();
+  screen.setIsLoading(settingsQuery.isLoading);
+
   const [filters, _setFilters] = useState<WorkOrderFiltersObj>(initialFilters);
 
   const setFilters: Dispatch<SetStateAction<WorkOrderFiltersObj>> = arg => {
@@ -50,9 +61,36 @@ export function WorkOrderFilters({
 
   const router = useRouter();
 
+  if (settingsQuery.isError) {
+    return (
+      <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(settingsQuery.error, 'An error occurred while loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (!settingsQuery.data) {
+    return null;
+  }
+
+  const settings = settingsQuery.data.settings;
+
   return (
     <ScrollView>
       <ResponsiveStack direction={'horizontal'} flexWrap={'wrap'} sm={{ direction: 'vertical', flexWrap: undefined }}>
+        <Button
+          title={'Filter type'}
+          type={'plain'}
+          onPress={() =>
+            router.push('Dropdown', {
+              title: 'Select Type',
+              onSelect: type => setFilters(f => ({ ...f, type })),
+              options: Object.keys(settings.workOrderTypes).map(type => ({ id: type, label: titleCase(type) })),
+            })
+          }
+        />
         <Button
           title={'Filter status'}
           type={'plain'}

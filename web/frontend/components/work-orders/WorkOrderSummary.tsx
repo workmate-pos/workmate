@@ -4,7 +4,6 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';

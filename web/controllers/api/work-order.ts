@@ -26,6 +26,7 @@ import { PlanWorkOrderOrder } from '../../schemas/generated/plan-work-order-orde
 import { getDraftOrderInputForExistingWorkOrder } from '../../services/work-orders/draft-order.js';
 import { DraftOrderInput } from '../../services/gql/queries/generated/schema.js';
 import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
+import { ShopSettings } from '../../schemas/generated/shop-settings.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -160,6 +161,8 @@ export default class WorkOrderController {
       companyLocationId: null,
       companyId: null,
       paymentTerms: null,
+      // Maybe make this a setting or something
+      type: 'WORK_ORDER' satisfies keyof ShopSettings['workOrderTypes'],
     });
 
     return res.json({ name });

@@ -5,9 +5,15 @@ import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchas
 import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
 
 const defaultShopSettings: ShopSettings = {
+  workOrderTypes: {
+    WORK_ORDER: { idFormat: 'WO-#{{id}}' },
+    BACK_ORDER: { idFormat: 'BO-#{{id}}' },
+    SALE: { idFormat: 'S-#{{id}}' },
+    LAYAWAY: { idFormat: 'LA-#{{id}}' },
+    WARRANTY: { idFormat: 'W-#{{id}}' },
+  },
   statuses: ['Draft', 'In Progress', 'Done'],
   defaultStatus: 'Draft',
-  idFormat: 'WO-#{{id}}',
   discountShortcuts: [
     { percentage: '10.00' as Decimal, unit: 'percentage' },
     { money: '10.00' as Money, unit: 'currency' },

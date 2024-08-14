@@ -2,7 +2,6 @@ import { Session } from '@shopify/shopify-api';
 import { CreateWorkOrderOrder } from '../../schemas/generated/create-work-order-order.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
-import { db } from '../db/db.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { gql } from '../gql/gql.js';
 import { getWorkOrder } from './queries.js';

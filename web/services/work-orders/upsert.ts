@@ -7,7 +7,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { validateCreateWorkOrder } from './validate.js';
 import { syncWorkOrder } from './sync.js';
-import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 import { ensureCustomersExist } from '../customer/sync.js';
@@ -54,7 +54,7 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
 
     const [workOrder = never()] = await db.workOrder.upsert({
       shop: session.shop,
-      name: await getNewWorkOrderName(session.shop),
+      name: await getNewWorkOrderName(session.shop, createWorkOrder.type),
       derivedFromOrderId: createWorkOrder.derivedFromOrderId,
       customerId: createWorkOrder.customerId,
       companyId: createWorkOrder.companyId,
@@ -68,6 +68,7 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
       discountType: createWorkOrder.discount?.type,
       paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
       paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
+      type: createWorkOrder.type,
     });
 
     await upsertItems(session, createWorkOrder, workOrder.id, []);
@@ -131,6 +132,7 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
         discountType: createWorkOrder.discount?.type,
         paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
         paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
+        type: createWorkOrder.type,
       });
 
       const [currentItems, currentCharges] = await Promise.all([

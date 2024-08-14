@@ -25,7 +25,7 @@ import { useParams } from 'react-router-dom';
 import { useServiceQuery } from '@work-orders/common/queries/use-service-query.js';
 import { createGid, ID, isGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useForm } from '@conform-to/react';
-import { match, P } from 'ts-pattern';
+import { match } from 'ts-pattern';
 import { useServiceMutation } from '@work-orders/common/queries/use-service-mutation.js';
 import { parseWithZod } from '@conform-to/zod';
 import { UpsertService } from '@web/schemas/upsert-service.js';

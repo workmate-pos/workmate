@@ -1,4 +1,4 @@
-import { BlockStack, Button, ButtonGroup, InlineStack, Text, TextField } from '@shopify/polaris';
+import { BlockStack, Button, ButtonGroup, InlineStack, Text } from '@shopify/polaris';
 import { CustomField } from '@web/frontend/components/shared-orders/CustomField.js';
 
 export type CustomFieldsListProps = {

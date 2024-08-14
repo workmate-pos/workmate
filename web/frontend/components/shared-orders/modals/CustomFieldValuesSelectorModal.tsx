@@ -1,4 +1,4 @@
-import { Button, FormLayout, Grid, InlineGrid, InlineStack, Modal, Text, TextField } from '@shopify/polaris';
+import { Button, InlineGrid, Modal, Text, TextField } from '@shopify/polaris';
 import { useState } from 'react';
 import { CustomFieldValuesModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesModal.js';
 

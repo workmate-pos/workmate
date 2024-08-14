@@ -69,9 +69,7 @@ export function NewWorkOrder() {
     return null;
   }
 
-  const createWorkOrder = defaultCreateWorkOrder({
-    status: settingsQuery.data.settings.defaultStatus,
-  });
+  const createWorkOrder = defaultCreateWorkOrder({ status: settingsQuery.data.settings.defaultStatus });
 
   return (
     <WorkOrder

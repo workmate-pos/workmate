@@ -54,6 +54,8 @@ import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
 import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -246,7 +248,11 @@ function WorkOrderProperties({
   createWorkOrder: WIPCreateWorkOrder;
   dispatch: CreateWorkOrderDispatchProxy;
 }) {
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
+
+  const settingsQuery = useSettingsQuery({ fetch });
+  const settings = settingsQuery.data?.settings;
 
   const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
   const { workOrder } = workOrderQuery.data ?? {};
@@ -334,6 +340,25 @@ function WorkOrderProperties({
           value={derivedFromOrder.workOrders.map(workOrder => workOrder.name).join(' • ')}
         />
       )}
+      <FormStringField
+        label={'Type'}
+        required
+        disabled={!settingsQuery.data || !!createWorkOrder.name}
+        onFocus={() => {
+          if (!settings) {
+            toast.show('Settings not loaded, please wait');
+            return;
+          }
+
+          router.push('Dropdown', {
+            title: 'Select Type',
+            onSelect: type => dispatch.setPartial({ type }),
+            options: Object.keys(settings.workOrderTypes).map(type => ({ id: type, label: titleCase(type) })),
+          });
+        }}
+        value={titleCase(createWorkOrder.type ?? '')}
+      />
+
       <FormStringField
         label={'Status'}
         required
