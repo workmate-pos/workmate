@@ -6,6 +6,10 @@ import { StockTransferPaginationOptions } from '../../schemas/generated/stock-tr
 import { StockTransferCountOptions } from '../../schemas/generated/stock-transfer-count-options.js';
 import { Int } from '../../schemas/generated/create-stock-transfer.js';
 import { getStockTransfer, getStockTransferLineItems } from './queries.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { getLineItemsById } from '../work-orders/get.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export async function getDetailedStockTransfer(session: Session, name: string) {
   const stockTransfer = await getStockTransfer({ shop: session.shop, name });
@@ -16,28 +20,30 @@ export async function getDetailedStockTransfer(session: Session, name: string) {
 
   const { note, fromLocationId, toLocationId } = stockTransfer;
 
-  assertGid(fromLocationId);
-  assertGid(toLocationId);
-
   const lineItems = await getStockTransferLineItems(stockTransfer.id);
+  const shopifyLineItemIds = unique(lineItems.map(item => item.shopifyOrderLineItemId).filter(isNonNullable));
+  const shopifyLineItemById = await getLineItemsById(shopifyLineItemIds);
 
   return {
     name,
     fromLocationId,
     toLocationId,
     note,
-    lineItems: lineItems.map(({ uuid, inventoryItemId, status, quantity, productTitle, productVariantTitle }) => {
-      assertGid(inventoryItemId);
-
-      return {
-        uuid,
-        inventoryItemId,
-        status,
-        quantity: quantity as Int,
-        productTitle,
-        productVariantTitle,
-      };
-    }),
+    lineItems: lineItems.map(
+      ({ uuid, inventoryItemId, status, quantity, productTitle, productVariantTitle, shopifyOrderLineItemId }) => {
+        return {
+          uuid,
+          inventoryItemId,
+          status,
+          quantity: quantity as Int,
+          productTitle,
+          productVariantTitle,
+          shopifyOrderLineItem: shopifyOrderLineItemId
+            ? shopifyLineItemById[shopifyOrderLineItemId] ?? never('fk')
+            : null,
+        };
+      },
+    ),
   };
 }
 export async function getStockTransferPage(session: Session, paginationOptions: StockTransferPaginationOptions) {

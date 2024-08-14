@@ -216,6 +216,7 @@ export function StockTransferLineItemScanner({
             quantity: action.quantity,
             productTitle: action.productTitle,
             productVariantTitle: action.productVariantTitle,
+            shopifyOrderLineItem: null,
           },
         ],
       });
@@ -232,6 +233,7 @@ export function StockTransferLineItemScanner({
               quantity: -action.quantity as Int,
               productTitle: action.productTitle,
               productVariantTitle: action.productVariantTitle,
+              shopifyOrderLineItem: null,
             },
           ],
         });

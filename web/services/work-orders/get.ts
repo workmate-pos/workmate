@@ -76,7 +76,7 @@ export async function getDetailedWorkOrder(session: Session, name: string): Prom
   });
 }
 
-async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string, ShopifyOrderLineItem>> {
+export async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string, ShopifyOrderLineItem>> {
   const lineItems = lineItemIds.length ? await db.shopifyOrder.getLineItemsByIds({ lineItemIds }) : [];
   return indexByMap(
     lineItems,

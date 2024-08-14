@@ -15,7 +15,7 @@ import { useInventoryItemQueries } from '@work-orders/common/queries/use-invento
 import { v4 as uuid } from 'uuid';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
-export function ProductSelector({
+export function StockTransferProductSelector({
   locationId,
   dispatch,
 }: {
@@ -138,6 +138,7 @@ function useProductVariantRows(
             status: 'PENDING',
             productVariantTitle: productVariant.title,
             productTitle: productVariant.product.title,
+            shopifyOrderLineItem: null,
           },
         ]);
       },

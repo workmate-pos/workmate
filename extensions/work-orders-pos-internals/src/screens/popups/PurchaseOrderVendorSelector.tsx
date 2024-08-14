@@ -1,13 +1,13 @@
 import { useVendorsQuery, Vendor } from '@work-orders/common/queries/use-vendors-query.js';
 import { useState } from 'react';
 import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { getFormattedAddressSubtitle } from '../../util/formatted-address-subtitle.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
+import { getFormattedAddressSubtitle } from '../../util/formatted-address-subtitle.js';
 
-export function VendorSelector({ onSelect }: { onSelect: (vendor: { vendorName: string }) => void }) {
+export function PurchaseOrderVendorSelector({ onSelect }: { onSelect: (vendor: { vendorName: string }) => void }) {
   const [query, setQuery] = useState('');
 
   const fetch = useAuthenticatedFetch();

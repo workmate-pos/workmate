@@ -8,10 +8,12 @@
   "dependencies": {
     "@work-orders/common": "file:../../common",
     "@work-orders/common-pos": "file:../common-pos",
+    "@work-orders/work-orders-pos-internals": "file:../work-orders-pos-internals",
     "uuid": "^9.0.1"
   },
   "scripts": {
-    "clean": "rm -fr node_modules"
+    "clean": "rm -fr node_modules",
+    "build": "tsc"
   },
   "devDependencies": {
     "@types/uuid": "^9.0.8"

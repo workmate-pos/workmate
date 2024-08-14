@@ -217,32 +217,3 @@ query getFulfillmentOrders($id: ID!) {
     }
   }
 }
-
-
-mutation {
-  fulfillmentOrderSplit(fulfillmentOrderSplits: [
-    {
-      fulfillmentOrderId: "gid://shopify/FulfillmentOrder/6489380520075",
-      fulfillmentOrderLineItems: [{
-        id: "gid://shopify/FulfillmentOrderLineItem/13938832015499",
-        quantity: 2
-      }]
-    }
-  ]) {
-    fulfillmentOrderSplits {
-      fulfillmentOrder {
-        id
-      }
-      remainingFulfillmentOrder {
-        id
-      }
-      replacementFulfillmentOrder {
-        id
-      }
-    }
-    userErrors {
-      field
-      message
-    }
-  }
-}

@@ -20,7 +20,7 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldConfig.js';
 import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 import { ProductCreator, ProductCreatorProps } from '@work-orders/common-pos/screens/product-creator/ProductCreator.js';
-import { PrintOverview } from './screens/popups/PrintOverview.js';
+import { WorkOrderPrintOverview } from './screens/popups/WorkOrderPrintOverview.js';
 import {
   CustomFieldFilterConfig,
   CustomFieldFilterConfigProps,
@@ -55,6 +55,25 @@ import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos
 import { WorkOrderItemFulfillment } from './screens/popups/WorkOrderItemFulfillment.js';
 import { WorkOrderItemFulfillmentHelp } from './screens/popups/WorkOrderItemFulfillmentHelp.js';
 import { WorkOrderItemFulfillmentItem } from './screens/popups/WorkOrderItemFulfillmentItem.js';
+import { StockTransferEntry } from './screens/StockTransferEntry.js';
+import { StockTransfer } from './screens/StockTransfer.js';
+import { StockTransferProductSelector } from './screens/popups/StockTransferProductSelector.js';
+import { StockTransferLineItemScanner } from './screens/popups/StockTransferLineItemScanner.js';
+import { StockTransferLineItemConfig } from './screens/popups/StockTransferLineItemConfig.js';
+import { StockTransferLineItemStatusSelector } from './screens/popups/StockTransferLineItemStatusSelector.js';
+import { ExistingStockTransfer } from './screens/popups/ExistingStockTransfer.js';
+import { ListPopup } from './screens/popups/ListPopup.js';
+import { ScrollView } from '@shopify/retail-ui-extensions-react';
+import { PurchaseOrderEntry } from './screens/PurchaseOrderEntry.js';
+import { PurchaseOrder } from './screens/PurchaseOrder.js';
+import { PurchaseOrderVendorSelector } from './screens/popups/PurchaseOrderVendorSelector.js';
+import { PurchaseOrderEmployeeSelector } from './screens/popups/PurchaseOrderEmployeeSelector.js';
+import { PurchaseOrderProductSelector } from './screens/popups/PurchaseOrderProductSelector.js';
+import { PurchaseOrderProductConfig } from './screens/popups/PurchaseOrderProductConfig.js';
+import { PurchaseOrderPrintOverview } from './screens/PurchaseOrderPrintOverview.js';
+import { PurchaseOrderOrderSelector } from './screens/popups/PurchaseOrderOrderSelector.js';
+import { PurchaseOrderOrderProductSelector } from './screens/popups/PurchaseOrderOrderProductSelector.js';
+import { PurchaseOrderFilterStatusSelector } from './screens/popups/PurchaseOrderFilterStatusSelector.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -211,9 +230,9 @@ export const { Router, useRouter } = createRouter({
       <CustomFieldFilterConfig {...props} useRouter={useRouter} />
     ),
   },
-  PrintOverview: {
+  WorkOrderPrintOverview: {
     title: 'Print',
-    Component: PrintOverview,
+    Component: WorkOrderPrintOverview,
   },
   ItemSelector: {
     title: 'Select item',
@@ -234,5 +253,91 @@ export const { Router, useRouter } = createRouter({
   WorkOrderItemFulfillmentItem: {
     title: 'Work Order Fulfillment Item',
     Component: WorkOrderItemFulfillmentItem,
+  },
+  StockTransferEntry: {
+    title: 'Stock Transfer',
+    Component: () => (
+      <ScreenPermissionBoundary permissions={requiredPermissions}>
+        <StockTransferEntry />
+      </ScreenPermissionBoundary>
+    ),
+  },
+  StockTransfer: {
+    title: 'Stock Transfer',
+    Component: StockTransfer,
+  },
+  StockTransferProductSelector: {
+    title: 'Select Product',
+    Component: StockTransferProductSelector,
+  },
+  StockTransferLineItemScanner: {
+    title: 'Scan Items',
+    Component: StockTransferLineItemScanner,
+  },
+  StockTransferLineItemConfig: {
+    title: 'Line Item Config',
+    Component: StockTransferLineItemConfig,
+  },
+  StockTransferLineItemStatusSelector: {
+    title: 'Select Status',
+    Component: StockTransferLineItemStatusSelector,
+  },
+  ExistingStockTransfer: {
+    title: 'Stock Transfer',
+    Component: ExistingStockTransfer,
+  },
+  ListPopup: {
+    title: 'ListPopup',
+    Component: ListPopup,
+  },
+
+  PurchaseOrderEntry: {
+    title: 'Purchase Orders',
+    Component: () => {
+      return (
+        <ScrollView>
+          <ScreenPermissionBoundary permissions={['read_settings', 'read_purchase_orders', 'read_employees']}>
+            <PurchaseOrderEntry />
+          </ScreenPermissionBoundary>
+        </ScrollView>
+      );
+    },
+  },
+  PurchaseOrder: {
+    title: 'Purchase Order',
+    Component: PurchaseOrder,
+  },
+  PurchaseOrderVendorSelector: {
+    title: 'Select Vendor',
+    Component: PurchaseOrderVendorSelector,
+  },
+  PurchaseOrderEmployeeSelector: {
+    title: 'Select Employee',
+    // TODO: permission boundary here?
+    Component: PurchaseOrderEmployeeSelector,
+  },
+  PurchaseOrderProductSelector: {
+    title: 'Select Product',
+    Component: PurchaseOrderProductSelector,
+  },
+  PurchaseOrderProductConfig: {
+    title: 'Product Config',
+    Component: PurchaseOrderProductConfig,
+  },
+  PurchaseOrderPrintOverview: {
+    title: 'Print Overview',
+    Component: PurchaseOrderPrintOverview,
+  },
+  PurchaseOrderOrderSelector: {
+    title: 'Select Order',
+    Component: PurchaseOrderOrderSelector,
+  },
+  PurchaseOrderOrderProductSelector: {
+    title: 'Select Order Product',
+    Component: PurchaseOrderOrderProductSelector,
+  },
+  PurchaseOrderFilterStatusSelector: {
+    title: 'Select Purchase Order Status',
+    Component: PurchaseOrderFilterStatusSelector,
   },
 });

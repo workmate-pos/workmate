@@ -21,7 +21,7 @@ import { v4 as uuid } from 'uuid';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 
-export function ProductSelector({
+export function PurchaseOrderProductSelector({
   filters: { vendorName, locationId },
   onSelect,
 }: {
@@ -105,9 +105,9 @@ export function ProductSelector({
         <Button
           title={'Select from Order'}
           onPress={() => {
-            router.push('OrderSelector', {
+            router.push('PurchaseOrderOrderSelector', {
               onSelect: orderId => {
-                router.push('OrderProductSelector', {
+                router.push('PurchaseOrderOrderProductSelector', {
                   orderId,
                   onSave: products => {
                     selectProducts(products);

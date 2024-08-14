@@ -14,7 +14,7 @@ type OrderTypeSegment = 'Orders' | 'Draft Orders';
 
 const orderTypeSegments: OrderTypeSegment[] = ['Orders', 'Draft Orders'];
 
-export function OrderSelector({ onSelect }: { onSelect: (orderId: ID) => void }) {
+export function PurchaseOrderOrderSelector({ onSelect }: { onSelect: (orderId: ID) => void }) {
   const [query, setQuery] = useDebouncedState('');
 
   const fetch = useAuthenticatedFetch();

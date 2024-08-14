@@ -219,7 +219,7 @@ function StockTransferItems({
               return;
             }
 
-            router.push('ProductSelector', { locationId: fromLocationId, dispatch });
+            router.push('StockTransferProductSelector', { locationId: fromLocationId, dispatch });
           }}
         />
         <FormButton

@@ -36,7 +36,7 @@ const SEGMENT = {
 
 type SegmentId = (typeof SEGMENT)[keyof typeof SEGMENT];
 
-export function Entry() {
+export function StockTransferEntry() {
   const [selectedSegment, setSelectedSegment] = useState<SegmentId>(SEGMENT.INCOMING_TRANSFERS);
 
   const fetch = useAuthenticatedFetch();

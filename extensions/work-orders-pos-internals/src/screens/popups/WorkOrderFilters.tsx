@@ -84,7 +84,7 @@ export function WorkOrderFilters({
           title={'Filter purchase order status'}
           type={'plain'}
           onPress={() =>
-            router.push('PurchaseOrderStatusSelector', {
+            router.push('PurchaseOrderFilterStatusSelector', {
               onSelect: status => setFilters(f => ({ ...f, purchaseOrderStatus: status })),
             })
           }

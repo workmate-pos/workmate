@@ -7,7 +7,7 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 
-export function EmployeeSelector({
+export function PurchaseOrderEmployeeSelector({
   initialEmployeeAssignments,
   onSave,
 }: {

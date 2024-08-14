@@ -10,7 +10,7 @@ import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.
 import { useRouter } from '../../routes.js';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 
-export function PrintOverview({ name, dueDateUtc }: { name: string; dueDateUtc: Date }) {
+export function WorkOrderPrintOverview({ name, dueDateUtc }: { name: string; dueDateUtc: Date }) {
   const dueDateLocal = new Date(dueDateUtc.getTime() + dueDateUtc.getTimezoneOffset() * MINUTE_IN_MS);
 
   const fetch = useAuthenticatedFetch();

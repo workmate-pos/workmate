@@ -68,17 +68,21 @@ const useInventoryItemBatcher = (fetch: Fetch) =>
     },
   });
 
-export const useInventoryItemQuery = ({
-  fetch,
-  id,
-  locationId,
-}: {
-  fetch: Fetch;
-  id: ID | null;
-  locationId: ID | null;
-}) => {
+export const useInventoryItemQuery = (
+  {
+    fetch,
+    id,
+    locationId,
+  }: {
+    fetch: Fetch;
+    id: ID | null;
+    locationId: ID | null;
+  },
+  options?: { enabled?: boolean },
+) => {
   const batcher = useInventoryItemBatcher(fetch);
   return useQuery({
+    ...options,
     queryKey: ['inventory-item', id, locationId] as const,
     queryFn: () => {
       if (id === null) {

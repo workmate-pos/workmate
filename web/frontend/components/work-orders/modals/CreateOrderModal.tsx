@@ -110,8 +110,8 @@ export function CreateOrderModal({
           createWorkOrderOrderMutation.mutate(
             {
               name: workOrder.name,
-              items: selectedItems.map(item => pick(item, 'type', 'uuid')),
-              charges: selectedCharges.map(charge => pick(charge, 'type', 'uuid')),
+              items: selectedItems.map(item => pick(item, 'uuid')),
+              charges: selectedCharges.map(charge => pick(charge, 'uuid')),
             },
             {
               onSuccess(result) {

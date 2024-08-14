@@ -43,26 +43,25 @@ import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to draft SO line items
-export function PurchaseOrder({
-  initialCreatePurchaseOrder,
-  purchaseOrder,
-}: {
-  initialCreatePurchaseOrder: CreatePurchaseOrder;
-  purchaseOrder: PurchaseOrder | null;
-}) {
+export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
+  const fetch = useAuthenticatedFetch();
   const [query, setQuery] = useState('');
   const { Form } = useForm();
 
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
-    initialCreatePurchaseOrder,
+    initial,
     { useReducer, useState, useRef },
   );
+
+  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: createPurchaseOrder.name });
+  const purchaseOrder = purchaseOrderQuery.data;
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
@@ -76,7 +75,6 @@ export function PurchaseOrder({
   const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, dispatch);
   const addProductPrerequisitesDialog = useAddProductPrerequisitesDialog(createPurchaseOrder, dispatch);
 
-  const fetch = useAuthenticatedFetch();
   const purchaseOrderMutation = usePurchaseOrderMutation(
     { fetch },
     {
@@ -114,7 +112,7 @@ export function PurchaseOrder({
 
   const productRows = useProductRows(
     createPurchaseOrder,
-    purchaseOrder,
+    purchaseOrder ?? null,
     dispatch,
     query,
     purchaseOrderMutation.isLoading,
@@ -293,7 +291,7 @@ export function PurchaseOrder({
                       .join(', ')
               }
               onFocus={() => {
-                router.push('EmployeeSelector', {
+                router.push('PurchaseOrderEmployeeSelector', {
                   initialEmployeeAssignments: createPurchaseOrder.employeeAssignments,
                   onSave: employeeAssignments => dispatch.setPartial({ employeeAssignments }),
                 });
@@ -426,7 +424,7 @@ export function PurchaseOrder({
             disabled={!createPurchaseOrder.name || hasUnsavedChanges}
             onPress={() => {
               if (createPurchaseOrder.name) {
-                router.push('PrintOverview', {
+                router.push('PurchaseOrderPrintOverview', {
                   name: createPurchaseOrder.name,
                 });
               }
@@ -519,7 +517,7 @@ function useProductRows(
           return;
         }
 
-        router.push('ProductConfig', {
+        router.push('PurchaseOrderProductConfig', {
           product,
           locationId,
           onSave: product => dispatch.updateProduct({ product }),
@@ -557,7 +555,7 @@ const useVendorChangeWarningDialog = (
       dialog.show({
         showDialog,
         onAction: () => {
-          router.push('VendorSelector', {
+          router.push('PurchaseOrderVendorSelector', {
             onSelect: vendorDetails => dispatch.setVendor(vendorDetails),
           });
         },
@@ -588,7 +586,7 @@ const useAddProductPrerequisitesDialog = (
   const showDialog = !hasVendor || !hasLocation;
   const onAction = () => {
     if (!hasVendor) {
-      router.push('VendorSelector', {
+      router.push('PurchaseOrderVendorSelector', {
         onSelect: vendorDetails => dispatch.setVendor(vendorDetails),
       });
     } else if (!hasLocation) {
@@ -609,11 +607,8 @@ const useAddProductPrerequisitesDialog = (
         return;
       }
 
-      router.push('ProductSelector', {
-        filters: {
-          vendorName: createPurchaseOrder.vendorName,
-          locationId: createPurchaseOrder.locationId,
-        },
+      router.push('PurchaseOrderProductSelector', {
+        filters: { vendorName: createPurchaseOrder.vendorName, locationId: createPurchaseOrder.locationId },
         onSelect: product => dispatch.addProducts({ products: [product] }),
       });
     }

@@ -5,13 +5,14 @@ export function stockTransferToCreateStockTransfer(stockTransfer: DetailedStockT
   return {
     name: stockTransfer.name,
     lineItems: stockTransfer.lineItems.map<CreateStockTransfer['lineItems'][number]>(
-      ({ inventoryItemId, uuid, status, productVariantTitle, productTitle, quantity }) => ({
+      ({ inventoryItemId, uuid, status, productVariantTitle, productTitle, quantity, shopifyOrderLineItem }) => ({
         inventoryItemId,
         uuid,
         status,
         productVariantTitle,
         productTitle,
         quantity,
+        shopifyOrderLineItem,
       }),
     ),
     note: stockTransfer.note,

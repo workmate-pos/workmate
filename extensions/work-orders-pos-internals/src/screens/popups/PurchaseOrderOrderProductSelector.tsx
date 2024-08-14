@@ -23,7 +23,13 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 /**
  * Similar to ProductSelector, but shows line items of a specific order to be able to link to them.
  */
-export function OrderProductSelector({ orderId, onSave }: { orderId: ID; onSave: (products: Product[]) => void }) {
+export function PurchaseOrderOrderProductSelector({
+  orderId,
+  onSave,
+}: {
+  orderId: ID;
+  onSave: (products: Product[]) => void;
+}) {
   const fetch = useAuthenticatedFetch();
 
   const isDraftOrder = parseGid(orderId).objectName === 'DraftOrder';

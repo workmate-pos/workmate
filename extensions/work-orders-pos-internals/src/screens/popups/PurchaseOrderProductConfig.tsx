@@ -20,7 +20,7 @@ import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 
-export function ProductConfig({
+export function PurchaseOrderProductConfig({
   product: initialProduct,
   purchaseOrder,
   locationId,

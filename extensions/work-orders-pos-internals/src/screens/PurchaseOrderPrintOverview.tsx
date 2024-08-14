@@ -6,10 +6,10 @@ import { RadioButtonList, ScrollView, Stack, Text, useExtensionApi } from '@shop
 import { useState } from 'react';
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
-import { useRouter } from '../routes.js';
 import { usePurchaseOrderPrintJobMutation } from '@work-orders/common/queries/use-purchase-order-print-job-mutation.js';
+import { useRouter } from '../routes.js';
 
-export function PrintOverview({ name }: { name: string }) {
+export function PurchaseOrderPrintOverview({ name }: { name: string }) {
   const fetch = useAuthenticatedFetch();
 
   const settingsQuery = useSettingsQuery({ fetch });

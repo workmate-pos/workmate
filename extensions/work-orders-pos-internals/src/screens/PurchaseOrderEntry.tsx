@@ -18,7 +18,7 @@ import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
-export function Entry() {
+export function PurchaseOrderEntry() {
   const [query, setQuery] = useDebouncedState('');
   const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
 
@@ -80,14 +80,13 @@ export function Entry() {
             const createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
 
             router.push('PurchaseOrder', {
-              initialCreatePurchaseOrder: {
+              initial: {
                 ...createPurchaseOrder,
                 customFields: {
                   ...customFieldsPresetsQuery.data.defaultCustomFields,
                   ...createPurchaseOrder.customFields,
                 },
               },
-              purchaseOrder: null,
             });
           }}
         />
@@ -173,10 +172,7 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
   return purchaseOrders.map<ListRow>(purchaseOrder => ({
     id: purchaseOrder.name,
     onPress: () => {
-      router.push('PurchaseOrder', {
-        initialCreatePurchaseOrder: createPurchaseOrderFromPurchaseOrder(purchaseOrder),
-        purchaseOrder,
-      });
+      router.push('PurchaseOrder', { initial: createPurchaseOrderFromPurchaseOrder(purchaseOrder) });
     },
     leftSide: {
       label: purchaseOrder.name,

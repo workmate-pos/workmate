@@ -168,7 +168,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
           <FormButton
-            title={'Fulfillment'}
+            title={'Sourcing'}
             type={'basic'}
             action={'button'}
             disabled={!createWorkOrder.name || hasUnsavedChanges}
@@ -208,7 +208,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
             disabled={!createWorkOrder.name || hasUnsavedChanges}
             onPress={() => {
               if (createWorkOrder.name) {
-                router.push('PrintOverview', {
+                router.push('WorkOrderPrintOverview', {
                   name: createWorkOrder.name,
                   dueDateUtc: new Date(createWorkOrder.dueDate),
                 });
