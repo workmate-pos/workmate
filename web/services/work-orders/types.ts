@@ -45,11 +45,12 @@ export type DetailedWorkOrderItem = {
   quantity: Int;
   absorbCharges: boolean;
   customFields: Record<string, string>;
+  purchaseOrders: WorkOrderPurchaseOrder[];
+  transferOrders: WorkOrderTransferOrder[];
+  reservations: LineItemReservation[];
 } & (
   | {
       type: 'product';
-      purchaseOrders: WorkOrderPurchaseOrder[];
-      transferOrders: WorkOrderTransferOrder[];
       productVariantId: ID;
     }
   | {
@@ -73,6 +74,11 @@ export type WorkOrderPurchaseOrderItem = {
 export type WorkOrderTransferOrder = {
   name: string;
   items: WorkOrderTransferOrderItem[];
+};
+
+export type LineItemReservation = {
+  locationId: ID;
+  quantity: Int;
 };
 
 export type WorkOrderTransferOrderItem = {

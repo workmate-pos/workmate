@@ -66,10 +66,10 @@ model WorkOrder {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  items                           WorkOrderItem[]
-  charges                         WorkOrderCharge[]
-  customFields                    WorkOrderCustomField[]
-  itemCustomFields                WorkOrderItemCustomField[]
+  items            WorkOrderItem[]
+  charges          WorkOrderCharge[]
+  customFields     WorkOrderCustomField[]
+  itemCustomFields WorkOrderItemCustomField[]
 
   @@unique([shop, name])
 }
@@ -119,8 +119,8 @@ model WorkOrderCharge {
 
   data Json @db.JsonB
 
-  createdAt                    DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt                    DateTime           @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([workOrderId, uuid])
   @@index([shopifyOrderLineItemId])
@@ -177,21 +177,30 @@ model ShopifyOrderLineItem {
   productVariantId String?
   productVariant   ProductVariant? @relation(fields: [productVariantId], references: [productVariantId])
 
-  title               String
-  quantity            Int
-  unfulfilledQuantity Int
-  discountedUnitPrice String // after all discounts, including order-level (proportionally distributed)
-  unitPrice           String // before tax/discounts
-  totalTax            String // for all quantities
+  title                        String
+  quantity                     Int
+  unfulfilledQuantity          Int
+  discountedUnitPrice          String // after all discounts, including order-level (proportionally distributed)
+  unitPrice                    String // before tax/discounts
+  totalTax                     String // for all quantities
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  workOrderItems                  WorkOrderItem[]
-  workOrderCharges                WorkOrderCharge[]
-  purchaseOrderLineItems          PurchaseOrderLineItem[]
+  workOrderItems         WorkOrderItem[]
+  workOrderCharges       WorkOrderCharge[]
+  purchaseOrderLineItems PurchaseOrderLineItem[]
 
   @@index([orderId])
+}
+
+// We track the source of line item quantity. Sources can be POs, TOs, or directly from inventory.
+model ShopifyOrderLineItemReservation {
+  lineItemId String @id
+  locationId String
+  quantity Int
+
+  @@index([locationId])
 }
 
 enum ShopifyOrderType {
@@ -214,8 +223,8 @@ model Employee {
 
   purchaseOrderEmployeeAssignments PurchaseOrderEmployeeAssignment[]
 
-  createdAt                       DateTime                          @default(now()) @db.Timestamptz(3)
-  updatedAt                       DateTime                          @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([shop])
 }
@@ -439,7 +448,7 @@ model StockTransferLineItem {
   // The SO line item that this stock transfer line item will fulfill
   shopifyOrderLineItemId String?
   // We require the order id as well, as the GraphQL API does not link line item to order id, only the other way around
-  shopifyOrderId String?
+  shopifyOrderId         String?
 
   // The quantity pending/sent/received/rejected depending on the status.
   // Line item is split if there are multiple statuses.
@@ -514,8 +523,8 @@ model WorkOrderItemCustomField {
   key   String
   value String
 
-  createdAt                    DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt                    DateTime           @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([workOrderId, workOrderItemUuid, key])
   @@index([key, value])

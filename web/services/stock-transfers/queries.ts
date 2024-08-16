@@ -24,9 +24,9 @@ export async function getStockTransfer(filters: MergeUnion<{ id: number } | { sh
   }>`
     SELECT *
     FROM "StockTransfer"
-    WHERE shop = ${filters?.shop ?? null}
-      AND name = ${filters?.name ?? null}
-      AND id = ${filters?.id ?? null};`;
+    WHERE shop = COALESCE(${filters?.shop ?? null}, shop)
+      AND name = COALESCE(${filters?.name ?? null}, name)
+      AND id = COALESCE(${filters?.id ?? null}, id);`;
 
   if (!stockTransfer) {
     return null;

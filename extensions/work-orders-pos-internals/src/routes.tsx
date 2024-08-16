@@ -74,6 +74,8 @@ import { PurchaseOrderPrintOverview } from './screens/PurchaseOrderPrintOverview
 import { PurchaseOrderOrderSelector } from './screens/popups/PurchaseOrderOrderSelector.js';
 import { PurchaseOrderOrderProductSelector } from './screens/popups/PurchaseOrderOrderProductSelector.js';
 import { PurchaseOrderFilterStatusSelector } from './screens/popups/PurchaseOrderFilterStatusSelector.js';
+import { CreateTransferOrderForLocation } from './screens/popups/CreateTransferOrderForLocation.js';
+import { QuantityAdjustmentList } from './screens/popups/QuantityAdjustmentList.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -339,5 +341,13 @@ export const { Router, useRouter } = createRouter({
   PurchaseOrderFilterStatusSelector: {
     title: 'Select Purchase Order Status',
     Component: PurchaseOrderFilterStatusSelector,
+  },
+  CreateTransferOrderForLocation: {
+    title: 'Select Transfer Order Location',
+    Component: CreateTransferOrderForLocation,
+  },
+  QuantityAdjustmentList: {
+    title: 'Quantity Adjustment List',
+    Component: QuantityAdjustmentList,
   },
 });

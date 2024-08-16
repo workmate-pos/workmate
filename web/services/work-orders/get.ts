@@ -41,6 +41,7 @@ import {
   getStockTransfersByIds,
   getTransferOrderLineItemsByShopifyOrderLineItemIds,
 } from '../stock-transfers/queries.js';
+import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js';
 
 export async function getDetailedWorkOrder(session: Session, name: string): Promise<DetailedWorkOrder | null> {
   const { shop } = session;
@@ -104,8 +105,9 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
 
   const lineItemIds = unique(items.map(item => item.shopifyOrderLineItemId).filter(isNonNullable));
 
-  const [lineItemById, purchaseOrderLineItems, transferOrderLineItems] = await Promise.all([
+  const [lineItemById, lineItemReservations, purchaseOrderLineItems, transferOrderLineItems] = await Promise.all([
     getLineItemsById(lineItemIds),
+    getShopifyOrderLineItemReservationsByIds(lineItemIds),
     getPurchaseOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
     getTransferOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
   ]);
@@ -117,12 +119,16 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
     getPurchaseOrdersByIds(purchaseOrderIds),
     getStockTransfersByIds(transferOrderIds),
   ]);
+
   const purchaseOrderById = indexBy(purchaseOrders, po => String(po.id));
   const transferOrderById = indexBy(transferOrders, po => String(po.id));
 
   return items.map<DetailedWorkOrderItem>(item => {
     const itemCustomFields = customFields.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
+    const itemReservations = !!item.shopifyOrderLineItemId
+      ? lineItemReservations.filter(hasPropertyValue('lineItemId', item.shopifyOrderLineItemId))
+      : [];
     const itemPurchaseOrderLineItems = purchaseOrderLineItems
       .filter(hasPropertyValue('shopifyOrderLineItemId', item.shopifyOrderLineItemId))
       .filter(hasNonNullableProperty('purchaseOrderId'));
@@ -152,8 +158,9 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
         name: to.name,
         items: itemTransferOrderLineItems.filter(hasPropertyValue('stockTransferId', to.id)),
       })),
+      reservations: itemReservations.map(({ quantity, locationId }) => ({ quantity, locationId })),
       customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
-    } as const;
+    } as const satisfies Partial<DetailedWorkOrderItem>;
 
     if (item.data.type === 'product') {
       return {

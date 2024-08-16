@@ -116,19 +116,19 @@ export function getTransferOrderBadge(transferOrder: WorkOrderTransferOrder, inc
     variant = 'highlight';
   }
 
-  let text = titleCase(name);
+  let text = name;
 
-  const incomingTransferOrderItemCount = sum(
+  const receivedTransferOrderItemCount = sum(
     transferOrder.items
-      .filter(item => item.status === 'PENDING' || item.status === 'IN_TRANSIT')
+      .filter(item => item.status === 'RECEIVED' || item.status === 'REJECTED')
       .map(item => item.quantity),
   );
   const transferOrderItemCount = sum(transferOrder.items.map(item => item.quantity));
 
   if (includeQuantity) {
-    text = `${incomingTransferOrderItemCount}/${transferOrderItemCount} • ${text}`;
+    text = `${receivedTransferOrderItemCount}/${transferOrderItemCount} • ${text}`;
   }
-  const status = incomingTransferOrderItemCount < transferOrderItemCount ? 'partial' : 'empty';
+  const status = receivedTransferOrderItemCount > 0 ? 'partial' : 'empty';
 
   return { variant, text, status };
 }

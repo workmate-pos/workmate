@@ -1,108 +1,136 @@
-import { Button, List, ListRow, ScrollView } from '@shopify/retail-ui-extensions-react';
-import { useEffect, useState } from 'react';
+import {
+  Button,
+  ButtonType,
+  List,
+  ListProps,
+  ListRow,
+  ScrollView,
+  Stack,
+  Text,
+} from '@shopify/retail-ui-extensions-react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 
-export type ListPopupItem = Omit<ListRow, 'onPress' | 'rightSide'> & { disabled?: boolean };
+export type ListPopupItem<ID extends string = string> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
+  id: ID;
+  disabled?: boolean;
+};
 
-export type ListPopupProps = {
+export type ListPopupProps<ID extends string = string> = {
   title: string;
   selection:
     | {
         type: 'select';
-        items: ListPopupItem[];
-        onSelect: (item: string) => void;
+        items: ListPopupItem<ID>[];
+        onSelect: (id: ID) => void;
+        onClose?: () => void;
       }
     | {
         type: 'multi-select';
-        items: ListPopupItem[];
-        initialSelection?: string[];
+        items: ListPopupItem<ID>[];
+        initialSelection?: ID[];
         /**
          * Called the moment a selection is made.
          */
-        onSelect?: (items: string[]) => void;
+        onSelect?: (ids: ID[]) => void;
         /**
          * Called when the page is closed.
          */
-        onClose?: (items: string[]) => void;
-        actions?: {
-          save?: {
-            /**
-             * Title of the save button. Defaults to 'Save'.
-             */
-            title?: string;
-            onSave: (items: string[]) => void;
-          };
-        };
+        onClose?: (ids: ID[]) => void;
       };
+  actions?: {
+    title?: string;
+    type?: ButtonType;
+    onAction: (ids: ID[]) => void;
+  }[];
+  emptyState?: ReactNode;
+  imageDisplayStrategy?: ListProps['imageDisplayStrategy'];
 };
 
 /**
  * Similar to dropdown, but shows a list of items instead of a dropdown.
  * Can be used to select from many items or from just one.
  */
-export function ListPopup({ title, selection }: ListPopupProps) {
+export function ListPopup<ID extends string = string>({
+  title,
+  selection,
+  emptyState,
+  imageDisplayStrategy,
+  actions,
+}: ListPopupProps<ID>) {
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(title);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>(
+  const [selectedIds, setSelectedIds] = useState<ID[]>(
     selection.type === 'multi-select' ? selection.initialSelection ?? [] : [],
   );
 
   useEffect(() => {
     screen.addOnNavigateBack(() => {
-      if (selection.type === 'multi-select') {
+      if (selection.type === 'select') {
+        selection.onClose?.();
+      } else if (selection.type === 'multi-select') {
         selection.onClose?.(selectedIds);
+      } else {
+        return selection satisfies never;
       }
     });
   }, [selectedIds]);
 
   return (
     <ScrollView>
-      <List
-        data={selection.items.map<ListRow>(item => ({
-          id: item.id,
-          leftSide: item.leftSide,
-          rightSide: {
-            showChevron: selection.type === 'select',
-            toggleSwitch:
-              selection.type !== 'multi-select'
-                ? undefined
-                : { value: selectedIds.includes(item.id), disabled: item.disabled },
-          },
-          onPress: () => {
-            if (item.disabled) {
-              return;
-            }
+      <Stack direction={'vertical'} spacing={2}>
+        <List
+          imageDisplayStrategy={imageDisplayStrategy}
+          data={selection.items.map<ListRow>(item => ({
+            id: item.id,
+            leftSide: item.leftSide,
+            rightSide: {
+              showChevron: selection.type === 'select' && !item.disabled,
+              toggleSwitch:
+                selection.type !== 'multi-select'
+                  ? undefined
+                  : { value: selectedIds.includes(item.id), disabled: item.disabled },
+            },
+            onPress: async () => {
+              if (item.disabled) {
+                return;
+              }
 
-            if (selection.type === 'select') {
-              selection.onSelect(item.id);
-              router.popCurrent();
-            } else if (selection.type === 'multi-select') {
-              const newSelectedIds = selectedIds.includes(item.id)
-                ? selectedIds.filter(id => id !== item.id)
-                : [...selectedIds, item.id];
+              if (selection.type === 'select') {
+                await router.popCurrent();
+                selection.onSelect(item.id);
+              } else if (selection.type === 'multi-select') {
+                const newSelectedIds = selectedIds.includes(item.id)
+                  ? selectedIds.filter(id => id !== item.id)
+                  : [...selectedIds, item.id];
 
-              setSelectedIds(newSelectedIds);
-              selection.onSelect?.(newSelectedIds);
-            } else {
-              return selection satisfies never;
-            }
-          },
-        }))}
-        onEndReached={() => {}}
-        isLoadingMore={false}
-      />
-      {selection.type === 'multi-select' && selection.actions?.save && (
-        <Button
-          title={selection.actions.save.title ?? 'Save'}
-          onPress={() => {
-            selection.actions?.save?.onSave(selectedIds);
-            router.popCurrent();
-          }}
+                setSelectedIds(newSelectedIds);
+                selection.onSelect?.(newSelectedIds);
+              } else {
+                return selection satisfies never;
+              }
+            },
+          }))}
+          onEndReached={() => {}}
+          isLoadingMore={false}
         />
-      )}
+
+        {selection.items.length === 0 &&
+          (emptyState ?? (
+            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+              <Text color="TextCritical" variant="body">
+                No items found
+              </Text>
+            </Stack>
+          ))}
+
+        {actions?.map(({ title, type, onAction }) => (
+          <Button title={title} type={type} onPress={() => onAction(selectedIds)} />
+        ))}
+      </Stack>
     </ScrollView>
   );
 }

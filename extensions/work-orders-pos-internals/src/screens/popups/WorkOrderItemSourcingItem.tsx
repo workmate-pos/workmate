@@ -150,30 +150,12 @@ export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: strin
               ? `${availableInventoryCount} available at current location`
               : ''}
           </Text>
-          <ResponsiveStack direction={'horizontal'} spacing={1}>
-            {getWorkOrderItemFulfillmentBadges(workOrderQuery.data.workOrder, workOrderItem).map(props => (
+          <ResponsiveStack direction={'horizontal'} spacing={1} flexWrap={'wrap'}>
+            {getWorkOrderItemFulfillmentBadges(workOrderItem).map(props => (
               <Badge {...props} />
             ))}
           </ResponsiveStack>
         </ResponsiveStack>
-
-        <ResponsiveGrid columns={3}>
-          <FormButton
-            action={'submit'}
-            title={'Create Shopify Order'}
-            disabled={hasShopifyOrder}
-            onPress={() =>
-              createWorkOrderOrderMutation.mutate({
-                name: workOrderName,
-                items: [{ uuid: workOrderItem.uuid }],
-                charges: [],
-              })
-            }
-            loading={createWorkOrderOrderMutation.isLoading}
-          />
-          <FormButton action="submit" title={'Create Purchase Order'} loading={createPurchaseOrderMutation.isLoading} />
-          <FormButton action="submit" title={'Create Transfer Order'} loading={createTransferOrderMutation.isLoading} />
-        </ResponsiveGrid>
       </Form>
     </ScrollView>
   );

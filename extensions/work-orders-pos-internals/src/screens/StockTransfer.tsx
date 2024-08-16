@@ -1,7 +1,15 @@
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useStockTransferMutation } from '@work-orders/common/queries/use-stock-transfer-mutation.js';
-import { Banner, List, ListRow, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import {
+  BadgeProps,
+  Banner,
+  List,
+  ListRow,
+  ScrollView,
+  Text,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
@@ -21,6 +29,10 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer-line-item-status-badge-props.js';
+import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
+import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) {
   const [createStockTransfer, dispatch, hasUnsavedChanges, setHasUnsavedChanges] =
@@ -74,9 +86,7 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
           )}
 
           <StockTransferProperties createStockTransfer={createStockTransfer} dispatch={dispatch} />
-
           <StockTransferItems createStockTransfer={createStockTransfer} dispatch={dispatch} />
-
           <FormStringField
             label={'Note'}
             type={'area'}
@@ -98,7 +108,6 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
             title={createStockTransfer.name ? 'Update Stock Transfer' : 'Create Stock Transfer'}
             type="primary"
             action={'submit'}
-            disabled={!hasUnsavedChanges}
             loading={stockTransferMutation.isLoading}
             onPress={() => mutate()}
           />
@@ -250,6 +259,25 @@ function useStockTransferLineItemRows(
   const inventoryItemIds = unique(createStockTransfer.lineItems.map(lineItem => lineItem.inventoryItemId));
   const inventoryItemQueries = useInventoryItemQueries({ fetch, locationId: null, ids: inventoryItemIds });
 
+  const orderIds = unique(
+    createStockTransfer.lineItems
+      .map(lineItem => lineItem.shopifyOrderLineItem?.orderId)
+      .filter(isNonNullable)
+      .filter(id => parseGid(id).objectName === 'Order'),
+  );
+
+  const draftOrderIds = unique(
+    createStockTransfer.lineItems
+      .map(lineItem => lineItem.shopifyOrderLineItem?.orderId)
+      .filter(isNonNullable)
+      .filter(id => parseGid(id).objectName === 'DraftOrder'),
+  );
+
+  const orderQueries = {
+    ...useOrderQueries({ fetch, ids: orderIds }),
+    ...useDraftOrderQueries({ fetch, ids: draftOrderIds }),
+  };
+
   const router = useRouter();
 
   return createStockTransfer.lineItems.map<ListRow>(lineItem => {
@@ -257,6 +285,14 @@ function useStockTransferLineItemRows(
     const hasOnlyDefaultVariant = inventoryItemQuery?.data?.variant?.product?.hasOnlyDefaultVariant ?? false;
     const imageUrl =
       inventoryItemQuery?.data?.variant?.image?.url ?? inventoryItemQuery?.data?.variant?.product?.featuredImage?.url;
+
+    const orderId = lineItem.shopifyOrderLineItem?.orderId;
+    const order = orderId ? orderQueries[orderId]?.data?.order : null;
+
+    const lineItemStatusBadge = getStockTransferLineItemStatusBadgeProps(lineItem.status);
+    const orderBadge: BadgeProps | undefined = orderId
+      ? { variant: 'highlight', text: order?.name ?? 'Unknown order' }
+      : undefined;
 
     return {
       id: lineItem.uuid,
@@ -273,7 +309,7 @@ function useStockTransferLineItemRows(
           source: imageUrl,
           badge: lineItem.quantity,
         },
-        badges: [getStockTransferLineItemStatusBadgeProps(lineItem.status)],
+        badges: [lineItemStatusBadge, orderBadge].filter(isNonNullable),
       },
       rightSide: {
         showChevron: true,
