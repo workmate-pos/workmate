@@ -12,6 +12,18 @@ import { CycleCountPaginationOptions } from '../../schemas/generated/cycle-count
 
 @Authenticated()
 export default class CycleCountController {
+  @Post('/')
+  @BodySchema('create-cycle-count')
+  @Permission('cycle_count')
+  async createCycleCount(req: Request<unknown, unknown, CreateCycleCount>, res: Response<CreateCycleCountResponse>) {
+    const session: Session = res.locals.shopify.session;
+
+    const { name } = await upsertCycleCount(session, req.body);
+    const cycleCount = await getDetailedCycleCount(session, name);
+
+    return res.json(cycleCount);
+  }
+
   @Post('/:name/apply')
   @BodySchema('apply-cycle-count')
   @Permission('cycle_count')
@@ -42,29 +54,6 @@ export default class CycleCountController {
     return res.json(plan);
   }
 
-  @Post('/')
-  @BodySchema('create-cycle-count')
-  @Permission('cycle_count')
-  async createCycleCount(req: Request<unknown, unknown, CreateCycleCount>, res: Response<CreateCycleCountResponse>) {
-    const session: Session = res.locals.shopify.session;
-
-    const { name } = await upsertCycleCount(session, req.body);
-    const cycleCount = await getDetailedCycleCount(session, name);
-
-    return res.json(cycleCount);
-  }
-
-  @Get('/:name')
-  @Permission('cycle_count')
-  async fetchCycleCount(req: Request<{ name: string }>, res: Response<FetchCycleCountResponse>) {
-    const session: Session = res.locals.shopify.session;
-    const { name } = req.params;
-
-    const cycleCount = await getDetailedCycleCount(session, name);
-
-    return res.json(cycleCount);
-  }
-
   @Get('/')
   @QuerySchema('cycle-count-pagination-options')
   @Permission('cycle_count')
@@ -78,6 +67,17 @@ export default class CycleCountController {
     const cycleCounts = await getDetailedCycleCountsPage(session, paginationOptions);
 
     return res.json(cycleCounts);
+  }
+
+  @Get('/:name')
+  @Permission('cycle_count')
+  async fetchCycleCount(req: Request<{ name: string }>, res: Response<FetchCycleCountResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { name } = req.params;
+
+    const cycleCount = await getDetailedCycleCount(session, name);
+
+    return res.json(cycleCount);
   }
 }
 
