@@ -53,9 +53,7 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Session } from '@shopify/retail-ui-extensions';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
-import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
 import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
 
 export type WorkOrderProps = {

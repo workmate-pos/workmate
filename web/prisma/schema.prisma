@@ -52,7 +52,7 @@ model WorkOrder {
 
   paymentTermsTemplateId String?
   // Only applicable for FIXED terms
-  paymentFixedDueDate DateTime?
+  paymentFixedDueDate    DateTime?
 
   derivedFromOrder   ShopifyOrder? @relation(fields: [derivedFromOrderId], references: [orderId])
   derivedFromOrderId String?
@@ -794,4 +794,71 @@ enum AppMigrationStatus {
   PENDING
   SUCCESS
   FAILURE
+}
+
+model CycleCount {
+  id Int @id @default(autoincrement())
+
+  shop String
+  name String
+
+  status     String
+  locationId String
+  note       String
+
+  items CycleCountItem[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([shop, name])
+}
+
+model CycleCountItem {
+  cycleCountId Int
+  cycleCount   CycleCount @relation(fields: [cycleCountId], references: [id])
+
+  uuid String @db.Uuid
+
+  productVariantId String
+  inventoryItemId  String
+  countQuantity    Int
+
+  productTitle        String
+  productVariantTitle String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  applications CycleCountItemApplication[]
+
+  @@id([cycleCountId, uuid])
+}
+
+// We track individual applications for auditing purposes, and to allow partial cycle counts.
+model CycleCountItemApplication {
+  id Int @id @default(autoincrement())
+
+  cycleCountItemUuid String @db.Uuid
+  cycleCountId Int
+  cycleCountItem   CycleCountItem @relation(fields: [cycleCountId, cycleCountItemUuid], references: [cycleCountId, uuid])
+
+  appliedQuantity Int
+
+  // Quantity before this application
+  originalQuantity Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// General purpose table for storing counters.
+// Key should be namespaced or something like that.
+model Counter {
+  id Int @id @default(autoincrement())
+
+  key        String
+  last_value Int
+
+  @@unique([key])
 }

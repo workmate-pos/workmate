@@ -1,64 +1,80 @@
-import { Authenticated, BodySchema, Post } from '@teifi-digital/shopify-app-express/decorators';
-import { PostCycleCount } from '../../schemas/generated/post-cycle-count.js';
+import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services';
-import { gql } from '../../services/gql/gql.js';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Permission } from '../../decorators/permission.js';
+import { applyCycleCountItems, ApplyCycleCountPlan, getCycleCountApplyPlan } from '../../services/cycle-count/apply.js';
+import { CreateCycleCount } from '../../schemas/generated/create-cycle-count.js';
+import { upsertCycleCount } from '../../services/cycle-count/upsert.js';
+import { getDetailedCycleCount, getDetailedCycleCountsPage } from '../../services/cycle-count/get.js';
+import { DetailedCycleCount } from '../../services/cycle-count/types.js';
+import { CycleCountPaginationOptions } from '../../schemas/generated/cycle-count-pagination-options.js';
 
 @Authenticated()
 export default class CycleCountController {
-  @Post('/')
-  @BodySchema('post-cycle-count')
+  @Post('/:name/apply')
   @Permission('cycle_count')
-  async postCycleCount(req: Request<unknown, unknown, PostCycleCount>, res: Response<PostCycleCountResponse>) {
+  async applyCycleCount(req: Request<{ name: string }>, res: Response<ApplyCycleCountResponse>) {
     const session: Session = res.locals.shopify.session;
-    const cycleCount = req.body;
+    const { name } = req.params;
 
-    const productVariantIds = cycleCount.productVariants.map(pv => pv.id);
+    await applyCycleCountItems(session, name);
+    const cycleCount = await getDetailedCycleCount(session, name);
 
-    if (productVariantIds.length === 0) {
-      return res.json({ success: true });
-    }
+    return res.json(cycleCount);
+  }
 
-    if (productVariantIds.length !== unique(productVariantIds).length) {
-      throw new HttpError('Duplicate product variant ids', 400);
-    }
+  @Post('/:name/plan')
+  @Permission('cycle_count')
+  async planCycleCount(req: Request<{ name: string }>, res: Response<PlanCycleCountResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { name } = req.params;
 
-    const graphql = new Graphql(session);
-    const products = await gql.products.getMany.run(graphql, { ids: productVariantIds }).then(res => {
-      return res.nodes.map(node => {
-        if (node?.__typename !== 'ProductVariant') {
-          throw new HttpError('Product variant not found', 400);
-        }
+    const plan = await getCycleCountApplyPlan(session, name);
 
-        return node;
-      });
-    });
+    return res.json(plan);
+  }
 
-    // TODO: Store this in the database for easy undoing. Make sure that we return the current inventory counts in the same query
+  @Post('/')
+  @BodySchema('create-cycle-count')
+  @Permission('cycle_count')
+  async createCycleCount(req: Request<unknown, unknown, CreateCycleCount>, res: Response<CreateCycleCountResponse>) {
+    const session: Session = res.locals.shopify.session;
 
-    const { inventorySetOnHandQuantities } = await gql.inventory.setOnHand.run(graphql, {
-      input: {
-        reason: 'cycle_count_available',
-        setQuantities: products.map(pv => ({
-          locationId: cycleCount.locationId,
-          quantity: cycleCount.productVariants.find(hasPropertyValue('id', pv.id))?.quantity ?? never(),
-          inventoryItemId: pv.inventoryItem.id,
-        })),
-      },
-    });
+    const { name } = await upsertCycleCount(session, req.body);
+    const cycleCount = await getDetailedCycleCount(session, name);
 
-    if (!inventorySetOnHandQuantities) {
-      throw new HttpError('Failed to adjust inventory', 500);
-    }
+    return res.json(cycleCount);
+  }
 
-    return res.json({ success: true });
+  @Get('/:name')
+  @Permission('cycle_count')
+  async fetchCycleCount(req: Request<{ name: string }>, res: Response<FetchCycleCountResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { name } = req.params;
+
+    const cycleCount = await getDetailedCycleCount(session, name);
+
+    return res.json(cycleCount);
+  }
+
+  @Get('/')
+  @QuerySchema('cycle-count-pagination-options')
+  @Permission('cycle_count')
+  async fetchCycleCounts(
+    req: Request<unknown, unknown, unknown, CycleCountPaginationOptions>,
+    res: Response<FetchCycleCountsResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const paginationOptions = req.query;
+
+    const cycleCounts = await getDetailedCycleCountsPage(session, paginationOptions);
+
+    return res.json(cycleCounts);
   }
 }
 
-export type PostCycleCountResponse = { success: true };
+export type ApplyCycleCountResponse = DetailedCycleCount;
+export type CreateCycleCountResponse = DetailedCycleCount;
+export type FetchCycleCountResponse = DetailedCycleCount;
+export type FetchCycleCountsResponse = DetailedCycleCount[];
+export type PlanCycleCountResponse = ApplyCycleCountPlan;

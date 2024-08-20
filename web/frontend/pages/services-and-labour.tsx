@@ -232,7 +232,17 @@ function useServiceRows(setToastAction: ToastActionCallable) {
           return formatHourlyLabourPrice(service.defaultCharges[0], currencyFormatter);
         }
 
-        return currencyFormatter(getTotalPriceForCharges(service.defaultCharges));
+        return currencyFormatter(
+          getTotalPriceForCharges(
+            service.defaultCharges.map(charge =>
+              match(charge)
+                .returnType<Parameters<typeof getTotalPriceForCharges>[0][number]>()
+                .with({ type: 'hourly-labour-charge' }, charge => ({ ...charge, type: 'hourly-labour' }))
+                .with({ type: 'fixed-price-labour-charge' }, labour => ({ ...labour, type: 'fixed-price-labour' }))
+                .exhaustive(),
+            ),
+          ),
+        );
       })
       .otherwise(service => currencyFormatter(service.price));
 

@@ -1,0 +1,322 @@
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { useForm } from '@teifi-digital/pos-tools/form';
+import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import {
+  Badge,
+  Banner,
+  List,
+  ListRow,
+  ScrollView,
+  Stack,
+  Text,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { ProductScanner } from '../components/ProductScanner.js';
+import { Dispatch, SetStateAction, useState } from 'react';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { useRouter } from '../routes.js';
+import { useCycleCountMutation } from '@work-orders/common/queries/use-cycle-count-mutation.ts.js';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { CreateCycleCount } from '@web/schemas/generated/create-cycle-count.js';
+import { useApplyCycleCountMutation } from '@work-orders/common/queries/use-apply-cycle-count-mutation.js';
+import { getCreateCycleCountFromDetailedCycleCount } from '../create-cycle-count/get-create-cycle-count-from-detailed-cycle-count.js';
+import { DetailedCycleCount } from '@web/services/cycle-count/types.js';
+import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { v4 as uuid } from 'uuid';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { getCycleCountApplicationStatusBadge } from './Entry.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+
+export function CycleCount({ initial }: { initial: CreateCycleCount }) {
+  const { Form } = useForm();
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+
+  const [lastSavedCreateCycleCount, setLastSavedCreateCycleCount] = useState(initial);
+  const [createCycleCount, setCreateCycleCount] = useState(initial);
+  const setStatus = getCreateCycleCountSetter(setCreateCycleCount, 'status');
+  const setLocationId = getCreateCycleCountSetter(setCreateCycleCount, 'locationId');
+  const setItems = getCreateCycleCountSetter(setCreateCycleCount, 'items');
+
+  const hasUnsavedChanges = JSON.stringify(createCycleCount) !== JSON.stringify(lastSavedCreateCycleCount);
+
+  const fetch = useAuthenticatedFetch();
+  const cycleCountQuery = useCycleCountQuery({ fetch, name: createCycleCount.name });
+  const locationQuery = useLocationQuery({ fetch, id: createCycleCount.locationId });
+
+  const onMutateSuccess = (cycleCount: DetailedCycleCount) => {
+    const createCycleCount = getCreateCycleCountFromDetailedCycleCount(cycleCount);
+    setLastSavedCreateCycleCount(createCycleCount);
+    setCreateCycleCount(createCycleCount);
+    toast.show(`Saved cycle count ${createCycleCount.name}`);
+  };
+
+  const cycleCountMutation = useCycleCountMutation({ fetch });
+  const applyCycleCountMutation = useApplyCycleCountMutation({ fetch });
+
+  const locationName = locationQuery.isLoading ? 'Loading...' : locationQuery.data?.name ?? 'Unknown location';
+
+  const rows = useItemRows(createCycleCount, setCreateCycleCount);
+
+  const router = useRouter();
+  const screen = useScreen();
+  screen.setIsLoading(cycleCountQuery.isLoading);
+
+  return (
+    <Form disabled={cycleCountMutation.isLoading || applyCycleCountMutation.isLoading}>
+      <ScrollView>
+        <ResponsiveStack spacing={2} direction={'vertical'}>
+          {cycleCountMutation.isError && (
+            <Banner
+              visible
+              title={'Could not update cycle count'}
+              variant={'error'}
+              action={extractErrorMessage(
+                cycleCountMutation.error,
+                'An unknown error occurred while saving this cycle count',
+              )}
+            />
+          )}
+
+          {applyCycleCountMutation.isError && (
+            <Banner
+              visible
+              title={'Could not apply cycle count'}
+              variant={'error'}
+              action={extractErrorMessage(
+                applyCycleCountMutation.error,
+                'An unknown error occurred while applying this cycle count',
+              )}
+            />
+          )}
+
+          {!!createCycleCount.name && (
+            <ResponsiveStack direction={'horizontal'} alignment={'space-between'} flex={1}>
+              <Text variant={'headingLarge'}>{createCycleCount.name}</Text>
+
+              {cycleCountQuery.data && (
+                <Badge {...getCycleCountApplicationStatusBadge(cycleCountQuery.data.applicationStatus)} />
+              )}
+            </ResponsiveStack>
+          )}
+
+          <ResponsiveGrid columns={4} grow>
+            <FormStringField
+              label={'Status'}
+              value={createCycleCount.status}
+              required
+              onFocus={() =>
+                router.push('ListPopup', {
+                  title: 'Select Status',
+                  selection: {
+                    type: 'select',
+                    items: ['Draft', 'Completed'].map(item => ({ id: item, leftSide: { label: item } })),
+                    onSelect: setStatus,
+                  },
+                  imageDisplayStrategy: 'never',
+                })
+              }
+            />
+
+            <FormStringField
+              label={'Location'}
+              type={'normal'}
+              value={locationName}
+              disabled={
+                !!createCycleCount.name &&
+                createCycleCount.items.length > 0 &&
+                cycleCountQuery.data?.applicationStatus !== 'NOT_APPLIED'
+              }
+              onFocus={() =>
+                router.push('LocationSelector', {
+                  selection: {
+                    type: 'select',
+                    onSelect: location => setLocationId(location.id),
+                  },
+                })
+              }
+            />
+
+            <FormButton
+              title={'Import Products'}
+              type={'primary'}
+              onPress={() => {
+                router.push('CycleCountProductSelector', {
+                  onSelect: productVariants => {
+                    setItems(current => {
+                      const knownProductVariantIds = new Set(current.map(item => item.productVariantId));
+
+                      return [
+                        ...current,
+                        ...productVariants
+                          .filter(pv => !knownProductVariantIds.has(pv.id))
+                          .map(pv => ({
+                            productVariantTitle: pv.title,
+                            productTitle: pv.product.title,
+                            uuid: uuid(),
+                            productVariantId: pv.id,
+                            countQuantity: 0,
+                            inventoryItemId: pv.inventoryItem.id,
+                          })),
+                      ];
+                    });
+                  },
+                });
+              }}
+            />
+
+            <ProductScanner
+              onProductScanned={productVariant =>
+                setItems(current => {
+                  const { uuid: itemUuid, countQuantity } = current.find(
+                    item => item.productVariantId === productVariant.id,
+                  ) ?? {
+                    uuid: uuid(),
+                    countQuantity: 0,
+                  };
+
+                  return [
+                    {
+                      uuid: itemUuid,
+                      productVariantTitle: productVariant.title,
+                      productTitle: productVariant.product.title,
+                      productVariantId: productVariant.id,
+                      inventoryItemId: productVariant.inventoryItem.id,
+                      countQuantity: countQuantity + 1,
+                    },
+                    ...current.filter(item => item.productVariantId !== productVariant.id),
+                  ];
+                })
+              }
+            />
+          </ResponsiveGrid>
+
+          <List data={rows} imageDisplayStrategy={'always'} />
+          {rows.length === 0 && (
+            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+              <Text variant="body" color="TextSubdued">
+                No products scanned
+              </Text>
+            </Stack>
+          )}
+        </ResponsiveStack>
+      </ScrollView>
+
+      <ResponsiveStack
+        direction={'vertical'}
+        spacing={0.5}
+        paddingVertical={'HalfPoint'}
+        paddingHorizontal={'HalfPoint'}
+        flex={0}
+      >
+        <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
+          <FormButton
+            title={'History'}
+            onPress={() => router.push('CycleCountApplications', { name: createCycleCount.name })}
+            disabled={!createCycleCount.name}
+            type={'primary'}
+          />
+
+          <FormButton
+            title={'Apply'}
+            onPress={() => {
+              if (!createCycleCount.name) {
+                toast.show('You must save your cycle count before applying it');
+                return;
+              }
+
+              return applyCycleCountMutation.mutate(createCycleCount.name, { onSuccess: onMutateSuccess });
+            }}
+            loading={applyCycleCountMutation.isLoading}
+            type={'primary'}
+            disabled={
+              !createCycleCount.name ||
+              hasUnsavedChanges ||
+              !cycleCountQuery.data ||
+              cycleCountQuery.data.applicationStatus === 'APPLIED'
+            }
+          />
+
+          <FormButton
+            action={'submit'}
+            title={'Save'}
+            onPress={() => cycleCountMutation.mutate(createCycleCount, { onSuccess: onMutateSuccess })}
+            loading={cycleCountMutation.isLoading}
+            type={'primary'}
+            disabled={!hasUnsavedChanges}
+          />
+        </ResponsiveGrid>
+      </ResponsiveStack>
+    </Form>
+  );
+}
+
+function useItemRows(
+  { name, items }: Pick<CreateCycleCount, 'name' | 'items'>,
+  setCreateCycleCount: Dispatch<SetStateAction<CreateCycleCount>>,
+) {
+  const setItems = getCreateCycleCountSetter(setCreateCycleCount, 'items');
+
+  const fetch = useAuthenticatedFetch();
+  const cycleCountQuery = useCycleCountQuery({ fetch, name });
+  const productVariantIds = unique(items.map(item => item.productVariantId));
+  const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
+
+  const router = useRouter();
+
+  return items.map<ListRow>(item => {
+    const productVariantQuery = productVariantQueries[item.productVariantId]!;
+    const productVariant = productVariantQuery.data;
+    const cycleCountItem = cycleCountQuery.data?.items.find(hasPropertyValue('uuid', item.uuid));
+
+    const label =
+      getProductVariantName(
+        productVariant ?? {
+          title: item.productVariantTitle,
+          product: { title: item.productTitle, hasOnlyDefaultVariant: false },
+        },
+      ) ?? 'Unknown Product';
+
+    return {
+      id: item.uuid,
+      onPress: () => {
+        router.push('ItemConfig', {
+          name,
+          item,
+          onRemove: () => setItems(current => current.filter(x => x.uuid !== item.uuid)),
+          onSave: ({ quantity }) =>
+            setItems(current => current.map(x => (x.uuid === item.uuid ? { ...x, countQuantity: quantity } : x))),
+        });
+      },
+      leftSide: {
+        label: label,
+        image: {
+          source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
+          badge: item.countQuantity,
+        },
+        badges: [getCycleCountApplicationStatusBadge(cycleCountItem?.applicationStatus ?? 'NOT_APPLIED')],
+      },
+      rightSide: {
+        showChevron: true,
+      },
+    };
+  });
+}
+
+function getCreateCycleCountSetter<K extends keyof CreateCycleCount>(
+  setCreateCycleCount: Dispatch<SetStateAction<CreateCycleCount>>,
+  key: K,
+): Dispatch<SetStateAction<CreateCycleCount[K]>> {
+  return arg => {
+    if (typeof arg === 'function') {
+      setCreateCycleCount(current => ({ ...current, [key]: arg(current[key]) }));
+    } else {
+      setCreateCycleCount(current => ({ ...current, [key]: arg }));
+    }
+  };
+}

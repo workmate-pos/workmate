@@ -187,6 +187,23 @@ mutation create($input: ProductInput!) {
   }
 }
 
+mutation createVariants(
+  $productId: ID!,
+  $strategy: ProductVariantsBulkCreateStrategy!,
+  $variants: [ProductVariantsBulkInput!]!
+) {
+  productVariantsBulkCreate(productId: $productId, strategy: $strategy, variants: $variants) {
+    userErrors {
+      field
+      message
+    }
+    productVariants {
+      ...ProductVariantFragment
+    }
+
+  }
+}
+
 fragment DatabaseProductFragment on Product {
   id
   handle

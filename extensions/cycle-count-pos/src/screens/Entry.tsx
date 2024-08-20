@@ -1,179 +1,146 @@
-import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { Banner, List, ListRow, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { ProductScanner } from '../components/ProductScanner.js';
-import { Dispatch, SetStateAction, useState } from 'react';
-import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
+import { useCycleCountPageQuery } from '@work-orders/common/queries/use-cycle-count-page-query.js';
+import { BadgeProps, Button, List, ListRow, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
-import { useCycleCountMutation } from '@work-orders/common/queries/use-cycle-count-mutation.ts.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { Int } from '@web/schemas/generated/create-product.js';
+import { useEffect, useState } from 'react';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
+import { sum } from '@teifi-digital/shopify-app-toolbox/array';
+import { CycleCountApplicationStatus } from '@web/services/cycle-count/types.js';
+import { getCreateCycleCountFromDetailedCycleCount } from '../create-cycle-count/get-create-cycle-count-from-detailed-cycle-count.js';
+import { getDefaultCreateCycleCount } from '../create-cycle-count/default.js';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function Entry() {
-  const { Form } = useForm();
-  const { toast, navigation, session } = useExtensionApi<'pos.home.modal.render'>();
-
-  const locationId = createGid('Location', session.currentSession.locationId.toString());
-  const [products, setProducts] = useState<Record<ID, number>>({});
-
-  // TODO: Allow adding arbitrary products as well
-
+  const [query, setQuery] = useDebouncedState('');
   const fetch = useAuthenticatedFetch();
-  const locationQuery = useLocationQuery({ fetch, id: locationId });
 
-  const cycleCountMutation = useCycleCountMutation(
-    { fetch },
-    {
-      onSuccess() {
-        toast.show('Updated inventory!');
-        navigation.dismiss();
-      },
+  const cycleCountPageQuery = useCycleCountPageQuery({
+    fetch,
+    filters: {
+      query,
     },
-  );
-
-  const locationName = (() => {
-    if (!locationId) {
-      return '';
-    }
-
-    if (locationQuery.isLoading) {
-      return 'Loading...';
-    }
-
-    return locationQuery.data?.name ?? 'Unknown location';
-  })();
-
-  const rows = useProductRows(products, setProducts);
+  });
 
   const router = useRouter();
 
+  const [selectedCycleCountName, setSelectedCycleCountName] = useState<string>();
+  const selectedCycleCountQuery = useCycleCountQuery({ fetch, name: selectedCycleCountName ?? null }, { staleTime: 0 });
+
+  const screen = useScreen();
+  screen.setIsLoading(selectedCycleCountQuery.isLoading);
+
+  const { session } = useExtensionApi<'pos.home.modal.render'>();
+
+  useEffect(() => {
+    if (selectedCycleCountQuery.data) {
+      const initial = getCreateCycleCountFromDetailedCycleCount(selectedCycleCountQuery.data);
+      router.push('CycleCount', { initial });
+      setSelectedCycleCountName(undefined);
+    }
+  }, [selectedCycleCountQuery.data]);
+
   return (
-    <Form disabled={cycleCountMutation.isLoading}>
-      <ResponsiveStack spacing={4} direction={'vertical'}>
-        <Banner
-          visible={cycleCountMutation.isError}
-          title={'Could not update inventory'}
-          variant={'error'}
-          action={extractErrorMessage(cycleCountMutation.error, '')}
-        />
-
-        <ResponsiveGrid columns={4} grow>
-          <FormStringField label={'Location'} type={'normal'} value={locationName} disabled />
-
-          <FormButton
-            title={'Select Vendor'}
+    <>
+      <ResponsiveStack
+        direction={'horizontal'}
+        alignment={'space-between'}
+        paddingVertical={'Small'}
+        sm={{ direction: 'vertical', alignment: 'center' }}
+      >
+        <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center', paddingVertical: 'Small' }}>
+          <Text variant="headingLarge">Cycle Counts</Text>
+        </ResponsiveStack>
+        <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
+          <Button
+            title={'New Cycle Count'}
+            type={'primary'}
             onPress={() =>
-              router.push('VendorSelector', {
-                onSelect: (vendorName, productVariantIds) => {
-                  toast.show(`Added products from vendor ${vendorName}`);
-                  setProducts(products => ({
-                    ...Object.fromEntries(productVariantIds.map(productVariantId => [productVariantId, 0])),
-                    ...products,
-                  }));
-                },
+              router.push('CycleCount', {
+                initial: getDefaultCreateCycleCount(
+                  createGid('Location', session.currentSession.locationId.toString()),
+                ),
               })
             }
           />
-
-          <ProductScanner
-            onProductScanned={productVariantId =>
-              setProducts(products => {
-                const newProducts = { ...products };
-                newProducts[productVariantId] ??= 0;
-                newProducts[productVariantId] += 1;
-                return newProducts;
-              })
-            }
-          />
-
-          <FormButton title={'Clear'} onPress={() => setProducts({})} type={'destructive'} />
-        </ResponsiveGrid>
-
-        <List data={rows} imageDisplayStrategy={'always'} />
-        {rows.length === 0 && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text variant="body" color="TextSubdued">
-              No products scanned
-            </Text>
-          </Stack>
-        )}
-
-        <FormButton
-          title={'Save'}
-          type={'primary'}
-          action={'submit'}
-          disabled={Object.values(products).length === 0}
-          loading={cycleCountMutation.isLoading}
-          onPress={() =>
-            cycleCountMutation.mutate({
-              locationId,
-              productVariants: Object.entries(products).map(([productVariantId, quantity]) => ({
-                id: productVariantId as ID,
-                quantity: quantity as Int,
-              })),
-            })
-          }
-        />
+        </ResponsiveStack>
       </ResponsiveStack>
-    </Form>
+
+      <ResponsiveStack direction={'horizontal'} alignment={'center'} flex={1} paddingHorizontal={'HalfPoint'}>
+        <Text variant="body" color="TextSubdued">
+          {cycleCountPageQuery.isRefetching ? 'Loading...' : ' '}
+        </Text>
+      </ResponsiveStack>
+
+      <ControlledSearchBar
+        value={query}
+        onTextChange={query => setQuery(query, !query)}
+        onSearch={() => {}}
+        placeholder={'Search cycle counts'}
+      />
+      <List
+        imageDisplayStrategy={'always'}
+        data={
+          cycleCountPageQuery.data?.pages.flat().map<ListRow>(cycleCount => {
+            return {
+              id: cycleCount.name,
+              onPress: () => setSelectedCycleCountName(cycleCount.name),
+              leftSide: {
+                label: cycleCount.name,
+                image: {
+                  badge: sum(cycleCount.items.map(item => item.countQuantity)),
+                },
+                badges: [getCycleCountApplicationStatusBadge(cycleCount.applicationStatus)],
+              },
+              rightSide: {
+                showChevron: true,
+              },
+            };
+          }) ?? []
+        }
+        onEndReached={cycleCountPageQuery.fetchNextPage}
+        isLoadingMore={cycleCountPageQuery.isFetchingNextPage}
+      />
+
+      {cycleCountPageQuery.isLoading && (
+        <ResponsiveStack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            Loading cycle counts...
+          </Text>
+        </ResponsiveStack>
+      )}
+
+      {cycleCountPageQuery.isSuccess && cycleCountPageQuery.data?.pages.length === 0 && (
+        <ResponsiveStack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text variant="body" color="TextSubdued">
+            No cycle counts found
+          </Text>
+        </ResponsiveStack>
+      )}
+
+      {cycleCountPageQuery.isError && (
+        <ResponsiveStack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+          <Text color="TextCritical" variant="body">
+            {extractErrorMessage(cycleCountPageQuery.error, 'An error occurred while loading cycle counts')}
+          </Text>
+        </ResponsiveStack>
+      )}
+    </>
   );
 }
 
-function useProductRows(products: Record<ID, number>, setProducts: Dispatch<SetStateAction<Record<ID, number>>>) {
-  const fetch = useAuthenticatedFetch();
-  const ids = Object.keys(products) as ID[];
-  const productVariantQueries = useProductVariantQueries({ fetch, ids });
+export function getCycleCountApplicationStatusBadge(applicationStatus: CycleCountApplicationStatus): BadgeProps {
+  if (applicationStatus === 'NOT_APPLIED') {
+    return { text: 'Not Applied', variant: 'highlight', status: 'empty' };
+  }
 
-  const router = useRouter();
+  if (applicationStatus === 'PARTIALLY_APPLIED') {
+    return { text: 'Partially Applied', variant: 'highlight', status: 'partial' };
+  }
 
-  return ids.map<ListRow>(id => {
-    const productVariantQuery = productVariantQueries[id]!;
-
-    const productVariant = productVariantQuery.data;
-    const name = productVariantQuery.isLoading
-      ? 'Loading...'
-      : getProductVariantName(productVariant) ?? 'Unknown Product';
-
-    const quantity = products[id] ?? 0;
-
-    return {
-      id,
-      onPress: () => {
-        router.push('ProductConfig', {
-          productVariantId: id,
-          quantity,
-          onRemove: () =>
-            setProducts(products => {
-              const newProducts = { ...products };
-              delete newProducts[id];
-              return newProducts;
-            }),
-          onSave: quantity => {
-            setProducts(products => {
-              const newProducts = { ...products };
-              newProducts[id] = quantity;
-              return newProducts;
-            });
-          },
-        });
-      },
-      leftSide: {
-        label: name,
-        image: {
-          source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
-          badge: quantity,
-        },
-      },
-      rightSide: {
-        showChevron: true,
-      },
-    };
-  });
+  return { text: 'Applied', variant: 'success', status: 'complete' };
 }

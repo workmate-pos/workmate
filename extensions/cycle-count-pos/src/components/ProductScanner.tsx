@@ -14,6 +14,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 
 /**
  * Component that handles product scanning.
@@ -21,7 +22,7 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
  * Displays whether a scanner has been found or not.
  * Allows for opening the camera if present.
  */
-export function ProductScanner({ onProductScanned }: { onProductScanned: (productVariantId: ID) => void }) {
+export function ProductScanner({ onProductScanned }: { onProductScanned: (productVariant: ProductVariant) => void }) {
   const sources = useScannerSourcesSubscription();
 
   const noSourcesAvailableText = sources.length === 0 ? <Text color={'TextCritical'}>No scanners found</Text> : null;
@@ -67,7 +68,7 @@ export function ProductScanner({ onProductScanned }: { onProductScanned: (produc
           return false;
         }
 
-        onProductScanned(query.data.id);
+        onProductScanned(query.data);
         const name = getProductVariantName(query.data) ?? 'Unknown Product';
         toast.show(`Scanned ${name}`);
         return false;
