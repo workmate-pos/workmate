@@ -35,24 +35,7 @@ const isAppMigrate = process.env.APP_MIGRATE === 'true';
 
 const appConfig: ShopifyAppConfig = {
   api: {
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // TODO
-    // @ts-expect-error XD
-    apiVersion: '2024-07',
-    // apiVersion: ApiVersion.April24, // TODO: @Tim update to latest
+    apiVersion: ApiVersion.July24,
     restResources,
   },
   sessionStorage,
