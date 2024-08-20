@@ -5,7 +5,7 @@ import {
   getCycleCountItemApplications,
   getCycleCountItems,
 } from './queries.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unit } from '../db/unit-of-work.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
@@ -13,6 +13,9 @@ import { gql } from '../gql/gql.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+
+const COMPARE_QUANTITY_MISMATCH_ERROR_MESSAGE =
+  'The compareQuantity argument no longer matches the persisted quantity.';
 
 export async function applyCycleCountItems(session: Session, plan: ApplyCycleCountPlan) {
   const { cycleCountName, itemApplications } = plan;
@@ -58,22 +61,38 @@ export async function applyCycleCountItems(session: Session, plan: ApplyCycleCou
     );
 
     // TODO: Check which error this gives when compareQuantity does not match and show it to the user in a nice way
-    await gql.inventory.setQuantities.run(graphql, {
-      input: {
-        ignoreCompareQuantity: false,
-        name: QUANTITY_NAME,
-        reason: 'cycle_count_available',
-        referenceDocumentUri: `workmate://cycle-count/${encodeURIComponent(cycleCount.name)}`,
-        quantities: itemApplications.map(({ originalQuantity, countQuantity, uuid }) => ({
-          compareQuantity: originalQuantity,
-          locationId: cycleCount.locationId,
-          quantity: countQuantity,
-          inventoryItemId:
-            items.find(hasPropertyValue('uuid', uuid))?.inventoryItemId ??
-            never('We already threw above if there was no associated item'),
-        })),
-      },
-    });
+
+    try {
+      await gql.inventory.setQuantities.run(graphql, {
+        input: {
+          ignoreCompareQuantity: false,
+          name: QUANTITY_NAME,
+          reason: 'cycle_count_available',
+          referenceDocumentUri: `workmate://cycle-count/${encodeURIComponent(cycleCount.name)}`,
+          quantities: itemApplications.map(({ originalQuantity, countQuantity, uuid }) => ({
+            compareQuantity: originalQuantity,
+            locationId: cycleCount.locationId,
+            quantity: countQuantity,
+            inventoryItemId:
+              items.find(hasPropertyValue('uuid', uuid))?.inventoryItemId ??
+              never('We already threw above if there was no associated item'),
+          })),
+        },
+      });
+    } catch (error) {
+      if (
+        // TODO: Use userErrors.code for this - COMPARE_QUANTITY_STALE
+        error instanceof GraphqlUserErrors &&
+        error.userErrors.some(userError => userError.message === COMPARE_QUANTITY_MISMATCH_ERROR_MESSAGE)
+      ) {
+        throw new HttpError(
+          'The inventory quantities of some items have changed since this overview was shown. A concurrent count may have occurred. Reload this tab to view an accurate count.',
+          400,
+        );
+      }
+
+      throw error;
+    }
   });
 }
 

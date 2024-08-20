@@ -47,7 +47,12 @@ export function ItemConfig({
   return (
     <ScrollView>
       <ResponsiveStack direction={'vertical'} spacing={2}>
-        <ResponsiveStack direction={'horizontal'} alignment={'space-between'} paddingVertical={'ExtraLarge'}>
+        <ResponsiveStack
+          direction={'horizontal'}
+          alignment={'space-between'}
+          paddingVertical={'ExtraLarge'}
+          flexWrap={'wrap'}
+        >
           <Text variant={'headingLarge'}>{label}</Text>
           <Badge {...getCycleCountApplicationStatusBadge(cycleCountItem?.applicationStatus ?? 'NOT_APPLIED')} />
         </ResponsiveStack>

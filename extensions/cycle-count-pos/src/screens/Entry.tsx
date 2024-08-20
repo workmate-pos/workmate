@@ -32,17 +32,17 @@ export function Entry() {
   const selectedCycleCountQuery = useCycleCountQuery({ fetch, name: selectedCycleCountName ?? null }, { staleTime: 0 });
 
   const screen = useScreen();
-  screen.setIsLoading(selectedCycleCountQuery.isLoading);
+  screen.setIsLoading(selectedCycleCountQuery.isFetching);
 
   const { session } = useExtensionApi<'pos.home.modal.render'>();
 
   useEffect(() => {
-    if (selectedCycleCountQuery.data) {
+    if (selectedCycleCountQuery.data && !selectedCycleCountQuery.isFetching) {
       const initial = getCreateCycleCountFromDetailedCycleCount(selectedCycleCountQuery.data);
       router.push('CycleCount', { initial });
       setSelectedCycleCountName(undefined);
     }
-  }, [selectedCycleCountQuery.data]);
+  }, [selectedCycleCountQuery.data, selectedCycleCountQuery.isFetching]);
 
   return (
     <>
@@ -133,14 +133,36 @@ export function Entry() {
   );
 }
 
-export function getCycleCountApplicationStatusBadge(applicationStatus: CycleCountApplicationStatus): BadgeProps {
+/**
+ * Create a badge for some application status.
+ * If `changed` is true, the status will be adjusted to indicate this by transforming applied into partially applied.
+ */
+export function getCycleCountApplicationStatusBadge(
+  applicationStatus: CycleCountApplicationStatus,
+  quantities?: {
+    countQuantity: number;
+    appliedQuantity: number;
+  },
+): BadgeProps {
+  const changed = quantities?.appliedQuantity !== quantities?.countQuantity;
+
   if (applicationStatus === 'NOT_APPLIED') {
     return { text: 'Not Applied', variant: 'highlight', status: 'empty' };
   }
 
-  if (applicationStatus === 'PARTIALLY_APPLIED') {
-    return { text: 'Partially Applied', variant: 'highlight', status: 'partial' };
+  if (applicationStatus === 'PARTIALLY_APPLIED' || (applicationStatus === 'APPLIED' && changed)) {
+    let text = 'Partially Applied';
+
+    if (quantities) {
+      text += ` (${quantities.appliedQuantity})`;
+    }
+
+    return { text, variant: 'highlight', status: 'partial' };
   }
 
-  return { text: 'Applied', variant: 'success', status: 'complete' };
+  if (applicationStatus === 'APPLIED') {
+    return { text: 'Applied', variant: 'success', status: 'complete' };
+  }
+
+  return applicationStatus satisfies never;
 }

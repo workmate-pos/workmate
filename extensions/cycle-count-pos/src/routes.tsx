@@ -10,6 +10,7 @@ import { CycleCountApplications } from './screens/CycleCountApplications.js';
 import { ItemConfig } from './screens/ItemConfig.js';
 import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
 import { CycleCountProductSelector } from './screens/CycleCountProductSelector.js';
+import { PlanCycleCount } from './screens/PlanCycleCount.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -57,5 +58,9 @@ export const { Router, useRouter } = createRouter({
   CycleCountProductSelector: {
     title: 'Import Product',
     Component: CycleCountProductSelector,
+  },
+  PlanCycleCount: {
+    title: 'Apply Cycle Count',
+    Component: PlanCycleCount,
   },
 });

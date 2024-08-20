@@ -92,10 +92,15 @@ async function getDetailedCycleCountItems(cycleCountId: number) {
         'countQuantity',
       ),
       applicationStatus,
-      applications: itemApplications.map(application => ({
-        ...pick(application, 'originalQuantity', 'appliedQuantity'),
-        appliedAt: application.createdAt.toISOString() as DateTime,
-      })),
+      /**
+       * Sorted from oldest to newest.
+       */
+      applications: itemApplications
+        .map(application => ({
+          ...pick(application, 'originalQuantity', 'appliedQuantity'),
+          appliedAt: application.createdAt.toISOString() as DateTime,
+        }))
+        .toSorted((a, b) => new Date(a.appliedAt).getTime() - new Date(b.appliedAt).getTime()),
     };
   });
 }

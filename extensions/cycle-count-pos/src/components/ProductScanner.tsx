@@ -6,7 +6,6 @@ import {
   useStatefulSubscribableScannerData,
 } from '@shopify/retail-ui-extensions-react';
 import { useRouter } from '../routes.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useEffect, useState } from 'react';
 import { useProductVariantByBarcodeQueries } from '@work-orders/common/queries/use-product-variant-by-barcode-query.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -22,7 +21,13 @@ import { ProductVariant } from '@work-orders/common/queries/use-product-variants
  * Displays whether a scanner has been found or not.
  * Allows for opening the camera if present.
  */
-export function ProductScanner({ onProductScanned }: { onProductScanned: (productVariant: ProductVariant) => void }) {
+export function ProductScanner({
+  onProductScanned,
+  disabled = false,
+}: {
+  onProductScanned: (productVariant: ProductVariant) => void;
+  disabled?: boolean;
+}) {
   const sources = useScannerSourcesSubscription();
 
   const noSourcesAvailableText = sources.length === 0 ? <Text color={'TextCritical'}>No scanners found</Text> : null;
@@ -31,7 +36,7 @@ export function ProductScanner({ onProductScanned }: { onProductScanned: (produc
 
   // TODO: Banner in camera somehow?
   const openCameraButton = sources.includes('camera') ? (
-    <Button title={'Open Camera'} onPress={() => router.push('Camera', {})} />
+    <Button title={'Open Camera'} isDisabled={disabled} onPress={() => router.push('Camera', {})} />
   ) : null;
 
   const scannerDataSubscribable = useStatefulSubscribableScannerData();

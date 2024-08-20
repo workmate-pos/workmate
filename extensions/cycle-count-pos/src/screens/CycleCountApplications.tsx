@@ -19,17 +19,17 @@ export function CycleCountApplications({ name }: { name: string | null }) {
   const productVariantIds = unique(itemsWithApplications.map(item => item.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  const applications = itemsWithApplications.flatMap(item => item.applications) ?? [];
+  const allItemApplications = itemsWithApplications.flatMap(item => item.applications) ?? [];
 
   // Unique dates from most recent to oldest. Used to group applications by date.
-  const orderedApplicationDates = unique(applications.map(application => application.appliedAt)).sort(
+  const orderedApplicationDates = unique(allItemApplications.map(application => application.appliedAt)).sort(
     (a, b) => new Date(b).getTime() - new Date(a).getTime(),
   );
 
   return (
     <ScrollView>
       {orderedApplicationDates.map(dateTime => {
-        const dateApplications = applications.filter(hasPropertyValue('appliedAt', dateTime));
+        const dateApplications = allItemApplications.filter(hasPropertyValue('appliedAt', dateTime));
 
         return (
           <List
@@ -51,6 +51,9 @@ export function CycleCountApplications({ name }: { name: string | null }) {
                     },
                   ) ?? 'Unknown product';
 
+                const delta = application.appliedQuantity - application.originalQuantity;
+                const sign = delta === 0 ? '=' : delta > 0 ? '+' : '-';
+
                 return {
                   id: String(i),
                   leftSide: {
@@ -59,6 +62,9 @@ export function CycleCountApplications({ name }: { name: string | null }) {
                       source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
                       badge: application.appliedQuantity,
                     },
+                  },
+                  rightSide: {
+                    label: `${sign} ${Math.abs(delta)}`,
                   },
                 };
               })
