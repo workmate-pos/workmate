@@ -62,9 +62,12 @@ export function CycleCountApplications({ name }: { name: string | null }) {
                       source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
                       badge: application.appliedQuantity,
                     },
-                  },
-                  rightSide: {
-                    label: `${sign} ${Math.abs(delta)}`,
+                    subtitle: [
+                      {
+                        content: `${sign} ${Math.abs(delta)}`,
+                        color: delta === 0 ? 'TextSubdued' : delta > 0 ? 'TextSuccess' : 'TextCritical',
+                      },
+                    ],
                   },
                 };
               })

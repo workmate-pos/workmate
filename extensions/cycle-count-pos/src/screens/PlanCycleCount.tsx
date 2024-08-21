@@ -138,7 +138,12 @@ export function PlanCycleCount({
                   source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
                   badge: countQuantity,
                 },
-                subtitle: [`${sign} ${Math.abs(delta)}`],
+                subtitle: [
+                  {
+                    content: `${sign} ${Math.abs(delta)}`,
+                    color: delta === 0 ? 'TextSubdued' : delta > 0 ? 'TextSuccess' : 'TextCritical',
+                  },
+                ],
               },
               rightSide: {
                 toggleSwitch: {
