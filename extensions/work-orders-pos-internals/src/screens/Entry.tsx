@@ -106,18 +106,14 @@ export function Entry() {
   );
 }
 
-function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number][]): ListRow[] {
+function useWorkOrderRows(workOrders: FetchWorkOrderInfoPageResponse[number][]): ListRow[] {
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
 
   const workOrderQueries = useWorkOrderQueries(
-    { fetch, names: workOrderInfos.map(({ name }) => name) },
-    { staleTime: 30 * SECOND_IN_MS },
+    { fetch, names: workOrders.map(({ name }) => name) },
+    { staleTime: 0, enabled: false },
   );
-
-  const workOrders = Object.values(workOrderQueries)
-    .map(query => query.data?.workOrder)
-    .filter(isNonNullable);
 
   const calculateWorkOrderQueries = useCalculateWorkOrderQueries({
     fetch,
@@ -137,17 +133,30 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     })),
   });
 
-  const customerIds = unique(workOrderInfos.map(info => info.customerId));
+  const customerIds = unique(workOrders.map(info => info.customerId));
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
 
   const router = useRouter();
+  const screen = useScreen();
 
-  return workOrders.flatMap<ListRow>(workOrder => {
+  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isRefetching));
+
+  return workOrders.map<ListRow>(workOrder => {
     const workOrderQuery = workOrderQueries[workOrder.name];
     const customerQuery = customerQueries[workOrder.customerId];
     const calculateWorkOrderQuery = calculateWorkOrderQueries[workOrder.name];
 
-    if (!workOrderQuery || !customerQuery || !calculateWorkOrderQuery) return [];
+    if (!workOrderQuery || !customerQuery || !calculateWorkOrderQuery)
+      return {
+        id: workOrder.name,
+        onPress: () => {},
+        leftSide: {
+          label: workOrder.name,
+        },
+        rightSide: {
+          label: 'Loading...',
+        },
+      };
 
     const customer = customerQuery.data;
     const calculation = calculateWorkOrderQuery.data;

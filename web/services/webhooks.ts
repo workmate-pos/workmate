@@ -15,7 +15,6 @@ import { cleanManyOrphanedDraftOrders, cleanOrphanedDraftOrders } from './work-o
 import { unit } from './db/unit-of-work.js';
 import { getWorkOrder } from './work-orders/queries.js';
 import { unreserveLineItem } from './sourcing/reserve.js';
-import { gql } from './gql/gql.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -180,10 +179,15 @@ export default {
 
         const lineItems = await db.shopifyOrder.getLineItems({ orderId: body.admin_graphql_api_id });
 
+        console.log('draft order', body.admin_graphql_api_id, 'become order', body.order_id);
+        console.log('line items', lineItems);
+        console.log('unreserving');
+
         if (!lineItems.length) {
           return;
         }
 
+        // TODO: Bulk
         await Promise.all(
           lineItems.map(lineItem => unreserveLineItem(session, { lineItemId: lineItem.lineItemId as ID })),
         );

@@ -43,6 +43,8 @@ export type ListPopupProps<ID extends string = string> = {
     title?: string;
     type?: ButtonType;
     onAction: (ids: ID[]) => void;
+    disabled?: boolean;
+    loading?: boolean;
   }[];
   emptyState?: ReactNode;
   imageDisplayStrategy?: ListProps['imageDisplayStrategy'];
@@ -121,14 +123,20 @@ export function ListPopup<ID extends string = string>({
         {selection.items.length === 0 &&
           (emptyState ?? (
             <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-              <Text color="TextCritical" variant="body">
+              <Text color="TextSubdued" variant="body">
                 No items found
               </Text>
             </Stack>
           ))}
 
-        {actions?.map(({ title, type, onAction }) => (
-          <Button title={title} type={type} onPress={() => onAction(selectedIds)} />
+        {actions?.map(({ title, type, onAction, disabled, loading }) => (
+          <Button
+            title={title}
+            type={type}
+            isDisabled={disabled}
+            isLoading={loading}
+            onPress={() => onAction(selectedIds)}
+          />
         ))}
       </Stack>
     </ScrollView>

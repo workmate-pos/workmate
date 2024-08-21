@@ -13,7 +13,7 @@ CREATE TABLE "ShopifyOrderLineItemReservation" (
     "locationId" TEXT NOT NULL,
     "quantity" INTEGER NOT NULL,
 
-    CONSTRAINT "ShopifyOrderLineItemReservation_pkey" PRIMARY KEY ("lineItemid")
+    CONSTRAINT "ShopifyOrderLineItemReservation_pkey" PRIMARY KEY ("lineItemId")
 );
 
 -- CreateIndex

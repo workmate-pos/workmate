@@ -11,11 +11,17 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { Session } from '@shopify/shopify-api';
 import { gql } from '../gql/gql.js';
 import { unit } from '../db/unit-of-work.js';
+import { isLineItemId } from '../../util/assertions.js';
 
 /**
  * Moves inventory stock from "available" to "reserved" for a given line item.
  */
 export async function reserveLineItemQuantity(session: Session, locationId: ID, lineItemId: ID, quantity: number) {
+  if (isLineItemId(lineItemId)) {
+    // only draft order line items can be reserved because order line items automatically put inventory in the 'committed' stage already
+    return;
+  }
+
   const inventoryItemId = await getLineItemInventoryItemId(session, lineItemId);
 
   const graphql = new Graphql(session);
@@ -28,7 +34,7 @@ export async function reserveLineItemQuantity(session: Session, locationId: ID, 
           quantity: quantity,
           inventoryItemId,
           from: { name: 'available', locationId },
-          to: { name: 'reserved', locationId },
+          to: { name: 'reserved', locationId, ledgerDocumentUri: 'workmate://reserveLineItemQuantity' },
         },
       ],
     },
@@ -88,10 +94,10 @@ async function revertShopifyReservationQuantities(
     input: {
       reason: 'other',
       referenceDocumentUri: 'workmate://unreserveLineItemAtLocation',
-      changes: reservations.map(({ locationId, lineItemId, quantity }) => ({
+      changes: reservations.map(({ locationId, quantity }) => ({
         inventoryItemId,
         quantity,
-        from: { name: 'reserved', locationId },
+        from: { name: 'reserved', locationId, ledgerDocumentUri: 'workmate://unreserveLineItemAtLocation' },
         to: { name: 'available', locationId },
       })),
     },

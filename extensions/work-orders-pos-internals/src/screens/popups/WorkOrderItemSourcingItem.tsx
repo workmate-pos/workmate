@@ -151,7 +151,7 @@ export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: strin
               : ''}
           </Text>
           <ResponsiveStack direction={'horizontal'} spacing={1} flexWrap={'wrap'}>
-            {getWorkOrderItemFulfillmentBadges(workOrderItem).map(props => (
+            {getWorkOrderItemFulfillmentBadges(workOrderQuery.data.workOrder, workOrderItem).map(props => (
               <Badge {...props} />
             ))}
           </ResponsiveStack>

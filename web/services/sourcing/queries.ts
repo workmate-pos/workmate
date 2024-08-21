@@ -1,6 +1,8 @@
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { sql } from '../db/sql-tag.js';
 import { MergeUnion } from '../../util/types.js';
+import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
+import { nest } from '../../util/db.js';
 
 export async function createOrIncrementShopifyOrderLineItemReservation(
   lineItemId: ID,
@@ -73,4 +75,25 @@ export async function removeShopifyOrderLineItemReservation({
     FROM "ShopifyOrderLineItemReservation"
     WHERE "locationId" = COALESCE(${_locationId}, "locationId")
       AND "lineItemId" = COALESCE(${_lineItemId}, "lineItemId");`;
+}
+
+export async function replaceReservationShopifyOrderLineItemIds(
+  replacements: { currentShopifyOrderLineItemId: ID; newShopifyOrderLineItemId: ID }[],
+) {
+  if (!isNonEmptyArray(replacements)) {
+    return;
+  }
+
+  const { currentShopifyOrderLineItemId, newShopifyOrderLineItemId } = nest(replacements);
+  const _currentShopifyOrderLineItemId: (string | null)[] = currentShopifyOrderLineItemId;
+  const _newShopifyOrderLineItemId: (string | null)[] = newShopifyOrderLineItemId;
+
+  await sql`
+    UPDATE "ShopifyOrderLineItemReservation" x
+    SET "lineItemId" = y."newShopifyOrderLineItemId"
+    FROM UNNEST(
+           ${_currentShopifyOrderLineItemId} :: text[],
+           ${_newShopifyOrderLineItemId} :: text[]
+         ) as y("currentShopifyOrderLineItemId", "newShopifyOrderLineItemId")
+    WHERE x."lineItemId" = y."currentShopifyOrderLineItemId";`;
 }

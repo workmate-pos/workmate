@@ -76,6 +76,7 @@ import { PurchaseOrderOrderProductSelector } from './screens/popups/PurchaseOrde
 import { PurchaseOrderFilterStatusSelector } from './screens/popups/PurchaseOrderFilterStatusSelector.js';
 import { CreateTransferOrderForLocation } from './screens/popups/CreateTransferOrderForLocation.js';
 import { QuantityAdjustmentList } from './screens/popups/QuantityAdjustmentList.js';
+import { UnsourcedItemList } from './screens/popups/UnsourcedItemList.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -349,5 +350,9 @@ export const { Router, useRouter } = createRouter({
   QuantityAdjustmentList: {
     title: 'Quantity Adjustment List',
     Component: QuantityAdjustmentList,
+  },
+  UnsourcedItemList: {
+    title: 'Reserve Item',
+    Component: UnsourcedItemList,
   },
 });

@@ -13,6 +13,9 @@ import {
 import { replacePurchaseOrderLineItemShopifyOrderLineItemIds } from '../purchase-orders/queries.js';
 import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
 import { replaceStockTransferLineItemShopifyOrderLineItemIds } from '../stock-transfers/queries.js';
+import { replaceReservationShopifyOrderLineItemIds } from '../sourcing/queries.js';
+import { isLineItemId } from '../../util/assertions.js';
+import { unreserveLineItem } from '../sourcing/reserve.js';
 
 type Order = { id: ID; customAttributes: { key: string; value: string | null }[] };
 type LineItem =
@@ -35,7 +38,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
   const errors: unknown[] = [];
 
   await Promise.all([
-    linkItems(lineItems, workOrder.id).catch(error => errors.push(error)),
+    linkItems(session, lineItems, workOrder.id).catch(error => errors.push(error)),
     linkCharges(lineItems, workOrder.id).catch(error => errors.push(error)),
   ]);
 
@@ -44,7 +47,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
   }
 }
 
-async function linkItems(lineItems: LineItem[], workOrderId: number) {
+async function linkItems(session: Session, lineItems: LineItem[], workOrderId: number) {
   const lineItemIdByItemUuid = getLineItemIdsByUuids(lineItems, 'item');
 
   const uuids = Object.keys(lineItemIdByItemUuid);
@@ -69,6 +72,18 @@ async function linkItems(lineItems: LineItem[], workOrderId: number) {
 
     // the same applies to transfer order line items
     replaceStockTransferLineItemShopifyOrderLineItemIds(replacements),
+
+    // and to reservations
+    replaceReservationShopifyOrderLineItemIds(
+      replacements.filter(replacement => !isLineItemId(replacement.newShopifyOrderLineItemId)),
+    ),
+
+    // if we would have replaced a reservation s.t. it reserved a real line item we should delete
+    // the reservation instead, as the product will now be committed already
+    // TODO: Bulk
+    ...replacements
+      .filter(replacement => isLineItemId(replacement.newShopifyOrderLineItemId))
+      .map(replacement => unreserveLineItem(session, { lineItemId: replacement.currentShopifyOrderLineItemId })),
   ]);
 
   if (items.length !== uuids.length) {
