@@ -1,6 +1,7 @@
 import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ID, DateTime, Int, Money } from '../gql/queries/generated/schema.js';
 import { ShopifyOrderType } from '../db/queries/generated/shopify-order.sql.js';
+import { UUID } from '../../util/types.js';
 
 /**
  * A work order with all available data.
@@ -40,7 +41,7 @@ export type WorkOrderPaymentTerms = {
 };
 
 export type DetailedWorkOrderItem = {
-  uuid: string;
+  uuid: UUID;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   quantity: Int;
   absorbCharges: boolean;
@@ -90,8 +91,8 @@ export type DetailedWorkOrderCharge = FixedPriceLabour | HourlyLabour;
 
 export type FixedPriceLabour = {
   type: 'fixed-price-labour';
-  uuid: string;
-  workOrderItemUuid: string | null;
+  uuid: UUID;
+  workOrderItemUuid: UUID | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;
@@ -102,8 +103,8 @@ export type FixedPriceLabour = {
 
 export type HourlyLabour = {
   type: 'hourly-labour';
-  uuid: string;
-  workOrderItemUuid: string | null;
+  uuid: UUID;
+  workOrderItemUuid: UUID | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;

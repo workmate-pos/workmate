@@ -175,6 +175,7 @@ function getLocationStockTransferLineItems(
         shopifyOrderLineItem,
         productTitle: productVariant.product.title,
         productVariantTitle: productVariant.title,
+        purchaseOrderLineItem: null,
       };
     })
     .filter(isNonNullable);

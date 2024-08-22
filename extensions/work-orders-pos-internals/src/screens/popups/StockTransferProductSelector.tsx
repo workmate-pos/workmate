@@ -14,6 +14,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { v4 as uuid } from 'uuid';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { UUID } from '@web/util/types.js';
 
 export function StockTransferProductSelector({
   locationId,
@@ -132,13 +133,14 @@ function useProductVariantRows(
       onPress() {
         selectLineItems([
           {
-            uuid: uuid(),
+            uuid: uuid() as UUID,
             inventoryItemId: productVariant.inventoryItem.id,
             quantity: 1 as Int,
             status: 'PENDING',
             productVariantTitle: productVariant.title,
             productTitle: productVariant.product.title,
             shopifyOrderLineItem: null,
+            purchaseOrderLineItem: null,
           },
         ]);
       },

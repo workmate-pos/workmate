@@ -54,6 +54,7 @@ import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
 import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
+import { UUID } from '@web/util/types.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -62,7 +63,7 @@ export type WorkOrderProps = {
 type OpenConfigPopup = {
   configType: 'item' | 'charge';
   type: 'product' | 'custom-item';
-  uuid: string;
+  uuid: UUID;
 };
 
 export function WorkOrder({ initial }: WorkOrderProps) {

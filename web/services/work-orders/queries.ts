@@ -3,7 +3,7 @@ import { WorkOrderChargeData } from './charges.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { WorkOrderItemData } from './items.js';
 import { assertGidOrNull } from '../../util/assertions.js';
-import { MergeUnion } from '../../util/types.js';
+import { MergeUnion, UUID } from '../../util/types.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
@@ -100,10 +100,16 @@ function mapWorkOrderCharge(charge: {
   createdAt: Date;
   updatedAt: Date;
 }) {
-  const { shopifyOrderLineItemId } = charge;
+  const { uuid, workOrderItemUuid, shopifyOrderLineItemId } = charge;
   assertGidOrNull(shopifyOrderLineItemId);
   const data = WorkOrderChargeData.parse(charge.data);
-  return { ...charge, shopifyOrderLineItemId, data };
+  return {
+    ...charge,
+    uuid: uuid as UUID,
+    workOrderItemUuid: workOrderItemUuid as UUID | null,
+    shopifyOrderLineItemId,
+    data,
+  };
 }
 
 export async function getWorkOrderItems(workOrderId: number) {
@@ -136,10 +142,10 @@ function mapWorkOrderItem(item: {
   createdAt: Date;
   updatedAt: Date;
 }) {
-  const { shopifyOrderLineItemId } = item;
+  const { uuid, shopifyOrderLineItemId } = item;
   assertGidOrNull(shopifyOrderLineItemId);
   const data = WorkOrderItemData.parse(item.data);
-  return { ...item, shopifyOrderLineItemId, data };
+  return { ...item, uuid: uuid as UUID, shopifyOrderLineItemId, data };
 }
 
 export async function getWorkOrderItemCustomFields(workOrderId: number) {
@@ -370,20 +376,21 @@ export async function setWorkOrderItemShopifyOrderLineItemIds(
 
 export async function setWorkOrderChargeShopifyOrderLineItemIds(
   workOrderId: number,
-  charges: { uuid: string; shopifyOrderLineItemId: ID | null }[],
+  charges: { uuid: UUID; shopifyOrderLineItemId: ID | null }[],
 ) {
   if (!isNonEmptyArray(charges)) {
     return;
   }
 
   const { shopifyOrderLineItemId, uuid } = nest(charges);
+  const _uuid: (string | null)[] = uuid;
   const _shopifyOrderLineItemId = shopifyOrderLineItemId as (string | null)[];
 
   const { count } = await sqlOne<{ count: number }>`
     WITH updated AS (
       UPDATE "WorkOrderCharge" x
         SET "shopifyOrderLineItemId" = y."shopifyOrderLineItemId"
-        FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
+        FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${_uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
         WHERE x."workOrderId" = ${workOrderId}
           AND x.uuid = y.uuid
         RETURNING 1)

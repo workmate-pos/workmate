@@ -36,9 +36,10 @@ import {
   getWorkOrderItems,
   WorkOrder,
 } from './queries.js';
+import { UUID } from '../../util/types.js';
 
-export type SelectedItem = { uuid: string };
-export type SelectedCharge = { uuid: string };
+export type SelectedItem = { uuid: UUID };
+export type SelectedCharge = { uuid: UUID };
 
 /**
  * Plan an order for some items and charges of a work order.

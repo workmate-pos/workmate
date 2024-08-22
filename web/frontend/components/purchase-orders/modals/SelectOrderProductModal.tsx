@@ -15,6 +15,7 @@ import { useInventoryItemQueries } from '@work-orders/common/queries/use-invento
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { v4 as uuid } from 'uuid';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { UUID } from '@web/util/types.js';
 
 /**
  * List of line items in an order to select from.
@@ -87,7 +88,7 @@ export function SelectOrderProductModal({
               const unitCost = inventoryItem?.unitCost?.amount;
 
               return {
-                uuid: uuid(),
+                uuid: uuid() as UUID,
                 availableQuantity: 0 as Int,
                 productVariantId: li.variant.id,
                 quantity: li.quantity,

@@ -1,6 +1,6 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { escapeLike } from '../db/like.js';
 import { StockTransferPaginationOptions } from '../../schemas/generated/stock-transfer-pagination-options.js';
 import { StockTransferCountOptions } from '../../schemas/generated/stock-transfer-count-options.js';
@@ -9,7 +9,9 @@ import { getStockTransfer, getStockTransferLineItems } from './queries.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getLineItemsById } from '../work-orders/get.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { getPurchaseOrderLineItemsByIdAndUuid } from '../purchase-orders/queries.js';
+import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 
 export async function getDetailedStockTransfer(session: Session, name: string) {
   const stockTransfer = await getStockTransfer({ shop: session.shop, name });
@@ -21,8 +23,18 @@ export async function getDetailedStockTransfer(session: Session, name: string) {
   const { note, fromLocationId, toLocationId } = stockTransfer;
 
   const lineItems = await getStockTransferLineItems(stockTransfer.id);
+
   const shopifyLineItemIds = unique(lineItems.map(item => item.shopifyOrderLineItemId).filter(isNonNullable));
-  const shopifyLineItemById = await getLineItemsById(shopifyLineItemIds);
+
+  const [shopifyLineItemById, purchaseOrderLineItems] = await Promise.all([
+    getLineItemsById(shopifyLineItemIds),
+    getPurchaseOrderLineItemsByIdAndUuid(
+      lineItems.filter(hasNonNullableProperty('purchaseOrderLineItemUuid')).map(item => ({
+        purchaseOrderId: item.purchaseOrderId,
+        uuid: item.purchaseOrderLineItemUuid,
+      })),
+    ),
+  ]);
 
   return {
     name,
@@ -30,7 +42,17 @@ export async function getDetailedStockTransfer(session: Session, name: string) {
     toLocationId,
     note,
     lineItems: lineItems.map(
-      ({ uuid, inventoryItemId, status, quantity, productTitle, productVariantTitle, shopifyOrderLineItemId }) => {
+      ({
+        uuid,
+        inventoryItemId,
+        status,
+        quantity,
+        productTitle,
+        productVariantTitle,
+        shopifyOrderLineItemId,
+        purchaseOrderLineItemUuid,
+        purchaseOrderId,
+      }) => {
         return {
           uuid,
           inventoryItemId,
@@ -40,6 +62,15 @@ export async function getDetailedStockTransfer(session: Session, name: string) {
           productVariantTitle,
           shopifyOrderLineItem: shopifyOrderLineItemId
             ? shopifyLineItemById[shopifyOrderLineItemId] ?? never('fk')
+            : null,
+          purchaseOrderLineItem: purchaseOrderLineItemUuid
+            ? pick(
+                purchaseOrderLineItems
+                  .filter(hasPropertyValue('uuid', purchaseOrderLineItemUuid))
+                  .find(hasPropertyValue('purchaseOrderId', purchaseOrderId)) ?? never('fk'),
+                'purchaseOrderName',
+                'uuid',
+              )
             : null,
         };
       },

@@ -19,6 +19,7 @@ import {
   useDraftOrderLineItemsQuery,
 } from '@work-orders/common/queries/use-draft-order-line-items-query.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { UUID } from '@web/util/types.js';
 
 /**
  * Similar to ProductSelector, but shows line items of a specific order to be able to link to them.
@@ -120,7 +121,7 @@ export function PurchaseOrderOrderProductSelector({
               .filter(li => selectedLineItemIds.includes(li.id))
               .map(li => {
                 return {
-                  uuid: uuid(),
+                  uuid: uuid() as UUID,
                   quantity: li.quantity,
                   productVariantId: li.variant.id,
                   availableQuantity: 0 as Int,

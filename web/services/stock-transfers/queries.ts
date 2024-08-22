@@ -1,5 +1,5 @@
 import { sql, sqlOne } from '../db/sql-tag.js';
-import { MergeUnion } from '../../util/types.js';
+import { MergeUnion, UUID } from '../../util/types.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
@@ -7,6 +7,10 @@ import { assertGidOrNull } from '../../util/assertions.js';
 import { StockTransferLineItemStatus } from '@prisma/client';
 import { nest } from '../../util/db.js';
 import { isNonEmptyArray, mapNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
+import { unit } from '../db/unit-of-work.js';
+import { getPurchaseOrderLineItemsByNameAndUuid } from '../purchase-orders/queries.js';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export type StockTransfer = NonNullable<Awaited<ReturnType<typeof getStockTransfer>>>;
 export type StockTransferLineItem = Awaited<ReturnType<typeof getStockTransferLineItems>>[number];
@@ -112,6 +116,8 @@ export async function getStockTransferLineItems(stockTransferId: number) {
     updatedAt: Date;
     shopifyOrderLineItemId: string | null;
     shopifyOrderId: string | null;
+    purchaseOrderId: number | null;
+    purchaseOrderLineItemUuid: string | null;
   }>`
     SELECT *
     FROM "StockTransferLineItem"
@@ -132,18 +138,18 @@ function mapStockTransferLineItem(stockTransferLineItem: {
   updatedAt: Date;
   shopifyOrderLineItemId: string | null;
   shopifyOrderId: string | null;
+  purchaseOrderId: number | null;
+  purchaseOrderLineItemUuid: string | null;
 }) {
-  const { inventoryItemId, shopifyOrderLineItemId, shopifyOrderId } = stockTransferLineItem;
+  const { uuid, inventoryItemId, shopifyOrderLineItemId, shopifyOrderId, purchaseOrderLineItemUuid, purchaseOrderId } =
+    stockTransferLineItem;
 
-  try {
-    assertGid(inventoryItemId);
-    assertGidOrNull(shopifyOrderLineItemId);
-    assertGidOrNull(shopifyOrderId);
-
+  const getShopifyOrderLineItemDetails = () => {
     if (shopifyOrderId !== null && shopifyOrderLineItemId !== null) {
+      assertGid(shopifyOrderId);
+      assertGid(shopifyOrderLineItemId);
+
       return {
-        ...stockTransferLineItem,
-        inventoryItemId,
         shopifyOrderLineItemId,
         shopifyOrderId,
       };
@@ -151,14 +157,42 @@ function mapStockTransferLineItem(stockTransferLineItem: {
 
     if (shopifyOrderId === null && shopifyOrderLineItemId === null) {
       return {
-        ...stockTransferLineItem,
-        inventoryItemId,
         shopifyOrderLineItemId,
         shopifyOrderId,
       };
     }
 
-    throw new Error(`shopifyOrderId and shopifyOrderLineItemId must be both set or both null`);
+    throw new Error(`shopifyOrderId and shopifyOrderLineItemId must be both null or both set`);
+  };
+
+  const getPurchaseOrderLineItemDetails = () => {
+    if (purchaseOrderId !== null && purchaseOrderLineItemUuid !== null) {
+      return {
+        purchaseOrderId,
+        purchaseOrderLineItemUuid: purchaseOrderLineItemUuid as UUID,
+      };
+    }
+
+    if (purchaseOrderId === null && purchaseOrderLineItemUuid === null) {
+      return {
+        purchaseOrderId,
+        purchaseOrderLineItemUuid,
+      };
+    }
+
+    throw new Error(`purchaseOrderId and purchaseOrderLineItemUuid must be both null or both set`);
+  };
+
+  try {
+    assertGid(inventoryItemId);
+
+    return {
+      ...stockTransferLineItem,
+      uuid: uuid as UUID,
+      inventoryItemId,
+      ...getShopifyOrderLineItemDetails(),
+      ...getPurchaseOrderLineItemDetails(),
+    };
   } catch (error) {
     sentryErr(error, { stockTransferLineItems: stockTransferLineItem });
     throw new HttpError('Unable to parse stock transfer line item', 500);
@@ -178,6 +212,10 @@ export async function upsertStockTransferLineItems(
       id: ID;
       orderId: ID;
     } | null;
+    purchaseOrderLineItem: {
+      purchaseOrderName: string;
+      uuid: UUID;
+    } | null;
   }[],
 ) {
   if (!isNonEmptyArray(items)) {
@@ -193,20 +231,56 @@ export async function upsertStockTransferLineItems(
   const _shopifyOrderLineItemIds: (string | null)[] = shopifyOrderLineItemId;
   const _shopifyOrderIds: (string | null)[] = shopifyOrderId;
 
-  await sql`
-    INSERT INTO "StockTransferLineItem" ("stockTransferId", uuid, "inventoryItemId", "productTitle",
-                                         "productVariantTitle", status, quantity, "shopifyOrderLineItemId",
-                                         "shopifyOrderId")
-    SELECT ${stockTransferId}, *
-    FROM UNNEST(
-      ${uuid} :: uuid[],
-      ${_inventoryItemIds} :: text[],
-      ${productTitle} :: text[],
-      ${productVariantTitle} :: text[],
-      ${status} :: "StockTransferLineItemStatus"[],
-      ${quantity} :: int[],
-      ${_shopifyOrderLineItemIds} :: text[],
-      ${_shopifyOrderIds} :: text[]);`;
+  return await unit(async () => {
+    const purchaseOrderLineItems = await getPurchaseOrderLineItemsByNameAndUuid(
+      items.map(item => item.purchaseOrderLineItem).filter(isNonNullable),
+    );
+
+    const linkedPurchaseOrderLineItems = items.map(purchaseOrderLineItem => {
+      if (!purchaseOrderLineItem.purchaseOrderLineItem) {
+        return { purchaseOrderId: null, purchaseOrderLineItemUuid: null };
+      }
+
+      const linkedPurchaseOrderLineItem = purchaseOrderLineItems
+        .filter(hasPropertyValue('uuid', purchaseOrderLineItem.purchaseOrderLineItem.uuid))
+        .find(hasPropertyValue('purchaseOrderName', purchaseOrderLineItem.purchaseOrderLineItem.purchaseOrderName));
+
+      if (!linkedPurchaseOrderLineItem) {
+        throw new HttpError(`Could not find linked purchase order line item`, 400);
+      }
+
+      return {
+        purchaseOrderId: linkedPurchaseOrderLineItem.purchaseOrderId,
+        purchaseOrderLineItemUuid: linkedPurchaseOrderLineItem.uuid,
+      };
+    });
+
+    if (!isNonEmptyArray(linkedPurchaseOrderLineItems)) {
+      never('If items is non-empty, then linked purchase order line items must also be non-empty');
+    }
+
+    const { purchaseOrderId, purchaseOrderLineItemUuid } = nest(linkedPurchaseOrderLineItems);
+    const _purchaseOrderId: (number | null)[] = purchaseOrderId;
+    const _purchaseOrderLineItemUuid: (string | null)[] = purchaseOrderLineItemUuid;
+
+    await sql`
+      INSERT INTO "StockTransferLineItem" ("stockTransferId", uuid, "inventoryItemId", "productTitle",
+                                           "productVariantTitle", status, quantity, "shopifyOrderLineItemId",
+                                           "shopifyOrderId", "purchaseOrderId", "purchaseOrderLineItemUuid")
+      SELECT ${stockTransferId}, *
+      FROM UNNEST(
+        ${uuid} :: uuid[],
+        ${_inventoryItemIds} :: text[],
+        ${productTitle} :: text[],
+        ${productVariantTitle} :: text[],
+        ${status} :: "StockTransferLineItemStatus"[],
+        ${quantity} :: int[],
+        ${_shopifyOrderLineItemIds} :: text[],
+        ${_shopifyOrderIds} :: text[],
+        ${_purchaseOrderId} :: int[],
+        ${_purchaseOrderLineItemUuid} :: uuid[]
+           );`;
+  });
 }
 
 export async function removeStockTransferLineItems(stockTransferId: number) {
@@ -256,6 +330,8 @@ export async function getTransferOrderLineItemsByShopifyOrderLineItemIds(shopify
     updatedAt: Date;
     shopifyOrderLineItemId: string | null;
     shopifyOrderId: string | null;
+    purchaseOrderId: number | null;
+    purchaseOrderLineItemUuid: string | null;
   }>`
     SELECT *
     FROM "StockTransferLineItem"

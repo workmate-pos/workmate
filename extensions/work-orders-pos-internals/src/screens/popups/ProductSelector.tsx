@@ -30,6 +30,7 @@ import { useLocationQueries } from '@work-orders/common/queries/use-location-que
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
+import { UUID } from '@web/util/types.js';
 
 export function ProductSelector({
   onSelect,
@@ -142,7 +143,7 @@ export function ProductSelector({
                     {
                       type: 'product',
                       quantity: product.quantity,
-                      uuid: uuid(),
+                      uuid: uuid() as UUID,
                       productVariantId: product.productVariantId,
                       absorbCharges: false,
                       customFields: customFieldsPresetsQuery.data.defaultCustomFields,
@@ -165,7 +166,7 @@ export function ProductSelector({
                   quantity: 1 as Int,
                   absorbCharges: false,
                   customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                  uuid: uuid(),
+                  uuid: uuid() as UUID,
                   name: 'Unnamed product',
                   unitPrice: BigDecimal.ONE.toMoney(),
                 },
@@ -314,13 +315,13 @@ function useProductVariantRows(
       onPress: () => {
         const charges: CreateWorkOrder['charges'][number][] = [];
         const items = productVariants.map(pv => {
-          const itemUuid = uuid();
+          const itemUuid = uuid() as UUID;
 
           for (const charge of pv.productVariant.defaultCharges) {
             const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
             charges.push({
               ...defaultCharge,
-              uuid: uuid(),
+              uuid: uuid() as UUID,
               workOrderItemUuid: itemUuid,
             });
           }

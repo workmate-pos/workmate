@@ -7,7 +7,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { validateCreateWorkOrder } from './validate.js';
 import { syncWorkOrder } from './sync.js';
-import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 import { ensureCustomersExist } from '../customer/sync.js';
@@ -31,6 +31,7 @@ import {
 } from './queries.js';
 import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
+import { UUID } from '../../util/types.js';
 
 // TODO: Support deleted customer/company
 
@@ -275,7 +276,7 @@ async function upsertCharges(
 
 async function deleteItems(createWorkOrder: CreateWorkOrder, workOrderId: number, currentItems: IGetItemsResult[]) {
   const newItemUuids = new Set(createWorkOrder.items.map(item => item.uuid));
-  const deletedItemUuids = currentItems.map(item => item.uuid).filter(uuid => !newItemUuids.has(uuid));
+  const deletedItemUuids = currentItems.map(item => item.uuid as UUID).filter(uuid => !newItemUuids.has(uuid));
 
   await removeWorkOrderItems(workOrderId, deletedItemUuids);
 }

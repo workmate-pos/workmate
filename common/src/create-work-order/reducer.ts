@@ -4,12 +4,13 @@ import { v4 as uuid } from 'uuid';
 import type { useReducer, useRef, useState } from 'react';
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { UUID } from '@web/util/types.js';
 
 export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
   customerId: CreateWorkOrder['customerId'] | null;
 };
 
-type ItemDescriptor = { uuid: string };
+type ItemDescriptor = { uuid: UUID };
 
 export type CreateWorkOrderAction =
   | ({
@@ -279,7 +280,7 @@ function getSplitItems(items: CreateWorkOrder['items'][number][], charges: Creat
         },
         {
           ...item,
-          uuid: uuid(),
+          uuid: uuid() as UUID,
           quantity: (item.quantity - 1) as Int,
         },
       ];

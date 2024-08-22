@@ -37,6 +37,7 @@ import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
+import { UUID } from '@web/util/types.js';
 
 type AddProductModalProps = AddProductModalPropsBase &
   (
@@ -189,7 +190,7 @@ export function AddProductModal({
                         quantity: 1 as Int,
                         absorbCharges: false,
                         customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                        uuid: uuid(),
+                        uuid: uuid() as UUID,
                         name: 'Unnamed product',
                         unitPrice: BigDecimal.ONE.toMoney(),
                       },
@@ -300,13 +301,13 @@ export function AddProductModal({
                   if (outputType === 'WORK_ORDER') {
                     const charges: CreateWorkOrder['charges'][number][] = [];
                     const items = productVariants.map(pv => {
-                      const itemUuid = uuid();
+                      const itemUuid = uuid() as UUID;
 
                       for (const charge of pv.productVariant.defaultCharges) {
                         const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
                         charges.push({
                           ...defaultCharge,
-                          uuid: uuid(),
+                          uuid: uuid() as UUID,
                           workOrderItemUuid: itemUuid,
                         });
                       }
@@ -331,7 +332,7 @@ export function AddProductModal({
                           inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
 
                         return {
-                          uuid: uuid(),
+                          uuid: uuid() as UUID,
                           shopifyOrderLineItem: null,
                           unitCost: BigDecimal.fromString(unitCost ?? '0.00')
                             .round(2)

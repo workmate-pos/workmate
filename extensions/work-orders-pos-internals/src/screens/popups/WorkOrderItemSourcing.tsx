@@ -33,6 +33,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { useReserveLineItemsInventoryMutation } from '@work-orders/common/queries/use-reserve-line-items-inventory-mutation.js';
+import { UUID } from '@web/util/types.js';
 
 /**
  * Fulfillment options for some work order.
@@ -402,7 +403,7 @@ function useWorkOrderQueries(name: string) {
 }
 
 export type UnsourcedWorkOrderItem = {
-  uuid: string;
+  uuid: UUID;
   productVariantId: ID;
   unsourcedQuantity: number;
   shopifyOrderLineItem: NonNullable<StockTransferLineItem['shopifyOrderLineItem']>;

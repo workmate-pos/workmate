@@ -40,6 +40,7 @@ import {
 } from '@web/schemas/generated/create-stock-transfer.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { v4 as uuid } from 'uuid';
+import { UUID } from '@web/util/types.js';
 
 const MODE = {
   ADD_LINE_ITEMS: {
@@ -210,13 +211,14 @@ export function StockTransferLineItemScanner({
         type: 'addLineItems',
         lineItems: [
           {
-            uuid: uuid(),
+            uuid: uuid() as UUID,
             inventoryItemId: action.inventoryItemId,
             status: action.toStatus,
             quantity: action.quantity,
             productTitle: action.productTitle,
             productVariantTitle: action.productVariantTitle,
             shopifyOrderLineItem: null,
+            purchaseOrderLineItem: null,
           },
         ],
       });
@@ -227,13 +229,14 @@ export function StockTransferLineItemScanner({
           type: 'addLineItems',
           lineItems: [
             {
-              uuid: uuid(),
+              uuid: uuid() as UUID,
               inventoryItemId: action.inventoryItemId,
               status: action.fromStatus,
               quantity: -action.quantity as Int,
               productTitle: action.productTitle,
               productVariantTitle: action.productVariantTitle,
               shopifyOrderLineItem: null,
+              purchaseOrderLineItem: null,
             },
           ],
         });

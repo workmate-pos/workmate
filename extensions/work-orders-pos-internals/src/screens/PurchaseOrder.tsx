@@ -50,6 +50,7 @@ TODAY_DATE.setHours(0, 0, 0, 0);
 
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to draft SO line items
+// TODO: a way to create a transfer order from a purchase order - but make sure it is linked somehow
 export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const fetch = useAuthenticatedFetch();
   const [query, setQuery] = useState('');
@@ -417,6 +418,16 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
         flex={0}
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
+          <FormButton
+            title={'Transfer Products'}
+            type={'basic'}
+            action={'button'}
+            disabled={!createPurchaseOrder.name || hasUnsavedChanges}
+            onPress={() => {
+              // TODO
+            }}
+          />
+
           <FormButton
             title={'Print'}
             type={'basic'}

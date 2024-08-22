@@ -1,13 +1,16 @@
-import { MergeUnion } from '../../util/types.js';
+import { MergeUnion, UUID } from '../../util/types.js';
 import { sql, sqlOne } from '../db/sql-tag.js';
 import { assertGidOrNull, assertMoneyOrNull } from '../../util/assertions.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
+import { indexByMap, isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertMoney, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { nest } from '../../util/db.js';
 import { DateTime } from '../gql/queries/generated/schema.js';
+import { ShopifyOrderLineItem } from '../work-orders/types.js';
+import { db } from '../db/db.js';
+import { Int } from '../../schemas/generated/create-stock-transfer.js';
 
 export type PurchaseOrder = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>;
 
@@ -205,18 +208,20 @@ export async function getPurchaseOrderLineItems(purchaseOrderId: number) {
   return lineItems.map(mapPurchaseOrderLineItem);
 }
 
-function mapPurchaseOrderLineItem(purchaseOrderLineItem: {
-  purchaseOrderId: number;
-  productVariantId: string;
-  quantity: number;
-  availableQuantity: number;
-  unitCost: string;
-  createdAt: Date;
-  shopifyOrderLineItemId: string | null;
-  updatedAt: Date;
-  uuid: string;
-}) {
-  const { productVariantId, unitCost, shopifyOrderLineItemId } = purchaseOrderLineItem;
+function mapPurchaseOrderLineItem<
+  const T extends {
+    purchaseOrderId: number;
+    productVariantId: string;
+    quantity: number;
+    availableQuantity: number;
+    unitCost: string;
+    createdAt: Date;
+    shopifyOrderLineItemId: string | null;
+    updatedAt: Date;
+    uuid: string;
+  },
+>(purchaseOrderLineItem: T) {
+  const { uuid, productVariantId, unitCost, shopifyOrderLineItemId } = purchaseOrderLineItem;
 
   try {
     assertGid(productVariantId);
@@ -225,6 +230,8 @@ function mapPurchaseOrderLineItem(purchaseOrderLineItem: {
 
     return {
       ...purchaseOrderLineItem,
+      // TODO: Use this more, also in schema with uuid pattern
+      uuid: uuid as UUID,
       productVariantId,
       unitCost,
       shopifyOrderLineItemId,
@@ -480,4 +487,81 @@ export async function replacePurchaseOrderLineItemShopifyOrderLineItemIds(
            ${_newShopifyOrderLineItemId} :: text[]
          ) as y("currentShopifyOrderLineItemId", "newShopifyOrderLineItemId")
     WHERE x."shopifyOrderLineItemId" = y."currentShopifyOrderLineItemId";`;
+}
+
+export async function getPurchaseOrderLineItemsByNameAndUuid(
+  items: {
+    purchaseOrderName: string;
+    uuid: string;
+  }[],
+) {
+  if (!isNonEmptyArray(items)) {
+    return [];
+  }
+
+  const { purchaseOrderName, uuid } = nest(items);
+
+  const lineItems = await sql<{
+    purchaseOrderId: number;
+    productVariantId: string;
+    quantity: number;
+    availableQuantity: number;
+    unitCost: string;
+    createdAt: Date;
+    shopifyOrderLineItemId: string | null;
+    updatedAt: Date;
+    uuid: string;
+    purchaseOrderName: string;
+  }>`
+    SELECT li.*, po.name AS "purchaseOrderName"
+    FROM "PurchaseOrderLineItem" li
+           INNER JOIN "PurchaseOrder" po ON li."purchaseOrderId" = po.id
+    WHERE (po.name, li.uuid) = ANY (SELECT *
+                                    FROM UNNEST(
+                                      ${purchaseOrderName} :: text[],
+                                      ${uuid} :: uuid[]
+                                         ));
+  `;
+
+  return lineItems.map(mapPurchaseOrderLineItem);
+}
+
+export async function getPurchaseOrderLineItemsByIdAndUuid(
+  items: {
+    purchaseOrderId: number;
+    uuid: string;
+  }[],
+) {
+  if (!isNonEmptyArray(items)) {
+    return [];
+  }
+
+  const { purchaseOrderId, uuid } = nest(items);
+
+  const _purchaseOrderId: (number | null)[] = purchaseOrderId;
+  const _uuid: (string | null)[] = uuid;
+
+  const lineItems = await sql<{
+    purchaseOrderId: number;
+    productVariantId: string;
+    quantity: number;
+    availableQuantity: number;
+    unitCost: string;
+    createdAt: Date;
+    shopifyOrderLineItemId: string | null;
+    updatedAt: Date;
+    uuid: string;
+    purchaseOrderName: string;
+  }>`
+    SELECT li.*, po.name AS "purchaseOrderName"
+    FROM "PurchaseOrderLineItem" li
+    INNER JOIN "PurchaseOrder" po ON li."purchaseOrderId" = po.id
+    WHERE (li."purchaseOrderId", li.uuid) = ANY (SELECT *
+                                                 FROM UNNEST(
+                                                   ${_purchaseOrderId} :: int[],
+                                                   ${_uuid} :: uuid[]
+                                                      ));
+  `;
+
+  return lineItems.map(mapPurchaseOrderLineItem);
 }

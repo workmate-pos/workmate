@@ -10,9 +10,10 @@ import { ButtonType, ScrollView, Stack, Text, useExtensionApi } from '@shopify/r
 import { useReserveLineItemsInventoryMutation } from '@work-orders/common/queries/use-reserve-line-items-inventory-mutation.js';
 import { useRouter } from '../../routes.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { UUID } from '@web/util/types.js';
 
 export type UnsourcedItemListSelectedItems = {
-  uuid: string;
+  uuid: UUID;
   shopifyOrderLineItem: { id: ID; orderId: ID };
   productVariantId: ID;
   unsourcedQuantity: number;

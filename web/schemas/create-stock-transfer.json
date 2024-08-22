@@ -21,7 +21,7 @@
         "type": "object",
         "properties": {
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           },
           "inventoryItemId": {
             "$ref": "scalars.json#/definitions/ID"
@@ -56,6 +56,24 @@
                 "additionalProperties": false
               }
             ]
+          },
+          "purchaseOrderLineItem": {
+            "anyOf": [
+              { "const": null },
+              {
+                "type": "object",
+                "properties": {
+                  "purchaseOrderName": {
+                    "type": "string"
+                  },
+                  "uuid": {
+                    "$ref": "scalars.json#/definitions/UUID"
+                  }
+                },
+                "required": ["purchaseOrderName", "uuid"],
+                "additionalProperties": false
+              }
+            ]
           }
         },
         "required": [
@@ -65,7 +83,8 @@
           "productVariantTitle",
           "quantity",
           "status",
-          "shopifyOrderLineItem"
+          "shopifyOrderLineItem",
+          "purchaseOrderLineItem"
         ],
         "additionalProperties": false
       }

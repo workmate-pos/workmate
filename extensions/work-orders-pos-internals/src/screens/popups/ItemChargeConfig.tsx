@@ -29,13 +29,14 @@ import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { UUID } from '@web/util/types.js';
 
 export function ItemChargeConfig({
   item: { uuid: itemUuid },
   createWorkOrder,
   dispatch,
 }: {
-  item: { uuid: string };
+  item: { uuid: UUID };
   createWorkOrder: WIPCreateWorkOrder;
   dispatch: CreateWorkOrderDispatchProxy;
 }) {
@@ -233,7 +234,7 @@ export function ItemChargeConfig({
             charge={generalLabourCharge}
             onChange={charge =>
               charge !== null
-                ? setGeneralLabourCharge({ ...charge, uuid: uuid(), employeeId: null })
+                ? setGeneralLabourCharge({ ...charge, uuid: uuid() as UUID, employeeId: null })
                 : setGeneralLabourCharge(null)
             }
           />
@@ -257,7 +258,7 @@ export function ItemChargeConfig({
                         const defaultLabourCharge = {
                           employeeId,
                           type: 'fixed-price-labour',
-                          uuid: uuid(),
+                          uuid: uuid() as UUID,
                           name: settings?.labourLineItemName || 'Labour',
                           amount: BigDecimal.ZERO.toMoney(),
                           workOrderItemUuid: item.uuid,
@@ -377,7 +378,7 @@ function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOr
     // pos only supports setting one general labour, so just use the total as fixed price
     return {
       type: 'fixed-price-labour',
-      uuid: uuid(),
+      uuid: uuid() as UUID,
       employeeId: null,
       name: generalLabours[0]!.name,
       amount: getTotalPriceForCharges(generalLabours),

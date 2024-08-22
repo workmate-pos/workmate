@@ -8,7 +8,6 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
 import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
@@ -18,6 +17,7 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { UUID } from '@web/util/types.js';
 
 export function ItemConfig({
   item: { uuid: itemUuid, type: itemType },
@@ -25,7 +25,7 @@ export function ItemConfig({
   dispatch,
   onAddLabour,
 }: {
-  item: { type: 'product' | 'custom-item'; uuid: string };
+  item: { type: 'product' | 'custom-item'; uuid: UUID };
   createWorkOrder: WIPCreateWorkOrder;
   onAddLabour: () => void;
   dispatch: CreateWorkOrderDispatchProxy;

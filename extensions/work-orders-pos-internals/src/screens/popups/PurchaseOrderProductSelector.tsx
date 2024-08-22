@@ -20,6 +20,7 @@ import { PaginationControls } from '@work-orders/common-pos/components/Paginatio
 import { v4 as uuid } from 'uuid';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { UUID } from '@web/util/types.js';
 
 export function PurchaseOrderProductSelector({
   filters: { vendorName, locationId },
@@ -138,7 +139,7 @@ export function PurchaseOrderProductSelector({
               },
               onCreate: product => {
                 selectProducts([
-                  { ...product, uuid: uuid(), customFields: customFieldsPresetsQuery.data.defaultCustomFields },
+                  { ...product, uuid: uuid() as UUID, customFields: customFieldsPresetsQuery.data.defaultCustomFields },
                 ]);
                 router.popCurrent();
               },
@@ -249,7 +250,7 @@ function useProductVariantRows(
         if (!variant.requiresComponents) {
           selectProducts([
             {
-              uuid: uuid(),
+              uuid: uuid() as UUID,
               shopifyOrderLineItem: null,
               productVariantId: variant.id,
               availableQuantity: 0 as Int,
@@ -268,7 +269,7 @@ function useProductVariantRows(
             const inventoryItem = inventoryItemQueries[productVariant.inventoryItem.id]?.data;
 
             return Array.from({ length: quantity }, () => ({
-              uuid: uuid(),
+              uuid: uuid() as UUID,
               shopifyOrderLineItem: null,
               handle: productVariant.product.handle,
               productVariantId: productVariant.id,

@@ -177,12 +177,12 @@ model ShopifyOrderLineItem {
   productVariantId String?
   productVariant   ProductVariant? @relation(fields: [productVariantId], references: [productVariantId])
 
-  title                        String
-  quantity                     Int
-  unfulfilledQuantity          Int
-  discountedUnitPrice          String // after all discounts, including order-level (proportionally distributed)
-  unitPrice                    String // before tax/discounts
-  totalTax                     String // for all quantities
+  title               String
+  quantity            Int
+  unfulfilledQuantity Int
+  discountedUnitPrice String // after all discounts, including order-level (proportionally distributed)
+  unitPrice           String // before tax/discounts
+  totalTax            String // for all quantities
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
@@ -198,7 +198,7 @@ model ShopifyOrderLineItem {
 model ShopifyOrderLineItemReservation {
   lineItemId String @id
   locationId String
-  quantity Int
+  quantity   Int
 
   @@index([locationId])
 }
@@ -382,9 +382,10 @@ model PurchaseOrderLineItem {
   /// Quantity that is added Shopify as available inventory
   availableQuantity Int
 
-  createdAt                        DateTime                           @default(now()) @db.Timestamptz(3)
-  updatedAt                        DateTime                           @default(now()) @db.Timestamptz(3)
-  PurchaseOrderLineItemCustomField PurchaseOrderLineItemCustomField[]
+  createdAt              DateTime                           @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime                           @default(now()) @db.Timestamptz(3)
+  customFields           PurchaseOrderLineItemCustomField[]
+  stockTransferLineItems StockTransferLineItem[]
 
   @@id([purchaseOrderId, uuid])
   @@index([purchaseOrderId])
@@ -453,6 +454,13 @@ model StockTransferLineItem {
   // The quantity pending/sent/received/rejected depending on the status.
   // Line item is split if there are multiple statuses.
   quantity Int
+
+  // Stock transfer line items can be linked to purchase order line items.
+  // This is used for cases where a purchase order should immediatelly be shipped to a different location.
+  // Linking the two allows us to determine how many items were transferred, and how many remain.
+  purchaseOrderId           Int?
+  purchaseOrderLineItemUuid String?                @db.Uuid
+  purchaseOrderLineItem     PurchaseOrderLineItem? @relation(fields: [purchaseOrderId, purchaseOrderLineItemUuid], references: [purchaseOrderId, uuid])
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)

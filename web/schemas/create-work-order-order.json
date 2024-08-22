@@ -12,7 +12,7 @@
         "type": "object",
         "properties": {
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           }
         },
         "required": ["uuid"],
@@ -25,7 +25,7 @@
         "type": "object",
         "properties": {
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           }
         },
         "required": ["uuid"],
