@@ -2,6 +2,7 @@ import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-r
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
+import { getUnsourcedWorkOrderItems } from './WorkOrderItemSourcing.js';
 
 export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) {
   const title = `Work order ${workOrder.name} saved`;
@@ -9,6 +10,8 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(title);
+
+  const hasUnsourcedItems = getUnsourcedWorkOrderItems(workOrder).length > 0;
 
   return (
     <ScrollView>
@@ -28,6 +31,15 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
               router.push('PaymentOverview', { name: workOrder.name });
             }}
           />
+          {hasUnsourcedItems && (
+            <Button
+              title={'Sourcing'}
+              onPress={async () => {
+                await router.popCurrent();
+                router.push('WorkOrderItemSourcing', { name: workOrder.name });
+              }}
+            />
+          )}
         </Stack>
       </Stack>
     </ScrollView>

@@ -117,7 +117,7 @@ export function SelectPurchaseOrderProductsToTransfer({ name }: { name: string }
 
   const screen = useScreen();
   screen.setTitle(`${name} - Create Transfer Order`);
-  screen.setIsLoading(purchaseOrderQuery.isLoading);
+  screen.setIsLoading(purchaseOrderQuery.isFetching);
 
   const router = useRouter();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();

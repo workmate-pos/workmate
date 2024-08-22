@@ -51,8 +51,8 @@
     "all:clean": "npm run admin:clean && npm run extensions:clean && rm -rf node_modules"
   },
   "dependencies": {
-    "@shopify/app": "^3.56.1",
-    "@shopify/cli": "^3.56.1"
+    "@shopify/app": "^3.58.2",
+    "@shopify/cli": "^3.66.0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^6.7.5",

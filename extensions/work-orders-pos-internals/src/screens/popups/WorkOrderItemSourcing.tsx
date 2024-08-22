@@ -409,7 +409,7 @@ export type UnsourcedWorkOrderItem = {
   shopifyOrderLineItem: NonNullable<StockTransferLineItem['shopifyOrderLineItem']>;
 };
 
-function getUnsourcedWorkOrderItems(workOrder: DetailedWorkOrder): UnsourcedWorkOrderItem[] {
+export function getUnsourcedWorkOrderItems(workOrder: DetailedWorkOrder): UnsourcedWorkOrderItem[] {
   return (
     workOrder.items
       .filter(hasPropertyValue('type', 'product'))

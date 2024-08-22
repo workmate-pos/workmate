@@ -35,6 +35,10 @@ export const useStockTransferMutation = ({ fetch }: { fetch: Fetch }) => {
     onSuccess(stockTransfer) {
       queryClient.invalidateQueries(['stock-transfer-page']);
       queryClient.invalidateQueries(['stock-transfer-count']);
+      queryClient.invalidateQueries(['work-order']);
+      queryClient.invalidateQueries(['work-order-info']);
+      queryClient.invalidateQueries(['purchase-order']);
+      queryClient.invalidateQueries(['purchase-order-info']);
 
       queryClient.setQueryData(
         ['stock-transfer', stockTransfer.name],
