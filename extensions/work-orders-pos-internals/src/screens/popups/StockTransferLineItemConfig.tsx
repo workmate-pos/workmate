@@ -46,7 +46,7 @@ export function StockTransferLineItemConfig({
   const lineItemName =
     getProductVariantName({
       title: lineItem.productVariantTitle,
-      product: { title: lineItem.productTitle, hasOnlyDefaultVariant: false },
+      product: { title: lineItem.productTitle, hasOnlyDefaultVariant: true },
     }) ?? 'Unknown Product';
 
   const screen = useScreen();
@@ -111,7 +111,7 @@ export function StockTransferLineItemConfig({
                 </Text>
               </Selectable>
             </ResponsiveStack>
-            <Badge {...getStockTransferLineItemStatusBadgeProps(lineItem.status)} />
+            <Badge {...getStockTransferLineItemStatusBadgeProps({ status: lineItem.status })} />
           </ResponsiveStack>
 
           <Text variant="body">Quantity</Text>

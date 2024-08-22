@@ -219,14 +219,7 @@ function useStockTransferRows(stockTransfers: DetailedStockTransfer[]): ListRow[
         subtitle: [fromLocationSubtitle, toLocationSubtitle],
         badges: entries(statusCount)
           .filter(([, quantity]) => quantity > 0)
-          .map<BadgeProps>(([status, quantity]) => {
-            const badgeProps = getStockTransferLineItemStatusBadgeProps(status);
-            return {
-              variant: badgeProps.variant,
-              status: badgeProps.status,
-              text: `${quantity} ${badgeProps.text}`,
-            };
-          }),
+          .map<BadgeProps>(([status, quantity]) => getStockTransferLineItemStatusBadgeProps({ status, quantity })),
       },
       rightSide: {
         showChevron: true,

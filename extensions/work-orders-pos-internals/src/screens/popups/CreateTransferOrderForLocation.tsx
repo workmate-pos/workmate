@@ -14,6 +14,7 @@ import { useRouter } from '../../routes.js';
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { UnsourcedWorkOrderItem } from './WorkOrderItemSourcing.js';
+import { defaultCreateStockTransfer } from '../../create-stock-transfer/default.js';
 
 /**
  * Select a transfer order location given a list of items that should be transferred.
@@ -63,11 +64,10 @@ export function CreateTransferOrderForLocation({
             await router.popCurrent();
             router.push('StockTransfer', {
               initial: {
-                name: null,
+                ...defaultCreateStockTransfer,
                 lineItems: fromLocation.stockTransferLineItems,
                 fromLocationId,
                 toLocationId,
-                note: '',
               },
             });
           },

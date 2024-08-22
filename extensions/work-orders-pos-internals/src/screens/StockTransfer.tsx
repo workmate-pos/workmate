@@ -282,14 +282,14 @@ function useStockTransferLineItemRows(
 
   return createStockTransfer.lineItems.map<ListRow>(lineItem => {
     const inventoryItemQuery = inventoryItemQueries[lineItem.inventoryItemId];
-    const hasOnlyDefaultVariant = inventoryItemQuery?.data?.variant?.product?.hasOnlyDefaultVariant ?? false;
+    const hasOnlyDefaultVariant = inventoryItemQuery?.data?.variant?.product?.hasOnlyDefaultVariant ?? true;
     const imageUrl =
       inventoryItemQuery?.data?.variant?.image?.url ?? inventoryItemQuery?.data?.variant?.product?.featuredImage?.url;
 
     const orderId = lineItem.shopifyOrderLineItem?.orderId;
     const order = orderId ? orderQueries[orderId]?.data?.order : null;
 
-    const lineItemStatusBadge = getStockTransferLineItemStatusBadgeProps(lineItem.status);
+    const lineItemStatusBadge = getStockTransferLineItemStatusBadgeProps({ status: lineItem.status });
     const orderBadge: BadgeProps | undefined = orderId
       ? { variant: 'highlight', text: order?.name ?? 'Unknown order' }
       : undefined;

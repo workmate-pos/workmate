@@ -12,7 +12,7 @@ import {
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { CreatePurchaseOrder, DateTime, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEffect, useState, useReducer, useRef } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
@@ -44,6 +44,7 @@ import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
+import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer-line-item-status-badge-props.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -419,12 +420,19 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
           <FormButton
-            title={'Transfer Products'}
+            title={'Transfer'}
             type={'basic'}
             action={'button'}
             disabled={!createPurchaseOrder.name || hasUnsavedChanges}
             onPress={() => {
-              // TODO
+              if (!createPurchaseOrder.name) {
+                toast.show('You must save your purchase order before you can transfer products');
+                return;
+              }
+
+              router.push('SelectPurchaseOrderProductsToTransfer', {
+                name: createPurchaseOrder.name,
+              });
             }}
           />
 
@@ -465,7 +473,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
 }
 
 function useProductRows(
-  { lineItems, locationId }: Pick<CreatePurchaseOrder, 'lineItems' | 'locationId'>,
+  { name, lineItems, locationId }: Pick<CreatePurchaseOrder, 'name' | 'lineItems' | 'locationId'>,
   purchaseOrder: PurchaseOrder | null,
   dispatch: CreatePurchaseOrderDispatchProxy,
   query: string,
@@ -477,6 +485,7 @@ function useProductRows(
   const fetch = useAuthenticatedFetch();
   const router = useRouter();
 
+  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
   const productVariantIds = unique(lineItems.map(product => product.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
@@ -518,6 +527,8 @@ function useProductRows(
     const displayName = getDisplayName(product);
     const imageUrl = variant?.image?.url ?? variant?.product?.featuredImage?.url;
 
+    const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', product.uuid));
+
     return {
       id: String(i),
       onPress: () => {
@@ -542,7 +553,16 @@ function useProductRows(
           badge: product.quantity,
         },
         subtitle: [`${product.availableQuantity} received`],
-        badges: [order].filter(isNonNullable).map(order => ({ variant: 'highlight', text: order.name })),
+        badges: [
+          order ? ({ variant: 'highlight', text: order.name } as const) : null,
+          ...(savedLineItem?.stockTransferLineItems?.map(({ status, stockTransferName, quantity }) =>
+            getStockTransferLineItemStatusBadgeProps({
+              status,
+              quantity,
+              name: stockTransferName,
+            }),
+          ) ?? []),
+        ].filter(isNonNullable),
       },
       rightSide: {
         showChevron: !disabled,

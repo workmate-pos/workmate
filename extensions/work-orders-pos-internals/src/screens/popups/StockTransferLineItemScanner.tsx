@@ -444,10 +444,10 @@ function useActionRows(actions: Action[], setActions: Dispatch<SetStateAction<Ac
     const badges: BadgeProps[] = [];
 
     if (action.fromStatus) {
-      badges.push(getStockTransferLineItemStatusBadgeProps(action.fromStatus));
+      badges.push(getStockTransferLineItemStatusBadgeProps({ status: action.fromStatus }));
     }
 
-    badges.push(getStockTransferLineItemStatusBadgeProps(action.toStatus));
+    badges.push(getStockTransferLineItemStatusBadgeProps({ status: action.toStatus }));
 
     return {
       id: String(i),
@@ -482,8 +482,8 @@ function textWithBadges(strings: TemplateStringsArray, ...values: StockTransferL
             {text}
           </Text>
         );
-        const value = values[i];
-        const badgeNode = value ? <Badge {...getStockTransferLineItemStatusBadgeProps(value)} /> : null;
+        const status = values[i];
+        const badgeNode = status ? <Badge {...getStockTransferLineItemStatusBadgeProps({ status })} /> : null;
         return [textNode, badgeNode];
       })}
     </ResponsiveStack>

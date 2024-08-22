@@ -3,14 +3,11 @@ import { sql, sqlOne } from '../db/sql-tag.js';
 import { assertGidOrNull, assertMoneyOrNull } from '../../util/assertions.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { indexByMap, isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
+import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertMoney, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { nest } from '../../util/db.js';
 import { DateTime } from '../gql/queries/generated/schema.js';
-import { ShopifyOrderLineItem } from '../work-orders/types.js';
-import { db } from '../db/db.js';
-import { Int } from '../../schemas/generated/create-stock-transfer.js';
 
 export type PurchaseOrder = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>;
 
@@ -209,7 +206,7 @@ export async function getPurchaseOrderLineItems(purchaseOrderId: number) {
 }
 
 function mapPurchaseOrderLineItem<
-  const T extends {
+  T extends {
     purchaseOrderId: number;
     productVariantId: string;
     quantity: number;

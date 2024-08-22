@@ -21,6 +21,7 @@ import {
   getPurchaseOrderLineItemCustomFields,
   getPurchaseOrderLineItems,
 } from './queries.js';
+import { getStockTransferLineItems, getStockTransferLineItemsForPurchaseOrder } from '../stock-transfers/queries.js';
 
 export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
   const purchaseOrder = await getPurchaseOrder({ shop, name });
@@ -123,9 +124,10 @@ export async function getPurchaseOrderInfoPage(
 }
 
 async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
-  const [lineItems, lineItemCustomFields] = await Promise.all([
+  const [lineItems, lineItemCustomFields, stockTransferLineItems] = await Promise.all([
     getPurchaseOrderLineItems(purchaseOrderId),
     getPurchaseOrderLineItemCustomFields(purchaseOrderId),
+    getStockTransferLineItemsForPurchaseOrder(purchaseOrderId),
   ]);
 
   const productVariantIds = unique(lineItems.map(({ productVariantId }) => productVariantId));
@@ -155,6 +157,10 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
     const shopifyOrderLineItem = shopifyOrderLineItemId
       ? shopifyOrderLineItemById[shopifyOrderLineItemId] ?? never('fk')
       : null;
+
+    const linkedStockTransferLineItems = stockTransferLineItems.filter(
+      hasPropertyValue('purchaseOrderLineItemUuid', uuid),
+    );
 
     const shopifyOrder = shopifyOrderLineItem ? orderById[shopifyOrderLineItem.orderId] ?? never('fk') : null;
 
@@ -200,6 +206,12 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
           },
         };
       })(),
+      stockTransferLineItems: linkedStockTransferLineItems.map(({ stockTransferName, status, quantity, uuid }) => ({
+        stockTransferName,
+        uuid,
+        status,
+        quantity,
+      })),
       customFields: Object.fromEntries(
         lineItemCustomFields.filter(cf => cf.purchaseOrderLineItemUuid === uuid).map(({ key, value }) => [key, value]),
       ),

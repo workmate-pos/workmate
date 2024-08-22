@@ -126,21 +126,23 @@ export async function getStockTransferLineItems(stockTransferId: number) {
   return lineItems.map(mapStockTransferLineItem);
 }
 
-function mapStockTransferLineItem(stockTransferLineItem: {
-  uuid: string;
-  stockTransferId: number;
-  inventoryItemId: string;
-  productTitle: string;
-  productVariantTitle: string;
-  status: 'PENDING' | 'IN_TRANSIT' | 'RECEIVED' | 'REJECTED';
-  quantity: number;
-  createdAt: Date;
-  updatedAt: Date;
-  shopifyOrderLineItemId: string | null;
-  shopifyOrderId: string | null;
-  purchaseOrderId: number | null;
-  purchaseOrderLineItemUuid: string | null;
-}) {
+function mapStockTransferLineItem<
+  T extends {
+    uuid: string;
+    stockTransferId: number;
+    inventoryItemId: string;
+    productTitle: string;
+    productVariantTitle: string;
+    status: 'PENDING' | 'IN_TRANSIT' | 'RECEIVED' | 'REJECTED';
+    quantity: number;
+    createdAt: Date;
+    updatedAt: Date;
+    shopifyOrderLineItemId: string | null;
+    shopifyOrderId: string | null;
+    purchaseOrderId: number | null;
+    purchaseOrderLineItemUuid: string | null;
+  },
+>(stockTransferLineItem: T) {
   const { uuid, inventoryItemId, shopifyOrderLineItemId, shopifyOrderId, purchaseOrderLineItemUuid, purchaseOrderId } =
     stockTransferLineItem;
 
@@ -356,4 +358,29 @@ export async function getStockTransfersByIds(stockTransferIds: number[]) {
     WHERE id = ANY (${stockTransferIds});`;
 
   return stockTransfers.map(mapStockTransfer);
+}
+
+export async function getStockTransferLineItemsForPurchaseOrder(purchaseOrderId: number) {
+  const lineItems = await sql<{
+    uuid: string;
+    stockTransferId: number;
+    inventoryItemId: string;
+    productTitle: string;
+    productVariantTitle: string;
+    status: 'PENDING' | 'IN_TRANSIT' | 'RECEIVED' | 'REJECTED';
+    quantity: number;
+    createdAt: Date;
+    updatedAt: Date;
+    shopifyOrderLineItemId: string | null;
+    shopifyOrderId: string | null;
+    purchaseOrderId: number | null;
+    purchaseOrderLineItemUuid: string | null;
+    stockTransferName: string;
+  }>`
+    SELECT li.*, st.name AS "stockTransferName"
+    FROM "StockTransferLineItem" li
+    INNER JOIN "StockTransfer" st ON li."stockTransferId" = st.id
+    WHERE li."purchaseOrderId" = ${purchaseOrderId};`;
+
+  return lineItems.map(mapStockTransferLineItem);
 }
