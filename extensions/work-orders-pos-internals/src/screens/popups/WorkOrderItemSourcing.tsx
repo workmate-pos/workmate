@@ -172,7 +172,8 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             title={'Create Purchase Order'}
             isDisabled={isSubmitting}
             onPress={() => {
-              router.push('UnsourcedItemList', {
+              // TODO: Instead of just this list, a
+              router.push('UnsourcedPurchaseOrderItemList', {
                 items: getUnsourcedWorkOrderItems(workOrder).map(
                   ({ uuid, shopifyOrderLineItem, unsourcedQuantity, productVariantId }) => ({
                     uuid,
@@ -183,63 +184,6 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
                     availableQuantity: Infinity,
                   }),
                 ),
-                primaryAction: {
-                  title: 'Create Purchase Order',
-                  loading: reserveLineItemInventoryMutation.isLoading,
-                  onAction: async selectedItems => {
-                    const status = settingsQuery.data?.settings.defaultPurchaseOrderStatus;
-                    const customFields = purchaseOrderCustomFieldsPresetsQuery.data?.defaultCustomFields;
-                    const lineItemCustomFields = lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields;
-
-                    if (!status || !customFields || !lineItemCustomFields) {
-                      toast.show('Wait for settings to load before creating a purchase order');
-                      return;
-                    }
-
-                    // TODO: List of vendors to pick from instead of products?
-
-                    const createPurchaseOrder: CreatePurchaseOrder = {
-                      ...defaultCreatePurchaseOrder({ status }),
-                      locationId: createGid('Location', session.currentSession.locationId),
-                      customFields,
-                      lineItems: selectedItems
-                        .map<CreatePurchaseOrder['lineItems'][number] | null>(item => {
-                          const { uuid, productVariantId, quantity, shopifyOrderLineItem } = item;
-                          const productVariantQuery = productVariantQueries[productVariantId];
-
-                          if (!productVariantQuery?.data) {
-                            return null;
-                          }
-
-                          const {
-                            inventoryItem: { unitCost },
-                          } = productVariantQuery.data;
-
-                          return {
-                            // can just recycle the work order item uuid
-                            uuid,
-                            shopifyOrderLineItem,
-                            quantity,
-                            productVariantId,
-                            availableQuantity: 0,
-                            customFields: lineItemCustomFields,
-                            unitCost: unitCost
-                              ? BigDecimal.fromDecimal(unitCost.amount).toMoney()
-                              : BigDecimal.ZERO.toMoney(),
-                          };
-                        })
-                        .filter(isNonNullable),
-                    };
-
-                    if (createPurchaseOrder.lineItems.length !== selectedItems.length) {
-                      toast.show('Some items could not be added to the transfer order');
-                      return;
-                    }
-
-                    await router.pop();
-                    router.push('PurchaseOrder', { initial: createPurchaseOrder });
-                  },
-                },
               });
             }}
           />

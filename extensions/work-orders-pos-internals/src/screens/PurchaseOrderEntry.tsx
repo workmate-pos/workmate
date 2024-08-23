@@ -194,8 +194,8 @@ function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
   const possibilities = [
     purchaseOrder.vendorName,
     purchaseOrder.location?.name,
-    purchaseOrder.linkedOrders.map(order => order.name).join(', '),
-    purchaseOrder.linkedCustomers.map(customer => customer.displayName).join(', '),
+    purchaseOrder.linkedOrders.map(order => order.name).join(', ') || undefined,
+    purchaseOrder.linkedCustomers.map(customer => customer.displayName).join(', ') || undefined,
   ].filter(isNonNullable);
 
   if (possibilities.length === 0) {

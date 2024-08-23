@@ -102,6 +102,7 @@ fragment ProductFragment on Product {
   handle
   hasOnlyDefaultVariant
   descriptionHtml
+  vendor
   featuredImage {
     url
   }

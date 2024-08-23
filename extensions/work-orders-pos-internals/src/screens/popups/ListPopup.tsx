@@ -11,14 +11,27 @@ import {
 import { ReactNode, useEffect, useState } from 'react';
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export type ListPopupItem<ID extends string = string> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
   id: ID;
   disabled?: boolean;
 };
 
+// TODO: Support actions for 'select' too
+export type ListPopupAction<ID extends string = string> = {
+  title?: string;
+  type?: ButtonType;
+  onAction: (ids: ID[]) => void;
+  disabled?: boolean;
+  loading?: boolean;
+  position?: 'top' | 'bottom';
+};
+
 export type ListPopupProps<ID extends string = string> = {
   title: string;
+  noSearchBar?: boolean;
   selection:
     | {
         type: 'select';
@@ -39,13 +52,7 @@ export type ListPopupProps<ID extends string = string> = {
          */
         onClose?: (ids: ID[]) => void;
       };
-  actions?: {
-    title?: string;
-    type?: ButtonType;
-    onAction: (ids: ID[]) => void;
-    disabled?: boolean;
-    loading?: boolean;
-  }[];
+  actions?: ListPopupAction<ID>[];
   emptyState?: ReactNode;
   imageDisplayStrategy?: ListProps['imageDisplayStrategy'];
 };
@@ -60,6 +67,7 @@ export function ListPopup<ID extends string = string>({
   emptyState,
   imageDisplayStrategy,
   actions,
+  noSearchBar = false,
 }: ListPopupProps<ID>) {
   const router = useRouter();
   const screen = useScreen();
@@ -68,6 +76,8 @@ export function ListPopup<ID extends string = string>({
   const [selectedIds, setSelectedIds] = useState<ID[]>(
     selection.type === 'multi-select' ? selection.initialSelection ?? [] : [],
   );
+
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     screen.addOnNavigateBack(() => {
@@ -81,41 +91,68 @@ export function ListPopup<ID extends string = string>({
     });
   }, [selectedIds]);
 
+  const defaultActionPosition = 'bottom';
+
+  const bottomActions = actions?.filter(action => (action.position ?? defaultActionPosition) === 'bottom');
+  const topActions = actions?.filter(action => (action.position ?? defaultActionPosition) === 'top');
+
   return (
     <ScrollView>
       <Stack direction={'vertical'} spacing={2}>
+        {topActions?.map(action => getActionButton(action, selectedIds))}
+
+        {!noSearchBar && (
+          <ControlledSearchBar
+            value={query}
+            onTextChange={setQuery}
+            onSearch={() => {}}
+            placeholder={'Search'}
+            editable
+          />
+        )}
+
         <List
           imageDisplayStrategy={imageDisplayStrategy}
-          data={selection.items.map<ListRow>(item => ({
-            id: item.id,
-            leftSide: item.leftSide,
-            rightSide: {
-              showChevron: selection.type === 'select' && !item.disabled,
-              toggleSwitch:
-                selection.type !== 'multi-select'
-                  ? undefined
-                  : { value: selectedIds.includes(item.id), disabled: item.disabled },
-            },
-            onPress: async () => {
-              if (item.disabled) {
-                return;
-              }
+          data={selection.items
+            .filter(
+              item =>
+                !query ||
+                item.leftSide.label.toLowerCase().includes(query.toLowerCase()) ||
+                item.leftSide.subtitle?.filter(isNonNullable).some(subtitle => {
+                  const subtitleString = typeof subtitle === 'string' ? subtitle : subtitle.content;
+                  return subtitleString.toLowerCase().includes(query.toLowerCase());
+                }),
+            )
+            .map<ListRow>(item => ({
+              id: item.id,
+              leftSide: item.leftSide,
+              rightSide: {
+                showChevron: selection.type === 'select' && !item.disabled,
+                toggleSwitch:
+                  selection.type !== 'multi-select'
+                    ? undefined
+                    : { value: selectedIds.includes(item.id), disabled: item.disabled },
+              },
+              onPress: async () => {
+                if (item.disabled) {
+                  return;
+                }
 
-              if (selection.type === 'select') {
-                await router.popCurrent();
-                selection.onSelect(item.id);
-              } else if (selection.type === 'multi-select') {
-                const newSelectedIds = selectedIds.includes(item.id)
-                  ? selectedIds.filter(id => id !== item.id)
-                  : [...selectedIds, item.id];
+                if (selection.type === 'select') {
+                  await router.popCurrent();
+                  selection.onSelect(item.id);
+                } else if (selection.type === 'multi-select') {
+                  const newSelectedIds = selectedIds.includes(item.id)
+                    ? selectedIds.filter(id => id !== item.id)
+                    : [...selectedIds, item.id];
 
-                setSelectedIds(newSelectedIds);
-                selection.onSelect?.(newSelectedIds);
-              } else {
-                return selection satisfies never;
-              }
-            },
-          }))}
+                  setSelectedIds(newSelectedIds);
+                  selection.onSelect?.(newSelectedIds);
+                } else {
+                  return selection satisfies never;
+                }
+              },
+            }))}
           onEndReached={() => {}}
           isLoadingMore={false}
         />
@@ -129,16 +166,20 @@ export function ListPopup<ID extends string = string>({
             </Stack>
           ))}
 
-        {actions?.map(({ title, type, onAction, disabled, loading }) => (
-          <Button
-            title={title}
-            type={type}
-            isDisabled={disabled}
-            isLoading={loading}
-            onPress={() => onAction(selectedIds)}
-          />
-        ))}
+        {bottomActions?.map(action => getActionButton(action, selectedIds))}
       </Stack>
     </ScrollView>
+  );
+}
+
+function getActionButton<ID extends string = string>(action: ListPopupAction<ID>, selectedIds: ID[]) {
+  return (
+    <Button
+      title={action.title}
+      type={action.type}
+      isDisabled={action.disabled}
+      isLoading={action.loading}
+      onPress={() => action.onAction(selectedIds)}
+    />
   );
 }

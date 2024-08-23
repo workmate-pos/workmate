@@ -4,15 +4,14 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { ButtonType, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useReserveLineItemsInventoryMutation } from '@work-orders/common/queries/use-reserve-line-items-inventory-mutation.js';
+import { Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useRouter } from '../../routes.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { UUID } from '@web/util/types.js';
 
-export type UnsourcedItemListSelectedItems = {
+export type UnsourcedItemListSelectedItem = {
   uuid: UUID;
   shopifyOrderLineItem: { id: ID; orderId: ID };
   productVariantId: ID;
@@ -22,27 +21,34 @@ export type UnsourcedItemListSelectedItems = {
 };
 
 export type UnsourcedItemListProps = {
-  items: UnsourcedItemListSelectedItems[];
+  items: UnsourcedItemListSelectedItem[];
+  filterAction?: {
+    title: string;
+    onAction: () => void;
+    loading?: boolean;
+    disabled?: boolean;
+  };
   primaryAction: {
     title: string;
     allowEmptySelection?: boolean;
-    onAction: (selectedItems: UnsourcedItemListSelectedItems[]) => void;
-    loading: boolean;
+    onAction: (selectedItems: UnsourcedItemListSelectedItem[]) => void;
+    loading?: boolean;
   };
 };
 
-export function UnsourcedItemList({ items: initialSelectedItems, primaryAction }: UnsourcedItemListProps) {
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+export function UnsourcedItemList({ items: listedItems, primaryAction, filterAction }: UnsourcedItemListProps) {
+  const [selectedItems, setSelectedItems] = useState(listedItems);
 
-  const [selectedItems, setSelectedItems] = useState(initialSelectedItems);
+  // Reset selection if input changes, e.g. when a filter is applied
+  useEffect(() => {
+    setSelectedItems(listedItems);
+  }, [JSON.stringify(listedItems)]);
 
   const fetch = useAuthenticatedFetch();
-  const productVariantIds = unique(initialSelectedItems.map(item => item.productVariantId));
+  const productVariantIds = unique(listedItems.map(item => item.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  const reserveLineItemInventoryMutation = useReserveLineItemsInventoryMutation({ fetch });
-
-  const getListPopupItem = (item: UnsourcedItemListSelectedItems) => ({
+  const getListPopupItem = (item: UnsourcedItemListSelectedItem) => ({
     id: item.uuid,
     leftSide: {
       label: getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
@@ -70,15 +76,25 @@ export function UnsourcedItemList({ items: initialSelectedItems, primaryAction }
       imageDisplayStrategy="always"
       selection={{
         type: 'multi-select',
-        items: initialSelectedItems.map(item => {
+        items: listedItems.map(item => {
           const selectedItem = selectedItems.find(hasPropertyValue('uuid', item.uuid));
           return getListPopupItem(selectedItem ?? item);
         }),
-        initialSelection: initialSelectedItems.map(item => item.uuid),
-        onSelect: selected => setSelectedItems(initialSelectedItems.filter(item => selected.includes(item.uuid))),
-        onClose: () => setSelectedItems(initialSelectedItems),
+        initialSelection: listedItems.map(item => item.uuid),
+        onSelect: selected => setSelectedItems(listedItems.filter(item => selected.includes(item.uuid))),
+        onClose: () => setSelectedItems(listedItems),
       }}
       actions={[
+        !!filterAction
+          ? ({
+              title: filterAction.title,
+              type: 'basic',
+              onAction: filterAction.onAction,
+              loading: filterAction.loading,
+              disabled: filterAction.disabled,
+              position: 'top',
+            } as const)
+          : null,
         {
           title: 'Change quantities',
           type: 'plain',
@@ -101,15 +117,15 @@ export function UnsourcedItemList({ items: initialSelectedItems, primaryAction }
             });
           },
           disabled: selectedItems.length === 0,
-        },
+        } as const,
         {
           title: primaryAction.title,
           type: 'primary',
           disabled: !primaryAction.allowEmptySelection && selectedItems.length === 0,
           loading: primaryAction.loading,
           onAction: () => primaryAction.onAction(selectedItems),
-        },
-      ]}
+        } as const,
+      ].filter(isNonNullable)}
       emptyState={
         <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
