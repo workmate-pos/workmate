@@ -1,7 +1,15 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useCycleCountPageQuery } from '@work-orders/common/queries/use-cycle-count-page-query.js';
-import { BadgeProps, Button, List, ListRow, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import {
+  BadgeProps,
+  Button,
+  List,
+  ListRow,
+  SegmentedControl,
+  Text,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -18,12 +26,21 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { useLocationQueries, useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useEmployeeQueries, useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+
+const SORT_MODES = ['created-date', 'due-date'] as const;
+const SORT_ORDERS = ['descending', 'ascending'] as const;
+
+type SortMode = (typeof SORT_MODES)[number];
+type SortOrder = (typeof SORT_ORDERS)[number];
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
   const [status, setStatus] = useState<string>();
   const [locationId, setLocationId] = useState<ID>();
   const [employeeId, setEmployeeId] = useState<ID>();
+  const [sortMode, setSortMode] = useState<SortMode>('created-date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('descending');
   const fetch = useAuthenticatedFetch();
 
   const locationQuery = useLocationQuery({ fetch, id: locationId! }, { enabled: !!locationId });
@@ -39,6 +56,8 @@ export function Entry() {
       status,
       locationId,
       employeeId,
+      sortMode,
+      sortOrder,
     },
   });
 
@@ -94,7 +113,7 @@ export function Entry() {
         </Text>
       </ResponsiveStack>
 
-      <ResponsiveGrid columns={2}>
+      <ResponsiveGrid columns={2} grow>
         <Button
           title={'Filter by status' + (status ? ` (${status})` : '')}
           onPress={() => router.push('StatusSelector', { onSelect: setStatus, onClear: () => setStatus(undefined) })}
@@ -120,6 +139,21 @@ export function Entry() {
               },
               onClear: () => setEmployeeId(undefined),
             })
+          }
+        />
+      </ResponsiveGrid>
+
+      <ResponsiveGrid columns={2} smColumns={2} grow>
+        <Button
+          title={`Sort by ${titleCase(sortMode)}`}
+          onPress={() =>
+            setSortMode(current => SORT_MODES[(SORT_MODES.indexOf(sortMode) + 1) % SORT_MODES.length] ?? current)
+          }
+        />
+        <Button
+          title={titleCase(sortOrder)}
+          onPress={() =>
+            setSortOrder(current => SORT_ORDERS[(SORT_ORDERS.indexOf(sortOrder) + 1) % SORT_ORDERS.length] ?? current)
           }
         />
       </ResponsiveGrid>
@@ -193,6 +227,19 @@ function useListRows(cycleCounts: DetailedCycleCount[], setSelectedCycleCountNam
             variant: 'highlight',
           },
           getCycleCountApplicationStateBadge(cycleCount.applicationStatus),
+          ...[cycleCount.dueDate].filter(isNonNullable).map<BadgeProps>(dueDate => {
+            const date = new Date(dueDate);
+
+            return {
+              text: `Due ${date.toLocaleDateString()}`,
+              variant:
+                new Date().getTime() > date.getTime() && cycleCount.applicationStatus !== 'APPLIED'
+                  ? 'critical'
+                  : cycleCount.applicationStatus === 'APPLIED'
+                    ? 'success'
+                    : 'warning',
+            };
+          }),
           ...cycleCount.employeeAssignments
             .map<BadgeProps | null>(({ employeeId }) => {
               const employeeQuery = employeeQueries[employeeId];

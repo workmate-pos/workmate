@@ -7,4 +7,6 @@ export const getDefaultCreateCycleCount = (locationId: ID): CreateCycleCount => 
   items: [],
   locationId,
   note: '',
+  dueDate: null,
+  employeeAssignments: [],
 });

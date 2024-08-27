@@ -11,13 +11,14 @@ export type CycleCountEmployeeAssignment = Awaited<ReturnType<typeof getCycleCou
 export async function getCycleCount({ shop, name }: { shop: string; name: string }) {
   const [cycleCount] = await sql<{
     id: number;
+    shop: string;
+    name: string;
     status: string;
     locationId: string;
     note: string;
     createdAt: Date;
     updatedAt: Date;
-    name: string;
-    shop: string;
+    dueDate: Date | null;
   }>`
     SELECT *
     FROM "CycleCount"
@@ -33,13 +34,14 @@ export async function getCycleCount({ shop, name }: { shop: string; name: string
 
 function mapCycleCount(cycleCount: {
   id: number;
+  shop: string;
+  name: string;
   status: string;
   locationId: string;
   note: string;
   createdAt: Date;
   updatedAt: Date;
-  name: string;
-  shop: string;
+  dueDate: Date | null;
 }) {
   const { locationId } = cycleCount;
 
@@ -60,7 +62,18 @@ export async function getCycleCountsPage(
     limit,
     locationId,
     employeeId,
-  }: { query?: string; status?: string; limit: number; offset: number; locationId?: ID; employeeId?: ID },
+    sortMode = 'created-date',
+    sortOrder = 'descending',
+  }: {
+    query?: string;
+    status?: string;
+    limit: number;
+    offset: number;
+    locationId?: ID;
+    employeeId?: ID;
+    sortMode?: 'due-date' | 'created-date';
+    sortOrder?: 'ascending' | 'descending';
+  },
 ) {
   const escapedQuery = query ? `%${escapeLike(query)}%` : undefined;
   const _locationId: string | undefined = locationId;
@@ -75,19 +88,34 @@ export async function getCycleCountsPage(
     note: string;
     createdAt: Date;
     updatedAt: Date;
+    dueDate: Date | null;
   }>`
-    SELECT DISTINCT cc.*
+    SELECT cc.*
     FROM "CycleCount" cc
-           LEFT JOIN "CycleCountEmployeeAssignment" ea ON ea."cycleCountId" = cc.id
     WHERE cc.shop = ${shop}
       AND cc.status = COALESCE(${status ?? null}, cc.status)
       AND (
-      cc.name ILIKE COALESCE(${escapedQuery ?? null}, cc.name) OR
-      cc.note ILIKE COALESCE(${escapedQuery ?? null}, cc.note)
-      )
+            cc.name ILIKE COALESCE(${escapedQuery ?? null}, cc.name) OR
+            cc.note ILIKE COALESCE(${escapedQuery ?? null}, cc.note)
+            )
       AND cc."locationId" = COALESCE(${_locationId ?? null}, cc."locationId")
-      AND ea."employeeId" IS NOT DISTINCT FROM COALESCE(${_employeeId ?? null}, ea."employeeId")
-    ORDER BY id DESC
+      AND ${_employeeId ?? null} :: text IS NULL
+       OR EXISTS (SELECT 1
+                  FROM "CycleCountEmployeeAssignment" ea
+                  WHERE ea."cycleCountId" = cc.id
+                    AND ea."employeeId" = ${_employeeId ?? null})
+    ORDER BY CASE
+               WHEN ${sortMode} = 'due-date' THEN
+                 CASE
+                   WHEN ${sortOrder} = 'ascending' THEN ("dueDate" - NOW())
+                   WHEN ${sortOrder} = 'descending' THEN (NOW() - "dueDate")
+                   END
+               WHEN ${sortMode} = 'created-date' THEN
+                 CASE
+                   WHEN ${sortOrder} = 'ascending' THEN ("createdAt" - NOW())
+                   WHEN ${sortOrder} = 'descending' THEN (NOW() - "createdAt")
+                   END
+               END NULLS LAST
     LIMIT ${limit} OFFSET ${offset};
   `;
 
@@ -100,31 +128,35 @@ export async function upsertCycleCount({
   status,
   name,
   shop,
+  dueDate,
 }: {
   shop: string;
   name: string;
   status: string;
   locationId: ID;
   note: string;
+  dueDate: Date | null;
 }) {
   const _locationId: string = locationId;
 
   const cycleCount = await sqlOne<{
     id: number;
+    shop: string;
+    name: string;
     status: string;
     locationId: string;
     note: string;
     createdAt: Date;
     updatedAt: Date;
-    name: string;
-    shop: string;
+    dueDate: Date | null;
   }>`
-    INSERT INTO "CycleCount" (status, "locationId", note, name, shop)
-    VALUES (${status}, ${_locationId}, ${note}, ${name}, ${shop})
+    INSERT INTO "CycleCount" (status, "locationId", note, name, shop, "dueDate")
+    VALUES (${status}, ${_locationId}, ${note}, ${name}, ${shop}, ${dueDate!})
     ON CONFLICT (shop, name)
       DO UPDATE SET status       = EXCLUDED.status,
                     "locationId" = EXCLUDED."locationId",
-                    note         = EXCLUDED.note
+                    note         = EXCLUDED.note,
+                    "dueDate"    = EXCLUDED."dueDate"
     RETURNING *;`;
 
   return mapCycleCount(cycleCount);

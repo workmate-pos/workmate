@@ -25,7 +25,9 @@ export const useCycleCountPageQuery = ({
         limit: String(PAGE_SIZE),
       });
 
-      for (const [key, value] of Object.entries(pick(filters, 'status', 'locationId', 'query', 'employeeId'))) {
+      for (const [key, value] of Object.entries(
+        pick(filters, 'status', 'locationId', 'query', 'employeeId', 'sortMode', 'sortOrder'),
+      )) {
         if (!!value) {
           searchParams.set(key, String(value));
         }

@@ -6,6 +6,8 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import {
   Badge,
   Banner,
+  DateField,
+  DatePicker,
   List,
   ListRow,
   ScrollView,
@@ -32,6 +34,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getCycleCountApplicationStateBadge } from './Entry.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { DateTime } from '@web/schemas/generated/create-work-order.js';
 
 export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   const { Form } = useForm();
@@ -41,9 +44,12 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   const [createCycleCount, setCreateCycleCount] = useState(initial);
   const setStatus = getCreateCycleCountSetter(setCreateCycleCount, 'status');
   const setLocationId = getCreateCycleCountSetter(setCreateCycleCount, 'locationId');
+  const setDueDate = getCreateCycleCountSetter(setCreateCycleCount, 'dueDate');
   const setNote = getCreateCycleCountSetter(setCreateCycleCount, 'note');
   const setItems = getCreateCycleCountSetter(setCreateCycleCount, 'items');
   const setEmployeeAssignments = getCreateCycleCountSetter(setCreateCycleCount, 'employeeAssignments');
+
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const hasUnsavedChanges = JSON.stringify(createCycleCount) !== JSON.stringify(lastSavedCreateCycleCount);
 
@@ -123,6 +129,27 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
               }
             />
 
+            <DatePicker
+              inputMode={'spinner'}
+              visibleState={[datePickerOpen, setDatePickerOpen]}
+              value={createCycleCount.dueDate ? new Date(createCycleCount.dueDate).toISOString() : undefined}
+              onChange={(dueDate: string) => setDueDate(new Date(dueDate).toISOString() as DateTime)}
+            />
+
+            <FormStringField
+              label={'Due Date'}
+              value={createCycleCount.dueDate ? new Date(createCycleCount.dueDate).toLocaleDateString() : undefined}
+              onFocus={() => setDatePickerOpen(true)}
+              action={
+                !!createCycleCount.dueDate
+                  ? {
+                      label: 'Clear',
+                      onPress: () => setDueDate(null),
+                    }
+                  : undefined
+              }
+              disabled={datePickerOpen}
+            />
             <FormStringField label={'Note'} type={'area'} value={createCycleCount.note} onChange={setNote} />
             <FormStringField
               label={'Assigned Employees'}

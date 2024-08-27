@@ -806,6 +806,8 @@ model CycleCount {
   locationId String
   note       String
 
+  dueDate    DateTime?
+
   items CycleCountItem[]
 
   createdAt                    DateTime                       @default(now()) @db.Timestamptz(3)
@@ -814,6 +816,8 @@ model CycleCount {
   employees CycleCountEmployeeAssignment[]
 
   @@unique([shop, name])
+  @@index([createdAt])
+  @@index([dueDate])
 }
 
 model CycleCountEmployeeAssignment {

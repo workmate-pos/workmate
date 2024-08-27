@@ -19,7 +19,7 @@ export async function upsertCycleCount(session: Session, createCycleCount: Creat
   validateCreateCycleCount(createCycleCount);
 
   return await unit(async () => {
-    const { status, note, locationId } = createCycleCount;
+    const { status, note, locationId, dueDate } = createCycleCount;
     const name = createCycleCount.name ?? (await getNewCycleCountName(session.shop));
 
     const { id: cycleCountId } = await queries.upsertCycleCount({
@@ -28,6 +28,7 @@ export async function upsertCycleCount(session: Session, createCycleCount: Creat
       status,
       note,
       locationId,
+      dueDate: dueDate ? new Date(dueDate) : null,
     });
 
     await upsertCreateCycleCountItems(cycleCountId, createCycleCount);

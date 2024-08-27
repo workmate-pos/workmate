@@ -18,5 +18,6 @@ export function getCreateCycleCountFromDetailedCycleCount(cycleCount: DetailedCy
     employeeAssignments: cycleCount.employeeAssignments.map(assignment => ({
       employeeId: assignment.employeeId,
     })),
+    dueDate: cycleCount.dueDate,
   };
 }

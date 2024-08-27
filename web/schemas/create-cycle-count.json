@@ -15,6 +15,9 @@
     "note": {
       "type": "string"
     },
+    "dueDate": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+    },
     "items": {
       "type": "array",
       "items": {
@@ -66,6 +69,6 @@
       }
     }
   },
-  "required": ["name", "status", "locationId", "note", "items", "employeeAssignments"],
+  "required": ["name", "status", "locationId", "note", "items", "employeeAssignments", "dueDate"],
   "additionalProperties": false
 }

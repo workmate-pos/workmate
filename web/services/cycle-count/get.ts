@@ -39,8 +39,9 @@ async function getDetailedCycleCountForCycleCount(cycleCount: CycleCount): Promi
   items: DetailedCycleCountItem[];
   applicationStatus: CycleCountApplicationStatus;
   employeeAssignments: DetailedCycleCountEmployeeAssignment[];
+  dueDate: DateTime | null;
 }> {
-  const { status, locationId, note } = cycleCount;
+  const { status, locationId, note, dueDate } = cycleCount;
 
   const [items, employeeAssignments] = await Promise.all([
     getDetailedCycleCountItems(cycleCount.id),
@@ -57,6 +58,7 @@ async function getDetailedCycleCountForCycleCount(cycleCount: CycleCount): Promi
     items,
     applicationStatus,
     employeeAssignments,
+    dueDate: dueDate ? (new Date(dueDate).toISOString() as DateTime) : null,
   };
 }
 

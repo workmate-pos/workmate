@@ -22,6 +22,14 @@
     },
     "employeeId": {
       "$ref": "scalars.json#/definitions/ID"
+    },
+    "sortMode": {
+      "type": "string",
+      "enum": ["due-date", "created-date"]
+    },
+    "sortOrder": {
+      "type": "string",
+      "enum": ["ascending", "descending"]
     }
   },
   "required": ["limit", "offset"],
