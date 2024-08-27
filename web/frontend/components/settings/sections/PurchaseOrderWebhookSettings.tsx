@@ -52,7 +52,7 @@ export function PurchaseOrderWebhookSettings({
               endpointUrl: value,
             },
           });
-          onIsValid(getErrorMessage(settings.purchaseOrderWebhook.endpointUrl) === undefined);
+          onIsValid(getErrorMessage(value) === undefined);
         }}
         error={getErrorMessage(settings.purchaseOrderWebhook.endpointUrl)}
       />

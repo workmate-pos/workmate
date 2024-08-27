@@ -8,6 +8,11 @@ const defaultShopSettings: ShopSettings = {
   statuses: ['Draft', 'In Progress', 'Done'],
   defaultStatus: 'Draft',
   idFormat: 'WO-#{{id}}',
+  cycleCount: {
+    idFormat: 'CC-#{{id}}',
+    statuses: ['Draft', 'Completed'],
+    defaultStatus: 'Draft',
+  },
   discountShortcuts: [
     { percentage: '10.00' as Decimal, unit: 'percentage' },
     { money: '10.00' as Money, unit: 'currency' },

@@ -1,7 +1,6 @@
 import * as queries from './queries.js';
 import { CreateCycleCount, CreateCycleCountItem } from '../../schemas/generated/create-cycle-count.js';
 import { unit } from '../db/unit-of-work.js';
-import { getCycleCountCountForShop } from '../counter/cycle-count-counter.js';
 import { Session } from '@shopify/shopify-api';
 import {
   getCycleCountItemApplications,
@@ -12,6 +11,7 @@ import {
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { validateCreateCycleCount } from './validate.js';
+import { getNewCycleCountName } from '../id-formatting.js';
 
 export async function upsertCycleCount(session: Session, createCycleCount: CreateCycleCount) {
   validateCreateCycleCount(createCycleCount);
@@ -32,11 +32,6 @@ export async function upsertCycleCount(session: Session, createCycleCount: Creat
 
     return { id: cycleCountId, name };
   });
-}
-
-// TODO: Configurable
-async function getNewCycleCountName(shop: string) {
-  return `CC-#${await getCycleCountCountForShop(shop)}`;
 }
 
 /**

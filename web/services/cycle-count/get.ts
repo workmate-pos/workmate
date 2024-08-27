@@ -42,8 +42,8 @@ async function getDetailedCycleCountForCycleCount(cycleCount: CycleCount): Promi
 
   const applicationStatus = match({ hasOnlyAppliedItems, hasOnlyNotAppliedItems })
     .returnType<CycleCountApplicationStatus>()
-    .with({ hasOnlyAppliedItems: true }, () => 'APPLIED')
     .with({ hasOnlyNotAppliedItems: true }, () => 'NOT_APPLIED')
+    .with({ hasOnlyAppliedItems: true }, () => 'APPLIED')
     .otherwise(() => 'PARTIALLY_APPLIED');
 
   return {

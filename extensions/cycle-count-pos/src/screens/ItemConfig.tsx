@@ -7,7 +7,7 @@ import { useProductVariantQuery } from '@work-orders/common/queries/use-product-
 import { Badge, Button, ScrollView, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { getCycleCountApplicationStatusBadge } from './Entry.js';
+import { getCycleCountApplicationStateBadge } from './Entry.js';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
@@ -54,7 +54,7 @@ export function ItemConfig({
           flexWrap={'wrap'}
         >
           <Text variant={'headingLarge'}>{label}</Text>
-          <Badge {...getCycleCountApplicationStatusBadge(cycleCountItem?.applicationStatus ?? 'NOT_APPLIED')} />
+          <Badge {...getCycleCountApplicationStateBadge(cycleCountItem?.applicationStatus ?? 'NOT_APPLIED')} />
         </ResponsiveStack>
 
         <ResponsiveStack direction={'vertical'} alignment={'center'} spacing={0.5}>

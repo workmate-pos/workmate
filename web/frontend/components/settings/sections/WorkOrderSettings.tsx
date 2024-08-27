@@ -39,10 +39,12 @@ export function WorkOrderSettings({
                 content: `Create status "${workOrderStatusValue}"`,
                 prefix: <Icon source={CirclePlusMinor} />,
                 onAction: () => {
-                  setSettings({
-                    ...settings,
-                    statuses: [...settings.statuses, workOrderStatusValue],
-                  });
+                  if (!settings.statuses.includes(workOrderStatusValue)) {
+                    setSettings({
+                      ...settings,
+                      statuses: [...settings.statuses, workOrderStatusValue],
+                    });
+                  }
                   setWorkOrderStatusValue('');
                 },
               }

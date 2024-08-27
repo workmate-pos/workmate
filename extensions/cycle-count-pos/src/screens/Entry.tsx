@@ -9,20 +9,30 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useEffect, useState } from 'react';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
-import { sum } from '@teifi-digital/shopify-app-toolbox/array';
-import { CycleCountApplicationStatus } from '@web/services/cycle-count/types.js';
+import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { CycleCountApplicationStatus, DetailedCycleCount } from '@web/services/cycle-count/types.js';
 import { getCreateCycleCountFromDetailedCycleCount } from '../create-cycle-count/get-create-cycle-count-from-detailed-cycle-count.js';
 import { getDefaultCreateCycleCount } from '../create-cycle-count/default.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { useLocationQueries, useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
+  const [status, setStatus] = useState<string>();
+  const [locationId, setLocationId] = useState<ID>();
   const fetch = useAuthenticatedFetch();
+
+  const locationQuery = useLocationQuery({ fetch, id: locationId! }, { enabled: !!locationId });
+  const location = locationQuery.data;
 
   const cycleCountPageQuery = useCycleCountPageQuery({
     fetch,
     filters: {
       query,
+      status,
+      locationId,
     },
   });
 
@@ -44,17 +54,19 @@ export function Entry() {
     }
   }, [selectedCycleCountQuery.data, selectedCycleCountQuery.isFetching]);
 
+  const rows = useListRows(cycleCountPageQuery.data?.pages.flat() ?? [], setSelectedCycleCountName);
+
   return (
-    <>
+    <ResponsiveStack direction={'vertical'} spacing={2}>
       <ResponsiveStack
         direction={'horizontal'}
         alignment={'space-between'}
-        paddingVertical={'Small'}
         sm={{ direction: 'vertical', alignment: 'center' }}
       >
         <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center', paddingVertical: 'Small' }}>
           <Text variant="headingLarge">Cycle Counts</Text>
         </ResponsiveStack>
+
         <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           <Button
             title={'New Cycle Count'}
@@ -76,32 +88,34 @@ export function Entry() {
         </Text>
       </ResponsiveStack>
 
+      <ResponsiveGrid columns={2}>
+        <Button
+          title={'Filter by status' + (status ? ` (${status})` : '')}
+          onPress={() => router.push('StatusSelector', { onSelect: setStatus, onClear: () => setStatus(undefined) })}
+        />
+        <Button
+          title={'Filter by location' + (locationId ? ` (${location?.name ?? 'loading...'})` : '')}
+          onPress={() =>
+            router.push('LocationSelector', {
+              selection: {
+                type: 'select',
+                onSelect: location => setLocationId(location.id),
+              },
+            })
+          }
+        />
+      </ResponsiveGrid>
+
       <ControlledSearchBar
         value={query}
         onTextChange={query => setQuery(query, !query)}
         onSearch={() => {}}
         placeholder={'Search cycle counts'}
       />
+
       <List
-        imageDisplayStrategy={'always'}
-        data={
-          cycleCountPageQuery.data?.pages.flat().map<ListRow>(cycleCount => {
-            return {
-              id: cycleCount.name,
-              onPress: () => setSelectedCycleCountName(cycleCount.name),
-              leftSide: {
-                label: cycleCount.name,
-                image: {
-                  badge: sum(cycleCount.items.map(item => item.countQuantity)),
-                },
-                badges: [getCycleCountApplicationStatusBadge(cycleCount.applicationStatus)],
-              },
-              rightSide: {
-                showChevron: true,
-              },
-            };
-          }) ?? []
-        }
+        imageDisplayStrategy={'never'}
+        data={rows}
         onEndReached={cycleCountPageQuery.fetchNextPage}
         isLoadingMore={cycleCountPageQuery.isFetchingNextPage}
       />
@@ -129,15 +143,50 @@ export function Entry() {
           </Text>
         </ResponsiveStack>
       )}
-    </>
+    </ResponsiveStack>
   );
+}
+
+function useListRows(cycleCounts: DetailedCycleCount[], setSelectedCycleCountName: (name: string) => void) {
+  const fetch = useAuthenticatedFetch();
+
+  const locationIds = unique(cycleCounts.map(cycleCount => cycleCount.locationId));
+  const locationQueries = useLocationQueries({ fetch, ids: locationIds });
+
+  return cycleCounts.map<ListRow>(cycleCount => {
+    const location = locationQueries[cycleCount.locationId]?.data;
+
+    return {
+      id: cycleCount.name,
+      onPress: () => setSelectedCycleCountName(cycleCount.name),
+      leftSide: {
+        label: cycleCount.name,
+        image: {
+          badge: sum(cycleCount.items.map(item => item.countQuantity)),
+        },
+        badges: [
+          {
+            text: cycleCount.status,
+            variant: 'highlight',
+          },
+          getCycleCountApplicationStateBadge(cycleCount.applicationStatus),
+          ...[location]
+            .filter(isNonNullable)
+            .map<BadgeProps>(location => ({ text: location.name, variant: 'neutral' })),
+        ],
+      },
+      rightSide: {
+        showChevron: true,
+      },
+    };
+  });
 }
 
 /**
  * Create a badge for some application status.
- * If `changed` is true, the status will be adjusted to indicate this by transforming applied into partially applied.
+ * If the count quantity and applied quantity are not equal the status will be adjusted to indicate this by transforming applied into partially applied.
  */
-export function getCycleCountApplicationStatusBadge(
+export function getCycleCountApplicationStateBadge(
   applicationStatus: CycleCountApplicationStatus,
   quantities?: {
     countQuantity: number;

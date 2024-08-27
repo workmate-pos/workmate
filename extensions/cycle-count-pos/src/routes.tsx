@@ -11,6 +11,7 @@ import { ItemConfig } from './screens/ItemConfig.js';
 import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
 import { CycleCountProductSelector } from './screens/CycleCountProductSelector.js';
 import { PlanCycleCount } from './screens/PlanCycleCount.js';
+import { StatusSelector } from './screens/StatusSelector.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -62,5 +63,9 @@ export const { Router, useRouter } = createRouter({
   PlanCycleCount: {
     title: 'Apply Cycle Count',
     Component: PlanCycleCount,
+  },
+  StatusSelector: {
+    title: 'Select Status',
+    Component: StatusSelector,
   },
 });

@@ -76,8 +76,8 @@ export async function getCycleCountsPage(
     SELECT *
     FROM "CycleCount"
     WHERE shop = ${shop}
+      AND status = COALESCE(${status ?? null}, status)
       AND (
-      status = COALESCE(${status ?? null}, status) OR
       name ILIKE COALESCE(${escapedQuery ?? null}, name) OR
       note ILIKE COALESCE(${escapedQuery ?? null}, note)
       )

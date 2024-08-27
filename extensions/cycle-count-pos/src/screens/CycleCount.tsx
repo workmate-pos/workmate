@@ -29,7 +29,7 @@ import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { v4 as uuid } from 'uuid';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { getCycleCountApplicationStatusBadge } from './Entry.js';
+import { getCycleCountApplicationStateBadge } from './Entry.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function CycleCount({ initial }: { initial: CreateCycleCount }) {
@@ -86,7 +86,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
               <Text variant={'headingLarge'}>{createCycleCount.name}</Text>
 
               {cycleCountQuery.data && (
-                <Badge {...getCycleCountApplicationStatusBadge(cycleCountQuery.data.applicationStatus)} />
+                <Badge {...getCycleCountApplicationStateBadge(cycleCountQuery.data.applicationStatus)} />
               )}
             </ResponsiveStack>
           )}
@@ -96,17 +96,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
               label={'Status'}
               value={createCycleCount.status}
               required
-              onFocus={() =>
-                router.push('ListPopup', {
-                  title: 'Select Status',
-                  selection: {
-                    type: 'select',
-                    items: ['Draft', 'Completed'].map(item => ({ id: item, leftSide: { label: item } })),
-                    onSelect: setStatus,
-                  },
-                  imageDisplayStrategy: 'never',
-                })
-              }
+              onFocus={() => router.push('StatusSelector', { onSelect: setStatus })}
             />
 
             <FormStringField
@@ -302,7 +292,7 @@ function useItemRows({
           badge: item.countQuantity,
         },
         badges: [
-          getCycleCountApplicationStatusBadge(cycleCountItem?.applicationStatus ?? 'NOT_APPLIED', {
+          getCycleCountApplicationStateBadge(cycleCountItem?.applicationStatus ?? 'NOT_APPLIED', {
             appliedQuantity: cycleCountItem?.applications.at(-1)?.appliedQuantity ?? 0,
             countQuantity: item.countQuantity,
           }),
