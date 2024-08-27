@@ -115,7 +115,7 @@ export async function getCycleCountsPage(
                    WHEN ${sortOrder} = 'ascending' THEN ("createdAt" - NOW())
                    WHEN ${sortOrder} = 'descending' THEN (NOW() - "createdAt")
                    END
-               END NULLS LAST
+               END NULLS LAST, "createdAt"
     LIMIT ${limit} OFFSET ${offset};
   `;
 
