@@ -171,8 +171,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
           <Button
             title={'Create Purchase Order'}
             isDisabled={isSubmitting}
-            onPress={() => {
-              // TODO: Instead of just this list, a
+            onPress={() =>
               router.push('UnsourcedPurchaseOrderItemList', {
                 items: getUnsourcedWorkOrderItems(workOrder).map(
                   ({ uuid, shopifyOrderLineItem, unsourcedQuantity, productVariantId }) => ({
@@ -184,8 +183,8 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
                     availableQuantity: Infinity,
                   }),
                 ),
-              });
-            }}
+              })
+            }
           />
         </ResponsiveGrid>
       </ResponsiveStack>

@@ -19,12 +19,17 @@ import {
 } from '../../services/mail/templates/purchase-order.js';
 import { renderHtmlToPdfCustomFile } from '../../services/mail/html-pdf/renderer.js';
 import { mg } from '../../services/mail/mailgun.js';
+import { transaction } from '../../services/db/transaction.js';
+import {
+  getPurchaseOrderCsvTemplatesZip,
+  readPurchaseOrderCsvImport,
+} from '../../services/purchase-orders/csv-import.js';
 
-@Authenticated()
 export default class PurchaseOrdersController {
   @Post('/')
   @BodySchema('create-purchase-order')
   @Permission('write_purchase_orders')
+  @Authenticated()
   async createPurchaseOrder(
     req: Request<unknown, unknown, CreatePurchaseOrder>,
     res: Response<CreatePurchaseOrderResponse>,
@@ -40,6 +45,7 @@ export default class PurchaseOrdersController {
 
   @Get('/:name')
   @Permission('read_purchase_orders')
+  @Authenticated()
   async fetchPurchaseOrder(req: Request<{ name: string }>, res: Response<FetchPurchaseOrderResponse>) {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
@@ -56,6 +62,7 @@ export default class PurchaseOrdersController {
   @Get('/')
   @QuerySchema('purchase-order-pagination-options')
   @Permission('read_purchase_orders')
+  @Authenticated()
   async fetchPurchaseOrderPage(
     req: Request<unknown, unknown, unknown, PurchaseOrderPaginationOptions>,
     res: Response<FetchPurchaseOrderInfoPageResponse>,
@@ -71,6 +78,7 @@ export default class PurchaseOrdersController {
   @Get('/common-custom-fields')
   @QuerySchema('offset-pagination-options')
   @Permission('read_purchase_orders')
+  @Authenticated()
   async fetchPurchaseOrderCustomFields(
     req: Request<unknown, unknown, unknown, OffsetPaginationOptions>,
     res: Response<FetchPurchaseOrderCustomFieldsResponse>,
@@ -92,6 +100,7 @@ export default class PurchaseOrdersController {
   @Authenticated()
   @Permission('read_purchase_orders')
   @QuerySchema('purchase-order-print-job')
+  @Authenticated()
   async printWorkOrder(
     req: Request<{ name: string; template: string }, unknown, unknown, PurchaseOrderPrintJob>,
     res: Response<PrintPurchaseOrderResponse>,
@@ -128,6 +137,34 @@ export default class PurchaseOrdersController {
     );
 
     return res.json({ success: true });
+  }
+
+  @Post('/upload/csv')
+  @Authenticated()
+  async uploadPurchaseOrdersCsv(req: Request, res: Response) {
+    const session = res.locals.shopify.session;
+
+    const createPurchaseOrders = await readPurchaseOrderCsvImport({
+      formData: req,
+      headers: req.headers,
+    });
+
+    await transaction(async () => {
+      for (const createPurchaseOrder of createPurchaseOrders) {
+        await upsertCreatePurchaseOrder(session, createPurchaseOrder);
+      }
+    });
+
+    return res.json({ success: true });
+  }
+
+  @Get('/upload/csv/templates')
+  async getPurchaseOrderCsvTemplates(req: Request, res: Response) {
+    const zip = await getPurchaseOrderCsvTemplatesZip();
+
+    res.attachment('purchase-order-csv-templates.zip');
+    res.setHeader('Content-Type', 'application/zip');
+    res.end(zip);
   }
 }
 

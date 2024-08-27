@@ -28,7 +28,7 @@ export const formBodyHandler: DecoratorHandler<undefined> = () => {
   };
 
   const multipartHandler: RequestHandler = async (req, res, next) => {
-    if (req.headers['content-type']?.toLowerCase() !== 'multipart/form-data') {
+    if (!req.headers['content-type']?.toLowerCase().includes('multipart/form-data')) {
       return next();
     }
 

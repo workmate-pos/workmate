@@ -21,6 +21,7 @@ import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useEffect, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { PurchaseOrderCsvUploadDropZoneModal } from '@web/frontend/components/purchase-orders/PurchaseOrderCsvUploadDropZoneModal.js';
 
 export default function () {
   return (
@@ -40,6 +41,7 @@ function PurchaseOrders() {
   const [query, setQuery, internalQuery] = useDebouncedState('');
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
+  const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -78,6 +80,12 @@ function PurchaseOrders() {
     <>
       <TitleBar
         title="Purchase Orders"
+        secondaryActions={[
+          {
+            content: 'Import CSV',
+            onAction: () => setIsCsvUploadDropZoneModalOpen(true),
+          },
+        ]}
         primaryAction={{
           content: 'New Purchase Order',
           onAction: () => redirectToPurchaseOrder('new'),
@@ -176,6 +184,12 @@ function PurchaseOrders() {
           </IndexTable.Row>
         ))}
       </IndexTable>
+
+      <PurchaseOrderCsvUploadDropZoneModal
+        open={isCsvUploadDropZoneModalOpen}
+        onClose={() => setIsCsvUploadDropZoneModalOpen(false)}
+      />
+
       {toast}
     </>
   );
