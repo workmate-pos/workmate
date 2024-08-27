@@ -12,6 +12,7 @@ import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListP
 import { CycleCountProductSelector } from './screens/CycleCountProductSelector.js';
 import { PlanCycleCount } from './screens/PlanCycleCount.js';
 import { StatusSelector } from './screens/StatusSelector.js';
+import { EmployeeSelector } from './screens/EmployeeSelector.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -67,5 +68,9 @@ export const { Router, useRouter } = createRouter({
   StatusSelector: {
     title: 'Select Status',
     Component: StatusSelector,
+  },
+  EmployeeSelector: {
+    title: 'Select Employees',
+    Component: EmployeeSelector,
   },
 });

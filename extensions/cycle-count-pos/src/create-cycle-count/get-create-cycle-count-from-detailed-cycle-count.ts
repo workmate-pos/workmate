@@ -15,5 +15,8 @@ export function getCreateCycleCountFromDetailedCycleCount(cycleCount: DetailedCy
       productVariantTitle: item.productVariantTitle,
       productVariantId: item.productVariantId,
     })),
+    employeeAssignments: cycleCount.employeeAssignments.map(assignment => ({
+      employeeId: assignment.employeeId,
+    })),
   };
 }

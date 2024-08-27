@@ -11,6 +11,7 @@ import {
 import { ReactNode, useEffect, useState } from 'react';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { UseRouter } from './router.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 
 export type ListPopupItem<ID extends string = string> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
   id: ID;
@@ -19,6 +20,13 @@ export type ListPopupItem<ID extends string = string> = Omit<ListRow, 'id' | 'on
 
 export type ListPopupProps<ID extends string = string> = {
   title: string;
+  /**
+   * Query value and setter. If provided, a search bar will be shown.
+   */
+  query?: {
+    query: string;
+    setQuery: (query: string) => void;
+  };
   selection:
     | {
         type: 'select';
@@ -39,6 +47,8 @@ export type ListPopupProps<ID extends string = string> = {
          */
         onClose?: (ids: ID[]) => void;
       };
+  onEndReached?: () => void;
+  isLoadingMore?: boolean;
   actions?: {
     title: string;
     type?: ButtonType;
@@ -53,6 +63,7 @@ export type ListPopupProps<ID extends string = string> = {
  * Similar to dropdown, but shows a list of items instead of a dropdown.
  * Can be used to select from many items or from just one.
  * @TODO: Use this from pos-tools once WorkMate migrates to new POS SDK
+ * @TODO: Create wrappers: StaticListPopup and QueryListPopup, where latter takes a query and render fn
  */
 export function ListPopup<ID extends string = string>({
   title,
@@ -60,6 +71,9 @@ export function ListPopup<ID extends string = string>({
   emptyState,
   imageDisplayStrategy,
   actions,
+  query,
+  isLoadingMore,
+  onEndReached,
   useRouter,
 }: ListPopupProps<ID>) {
   const router = useRouter();
@@ -85,6 +99,17 @@ export function ListPopup<ID extends string = string>({
   return (
     <ScrollView>
       <Stack direction={'vertical'} spacing={2}>
+        {!!query && (
+          <ControlledSearchBar
+            value={query.query}
+            onTextChange={query.setQuery}
+            onSearch={() => {}}
+            placeholder={'Search'}
+            onFocus={() => {}}
+            editable
+          />
+        )}
+
         <List
           imageDisplayStrategy={imageDisplayStrategy}
           data={selection.items.map<ListRow>(item => ({
@@ -117,18 +142,27 @@ export function ListPopup<ID extends string = string>({
               }
             },
           }))}
-          onEndReached={() => {}}
-          isLoadingMore={false}
+          onEndReached={onEndReached}
+          isLoadingMore={isLoadingMore}
         />
 
         {selection.items.length === 0 &&
+          !isLoadingMore &&
           (emptyState ?? (
             <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-              <Text color="TextCritical" variant="body">
+              <Text color="TextSubdued" variant="body">
                 No items found
               </Text>
             </Stack>
           ))}
+
+        {selection.items.length === 0 && isLoadingMore && (
+          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+            <Text color="TextSubdued" variant="body">
+              Loading...
+            </Text>
+          </Stack>
+        )}
 
         {actions?.map(({ title, type, onAction }) => (
           <Button title={title} type={type} onPress={() => onAction(selectedIds)} />

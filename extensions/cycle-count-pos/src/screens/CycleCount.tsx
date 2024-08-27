@@ -31,6 +31,7 @@ import { v4 as uuid } from 'uuid';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getCycleCountApplicationStateBadge } from './Entry.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 
 export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   const { Form } = useForm();
@@ -42,12 +43,16 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   const setLocationId = getCreateCycleCountSetter(setCreateCycleCount, 'locationId');
   const setNote = getCreateCycleCountSetter(setCreateCycleCount, 'note');
   const setItems = getCreateCycleCountSetter(setCreateCycleCount, 'items');
+  const setEmployeeAssignments = getCreateCycleCountSetter(setCreateCycleCount, 'employeeAssignments');
 
   const hasUnsavedChanges = JSON.stringify(createCycleCount) !== JSON.stringify(lastSavedCreateCycleCount);
 
   const fetch = useAuthenticatedFetch();
   const cycleCountQuery = useCycleCountQuery({ fetch, name: createCycleCount.name });
   const locationQuery = useLocationQuery({ fetch, id: createCycleCount.locationId });
+
+  const employeeIds = unique(createCycleCount.employeeAssignments.map(assignment => assignment.employeeId));
+  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
 
   const onMutateSuccess = (message: string) => (cycleCount: DetailedCycleCount) => {
     const createCycleCount = getCreateCycleCountFromDetailedCycleCount(cycleCount);
@@ -119,6 +124,26 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
             />
 
             <FormStringField label={'Note'} type={'area'} value={createCycleCount.note} onChange={setNote} />
+            <FormStringField
+              label={'Assigned Employees'}
+              type={'area'}
+              onFocus={() =>
+                router.push('EmployeeSelector', {
+                  selection: {
+                    type: 'multi-select',
+                    initialSelection: createCycleCount.employeeAssignments.map(assignment => assignment.employeeId),
+                    onClose: employeeIds => setEmployeeAssignments(employeeIds.map(employeeId => ({ employeeId }))),
+                  },
+                })
+              }
+              value={createCycleCount.employeeAssignments
+                .map(({ employeeId }) => {
+                  const employeeQuery = employeeQueries[employeeId];
+                  if (employeeQuery?.isLoading) return 'Loading...';
+                  return employeeQuery?.data?.name ?? 'Unknown employee';
+                })
+                .join(', ')}
+            />
 
             <FormButton
               title={'Import Products'}

@@ -19,6 +19,9 @@
     },
     "locationId": {
       "$ref": "scalars.json#/definitions/ID"
+    },
+    "employeeId": {
+      "$ref": "scalars.json#/definitions/ID"
     }
   },
   "required": ["limit", "offset"],

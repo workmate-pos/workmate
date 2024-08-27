@@ -2,6 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import {
   CycleCount,
   getCycleCount,
+  getCycleCountEmployeeAssignments,
   getCycleCountItemApplications,
   getCycleCountItems,
   getCycleCountsPage,
@@ -9,7 +10,12 @@ import {
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { CycleCountPaginationOptions } from '../../schemas/generated/cycle-count-pagination-options.js';
-import { CycleCountApplicationStatus, DetailedCycleCount } from './types.js';
+import {
+  CycleCountApplicationStatus,
+  DetailedCycleCount,
+  DetailedCycleCountEmployeeAssignment,
+  DetailedCycleCountItem,
+} from './types.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { hasNestedPropertyValue, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { match } from 'ts-pattern';
@@ -30,21 +36,18 @@ async function getDetailedCycleCountForCycleCount(cycleCount: CycleCount): Promi
   note: string;
   status: string;
   locationId: ID;
-  items: Awaited<ReturnType<typeof getDetailedCycleCountItems>>;
+  items: DetailedCycleCountItem[];
   applicationStatus: CycleCountApplicationStatus;
+  employeeAssignments: DetailedCycleCountEmployeeAssignment[];
 }> {
   const { status, locationId, note } = cycleCount;
 
-  const items = await getDetailedCycleCountItems(cycleCount.id);
+  const [items, employeeAssignments] = await Promise.all([
+    getDetailedCycleCountItems(cycleCount.id),
+    getDetailedCycleCountEmployeeAssignments(cycleCount.id),
+  ]);
 
-  const hasOnlyAppliedItems = items.every(hasPropertyValue('applicationStatus', 'APPLIED'));
-  const hasOnlyNotAppliedItems = items.every(hasPropertyValue('applicationStatus', 'NOT_APPLIED'));
-
-  const applicationStatus = match({ hasOnlyAppliedItems, hasOnlyNotAppliedItems })
-    .returnType<CycleCountApplicationStatus>()
-    .with({ hasOnlyNotAppliedItems: true }, () => 'NOT_APPLIED')
-    .with({ hasOnlyAppliedItems: true }, () => 'APPLIED')
-    .otherwise(() => 'PARTIALLY_APPLIED');
+  const applicationStatus = deriveCycleCountApplicationStatus(items);
 
   return {
     name: cycleCount.name,
@@ -53,6 +56,7 @@ async function getDetailedCycleCountForCycleCount(cycleCount: CycleCount): Promi
     locationId,
     items,
     applicationStatus,
+    employeeAssignments,
   };
 }
 
@@ -64,7 +68,7 @@ export async function getDetailedCycleCountsPage(
   return await Promise.all(cycleCounts.map(cycleCount => getDetailedCycleCountForCycleCount(cycleCount)));
 }
 
-async function getDetailedCycleCountItems(cycleCountId: number) {
+export async function getDetailedCycleCountItems(cycleCountId: number) {
   const [items, applications] = await Promise.all([
     getCycleCountItems(cycleCountId),
     getCycleCountItemApplications(cycleCountId),
@@ -103,4 +107,20 @@ async function getDetailedCycleCountItems(cycleCountId: number) {
         .toSorted((a, b) => new Date(a.appliedAt).getTime() - new Date(b.appliedAt).getTime()),
     };
   });
+}
+
+export async function getDetailedCycleCountEmployeeAssignments(cycleCountId: number) {
+  const assignments = await getCycleCountEmployeeAssignments(cycleCountId);
+  return assignments.map(assignment => pick(assignment, 'employeeId'));
+}
+
+function deriveCycleCountApplicationStatus(items: DetailedCycleCountItem[]) {
+  const hasOnlyAppliedItems = items.every(hasPropertyValue('applicationStatus', 'APPLIED'));
+  const hasOnlyNotAppliedItems = items.every(hasPropertyValue('applicationStatus', 'NOT_APPLIED'));
+
+  return match({ hasOnlyAppliedItems, hasOnlyNotAppliedItems })
+    .returnType<CycleCountApplicationStatus>()
+    .with({ hasOnlyNotAppliedItems: true }, () => 'NOT_APPLIED')
+    .with({ hasOnlyAppliedItems: true }, () => 'APPLIED')
+    .otherwise(() => 'PARTIALLY_APPLIED');
 }

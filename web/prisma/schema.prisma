@@ -808,10 +808,24 @@ model CycleCount {
 
   items CycleCountItem[]
 
+  createdAt                    DateTime                       @default(now()) @db.Timestamptz(3)
+  updatedAt                    DateTime                       @default(now()) @db.Timestamptz(3)
+
+  employees CycleCountEmployeeAssignment[]
+
+  @@unique([shop, name])
+}
+
+model CycleCountEmployeeAssignment {
+  cycleCountId Int
+  cycleCount   CycleCount @relation(fields: [cycleCountId], references: [id])
+
+  employeeId String
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  @@unique([shop, name])
+  @@unique([cycleCountId, employeeId])
 }
 
 model CycleCountItem {
@@ -839,9 +853,9 @@ model CycleCountItem {
 model CycleCountItemApplication {
   id Int @id @default(autoincrement())
 
-  cycleCountItemUuid String @db.Uuid
-  cycleCountId Int
-  cycleCountItem   CycleCountItem @relation(fields: [cycleCountId, cycleCountItemUuid], references: [cycleCountId, uuid])
+  cycleCountItemUuid String         @db.Uuid
+  cycleCountId       Int
+  cycleCountItem     CycleCountItem @relation(fields: [cycleCountId, cycleCountItemUuid], references: [cycleCountId, uuid])
 
   appliedQuantity Int
 

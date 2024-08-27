@@ -6,6 +6,7 @@ import { escapeLike } from '../db/like.js';
 
 export type CycleCount = NonNullable<Awaited<ReturnType<typeof getCycleCount>>>;
 export type CycleCountItem = Awaited<ReturnType<typeof getCycleCountItems>>[number];
+export type CycleCountEmployeeAssignment = Awaited<ReturnType<typeof getCycleCountEmployeeAssignments>>[number];
 
 export async function getCycleCount({ shop, name }: { shop: string; name: string }) {
   const [cycleCount] = await sql<{
@@ -58,10 +59,12 @@ export async function getCycleCountsPage(
     offset,
     limit,
     locationId,
-  }: { query?: string; status?: string; limit: number; offset: number; locationId?: ID },
+    employeeId,
+  }: { query?: string; status?: string; limit: number; offset: number; locationId?: ID; employeeId?: ID },
 ) {
   const escapedQuery = query ? `%${escapeLike(query)}%` : undefined;
   const _locationId: string | undefined = locationId;
+  const _employeeId: string | undefined = employeeId;
 
   const cycleCounts = await sql<{
     id: number;
@@ -73,15 +76,17 @@ export async function getCycleCountsPage(
     createdAt: Date;
     updatedAt: Date;
   }>`
-    SELECT *
-    FROM "CycleCount"
-    WHERE shop = ${shop}
-      AND status = COALESCE(${status ?? null}, status)
+    SELECT DISTINCT cc.*
+    FROM "CycleCount" cc
+           LEFT JOIN "CycleCountEmployeeAssignment" ea ON ea."cycleCountId" = cc.id
+    WHERE cc.shop = ${shop}
+      AND cc.status = COALESCE(${status ?? null}, cc.status)
       AND (
-      name ILIKE COALESCE(${escapedQuery ?? null}, name) OR
-      note ILIKE COALESCE(${escapedQuery ?? null}, note)
+      cc.name ILIKE COALESCE(${escapedQuery ?? null}, cc.name) OR
+      cc.note ILIKE COALESCE(${escapedQuery ?? null}, cc.note)
       )
-      AND "locationId" = COALESCE(${_locationId ?? null}, "locationId")
+      AND cc."locationId" = COALESCE(${_locationId ?? null}, cc."locationId")
+      AND ea."employeeId" IS NOT DISTINCT FROM COALESCE(${_employeeId ?? null}, ea."employeeId")
     ORDER BY id DESC
     LIMIT ${limit} OFFSET ${offset};
   `;
@@ -252,4 +257,54 @@ export async function getCycleCountItemApplications(cycleCountId: number) {
     SELECT *
     FROM "CycleCountItemApplication"
     WHERE "cycleCountId" = ${cycleCountId};`;
+}
+
+export async function getCycleCountEmployeeAssignments(cycleCountId: number) {
+  const assignments = await sql<{ employeeId: string }>`
+    SELECT "employeeId"
+    FROM "CycleCountEmployeeAssignment"
+    WHERE "cycleCountId" = ${cycleCountId};`;
+
+  return assignments.map(mapCycleCountEmployeeAssignment);
+}
+
+function mapCycleCountEmployeeAssignment(assignment: { employeeId: string }) {
+  const { employeeId } = assignment;
+
+  assertGid(employeeId);
+  return {
+    ...assignment,
+    employeeId,
+  };
+}
+
+export async function upsertCycleCountEmployeeAssignment(cycleCountId: number, assignments: { employeeId: ID }[]) {
+  if (!isNonEmptyArray(assignments)) {
+    return;
+  }
+
+  const { employeeId } = nest(assignments);
+  const _employeeId: string[] = employeeId;
+
+  await sql`
+    INSERT INTO "CycleCountEmployeeAssignment" ("cycleCountId", "employeeId")
+    SELECT ${cycleCountId}, *
+    FROM UNNEST(${_employeeId} :: text[])
+    ON CONFLICT ("cycleCountId", "employeeId")
+      DO UPDATE SET "cycleCountId" = EXCLUDED."cycleCountId";`;
+}
+
+export async function removeCycleCountEmployeeAssignments(cycleCountId: number, assignments: { employeeId: ID }[]) {
+  if (!isNonEmptyArray(assignments)) {
+    return;
+  }
+
+  const { employeeId } = nest(assignments);
+  const _employeeId: string[] = employeeId;
+
+  await sql`
+    DELETE
+    FROM "CycleCountEmployeeAssignment"
+    WHERE "cycleCountId" = ${cycleCountId}
+      AND "employeeId" = ANY (${_employeeId} :: text[]);`;
 }

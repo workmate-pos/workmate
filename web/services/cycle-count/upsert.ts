@@ -3,8 +3,10 @@ import { CreateCycleCount, CreateCycleCountItem } from '../../schemas/generated/
 import { unit } from '../db/unit-of-work.js';
 import { Session } from '@shopify/shopify-api';
 import {
+  getCycleCountEmployeeAssignments,
   getCycleCountItemApplications,
   getCycleCountItems,
+  removeCycleCountEmployeeAssignments,
   removeCycleCountItemsByUuid,
   upsertCycleCountItems,
 } from './queries.js';
@@ -29,6 +31,7 @@ export async function upsertCycleCount(session: Session, createCycleCount: Creat
     });
 
     await upsertCreateCycleCountItems(cycleCountId, createCycleCount);
+    await upsertCycleCountEmployeeAssignments(cycleCountId, createCycleCount);
 
     return { id: cycleCountId, name };
   });
@@ -70,4 +73,14 @@ async function upsertCreateCycleCountItems(cycleCountId: number, createCycleCoun
   );
 
   await upsertCycleCountItems(cycleCountId, createCycleCount.items);
+}
+
+async function upsertCycleCountEmployeeAssignments(cycleCountId: number, createCycleCount: CreateCycleCount) {
+  const currentEmployeeAssignments = await getCycleCountEmployeeAssignments(cycleCountId);
+  const deletedEmployeeAssignments = currentEmployeeAssignments.filter(
+    assignment => !createCycleCount.employeeAssignments.some(hasPropertyValue('employeeId', assignment.employeeId)),
+  );
+
+  await removeCycleCountEmployeeAssignments(cycleCountId, deletedEmployeeAssignments);
+  await queries.upsertCycleCountEmployeeAssignment(cycleCountId, createCycleCount.employeeAssignments);
 }

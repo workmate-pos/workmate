@@ -17,15 +17,20 @@ import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useLocationQueries, useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useEmployeeQueries, useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
   const [status, setStatus] = useState<string>();
   const [locationId, setLocationId] = useState<ID>();
+  const [employeeId, setEmployeeId] = useState<ID>();
   const fetch = useAuthenticatedFetch();
 
   const locationQuery = useLocationQuery({ fetch, id: locationId! }, { enabled: !!locationId });
   const location = locationQuery.data;
+
+  const employeeQuery = useEmployeeQuery({ fetch, id: employeeId ?? null });
+  const employee = employeeQuery.data;
 
   const cycleCountPageQuery = useCycleCountPageQuery({
     fetch,
@@ -33,6 +38,7 @@ export function Entry() {
       query,
       status,
       locationId,
+      employeeId,
     },
   });
 
@@ -104,6 +110,18 @@ export function Entry() {
             })
           }
         />
+        <Button
+          title={'Filter by employee' + (employeeId ? ` (${employee?.name ?? 'loading...'})` : '')}
+          onPress={() =>
+            router.push('EmployeeSelector', {
+              selection: {
+                type: 'select',
+                onSelect: setEmployeeId,
+              },
+              onClear: () => setEmployeeId(undefined),
+            })
+          }
+        />
       </ResponsiveGrid>
 
       <ControlledSearchBar
@@ -153,6 +171,11 @@ function useListRows(cycleCounts: DetailedCycleCount[], setSelectedCycleCountNam
   const locationIds = unique(cycleCounts.map(cycleCount => cycleCount.locationId));
   const locationQueries = useLocationQueries({ fetch, ids: locationIds });
 
+  const employeeIds = unique(
+    cycleCounts.flatMap(cycleCount => cycleCount.employeeAssignments.map(assignment => assignment.employeeId)),
+  );
+  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
+
   return cycleCounts.map<ListRow>(cycleCount => {
     const location = locationQueries[cycleCount.locationId]?.data;
 
@@ -170,6 +193,13 @@ function useListRows(cycleCounts: DetailedCycleCount[], setSelectedCycleCountNam
             variant: 'highlight',
           },
           getCycleCountApplicationStateBadge(cycleCount.applicationStatus),
+          ...cycleCount.employeeAssignments
+            .map<BadgeProps | null>(({ employeeId }) => {
+              const employeeQuery = employeeQueries[employeeId];
+              if (employeeQuery?.isLoading) return null;
+              return { text: employeeQuery?.data?.name ?? 'Unknown employee', variant: 'neutral' };
+            })
+            .filter(isNonNullable),
           ...[location]
             .filter(isNonNullable)
             .map<BadgeProps>(location => ({ text: location.name, variant: 'neutral' })),

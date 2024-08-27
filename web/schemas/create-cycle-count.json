@@ -50,8 +50,22 @@
         ],
         "additionalProperties": false
       }
+    },
+    "employeeAssignments": {
+      "type": "array",
+      "items": {
+        "title": "employee-assignment",
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "$ref": "scalars.json#/definitions/ID"
+          }
+        },
+        "required": ["employeeId"],
+        "additionalProperties": false
+      }
     }
   },
-  "required": ["name", "status", "locationId", "note", "items"],
+  "required": ["name", "status", "locationId", "note", "items", "employeeAssignments"],
   "additionalProperties": false
 }
