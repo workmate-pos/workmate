@@ -6,7 +6,7 @@ import {
   getCycleCountItems,
 } from './queries.js';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unit } from '../db/unit-of-work.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
@@ -120,7 +120,7 @@ export async function getCycleCountApplyPlan(session: Session, name: string): Pr
 
   const itemsToApply = items.filter(item => {
     const [lastItemApplication] = applications
-      .filter(hasNestedPropertyValue('cycleCountItemUuid', item.uuid))
+      .filter(hasPropertyValue('cycleCountItemUuid', item.uuid))
       .toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     return lastItemApplication?.appliedQuantity !== item.countQuantity;
