@@ -21,7 +21,7 @@ import { Dispatch, SetStateAction, useState } from 'react';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useRouter } from '../routes.js';
-import { useCycleCountMutation } from '@work-orders/common/queries/use-cycle-count-mutation.ts.js';
+import { useCycleCountMutation } from '@work-orders/common/queries/use-cycle-count-mutation.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CreateCycleCount } from '@web/schemas/generated/create-cycle-count.js';
 import { getCreateCycleCountFromDetailedCycleCount } from '../create-cycle-count/get-create-cycle-count-from-detailed-cycle-count.js';

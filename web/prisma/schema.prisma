@@ -821,6 +821,8 @@ model CycleCount {
 }
 
 model CycleCountEmployeeAssignment {
+  id Int @id @default(autoincrement())
+
   cycleCountId Int
   cycleCount   CycleCount @relation(fields: [cycleCountId], references: [id])
 

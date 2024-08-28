@@ -27,11 +27,14 @@ export const useCycleCountMutation = (
       const result: CreateCycleCountResponse = await response.json();
       return result;
     },
-    onSuccess: result => {
+    onSuccess: (...args) => {
+      const [result] = args;
       queryClient.invalidateQueries(['inventory-item']);
       queryClient.invalidateQueries(['inventory-items']);
       queryClient.invalidateQueries(['cycle-count-page']);
       queryClient.setQueryData(['cycle-count', result.name], result satisfies UseQueryData<typeof useCycleCountQuery>);
+
+      options?.onSuccess?.(...args);
     },
   });
 };

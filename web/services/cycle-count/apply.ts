@@ -60,8 +60,6 @@ export async function applyCycleCountItems(session: Session, plan: ApplyCycleCou
       })),
     );
 
-    // TODO: Check which error this gives when compareQuantity does not match and show it to the user in a nice way
-
     try {
       await gql.inventory.setQuantities.run(graphql, {
         input: {

@@ -1,9 +1,12 @@
 -- CreateTable
 CREATE TABLE "CycleCountEmployeeAssignment" (
+    "id" SERIAL NOT NULL,
     "cycleCountId" INTEGER NOT NULL,
     "employeeId" TEXT NOT NULL,
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "updatedAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "CycleCountEmployeeAssignment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
