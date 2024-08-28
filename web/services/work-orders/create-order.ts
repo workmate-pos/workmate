@@ -3,7 +3,7 @@ import { CreateWorkOrderOrder } from '../../schemas/generated/create-work-order-
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { getWorkOrderDraftOrderInput } from './draft-order.js';
 import { db } from '../db/db.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { gql } from '../gql/gql.js';
 
 /**
@@ -32,20 +32,29 @@ export async function createWorkOrderOrder(session: Session, createWorkOrderOrde
     throw new HttpError('Could not create order', 500);
   }
 
-  const response = await gql.draftOrder.create.run(graphql, { input });
+  try {
+    const response = await gql.draftOrder.create.run(graphql, { input });
 
-  if (!response.result?.draftOrder) {
-    throw new HttpError('Failed to create order', 500);
+    if (!response.result?.draftOrder) {
+      throw new HttpError('Failed to create order', 500);
+    }
+
+    const { draftOrderComplete } = await gql.draftOrder.complete.run(graphql, {
+      id: response.result.draftOrder.id,
+      paymentPending: true,
+    });
+
+    if (!draftOrderComplete?.draftOrder?.order) {
+      throw new HttpError('Failed to complete order', 500);
+    }
+
+    return { order: draftOrderComplete.draftOrder.order, workOrder: { id: workOrder.id } };
+  } catch (error) {
+    if (error instanceof GraphqlUserErrors) {
+      const message = error.userErrors.map(error => error.message).join(', ');
+      throw new HttpError(message, 400);
+    }
+
+    throw error;
   }
-
-  const { draftOrderComplete } = await gql.draftOrder.complete.run(graphql, {
-    id: response.result.draftOrder.id,
-    paymentPending: true,
-  });
-
-  if (!draftOrderComplete?.draftOrder?.order) {
-    throw new HttpError('Failed to complete order', 500);
-  }
-
-  return { order: draftOrderComplete.draftOrder.order, workOrder: { id: workOrder.id } };
 }

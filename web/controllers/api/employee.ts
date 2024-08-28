@@ -7,7 +7,7 @@ import { db } from '../../services/db/db.js';
 import { getShopSettings } from '../../services/settings.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Permission, isPermissionNode, LocalsTeifiUser, createNewEmployees } from '../../decorators/permission.js';
-import { indexBy } from '@teifi-digital/shopify-app-toolbox/array';
+import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -67,7 +67,7 @@ export default class EmployeeController {
     const { shop } = session;
     const { ids } = req.query;
 
-    const staffMembers = await getStaffMembersByIds(session, ids);
+    const staffMembers = await getStaffMembersByIds(session, unique(ids));
 
     const staffMembersWithDatabaseInfo = await attachDatabaseEmployees(shop, staffMembers.filter(isNonNullable));
 
