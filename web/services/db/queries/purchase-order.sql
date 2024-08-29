@@ -7,12 +7,13 @@ WITH "CustomFieldFilters" AS (SELECT row_number() over () as row, key, val, inve
 SELECT DISTINCT po.id, po.name
 FROM "PurchaseOrder" po
        LEFT JOIN "PurchaseOrderLineItem" poli ON po.id = poli."purchaseOrderId"
+       LEFT JOIN "SpecialOrderLineItem" spoli ON poli."specialOrderLineItemId" = spoli.id
        LEFT JOIN "ProductVariant" pv ON poli."productVariantId" = pv."productVariantId"
        LEFT JOIN "Product" p ON pv."productId" = p."productId"
        LEFT JOIN "PurchaseOrderEmployeeAssignment" poea ON po.id = poea."purchaseOrderId"
        LEFT JOIN "Employee" e ON poea."employeeId" = e."staffMemberId"
        LEFT JOIN "Location" l ON po."locationId" = l."locationId"
-       LEFT JOIN "ShopifyOrderLineItem" soli ON poli."shopifyOrderLineItemId" = soli."lineItemId"
+       LEFT JOIN "ShopifyOrderLineItem" soli ON spoli."shopifyOrderLineItemId" = soli."lineItemId"
        LEFT JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
        LEFT JOIN "Customer" c ON so."customerId" = c."customerId"
        LEFT JOIN "WorkOrderItem" woi ON soli."lineItemId" = woi."shopifyOrderLineItemId"
@@ -73,7 +74,8 @@ WHERE po.shop = :shop!
 SELECT DISTINCT po.*
 FROM "ShopifyOrder" so
        INNER JOIN "ShopifyOrderLineItem" soli USING ("orderId")
-       INNER JOIN "PurchaseOrderLineItem" poli ON poli."shopifyOrderLineItemId" = soli."lineItemId"
+       INNER JOIN "SpecialOrderLineItem" spoli ON spoli."shopifyOrderLineItemId" = soli."lineItemId"
+       INNER JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
        INNER JOIN "PurchaseOrder" po ON po.id = poli."purchaseOrderId"
 WHERE so."orderId" in :shopifyOrderIds!;
 

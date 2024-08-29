@@ -14,7 +14,12 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { getPurchaseOrderBadges } from '../util/badges.js';
+import {
+  getPurchaseOrderBadges,
+  getReservationBadges,
+  getSpecialOrderBadges,
+  getTransferOrderBadges,
+} from '../util/badges.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
@@ -194,9 +199,11 @@ function useWorkOrderRows(workOrders: FetchWorkOrderInfoPageResponse[number][]):
       calculation &&
       BigDecimal.fromMoney(calculation.outstanding).compare(BigDecimal.ZERO) > 0;
 
-    const purchaseOrders = workOrder.items
-      .filter(hasPropertyValue('type', 'product'))
-      .flatMap(item => item.purchaseOrders);
+    const products = workOrder.items.filter(hasPropertyValue('type', 'product'));
+    const reservations = products.flatMap(item => item.reservations);
+    const transferOrders = products.flatMap(item => item.transferOrders);
+    const specialOrders = products.flatMap(item => item.specialOrders);
+    const purchaseOrders = products.flatMap(item => item.purchaseOrders);
 
     return {
       id: workOrder.name,
@@ -218,6 +225,9 @@ function useWorkOrderRows(workOrders: FetchWorkOrderInfoPageResponse[number][]):
             { variant: 'warning', text: `Due ${dueDateString}` },
             isOverdue ? ({ variant: 'critical', text: 'Overdue' } as const) : undefined,
             financialStatus ? ({ variant: 'highlight', text: financialStatus } as const) : undefined,
+            ...getReservationBadges(reservations, false),
+            ...getTransferOrderBadges(transferOrders, false),
+            ...getSpecialOrderBadges(specialOrders, false),
             ...getPurchaseOrderBadges(purchaseOrders, false),
           ] as const
         ).filter(isNonNullable),

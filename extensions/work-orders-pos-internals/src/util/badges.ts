@@ -5,8 +5,17 @@ import type {
 import type { BadgeVariant, BadgeStatus } from '@shopify/retail-ui-extensions/src/components/Badge/Badge.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { BadgeProps } from '@shopify/retail-ui-extensions-react';
-import { WorkOrderPurchaseOrder, WorkOrderTransferOrder } from '@web/services/work-orders/types.js';
+import {
+  DetailedWorkOrder,
+  DetailedWorkOrderItem,
+  LineItemReservation,
+  WorkOrderPurchaseOrder,
+  WorkOrderSpecialOrder,
+  WorkOrderTransferOrder,
+} from '@web/services/work-orders/types.js';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function getStatusText(status: OrderDisplayFinancialStatus | OrderDisplayFulfillmentStatus): string {
   return titleCase(status.replace(/_/g, ' '));
@@ -83,7 +92,7 @@ export function getPurchaseOrderBadge(purchaseOrder: WorkOrderPurchaseOrder, inc
   let text = purchaseOrder.name;
 
   if (includeQuantity) {
-    text = `${availableQuantity}/${quantity} • ${text}`;
+    text = `${text} • ${availableQuantity}/${quantity}`;
   }
 
   return { text, variant, status } as const;
@@ -101,6 +110,42 @@ export function getPurchaseOrderBadges(
   }
 
   return Object.values(purchaseOrderByName).map(purchaseOrder => getPurchaseOrderBadge(purchaseOrder, includeQuantity));
+}
+
+export function getSpecialOrderBadge(specialOrder: WorkOrderSpecialOrder, includeQuantity: boolean): BadgeProps {
+  const { name, items } = specialOrder;
+
+  let variant: BadgeVariant = 'success';
+
+  if (items.some(item => item.quantity > item.orderedQuantity)) {
+    variant = 'warning';
+  }
+
+  let text = name;
+
+  const totalQuantity = sum(items.map(item => item.quantity));
+  const totalOrderedQuantity = sum(items.map(item => item.orderedQuantity));
+
+  if (includeQuantity) {
+    text = `${text} • ${totalOrderedQuantity}/${totalQuantity}`;
+  }
+
+  return {
+    text,
+    variant,
+    status: totalQuantity === totalOrderedQuantity ? 'complete' : totalOrderedQuantity > 0 ? 'partial' : 'empty',
+  } as const;
+}
+
+export function getSpecialOrderBadges(specialOrders: WorkOrderSpecialOrder[], includeQuantity: boolean) {
+  const specialOrderByName: Record<string, WorkOrderSpecialOrder> = {};
+
+  for (const { name, items } of specialOrders) {
+    const specialOrder = (specialOrderByName[name] ??= { name, items: [] });
+    specialOrder.items.push(...items);
+  }
+
+  return Object.values(specialOrderByName).map(specialOrder => getSpecialOrderBadge(specialOrder, includeQuantity));
 }
 
 export function getTransferOrderBadge(transferOrder: WorkOrderTransferOrder, includeQuantity: boolean): BadgeProps {
@@ -126,9 +171,107 @@ export function getTransferOrderBadge(transferOrder: WorkOrderTransferOrder, inc
   const transferOrderItemCount = sum(transferOrder.items.map(item => item.quantity));
 
   if (includeQuantity) {
-    text = `${receivedTransferOrderItemCount}/${transferOrderItemCount} • ${text}`;
+    text = `${text} • ${receivedTransferOrderItemCount}/${transferOrderItemCount}`;
   }
   const status = receivedTransferOrderItemCount > 0 ? 'partial' : 'empty';
 
   return { variant, text, status };
+}
+
+export function getTransferOrderBadges(transferOrders: WorkOrderTransferOrder[], includeQuantity: boolean) {
+  const transferOrderByName: Record<string, WorkOrderTransferOrder> = {};
+
+  for (const { name, items } of transferOrders) {
+    const transferOrder = (transferOrderByName[name] ??= { name, items: [] });
+    transferOrder.items.push(...items);
+  }
+
+  return Object.values(transferOrderByName).map(transferOrder => getTransferOrderBadge(transferOrder, includeQuantity));
+}
+
+export function getReservationBadge(
+  reservation: Pick<LineItemReservation, 'quantity'>,
+  includeQuantity: boolean,
+): BadgeProps {
+  const { quantity } = reservation;
+
+  let text = 'Layaway';
+
+  if (includeQuantity) {
+    text = `${text} • ${quantity}`;
+  }
+
+  return {
+    text,
+    variant: 'success',
+  } as const;
+}
+
+export function getReservationBadges(reservations: LineItemReservation[], includeQuantity: boolean) {
+  if (reservations.length === 0) {
+    return [];
+  }
+
+  let quantity = sum(reservations.map(reservation => reservation.quantity));
+
+  return [getReservationBadge({ quantity }, includeQuantity)];
+}
+
+export function getWorkOrderItemSourcingBadges(
+  workOrder: DetailedWorkOrder,
+  item: DetailedWorkOrderItem,
+  options?: {
+    includeOrderBadge?: boolean;
+    includeStatusBadge?: boolean;
+  },
+): BadgeProps[] {
+  const totalSourced = getWorkOrderItemSourcedCount(item);
+
+  const sourcedAllItemsBadge: BadgeProps | undefined =
+    options?.includeStatusBadge && totalSourced >= item.quantity
+      ? { text: 'Sourced all items', status: 'complete', variant: 'success' }
+      : undefined;
+  const requiresSourcingBadge: BadgeProps | undefined =
+    options?.includeStatusBadge && totalSourced < item.quantity && !isOrderId(item.shopifyOrderLineItem?.orderId)
+      ? { text: 'Requires sourcing', status: totalSourced > 0 ? 'partial' : 'empty', variant: 'critical' }
+      : undefined;
+
+  const orderBadge: BadgeProps | undefined =
+    options?.includeOrderBadge && isOrderId(item.shopifyOrderLineItem?.orderId)
+      ? {
+          text:
+            workOrder.orders.find(hasPropertyValue('id', item.shopifyOrderLineItem.orderId))?.name ?? 'Unknown order',
+          status: 'complete',
+          variant: 'success',
+        }
+      : undefined;
+
+  const layawayBadges = item.reservations.map<BadgeProps>(reservation => getReservationBadge(reservation, true));
+  const transferOrderBadges = item.transferOrders.map<BadgeProps>(to => getTransferOrderBadge(to, true));
+  const specialOrderBadges = item.specialOrders.map<BadgeProps>(so => getSpecialOrderBadge(so, true));
+  const purchaseOrderBadges = item.purchaseOrders.map<BadgeProps>(po => getPurchaseOrderBadge(po, true));
+
+  return [
+    orderBadge,
+    sourcedAllItemsBadge,
+    requiresSourcingBadge,
+    ...layawayBadges,
+    ...transferOrderBadges,
+    ...specialOrderBadges,
+    ...purchaseOrderBadges,
+  ].filter(isNonNullable);
+}
+
+export function getWorkOrderItemSourcedCount(
+  item: Pick<DetailedWorkOrderItem, 'specialOrders' | 'transferOrders' | 'reservations'>,
+) {
+  return sum([
+    ...item.specialOrders.flatMap(po => po.items).map(item => item.quantity),
+    ...item.transferOrders.flatMap(to => to.items).map(item => item.quantity),
+    ...item.reservations.map(reservation => reservation.quantity),
+  ]);
+}
+
+export function isOrderId(id: string | null | undefined): id is ID {
+  return !!id && parseGid(id).objectName === 'Order';
 }

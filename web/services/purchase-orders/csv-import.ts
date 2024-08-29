@@ -154,7 +154,7 @@ export async function readPurchaseOrderCsvImport({
       createPurchaseOrder.lineItems.push({
         uuid: uuid() as UUID,
         quantity: data.Quantity,
-        shopifyOrderLineItem: null,
+        specialOrderLineItem: null,
         productVariantId: data.ProductVariantID,
         unitCost: data.UnitCost,
         availableQuantity: data.AvailableQuantity,

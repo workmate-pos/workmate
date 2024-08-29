@@ -61,7 +61,7 @@ type LineItemSources = {
   id: ID;
   sources: {
     reservations: number;
-    purchaseOrders: number;
+    specialOrders: number;
     transferOrders: number;
   };
 };

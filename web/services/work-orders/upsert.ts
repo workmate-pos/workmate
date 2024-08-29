@@ -34,6 +34,7 @@ import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 import { UUID } from '../../util/types.js';
 
 // TODO: Support deleted customer/company
+// TODO: Handle case where special order/ purchase order items are deleted
 
 export async function upsertWorkOrder(
   session: Session,

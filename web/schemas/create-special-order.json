@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+    },
+    "customerId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "locationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "companyId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "companyLocationId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "companyContactId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "requiredBy": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+    },
+    "note": {
+      "type": "string"
+    },
+    "lineItems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "$ref": "scalars.json#/definitions/UUID"
+          },
+          "shopifyOrderLineItem": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "$ref": "scalars.json#/definitions/ID"
+              },
+              "orderId": {
+                "$ref": "scalars.json#/definitions/ID"
+              }
+            },
+            "required": ["id", "orderId"],
+            "additionalProperties": false
+          },
+          "productVariantId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "quantity": {
+            "$ref": "scalars.json#/definitions/Int",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": ["uuid", "shopifyOrderLineItem", "productVariantId", "quantity"]
+      }
+    }
+  },
+  "required": [
+    "name",
+    "customerId",
+    "locationId",
+    "companyId",
+    "companyLocationId",
+    "companyContactId",
+    "requiredBy",
+    "note",
+    "lineItems"
+  ],
+  "additionalProperties": false
+}

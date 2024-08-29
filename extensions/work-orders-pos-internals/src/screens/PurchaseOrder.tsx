@@ -39,7 +39,7 @@ import {
   CreatePurchaseOrderDispatchProxy,
   useCreatePurchaseOrderReducer,
 } from '@work-orders/common/create-purchase-order/reducer.js';
-import type { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import type { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -474,7 +474,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
 
 function useProductRows(
   { name, lineItems, locationId }: Pick<CreatePurchaseOrder, 'name' | 'lineItems' | 'locationId'>,
-  purchaseOrder: PurchaseOrder | null,
+  purchaseOrder: DetailedPurchaseOrder | null,
   dispatch: CreatePurchaseOrderDispatchProxy,
   query: string,
   disabled: boolean,

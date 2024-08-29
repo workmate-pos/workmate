@@ -253,33 +253,6 @@ const upsertLineItemIR: any = {"usedParamSet":{"lineItemId":true,"orderId":true,
 export const upsertLineItem = new PreparedQuery<IUpsertLineItemParams,IUpsertLineItemResult>(upsertLineItemIR);
 
 
-/** 'RemoveLineItemsByIds' parameters type */
-export interface IRemoveLineItemsByIdsParams {
-  lineItemIds: readonly (string)[];
-}
-
-/** 'RemoveLineItemsByIds' return type */
-export type IRemoveLineItemsByIdsResult = void;
-
-/** 'RemoveLineItemsByIds' query type */
-export interface IRemoveLineItemsByIdsQuery {
-  params: IRemoveLineItemsByIdsParams;
-  result: IRemoveLineItemsByIdsResult;
-}
-
-const removeLineItemsByIdsIR: any = {"usedParamSet":{"lineItemIds":true},"params":[{"name":"lineItemIds","required":true,"transform":{"type":"array_spread"},"locs":[{"a":57,"b":69}]}],"statement":"DELETE\nFROM \"ShopifyOrderLineItem\"\nWHERE \"lineItemId\" IN :lineItemIds!"};
-
-/**
- * Query generated from SQL:
- * ```
- * DELETE
- * FROM "ShopifyOrderLineItem"
- * WHERE "lineItemId" IN :lineItemIds!
- * ```
- */
-export const removeLineItemsByIds = new PreparedQuery<IRemoveLineItemsByIdsParams,IRemoveLineItemsByIdsResult>(removeLineItemsByIdsIR);
-
-
 /** 'GetRelatedWorkOrdersByShopifyOrderId' parameters type */
 export interface IGetRelatedWorkOrdersByShopifyOrderIdParams {
   orderId: string;
@@ -391,7 +364,7 @@ export interface IGetLinkedOrdersByPurchaseOrderIdQuery {
   result: IGetLinkedOrdersByPurchaseOrderIdResult;
 }
 
-const getLinkedOrdersByPurchaseOrderIdIR: any = {"usedParamSet":{"purchaseOrderId":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":357,"b":373}]}],"statement":"SELECT DISTINCT \"ShopifyOrder\".*\nFROM \"ShopifyOrder\"\n       INNER JOIN \"ShopifyOrderLineItem\" ON \"ShopifyOrder\".\"orderId\" = \"ShopifyOrderLineItem\".\"orderId\"\n       INNER JOIN \"PurchaseOrderLineItem\"\n                  ON \"ShopifyOrderLineItem\".\"lineItemId\" = \"PurchaseOrderLineItem\".\"shopifyOrderLineItemId\"\nWHERE \"PurchaseOrderLineItem\".\"purchaseOrderId\" = :purchaseOrderId!"};
+const getLinkedOrdersByPurchaseOrderIdIR: any = {"usedParamSet":{"purchaseOrderId":true},"params":[{"name":"purchaseOrderId","required":true,"transform":{"type":"scalar"},"locs":[{"a":497,"b":513}]}],"statement":"SELECT DISTINCT \"ShopifyOrder\".*\nFROM \"ShopifyOrder\"\n       INNER JOIN \"ShopifyOrderLineItem\" ON \"ShopifyOrder\".\"orderId\" = \"ShopifyOrderLineItem\".\"orderId\"\n       INNER JOIN \"SpecialOrderLineItem\"\n                  ON \"ShopifyOrderLineItem\".\"lineItemId\" = \"SpecialOrderLineItem\".\"shopifyOrderLineItemId\"\n       INNER JOIN \"PurchaseOrderLineItem\"\n                  ON \"SpecialOrderLineItem\".\"id\" = \"PurchaseOrderLineItem\".\"specialOrderLineItemId\"\nWHERE \"PurchaseOrderLineItem\".\"purchaseOrderId\" = :purchaseOrderId!"};
 
 /**
  * Query generated from SQL:
@@ -399,8 +372,10 @@ const getLinkedOrdersByPurchaseOrderIdIR: any = {"usedParamSet":{"purchaseOrderI
  * SELECT DISTINCT "ShopifyOrder".*
  * FROM "ShopifyOrder"
  *        INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
+ *        INNER JOIN "SpecialOrderLineItem"
+ *                   ON "ShopifyOrderLineItem"."lineItemId" = "SpecialOrderLineItem"."shopifyOrderLineItemId"
  *        INNER JOIN "PurchaseOrderLineItem"
- *                   ON "ShopifyOrderLineItem"."lineItemId" = "PurchaseOrderLineItem"."shopifyOrderLineItemId"
+ *                   ON "SpecialOrderLineItem"."id" = "PurchaseOrderLineItem"."specialOrderLineItemId"
  * WHERE "PurchaseOrderLineItem"."purchaseOrderId" = :purchaseOrderId!
  * ```
  */

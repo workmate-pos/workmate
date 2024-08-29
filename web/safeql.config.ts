@@ -18,6 +18,7 @@ export default defineConfig({
       types: {
         json: 'unknown',
         jsonb: 'unknown',
+        uuid: 'UUID',
       },
     },
   },

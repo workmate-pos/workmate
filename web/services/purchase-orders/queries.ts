@@ -194,9 +194,9 @@ export async function getPurchaseOrderLineItems(purchaseOrderId: number) {
     availableQuantity: number;
     unitCost: string;
     createdAt: Date;
-    shopifyOrderLineItemId: string | null;
     updatedAt: Date;
-    uuid: string;
+    uuid: UUID;
+    specialOrderLineItemId: number | null;
   }>`
     SELECT *
     FROM "PurchaseOrderLineItem"
@@ -213,25 +213,21 @@ function mapPurchaseOrderLineItem<
     availableQuantity: number;
     unitCost: string;
     createdAt: Date;
-    shopifyOrderLineItemId: string | null;
     updatedAt: Date;
-    uuid: string;
+    specialOrderLineItemId: number | null;
+    uuid: UUID;
   },
 >(purchaseOrderLineItem: T) {
-  const { uuid, productVariantId, unitCost, shopifyOrderLineItemId } = purchaseOrderLineItem;
+  const { productVariantId, unitCost } = purchaseOrderLineItem;
 
   try {
     assertGid(productVariantId);
     assertMoney(unitCost);
-    assertGidOrNull(shopifyOrderLineItemId);
 
     return {
       ...purchaseOrderLineItem,
-      // TODO: Use this more, also in schema with uuid pattern
-      uuid: uuid as UUID,
       productVariantId,
       unitCost,
-      shopifyOrderLineItemId,
     };
   } catch (error) {
     sentryErr(error, { purchaseOrderLineItem });
@@ -262,7 +258,7 @@ export async function insertPurchaseOrderCustomFields(purchaseOrderId: number, c
 
 export async function insertPurchaseOrderLineItemCustomFields(
   purchaseOrderId: number,
-  lineItems: { uuid: string; customFields: Record<string, string> }[],
+  lineItems: { uuid: UUID; customFields: Record<string, string> }[],
 ) {
   const flatCustomFields = lineItems.flatMap(({ uuid, customFields }) =>
     Object.entries(customFields).map(([key, value]) => ({ uuid, key, value })),
@@ -291,7 +287,7 @@ export async function getPurchaseOrderLineItemCustomFields(purchaseOrderId: numb
   return await sql<{
     id: number;
     purchaseOrderId: number;
-    purchaseOrderLineItemUuid: string;
+    purchaseOrderLineItemUuid: UUID;
     key: string;
     value: string;
     createdAt: Date;
@@ -375,55 +371,33 @@ export async function upsertPurchaseOrderLineItems(
     quantity: number;
     availableQuantity: number;
     unitCost: Money;
-    shopifyOrderLineItemId: ID | null;
-    uuid: string;
+    uuid: UUID;
   }[],
 ) {
   if (!isNonEmptyArray(lineItems)) {
     return;
   }
 
-  const { shopifyOrderLineItemId, unitCost, quantity, availableQuantity, productVariantId, uuid } = nest(lineItems);
+  const { unitCost, quantity, availableQuantity, productVariantId, uuid } = nest(lineItems);
   const _productVariantId: string[] = productVariantId;
   const _unitCost: string[] = unitCost;
-  const _shopifyOrderLineItemId: (string | null)[] = shopifyOrderLineItemId;
 
   await sql`
     INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", quantity, "availableQuantity",
-                                         "unitCost", "shopifyOrderLineItemId", uuid)
+                                         "unitCost", uuid)
     SELECT ${purchaseOrderId}, *
     FROM UNNEST(
       ${_productVariantId} :: text[],
       ${quantity} :: int[],
       ${availableQuantity} :: int[],
       ${_unitCost} :: text[],
-      ${_shopifyOrderLineItemId} :: text[],
       ${uuid} :: uuid[])
     ON CONFLICT ("purchaseOrderId", uuid)
-      DO UPDATE SET "productVariantId"       = EXCLUDED."productVariantId",
-                    quantity                 = EXCLUDED.quantity,
-                    "availableQuantity"      = EXCLUDED."availableQuantity",
-                    "unitCost"               = EXCLUDED."unitCost",
-                    "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId";`;
-}
-
-export async function setPurchaseOrderLineItemShopifyOrderLineItemIds(
-  purchaseOrderId: number,
-  lineItems: { uuid: string; shopifyOrderLineItemId: ID | null }[],
-) {
-  if (!isNonEmptyArray(lineItems)) {
-    return;
-  }
-
-  const { shopifyOrderLineItemId, uuid } = nest(lineItems);
-  const _shopifyOrderLineItemId: (string | null)[] = shopifyOrderLineItemId;
-
-  await sql`
-    UPDATE "PurchaseOrderLineItem" x
-    SET "shopifyOrderLineItemId" = y."shopifyOrderLineItemId"
-    FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
-    WHERE x."purchaseOrderId" = ${purchaseOrderId}
-      AND x.uuid = y.uuid;`;
+      DO UPDATE SET "productVariantId"  = EXCLUDED."productVariantId",
+                    quantity            = EXCLUDED.quantity,
+                    "availableQuantity" = EXCLUDED."availableQuantity",
+                    "unitCost"          = EXCLUDED."unitCost";
+  `;
 }
 
 export async function insertPurchaseOrderAssignedEmployees(purchaseOrderId: number, employees: { employeeId: ID }[]) {
@@ -440,56 +414,10 @@ export async function insertPurchaseOrderAssignedEmployees(purchaseOrderId: numb
     FROM UNNEST(${_employeeId} :: text[]);`;
 }
 
-export async function getPurchaseOrderLineItemsByShopifyOrderLineItemIds(shopifyOrderLineItemIds: ID[]) {
-  if (!isNonEmptyArray(shopifyOrderLineItemIds)) {
-    return [];
-  }
-
-  const _shopifyOrderLineItemIds: (string | null)[] = shopifyOrderLineItemIds;
-
-  const lineItems = await sql<{
-    purchaseOrderId: number;
-    productVariantId: string;
-    quantity: number;
-    availableQuantity: number;
-    unitCost: string;
-    createdAt: Date;
-    shopifyOrderLineItemId: string | null;
-    updatedAt: Date;
-    uuid: string;
-  }>`
-    SELECT *
-    FROM "PurchaseOrderLineItem"
-    WHERE "shopifyOrderLineItemId" = ANY (${_shopifyOrderLineItemIds});`;
-
-  return lineItems.map(mapPurchaseOrderLineItem);
-}
-
-export async function replacePurchaseOrderLineItemShopifyOrderLineItemIds(
-  replacements: { currentShopifyOrderLineItemId: ID; newShopifyOrderLineItemId: ID }[],
-) {
-  if (!isNonEmptyArray(replacements)) {
-    return;
-  }
-
-  const { currentShopifyOrderLineItemId, newShopifyOrderLineItemId } = nest(replacements);
-  const _currentShopifyOrderLineItemId: (string | null)[] = currentShopifyOrderLineItemId;
-  const _newShopifyOrderLineItemId: (string | null)[] = newShopifyOrderLineItemId;
-
-  await sql`
-    UPDATE "PurchaseOrderLineItem" x
-    SET "shopifyOrderLineItemId" = y."newShopifyOrderLineItemId"
-    FROM UNNEST(
-           ${_currentShopifyOrderLineItemId} :: text[],
-           ${_newShopifyOrderLineItemId} :: text[]
-         ) as y("currentShopifyOrderLineItemId", "newShopifyOrderLineItemId")
-    WHERE x."shopifyOrderLineItemId" = y."currentShopifyOrderLineItemId";`;
-}
-
 export async function getPurchaseOrderLineItemsByNameAndUuid(
   items: {
     purchaseOrderName: string;
-    uuid: string;
+    uuid: UUID;
   }[],
 ) {
   if (!isNonEmptyArray(items)) {
@@ -505,9 +433,9 @@ export async function getPurchaseOrderLineItemsByNameAndUuid(
     availableQuantity: number;
     unitCost: string;
     createdAt: Date;
-    shopifyOrderLineItemId: string | null;
     updatedAt: Date;
-    uuid: string;
+    uuid: UUID;
+    specialOrderLineItemId: number | null;
     purchaseOrderName: string;
   }>`
     SELECT li.*, po.name AS "purchaseOrderName"
@@ -526,7 +454,7 @@ export async function getPurchaseOrderLineItemsByNameAndUuid(
 export async function getPurchaseOrderLineItemsByIdAndUuid(
   items: {
     purchaseOrderId: number;
-    uuid: string;
+    uuid: UUID;
   }[],
 ) {
   if (!isNonEmptyArray(items)) {
@@ -545,9 +473,9 @@ export async function getPurchaseOrderLineItemsByIdAndUuid(
     availableQuantity: number;
     unitCost: string;
     createdAt: Date;
-    shopifyOrderLineItemId: string | null;
     updatedAt: Date;
-    uuid: string;
+    uuid: UUID;
+    specialOrderLineItemId: number | null;
     purchaseOrderName: string;
   }>`
     SELECT li.*, po.name AS "purchaseOrderName"
@@ -561,4 +489,34 @@ export async function getPurchaseOrderLineItemsByIdAndUuid(
   `;
 
   return lineItems.map(mapPurchaseOrderLineItem);
+}
+
+export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
+  const purchaseOrders = await sql<{
+    id: number;
+    shop: string;
+    locationId: string | null;
+    discount: string | null;
+    tax: string | null;
+    shipping: string | null;
+    deposited: string | null;
+    paid: string | null;
+    name: string;
+    status: string;
+    shipFrom: string;
+    shipTo: string;
+    note: string;
+    vendorName: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    placedDate: Date | null;
+  }>`
+    SELECT DISTINCT po.*
+    FROM "PurchaseOrder" po
+           INNER JOIN "PurchaseOrderLineItem" poli ON poli."purchaseOrderId" = po.id
+           INNER JOIN "SpecialOrderLineItem" soli ON soli.id = poli."specialOrderLineItemId"
+    WHERE soli."specialOrderId" = ${specialOrderId};
+  `;
+
+  return purchaseOrders.map(mapPurchaseOrder);
 }

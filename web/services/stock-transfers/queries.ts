@@ -3,7 +3,6 @@ import { MergeUnion, UUID } from '../../util/types.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { assertGidOrNull } from '../../util/assertions.js';
 import { StockTransferLineItemStatus } from '@prisma/client';
 import { nest } from '../../util/db.js';
 import { isNonEmptyArray, mapNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
@@ -105,7 +104,7 @@ function mapStockTransfer(stockTransfer: {
 
 export async function getStockTransferLineItems(stockTransferId: number) {
   const lineItems = await sql<{
-    uuid: string;
+    uuid: UUID;
     stockTransferId: number;
     inventoryItemId: string;
     productTitle: string;
@@ -117,7 +116,7 @@ export async function getStockTransferLineItems(stockTransferId: number) {
     shopifyOrderLineItemId: string | null;
     shopifyOrderId: string | null;
     purchaseOrderId: number | null;
-    purchaseOrderLineItemUuid: string | null;
+    purchaseOrderLineItemUuid: UUID | null;
   }>`
     SELECT *
     FROM "StockTransferLineItem"
@@ -128,7 +127,7 @@ export async function getStockTransferLineItems(stockTransferId: number) {
 
 function mapStockTransferLineItem<
   T extends {
-    uuid: string;
+    uuid: UUID;
     stockTransferId: number;
     inventoryItemId: string;
     productTitle: string;
@@ -140,10 +139,10 @@ function mapStockTransferLineItem<
     shopifyOrderLineItemId: string | null;
     shopifyOrderId: string | null;
     purchaseOrderId: number | null;
-    purchaseOrderLineItemUuid: string | null;
+    purchaseOrderLineItemUuid: UUID | null;
   },
 >(stockTransferLineItem: T) {
-  const { uuid, inventoryItemId, shopifyOrderLineItemId, shopifyOrderId, purchaseOrderLineItemUuid, purchaseOrderId } =
+  const { inventoryItemId, shopifyOrderLineItemId, shopifyOrderId, purchaseOrderLineItemUuid, purchaseOrderId } =
     stockTransferLineItem;
 
   const getShopifyOrderLineItemDetails = () => {
@@ -171,7 +170,7 @@ function mapStockTransferLineItem<
     if (purchaseOrderId !== null && purchaseOrderLineItemUuid !== null) {
       return {
         purchaseOrderId,
-        purchaseOrderLineItemUuid: purchaseOrderLineItemUuid as UUID,
+        purchaseOrderLineItemUuid,
       };
     }
 
@@ -190,7 +189,6 @@ function mapStockTransferLineItem<
 
     return {
       ...stockTransferLineItem,
-      uuid: uuid as UUID,
       inventoryItemId,
       ...getShopifyOrderLineItemDetails(),
       ...getPurchaseOrderLineItemDetails(),
@@ -204,7 +202,7 @@ function mapStockTransferLineItem<
 export async function upsertStockTransferLineItems(
   stockTransferId: number,
   items: {
-    uuid: string;
+    uuid: UUID;
     inventoryItemId: ID;
     productTitle: string;
     productVariantTitle: string;
@@ -321,7 +319,7 @@ export async function getTransferOrderLineItemsByShopifyOrderLineItemIds(shopify
   const _shopifyOrderLineItemIds: (string | null)[] = shopifyOrderLineItemIds;
 
   const lineItems = await sql<{
-    uuid: string;
+    uuid: UUID;
     stockTransferId: number;
     inventoryItemId: string;
     productTitle: string;
@@ -333,7 +331,7 @@ export async function getTransferOrderLineItemsByShopifyOrderLineItemIds(shopify
     shopifyOrderLineItemId: string | null;
     shopifyOrderId: string | null;
     purchaseOrderId: number | null;
-    purchaseOrderLineItemUuid: string | null;
+    purchaseOrderLineItemUuid: UUID | null;
   }>`
     SELECT *
     FROM "StockTransferLineItem"
@@ -362,7 +360,7 @@ export async function getStockTransfersByIds(stockTransferIds: number[]) {
 
 export async function getStockTransferLineItemsForPurchaseOrder(purchaseOrderId: number) {
   const lineItems = await sql<{
-    uuid: string;
+    uuid: UUID;
     stockTransferId: number;
     inventoryItemId: string;
     productTitle: string;
@@ -374,7 +372,7 @@ export async function getStockTransferLineItemsForPurchaseOrder(purchaseOrderId:
     shopifyOrderLineItemId: string | null;
     shopifyOrderId: string | null;
     purchaseOrderId: number | null;
-    purchaseOrderLineItemUuid: string | null;
+    purchaseOrderLineItemUuid: UUID | null;
     stockTransferName: string;
   }>`
     SELECT li.*, st.name AS "stockTransferName"

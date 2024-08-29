@@ -7,7 +7,7 @@ import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-ord
 import { upsertCreatePurchaseOrder } from '../../services/purchase-orders/upsert.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getDetailedPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
-import { PurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
+import { DetailedPurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
 import { db } from '../../services/db/db.js';
@@ -173,11 +173,11 @@ export type FetchPurchaseOrderInfoPageResponse = {
 };
 
 export type CreatePurchaseOrderResponse = {
-  purchaseOrder: PurchaseOrder;
+  purchaseOrder: DetailedPurchaseOrder;
 };
 
 export type FetchPurchaseOrderResponse = {
-  purchaseOrder: PurchaseOrder;
+  purchaseOrder: DetailedPurchaseOrder;
 };
 
 export type FetchPurchaseOrderCustomFieldsResponse = {

@@ -27,7 +27,7 @@ import { PurchaseOrderLineItemModal } from '@web/frontend/components/purchase-or
 import { Tone } from '@shopify/polaris/build/ts/src/components/Badge/index.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
@@ -42,7 +42,7 @@ export function PurchaseOrderProductsCard({
   onMarkAllAsNotReceivedClick,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
-  purchaseOrder: PurchaseOrder | null;
+  purchaseOrder: DetailedPurchaseOrder | null;
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
   onAddProductClick: () => void;
@@ -103,7 +103,7 @@ function ProductsList({
   disabled,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
-  purchaseOrder: PurchaseOrder | null;
+  purchaseOrder: DetailedPurchaseOrder | null;
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
 }) {

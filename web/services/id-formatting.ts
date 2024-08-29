@@ -63,6 +63,12 @@ export async function getNewStockTransferName(shop: string) {
   return await applyFormatters(settings.stockTransferIdFormat, stockTransferFormatters, { shop });
 }
 
+export async function getNewSpecialOrderName(shop: string): Promise<string> {
+  // TODO: id format
+  // TODO: merge with counter
+  return `SO-${Math.round(Math.random() * 100)}`;
+}
+
 async function getNextWorkOrderIdForShop(shop: string) {
   await createWorkOrderIdSequenceForShopIfNotExists(shop);
   const [{ id } = never('Sequence not found')] = await db.sequence.getNextSequenceValue({

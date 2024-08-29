@@ -4,7 +4,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useRouter } from '../../routes.js';
@@ -21,6 +21,7 @@ export type UnsourcedItemListSelectedItem = {
 };
 
 export type UnsourcedItemListProps = {
+  title: string;
   items: UnsourcedItemListSelectedItem[];
   filterAction?: {
     title: string;
@@ -28,15 +29,24 @@ export type UnsourcedItemListProps = {
     loading?: boolean;
     disabled?: boolean;
   };
-  primaryAction: {
+  primaryAction?: {
     title: string;
     allowEmptySelection?: boolean;
     onAction: (selectedItems: UnsourcedItemListSelectedItem[]) => void;
     loading?: boolean;
   };
+  children?: ReactNode;
+  noSearchBar?: boolean;
 };
 
-export function UnsourcedItemList({ items: listedItems, primaryAction, filterAction }: UnsourcedItemListProps) {
+export function UnsourcedItemList({
+  title,
+  items: listedItems,
+  primaryAction,
+  filterAction,
+  children,
+  noSearchBar,
+}: UnsourcedItemListProps) {
   const [selectedItems, setSelectedItems] = useState(listedItems);
 
   // Reset selection if input changes, e.g. when a filter is applied
@@ -72,7 +82,8 @@ export function UnsourcedItemList({ items: listedItems, primaryAction, filterAct
 
   return (
     <ListPopup
-      title="Select items to reserve"
+      title={title}
+      noSearchBar={noSearchBar}
       imageDisplayStrategy="always"
       selection={{
         type: 'multi-select',
@@ -95,36 +106,41 @@ export function UnsourcedItemList({ items: listedItems, primaryAction, filterAct
               position: 'top',
             } as const)
           : null,
-        {
-          title: 'Change quantities',
-          type: 'plain',
-          onAction: () => {
-            router.push('QuantityAdjustmentList', {
-              items: selectedItems.map(item => ({
-                id: item.uuid,
-                quantity: item.quantity,
-                min: 1,
-                max: Math.min(item.unsourcedQuantity, item.availableQuantity),
-                name: getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
-              })),
-              onChange: items =>
-                setSelectedItems(
-                  selectedItems.map(item => ({
-                    ...item,
-                    quantity: items.find(hasPropertyValue('id', item.uuid))?.quantity ?? item.quantity,
+        !!primaryAction
+          ? ({
+              title: 'Change quantities',
+              type: 'plain',
+              onAction: () => {
+                router.push('QuantityAdjustmentList', {
+                  items: selectedItems.map(item => ({
+                    id: item.uuid,
+                    quantity: item.quantity,
+                    min: 1,
+                    max: Math.min(item.unsourcedQuantity, item.availableQuantity),
+                    name:
+                      getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
                   })),
-                ),
-            });
-          },
-          disabled: selectedItems.length === 0,
-        } as const,
-        {
-          title: primaryAction.title,
-          type: 'primary',
-          disabled: !primaryAction.allowEmptySelection && selectedItems.length === 0,
-          loading: primaryAction.loading,
-          onAction: () => primaryAction.onAction(selectedItems),
-        } as const,
+                  onChange: items =>
+                    setSelectedItems(
+                      selectedItems.map(item => ({
+                        ...item,
+                        quantity: items.find(hasPropertyValue('id', item.uuid))?.quantity ?? item.quantity,
+                      })),
+                    ),
+                });
+              },
+              disabled: selectedItems.length === 0,
+            } as const)
+          : null,
+        !!primaryAction
+          ? ({
+              title: primaryAction.title,
+              type: 'primary',
+              disabled: !primaryAction.allowEmptySelection && selectedItems.length === 0,
+              loading: primaryAction.loading,
+              onAction: () => primaryAction.onAction(selectedItems),
+            } as const)
+          : null,
       ].filter(isNonNullable)}
       emptyState={
         <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
@@ -133,6 +149,8 @@ export function UnsourcedItemList({ items: listedItems, primaryAction, filterAct
           </Text>
         </Stack>
       }
-    />
+    >
+      {children}
+    </ListPopup>
   );
 }

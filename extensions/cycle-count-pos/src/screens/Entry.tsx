@@ -23,8 +23,6 @@ export function Entry() {
   const locationId = createGid('Location', session.currentSession.locationId.toString());
   const [products, setProducts] = useState<Record<ID, number>>({});
 
-  // TODO: Allow adding arbitrary products as well
-
   const fetch = useAuthenticatedFetch();
   const locationQuery = useLocationQuery({ fetch, id: locationId });
 

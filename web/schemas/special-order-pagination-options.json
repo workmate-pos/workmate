@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "description": "Filters for fetching special orders. The 'lineItem' filters are combined to match one line item",
+  "properties": {
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25
+    },
+    "query": {
+      "type": "string"
+    },
+    "customerId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "locationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "lineItemState": {
+      "enum": ["FULLY_ORDERED", "NOT_FULLY_ORDERED"]
+    },
+    "lineItemVendorName": {
+      "type": "string"
+    }
+  },
+  "required": ["limit", "offset"],
+  "additionalProperties": false
+}

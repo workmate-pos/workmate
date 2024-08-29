@@ -65,31 +65,37 @@
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
           },
-          "shopifyOrderLineItem": {
+          "specialOrderLineItem": {
             "anyOf": [
               { "const": null },
               {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "$ref": "scalars.json#/definitions/ID"
+                  "name": {
+                    "type": "string"
                   },
-                  "orderId": {
-                    "$ref": "scalars.json#/definitions/ID"
+                  "uuid": {
+                    "$ref": "scalars.json#/definitions/UUID"
+                  },
+                  "quantity": {
+                    "$ref": "scalars.json#/definitions/Int",
+                    "minimum": 1
                   }
                 },
-                "required": ["id", "orderId"],
+                "required": ["name", "uuid", "quantity"],
                 "additionalProperties": false
               }
             ]
           },
           "quantity": {
             "description": "The quantity of this product variant in the PO",
-            "$ref": "scalars.json#/definitions/Int"
+            "$ref": "scalars.json#/definitions/Int",
+            "minimum": 1
           },
           "availableQuantity": {
             "description": "The quantity of this product variant available in the inventory",
-            "$ref": "scalars.json#/definitions/Int"
+            "$ref": "scalars.json#/definitions/Int",
+            "minimum": 0
           },
           "unitCost": {
             "$ref": "scalars.json#/definitions/Money"
@@ -104,7 +110,7 @@
         "required": [
           "uuid",
           "productVariantId",
-          "shopifyOrderLineItem",
+          "specialOrderLineItem",
           "quantity",
           "availableQuantity",
           "unitCost",

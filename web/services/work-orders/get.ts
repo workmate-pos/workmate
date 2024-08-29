@@ -17,7 +17,7 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { indexBy, indexByMap, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Value } from '@sinclair/typebox/value';
@@ -33,15 +33,14 @@ import {
 } from './queries.js';
 import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
-import {
-  getPurchaseOrderLineItemsByShopifyOrderLineItemIds,
-  getPurchaseOrdersByIds,
-} from '../purchase-orders/queries.js';
+import { getPurchaseOrdersByIds } from '../purchase-orders/queries.js';
 import {
   getStockTransfersByIds,
   getTransferOrderLineItemsByShopifyOrderLineItemIds,
 } from '../stock-transfers/queries.js';
 import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js';
+import { UUID } from '../../util/types.js';
+import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
 
 export async function getDetailedWorkOrder(session: Session, name: string): Promise<DetailedWorkOrder | null> {
   const { shop } = session;
@@ -105,23 +104,32 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
 
   const lineItemIds = unique(items.map(item => item.shopifyOrderLineItemId).filter(isNonNullable));
 
-  const [lineItemById, lineItemReservations, purchaseOrderLineItems, transferOrderLineItems] = await Promise.all([
+  const [lineItemById, lineItemReservations, transferOrderLineItems, specialOrderLineItems] = await Promise.all([
     getLineItemsById(lineItemIds),
+    // TODO: Show reservations inside the work order
+    // TODO: Show special orders inside the work order
     getShopifyOrderLineItemReservationsByIds(lineItemIds),
-    getPurchaseOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
     getTransferOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
+    getSpecialOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
   ]);
 
-  const purchaseOrderIds = unique(purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId));
   const transferOrderIds = unique(transferOrderLineItems.map(lineItem => lineItem.stockTransferId));
+  const specialOrderIds = unique(specialOrderLineItems.map(lineItem => lineItem.specialOrderId));
+  const purchaseOrderIds = unique(
+    specialOrderLineItems.flatMap(lineItem =>
+      lineItem.purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId),
+    ),
+  );
 
-  const [purchaseOrders, transferOrders] = await Promise.all([
-    getPurchaseOrdersByIds(purchaseOrderIds),
+  const [transferOrders, specialOrders, purchaseOrders] = await Promise.all([
     getStockTransfersByIds(transferOrderIds),
+    getSpecialOrdersByIds(specialOrderIds),
+    getPurchaseOrdersByIds(purchaseOrderIds),
   ]);
 
-  const purchaseOrderById = indexBy(purchaseOrders, po => String(po.id));
   const transferOrderById = indexBy(transferOrders, po => String(po.id));
+  const specialOrderById = indexBy(specialOrders, so => String(so.id));
+  const purchaseOrderById = indexBy(purchaseOrders, po => String(po.id));
 
   return items.map<DetailedWorkOrderItem>(item => {
     const itemCustomFields = customFields.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
@@ -129,18 +137,23 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
     const itemReservations = !!item.shopifyOrderLineItemId
       ? lineItemReservations.filter(hasPropertyValue('lineItemId', item.shopifyOrderLineItemId))
       : [];
-    const itemPurchaseOrderLineItems = purchaseOrderLineItems
-      .filter(hasPropertyValue('shopifyOrderLineItemId', item.shopifyOrderLineItemId))
-      .filter(hasNonNullableProperty('purchaseOrderId'));
     const itemTransferOrderLineItems = transferOrderLineItems
       .filter(hasPropertyValue('shopifyOrderLineItemId', item.shopifyOrderLineItemId))
       .filter(hasNonNullableProperty('stockTransferId'));
+    const itemSpecialOrderLineItems = item.shopifyOrderLineItemId
+      ? specialOrderLineItems
+          .filter(hasPropertyValue('shopifyOrderLineItemId', item.shopifyOrderLineItemId))
+          .filter(hasNonNullableProperty('specialOrderId'))
+      : [];
 
-    const itemPurchaseOrders = itemPurchaseOrderLineItems.map(
-      poLineItem => purchaseOrderById[poLineItem.purchaseOrderId] ?? never('fk'),
-    );
     const itemTransferOrders = itemTransferOrderLineItems.map(
       poLineItem => transferOrderById[poLineItem.stockTransferId] ?? never('fk'),
+    );
+    const itemSpecialOrders = itemSpecialOrderLineItems.map(
+      poLineItem => specialOrderById[poLineItem.specialOrderId] ?? never('fk'),
+    );
+    const itemPurchaseOrders = itemSpecialOrderLineItems.flatMap(lineItem =>
+      lineItem.purchaseOrderLineItems.map(lineItem => purchaseOrderById[lineItem.purchaseOrderId] ?? never('fk')),
     );
 
     const base = {
@@ -152,11 +165,20 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
         : null,
       purchaseOrders: itemPurchaseOrders.map(po => ({
         name: po.name,
-        items: itemPurchaseOrderLineItems.filter(hasPropertyValue('purchaseOrderId', po.id)),
+        items: itemSpecialOrderLineItems
+          .flatMap(lineItem => lineItem.purchaseOrderLineItems)
+          .filter(hasPropertyValue('purchaseOrderId', po.id)),
       })),
       transferOrders: itemTransferOrders.map(to => ({
         name: to.name,
         items: itemTransferOrderLineItems.filter(hasPropertyValue('stockTransferId', to.id)),
+      })),
+      specialOrders: itemSpecialOrders.map(so => ({
+        name: so.name,
+        items: itemSpecialOrderLineItems.filter(hasPropertyValue('specialOrderId', so.id)).map(lineItem => ({
+          quantity: lineItem.quantity,
+          orderedQuantity: sum(lineItem.purchaseOrderLineItems.map(lineItem => lineItem.quantity)),
+        })),
       })),
       reservations: itemReservations.map(({ quantity, locationId }) => ({ quantity, locationId })),
       customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
@@ -189,11 +211,11 @@ async function getDetailedWorkOrderCharges(workOrderId: number): Promise<Detaile
 
   return charges.map<DetailedWorkOrderCharge>(charge => {
     const base = {
-      uuid: charge.uuid,
+      uuid: charge.uuid as UUID,
       employeeId: charge.data.employeeId,
       name: charge.data.name,
       removeLocked: charge.data.removeLocked,
-      workOrderItemUuid: charge.workOrderItemUuid,
+      workOrderItemUuid: charge.workOrderItemUuid as UUID | null,
       shopifyOrderLineItem: charge.shopifyOrderLineItemId
         ? lineItemById[charge.shopifyOrderLineItemId] ?? never()
         : null,

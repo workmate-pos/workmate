@@ -14,7 +14,7 @@ import { Int } from '@web/schemas/generated/create-product.js';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@web/frontend/components/shared-orders/CustomFieldsList.js';
 import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
@@ -33,7 +33,7 @@ export function PurchaseOrderLineItemModal({
   onSave,
 }: {
   initialProduct: CreatePurchaseOrder['lineItems'][number];
-  purchaseOrder: PurchaseOrder | null;
+  purchaseOrder: DetailedPurchaseOrder | null;
   locationId: ID | null;
   open: boolean;
   onClose: () => void;

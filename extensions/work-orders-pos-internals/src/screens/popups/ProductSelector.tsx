@@ -82,7 +82,6 @@ export function ProductSelector({
     charges: CreateWorkOrderCharge[],
     name: string = 'Product',
   ) => {
-    setQuery('', true);
     onSelect({ items, charges });
     toast.show(`${name} added to cart`, { duration: 750 });
   };

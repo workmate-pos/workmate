@@ -13,6 +13,7 @@ import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 
 export type ListPopupItem<ID extends string = string> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
   id: ID;
@@ -27,6 +28,7 @@ export type ListPopupAction<ID extends string = string> = {
   disabled?: boolean;
   loading?: boolean;
   position?: 'top' | 'bottom';
+  submit?: boolean;
 };
 
 export type ListPopupProps<ID extends string = string> = {
@@ -55,6 +57,7 @@ export type ListPopupProps<ID extends string = string> = {
   actions?: ListPopupAction<ID>[];
   emptyState?: ReactNode;
   imageDisplayStrategy?: ListProps['imageDisplayStrategy'];
+  children?: ReactNode;
 };
 
 /**
@@ -68,6 +71,7 @@ export function ListPopup<ID extends string = string>({
   imageDisplayStrategy,
   actions,
   noSearchBar = false,
+  children,
 }: ListPopupProps<ID>) {
   const router = useRouter();
   const screen = useScreen();
@@ -166,6 +170,8 @@ export function ListPopup<ID extends string = string>({
             </Stack>
           ))}
 
+        {children}
+
         {bottomActions?.map(action => getActionButton(action, selectedIds))}
       </Stack>
     </ScrollView>
@@ -174,11 +180,12 @@ export function ListPopup<ID extends string = string>({
 
 function getActionButton<ID extends string = string>(action: ListPopupAction<ID>, selectedIds: ID[]) {
   return (
-    <Button
-      title={action.title}
+    <FormButton
+      title={action.title ?? ''}
       type={action.type}
-      isDisabled={action.disabled}
-      isLoading={action.loading}
+      action={action.submit ? 'submit' : 'button'}
+      disabled={action.disabled}
+      loading={action.loading}
       onPress={() => action.onAction(selectedIds)}
     />
   );

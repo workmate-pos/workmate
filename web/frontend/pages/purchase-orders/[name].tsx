@@ -43,7 +43,7 @@ import { PurchaseOrderSummary } from '@web/frontend/components/purchase-orders/P
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { AddOrderProductModal } from '@web/frontend/components/purchase-orders/modals/AddOrderProductModal.js';
 import { Int } from '@web/schemas/generated/create-product.js';
-import type { PurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
+import type { DetailedPurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
 import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';

@@ -49,6 +49,7 @@ export type DetailedWorkOrderItem = {
   purchaseOrders: WorkOrderPurchaseOrder[];
   transferOrders: WorkOrderTransferOrder[];
   reservations: LineItemReservation[];
+  specialOrders: WorkOrderSpecialOrder[];
 } & (
   | {
       type: 'product';
@@ -70,6 +71,16 @@ export type WorkOrderPurchaseOrderItem = {
   unitCost: Money;
   quantity: Int;
   availableQuantity: Int;
+};
+
+export type WorkOrderSpecialOrder = {
+  name: string;
+  items: WorkOrderSpecialOrderItem[];
+};
+
+export type WorkOrderSpecialOrderItem = {
+  quantity: Int;
+  orderedQuantity: Int;
 };
 
 export type WorkOrderTransferOrder = {

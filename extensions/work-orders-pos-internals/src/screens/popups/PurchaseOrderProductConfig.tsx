@@ -17,7 +17,7 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
-import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 
 export function PurchaseOrderProductConfig({
@@ -27,7 +27,7 @@ export function PurchaseOrderProductConfig({
   onSave,
 }: NonNullableValues<Pick<CreatePurchaseOrder, 'locationId'>> & {
   product: Product;
-  purchaseOrder: PurchaseOrder | null;
+  purchaseOrder: DetailedPurchaseOrder | null;
   onSave: (product: Product) => void;
 }) {
   const [product, setProduct] = useState<Product>(initialProduct);

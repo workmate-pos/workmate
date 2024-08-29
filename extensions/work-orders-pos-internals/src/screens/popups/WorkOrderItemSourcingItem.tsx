@@ -1,10 +1,9 @@
-import { Badge, Button, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Badge, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { match } from 'ts-pattern';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { getWorkOrderItemFulfillmentBadges } from './WorkOrderItemSourcing.js';
 import { SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
@@ -12,12 +11,11 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { createGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { useCreateWorkOrderOrderMutation } from '@work-orders/common/queries/use-create-work-order-order-mutation.js';
 import { useStockTransferMutation } from '@work-orders/common/queries/use-stock-transfer-mutation.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { getWorkOrderItemSourcingBadges } from '../../util/badges.js';
 
 // TODO: Also show the current location inventory #, and then make it possible to config SO/PO/TO
 export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: string; workOrderName: string }) {
@@ -151,7 +149,7 @@ export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: strin
               : ''}
           </Text>
           <ResponsiveStack direction={'horizontal'} spacing={1} flexWrap={'wrap'}>
-            {getWorkOrderItemFulfillmentBadges(workOrderQuery.data.workOrder, workOrderItem).map(props => (
+            {getWorkOrderItemSourcingBadges(workOrderQuery.data.workOrder, workOrderItem).map(props => (
               <Badge {...props} />
             ))}
           </ResponsiveStack>

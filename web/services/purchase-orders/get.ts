@@ -3,8 +3,6 @@ import type { PurchaseOrderInfo } from './types.js';
 import { escapeLike } from '../db/like.js';
 import { db } from '../db/db.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
-import { assertGidOrNull, assertInt, assertMoneyOrNull } from '../../util/assertions.js';
-import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
@@ -21,7 +19,10 @@ import {
   getPurchaseOrderLineItemCustomFields,
   getPurchaseOrderLineItems,
 } from './queries.js';
-import { getStockTransferLineItems, getStockTransferLineItemsForPurchaseOrder } from '../stock-transfers/queries.js';
+import { getStockTransferLineItemsForPurchaseOrder } from '../stock-transfers/queries.js';
+import { assertInt } from '../../util/assertions.js';
+import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { getSpecialOrderLineItemsForPurchaseOrder, getSpecialOrdersByIds } from '../special-orders/queries.js';
 
 export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
   const purchaseOrder = await getPurchaseOrder({ shop, name });
@@ -45,13 +46,6 @@ export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, 
         .then(result => result.flat())
         .then(result => uniqueBy(result, wo => wo.id))
     : [];
-
-  assertGidOrNull(purchaseOrder.locationId);
-  assertMoneyOrNull(purchaseOrder.discount);
-  assertMoneyOrNull(purchaseOrder.tax);
-  assertMoneyOrNull(purchaseOrder.shipping);
-  assertMoneyOrNull(purchaseOrder.deposited);
-  assertMoneyOrNull(purchaseOrder.paid);
 
   // we send along all data from the database. it may not be complete but significantly reduces time TTI in POS.
   // pos will instantly mark the data as stale so it will refetch any missing data
@@ -124,10 +118,11 @@ export async function getPurchaseOrderInfoPage(
 }
 
 async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
-  const [lineItems, lineItemCustomFields, stockTransferLineItems] = await Promise.all([
+  const [lineItems, lineItemCustomFields, stockTransferLineItems, specialOrderLineItems] = await Promise.all([
     getPurchaseOrderLineItems(purchaseOrderId),
     getPurchaseOrderLineItemCustomFields(purchaseOrderId),
     getStockTransferLineItemsForPurchaseOrder(purchaseOrderId),
+    getSpecialOrderLineItemsForPurchaseOrder(purchaseOrderId),
   ]);
 
   const productVariantIds = unique(lineItems.map(({ productVariantId }) => productVariantId));
@@ -139,7 +134,7 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
   const productById = indexBy(products, p => p.productId);
 
   const shopifyOrderLineItemIds = unique(
-    lineItems.map(({ shopifyOrderLineItemId }) => shopifyOrderLineItemId).filter(isNonNullable),
+    specialOrderLineItems.map(({ shopifyOrderLineItemId }) => shopifyOrderLineItemId).filter(isNonNullable),
   );
   const shopifyOrderLineItems = shopifyOrderLineItemIds.length
     ? await db.shopifyOrder.getLineItemsByIds({ lineItemIds: shopifyOrderLineItemIds })
@@ -150,12 +145,20 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
   const orders = orderIds.length ? await db.shopifyOrder.getMany({ orderIds }) : [];
   const orderById = indexBy(orders, o => o.orderId);
 
-  return lineItems.map(({ uuid, quantity, availableQuantity, productVariantId, shopifyOrderLineItemId, unitCost }) => {
+  const specialOrderIds = unique(specialOrderLineItems.map(({ specialOrderId }) => specialOrderId));
+  const specialOrders = await getSpecialOrdersByIds(specialOrderIds);
+  const specialOrderById = indexBy(specialOrders, so => String(so.id));
+
+  return lineItems.map(({ uuid, quantity, availableQuantity, productVariantId, unitCost, specialOrderLineItemId }) => {
     const productVariant = productVariantById[productVariantId] ?? never('fk');
     const product = productById[productVariant.productId] ?? never('fk');
 
-    const shopifyOrderLineItem = shopifyOrderLineItemId
-      ? shopifyOrderLineItemById[shopifyOrderLineItemId] ?? never('fk')
+    const specialOrderLineItem = specialOrderLineItemId
+      ? specialOrderLineItems.find(hasPropertyValue('id', specialOrderLineItemId))
+      : null;
+
+    const shopifyOrderLineItem = specialOrderLineItem?.shopifyOrderLineItemId
+      ? shopifyOrderLineItemById[specialOrderLineItem.shopifyOrderLineItemId] ?? never('fk')
       : null;
 
     const linkedStockTransferLineItems = stockTransferLineItems.filter(
@@ -167,7 +170,6 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
     assertGid(productVariant.productVariantId);
     assertGid(productVariant.inventoryItemId);
     assertGid(product.productId);
-    assertGidOrNull(shopifyOrderLineItemId);
     assertInt(quantity);
     assertInt(availableQuantity);
     assertMoney(unitCost);
@@ -188,6 +190,7 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
           productType: product.productType,
         },
       },
+      // TODO: Warn if this is undefined but special order line item is defined
       shopifyOrderLineItem: (() => {
         if (shopifyOrderLineItem == null) {
           return null;
@@ -218,6 +221,13 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
       unitCost,
       quantity,
       availableQuantity,
+      specialOrderLineItem: specialOrderLineItem
+        ? {
+            uuid: specialOrderLineItem.uuid,
+            name: specialOrderById[specialOrderLineItem.specialOrderId]?.name ?? never('fk'),
+            quantity: specialOrderLineItem.quantity,
+          }
+        : null,
     };
   });
 }

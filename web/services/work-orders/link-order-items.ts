@@ -10,12 +10,12 @@ import {
   setWorkOrderChargeShopifyOrderLineItemIds,
   setWorkOrderItemShopifyOrderLineItemIds,
 } from './queries.js';
-import { replacePurchaseOrderLineItemShopifyOrderLineItemIds } from '../purchase-orders/queries.js';
 import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
 import { replaceStockTransferLineItemShopifyOrderLineItemIds } from '../stock-transfers/queries.js';
 import { replaceReservationShopifyOrderLineItemIds } from '../sourcing/queries.js';
 import { isLineItemId } from '../../util/assertions.js';
 import { unreserveLineItem } from '../sourcing/reserve.js';
+import { replaceSpecialOrderLineItemShopifyOrderLineItemIds } from '../special-orders/queries.js';
 
 type Order = { id: ID; customAttributes: { key: string; value: string | null }[] };
 type LineItem =
@@ -61,14 +61,16 @@ async function linkItems(session: Session, lineItems: LineItem[], workOrderId: n
       newShopifyOrderLineItemId: lineItemIdByItemUuid[uuid] ?? never(),
     }));
 
+  console.log('replacements', replacements);
+
   await Promise.all([
     setWorkOrderItemShopifyOrderLineItemIds(
       workOrderId,
       items.map(({ uuid }) => ({ uuid, shopifyOrderLineItemId: lineItemIdByItemUuid[uuid] ?? never() })),
     ),
 
-    // items may have been linked to a purchase order line item. if so, we should update the purchase order line item's shopifyOrderLineItemId too.
-    replacePurchaseOrderLineItemShopifyOrderLineItemIds(replacements),
+    // items may have been linked to a special order line item. if so, we should update the special order line item's shopifyOrderLineItemId too.
+    replaceSpecialOrderLineItemShopifyOrderLineItemIds(replacements),
 
     // the same applies to transfer order line items
     replaceStockTransferLineItemShopifyOrderLineItemIds(replacements),

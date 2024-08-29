@@ -3,6 +3,7 @@ import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
 import { getUnsourcedWorkOrderItems } from './WorkOrderItemSourcing.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 
 export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) {
   const title = `Work order ${workOrder.name} saved`;
@@ -20,7 +21,7 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
           <Text variant={'headingLarge'}>{title}</Text>
         </Stack>
       </Stack>
-      <Stack direction={'vertical'} alignment={'center'} paddingVertical={'ExtraLarge'}>
+      <ResponsiveGrid columns={3} grow>
         <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'} flexChildren>
           <Button title={'Back to work order'} onPress={() => router.popCurrent()} />
 
@@ -41,7 +42,7 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
             />
           )}
         </Stack>
-      </Stack>
+      </ResponsiveGrid>
     </ScrollView>
   );
 }

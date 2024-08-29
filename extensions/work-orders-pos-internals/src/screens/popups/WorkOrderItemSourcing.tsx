@@ -1,14 +1,12 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
-import { DetailedWorkOrder, DetailedWorkOrderItem } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import {
-  BadgeProps,
   Button,
   List,
   ListRow,
   ScrollView,
   Selectable,
-  Stack,
   Text,
   useExtensionApi,
 } from '@shopify/retail-ui-extensions-react';
@@ -17,23 +15,19 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { match } from 'ts-pattern';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { groupBy, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { hasNonNullableProperty, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { getPurchaseOrderBadge, getTransferOrderBadge } from '../../util/badges.js';
+import { getWorkOrderItemSourcedCount, getWorkOrderItemSourcingBadges, isOrderId } from '../../util/badges.js';
 import { useRouter } from '../../routes.js';
 import { SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
-import { createGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
-import { defaultCreatePurchaseOrder } from '@work-orders/common/create-purchase-order/default.js';
-import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { useReserveLineItemsInventoryMutation } from '@work-orders/common/queries/use-reserve-line-items-inventory-mutation.js';
 import { UUID } from '@web/util/types.js';
+import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 
 /**
  * Fulfillment options for some work order.
@@ -47,9 +41,6 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
   const { toast, session } = useExtensionApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
 
-  const settingsQuery = useSettingsQuery({ fetch });
-  const purchaseOrderCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
-  const lineItemCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
   const { workOrderQuery, productVariantQueries, inventoryItemQueries } = useWorkOrderQueries(name);
   const workOrder = workOrderQuery.data?.workOrder;
 
@@ -61,8 +52,9 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
   screen.setIsLoading(workOrderQuery.isFetching);
 
   const reserveLineItemInventoryMutation = useReserveLineItemsInventoryMutation({ fetch });
+  const specialOrderMutation = useSpecialOrderMutation({ fetch });
 
-  const isSubmitting = reserveLineItemInventoryMutation.isLoading;
+  const isSubmitting = reserveLineItemInventoryMutation.isLoading || specialOrderMutation.isLoading;
 
   if (workOrderQuery.isError) {
     return (
@@ -109,11 +101,12 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
 
         <ResponsiveGrid columns={3}>
           <Button
-            title={'Reserve from Inventory'}
+            title={'Layaway'}
             isDisabled={isSubmitting}
             isLoading={reserveLineItemInventoryMutation.isLoading}
             onPress={() => {
               router.push('UnsourcedItemList', {
+                title: 'Select items to layaway',
                 items: getUnsourcedWorkOrderItems(workOrder)
                   // if already in an order we cannot even reserve it smh
                   .filter(item => !isOrderId(item.shopifyOrderLineItem?.orderId))
@@ -169,10 +162,11 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             }
           />
           <Button
-            title={'Create Purchase Order'}
+            title={'Create Special Order'}
             isDisabled={isSubmitting}
             onPress={() =>
-              router.push('UnsourcedPurchaseOrderItemList', {
+              router.push('CreateSpecialOrderList', {
+                workOrder,
                 items: getUnsourcedWorkOrderItems(workOrder).map(
                   ({ uuid, shopifyOrderLineItem, unsourcedQuantity, productVariantId }) => ({
                     uuid,
@@ -266,52 +260,12 @@ function useItemListRows(name: string): ListRow[] {
           })
           .with({ type: 'custom-item' }, item => item.name)
           .exhaustive(),
-        badges: getWorkOrderItemFulfillmentBadges(workOrder, item),
+        badges: getWorkOrderItemSourcingBadges(workOrder, item, { includeOrderBadge: true, includeStatusBadge: true }),
         subtitle,
       },
       rightSide: { showChevron: true },
     };
   });
-}
-
-export function getWorkOrderItemFulfillmentBadges(
-  workOrder: DetailedWorkOrder,
-  item: DetailedWorkOrderItem,
-): BadgeProps[] {
-  const totalSourced = getWorkOrderItemSourcedCount(item);
-
-  const sourcedAllItemsBadge: BadgeProps | undefined =
-    totalSourced >= item.quantity ? { text: 'Sourced all items', status: 'complete', variant: 'success' } : undefined;
-  const requiresSourcingBadge: BadgeProps | undefined =
-    totalSourced < item.quantity && !isOrderId(item.shopifyOrderLineItem?.orderId)
-      ? { text: 'Requires sourcing', status: totalSourced > 0 ? 'partial' : 'empty', variant: 'critical' }
-      : undefined;
-
-  const orderBadge: BadgeProps | undefined = isOrderId(item.shopifyOrderLineItem?.orderId)
-    ? {
-        text: workOrder.orders.find(hasPropertyValue('id', item.shopifyOrderLineItem.orderId))?.name ?? 'Unknown order',
-        status: 'complete',
-        variant: 'success',
-      }
-    : undefined;
-
-  const purchaseOrderBadges = item.purchaseOrders.map<BadgeProps>(po => getPurchaseOrderBadge(po, true));
-  const transferOrderBadges = item.transferOrders.map<BadgeProps>(to => getTransferOrderBadge(to, true));
-
-  // This inventory will always come from the current location, so no need to show the location
-  // TODO: Think about whether we should actually show location/how to handle logging into pos on different locations - probably best to select a location for the entire work order
-  const reservedCount = sum(item.reservations.map(reservation => reservation.quantity));
-  const inventoryBadge: BadgeProps | undefined =
-    reservedCount > 0 ? { text: `${reservedCount} • Reserved`, variant: 'success' } : undefined;
-
-  return [
-    orderBadge,
-    sourcedAllItemsBadge,
-    requiresSourcingBadge,
-    ...purchaseOrderBadges,
-    ...transferOrderBadges,
-    inventoryBadge,
-  ].filter(isNonNullable);
 }
 
 function useWorkOrderQueries(name: string) {
@@ -359,8 +313,8 @@ export function getUnsourcedWorkOrderItems(workOrder: DetailedWorkOrder): Unsour
       // very important that this is set bcs the TO/PO line item will not be linked to the WO item in any way
       .filter(hasNonNullableProperty('shopifyOrderLineItem'))
       .map(
-        ({ uuid, quantity, productVariantId, purchaseOrders, transferOrders, reservations, shopifyOrderLineItem }) => {
-          const sourced = getWorkOrderItemSourcedCount({ purchaseOrders, transferOrders, reservations });
+        ({ uuid, quantity, productVariantId, specialOrders, transferOrders, reservations, shopifyOrderLineItem }) => {
+          const sourced = getWorkOrderItemSourcedCount({ specialOrders, transferOrders, reservations });
           const unsourcedQuantity = Math.max(0, quantity - sourced);
 
           return {
@@ -373,18 +327,4 @@ export function getUnsourcedWorkOrderItems(workOrder: DetailedWorkOrder): Unsour
       )
       .filter(item => item.unsourcedQuantity > 0)
   );
-}
-
-function getWorkOrderItemSourcedCount(
-  item: Pick<DetailedWorkOrderItem, 'purchaseOrders' | 'transferOrders' | 'reservations'>,
-) {
-  return sum([
-    ...item.purchaseOrders.flatMap(po => po.items).map(item => item.quantity),
-    ...item.transferOrders.flatMap(to => to.items).map(item => item.quantity),
-    ...item.reservations.map(reservation => reservation.quantity),
-  ]);
-}
-
-function isOrderId(id: string | null | undefined): id is ID {
-  return !!id && parseGid(id).objectName === 'Order';
 }
