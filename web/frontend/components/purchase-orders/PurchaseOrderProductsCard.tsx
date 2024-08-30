@@ -19,8 +19,7 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useState } from 'react';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { PurchaseOrderLineItemModal } from '@web/frontend/components/purchase-orders/modals/PurchaseOrderLineItemModal.js';
@@ -28,8 +27,6 @@ import { Tone } from '@shopify/polaris/build/ts/src/components/Badge/index.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
-import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
-import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function PurchaseOrderProductsCard({
   createPurchaseOrder,
@@ -37,7 +34,7 @@ export function PurchaseOrderProductsCard({
   dispatch,
   disabled,
   onAddProductClick,
-  onAddOrderProductClick,
+  onAddSpecialOrderProductClick,
   onMarkAllAsReceivedClick,
   onMarkAllAsNotReceivedClick,
 }: {
@@ -46,7 +43,7 @@ export function PurchaseOrderProductsCard({
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
   onAddProductClick: () => void;
-  onAddOrderProductClick: () => void;
+  onAddSpecialOrderProductClick: () => void;
   onMarkAllAsReceivedClick: () => void;
   onMarkAllAsNotReceivedClick: () => void;
 }) {
@@ -74,8 +71,8 @@ export function PurchaseOrderProductsCard({
           <Button onClick={() => onAddProductClick()} disabled={disabled}>
             Add Product
           </Button>
-          <Button onClick={() => onAddOrderProductClick()} disabled={disabled}>
-            Select from Order
+          <Button onClick={() => onAddSpecialOrderProductClick()} disabled={disabled}>
+            Select from Special Orders
           </Button>
           {noLineItems || allAreReceived ? (
             <Button
@@ -114,27 +111,9 @@ function ProductsList({
   const productVariantIds = unique(createPurchaseOrder.lineItems.map(li => li.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  const orderIds = unique(
-    createPurchaseOrder.lineItems
-      .map(li => li.shopifyOrderLineItem?.orderId)
-      .filter(isNonNullable)
-      .filter(id => parseGid(id).objectName === 'Order'),
-  );
-  const draftOrderIds = unique(
-    createPurchaseOrder.lineItems
-      .map(li => li.shopifyOrderLineItem?.orderId)
-      .filter(isNonNullable)
-      .filter(id => parseGid(id).objectName === 'DraftOrder'),
-  );
+  // TODO: TO/SO info (just like pos)
 
-  const orderQueries = {
-    ...useOrderQueries({ fetch, ids: orderIds }),
-    ...useDraftOrderQueries({ fetch, ids: draftOrderIds }),
-  };
-
-  const isLoading =
-    Object.values(productVariantQueries).some(query => query.isLoading) ||
-    Object.values(orderQueries).some(query => query.isLoading);
+  const isLoading = Object.values(productVariantQueries).some(query => query.isLoading);
 
   const [modalLineItem, setModalLineItem] = useState<CreatePurchaseOrder['lineItems'][number] | null>(null);
 
@@ -158,8 +137,6 @@ function ProductsList({
           const name = getProductVariantName(productVariant) ?? 'Unknown Product';
           const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
 
-          const orderQuery = item.shopifyOrderLineItem ? orderQueries[item.shopifyOrderLineItem.orderId] : null;
-
           let quantityBadgeTone: Tone | undefined;
 
           if (item.availableQuantity >= item.quantity) {
@@ -182,7 +159,7 @@ function ProductsList({
               disabled={disabled}
               shortcutActions={canRemove ? [{ content: 'Remove', onAction: () => onLineItemRemove(item) }] : []}
             >
-              {(!productVariant || !orderQuery?.data?.order) && (
+              {!productVariant && (
                 <InlineStack gap={'200'}>
                   <SkeletonThumbnail size={'small'} />
                   <BlockStack gap={'200'}>
@@ -212,9 +189,9 @@ function ProductsList({
                   <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
                     {name}
                   </Text>
-                  {orderQuery?.data?.order && (
+                  {item.specialOrderLineItem && (
                     <Box>
-                      <Badge tone={'info'}>{orderQuery?.data?.order?.name}</Badge>
+                      <Badge tone={'info'}>{item.specialOrderLineItem.name}</Badge>
                     </Box>
                   )}
                   <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>

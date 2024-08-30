@@ -333,7 +333,7 @@ export function AddProductModal({
 
                         return {
                           uuid: uuid() as UUID,
-                          shopifyOrderLineItem: null,
+                          specialOrderLineItem: null,
                           unitCost: BigDecimal.fromString(unitCost ?? '0.00')
                             .round(2)
                             .toMoney(),

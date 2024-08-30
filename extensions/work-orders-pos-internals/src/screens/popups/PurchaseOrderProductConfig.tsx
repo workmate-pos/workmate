@@ -16,7 +16,6 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMon
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
-import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 
@@ -43,9 +42,6 @@ export function PurchaseOrderProductConfig({
   const productVariantQuery = useProductVariantQuery({ fetch, id: product?.productVariantId ?? null });
   const productVariant = productVariantQuery?.data;
 
-  const orderQuery = useOrderQuery({ fetch, id: product?.shopifyOrderLineItem?.orderId ?? null });
-  const order = orderQuery?.data?.order;
-
   const inventoryItemQuery = useInventoryItemQuery({
     fetch,
     id: productVariant?.inventoryItem?.id ?? null,
@@ -60,14 +56,12 @@ export function PurchaseOrderProductConfig({
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
   screen.setTitle(getProductVariantName(productVariant) ?? 'Product Config');
   screen.setIsLoading(
-    !product ||
-      productVariantQuery.isLoading ||
-      inventoryItemQuery.isLoading ||
-      locationQuery.isLoading ||
-      orderQuery.isLoading,
+    !product || productVariantQuery.isLoading || inventoryItemQuery.isLoading || locationQuery.isLoading,
   );
 
   const currencyFormatter = useCurrencyFormatter();
+
+  // TODO: TO/SO info
 
   return (
     <ScrollView>
@@ -80,10 +74,10 @@ export function PurchaseOrderProductConfig({
             </Text>
           </Stack>
 
-          {order && (
+          {product.specialOrderLineItem?.name && (
             <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="body" color="TextSubdued">
-                Linked to order {order.name}
+                Linked to order {product.specialOrderLineItem?.name}
               </Text>
             </Stack>
           )}

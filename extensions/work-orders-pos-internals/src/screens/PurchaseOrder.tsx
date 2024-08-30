@@ -489,24 +489,7 @@ function useProductRows(
   const productVariantIds = unique(lineItems.map(product => product.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  const orderIds = unique(
-    lineItems
-      .map(lineItem => lineItem.shopifyOrderLineItem?.orderId)
-      .filter(isNonNullable)
-      .filter(id => parseGid(id).objectName === 'Order'),
-  );
-
-  const draftOrderIds = unique(
-    lineItems
-      .map(lineItem => lineItem.shopifyOrderLineItem?.orderId)
-      .filter(isNonNullable)
-      .filter(id => parseGid(id).objectName === 'DraftOrder'),
-  );
-
-  const orderQueries = {
-    ...useOrderQueries({ fetch, ids: orderIds }),
-    ...useDraftOrderQueries({ fetch, ids: draftOrderIds }),
-  };
+  // TODO: TO/SO info
 
   const getDisplayName = (product: Product) => {
     const variant = productVariantQueries[product.productVariantId]?.data ?? null;
@@ -521,8 +504,6 @@ function useProductRows(
 
   return lineItems.filter(queryFilter).map<ListRow>((product, i) => {
     const variant = productVariantQueries[product.productVariantId]?.data ?? null;
-    const orderId = product.shopifyOrderLineItem?.orderId;
-    const order = orderId ? orderQueries[orderId]?.data?.order ?? null : null;
 
     const displayName = getDisplayName(product);
     const imageUrl = variant?.image?.url ?? variant?.product?.featuredImage?.url;
@@ -554,7 +535,6 @@ function useProductRows(
         },
         subtitle: [`${product.availableQuantity} received`],
         badges: [
-          order ? ({ variant: 'highlight', text: order.name } as const) : null,
           ...(savedLineItem?.stockTransferLineItems?.map(({ status, stockTransferName, quantity }) =>
             getStockTransferLineItemStatusBadgeProps({
               status,

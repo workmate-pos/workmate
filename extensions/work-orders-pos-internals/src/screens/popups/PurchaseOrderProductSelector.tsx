@@ -104,19 +104,9 @@ export function PurchaseOrderProductSelector({
 
       <ResponsiveGrid columns={2}>
         <Button
-          title={'Select from Order'}
+          title={'Select from Special Orders'}
           onPress={() => {
-            router.push('PurchaseOrderOrderSelector', {
-              onSelect: orderId => {
-                router.push('PurchaseOrderOrderProductSelector', {
-                  orderId,
-                  onSave: products => {
-                    selectProducts(products);
-                    router.popCurrent();
-                  },
-                });
-              },
-            });
+            toast.show('Not implemented yet');
           }}
         />
         <Button
@@ -251,7 +241,7 @@ function useProductVariantRows(
           selectProducts([
             {
               uuid: uuid() as UUID,
-              shopifyOrderLineItem: null,
+              specialOrderLineItem: null,
               productVariantId: variant.id,
               availableQuantity: 0 as Int,
               quantity: 1 as Int,
@@ -270,7 +260,7 @@ function useProductVariantRows(
 
             return Array.from({ length: quantity }, () => ({
               uuid: uuid() as UUID,
-              shopifyOrderLineItem: null,
+              specialOrderLineItem: null,
               handle: productVariant.product.handle,
               productVariantId: productVariant.id,
               availableQuantity: 0 as Int,

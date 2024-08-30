@@ -72,7 +72,6 @@ import { PurchaseOrderProductSelector } from './screens/popups/PurchaseOrderProd
 import { PurchaseOrderProductConfig } from './screens/popups/PurchaseOrderProductConfig.js';
 import { PurchaseOrderPrintOverview } from './screens/PurchaseOrderPrintOverview.js';
 import { PurchaseOrderOrderSelector } from './screens/popups/PurchaseOrderOrderSelector.js';
-import { PurchaseOrderOrderProductSelector } from './screens/popups/PurchaseOrderOrderProductSelector.js';
 import { PurchaseOrderFilterStatusSelector } from './screens/popups/PurchaseOrderFilterStatusSelector.js';
 import { CreateTransferOrderForLocation } from './screens/popups/CreateTransferOrderForLocation.js';
 import { QuantityAdjustmentList } from './screens/popups/QuantityAdjustmentList.js';
@@ -336,10 +335,6 @@ export const { Router, useRouter } = createRouter({
   PurchaseOrderOrderSelector: {
     title: 'Select Order',
     Component: PurchaseOrderOrderSelector,
-  },
-  PurchaseOrderOrderProductSelector: {
-    title: 'Select Order Product',
-    Component: PurchaseOrderOrderProductSelector,
   },
   PurchaseOrderFilterStatusSelector: {
     title: 'Select Purchase Order Status',
