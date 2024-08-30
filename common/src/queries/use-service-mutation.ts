@@ -5,6 +5,7 @@ import { match, P } from 'ts-pattern';
 import { UpsertService } from '@web/schemas/upsert-service.js';
 import { UseQueryData } from './react-query.js';
 import { useServiceQuery } from './use-service-query.js';
+import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 
 export const useServiceMutation = ({ fetch }: { fetch: Fetch }) => {
   const queryClient = useQueryClient();
@@ -12,7 +13,7 @@ export const useServiceMutation = ({ fetch }: { fetch: Fetch }) => {
   return useMutation({
     mutationFn: async (service: UpsertService | URLSearchParams | HTMLFormElement) => {
       const searchParams = match(service)
-        .with(P.instanceOf(URLSearchParams), service => service)
+        .with(P.instanceOf(URLSearchParams), identity)
         .with(
           P.instanceOf(HTMLFormElement),
           service =>

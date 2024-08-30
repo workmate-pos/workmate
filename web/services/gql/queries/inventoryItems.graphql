@@ -88,11 +88,14 @@ query getPageWithLocationInventoryLevel($first: Int = 10, $after: String, $query
   }
 }
 
-mutation updateInventoryItem($id: ID!, $input: InventoryItemUpdateInput!) {
+mutation updateInventoryItem($id: ID!, $input: InventoryItemInput!) {
   inventoryItemUpdate(id: $id, input: $input) {
     userErrors {
       field
       message
+    }
+    inventoryItem {
+      id
     }
   }
 }

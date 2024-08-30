@@ -9,8 +9,6 @@ import { useInfiniteQuery, UseInfiniteQueryOptions, useQueryClient } from 'react
 import { WorkOrderInfo } from '@web/services/work-orders/types.js';
 import { ID } from '@web/schemas/generated/ids.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
-import { UseQueryData } from './react-query.js';
-import { useWorkOrderQuery } from './use-work-order-query.js';
 
 export type OverdueStatus = 'OVERDUE' | 'NOT_OVERDUE';
 

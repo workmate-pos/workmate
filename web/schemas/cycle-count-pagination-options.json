@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "status": {
+      "type": "string"
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 25
+    },
+    "query": {
+      "type": "string"
+    },
+    "locationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "employeeId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "sortMode": {
+      "type": "string",
+      "enum": ["due-date", "created-date"]
+    },
+    "sortOrder": {
+      "type": "string",
+      "enum": ["ascending", "descending"]
+    }
+  },
+  "required": ["limit", "offset"],
+  "additionalProperties": false
+}

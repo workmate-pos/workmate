@@ -1,0 +1,173 @@
+import {
+  Button,
+  ButtonType,
+  List,
+  ListProps,
+  ListRow,
+  ScrollView,
+  Stack,
+  Text,
+} from '@shopify/retail-ui-extensions-react';
+import { ReactNode, useEffect, useState } from 'react';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { UseRouter } from './router.js';
+import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+
+export type ListPopupItem<ID extends string = string> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
+  id: ID;
+  disabled?: boolean;
+};
+
+export type ListPopupProps<ID extends string = string> = {
+  title: string;
+  /**
+   * Query value and setter. If provided, a search bar will be shown.
+   */
+  query?: {
+    query: string;
+    setQuery: (query: string) => void;
+  };
+  selection:
+    | {
+        type: 'select';
+        items: ListPopupItem<ID>[];
+        onSelect: (id: ID) => void;
+        onClose?: () => void;
+      }
+    | {
+        type: 'multi-select';
+        items: ListPopupItem<ID>[];
+        initialSelection?: ID[];
+        /**
+         * Called the moment a selection is made.
+         */
+        onSelect?: (ids: ID[]) => void;
+        /**
+         * Called when the page is closed.
+         */
+        onClose?: (ids: ID[]) => void;
+      };
+  onEndReached?: () => void;
+  isLoadingMore?: boolean;
+  actions?: {
+    title: string;
+    type?: ButtonType;
+    onAction: (ids: ID[]) => void;
+  }[];
+  emptyState?: ReactNode;
+  imageDisplayStrategy?: ListProps['imageDisplayStrategy'];
+  useRouter: UseRouter;
+};
+
+/**
+ * Similar to dropdown, but shows a list of items instead of a dropdown.
+ * Can be used to select from many items or from just one.
+ * @TODO: Use this from pos-tools once WorkMate migrates to new POS SDK
+ * @TODO: Create wrappers: StaticListPopup and QueryListPopup, where latter takes a query and render fn
+ */
+export function ListPopup<ID extends string = string>({
+  title,
+  selection,
+  emptyState,
+  imageDisplayStrategy,
+  actions,
+  query,
+  isLoadingMore,
+  onEndReached,
+  useRouter,
+}: ListPopupProps<ID>) {
+  const router = useRouter();
+  const screen = useScreen();
+  screen.setTitle(title);
+
+  const [selectedIds, setSelectedIds] = useState<ID[]>(
+    selection.type === 'multi-select' ? selection.initialSelection ?? [] : [],
+  );
+
+  useEffect(() => {
+    screen.addOnNavigateBack(() => {
+      if (selection.type === 'select') {
+        selection.onClose?.();
+      } else if (selection.type === 'multi-select') {
+        selection.onClose?.(selectedIds);
+      } else {
+        return selection satisfies never;
+      }
+    });
+  }, [selectedIds]);
+
+  return (
+    <ScrollView>
+      <Stack direction={'vertical'} spacing={2}>
+        {!!query && (
+          <ControlledSearchBar
+            value={query.query}
+            onTextChange={query.setQuery}
+            onSearch={() => {}}
+            placeholder={'Search'}
+            onFocus={() => {}}
+            editable
+          />
+        )}
+
+        <List
+          imageDisplayStrategy={imageDisplayStrategy}
+          data={selection.items.map<ListRow>(item => ({
+            id: item.id,
+            leftSide: item.leftSide,
+            rightSide: {
+              showChevron: selection.type === 'select' && !item.disabled,
+              toggleSwitch:
+                selection.type !== 'multi-select'
+                  ? undefined
+                  : { value: selectedIds.includes(item.id), disabled: item.disabled },
+            },
+            onPress: async () => {
+              if (item.disabled) {
+                return;
+              }
+
+              if (selection.type === 'select') {
+                await router.popCurrent();
+                selection.onSelect(item.id);
+              } else if (selection.type === 'multi-select') {
+                const newSelectedIds = selectedIds.includes(item.id)
+                  ? selectedIds.filter(id => id !== item.id)
+                  : [...selectedIds, item.id];
+
+                setSelectedIds(newSelectedIds);
+                selection.onSelect?.(newSelectedIds);
+              } else {
+                return selection satisfies never;
+              }
+            },
+          }))}
+          onEndReached={onEndReached}
+          isLoadingMore={isLoadingMore}
+        />
+
+        {selection.items.length === 0 &&
+          !isLoadingMore &&
+          (emptyState ?? (
+            <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+              <Text color="TextSubdued" variant="body">
+                No items found
+              </Text>
+            </Stack>
+          ))}
+
+        {selection.items.length === 0 && isLoadingMore && (
+          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+            <Text color="TextSubdued" variant="body">
+              Loading...
+            </Text>
+          </Stack>
+        )}
+
+        {actions?.map(({ title, type, onAction }) => (
+          <Button title={title} type={type} onPress={() => onAction(selectedIds)} />
+        ))}
+      </Stack>
+    </ScrollView>
+  );
+}

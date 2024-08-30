@@ -3,6 +3,7 @@ import { db } from './db/db.js';
 import { useClient } from './db/client.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { getCount } from './counter/queries.js';
 
 type Formatters = Record<string, ({ shop }: { shop: string }) => Promise<string> | string>;
 
@@ -30,6 +31,11 @@ const stockTransferFormatters: Formatters = {
   id: ({ shop }) => getNextStockTransferIdForShop(shop).then(String),
 };
 
+const cycleCountFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getCount(`cycle-count.${shop}`).then(String),
+};
+
 async function applyFormatters<Arg>(
   format: string,
   formatters: Record<string, (arg: Arg) => Promise<string> | string>,
@@ -47,6 +53,8 @@ async function applyFormatters<Arg>(
 
   return format;
 }
+
+// TODO: Migrate all of these to new counter table
 
 export async function getNewWorkOrderName(shop: string) {
   const settings = await getShopSettings(shop);
@@ -67,6 +75,11 @@ export async function getNewSpecialOrderName(shop: string): Promise<string> {
   // TODO: id format
   // TODO: merge with counter
   return `SO-${Math.round(Math.random() * 100)}`;
+}
+
+export async function getNewCycleCountName(shop: string) {
+  const settings = await getShopSettings(shop);
+  return await applyFormatters(settings.cycleCount.idFormat, cycleCountFormatters, { shop });
 }
 
 async function getNextWorkOrderIdForShop(shop: string) {

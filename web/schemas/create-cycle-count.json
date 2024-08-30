@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "description": "Create or update a cycle count",
+  "properties": {
+    "name": {
+      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+    },
+    "status": {
+      "type": "string"
+    },
+    "locationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "note": {
+      "type": "string"
+    },
+    "dueDate": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "title": "create-cycle-count-item",
+        "properties": {
+          "uuid": {
+            "type": "string"
+          },
+          "productVariantId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "inventoryItemId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "countQuantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          },
+          "productTitle": {
+            "type": "string"
+          },
+          "productVariantTitle": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "productVariantId",
+          "inventoryItemId",
+          "countQuantity",
+          "productTitle",
+          "productVariantTitle"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "employeeAssignments": {
+      "type": "array",
+      "items": {
+        "title": "employee-assignment",
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "$ref": "scalars.json#/definitions/ID"
+          }
+        },
+        "required": ["employeeId"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["name", "status", "locationId", "note", "items", "employeeAssignments", "dueDate"],
+  "additionalProperties": false
+}

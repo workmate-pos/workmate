@@ -17,7 +17,7 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
-import { v4 as uuid } from 'uuid';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { UUID } from '@web/util/types.js';

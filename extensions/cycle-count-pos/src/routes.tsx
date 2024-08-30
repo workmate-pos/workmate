@@ -1,11 +1,18 @@
 import { createRouter } from '@teifi-digital/pos-tools/router';
 import { ScrollView } from '@shopify/retail-ui-extensions-react';
 import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
-import { Entry } from './screens/Entry.js';
+import { CycleCount } from './screens/CycleCount.js';
 import { Camera } from './screens/Camera.js';
 import { VendorSelector } from './screens/VendorSelector.js';
-import { ProductConfig } from './screens/ProductConfig.js';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
+import { Entry } from './screens/Entry.js';
+import { CycleCountApplications } from './screens/CycleCountApplications.js';
+import { ItemConfig } from './screens/ItemConfig.js';
+import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
+import { CycleCountProductSelector } from './screens/CycleCountProductSelector.js';
+import { PlanCycleCount } from './screens/PlanCycleCount.js';
+import { StatusSelector } from './screens/StatusSelector.js';
+import { EmployeeSelector } from './screens/EmployeeSelector.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -19,6 +26,10 @@ export const { Router, useRouter } = createRouter({
         </ScrollView>
       );
     },
+  },
+  CycleCount: {
+    title: 'Cycle Count',
+    Component: CycleCount,
   },
   LocationSelector: {
     title: 'Select Location',
@@ -34,8 +45,32 @@ export const { Router, useRouter } = createRouter({
     title: 'Select Vendor',
     Component: VendorSelector,
   },
-  ProductConfig: {
-    title: 'Product Config',
-    Component: ProductConfig,
+  ItemConfig: {
+    title: 'Item Config',
+    Component: ItemConfig,
+  },
+  CycleCountApplications: {
+    title: 'Cycle Count Applications',
+    Component: CycleCountApplications,
+  },
+  ListPopup: {
+    title: 'ListPopup',
+    Component: (props: Omit<ListPopupProps, 'useRouter'>) => <ListPopup {...props} useRouter={useRouter} />,
+  },
+  CycleCountProductSelector: {
+    title: 'Import Product',
+    Component: CycleCountProductSelector,
+  },
+  PlanCycleCount: {
+    title: 'Apply Cycle Count',
+    Component: PlanCycleCount,
+  },
+  StatusSelector: {
+    title: 'Select Status',
+    Component: StatusSelector,
+  },
+  EmployeeSelector: {
+    title: 'Select Employees',
+    Component: EmployeeSelector,
   },
 });

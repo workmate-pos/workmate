@@ -32,8 +32,10 @@
     "@pgtyped/runtime": "^2.3.0",
     "@prisma/client": "^5.5.2",
     "@sentry/node": "^7.74.1",
+    "@shopify/shopify-api": "^11.3.0",
+    "@shopify/shopify-app-express": "^5.0.4",
     "@sinclair/typebox": "^0.32.15",
-    "@teifi-digital/shopify-app-express": "^0.9.1",
+    "@teifi-digital/shopify-app-express": "^0.10.0",
     "@teifi-digital/shopify-app-toolbox": "^0.0.64",
     "@ts-safeql/sql-tag": "^0.2.1",
     "@work-orders/common": "file:../common",
@@ -58,7 +60,6 @@
   },
   "devDependencies": {
     "@pgtyped/cli": "^2.3.0",
-    "@shopify/shopify-api": "^10.0.0",
     "@teifi-digital/genql": "^0.0.47",
     "@ts-safeql/eslint-plugin": "^3.4.1",
     "@types/busboy": "^1.5.4",
@@ -78,6 +79,6 @@
     "json-schema-to-typescript": "^13.1.1",
     "nodemon": "^3.0.1",
     "ts-node": "^10.9.1",
-    "typescript-eslint": "^8.0.0"
+    "typescript-eslint": "^8.3.0"
   }
 }

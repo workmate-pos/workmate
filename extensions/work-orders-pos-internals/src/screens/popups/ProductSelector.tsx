@@ -1,6 +1,6 @@
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { uuid } from '../../util/uuid.js';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
@@ -142,7 +142,7 @@ export function ProductSelector({
                     {
                       type: 'product',
                       quantity: product.quantity,
-                      uuid: uuid() as UUID,
+                      uuid: uuid(),
                       productVariantId: product.productVariantId,
                       absorbCharges: false,
                       customFields: customFieldsPresetsQuery.data.defaultCustomFields,
@@ -165,7 +165,7 @@ export function ProductSelector({
                   quantity: 1 as Int,
                   absorbCharges: false,
                   customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                  uuid: uuid() as UUID,
+                  uuid: uuid() ,
                   name: 'Unnamed product',
                   unitPrice: BigDecimal.ONE.toMoney(),
                 },
@@ -314,13 +314,13 @@ function useProductVariantRows(
       onPress: () => {
         const charges: CreateWorkOrder['charges'][number][] = [];
         const items = productVariants.map(pv => {
-          const itemUuid = uuid() as UUID;
+          const itemUuid = uuid();
 
           for (const charge of pv.productVariant.defaultCharges) {
             const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
             charges.push({
               ...defaultCharge,
-              uuid: uuid() as UUID,
+              uuid: uuid(),
               workOrderItemUuid: itemUuid,
             });
           }

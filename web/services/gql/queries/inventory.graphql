@@ -83,3 +83,16 @@ mutation moveQuantities($input: InventoryMoveQuantitiesInput!) {
     }
   }
 }
+
+mutation setQuantities($input: InventorySetQuantitiesInput!) {
+  inventorySetQuantities(input: $input) {
+    userErrors {
+      field
+      message
+      code
+    }
+    inventoryAdjustmentGroup {
+      id
+    }
+  }
+}

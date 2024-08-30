@@ -227,6 +227,23 @@ export default class ServicesController {
         throw new HttpError('Failed to update product', 500);
       }
 
+      const { productVariantUpdate } = await gql.products.updateVariant.run(graphql, {
+        input: { id: productVariantId, price, metafields: productVariantMetafields },
+      });
+
+      if (!productVariantUpdate?.productVariant) {
+        throw new HttpError('Failed to update service product variant', 500);
+      }
+
+      const { inventoryItemUpdate } = await gql.inventoryItems.updateInventoryItem.run(graphql, {
+        id: productVariantUpdate.productVariant.inventoryItem.id,
+        input: { sku },
+      });
+
+      if (!inventoryItemUpdate?.inventoryItem?.id) {
+        throw new HttpError('Failed to update inventory item', 500);
+      }
+
       return res.json({
         type: 'success',
         variant: {
@@ -241,7 +258,6 @@ export default class ServicesController {
           metafields: productMetafields,
           title,
           descriptionHtml: description,
-          variants: [{ sku, price, metafields: productVariantMetafields }],
         },
       });
 
@@ -249,10 +265,29 @@ export default class ServicesController {
         throw new HttpError('Failed to create service product', 500);
       }
 
-      const [variant] = productCreate.product.variants.nodes;
+      const { productVariantsBulkCreate } = await gql.products.createVariants.run(graphql, {
+        productId: productCreate.product.id,
+        strategy: 'REMOVE_STANDALONE_VARIANT',
+        variants: [{ price, metafields: productVariantMetafields }],
+      });
+
+      if (!productVariantsBulkCreate?.productVariants) {
+        throw new HttpError('Failed to create service product variant', 500);
+      }
+
+      const [variant] = productVariantsBulkCreate?.productVariants;
 
       if (!variant) {
         throw new HttpError('Failed to create service product variant', 500);
+      }
+
+      const { inventoryItemUpdate } = await gql.inventoryItems.updateInventoryItem.run(graphql, {
+        id: variant.inventoryItem.id,
+        input: { sku },
+      });
+
+      if (!inventoryItemUpdate?.inventoryItem?.id) {
+        throw new HttpError('Failed to update inventory item', 500);
       }
 
       return res.json({

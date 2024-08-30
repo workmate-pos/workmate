@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { CreateWorkOrderCharge } from '../../types.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { uuid } from '../../util/uuid.js';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import {
   hasNestedPropertyValue,
   hasNonNullableProperty,

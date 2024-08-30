@@ -23,6 +23,28 @@
         "minLength": 1
       }
     },
+    "cycleCount": {
+      "type": "object",
+      "properties": {
+        "idFormat": {
+          "type": "string",
+          "minLength": 1
+        },
+        "statuses": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "defaultStatus": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["idFormat", "statuses", "defaultStatus"],
+      "additionalProperties": false
+    },
     "defaultStatus": {
       "type": "string",
       "minLength": 1
