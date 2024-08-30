@@ -39,7 +39,6 @@ import {
   StockTransferLineItem,
 } from '@web/schemas/generated/create-stock-transfer.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { UUID } from '@web/util/types.js';
 import { uuid } from '@work-orders/common-pos/util/uuid.js';
 
 const MODE = {

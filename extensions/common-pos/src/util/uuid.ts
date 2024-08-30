@@ -1,4 +1,5 @@
 import { v4 } from 'uuid';
+import { UUID } from '@web/util/types.js';
 
 /**
  * Uuid with fallback rng because shopify sucks
@@ -12,5 +13,5 @@ export function uuid() {
       ? () => Array.from({ length: 16 }, () => Math.floor(Math.random() * 256))
       : () => [...crypto.getRandomValues(new Uint8Array(16))];
 
-  return v4({ rng });
+  return v4({ rng }) as UUID;
 }

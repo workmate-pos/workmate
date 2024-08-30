@@ -121,8 +121,8 @@ export default class ServicesController {
 
     if (submission.status !== 'success') {
       return res.status(200).json({
-        type: 'submission-result',
         submissionResult: submission.reply(),
+        variant: null,
       });
     }
 
@@ -136,7 +136,7 @@ export default class ServicesController {
       .with('fixed', () => FIXED_PRICE_SERVICE)
       .with('dynamic', () => QUANTITY_ADJUSTING_SERVICE)
       .exhaustive();
-    const tags: string[] = [SERVICE_METAFIELD_VALUE_TAG_NAME[serviceType]];
+    const serviceTags: string[] = [SERVICE_METAFIELD_VALUE_TAG_NAME[serviceType]];
 
     const defaultChargeIds = match(submission.value)
       .with({ type: 'fixed' }, () => null)
@@ -200,23 +200,15 @@ export default class ServicesController {
     }
 
     if (productVariant) {
-      const { productVariantUpdate } = await gql.products.updateVariant.run(graphql, {
-        input: {
-          id: productVariantId,
-          sku,
-          price,
-          metafields: productVariantMetafields,
-        },
-      });
-
-      if (!productVariantUpdate?.productVariant) {
-        throw new HttpError('Failed to update service product variant', 500);
-      }
-
       const { productUpdate } = await gql.products.updateProduct.run(graphql, {
         input: {
           id: productVariant.product.id,
-          tags,
+          tags: [
+            ...productVariant.product.tags.filter(
+              tag => !Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).some(t => tag === t),
+            ),
+            ...serviceTags,
+          ],
           metafields: productMetafields,
           title,
           descriptionHtml: description,
@@ -245,16 +237,16 @@ export default class ServicesController {
       }
 
       return res.json({
-        type: 'success',
+        submissionResult: submission.reply(),
         variant: {
-          ...parseProductVariantMetafields(productVariantUpdate.productVariant),
-          errors: getServiceProductVariantErrors(productVariantUpdate.productVariant),
+          ...parseProductVariantMetafields(inventoryItemUpdate.inventoryItem.variant),
+          errors: getServiceProductVariantErrors(inventoryItemUpdate.inventoryItem.variant),
         },
       });
     } else {
       const { productCreate } = await gql.products.create.run(graphql, {
         input: {
-          tags,
+          tags: serviceTags,
           metafields: productMetafields,
           title,
           descriptionHtml: description,
@@ -291,7 +283,7 @@ export default class ServicesController {
       }
 
       return res.json({
-        type: 'success',
+        submissionResult: submission.reply(),
         variant: {
           ...parseProductVariantMetafields(variant),
           errors: getServiceProductVariantErrors(variant),
@@ -326,12 +318,8 @@ export type GetServiceResponse = {
   service: ServiceProductVariant | null;
 };
 
-export type UpsertServiceResponse =
-  | {
-      type: 'submission-result';
-      submissionResult: SubmissionResult;
-    }
-  | {
-      type: 'success';
-      variant: ServiceProductVariant;
-    };
+// TODO: Update in labour too
+export type UpsertServiceResponse = {
+  submissionResult: SubmissionResult;
+  variant: ServiceProductVariant | null;
+};

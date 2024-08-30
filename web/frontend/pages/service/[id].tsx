@@ -24,8 +24,8 @@ import {
 import { useParams } from 'react-router-dom';
 import { useServiceQuery } from '@work-orders/common/queries/use-service-query.js';
 import { createGid, ID, isGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useForm } from '@conform-to/react';
-import { match, P } from 'ts-pattern';
+import { SubmissionResult, useForm } from '@conform-to/react';
+import { match } from 'ts-pattern';
 import { useServiceMutation } from '@work-orders/common/queries/use-service-mutation.js';
 import { parseWithZod } from '@conform-to/zod';
 import { UpsertService } from '@web/schemas/upsert-service.js';
@@ -60,7 +60,7 @@ export default function Service() {
   const serviceQuery = useServiceQuery({ fetch, id });
   const serviceMutation = useServiceMutation({ fetch });
 
-  const lastResult = serviceMutation.data?.type === 'submission-result' ? serviceMutation.data.submissionResult : null;
+  const lastResult = serviceMutation.data?.submissionResult;
 
   const [form, fields] = useForm({
     lastResult,
@@ -157,7 +157,7 @@ export default function Service() {
                     event.preventDefault();
                     serviceMutation.mutate(event.currentTarget, {
                       onSuccess(result) {
-                        if (result.type === 'success') {
+                        if (result.variant) {
                           setToastAction({ content: 'Saved service!' });
                           Redirect.create(app).dispatch(
                             Redirect.Action.APP,
