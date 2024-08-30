@@ -145,7 +145,7 @@ function mapStockTransferLineItem<
   const { inventoryItemId, shopifyOrderLineItemId, shopifyOrderId, purchaseOrderLineItemUuid, purchaseOrderId } =
     stockTransferLineItem;
 
-  const getShopifyOrderLineItemDetails = () => {
+  const getShopifyOrderLineItem = () => {
     if (shopifyOrderId !== null && shopifyOrderLineItemId !== null) {
       assertGid(shopifyOrderId);
       assertGid(shopifyOrderLineItemId);
@@ -166,7 +166,7 @@ function mapStockTransferLineItem<
     throw new Error(`shopifyOrderId and shopifyOrderLineItemId must be both null or both set`);
   };
 
-  const getPurchaseOrderLineItemDetails = () => {
+  const getPurchaseOrderLineItem = () => {
     if (purchaseOrderId !== null && purchaseOrderLineItemUuid !== null) {
       return {
         purchaseOrderId,
@@ -190,8 +190,8 @@ function mapStockTransferLineItem<
     return {
       ...stockTransferLineItem,
       inventoryItemId,
-      ...getShopifyOrderLineItemDetails(),
-      ...getPurchaseOrderLineItemDetails(),
+      ...getShopifyOrderLineItem(),
+      ...getPurchaseOrderLineItem(),
     };
   } catch (error) {
     sentryErr(error, { stockTransferLineItems: stockTransferLineItem });

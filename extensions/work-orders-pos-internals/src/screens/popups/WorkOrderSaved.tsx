@@ -21,7 +21,7 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
           <Text variant={'headingLarge'}>{title}</Text>
         </Stack>
       </Stack>
-      <ResponsiveGrid columns={3} grow>
+      <ResponsiveGrid columns={2}>
         <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'} flexChildren>
           <Button title={'Back to work order'} onPress={() => router.popCurrent()} />
 

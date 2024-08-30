@@ -3,6 +3,7 @@ import { Int } from '../schemas/generated/pagination-options.js';
 import { Money, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { UUID } from './types.js';
 import { validate, version } from 'uuid';
+import { isGidWithNamespace } from '@work-orders/common/util/gid.js';
 
 export function assertGidOrNull(gid: string | null): asserts gid is ID | null {
   if (gid !== null) {
@@ -26,12 +27,6 @@ export function assertMoneyOrNull(value: string | null): asserts value is Money 
   if (value !== null) {
     assertMoney(value);
   }
-}
-
-export function isGidWithNamespace(namespace: string) {
-  return (id: string | null | undefined): id is ID => {
-    return !!id && parseGid(id).objectName === namespace;
-  };
 }
 
 export const isLineItemId = isGidWithNamespace('LineItem');

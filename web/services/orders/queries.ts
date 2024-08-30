@@ -121,6 +121,12 @@ function mapShopifyOrder<
 
     return {
       ...shopifyOrder,
+      orderId,
+      customerId,
+      total,
+      outstanding,
+      discount,
+      subtotal,
     };
   } catch (error) {
     sentryErr(error, { shopifyOrder });

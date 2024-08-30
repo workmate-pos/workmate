@@ -5,11 +5,11 @@ import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
 
 export const useSpecialOrderQuery = (
   { fetch, name }: { fetch: Fetch; name: string | null },
-  options?: UseQueryOptions<DetailedSpecialOrder | null, unknown, DetailedSpecialOrder | null, string[]>,
+  options?: UseQueryOptions<DetailedSpecialOrder | null, unknown, DetailedSpecialOrder | null, (string | null)[]>,
 ) =>
   useQuery({
     ...options,
-    queryKey: ['special-order'],
+    queryKey: ['special-order', name],
     queryFn: async () => {
       if (name === null) {
         return null;

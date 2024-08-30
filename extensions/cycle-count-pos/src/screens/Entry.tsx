@@ -3,6 +3,7 @@ import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-s
 import { useCycleCountPageQuery } from '@work-orders/common/queries/use-cycle-count-page-query.js';
 import {
   BadgeProps,
+  Banner,
   Button,
   List,
   ListRow,
@@ -106,6 +107,16 @@ export function Entry() {
           />
         </ResponsiveStack>
       </ResponsiveStack>
+
+      {selectedCycleCountName && selectedCycleCountQuery.isError && (
+        <Banner
+          title={`Could not load ${selectedCycleCountName}: ${extractErrorMessage(selectedCycleCountQuery.error, 'unknown error')}`}
+          variant={'error'}
+          visible
+          action={'Retry'}
+          onAction={() => selectedCycleCountQuery.refetch()}
+        />
+      )}
 
       <ResponsiveStack direction={'horizontal'} alignment={'center'} flex={1} paddingHorizontal={'HalfPoint'}>
         <Text variant="body" color="TextSubdued">

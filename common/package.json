@@ -58,7 +58,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.62",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.64",
     "react-query": "^3.39.3",
     "ts-pattern": "^5.2.0",
     "uuid": "^9.0.1",

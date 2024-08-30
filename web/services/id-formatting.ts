@@ -16,6 +16,8 @@ const baseFormatters: Formatters = {
   minute: () => new Date().getMinutes().toString(),
 };
 
+// TODO: Migrate all of these to new counter table
+
 const workOrderFormatters: Formatters = {
   ...baseFormatters,
   id: ({ shop }) => getNextWorkOrderIdForShop(shop).then(String),
@@ -53,8 +55,6 @@ async function applyFormatters<Arg>(
 
   return format;
 }
-
-// TODO: Migrate all of these to new counter table
 
 export async function getNewWorkOrderName(shop: string) {
   const settings = await getShopSettings(shop);

@@ -35,17 +35,23 @@
             "$ref": "scalars.json#/definitions/UUID"
           },
           "shopifyOrderLineItem": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "$ref": "scalars.json#/definitions/ID"
-              },
-              "orderId": {
-                "$ref": "scalars.json#/definitions/ID"
+            "description": "This should never really be null, but it can happen if a linked order is deleted.",
+            "anyOf": [
+              { "const": null },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "scalars.json#/definitions/ID"
+                  },
+                  "orderId": {
+                    "$ref": "scalars.json#/definitions/ID"
+                  }
+                },
+                "required": ["id", "orderId"],
+                "additionalProperties": false
               }
-            },
-            "required": ["id", "orderId"],
-            "additionalProperties": false
+            ]
           },
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"

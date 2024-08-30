@@ -2,7 +2,7 @@ import { CreateSpecialOrder } from '../../schemas/generated/create-special-order
 import { unit } from '../db/unit-of-work.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { getNewStockTransferName } from '../id-formatting.js';
+import { getNewSpecialOrderName } from '../id-formatting.js';
 import { Session } from '@shopify/shopify-api';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { ensureLocationsExist } from '../locations/sync.js';
@@ -19,7 +19,7 @@ export async function upsertCreateSpecialOrder(session: Session, createSpecialOr
   return await unit(async () => {
     // TODO: Validate
 
-    const name = createSpecialOrder.name ?? (await getNewStockTransferName(session.shop));
+    const name = createSpecialOrder.name ?? (await getNewSpecialOrderName(session.shop));
     const isNew = createSpecialOrder.name === null;
     const existingSpecialOrder = isNew ? null : await getDetailedSpecialOrder(session, name);
 
@@ -55,7 +55,7 @@ export async function upsertCreateSpecialOrder(session: Session, createSpecialOr
         specialOrderId,
         createSpecialOrder.lineItems.map(lineItem => ({
           ...lineItem,
-          shopifyOrderLineItemId: lineItem.shopifyOrderLineItem.id,
+          shopifyOrderLineItemId: lineItem.shopifyOrderLineItem?.id ?? null,
         })),
       ),
     ]);
@@ -135,7 +135,10 @@ function assertNoIllegalLineItemChanges(
       throw new HttpError(`Cannot decrease quantity below ordered quantity (${linkedPurchaseOrderQuantity})`, 400);
     }
 
-    if (newLineItem.shopifyOrderLineItem?.id !== oldLineItem.shopifyOrderLineItemId) {
+    if (
+      newLineItem.shopifyOrderLineItem?.id !== oldLineItem.shopifyOrderLineItem?.id ||
+      newLineItem.shopifyOrderLineItem?.orderId !== oldLineItem.shopifyOrderLineItem?.orderId
+    ) {
       throw new HttpError('Cannot change linked order line item', 400);
     }
 

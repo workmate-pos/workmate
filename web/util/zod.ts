@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { DateTime } from '../services/gql/queries/generated/schema.js';
 import { BigDecimal, Decimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { isGidWithNamespace } from './assertions.js';
+import { isGidWithNamespace } from '@work-orders/common/util/gid.js';
 
 export const zID = z.string().refine(isGid);
 export const zNamespacedID = (type: string) => z.string().refine(isGidWithNamespace(type));

@@ -131,7 +131,6 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
             <DatePicker
               inputMode={'spinner'}
               visibleState={[datePickerOpen, setDatePickerOpen]}
-              value={createCycleCount.dueDate ? new Date(createCycleCount.dueDate).toISOString() : undefined}
               onChange={(dueDate: string) => setDueDate(new Date(dueDate).toISOString() as DateTime)}
             />
 
@@ -337,7 +336,7 @@ function useItemRows({
         });
       },
       leftSide: {
-        label: label,
+        label,
         image: {
           source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
           badge: item.countQuantity,

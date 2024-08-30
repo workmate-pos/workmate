@@ -1,0 +1,8 @@
+type = "pos_ui_extension"
+name = "special-order-pos"
+description = "special-order-pos"
+
+extension_points = [
+  'pos.home.tile.render',
+  'pos.home.modal.render'
+]

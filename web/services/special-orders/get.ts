@@ -8,8 +8,14 @@ import { getLocationForSpecialOrder } from '../locations/queries.js';
 import { DateTime } from '../gql/queries/generated/schema.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { SpecialOrderPaginationOptions } from '../../schemas/generated/special-order-pagination-options.js';
+import {
+  OrderState,
+  PurchaseOrderState,
+  SpecialOrderPaginationOptions,
+} from '../../schemas/generated/special-order-pagination-options.js';
 import { escapeLike } from '../db/like.js';
+import { pick } from '@teifi-digital/shopify-app-toolbox/object';
+import { sum } from '@teifi-digital/shopify-app-toolbox/array';
 
 export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
   const specialOrder = await getSpecialOrder({ shop, name });
@@ -27,6 +33,18 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
     getSpecialOrderLineItems(specialOrder.id),
   ]);
 
+  const purchaseOrderState: PurchaseOrderState = lineItems
+    .flatMap(lineItem => lineItem.purchaseOrderLineItems)
+    .every(lineItem => lineItem.availableQuantity >= lineItem.quantity)
+    ? 'ALL_RECEIVED'
+    : 'NOT_ALL_RECEIVED';
+
+  const orderState: OrderState = lineItems.every(
+    lineItem => lineItem.quantity <= sum(lineItem.purchaseOrderLineItems.map(lineItem => lineItem.quantity)),
+  )
+    ? 'FULLY_ORDERED'
+    : 'NOT_FULLY_ORDERED';
+
   return {
     name: specialOrder.name,
     note: specialOrder.note,
@@ -34,40 +52,49 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
     companyId: specialOrder.companyId,
     companyLocationId: specialOrder.companyLocationId,
     companyContactId: specialOrder.companyContactId,
+    purchaseOrderState,
+    orderState,
     customer: {
       id: customer.customerId,
-      displayName: customer.displayName,
-      firstName: customer.firstName,
-      lastName: customer.lastName,
-      email: customer.email,
-      phone: customer.phone,
-      address: customer.address,
+      ...pick(customer, 'displayName', 'firstName', 'lastName', 'email', 'phone', 'address'),
     },
     location: {
       id: location.locationId,
       name: location.name,
     },
-    workOrders: workOrders.map(wo => ({
-      name: wo.name,
-      status: wo.status,
-      orderIds: wo.orderIds,
-    })),
+    workOrders: workOrders.map(wo => pick(wo, 'name', 'status', 'orderIds')),
     orders: shopifyOrders.map(order => ({
       id: order.orderId,
       name: order.name,
       type: order.orderType,
     })),
-    purchaseOrders: purchaseOrders.map(po => ({
-      name: po.name,
-      status: po.status,
-      vendorName: po.vendorName,
-    })),
-    // TODO: Special orders
+    purchaseOrders: purchaseOrders.map(po => {
+      const purchaseOrderLineItems = lineItems
+        .flatMap(lineItem => lineItem.purchaseOrderLineItems)
+        .filter(hasPropertyValue('purchaseOrderId', po.id));
+
+      const purchaseOrderQuantity = sum(purchaseOrderLineItems.map(lineItem => lineItem.quantity));
+      const purchaseOrderAvailableQuantity = sum(purchaseOrderLineItems.map(lineItem => lineItem.availableQuantity));
+
+      return {
+        name: po.name,
+        status: po.status,
+        vendorName: po.vendorName,
+        quantity: purchaseOrderQuantity,
+        availableQuantity: purchaseOrderAvailableQuantity,
+      };
+    }),
     lineItems: lineItems.map(lineItem => ({
       uuid: lineItem.uuid,
       quantity: lineItem.quantity,
       productVariantId: lineItem.productVariantId,
-      shopifyOrderLineItemId: lineItem.shopifyOrderLineItemId,
+      shopifyOrderLineItem: lineItem.shopifyOrderLineItem
+        ? {
+            id: lineItem.shopifyOrderLineItem.shopifyOrderLineItemId,
+            orderId: lineItem.shopifyOrderLineItem.shopifyOrderId,
+            quantity: lineItem.shopifyOrderLineItem.shopifyOrderLineItemQuantity,
+          }
+        : null,
       purchaseOrderLineItems: lineItem.purchaseOrderLineItems.map(lineItem => ({
         purchaseOrderName: purchaseOrders.find(hasPropertyValue('id', lineItem.purchaseOrderId))?.name ?? never(),
         quantity: lineItem.quantity,

@@ -17,15 +17,13 @@ import { EmployeeSelector } from './screens/EmployeeSelector.js';
 export const { Router, useRouter } = createRouter({
   Entry: {
     title: 'Cycle Count',
-    Component: () => {
-      return (
-        <ScrollView>
-          <ScreenPermissionBoundary permissions={['cycle_count']}>
-            <Entry />
-          </ScreenPermissionBoundary>
-        </ScrollView>
-      );
-    },
+    Component: () => (
+      <ScrollView>
+        <ScreenPermissionBoundary permissions={['cycle_count']}>
+          <Entry />
+        </ScreenPermissionBoundary>
+      </ScrollView>
+    ),
   },
   CycleCount: {
     title: 'Cycle Count',

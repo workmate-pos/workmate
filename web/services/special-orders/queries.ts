@@ -82,9 +82,13 @@ export async function getSpecialOrderLineItems(specialOrderId: number) {
     id: number;
     specialOrderId: number;
     uuid: UUID;
-    shopifyOrderLineItemId: string;
+    shopifyOrderLineItemId: string | null;
     productVariantId: string;
     quantity: number;
+    createdAt: Date;
+    updatedAt: Date;
+    shopifyOrderId: string | null;
+    shopifyOrderLineItemQuantity: number | null;
     purchaseOrderLineItems:
       | {
           purchaseOrderId: number;
@@ -99,11 +103,15 @@ export async function getSpecialOrderLineItems(specialOrderId: number) {
         }[]
       | null;
   }>`
-    SELECT spoli.*, jsonb_agg(poli) AS "purchaseOrderLineItems"
+    SELECT spoli.*,
+           soli."orderId"  AS "shopifyOrderId",
+           soli.quantity   AS "shopifyOrderLineItemQuantity",
+           jsonb_agg(poli) AS "purchaseOrderLineItems"
     FROM "SpecialOrderLineItem" spoli
+           LEFT JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = spoli."shopifyOrderLineItemId"
            LEFT JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
     WHERE spoli."specialOrderId" = ${specialOrderId}
-    GROUP BY spoli.id;
+    GROUP BY spoli.id, soli."lineItemId";
   `;
 
   return lineItems.map(mapSpecialOrderLineItem);
@@ -113,9 +121,11 @@ function mapSpecialOrderLineItem(lineItem: {
   id: number;
   specialOrderId: number;
   uuid: UUID;
+  shopifyOrderId: string | null;
   shopifyOrderLineItemId: string | null;
   productVariantId: string;
   quantity: number;
+  shopifyOrderLineItemQuantity: number | null;
   purchaseOrderLineItems:
     | ({
         purchaseOrderId: number;
@@ -130,7 +140,29 @@ function mapSpecialOrderLineItem(lineItem: {
       } | null)[]
     | null;
 }) {
-  const { shopifyOrderLineItemId, productVariantId, purchaseOrderLineItems } = lineItem;
+  const {
+    shopifyOrderLineItemQuantity,
+    shopifyOrderLineItemId,
+    shopifyOrderId,
+    productVariantId,
+    purchaseOrderLineItems,
+  } = lineItem;
+
+  const getShopifyOrderLineItem = () => {
+    if (shopifyOrderLineItemId !== null && shopifyOrderId !== null && shopifyOrderLineItemQuantity !== null) {
+      assertGid(shopifyOrderLineItemId);
+      assertGid(shopifyOrderId);
+      return { shopifyOrderLineItemId, shopifyOrderId, shopifyOrderLineItemQuantity };
+    }
+
+    if (shopifyOrderLineItemId === null && shopifyOrderId === null && shopifyOrderLineItemQuantity === null) {
+      return { shopifyOrderLineItemId, shopifyOrderId, shopifyOrderLineItemQuantity };
+    }
+
+    throw new Error(
+      `shopifyOrderLineItemId, shopifyOrderId, and shopifyOrderLineItemQuantity must all be null or all set`,
+    );
+  };
 
   try {
     assertGidOrNull(shopifyOrderLineItemId);
@@ -138,7 +170,7 @@ function mapSpecialOrderLineItem(lineItem: {
 
     return {
       ...lineItem,
-      shopifyOrderLineItemId,
+      shopifyOrderLineItem: getShopifyOrderLineItem(),
       productVariantId,
       purchaseOrderLineItems:
         purchaseOrderLineItems?.filter(isNonNullable).map(
@@ -223,7 +255,7 @@ export async function upsertSpecialOrderLineItems(
   specialOrderId: number,
   lineItems: {
     uuid: UUID;
-    shopifyOrderLineItemId: ID;
+    shopifyOrderLineItemId: ID | null;
     productVariantId: ID;
     quantity: number;
   }[],
@@ -272,39 +304,73 @@ export async function replaceSpecialOrderLineItemShopifyOrderLineItemIds(
 
 export async function getSpecialOrdersPage(
   shop: string,
-  { locationId, customerId, offset, query, lineItemVendorName, lineItemState, limit }: SpecialOrderPaginationOptions,
+  {
+    locationId,
+    customerId,
+    offset,
+    query,
+    lineItemVendorName,
+    lineItemOrderState,
+    orderState,
+    purchaseOrderState,
+    limit,
+  }: SpecialOrderPaginationOptions,
 ) {
   const _locationId: string | null = locationId ?? null;
   const _customerId: string | null = customerId ?? null;
+  const _lineItemOrderState: string | null = lineItemOrderState ?? null;
+  const _purchaseOrderState: string | null = purchaseOrderState ?? null;
+  const _orderState: string | null = orderState ?? null;
+  const _query: string | null = query ?? null;
+  const _lineItemVendorName: string | null = lineItemVendorName ?? null;
 
   const specialOrders = await sql<{ id: number; name: string }>`
-    SELECT DISTINCT so.id, so.name
-    FROM "SpecialOrder" so
-           LEFT JOIN "SpecialOrderLineItem" soli ON soli."specialOrderId" = so.id
-           LEFT JOIN "ProductVariant" pv ON pv."productVariantId" = soli."productVariantId"
+    SELECT DISTINCT spo.id, spo.name
+    FROM "SpecialOrder" spo
+           LEFT JOIN "SpecialOrderLineItem" spoli ON spoli."specialOrderId" = spo.id
+           LEFT JOIN "ProductVariant" pv ON pv."productVariantId" = spoli."productVariantId"
            LEFT JOIN "Product" p ON p."productId" = pv."productId"
-    WHERE so.shop = ${shop}
-      AND so."locationId" = COALESCE(${_locationId}, so."locationId")
-      AND so."customerId" = COALESCE(${_customerId}, so."customerId")
-      AND (so.note ILIKE COALESCE(${query ?? null}, '%'))
-      AND p.vendor = COALESCE(${lineItemVendorName ?? null}, p.vendor)
+    WHERE spo.shop = ${shop}
+      AND spo."locationId" = COALESCE(${_locationId}, spo."locationId")
+      AND spo."customerId" = COALESCE(${_customerId}, spo."customerId")
+      AND spo.note ILIKE COALESCE(${_query}, '%')
+      AND p.vendor = COALESCE(${_lineItemVendorName}, p.vendor)
       AND (
-      CASE ${lineItemState ?? null}
-        WHEN 'FULLY_ORDERED' THEN soli.quantity <= (SELECT SUM(poli.quantity)
-                                                    FROM "PurchaseOrderLineItem" poli
-                                                    WHERE poli."specialOrderLineItemId" = soli.id)
-        WHEN 'NOT_FULLY_ORDERED' THEN soli.quantity > (SELECT SUM(poli.quantity)
-                                                       FROM "PurchaseOrderLineItem" poli
-                                                       WHERE poli."specialOrderLineItemId" = soli.id)
+      CASE ${_lineItemOrderState}
+        WHEN 'FULLY_ORDERED' THEN spoli.quantity <= (SELECT SUM(poli.quantity)
+                                                     FROM "PurchaseOrderLineItem" poli
+                                                     WHERE poli."specialOrderLineItemId" = spoli.id)
+        WHEN 'NOT_FULLY_ORDERED' THEN spoli.quantity > (SELECT SUM(poli.quantity)
+                                                        FROM "PurchaseOrderLineItem" poli
+                                                        WHERE poli."specialOrderLineItemId" = spoli.id)
         ELSE TRUE
         END
       )
-    ORDER BY so.id DESC
+      AND (WITH "NotFullyOrderedSpecialOrderLineItems" AS (SELECT spoli.id
+                                                           FROM "SpecialOrderLineItem" spoli
+                                                                  LEFT JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
+                                                           GROUP BY spoli.id
+                                                           HAVING spoli.quantity < COALESCE(SUM(poli.quantity), 0))
+           SELECT CASE ${_orderState}
+                    WHEN 'FULLY_ORDERED' THEN NOT EXISTS (SELECT * FROM "NotFullyOrderedSpecialOrderLineItems")
+                    WHEN 'NOT_FULLY_ORDERED' THEN EXISTS (SELECT * FROM "NotFullyOrderedSpecialOrderLineItems")
+                    ELSE TRUE
+                    END) IS DISTINCT FROM FALSE
+      AND (WITH "NotFullyReceivedPurchaseOrderLineItems" AS (SELECT poli."purchaseOrderId", poli.uuid
+                                                             FROM "SpecialOrderLineItem" spoli
+                                                                    INNER JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
+                                                             WHERE poli."availableQuantity" < poli.quantity)
+           SELECT CASE ${_purchaseOrderState}
+                    WHEN 'ALL_RECEIVED' THEN NOT EXISTS (SELECT * FROM "NotFullyReceivedPurchaseOrderLineItems")
+                    WHEN 'NOT_ALL_RECEIVED' THEN EXISTS (SELECT * FROM "NotFullyReceivedPurchaseOrderLineItems")
+                    ELSE TRUE
+                    END) IS DISTINCT FROM FALSE
+    ORDER BY spo.id DESC
     LIMIT ${limit + 1} OFFSET ${offset}
   `;
 
   return {
-    specialOrders: specialOrders.slice(0, -1),
+    specialOrders: specialOrders.slice(0, limit),
     hasNextPage: specialOrders.length > limit,
   };
 }
@@ -325,6 +391,8 @@ export async function getSpecialOrderLineItemsByShopifyOrderLineItemIds(shopifyO
     quantity: number;
     createdAt: Date;
     updatedAt: Date;
+    shopifyOrderId: string | null;
+    shopifyOrderLineItemQuantity: number | null;
     purchaseOrderLineItems:
       | {
           purchaseOrderId: number;
@@ -339,11 +407,15 @@ export async function getSpecialOrderLineItemsByShopifyOrderLineItemIds(shopifyO
         }[]
       | null;
   }>`
-    SELECT soli.*, jsonb_agg(poli) AS "purchaseOrderLineItems"
-    FROM "SpecialOrderLineItem" soli
-           LEFT JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = soli.id
+    SELECT spoli.*,
+           soli."orderId"  AS "shopifyOrderId",
+           soli.quantity   AS "shopifyOrderLineItemQuantity",
+           jsonb_agg(poli) AS "purchaseOrderLineItems"
+    FROM "SpecialOrderLineItem" spoli
+           LEFT JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = spoli."shopifyOrderLineItemId"
+           LEFT JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
     WHERE "shopifyOrderLineItemId" = ANY (${_shopifyOrderLineItemIds})
-    GROUP BY soli.id;
+    GROUP BY spoli.id, soli."lineItemId";
   `;
 
   return lineItems.map(mapSpecialOrderLineItem);
@@ -406,6 +478,8 @@ export async function getSpecialOrderLineItemsForPurchaseOrder(purchaseOrderId: 
     quantity: number;
     createdAt: Date;
     updatedAt: Date;
+    shopifyOrderId: string | null;
+    shopifyOrderLineItemQuantity: number | null;
     purchaseOrderLineItems:
       | {
           purchaseOrderId: number;
@@ -420,11 +494,15 @@ export async function getSpecialOrderLineItemsForPurchaseOrder(purchaseOrderId: 
         }[]
       | null;
   }>`
-    SELECT soli.*, jsonb_agg(poli) AS "purchaseOrderLineItems"
-    FROM "SpecialOrderLineItem" soli
-           INNER JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = soli.id
+    SELECT spoli.*,
+           soli."orderId"  AS "shopifyOrderId",
+           soli.quantity   AS "shopifyOrderLineItemQuantity",
+           jsonb_agg(poli) AS "purchaseOrderLineItems"
+    FROM "SpecialOrderLineItem" spoli
+           LEFT JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = spoli."shopifyOrderLineItemId"
+           INNER JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
     WHERE poli."purchaseOrderId" = ${purchaseOrderId}
-    GROUP BY soli.id;
+    GROUP BY spoli.id, soli."lineItemId";
   `;
 
   return lineItems.map(mapSpecialOrderLineItem);
@@ -452,6 +530,8 @@ export async function getSpecialOrderLineItemsByNameAndUuids(
     quantity: number;
     createdAt: Date;
     updatedAt: Date;
+    shopifyOrderId: string | null;
+    shopifyOrderLineItemQuantity: number | null;
     purchaseOrderLineItems:
       | {
           purchaseOrderId: number;
@@ -466,17 +546,21 @@ export async function getSpecialOrderLineItemsByNameAndUuids(
         }[]
       | null;
   }>`
-    SELECT soli.*, jsonb_agg(poli) AS "purchaseOrderLineItems"
-    FROM "SpecialOrderLineItem" soli
-           LEFT JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = soli.id
-           INNER JOIN "SpecialOrder" so ON so.id = soli."specialOrderId"
-    WHERE so.shop = ${shop}
-      AND (so.name, soli.uuid) IN (SELECT *
-                                   FROM UNNEST(
-                                     ${name} :: text[],
-                                     ${uuid} :: uuid[]
-                                        ))
-    GROUP BY soli.id;
+    SELECT spoli.*,
+           soli."orderId"  AS "shopifyOrderId",
+           soli.quantity   AS "shopifyOrderLineItemQuantity",
+           jsonb_agg(poli) AS "purchaseOrderLineItems"
+    FROM "SpecialOrderLineItem" spoli
+           LEFT JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = spoli."shopifyOrderLineItemId"
+           LEFT JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
+           INNER JOIN "SpecialOrder" spo ON spo.id = spoli."specialOrderId"
+    WHERE spo.shop = ${shop}
+      AND (spo.name, spoli.uuid) IN (SELECT *
+                                     FROM UNNEST(
+                                       ${name} :: text[],
+                                       ${uuid} :: uuid[]
+                                          ))
+    GROUP BY spoli.id, soli."lineItemId";
   `;
 
   return lineItems.map(mapSpecialOrderLineItem);
