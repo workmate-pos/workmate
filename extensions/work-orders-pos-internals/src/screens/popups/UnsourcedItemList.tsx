@@ -1,5 +1,4 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { ListPopup } from './ListPopup.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -10,6 +9,7 @@ import { Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useRouter } from '../../routes.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { UUID } from '@web/util/types.js';
+import { ListPopup } from '@work-orders/common-pos/screens/ListPopup.js';
 
 export type UnsourcedItemListSelectedItem = {
   uuid: UUID;
@@ -36,7 +36,6 @@ export type UnsourcedItemListProps = {
     loading?: boolean;
   };
   children?: ReactNode;
-  noSearchBar?: boolean;
 };
 
 export function UnsourcedItemList({
@@ -45,7 +44,6 @@ export function UnsourcedItemList({
   primaryAction,
   filterAction,
   children,
-  noSearchBar,
 }: UnsourcedItemListProps) {
   const [selectedItems, setSelectedItems] = useState(listedItems);
 
@@ -83,7 +81,6 @@ export function UnsourcedItemList({
   return (
     <ListPopup
       title={title}
-      noSearchBar={noSearchBar}
       imageDisplayStrategy="always"
       selection={{
         type: 'multi-select',
@@ -94,54 +91,54 @@ export function UnsourcedItemList({
         initialSelection: listedItems.map(item => item.uuid),
         onSelect: selected => setSelectedItems(listedItems.filter(item => selected.includes(item.uuid))),
         onClose: () => setSelectedItems(listedItems),
+        actions: [
+          !!filterAction
+            ? ({
+                title: filterAction.title,
+                type: 'basic',
+                onAction: filterAction.onAction,
+                loading: filterAction.loading,
+                disabled: filterAction.disabled,
+                position: 'top',
+              } as const)
+            : null,
+          !!primaryAction
+            ? ({
+                title: 'Change quantities',
+                type: 'plain',
+                onAction: () => {
+                  router.push('QuantityAdjustmentList', {
+                    items: selectedItems.map(item => ({
+                      id: item.uuid,
+                      quantity: item.quantity,
+                      min: 1,
+                      max: Math.min(item.unsourcedQuantity, item.availableQuantity),
+                      name:
+                        getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
+                    })),
+                    onChange: items =>
+                      setSelectedItems(
+                        selectedItems.map(item => ({
+                          ...item,
+                          quantity: items.find(hasPropertyValue('id', item.uuid))?.quantity ?? item.quantity,
+                        })),
+                      ),
+                  });
+                },
+                disabled: selectedItems.length === 0,
+              } as const)
+            : null,
+          !!primaryAction
+            ? ({
+                title: primaryAction.title,
+                type: 'primary',
+                disabled: !primaryAction.allowEmptySelection && selectedItems.length === 0,
+                loading: primaryAction.loading,
+                onAction: () => primaryAction.onAction(selectedItems),
+              } as const)
+            : null,
+        ].filter(isNonNullable),
       }}
-      actions={[
-        !!filterAction
-          ? ({
-              title: filterAction.title,
-              type: 'basic',
-              onAction: filterAction.onAction,
-              loading: filterAction.loading,
-              disabled: filterAction.disabled,
-              position: 'top',
-            } as const)
-          : null,
-        !!primaryAction
-          ? ({
-              title: 'Change quantities',
-              type: 'plain',
-              onAction: () => {
-                router.push('QuantityAdjustmentList', {
-                  items: selectedItems.map(item => ({
-                    id: item.uuid,
-                    quantity: item.quantity,
-                    min: 1,
-                    max: Math.min(item.unsourcedQuantity, item.availableQuantity),
-                    name:
-                      getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
-                  })),
-                  onChange: items =>
-                    setSelectedItems(
-                      selectedItems.map(item => ({
-                        ...item,
-                        quantity: items.find(hasPropertyValue('id', item.uuid))?.quantity ?? item.quantity,
-                      })),
-                    ),
-                });
-              },
-              disabled: selectedItems.length === 0,
-            } as const)
-          : null,
-        !!primaryAction
-          ? ({
-              title: primaryAction.title,
-              type: 'primary',
-              disabled: !primaryAction.allowEmptySelection && selectedItems.length === 0,
-              loading: primaryAction.loading,
-              onAction: () => primaryAction.onAction(selectedItems),
-            } as const)
-          : null,
-      ].filter(isNonNullable)}
       emptyState={
         <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
@@ -149,6 +146,7 @@ export function UnsourcedItemList({
           </Text>
         </Stack>
       }
+      useRouter={useRouter}
     >
       {children}
     </ListPopup>

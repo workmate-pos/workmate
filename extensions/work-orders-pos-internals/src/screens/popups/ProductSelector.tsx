@@ -165,7 +165,7 @@ export function ProductSelector({
                   quantity: 1 as Int,
                   absorbCharges: false,
                   customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                  uuid: uuid() ,
+                  uuid: uuid(),
                   name: 'Unnamed product',
                   unitPrice: BigDecimal.ONE.toMoney(),
                 },
@@ -178,12 +178,9 @@ export function ProductSelector({
           <Button
             title={'Select Locations'}
             onPress={() =>
-              router.push('LocationSelector', {
-                selection: {
-                  type: 'toggle',
-                  onSelection: setInventoryLocationIds,
-                  initialSelection: inventoryLocationIds,
-                },
+              router.push('MultiLocationSelector', {
+                initialSelection: inventoryLocationIds,
+                onSelect: locations => setInventoryLocationIds(locations.map(location => location.id)),
               })
             }
           />

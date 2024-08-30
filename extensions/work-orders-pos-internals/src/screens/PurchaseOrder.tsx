@@ -45,6 +45,7 @@ import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-orde
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer-line-item-status-badge-props.js';
+import { getSpecialOrderBadge } from '../util/badges.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -193,10 +194,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               label={'Location'}
               onFocus={() => {
                 router.push('LocationSelector', {
-                  selection: {
-                    type: 'select',
-                    onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
-                  },
+                  onSelect: location => dispatch.setLocation({ locationId: location.id }),
                 });
               }}
               disabled={!!createPurchaseOrder.name && createPurchaseOrder.locationId !== null}
@@ -510,6 +508,8 @@ function useProductRows(
 
     const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', product.uuid));
 
+    product.specialOrderLineItem?.name;
+
     return {
       id: String(i),
       onPress: () => {
@@ -535,6 +535,9 @@ function useProductRows(
         },
         subtitle: [`${product.availableQuantity} received`],
         badges: [
+          product.specialOrderLineItem
+            ? getSpecialOrderBadge({ name: product.specialOrderLineItem.name, items: [] }, false)
+            : null,
           ...(savedLineItem?.stockTransferLineItems?.map(({ status, stockTransferName, quantity }) =>
             getStockTransferLineItemStatusBadgeProps({
               status,
@@ -602,10 +605,7 @@ const useAddProductPrerequisitesDialog = (
       });
     } else if (!hasLocation) {
       router.push('LocationSelector', {
-        selection: {
-          type: 'select',
-          onSelect: location => dispatch.setLocation({ locationId: location?.id ?? null }),
-        },
+        onSelect: location => dispatch.setLocation({ locationId: location.id }),
       });
     } else {
       if (!createPurchaseOrder.locationId) {

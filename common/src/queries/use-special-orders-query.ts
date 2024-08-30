@@ -1,17 +1,20 @@
 import { SpecialOrderPaginationOptions } from '@web/schemas/generated/special-order-pagination-options.js';
 import { FetchSpecialOrdersResponse } from '@web/controllers/api/special-orders.js';
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery } from 'react-query';
+import { useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
 
 export const useSpecialOrdersQuery = ({
   fetch,
   params,
+  options,
 }: {
   fetch: Fetch;
   params: Omit<SpecialOrderPaginationOptions, 'offset'>;
+  options?: { enabled?: boolean };
 }) =>
   useInfiniteQuery({
-    queryKey: ['special-orders'],
+    ...options,
+    queryKey: ['special-orders', params],
     queryFn: async ({ pageParam: offset = 0 }) => {
       const searchParams = new URLSearchParams();
 

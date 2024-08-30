@@ -115,6 +115,10 @@ export function getPurchaseOrderBadges(
 export function getSpecialOrderBadge(specialOrder: WorkOrderSpecialOrder, includeQuantity: boolean): BadgeProps {
   const { name, items } = specialOrder;
 
+  if (!includeQuantity) {
+    return { text: name, variant: 'highlight' };
+  }
+
   let variant: BadgeVariant = 'success';
 
   if (items.some(item => item.quantity > item.orderedQuantity)) {

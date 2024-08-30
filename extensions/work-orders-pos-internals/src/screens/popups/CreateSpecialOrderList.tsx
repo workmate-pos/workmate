@@ -29,7 +29,6 @@ export function CreateSpecialOrderList({
     <Form disabled={specialOrderMutation.isLoading}>
       <UnsourcedItemList
         title="Create Special Order"
-        noSearchBar
         primaryAction={{
           title: 'Create Special Order',
           allowEmptySelection: false,
@@ -78,7 +77,7 @@ export function CreateSpecialOrderList({
           visibleState={[isDatePickerOpen, setIsDatePickerOpen]}
           inputMode={'spinner'}
           selected={requiredBy?.toISOString()}
-          onSelect={(date: string) => setRequiredBy(new Date(date))}
+          onChange={(date: string) => setRequiredBy(new Date(date))}
         />
       </UnsourcedItemList>
     </Form>

@@ -162,16 +162,14 @@ function StockTransferProperties({
           value={fromLocationName}
           onFocus={() =>
             router.push('LocationSelector', {
-              selection: {
-                type: 'select',
-                onSelect: ({ id: fromLocationId }) => {
-                  if (fromLocationId === createStockTransfer.toLocationId) {
-                    toast.show('Source and destination locations cannot be the same');
-                    return;
-                  }
+              onSelect: location => {
+                const fromLocationId = location.id;
+                if (fromLocationId === createStockTransfer.toLocationId) {
+                  toast.show('Source and destination locations cannot be the same');
+                  return;
+                }
 
-                  dispatch.setPartial({ fromLocationId });
-                },
+                dispatch.setPartial({ fromLocationId });
               },
             })
           }
@@ -182,16 +180,14 @@ function StockTransferProperties({
           value={toLocationName}
           onFocus={() =>
             router.push('LocationSelector', {
-              selection: {
-                type: 'select',
-                onSelect: ({ id: toLocationId }) => {
-                  if (toLocationId === createStockTransfer.fromLocationId) {
-                    toast.show('Source and destination locations cannot be the same');
-                    return;
-                  }
+              onSelect: location => {
+                const toLocationId = location.id;
+                if (toLocationId === createStockTransfer.fromLocationId) {
+                  toast.show('Source and destination locations cannot be the same');
+                  return;
+                }
 
-                  dispatch.setPartial({ toLocationId });
-                },
+                dispatch.setPartial({ toLocationId });
               },
             })
           }

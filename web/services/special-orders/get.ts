@@ -33,9 +33,9 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
     getSpecialOrderLineItems(specialOrder.id),
   ]);
 
-  const purchaseOrderState: PurchaseOrderState = lineItems
+  const purchaseOrderState: PurchaseOrderState = !lineItems
     .flatMap(lineItem => lineItem.purchaseOrderLineItems)
-    .every(lineItem => lineItem.availableQuantity >= lineItem.quantity)
+    .some(lineItem => lineItem.availableQuantity < lineItem.quantity)
     ? 'ALL_RECEIVED'
     : 'NOT_ALL_RECEIVED';
 
@@ -88,13 +88,16 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
       uuid: lineItem.uuid,
       quantity: lineItem.quantity,
       productVariantId: lineItem.productVariantId,
-      shopifyOrderLineItem: lineItem.shopifyOrderLineItem
-        ? {
-            id: lineItem.shopifyOrderLineItem.shopifyOrderLineItemId,
-            orderId: lineItem.shopifyOrderLineItem.shopifyOrderId,
-            quantity: lineItem.shopifyOrderLineItem.shopifyOrderLineItemQuantity,
-          }
-        : null,
+      shopifyOrderLineItem:
+        lineItem.shopifyOrderLineItem.shopifyOrderLineItemId !== null &&
+        lineItem.shopifyOrderLineItem.shopifyOrderId !== null &&
+        lineItem.shopifyOrderLineItem.shopifyOrderLineItemQuantity !== null
+          ? {
+              id: lineItem.shopifyOrderLineItem.shopifyOrderLineItemId,
+              orderId: lineItem.shopifyOrderLineItem.shopifyOrderId,
+              quantity: lineItem.shopifyOrderLineItem.shopifyOrderLineItemQuantity,
+            }
+          : null,
       purchaseOrderLineItems: lineItem.purchaseOrderLineItems.map(lineItem => ({
         purchaseOrderName: purchaseOrders.find(hasPropertyValue('id', lineItem.purchaseOrderId))?.name ?? never(),
         quantity: lineItem.quantity,

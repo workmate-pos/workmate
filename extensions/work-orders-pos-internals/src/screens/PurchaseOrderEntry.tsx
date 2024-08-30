@@ -68,28 +68,40 @@ export function PurchaseOrderEntry() {
 
   return (
     <>
-      <ResponsiveStack direction={'horizontal'} alignment={'space-between'} paddingVertical={'Small'}>
-        <ResponsiveStack direction={'horizontal'}>
+      <ResponsiveStack
+        direction={'horizontal'}
+        alignment={'space-between'}
+        paddingVertical={'Small'}
+        sm={{ direction: 'vertical', alignment: 'center' }}
+      >
+        <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center', paddingVertical: 'Small' }}>
           <Text variant="headingLarge">Purchase Orders</Text>
         </ResponsiveStack>
-        <Button
-          title={'New Purchase Order'}
-          type={'primary'}
-          onPress={() => {
-            const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
-            const createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
+        <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
+          <Button
+            title={'Merge Special Orders'}
+            type={'plain'}
+            onPress={() => router.push('CreatePurchaseOrderSpecialOrderSelector', {})}
+          />
+          <Button
+            title={'New Purchase Order'}
+            type={'primary'}
+            onPress={() => {
+              const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
+              const createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
 
-            router.push('PurchaseOrder', {
-              initial: {
-                ...createPurchaseOrder,
-                customFields: {
-                  ...customFieldsPresetsQuery.data.defaultCustomFields,
-                  ...createPurchaseOrder.customFields,
+              router.push('PurchaseOrder', {
+                initial: {
+                  ...createPurchaseOrder,
+                  customFields: {
+                    ...customFieldsPresetsQuery.data.defaultCustomFields,
+                    ...createPurchaseOrder.customFields,
+                  },
                 },
-              },
-            });
-          }}
-        />
+              });
+            }}
+          />
+        </ResponsiveStack>
       </ResponsiveStack>
 
       <Stack direction="horizontal" alignment="center" flex={1} paddingHorizontal={'HalfPoint'}>

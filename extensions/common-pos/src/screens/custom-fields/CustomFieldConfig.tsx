@@ -12,8 +12,8 @@ import { SelectPresetToEditProps } from './SelectPresetToEdit.js';
 import { EditPresetProps } from './EditPreset.js';
 import { SelectPresetProps } from './SelectPreset.js';
 import { CustomField } from '../../components/CustomField.js';
-import { DropdownProps } from '../Dropdown.js';
 import { CustomFieldValuesConfigProps } from './CustomFieldValuesConfig.js';
+import { ListPopupProps } from '../ListPopup.js';
 
 export type CustomFieldConfigProps = {
   initialCustomFields: Record<string, string>;
@@ -23,8 +23,8 @@ export type CustomFieldConfigProps = {
     SavePreset: Route<SavePresetProps>;
     SelectPresetToEdit: Route<SelectPresetToEditProps>;
     SelectPreset: Route<SelectPresetProps>;
-    Dropdown: Route<DropdownProps<string>>;
     CustomFieldValuesConfig: Route<CustomFieldValuesConfigProps>;
+    ListPopup: Route<ListPopupProps>;
   }>;
   type: CustomFieldsPresetType;
 };

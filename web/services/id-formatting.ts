@@ -38,6 +38,11 @@ const cycleCountFormatters: Formatters = {
   id: ({ shop }) => getCount(`cycle-count.${shop}`).then(String),
 };
 
+const specialOrderFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getCount(`special-order.${shop}`).then(String),
+};
+
 async function applyFormatters<Arg>(
   format: string,
   formatters: Record<string, (arg: Arg) => Promise<string> | string>,
@@ -72,9 +77,8 @@ export async function getNewStockTransferName(shop: string) {
 }
 
 export async function getNewSpecialOrderName(shop: string): Promise<string> {
-  // TODO: id format
-  // TODO: merge with counter
-  return `SO-${Math.round(Math.random() * 100)}`;
+  const settings = await getShopSettings(shop);
+  return await applyFormatters('SO-#{{id}}', specialOrderFormatters, { shop });
 }
 
 export async function getNewCycleCountName(shop: string) {

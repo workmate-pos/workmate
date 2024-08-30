@@ -2,7 +2,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
+import { ListPopup, SelectListPopupAction } from '@work-orders/common-pos/screens/ListPopup.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../routes.js';
 
@@ -16,7 +16,7 @@ export function StatusSelector({ onSelect, onClear }: { onSelect: (status: strin
 
   const router = useRouter();
 
-  const actions: ListPopupProps['actions'] = onClear
+  const actions: SelectListPopupAction[] = onClear
     ? [
         {
           title: 'Clear',
@@ -48,8 +48,8 @@ export function StatusSelector({ onSelect, onClear }: { onSelect: (status: strin
         type: 'select',
         items: statuses.map(status => ({ id: status, leftSide: { label: status } })),
         onSelect,
+        actions,
       }}
-      actions={actions}
       useRouter={useRouter}
     />
   );

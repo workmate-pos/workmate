@@ -1,5 +1,4 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { ListPopup, ListPopupItem } from './ListPopup.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
@@ -15,6 +14,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { useRouter } from '../../routes.js';
 import { defaultCreateStockTransfer } from '../../create-stock-transfer/default.js';
 import { UUID } from '@web/util/types.js';
+import { ListPopup, ListPopupItem } from '@work-orders/common-pos/screens/ListPopup.js';
 
 type SelectablePurchaseOrderLineItem = {
   uuid: UUID;
@@ -157,85 +157,86 @@ export function SelectPurchaseOrderProductsToTransfer({ name }: { name: string }
         }),
         initialSelection: selectedItems.map(item => item.uuid),
         onSelect: uuids => updateSelection(uuids),
-      }}
-      actions={[
-        {
-          title: 'Change quantities',
-          type: 'plain',
-          disabled: selectedItems.length === 0,
-          onAction: () => {
-            router.push('QuantityAdjustmentList', {
-              items: selectedItems.map(item => ({
-                name: getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
-                quantity: item.selectedQuantity,
-                min: 1,
-                max: Math.max(item.purchaseOrderQuantity - item.transferredQuantity, 0),
-                id: item.uuid,
-              })),
-              onChange: changedItems =>
-                setSelectedItems(items =>
-                  items.map(item => ({
-                    ...item,
-                    selectedQuantity:
-                      changedItems.find(hasPropertyValue('id', item.uuid))?.quantity ?? item.selectedQuantity,
-                  })),
-                ),
-            });
-          },
-        },
-        {
-          title: 'Create Stock Transfer',
-          type: 'primary',
-          disabled: selectedItems.length === 0,
-          onAction: async () => {
-            const lineItems = selectedItems
-              .map(item => {
-                const productVariant = productVariantQueries[item.productVariantId]?.data;
-
-                if (!productVariant) {
-                  return null;
-                }
-
-                return {
+        actions: [
+          {
+            title: 'Change quantities',
+            type: 'plain',
+            disabled: selectedItems.length === 0,
+            onAction: () => {
+              router.push('QuantityAdjustmentList', {
+                items: selectedItems.map(item => ({
+                  name: getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
                   quantity: item.selectedQuantity,
-                  inventoryItemId: item.inventoryItemId,
-                  status: 'PENDING',
-                  uuid: item.uuid,
-                  shopifyOrderLineItem: item.shopifyOrderLineItem
-                    ? {
-                        id: item.shopifyOrderLineItem.id,
-                        orderId: item.shopifyOrderLineItem.order.id,
-                      }
-                    : null,
-                  purchaseOrderLineItem: {
-                    uuid: item.uuid,
-                    purchaseOrderName: name,
-                  },
-                  productTitle: productVariant.product.title,
-                  productVariantTitle: productVariant.title,
-                } as const;
-              })
-              .filter(isNonNullable);
-
-            if (lineItems.length !== selectedItems.length) {
-              toast.show('Not all products have finished loading, please try again in a bit');
-              return;
-            }
-
-            // TODO: On close, make this also close the quantity selector
-            // TODO: invalidate PO on TO save
-            await router.popCurrent();
-            router.push('StockTransfer', {
-              initial: {
-                ...defaultCreateStockTransfer,
-                fromLocationId: purchaseOrderQuery.data?.location?.id ?? null,
-                lineItems,
-              },
-            });
+                  min: 1,
+                  max: Math.max(item.purchaseOrderQuantity - item.transferredQuantity, 0),
+                  id: item.uuid,
+                })),
+                onChange: changedItems =>
+                  setSelectedItems(items =>
+                    items.map(item => ({
+                      ...item,
+                      selectedQuantity:
+                        changedItems.find(hasPropertyValue('id', item.uuid))?.quantity ?? item.selectedQuantity,
+                    })),
+                  ),
+              });
+            },
           },
-        },
-      ]}
+          {
+            title: 'Create Stock Transfer',
+            type: 'primary',
+            disabled: selectedItems.length === 0,
+            onAction: async () => {
+              const lineItems = selectedItems
+                .map(item => {
+                  const productVariant = productVariantQueries[item.productVariantId]?.data;
+
+                  if (!productVariant) {
+                    return null;
+                  }
+
+                  return {
+                    quantity: item.selectedQuantity,
+                    inventoryItemId: item.inventoryItemId,
+                    status: 'PENDING',
+                    uuid: item.uuid,
+                    shopifyOrderLineItem: item.shopifyOrderLineItem
+                      ? {
+                          id: item.shopifyOrderLineItem.id,
+                          orderId: item.shopifyOrderLineItem.order.id,
+                        }
+                      : null,
+                    purchaseOrderLineItem: {
+                      uuid: item.uuid,
+                      purchaseOrderName: name,
+                    },
+                    productTitle: productVariant.product.title,
+                    productVariantTitle: productVariant.title,
+                  } as const;
+                })
+                .filter(isNonNullable);
+
+              if (lineItems.length !== selectedItems.length) {
+                toast.show('Not all products have finished loading, please try again in a bit');
+                return;
+              }
+
+              // TODO: On close, make this also close the quantity selector
+              // TODO: invalidate PO on TO save
+              await router.popCurrent();
+              router.push('StockTransfer', {
+                initial: {
+                  ...defaultCreateStockTransfer,
+                  fromLocationId: purchaseOrderQuery.data?.location?.id ?? null,
+                  lineItems,
+                },
+              });
+            },
+          },
+        ],
+      }}
       imageDisplayStrategy="always"
+      useRouter={useRouter}
     />
   );
 }

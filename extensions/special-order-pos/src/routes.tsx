@@ -5,13 +5,17 @@ import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListP
 import { Entry } from './screens/Entry.js';
 import { OrderStateSelector } from './screens/selectors/OrderStateSelector.js';
 import { PurchaseOrderStateSelector } from './screens/selectors/PurchaseOrderStateSelector.js';
-import { VendorSelector } from './screens/selectors/VendorSelector.js';
-import { CustomerSelector } from './screens/selectors/CustomerSelector.js';
-import { LocationSelector } from './screens/selectors/LocationSelector.js';
+import { VendorSelector, VendorSelectorProps } from '@work-orders/common-pos/screens/selector/VendorSelector.js';
+import { CustomerSelector, CustomerSelectorProps } from '@work-orders/common-pos/screens/selector/CustomerSelector.js';
+import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/selector/LocationSelector.js';
 import { SpecialOrderLineItemConfig } from './screens/special-order/SpecialOrderLineItemConfig.js';
 import { SpecialOrder } from './screens/special-order/SpecialOrder.js';
-import { CompanySelector } from './screens/selectors/CompanySelector.js';
-import { CompanyLocationSelector } from './screens/selectors/CompanyLocationSelector.js';
+import { CompanySelector, CompanySelectorProps } from '@work-orders/common-pos/screens/selector/CompanySelector.js';
+import {
+  CompanyLocationSelector,
+  CompanyLocationSelectorProps,
+} from '@work-orders/common-pos/screens/selector/CompanyLocationSelector.js';
+import { SpecialOrderFilters } from './screens/special-order/SpecialOrderFilters.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -34,20 +38,26 @@ export const { Router, useRouter } = createRouter({
   },
   ListPopup: {
     title: 'ListPopup',
-    Component: (props: Omit<ListPopupProps, 'useRouter'>) => <ListPopup {...props} useRouter={useRouter} />,
+    Component: <ID extends string = string>(props: Omit<ListPopupProps<ID>, 'useRouter'>) => (
+      <ListPopup {...props} useRouter={useRouter} />
+    ),
   },
   // TODO: have ListPopup-based standard components like this all in common pos
   CustomerSelector: {
     title: 'Select Customer',
-    Component: CustomerSelector,
+    Component: (props: Omit<CustomerSelectorProps, 'useRouter'>) => (
+      <CustomerSelector {...props} useRouter={useRouter} />
+    ),
   },
   LocationSelector: {
     title: 'Select Location',
-    Component: LocationSelector,
+    Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
+      <LocationSelector {...props} useRouter={useRouter} />
+    ),
   },
   VendorSelector: {
     title: 'Select Vendor',
-    Component: VendorSelector,
+    Component: (props: Omit<VendorSelectorProps, 'useRouter'>) => <VendorSelector {...props} useRouter={useRouter} />,
   },
   OrderStateSelector: {
     title: 'Select Order State',
@@ -59,10 +69,16 @@ export const { Router, useRouter } = createRouter({
   },
   CompanySelector: {
     title: 'Select Company',
-    Component: CompanySelector,
+    Component: (props: Omit<CompanySelectorProps, 'useRouter'>) => <CompanySelector {...props} useRouter={useRouter} />,
   },
   CompanyLocationSelector: {
     title: 'Select Company Location',
-    Component: CompanyLocationSelector,
+    Component: (props: Omit<CompanyLocationSelectorProps, 'useRouter'>) => (
+      <CompanyLocationSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  SpecialOrderFilters: {
+    title: 'Special Order Filters',
+    Component: SpecialOrderFilters,
   },
 });

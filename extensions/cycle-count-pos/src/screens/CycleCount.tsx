@@ -120,10 +120,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
               }
               onFocus={() =>
                 router.push('LocationSelector', {
-                  selection: {
-                    type: 'select',
-                    onSelect: location => setLocationId(location.id),
-                  },
+                  onSelect: location => setLocationId(location.id),
                 })
               }
             />
@@ -153,12 +150,10 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
               label={'Assigned Employees'}
               type={'area'}
               onFocus={() =>
-                router.push('EmployeeSelector', {
-                  selection: {
-                    type: 'multi-select',
-                    initialSelection: createCycleCount.employeeAssignments.map(assignment => assignment.employeeId),
-                    onClose: employeeIds => setEmployeeAssignments(employeeIds.map(employeeId => ({ employeeId }))),
-                  },
+                router.push('MultiEmployeeSelector', {
+                  initialSelection: createCycleCount.employeeAssignments.map(assignment => assignment.employeeId),
+                  onSelect: employees =>
+                    setEmployeeAssignments(employees.map(employee => ({ employeeId: employee.id }))),
                 })
               }
               value={createCycleCount.employeeAssignments

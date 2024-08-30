@@ -1,20 +1,22 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { ListPopup } from '@work-orders/common-pos/screens/ListPopup.js';
-import { useScreen } from '@teifi-digital/pos-tools/router';
-import { useRouter } from '../../routes.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Company, useCompaniesQuery } from '@work-orders/common/queries/use-companies-query.js';
-import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
+import { useDebouncedState } from '../../hooks/use-debounced-state.js';
+import { UseRouter } from '../router.js';
+import { ListPopup } from '../ListPopup.js';
+import { getSubtitle } from '../../util/subtitle.js';
 
-export function CompanySelector({ onSelect, onClear }: { onSelect: (company: Company) => void; onClear?: () => void }) {
+export type CompanySelectorProps = {
+  onSelect: (company: Company) => void;
+  onClear?: () => void;
+  useRouter: UseRouter;
+};
+
+export function CompanySelector({ onSelect, onClear, useRouter }: CompanySelectorProps) {
   const fetch = useAuthenticatedFetch();
   const [query, setQuery] = useDebouncedState('');
   const companiesQuery = useCompaniesQuery({ fetch, params: { query } });
-
-  const screen = useScreen();
-  screen.setIsLoading(companiesQuery.isLoading);
 
   const companies = companiesQuery.data?.pages.flat() ?? [];
 

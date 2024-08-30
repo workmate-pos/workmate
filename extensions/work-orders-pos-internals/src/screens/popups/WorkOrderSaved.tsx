@@ -22,26 +22,24 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
         </Stack>
       </Stack>
       <ResponsiveGrid columns={2}>
-        <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'} flexChildren>
-          <Button title={'Back to work order'} onPress={() => router.popCurrent()} />
+        <Button title={'Back to work order'} onPress={() => router.popCurrent()} />
 
+        <Button
+          title={'Manage payments'}
+          onPress={async () => {
+            await router.popCurrent();
+            router.push('PaymentOverview', { name: workOrder.name });
+          }}
+        />
+        {hasUnsourcedItems && (
           <Button
-            title={'Manage payments'}
+            title={'Sourcing'}
             onPress={async () => {
               await router.popCurrent();
-              router.push('PaymentOverview', { name: workOrder.name });
+              router.push('WorkOrderItemSourcing', { name: workOrder.name });
             }}
           />
-          {hasUnsourcedItems && (
-            <Button
-              title={'Sourcing'}
-              onPress={async () => {
-                await router.popCurrent();
-                router.push('WorkOrderItemSourcing', { name: workOrder.name });
-              }}
-            />
-          )}
-        </Stack>
+        )}
       </ResponsiveGrid>
     </ScrollView>
   );

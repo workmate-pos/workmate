@@ -8,6 +8,10 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertMoney, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { nest } from '../../util/db.js';
 import { DateTime } from '../gql/queries/generated/schema.js';
+import { Int } from '../../schemas/generated/create-purchase-order.js';
+import { getSpecialOrderLineItemsByNameAndUuids } from '../special-orders/queries.js';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 export type PurchaseOrder = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>;
 
@@ -372,31 +376,35 @@ export async function upsertPurchaseOrderLineItems(
     availableQuantity: number;
     unitCost: Money;
     uuid: UUID;
+    specialOrderLineItemId: number | null;
   }[],
 ) {
   if (!isNonEmptyArray(lineItems)) {
     return;
   }
 
-  const { unitCost, quantity, availableQuantity, productVariantId, uuid } = nest(lineItems);
+  const { unitCost, quantity, availableQuantity, productVariantId, uuid, specialOrderLineItemId } = nest(lineItems);
   const _productVariantId: string[] = productVariantId;
   const _unitCost: string[] = unitCost;
 
   await sql`
     INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", quantity, "availableQuantity",
-                                         "unitCost", uuid)
+                                         "unitCost", uuid, "specialOrderLineItemId")
     SELECT ${purchaseOrderId}, *
     FROM UNNEST(
       ${_productVariantId} :: text[],
       ${quantity} :: int[],
       ${availableQuantity} :: int[],
       ${_unitCost} :: text[],
-      ${uuid} :: uuid[])
+      ${uuid} :: uuid[],
+      ${specialOrderLineItemId} :: int[]
+         )
     ON CONFLICT ("purchaseOrderId", uuid)
-      DO UPDATE SET "productVariantId"  = EXCLUDED."productVariantId",
-                    quantity            = EXCLUDED.quantity,
-                    "availableQuantity" = EXCLUDED."availableQuantity",
-                    "unitCost"          = EXCLUDED."unitCost";
+      DO UPDATE SET "productVariantId"       = EXCLUDED."productVariantId",
+                    quantity                 = EXCLUDED.quantity,
+                    "availableQuantity"      = EXCLUDED."availableQuantity",
+                    "unitCost"               = EXCLUDED."unitCost",
+                    "specialOrderLineItemId" = EXCLUDED."specialOrderLineItemId";
   `;
 }
 

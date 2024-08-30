@@ -1,6 +1,6 @@
 import { createRouter } from '@teifi-digital/pos-tools/router';
 import { ScrollView } from '@shopify/retail-ui-extensions-react';
-import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
+import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/selector/LocationSelector.js';
 import { CycleCount } from './screens/CycleCount.js';
 import { Camera } from './screens/Camera.js';
 import { VendorSelector } from './screens/VendorSelector.js';
@@ -12,7 +12,11 @@ import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListP
 import { CycleCountProductSelector } from './screens/CycleCountProductSelector.js';
 import { PlanCycleCount } from './screens/PlanCycleCount.js';
 import { StatusSelector } from './screens/StatusSelector.js';
-import { EmployeeSelector } from './screens/EmployeeSelector.js';
+import {
+  MultiEmployeeSelector,
+  MultiEmployeeSelectorProps,
+} from '@work-orders/common-pos/screens/selector/MultiEmployeeSelector.js';
+import { EmployeeSelector, EmployeeSelectorProps } from '@work-orders/common-pos/screens/selector/EmployeeSelector.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -69,6 +73,14 @@ export const { Router, useRouter } = createRouter({
   },
   EmployeeSelector: {
     title: 'Select Employees',
-    Component: EmployeeSelector,
+    Component: (props: Omit<EmployeeSelectorProps, 'useRouter'>) => (
+      <EmployeeSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  MultiEmployeeSelector: {
+    title: 'Select Employees',
+    Component: (props: Omit<MultiEmployeeSelectorProps, 'useRouter'>) => (
+      <MultiEmployeeSelector {...props} useRouter={useRouter} />
+    ),
   },
 });

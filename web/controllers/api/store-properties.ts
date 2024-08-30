@@ -6,6 +6,7 @@ import { Request, Response } from 'express-serve-static-core';
 import { CurrencyCode } from '../../services/gql/queries/generated/schema.js';
 import { getShopType } from '../../services/shop.js';
 import { ShopPlanType } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 @Authenticated()
 export default class StorePropertiesController {

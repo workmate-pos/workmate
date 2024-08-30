@@ -33,6 +33,7 @@ import {
 } from './queries.js';
 import { getProducts, getProductVariants } from '../products/queries.js';
 import { getSpecialOrderLineItemsByNameAndUuids, getSpecialOrdersByNames } from '../special-orders/queries.js';
+import { httpError } from '../../util/http-error.js';
 
 export async function upsertCreatePurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -77,10 +78,25 @@ export async function upsertCreatePurchaseOrder(session: Session, createPurchase
       removePurchaseOrderAssignedEmployees(purchaseOrderId),
     ]);
 
+    const specialOrderLineItemNameUuids = createPurchaseOrder.lineItems
+      .map(lineItem => lineItem.specialOrderLineItem)
+      .filter(isNonNullable);
+
+    const specialOrderLineItems = await getSpecialOrderLineItemsByNameAndUuids(shop, specialOrderLineItemNameUuids);
+
     await Promise.all([
-      upsertPurchaseOrderLineItems(purchaseOrderId, createPurchaseOrder.lineItems).then(() =>
-        insertPurchaseOrderLineItemCustomFields(purchaseOrderId, createPurchaseOrder.lineItems),
-      ),
+      upsertPurchaseOrderLineItems(
+        purchaseOrderId,
+        createPurchaseOrder.lineItems.map(lineItem => ({
+          ...lineItem,
+          specialOrderLineItemId: !lineItem.specialOrderLineItem
+            ? null
+            : specialOrderLineItems
+                .filter(hasPropertyValue('uuid', lineItem.specialOrderLineItem.uuid))
+                .find(hasPropertyValue('specialOrderName', lineItem.specialOrderLineItem.name))?.id ??
+              httpError('Special order line item not found', 400),
+        })),
+      ).then(() => insertPurchaseOrderLineItemCustomFields(purchaseOrderId, createPurchaseOrder.lineItems)),
       insertPurchaseOrderCustomFields(purchaseOrderId, createPurchaseOrder.customFields),
       insertPurchaseOrderAssignedEmployees(purchaseOrderId, createPurchaseOrder.employeeAssignments),
     ]);
@@ -311,7 +327,7 @@ async function assertAllSameVendor(createPurchaseOrder: CreatePurchaseOrder) {
 
   const vendors = products.map(pv => pv.vendor);
 
-  if (unique(vendors).length !== vendors.length) {
+  if (unique(vendors).length > 1) {
     throw new HttpError('All products must have the same vendor', 400);
   }
 }

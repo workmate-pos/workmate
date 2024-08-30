@@ -114,7 +114,7 @@ export function Entry() {
           variant={'error'}
           visible
           action={'Retry'}
-          onAction={() => selectedCycleCountQuery.refetch()}
+          onPress={() => selectedCycleCountQuery.refetch()}
         />
       )}
 
@@ -133,10 +133,7 @@ export function Entry() {
           title={'Filter by location' + (locationId ? ` (${location?.name ?? 'loading...'})` : '')}
           onPress={() =>
             router.push('LocationSelector', {
-              selection: {
-                type: 'select',
-                onSelect: location => setLocationId(location.id),
-              },
+              onSelect: location => setLocationId(location.id),
             })
           }
         />
@@ -144,10 +141,7 @@ export function Entry() {
           title={'Filter by employee' + (employeeId ? ` (${employee?.name ?? 'loading...'})` : '')}
           onPress={() =>
             router.push('EmployeeSelector', {
-              selection: {
-                type: 'select',
-                onSelect: setEmployeeId,
-              },
+              onSelect: employee => setEmployeeId(employee.id),
               onClear: () => setEmployeeId(undefined),
             })
           }

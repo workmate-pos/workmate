@@ -121,10 +121,11 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
 
   const { Form } = useForm();
 
-  const rows = useListRows(createSpecialOrder, setCreateSpecialOrder);
+  const disabled = Object.values(bannerQueries).some(query => query.isError) || specialOrderMutation.isLoading;
+  const rows = useListRows(createSpecialOrder, setCreateSpecialOrder, disabled);
 
   return (
-    <Form>
+    <Form disabled={disabled}>
       <ScrollView>
         <ResponsiveGrid columns={1} spacing={2}>
           {Object.entries(bannerQueries).map(([key, query]) => {
@@ -140,7 +141,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
                 variant={'error'}
                 visible
                 action={'Retry'}
-                onAction={() => query.refetch()}
+                onPress={() => query.refetch()}
               />
             );
           })}
@@ -180,7 +181,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
                       ? 'Loading...'
                       : companyLocationQuery.data?.name ?? 'Unknown location'
                 }
-                required={!!createSpecialOrder.companyId}
+                required
               />
             )}
 
@@ -254,6 +255,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
             title={'Save'}
             type={'primary'}
             action={'submit'}
+            loading={specialOrderMutation.isLoading}
             onPress={() =>
               specialOrderMutation.mutate(createSpecialOrder as CreateSpecialOrder, {
                 onSuccess(specialOrder) {
@@ -287,6 +289,7 @@ function getCreateSpecialOrderSetter<K extends keyof WIPCreateSpecialOrder>(
 function useListRows(
   createSpecialOrder: WIPCreateSpecialOrder,
   setCreateSpecialOrder: Dispatch<SetStateAction<WIPCreateSpecialOrder>>,
+  disabled: boolean,
 ) {
   const { name, lineItems } = createSpecialOrder;
 
@@ -317,6 +320,10 @@ function useListRows(
     return {
       id: lineItem.uuid,
       onPress: () => {
+        if (disabled) {
+          return;
+        }
+
         router.push('SpecialOrderLineItemConfig', {
           name: createSpecialOrder.name,
           lineItem,
@@ -338,7 +345,7 @@ function useListRows(
           specialOrder && specialOrderLineItem ? getSpecialOrderLineItemBadges(specialOrder, specialOrderLineItem) : [],
       },
       rightSide: {
-        showChevron: true,
+        showChevron: !disabled,
       },
     };
   });

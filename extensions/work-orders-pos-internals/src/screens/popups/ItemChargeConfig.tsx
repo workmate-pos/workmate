@@ -247,30 +247,39 @@ export function ItemChargeConfig({
                   title={'Add employees'}
                   type={'primary'}
                   onPress={() =>
-                    router.push('EmployeeSelector', {
-                      selected: employeeLabourCharges.map(e => e.employeeId),
+                    router.push('MultiEmployeeSelector', {
+                      initialSelection: employeeLabourCharges.map(e => e.employeeId),
                       disabled: employeeLabourCharges
                         .filter(charge => !!calculatedDraftOrderQuery.getChargeLineItem(charge)?.order)
                         .map(e => e.employeeId),
-                      onSelect: employeeId => {
-                        setHasUnsavedChanges(true);
+                      onSelect: employees => {
+                        let changed = false;
+                        setEmployeeLabourCharges(current => {
+                          const currentEmployeeIds = current.map(e => e.employeeId);
+                          const selectedEmployeeIds = employees.map(e => e.id);
+                          const newEmployeeIds = selectedEmployeeIds.filter(id => !currentEmployeeIds.includes(id));
 
-                        const defaultLabourCharge = {
-                          employeeId,
-                          type: 'fixed-price-labour',
-                          uuid: uuid() as UUID,
-                          name: settings?.labourLineItemName || 'Labour',
-                          amount: BigDecimal.ZERO.toMoney(),
-                          workOrderItemUuid: item.uuid,
-                          amountLocked: false,
-                          removeLocked: false,
-                        } as const;
+                          changed ||= newEmployeeIds.length > 0;
+                          changed ||= currentEmployeeIds.length !== selectedEmployeeIds.length;
 
-                        setEmployeeLabourCharges(current => [...current, defaultLabourCharge]);
-                      },
-                      onDeselect: employeeId => {
-                        setHasUnsavedChanges(true);
-                        setEmployeeLabourCharges(current => current.filter(l => l.employeeId !== employeeId));
+                          return [
+                            ...newEmployeeIds.map(
+                              employeeId =>
+                                ({
+                                  employeeId,
+                                  type: 'fixed-price-labour',
+                                  uuid: uuid() as UUID,
+                                  name: settings?.labourLineItemName || 'Labour',
+                                  amount: BigDecimal.ZERO.toMoney(),
+                                  workOrderItemUuid: item.uuid,
+                                  amountLocked: false,
+                                  removeLocked: false,
+                                }) as const,
+                            ),
+                            ...current.filter(charge => selectedEmployeeIds.includes(charge.employeeId)),
+                          ];
+                        });
+                        setHasUnsavedChanges(changed);
                       },
                     })
                   }

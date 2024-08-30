@@ -12,10 +12,26 @@ import { ReactNode, useEffect, useState } from 'react';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { UseRouter } from './router.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
+import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 
 export type ListPopupItem<ID extends string = string> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
   id: ID;
   disabled?: boolean;
+};
+
+type BaseListPopupAction<ID extends string = string> = {
+  title?: string;
+  type?: ButtonType;
+  onAction: (ids: ID[]) => void;
+  disabled?: boolean;
+  loading?: boolean;
+  position?: 'top' | 'bottom';
+  submit?: boolean;
+};
+
+export type SelectListPopupAction<ID extends string = string> = BaseListPopupAction<ID> & { onAction: () => void };
+export type MultiSelectListPopupAction<ID extends string = string> = BaseListPopupAction<ID> & {
+  onAction: (ids: ID[]) => void;
 };
 
 export type ListPopupProps<ID extends string = string> = {
@@ -33,6 +49,7 @@ export type ListPopupProps<ID extends string = string> = {
         items: ListPopupItem<ID>[];
         onSelect: (id: ID) => void;
         onClose?: () => void;
+        actions?: SelectListPopupAction<ID>[];
       }
     | {
         type: 'multi-select';
@@ -46,18 +63,17 @@ export type ListPopupProps<ID extends string = string> = {
          * Called when the page is closed.
          */
         onClose?: (ids: ID[]) => void;
+        actions?: MultiSelectListPopupAction<ID>[];
       };
   onEndReached?: () => void;
   isLoadingMore?: boolean;
-  actions?: {
-    title: string;
-    type?: ButtonType;
-    onAction: (ids: ID[]) => void;
-  }[];
   emptyState?: ReactNode;
   imageDisplayStrategy?: ListProps['imageDisplayStrategy'];
   useRouter: UseRouter;
+  children?: ReactNode;
 };
+
+// TODO: Get rid of the <ScrollView> and add it inside the createRouter component only
 
 /**
  * Similar to dropdown, but shows a list of items instead of a dropdown.
@@ -70,11 +86,11 @@ export function ListPopup<ID extends string = string>({
   selection,
   emptyState,
   imageDisplayStrategy,
-  actions,
   query,
   isLoadingMore,
   onEndReached,
   useRouter,
+  children,
 }: ListPopupProps<ID>) {
   const router = useRouter();
   const screen = useScreen();
@@ -96,9 +112,15 @@ export function ListPopup<ID extends string = string>({
     });
   }, [selectedIds]);
 
+  const defaultActionPosition = 'bottom';
+  const bottomActions = selection.actions?.filter(action => (action.position ?? defaultActionPosition) === 'bottom');
+  const topActions = selection.actions?.filter(action => (action.position ?? defaultActionPosition) === 'top');
+
   return (
     <ScrollView>
       <Stack direction={'vertical'} spacing={2}>
+        {topActions?.map(action => getActionButton(action, selectedIds))}
+
         {!!query && (
           <ControlledSearchBar
             value={query.query}
@@ -156,7 +178,7 @@ export function ListPopup<ID extends string = string>({
             </Stack>
           ))}
 
-        {selection.items.length === 0 && isLoadingMore && (
+        {isLoadingMore && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextSubdued" variant="body">
               Loading...
@@ -164,10 +186,26 @@ export function ListPopup<ID extends string = string>({
           </Stack>
         )}
 
-        {actions?.map(({ title, type, onAction }) => (
-          <Button title={title} type={type} onPress={() => onAction(selectedIds)} />
-        ))}
+        {children}
+
+        {bottomActions?.map(action => getActionButton(action, selectedIds))}
       </Stack>
     </ScrollView>
+  );
+}
+
+function getActionButton<ID extends string = string>(
+  action: SelectListPopupAction<ID> | MultiSelectListPopupAction<ID>,
+  selectedIds: ID[],
+) {
+  return (
+    <FormButton
+      title={action.title ?? ''}
+      type={action.type}
+      action={action.submit ? 'submit' : 'button'}
+      disabled={action.disabled}
+      loading={action.loading}
+      onPress={() => action.onAction(selectedIds)}
+    />
   );
 }

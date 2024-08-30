@@ -117,29 +117,31 @@ export async function getSpecialOrderLineItems(specialOrderId: number) {
   return lineItems.map(mapSpecialOrderLineItem);
 }
 
-function mapSpecialOrderLineItem(lineItem: {
-  id: number;
-  specialOrderId: number;
-  uuid: UUID;
-  shopifyOrderId: string | null;
-  shopifyOrderLineItemId: string | null;
-  productVariantId: string;
-  quantity: number;
-  shopifyOrderLineItemQuantity: number | null;
-  purchaseOrderLineItems:
-    | ({
-        purchaseOrderId: number;
-        productVariantId: string;
-        quantity: number;
-        availableQuantity: number;
-        unitCost: string;
-        createdAt: Date;
-        updatedAt: Date;
-        uuid: UUID;
-        specialOrderLineItemId: number | null;
-      } | null)[]
-    | null;
-}) {
+function mapSpecialOrderLineItem<
+  T extends {
+    id: number;
+    specialOrderId: number;
+    uuid: UUID;
+    shopifyOrderId: string | null;
+    shopifyOrderLineItemId: string | null;
+    productVariantId: string;
+    quantity: number;
+    shopifyOrderLineItemQuantity: number | null;
+    purchaseOrderLineItems:
+      | ({
+          purchaseOrderId: number;
+          productVariantId: string;
+          quantity: number;
+          availableQuantity: number;
+          unitCost: string;
+          createdAt: Date;
+          updatedAt: Date;
+          uuid: UUID;
+          specialOrderLineItemId: number | null;
+        } | null)[]
+      | null;
+  },
+>(lineItem: T) {
   const {
     shopifyOrderLineItemQuantity,
     shopifyOrderLineItemId,
@@ -337,12 +339,12 @@ export async function getSpecialOrdersPage(
       AND p.vendor = COALESCE(${_lineItemVendorName}, p.vendor)
       AND (
       CASE ${_lineItemOrderState}
-        WHEN 'FULLY_ORDERED' THEN spoli.quantity <= (SELECT SUM(poli.quantity)
-                                                     FROM "PurchaseOrderLineItem" poli
-                                                     WHERE poli."specialOrderLineItemId" = spoli.id)
-        WHEN 'NOT_FULLY_ORDERED' THEN spoli.quantity > (SELECT SUM(poli.quantity)
-                                                        FROM "PurchaseOrderLineItem" poli
-                                                        WHERE poli."specialOrderLineItemId" = spoli.id)
+        WHEN 'FULLY_ORDERED' THEN spoli.quantity <= COALESCE((SELECT SUM(poli.quantity)
+                                                              FROM "PurchaseOrderLineItem" poli
+                                                              WHERE poli."specialOrderLineItemId" = spoli.id), 0)
+        WHEN 'NOT_FULLY_ORDERED' THEN spoli.quantity > COALESCE((SELECT SUM(poli.quantity)
+                                                                 FROM "PurchaseOrderLineItem" poli
+                                                                 WHERE poli."specialOrderLineItemId" = spoli.id), 0)
         ELSE TRUE
         END
       )
@@ -530,6 +532,7 @@ export async function getSpecialOrderLineItemsByNameAndUuids(
     quantity: number;
     createdAt: Date;
     updatedAt: Date;
+    specialOrderName: string;
     shopifyOrderId: string | null;
     shopifyOrderLineItemQuantity: number | null;
     purchaseOrderLineItems:
@@ -547,6 +550,7 @@ export async function getSpecialOrderLineItemsByNameAndUuids(
       | null;
   }>`
     SELECT spoli.*,
+           spo."name"      AS "specialOrderName",
            soli."orderId"  AS "shopifyOrderId",
            soli.quantity   AS "shopifyOrderLineItemQuantity",
            jsonb_agg(poli) AS "purchaseOrderLineItems"
@@ -560,7 +564,7 @@ export async function getSpecialOrderLineItemsByNameAndUuids(
                                        ${name} :: text[],
                                        ${uuid} :: uuid[]
                                           ))
-    GROUP BY spoli.id, soli."lineItemId";
+    GROUP BY spoli.id, spo.id, soli."lineItemId";
   `;
 
   return lineItems.map(mapSpecialOrderLineItem);
