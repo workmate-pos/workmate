@@ -12,7 +12,7 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
-import { v4 as uuid } from 'uuid';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export function ProductSelector({
