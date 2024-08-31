@@ -12,7 +12,7 @@ import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Int } from '@web/schemas/generated/create-product.js';
 import { useRouter } from '../../routes.js';
-import { v4 as uuid } from 'uuid';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import { useDraftOrderQuery } from '@work-orders/common/queries/use-draft-order-query.js';
 import {
   DraftOrderLineItem,
