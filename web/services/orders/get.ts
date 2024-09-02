@@ -33,6 +33,7 @@ export async function getOrder(session: Session, id: ID): Promise<Order | null> 
     tax: decimalToMoney(order.totalTaxSet?.shopMoney?.amount ?? BigDecimal.ZERO.toDecimal()),
     customer: order.customer,
     workOrders: relatedWorkOrders.map(({ name }) => ({ name })),
+    customAttributes: order.customAttributes,
   };
 }
 

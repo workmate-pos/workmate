@@ -1,10 +1,14 @@
 import type { Request, Response } from 'express-serve-static-core';
 import type { Session } from '@shopify/shopify-api';
-import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
+import { Authenticated, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { getOrder, getOrderPage, getOrderLineItems } from '../../services/orders/get.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
+import { getWorkOrder } from '../../services/work-orders/queries.js';
+import { cleanOrphanedDraftOrders } from '../../services/work-orders/clean-orphaned-draft-orders.js';
+import { syncShopifyOrders } from '../../services/shopify-order/sync.js';
 
 @Authenticated()
 export default class OrderController {
@@ -47,6 +51,35 @@ export default class OrderController {
 
     return res.json(lineItems);
   }
+
+  @Post('/:id/sync')
+  async syncOrder(req: Request<{ id: string }>, res: Response<SyncOrderResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const { id } = req.params;
+
+    const orderId = createGid('Order', id);
+    const order = await getOrder(session, orderId);
+
+    if (!order) {
+      throw new HttpError('Order not found', 404);
+    }
+
+    const workOrderName = order.customAttributes.find(({ key }) => key === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME)?.value;
+
+    if (!workOrderName) {
+      throw new HttpError('Order is not associated with a work order', 400);
+    }
+
+    const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName });
+
+    if (!workOrder) {
+      throw new HttpError('Order is associated with an unknown work order', 400);
+    }
+
+    await cleanOrphanedDraftOrders(session, workOrder.id, () => syncShopifyOrders(session, [orderId]));
+
+    return res.json({ success: true });
+  }
 }
 
 export type FetchOrdersResponse = Awaited<ReturnType<typeof getOrderPage>>;
@@ -54,3 +87,5 @@ export type FetchOrdersResponse = Awaited<ReturnType<typeof getOrderPage>>;
 export type FetchOrderResponse = Awaited<ReturnType<typeof getOrder>>;
 
 export type FetchOrderLineItemsResponse = NonNullable<Awaited<ReturnType<typeof getOrderLineItems>>>;
+
+export type SyncOrderResponse = { success: true };
