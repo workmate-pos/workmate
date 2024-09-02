@@ -13,10 +13,19 @@ export type SpecialOrderSelectorProps = {
   onSelect: (specialOrder: DetailedSpecialOrder) => void;
   onClear?: () => void;
   useRouter: UseRouter;
-  filters?: Partial<Omit<SpecialOrderPaginationOptions, 'offset'>>;
+  filters?: Partial<
+    Omit<SpecialOrderPaginationOptions, 'offset'> & {
+      isExcluded?: (specialOrder: DetailedSpecialOrder) => boolean;
+    }
+  >;
 };
 
-export function SpecialOrderSelector({ onSelect, onClear, useRouter, filters }: SpecialOrderSelectorProps) {
+export function SpecialOrderSelector({
+  onSelect,
+  onClear,
+  useRouter,
+  filters: { isExcluded, ...filters } = {},
+}: SpecialOrderSelectorProps) {
   const fetch = useAuthenticatedFetch();
   const [query, setQuery] = useDebouncedState('');
   const specialOrdersQuery = useSpecialOrdersQuery({
@@ -28,7 +37,7 @@ export function SpecialOrderSelector({ onSelect, onClear, useRouter, filters }: 
     },
   });
 
-  const specialOrders = specialOrdersQuery.data?.pages.flat() ?? [];
+  const specialOrders = specialOrdersQuery.data?.pages.flat().filter(specialOrder => !isExcluded?.(specialOrder)) ?? [];
 
   return (
     <ListPopup

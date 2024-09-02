@@ -29,9 +29,11 @@ import { ImportSpecialOrderLineItemsButton } from '../../components/ImportSpecia
 export function PurchaseOrderProductSelector({
   filters: { vendorName, locationId },
   onSelect,
+  createPurchaseOrder,
 }: {
   filters: NonNullableValues<Pick<CreatePurchaseOrder, 'vendorName' | 'locationId'>>;
   onSelect: (product: Product) => void;
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'name' | 'lineItems'>;
 }) {
   const [query, setQuery] = useDebouncedState('');
 
@@ -111,7 +113,13 @@ export function PurchaseOrderProductSelector({
         <ImportSpecialOrderLineItemsButton
           vendorName={vendorName}
           locationId={locationId}
-          onSelect={products => products.forEach(product => onSelect(product))}
+          onSelect={products => {
+            selectProducts(products);
+            // we must pop here because createPurchaseOrder must be up-to-date
+            // to correctly calculate the remaining quantity of special order line items
+            router.popCurrent();
+          }}
+          createPurchaseOrder={createPurchaseOrder}
         />
         <Button
           title={'New Product'}

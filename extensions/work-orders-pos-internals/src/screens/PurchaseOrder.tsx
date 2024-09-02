@@ -587,7 +587,7 @@ const useVendorChangeWarningDialog = (
 };
 
 const useAddProductPrerequisitesDialog = (
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'locationId' | 'vendorName'>,
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'name' | 'lineItems' | 'locationId' | 'vendorName'>,
   dispatch: CreatePurchaseOrderDispatchProxy,
 ) => {
   const dialog = useDialog();
@@ -621,6 +621,7 @@ const useAddProductPrerequisitesDialog = (
       router.push('PurchaseOrderProductSelector', {
         filters: { vendorName: createPurchaseOrder.vendorName, locationId: createPurchaseOrder.locationId },
         onSelect: product => dispatch.addProducts({ products: [product] }),
+        createPurchaseOrder,
       });
     }
   };

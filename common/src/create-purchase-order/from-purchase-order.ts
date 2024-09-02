@@ -9,7 +9,6 @@ export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: DetailedPurc
         ? {
             name: lineItem.specialOrderLineItem.name,
             uuid: lineItem.specialOrderLineItem.uuid,
-            quantity: lineItem.specialOrderLineItem.quantity,
           }
         : null,
       availableQuantity: lineItem.availableQuantity,

@@ -78,7 +78,7 @@
                     "$ref": "scalars.json#/definitions/UUID"
                   }
                 },
-                "required": ["name", "uuid", "quantity"],
+                "required": ["name", "uuid"],
                 "additionalProperties": false
               }
             ]

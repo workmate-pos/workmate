@@ -226,7 +226,6 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
                         specialOrderLineItem: {
                           name: specialOrder.name,
                           uuid: lineItem.uuid,
-                          quantity: lineItem.quantity,
                         },
                         quantity: lineItem.quantity,
                         availableQuantity: 0,
