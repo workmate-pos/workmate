@@ -2,6 +2,8 @@ import { Fetch } from './fetch.js';
 import { useMutation, useQueryClient } from 'react-query';
 import { CreateSpecialOrderResponse } from '@web/controllers/api/special-orders.js';
 import { CreateSpecialOrder } from '@web/schemas/generated/create-special-order.js';
+import { useSpecialOrderQuery } from './use-special-order-query.js';
+import { UseQueryData } from './react-query.js';
 
 export const useSpecialOrderMutation = ({ fetch }: { fetch: Fetch }) => {
   const queryClient = useQueryClient();
@@ -25,7 +27,10 @@ export const useSpecialOrderMutation = ({ fetch }: { fetch: Fetch }) => {
       const [specialOrder] = args;
 
       queryClient.invalidateQueries(['special-orders']);
-      queryClient.invalidateQueries(['special-order', specialOrder.name]);
+      queryClient.setQueryData(
+        ['special-order', specialOrder.name],
+        specialOrder satisfies UseQueryData<typeof useSpecialOrderQuery>,
+      );
       queryClient.invalidateQueries(['work-order']);
       queryClient.invalidateQueries(['work-order-info']);
     },

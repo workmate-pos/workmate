@@ -1,5 +1,4 @@
 import { Dispatch, SetStateAction, useState } from 'react';
-import { WIPCreateSpecialOrder } from '../../create-special-order/default.js';
 import { CreateSpecialOrder, DateTime } from '@web/schemas/generated/create-special-order.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
@@ -30,12 +29,16 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
-import { getCreateSpecialOrderFromDetailedSpecialOrder } from '../../create-special-order/get-create-special-order-from-detailed-special-order.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getSpecialOrderLineItemBadges } from '@work-orders/common-pos/util/special-orders.js';
+import {
+  getCreateSpecialOrderSetter,
+  WIPCreateSpecialOrder,
+} from '@work-orders/common/create-special-order/default.js';
+import { getCreateSpecialOrderFromDetailedSpecialOrder } from '@work-orders/common/create-special-order/get-create-special-order-from-detailed-special-order.js';
 
 export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const [lastSavedSpecialOrder, setLastSavedSpecialOrder] = useState(initial);
@@ -43,13 +46,13 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
 
   const hasUnsavedChanges = JSON.stringify(createSpecialOrder) !== JSON.stringify(lastSavedSpecialOrder);
 
+  const setCustomerId = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'customerId');
   const setCompanyId = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'companyId');
   const setCompanyContactId = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'companyContactId');
   const setCompanyLocationId = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'companyLocationId');
   const setLocationId = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'locationId');
   const setNote = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'note');
   const setRequiredBy = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'requiredBy');
-  const setCustomerId = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'customerId');
 
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
@@ -106,7 +109,12 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
 
   const openCustomerSelector = () =>
     router.push('CustomerSelector', {
-      onSelect: customer => setCustomerId(customer.id),
+      onSelect: customer => {
+        setCompanyId(null);
+        setCompanyContactId(null);
+        setCompanyLocationId(null);
+        setCustomerId(customer.id);
+      },
     });
 
   const openLocationSelector = () =>
@@ -274,19 +282,6 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
       </ResponsiveStack>
     </Form>
   );
-}
-
-function getCreateSpecialOrderSetter<K extends keyof WIPCreateSpecialOrder>(
-  setCreateSpecialOrder: Dispatch<SetStateAction<WIPCreateSpecialOrder>>,
-  key: K,
-): Dispatch<SetStateAction<WIPCreateSpecialOrder[K]>> {
-  return arg => {
-    if (typeof arg === 'function') {
-      setCreateSpecialOrder(current => ({ ...current, [key]: arg(current[key]) }));
-    } else {
-      setCreateSpecialOrder(current => ({ ...current, [key]: arg }));
-    }
-  };
 }
 
 function useListRows(

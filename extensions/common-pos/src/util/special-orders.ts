@@ -82,7 +82,6 @@ export function getSpecialOrderLineItemBadges(
       variant: 'highlight',
     })),
     ...orders
-      .filter(hasPropertyValue('type', 'ORDER'))
       .filter(order => !workOrderOrderIds.has(order.id))
       .map<BadgeProps>(order => ({
         text: order.name,

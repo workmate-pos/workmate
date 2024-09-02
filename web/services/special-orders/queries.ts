@@ -278,7 +278,11 @@ export async function upsertSpecialOrderLineItems(
       ${_shopifyOrderLineItemId} :: text[],
       ${_productVariantId} :: text[],
       ${quantity} :: int[]
-         );
+         )
+    ON CONFLICT ("specialOrderId", uuid)
+      DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
+                    "productVariantId"       = EXCLUDED."productVariantId",
+                    quantity                 = EXCLUDED.quantity;
   `;
 }
 

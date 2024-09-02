@@ -11,7 +11,7 @@ export function DateModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onUpdate: (dateUtc: Date) => void;
+  onUpdate: (date: Date) => void;
   /**
    * If false, the returned date will be timezone free, i.e. in UTC.
    * If true, the local timezone is used.

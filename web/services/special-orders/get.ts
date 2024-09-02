@@ -48,7 +48,7 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
   return {
     name: specialOrder.name,
     note: specialOrder.note,
-    requiredBy: specialOrder.requiredBy?.toISOString() as DateTime | null,
+    requiredBy: (specialOrder.requiredBy?.toISOString() ?? null) as DateTime | null,
     companyId: specialOrder.companyId,
     companyLocationId: specialOrder.companyLocationId,
     companyContactId: specialOrder.companyContactId,

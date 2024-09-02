@@ -37,7 +37,7 @@ export const useSpecialOrdersQuery = ({
       return pages.flat(1).length;
     },
     select: ({ pages, pageParams }) => ({
-      pages: pages.flatMap(page => page.specialOrders),
+      pages: pages.map(page => page.specialOrders),
       pageParams,
     }),
   });

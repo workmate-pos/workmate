@@ -16,7 +16,7 @@ export function StatusSelector({ onSelect, onClear }: { onSelect: (status: strin
 
   const router = useRouter();
 
-  const actions: SelectListPopupAction[] = onClear
+  const actions: SelectListPopupAction<string>[] = onClear
     ? [
         {
           title: 'Clear',

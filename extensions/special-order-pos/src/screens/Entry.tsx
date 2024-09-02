@@ -1,8 +1,6 @@
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useState } from 'react';
-import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useSpecialOrdersQuery } from '@work-orders/common/queries/use-special-orders-query.js';
 import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
@@ -13,14 +11,14 @@ import { Banner, Button, List, ListRow, Text, useExtensionApi } from '@shopify/r
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { getDefaultCreateSpecialOrder } from '../create-special-order/default.js';
-import { getCreateSpecialOrderFromDetailedSpecialOrder } from '../create-special-order/get-create-special-order-from-detailed-special-order.js';
 import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
 import { OrderState, PurchaseOrderState } from '@web/schemas/generated/special-order-pagination-options.js';
 import {
   getDetailedSpecialOrderBadges,
   getDetailedSpecialOrderSubtitle,
 } from '@work-orders/common-pos/util/special-orders.js';
+import { getCreateSpecialOrderFromDetailedSpecialOrder } from '@work-orders/common/create-special-order/get-create-special-order-from-detailed-special-order.js';
+import { defaultCreateSpecialOrder } from '@work-orders/common/create-special-order/default.js';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
@@ -98,9 +96,10 @@ export function Entry() {
               type={'primary'}
               onPress={() =>
                 router.push('SpecialOrder', {
-                  initial: getDefaultCreateSpecialOrder(
-                    createGid('Location', session.currentSession.locationId.toString()),
-                  ),
+                  initial: {
+                    ...defaultCreateSpecialOrder,
+                    locationId: createGid('Location', session.currentSession.locationId),
+                  },
                 })
               }
             />
