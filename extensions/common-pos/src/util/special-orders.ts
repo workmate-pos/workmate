@@ -2,6 +2,7 @@ import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
 import { BadgeProps } from '@shopify/retail-ui-extensions-react';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sum } from '@teifi-digital/shopify-app-toolbox/array';
 
 export function getDetailedSpecialOrderSubtitle(specialOrder: DetailedSpecialOrder) {
   return undefined;
@@ -56,4 +57,56 @@ export function getSpecialOrderPurchaseOrderStateBadge({
           ? 'partial'
           : 'empty',
   };
+}
+
+// TODO: Also support CreateSpecialOrder line items instead only detailed
+export function getSpecialOrderLineItemBadges(
+  detailedSpecialOrder: DetailedSpecialOrder,
+  lineItem: DetailedSpecialOrder['lineItems'][number],
+): BadgeProps[] {
+  const orderId = lineItem.shopifyOrderLineItem?.orderId;
+  const workOrders = orderId
+    ? detailedSpecialOrder.workOrders.filter(workOrder => workOrder.orderIds.includes(orderId))
+    : [];
+
+  const orders = orderId ? detailedSpecialOrder.orders.filter(order => order.id === orderId) : [];
+  const purchaseOrders = detailedSpecialOrder.purchaseOrders.filter(po =>
+    lineItem.purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderName).includes(po.name),
+  );
+
+  const workOrderOrderIds = new Set(...workOrders.flatMap(wo => wo.orderIds));
+
+  return [
+    ...workOrders.map<BadgeProps>(workOrder => ({
+      text: workOrder.name,
+      variant: 'highlight',
+    })),
+    ...orders
+      .filter(hasPropertyValue('type', 'ORDER'))
+      .filter(order => !workOrderOrderIds.has(order.id))
+      .map<BadgeProps>(order => ({
+        text: order.name,
+        variant: 'highlight',
+      })),
+    ...purchaseOrders.map<BadgeProps>(po => {
+      const lineItemAvailableQuantity = sum(
+        lineItem.purchaseOrderLineItems
+          .filter(hasPropertyValue('purchaseOrderName', po.name))
+          .map(lineItem => lineItem.availableQuantity),
+      );
+
+      const lineItemQuantity = sum(
+        lineItem.purchaseOrderLineItems
+          .filter(hasPropertyValue('purchaseOrderName', po.name))
+          .map(lineItem => lineItem.quantity),
+      );
+
+      return {
+        text: [po.name, `${lineItemAvailableQuantity} / ${lineItemQuantity}`].join(' • '),
+        variant: lineItemAvailableQuantity >= po.quantity ? 'success' : 'warning',
+        status:
+          lineItemAvailableQuantity >= po.quantity ? 'complete' : lineItemAvailableQuantity > 0 ? 'partial' : 'empty',
+      };
+    }),
+  ];
 }

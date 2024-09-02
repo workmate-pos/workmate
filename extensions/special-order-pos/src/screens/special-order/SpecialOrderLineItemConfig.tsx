@@ -14,6 +14,7 @@ import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveS
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { useRouter } from '../../routes.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { getSpecialOrderLineItemBadges } from '@work-orders/common-pos/util/special-orders.js';
 
 export function SpecialOrderLineItemConfig({
   name,
@@ -124,56 +125,4 @@ export function SpecialOrderLineItemConfig({
       </ResponsiveGrid>
     </ScrollView>
   );
-}
-
-// TODO: Also support CreateWorkOrder line items instead only detailed
-export function getSpecialOrderLineItemBadges(
-  detailedSpecialOrder: DetailedSpecialOrder,
-  lineItem: DetailedSpecialOrder['lineItems'][number],
-): BadgeProps[] {
-  const orderId = lineItem.shopifyOrderLineItem?.orderId;
-  const workOrders = orderId
-    ? detailedSpecialOrder.workOrders.filter(workOrder => workOrder.orderIds.includes(orderId))
-    : [];
-
-  const orders = orderId ? detailedSpecialOrder.orders.filter(order => order.id === orderId) : [];
-  const purchaseOrders = detailedSpecialOrder.purchaseOrders.filter(po =>
-    lineItem.purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderName).includes(po.name),
-  );
-
-  const workOrderOrderIds = new Set(...workOrders.flatMap(wo => wo.orderIds));
-
-  return [
-    ...workOrders.map<BadgeProps>(workOrder => ({
-      text: workOrder.name,
-      variant: 'highlight',
-    })),
-    ...orders
-      .filter(hasPropertyValue('type', 'ORDER'))
-      .filter(order => !workOrderOrderIds.has(order.id))
-      .map<BadgeProps>(order => ({
-        text: order.name,
-        variant: 'highlight',
-      })),
-    ...purchaseOrders.map<BadgeProps>(po => {
-      const lineItemAvailableQuantity = sum(
-        lineItem.purchaseOrderLineItems
-          .filter(hasPropertyValue('purchaseOrderName', po.name))
-          .map(lineItem => lineItem.availableQuantity),
-      );
-
-      const lineItemQuantity = sum(
-        lineItem.purchaseOrderLineItems
-          .filter(hasPropertyValue('purchaseOrderName', po.name))
-          .map(lineItem => lineItem.quantity),
-      );
-
-      return {
-        text: [po.name, `${lineItemAvailableQuantity} / ${lineItemQuantity}`].join(' • '),
-        variant: lineItemAvailableQuantity >= po.quantity ? 'success' : 'warning',
-        status:
-          lineItemAvailableQuantity >= po.quantity ? 'complete' : lineItemAvailableQuantity > 0 ? 'partial' : 'empty',
-      };
-    }),
-  ];
 }

@@ -24,6 +24,7 @@ export function VendorSelector({ onSelect, onClear, useRouter }: VendorSelectorP
       title={'Select Vendor'}
       query={{ query, setQuery }}
       isLoadingMore={vendorsQuery.isFetching}
+      resourceName={{ singular: 'vendor', plural: 'vendors' }}
       selection={{
         type: 'select',
         items: [

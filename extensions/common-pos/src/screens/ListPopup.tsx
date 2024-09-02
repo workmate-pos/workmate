@@ -14,23 +14,22 @@ import { UseRouter } from './router.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 
-export type ListPopupItem<ID extends string = string> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
+export type ListPopupItem<ID> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
   id: ID;
   disabled?: boolean;
 };
 
-type BaseListPopupAction<ID extends string = string> = {
+export type BaseListPopupAction<ID> = {
   title?: string;
   type?: ButtonType;
-  onAction: (ids: ID[]) => void;
   disabled?: boolean;
   loading?: boolean;
   position?: 'top' | 'bottom';
   submit?: boolean;
 };
 
-export type SelectListPopupAction<ID extends string = string> = BaseListPopupAction<ID> & { onAction: () => void };
-export type MultiSelectListPopupAction<ID extends string = string> = BaseListPopupAction<ID> & {
+export type SelectListPopupAction<ID> = BaseListPopupAction<ID> & { onAction: () => void };
+export type MultiSelectListPopupAction<ID> = BaseListPopupAction<ID> & {
   onAction: (ids: ID[]) => void;
 };
 
@@ -65,6 +64,7 @@ export type ListPopupProps<ID extends string = string> = {
         onClose?: (ids: ID[]) => void;
         actions?: MultiSelectListPopupAction<ID>[];
       };
+  resourceName?: { singular: string; plural: string };
   onEndReached?: () => void;
   isLoadingMore?: boolean;
   emptyState?: ReactNode;
@@ -91,6 +91,7 @@ export function ListPopup<ID extends string = string>({
   onEndReached,
   useRouter,
   children,
+  resourceName = { singular: 'item', plural: 'items' },
 }: ListPopupProps<ID>) {
   const router = useRouter();
   const screen = useScreen();
@@ -173,7 +174,7 @@ export function ListPopup<ID extends string = string>({
           (emptyState ?? (
             <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
               <Text color="TextSubdued" variant="body">
-                No items found
+                No {resourceName.plural} found
               </Text>
             </Stack>
           ))}
@@ -181,7 +182,7 @@ export function ListPopup<ID extends string = string>({
         {isLoadingMore && (
           <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
             <Text color="TextSubdued" variant="body">
-              Loading...
+              Loading {resourceName.plural}...
             </Text>
           </Stack>
         )}

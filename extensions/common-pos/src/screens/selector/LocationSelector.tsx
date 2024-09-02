@@ -25,6 +25,7 @@ export function LocationSelector({ onSelect, onClear, useRouter }: LocationSelec
     <ListPopup
       title={'Select Location'}
       query={{ query, setQuery }}
+      resourceName={{ singular: 'location', plural: 'locations' }}
       isLoadingMore={locationsQuery.isFetching}
       onEndReached={() => locationsQuery.fetchNextPage()}
       selection={{

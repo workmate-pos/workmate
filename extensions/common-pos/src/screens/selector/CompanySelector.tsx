@@ -24,6 +24,7 @@ export function CompanySelector({ onSelect, onClear, useRouter }: CompanySelecto
     <ListPopup
       title={'Select Company'}
       query={{ query, setQuery }}
+      resourceName={{ singular: 'company', plural: 'companies' }}
       isLoadingMore={companiesQuery.isFetching}
       onEndReached={() => companiesQuery.fetchNextPage()}
       selection={{

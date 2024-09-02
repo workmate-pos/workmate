@@ -11,7 +11,12 @@ import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services'
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { sendPurchaseOrderWebhook } from './webhook.js';
-import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import {
+  hasNestedPropertyValue,
+  hasNonNullableProperty,
+  hasPropertyValue,
+  isNonNullable,
+} from '@teifi-digital/shopify-app-toolbox/guards';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { DetailedPurchaseOrder } from './types.js';
@@ -205,8 +210,7 @@ function assertNoIllegalLineItemChanges(
 
       if (
         newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.name ||
-        newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.uuid ||
-        newLineItem.specialOrderLineItem?.quantity !== oldLineItem.specialOrderLineItem?.quantity
+        newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.uuid
       ) {
         throw new HttpError('Cannot change linked special order line item for (partially) received line items', 400);
       }
@@ -337,12 +341,15 @@ async function assertValidSpecialOrderLineItems(
   createPurchaseOrder: CreatePurchaseOrder,
   existingPurchaseOrder: DetailedPurchaseOrder | null,
 ) {
-  const lineItemsWithLink = createPurchaseOrder.lineItems.map(li => li.specialOrderLineItem).filter(isNonNullable);
-  const specialOrderNames = unique(lineItemsWithLink.map(li => li.name));
+  const lineItemsWithLink = createPurchaseOrder.lineItems.filter(hasNonNullableProperty('specialOrderLineItem'));
+  const specialOrderNames = unique(lineItemsWithLink.map(li => li.specialOrderLineItem.name));
 
   const [specialOrders, specialOrderLineItems] = await Promise.all([
     getSpecialOrdersByNames(shop, specialOrderNames),
-    getSpecialOrderLineItemsByNameAndUuids(shop, lineItemsWithLink),
+    getSpecialOrderLineItemsByNameAndUuids(
+      shop,
+      lineItemsWithLink.map(lineItem => lineItem.specialOrderLineItem),
+    ),
   ]);
 
   if (specialOrderLineItems.length !== lineItemsWithLink.length) {
@@ -354,16 +361,15 @@ async function assertValidSpecialOrderLineItems(
 
     const createUsedQuantity = sum(
       lineItemsWithLink
-        .filter(hasPropertyValue('uuid', lineItem.uuid))
-        .filter(hasPropertyValue('name', specialOrderName))
+        .filter(hasNestedPropertyValue('specialOrderLineItem.uuid', lineItem.uuid))
+        .filter(hasNestedPropertyValue('specialOrderLineItem.name', specialOrderName))
         .map(lineItem => lineItem.quantity),
     );
 
     const existingUsedQuantity = sum(
       existingPurchaseOrder?.lineItems
-        .map(lineItem => lineItem.specialOrderLineItem)
-        .filter(isNonNullable)
-        .filter(hasPropertyValue('name', specialOrderName))
+        .filter(hasNestedPropertyValue('specialOrderLineItem.uuid', lineItem.uuid))
+        .filter(hasNestedPropertyValue('specialOrderLineItem.name', specialOrderName))
         .map(lineItem => lineItem.quantity) ?? [],
     );
 

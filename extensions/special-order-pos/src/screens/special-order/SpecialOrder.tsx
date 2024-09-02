@@ -34,8 +34,8 @@ import { getCreateSpecialOrderFromDetailedSpecialOrder } from '../../create-spec
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { getSpecialOrderLineItemBadges } from './SpecialOrderLineItemConfig.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { getSpecialOrderLineItemBadges } from '@work-orders/common-pos/util/special-orders.js';
 
 export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const [lastSavedSpecialOrder, setLastSavedSpecialOrder] = useState(initial);

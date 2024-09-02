@@ -76,10 +76,6 @@
                   },
                   "uuid": {
                     "$ref": "scalars.json#/definitions/UUID"
-                  },
-                  "quantity": {
-                    "$ref": "scalars.json#/definitions/Int",
-                    "minimum": 1
                   }
                 },
                 "required": ["name", "uuid", "quantity"],

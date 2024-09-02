@@ -17,11 +17,12 @@ export async function upsertCreateSpecialOrder(session: Session, createSpecialOr
   assertNoDuplicateLineItemUuids(createSpecialOrder);
 
   return await unit(async () => {
-    // TODO: Validate
-
     const name = createSpecialOrder.name ?? (await getNewSpecialOrderName(session.shop));
     const isNew = createSpecialOrder.name === null;
     const existingSpecialOrder = isNew ? null : await getDetailedSpecialOrder(session, name);
+
+    assertNoIllegalSpecialOrderChanges(createSpecialOrder, existingSpecialOrder);
+    assertNoIllegalLineItemChanges(createSpecialOrder, existingSpecialOrder);
 
     const productVariantIds = unique(createSpecialOrder.lineItems.map(li => li.productVariantId));
     const orderIds = unique(
@@ -35,9 +36,6 @@ export async function upsertCreateSpecialOrder(session: Session, createSpecialOr
       ensureCustomersExist(session, [createSpecialOrder.customerId]),
       ensureShopifyOrdersExist(session, orderIds),
     ]);
-
-    assertNoIllegalSpecialOrderChanges(createSpecialOrder, existingSpecialOrder);
-    assertNoIllegalLineItemChanges(createSpecialOrder, existingSpecialOrder);
 
     const { id: specialOrderId } = await upsertSpecialOrder({
       ...createSpecialOrder,

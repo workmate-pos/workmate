@@ -24,6 +24,7 @@ export function CustomerSelector({ onSelect, onClear, useRouter }: CustomerSelec
     <ListPopup
       title={'Select Customer'}
       query={{ query, setQuery }}
+      resourceName={{ singular: 'customer', plural: 'customers' }}
       isLoadingMore={customersQuery.isFetching}
       onEndReached={() => customersQuery.fetchNextPage()}
       selection={{

@@ -24,6 +24,10 @@ export async function reserveLineItemQuantity(session: Session, locationId: ID, 
 
   const inventoryItemId = await getLineItemInventoryItemId(session, lineItemId);
 
+  if (!inventoryItemId) {
+    throw new HttpError('Line item must be a product', 404);
+  }
+
   const graphql = new Graphql(session);
   await gql.inventory.moveQuantities.run(graphql, {
     input: {
@@ -63,7 +67,7 @@ async function getLineItemInventoryItemId(session: Session, lineItemId: ID) {
   const { productVariantId } = shopifyOrderLineItem;
 
   if (!productVariantId) {
-    throw new HttpError('Line item must be a product', 404);
+    return null;
   }
 
   const graphql = new Graphql(session);
@@ -84,6 +88,10 @@ async function revertShopifyReservationQuantities(
     getLineItemInventoryItemId(session, lineItemId),
     getShopifyOrderLineItemReservations({ locationId, lineItemId }),
   ]);
+
+  if (!inventoryItemId) {
+    return;
+  }
 
   if (!reservations.length) {
     return;

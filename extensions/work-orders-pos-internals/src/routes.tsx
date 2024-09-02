@@ -91,6 +91,14 @@ import {
   NotFullyOrderedSpecialOrderVendorSelector,
   NotFullyOrderedSpecialOrderVendorSelectorProps,
 } from '@work-orders/common-pos/screens/selector/NotFullyOrderedSpecialOrderVendorSelector.js';
+import {
+  SpecialOrderSelector,
+  SpecialOrderSelectorProps,
+} from '@work-orders/common-pos/screens/selector/SpecialOrderSelector.js';
+import {
+  MultiSpecialOrderLineItemSelector,
+  MultiSpecialOrderLineItemSelectorProps,
+} from '@work-orders/common-pos/screens/selector/MultiSpecialOrderLineItemSelector.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -394,6 +402,18 @@ export const { Router, useRouter } = createRouter({
     title: 'Select Employees',
     Component: (props: Omit<MultiEmployeeSelectorProps, 'useRouter'>) => (
       <MultiEmployeeSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  SpecialOrderSelector: {
+    title: 'Select Special Order',
+    Component: (props: Omit<SpecialOrderSelectorProps, 'useRouter'>) => (
+      <SpecialOrderSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  MultiSpecialOrderLineItemSelector: {
+    title: 'Select Special Order Line Item',
+    Component: (props: Omit<MultiSpecialOrderLineItemSelectorProps, 'useRouter'>) => (
+      <MultiSpecialOrderLineItemSelector {...props} useRouter={useRouter} />
     ),
   },
 });

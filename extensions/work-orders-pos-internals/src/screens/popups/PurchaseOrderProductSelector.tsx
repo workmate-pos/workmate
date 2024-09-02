@@ -15,12 +15,16 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { UUID } from '@web/util/types.js';
+import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
+import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
+import { ImportSpecialOrderLineItemsButton } from '../../components/ImportSpecialOrderLineItemsButton.js';
 
 export function PurchaseOrderProductSelector({
   filters: { vendorName, locationId },
@@ -64,6 +68,7 @@ export function PurchaseOrderProductSelector({
   const screen = useScreen();
 
   const isLoading = locationQuery.isLoading || customFieldsPresetsQuery.isLoading;
+
   screen.setIsLoading(isLoading);
 
   const [page, setPage] = useState(1);
@@ -103,11 +108,10 @@ export function PurchaseOrderProductSelector({
       </Stack>
 
       <ResponsiveGrid columns={2}>
-        <Button
-          title={'Select from Special Orders'}
-          onPress={() => {
-            toast.show('Not implemented yet');
-          }}
+        <ImportSpecialOrderLineItemsButton
+          vendorName={vendorName}
+          locationId={locationId}
+          onSelect={products => products.forEach(product => onSelect(product))}
         />
         <Button
           title={'New Product'}

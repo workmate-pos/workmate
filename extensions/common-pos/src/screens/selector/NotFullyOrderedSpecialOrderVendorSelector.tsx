@@ -32,6 +32,7 @@ export function NotFullyOrderedSpecialOrderVendorSelector({
     <ListPopup
       title={'Select Vendor'}
       query={{ query, setQuery }}
+      resourceName={{ singular: 'vendor', plural: 'vendors' }}
       isLoadingMore={vendorsQuery.isFetching}
       selection={{
         type: 'select',

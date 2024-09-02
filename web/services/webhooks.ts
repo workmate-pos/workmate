@@ -179,10 +179,6 @@ export default {
 
         const lineItems = await db.shopifyOrder.getLineItems({ orderId: body.admin_graphql_api_id });
 
-        console.log('draft order', body.admin_graphql_api_id, 'become order', body.order_id);
-        console.log('line items', lineItems);
-        console.log('unreserving');
-
         if (!lineItems.length) {
           return;
         }
