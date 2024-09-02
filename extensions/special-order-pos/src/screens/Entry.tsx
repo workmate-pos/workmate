@@ -91,19 +91,21 @@ export function Entry() {
           <Text variant="headingLarge">Special Orders</Text>
         </ResponsiveStack>
 
-        <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
-          <Button
-            title={'New Special Order'}
-            type={'primary'}
-            onPress={() =>
-              router.push('SpecialOrder', {
-                initial: getDefaultCreateSpecialOrder(
-                  createGid('Location', session.currentSession.locationId.toString()),
-                ),
-              })
-            }
-          />
-        </ResponsiveStack>
+        {false && (
+          <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
+            <Button
+              title={'New Special Order'}
+              type={'primary'}
+              onPress={() =>
+                router.push('SpecialOrder', {
+                  initial: getDefaultCreateSpecialOrder(
+                    createGid('Location', session.currentSession.locationId.toString()),
+                  ),
+                })
+              }
+            />
+          </ResponsiveStack>
+        )}
       </ResponsiveStack>
 
       <ResponsiveStack direction={'horizontal'} alignment={'center'} flex={1} paddingHorizontal={'HalfPoint'}>

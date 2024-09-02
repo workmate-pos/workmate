@@ -151,6 +151,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
           <ResponsiveGrid columns={4}>
             {canSelectCompany && (
               <FormStringField
+                disabled
                 label={'Company'}
                 onFocus={() => openCompanySelector()}
                 value={
@@ -165,6 +166,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
 
             {createSpecialOrder.companyId && (
               <FormStringField
+                disabled
                 label={'Company Location'}
                 onFocus={() => {
                   if (!createSpecialOrder.companyId) {
@@ -194,12 +196,13 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
                     ? 'Loading...'
                     : customerQuery.data?.displayName ?? 'Unknown customer'
               }
-              disabled={!!createSpecialOrder.companyId}
+              disabled={true || !!createSpecialOrder.companyId}
               onFocus={() => openCustomerSelector()}
               required
             />
 
             <FormStringField
+              disabled
               label={'Location'}
               value={locationQuery.isLoading ? 'Loading...' : locationQuery.data?.name ?? 'Unknown location'}
               onFocus={() => openLocationSelector()}
