@@ -247,11 +247,35 @@ export default {
         orderId: body.admin_graphql_api_id,
       });
 
-      await cleanManyOrphanedDraftOrders(
-        session,
-        relatedWorkOrders.map(({ id }) => id),
-        () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
-      );
+      if (relatedWorkOrders.length > 0) {
+        await cleanManyOrphanedDraftOrders(
+          session,
+          relatedWorkOrders.map(({ id }) => id),
+          () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
+        );
+      } else {
+        // No related work orders, maybe the order create webhook failed, so try to create it here
+
+        const workOrderName = body.note_attributes.find(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
+
+        if (workOrderName) {
+          const [workOrder] = await db.workOrder.get({ shop: session.shop, name: workOrderName.value });
+
+          if (!workOrder) {
+            // can happen if a merchant manually adds the attribute. if this happens often something is wrong
+            sentryErr('Order with Work Order Attribute not found in db', {
+              shop: session.shop,
+              workOrderName,
+              orderId: body.admin_graphql_api_id,
+            });
+            return;
+          }
+
+          await cleanOrphanedDraftOrders(session, workOrder.id, () =>
+            syncShopifyOrders(session, [body.admin_graphql_api_id]),
+          );
+        }
+      }
     },
   },
 
