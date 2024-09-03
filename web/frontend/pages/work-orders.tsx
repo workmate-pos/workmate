@@ -1,11 +1,13 @@
 import {
   Badge,
+  Box,
   Card,
   EmptyState,
   Frame,
   IndexFilters,
   IndexFiltersMode,
   IndexTable,
+  InlineStack,
   Page,
   SkeletonBodyText,
   Text,
@@ -28,7 +30,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 export default function () {
   return (
     <Frame>
-      <Page narrowWidth>
+      <Page>
         <PermissionBoundary permissions={['read_work_orders']}>
           <WorkOrders />
         </PermissionBoundary>
@@ -105,6 +107,7 @@ function WorkOrders() {
           { title: 'Status' },
           { title: 'Customer' },
           { title: 'SO #' },
+          { title: 'SPO #' },
           { title: 'PO #' },
         ]}
         itemCount={workOrders.length}
@@ -169,25 +172,36 @@ function WorkOrders() {
               })()}
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Text as={'p'} variant="bodyMd">
+              <InlineStack gap="100">
                 {workOrder.orders
                   .filter(hasPropertyValue('type', 'ORDER'))
                   .map(order => order.name)
-                  .join(', ')}
-              </Text>
+                  .map(sp => (
+                    <Badge tone="enabled">{sp}</Badge>
+                  ))}
+              </InlineStack>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Text as={'p'} variant="bodyMd">
-                {(() => {
-                  const purchaseOrderNames = unique(
-                    workOrder.items
-                      .filter(hasPropertyValue('type', 'product'))
-                      .flatMap(item => item.purchaseOrders.map(po => po.name)),
-                  );
-
-                  return purchaseOrderNames.join(', ');
-                })()}
-              </Text>
+              <InlineStack gap="100">
+                {unique(
+                  workOrder.items
+                    .filter(hasPropertyValue('type', 'product'))
+                    .flatMap(item => item.specialOrders.map(spo => spo.name)),
+                ).map(sp => (
+                  <Badge tone="enabled">{sp}</Badge>
+                ))}
+              </InlineStack>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <InlineStack gap="100">
+                {unique(
+                  workOrder.items
+                    .filter(hasPropertyValue('type', 'product'))
+                    .flatMap(item => item.purchaseOrders.map(po => po.name)),
+                ).map(sp => (
+                  <Badge tone="enabled">{sp}</Badge>
+                ))}
+              </InlineStack>
             </IndexTable.Cell>
           </IndexTable.Row>
         ))}

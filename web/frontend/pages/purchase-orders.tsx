@@ -6,6 +6,7 @@ import {
   IndexFilters,
   IndexFiltersMode,
   IndexTable,
+  InlineStack,
   Page,
   Text,
 } from '@shopify/polaris';
@@ -20,8 +21,9 @@ import { Redirect } from '@shopify/app-bridge/actions';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useEffect, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { PurchaseOrderCsvUploadDropZoneModal } from '@web/frontend/components/purchase-orders/PurchaseOrderCsvUploadDropZoneModal.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 export default function () {
   return (
@@ -116,6 +118,7 @@ function PurchaseOrders() {
           { title: 'Status' },
           { title: 'Location' },
           { title: 'Customer' },
+          { title: 'SPO #' },
           { title: 'SO #' },
           { title: 'WO #' },
         ]}
@@ -174,17 +177,32 @@ function PurchaseOrders() {
               </Text>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Text as={'p'} variant="bodyMd">
+              <InlineStack gap="100">
+                {unique(
+                  purchaseOrder.lineItems.map(lineItem => lineItem.specialOrderLineItem?.name).filter(isNonNullable),
+                ).map(spo => (
+                  <Badge tone="enabled">{spo}</Badge>
+                ))}
+              </InlineStack>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <InlineStack gap="100">
                 {purchaseOrder.linkedOrders
                   .filter(hasPropertyValue('orderType', 'ORDER'))
                   .map(order => order.name)
-                  .join(', ')}
-              </Text>
+                  .map(sp => (
+                    <Badge tone="enabled">{sp}</Badge>
+                  ))}
+              </InlineStack>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Text as={'p'} variant="bodyMd">
-                {purchaseOrder.linkedWorkOrders.map(wo => wo.name).join(', ')}
-              </Text>
+              <InlineStack gap="100">
+                {purchaseOrder.linkedWorkOrders
+                  .map(wo => wo.name)
+                  .map(sp => (
+                    <Badge tone="enabled">{sp}</Badge>
+                  ))}
+              </InlineStack>
             </IndexTable.Cell>
           </IndexTable.Row>
         ))}

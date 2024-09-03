@@ -76,10 +76,14 @@ function SpecialOrders() {
     <>
       <TitleBar
         title="Special Orders"
-        primaryAction={{
-          content: 'New Special Order',
-          onAction: () => redirectToSpecialOrder('new'),
-        }}
+        primaryAction={
+          false
+            ? {
+                content: 'New Special Order',
+                onAction: () => redirectToSpecialOrder('new'),
+              }
+            : undefined
+        }
       />
 
       <IndexFilters

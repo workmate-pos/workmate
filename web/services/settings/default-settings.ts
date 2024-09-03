@@ -14,7 +14,7 @@ const defaultShopSettings: ShopSettings = {
     defaultStatus: 'Draft',
   },
   specialOrders: {
-    idFormat: 'SO-#{{id}}',
+    idFormat: 'SPO-#{{id}}',
   },
   discountShortcuts: [
     { percentage: '10.00' as Decimal, unit: 'percentage' },
