@@ -60,7 +60,7 @@
   },
   "devDependencies": {
     "@pgtyped/cli": "^2.3.0",
-    "@teifi-digital/genql": "^0.0.47",
+    "@teifi-digital/genql": "^0.0.48",
     "@ts-safeql/eslint-plugin": "^3.4.1",
     "@types/busboy": "^1.5.4",
     "@types/cors": "^2.8.15",
