@@ -38,6 +38,7 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { UUID } from '@web/util/types.js';
+import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
 
 type AddProductModalProps = AddProductModalPropsBase &
   (
@@ -64,6 +65,10 @@ type AddProductModalPropsBase = {
    */
   vendorName?: string;
   /**
+   * Optional create purchase order. Required to import special orders.
+   */
+  createPurchaseOrder?: Pick<CreatePurchaseOrder, 'name' | 'lineItems'>;
+  /**
    * Product type filter, workmate specific.
    */
   productType: 'PRODUCT' | 'SERVICE';
@@ -86,6 +91,7 @@ export function AddProductModal({
   vendorName,
   productType,
   companyLocationId,
+  createPurchaseOrder,
 }: AddProductModalProps) {
   const [page, setPage] = useState(0);
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
@@ -156,10 +162,27 @@ export function AddProductModal({
 
   const shouldShowPrice = companyLocationId === null;
 
+  const [isSpecialOrderModalOpen, setIsSpecialOrderModalOpen] = useState(false);
+
   return (
     <>
+      {outputType === 'PURCHASE_ORDER' && vendorName && locationId && createPurchaseOrder && (
+        <ImportSpecialOrderModal
+          open={isSpecialOrderModalOpen}
+          onClose={() => setIsSpecialOrderModalOpen(false)}
+          createPurchaseOrder={createPurchaseOrder}
+          locationId={locationId}
+          vendorName={vendorName}
+          onSelect={lineItems => {
+            onAdd(lineItems);
+            setToastAction({ content: 'Special order imported' });
+            onClose();
+          }}
+        />
+      )}
+
       <Modal
-        open={open}
+        open={open && !isSpecialOrderModalOpen}
         onClose={onClose}
         title={`Add ${titleCase(thing)}`}
         secondaryActions={[
@@ -167,6 +190,10 @@ export function AddProductModal({
             content: 'Reload',
             onAction: () => productVariantsQuery.refetch(),
             loading: productVariantsQuery.isRefetching,
+          },
+          {
+            content: 'Import Special Order',
+            onAction: () => setIsSpecialOrderModalOpen(true),
           },
           productType === 'SERVICE'
             ? {

@@ -189,6 +189,14 @@ export function SpecialOrderGeneralCard({
           value={
             createSpecialOrder.requiredBy === null ? '' : new Date(createSpecialOrder.requiredBy).toLocaleDateString()
           }
+          labelAction={
+            !!createSpecialOrder.requiredBy
+              ? {
+                  content: 'Remove',
+                  onAction: () => setRequiredBy(null),
+                }
+              : undefined
+          }
           onFocus={() => setIsDatePickerOpen(true)}
           disabled={disabled}
           readOnly

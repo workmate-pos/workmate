@@ -1,0 +1,365 @@
+import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
+import {
+  EmptyState,
+  Frame,
+  IndexFilters,
+  IndexFiltersMode,
+  IndexTable,
+  LegacyCard,
+  Page,
+  Text,
+  useIndexResourceState,
+} from '@shopify/polaris';
+import { emptyState } from '@web/frontend/assets/index.js';
+import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
+import { useEffect, useState } from 'react';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { useToast } from '@teifi-digital/shopify-app-react';
+import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
+import { useSpecialOrdersQuery } from '@work-orders/common/queries/use-special-orders-query.js';
+import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
+import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
+import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useNotFullyOrderedSpecialOrderVendorsQuery } from '@work-orders/common/queries/use-not-fully-ordered-special-order-vendors-query.js';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
+import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { Redirect } from '@shopify/app-bridge/actions';
+import { useAppBridge } from '@shopify/app-bridge-react';
+
+export default function () {
+  return (
+    <Frame>
+      <Page>
+        <PermissionBoundary permissions={['read_special_orders', 'write_purchase_orders', 'read_settings']}>
+          <Merge />
+        </PermissionBoundary>
+      </Page>
+    </Frame>
+  );
+}
+
+function Merge() {
+  const app = useAppBridge();
+
+  const [query, setQuery, optimisticQuery] = useDebouncedState('');
+  const [locationId, setLocationId] = useState<ID>();
+  const [vendorName, setVendorName] = useState<string>();
+
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const vendorsQuery = useNotFullyOrderedSpecialOrderVendorsQuery({ fetch, locationId: locationId ?? null });
+  const locationsQuery = useLocationsQuery({ fetch, params: {} });
+  const specialOrdersQuery = useSpecialOrdersQuery({
+    fetch,
+    params: {
+      query,
+      locationId,
+      lineItemVendorName: vendorName,
+      lineItemOrderState: 'NOT_FULLY_ORDERED',
+      limit: 25,
+    },
+  });
+  const settingsQuery = useSettingsQuery({ fetch });
+  const purchaseOrderCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
+  const lineItemCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const purchaseOrderMutation = usePurchaseOrderMutation({ fetch });
+
+  const productVariantIds = unique(
+    specialOrdersQuery.data?.pages
+      .flat()
+      .flatMap(specialOrder => specialOrder.lineItems)
+      .map(lineItem => lineItem.productVariantId) ?? [],
+  );
+  const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
+
+  useEffect(() => {
+    if (!locationsQuery.isFetching && locationsQuery.hasNextPage) {
+      locationsQuery.fetchNextPage();
+    }
+  }, [locationsQuery.isFetching, locationsQuery.hasNextPage]);
+
+  const locations = locationsQuery.data?.pages.flat() ?? [];
+  const vendors = vendorsQuery.data ?? [];
+
+  const [pageIndex, setPageIndex] = useState(0);
+  const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, specialOrdersQuery);
+  const page = specialOrdersQuery.data?.pages[pageIndex] ?? [];
+
+  const { allResourcesSelected, clearSelection, selectedResources, handleSelectionChange } = useIndexResourceState(
+    specialOrdersQuery.data?.pages.flat() ?? [],
+    {
+      resourceIDResolver: specialOrder => specialOrder.name,
+    },
+  );
+
+  console.log(selectedResources);
+
+  return (
+    <LegacyCard>
+      <IndexFilters
+        mode={IndexFiltersMode.Default}
+        setMode={() => {}}
+        canCreateNewView={false}
+        onQueryChange={() => {}}
+        onQueryClear={() => {}}
+        onClearAll={() => {}}
+        filters={[]}
+        loading={locationsQuery.isFetching}
+        tabs={[
+          {
+            id: 'All',
+            content: 'All Locations',
+            onAction: () => {
+              setLocationId(undefined);
+              clearSelection();
+            },
+          },
+          ...locations.map(location => ({
+            id: location.id,
+            content: location.name,
+            onAction: () => {
+              setLocationId(location.id);
+              clearSelection();
+            },
+          })),
+        ]}
+        selected={locations.findIndex(location => location.id === locationId) + 1}
+        hideFilters
+        hideQueryField
+      />
+
+      <IndexFilters
+        mode={IndexFiltersMode.Default}
+        filters={[]}
+        hideFilters
+        hideQueryField
+        onQueryChange={() => {}}
+        onQueryClear={() => {}}
+        onClearAll={() => {}}
+        setMode={() => {}}
+        canCreateNewView={false}
+        loading={vendorsQuery.isFetching}
+        tabs={[
+          {
+            id: 'All',
+            content: 'All Vendors',
+            onAction: () => {
+              setVendorName(undefined);
+              clearSelection();
+            },
+          },
+          ...vendors.map(vendor => ({
+            id: vendor.name,
+            content: vendor.name,
+            onAction: () => {
+              setVendorName(vendor.name);
+              clearSelection();
+            },
+          })),
+        ]}
+        selected={vendors.findIndex(vendor => vendor.name === vendorName) + 1}
+      />
+
+      <IndexFilters
+        mode={IndexFiltersMode.Filtering}
+        setMode={() => {}}
+        filters={[]}
+        onQueryChange={query => setQuery(query, !query)}
+        onQueryClear={() => setQuery('', true)}
+        onClearAll={() => {
+          setQuery('', true);
+          setLocationId(undefined);
+          setVendorName(undefined);
+        }}
+        queryValue={optimisticQuery}
+        queryPlaceholder={'Search special orders'}
+        tabs={[]}
+        selected={0}
+      />
+
+      <IndexTable
+        headings={[
+          { title: 'Special Order' },
+          { title: 'Location' },
+          { title: 'Customer' },
+          { title: 'Required By' },
+          { title: 'PO #' },
+          { title: 'SO #' },
+          { title: 'WO #' },
+        ]}
+        selectable={!!locationId && !!vendorName}
+        selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
+        itemCount={sum(specialOrdersQuery.data?.pages.flatMap(page => page.length) ?? [])}
+        loading={
+          specialOrdersQuery.isLoading ||
+          Object.values(productVariantQueries).some(query => query.isLoading) ||
+          purchaseOrderMutation.isLoading ||
+          settingsQuery.isLoading ||
+          purchaseOrderCustomFieldsPresetsQuery.isLoading ||
+          lineItemCustomFieldsPresetsQuery.isLoading
+        }
+        emptyState={
+          <EmptyState heading={'Special Orders'} image={emptyState}>
+            {page.length === 0 && 'No special orders found'}
+          </EmptyState>
+        }
+        pagination={{
+          hasNext: pagination.hasNextPage,
+          hasPrevious: pagination.hasPreviousPage,
+          onPrevious: () => pagination.previous(),
+          onNext: () => pagination.next(),
+        }}
+        resourceName={{ singular: 'special order', plural: 'special orders' }}
+        onSelectionChange={handleSelectionChange}
+        promotedBulkActions={[
+          {
+            id: 'merge',
+            content: 'Merge',
+            disabled: selectedResources.length === 0 || !locationId || !vendorName || purchaseOrderMutation.isLoading,
+            onAction: () => {
+              if (!locationId || !vendorName) {
+                return;
+              }
+
+              const status = settingsQuery.data?.settings.defaultPurchaseOrderStatus;
+              const customFields = purchaseOrderCustomFieldsPresetsQuery.data?.defaultCustomFields;
+              const lineItemCustomFields = lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields;
+
+              if (!status || !customFields || !lineItemCustomFields) {
+                setToastAction({ content: 'Settings not loaded, please try again' });
+                return;
+              }
+
+              const location = locations.find(location => location.id === locationId);
+              const selectedSpecialOrders = selectedResources
+                .map(name => specialOrdersQuery.data?.pages.flat().find(specialOrder => specialOrder.name === name))
+                .filter(isNonNullable);
+
+              if (selectedSpecialOrders.length !== selectedResources.length) {
+                setToastAction({ content: 'Some special orders are missing, please try again' });
+                return;
+              }
+
+              const createPurchaseOrder: CreatePurchaseOrder = {
+                name: null,
+                status,
+                placedDate: null,
+                locationId,
+                vendorName,
+                shipFrom: '',
+                shipTo: location?.address?.formatted.join('\n') ?? '',
+                note: '',
+                discount: null,
+                tax: null,
+                shipping: null,
+                deposited: null,
+                paid: null,
+                customFields,
+                employeeAssignments: [],
+                lineItems: selectedSpecialOrders.flatMap(specialOrder =>
+                  specialOrder.lineItems
+                    .map(lineItem => {
+                      const productVariant = productVariantQueries[lineItem.productVariantId]?.data;
+
+                      if (!productVariant) {
+                        setToastAction({ content: 'Product variant not found' });
+                        throw new Error('Product variant not found');
+                      }
+
+                      if (productVariant.product.vendor !== vendorName) {
+                        return null;
+                      }
+
+                      const inventoryItem = productVariant.inventoryItem;
+
+                      const unitCost = inventoryItem.unitCost
+                        ? BigDecimal.fromDecimal(inventoryItem.unitCost.amount).toMoney()
+                        : BigDecimal.ZERO.toMoney();
+
+                      return {
+                        uuid: lineItem.uuid,
+                        productVariantId: lineItem.productVariantId,
+                        specialOrderLineItem: {
+                          name: specialOrder.name,
+                          uuid: lineItem.uuid,
+                        },
+                        quantity: lineItem.quantity,
+                        availableQuantity: 0,
+                        unitCost,
+                        customFields: lineItemCustomFields,
+                      };
+                    })
+                    .filter(isNonNullable),
+                ),
+              };
+
+              setToastAction({ content: 'Merging special orders...' });
+              purchaseOrderMutation.mutate(createPurchaseOrder, {
+                onSuccess({ purchaseOrder }) {
+                  setToastAction({ content: `Saved purchase order ${purchaseOrder.name}` });
+                  Redirect.create(app).dispatch(
+                    Redirect.Action.APP,
+                    `/purchase-orders/${encodeURIComponent(purchaseOrder.name)}`,
+                  );
+                },
+              });
+            },
+          },
+        ]}
+      >
+        {page.map((specialOrder, i) => (
+          <IndexTable.Row
+            key={specialOrder.name}
+            id={specialOrder.name}
+            selected={selectedResources.includes(specialOrder.name)}
+            position={i}
+          >
+            <IndexTable.Cell>
+              <Text as={'p'} fontWeight={'bold'} variant="bodyMd">
+                {specialOrder.name}
+              </Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as={'p'} variant="bodyMd">
+                {specialOrder.location?.name}
+              </Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as={'p'} variant="bodyMd">
+                {specialOrder.customer.displayName}
+              </Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as={'p'} variant="bodyMd">
+                {specialOrder.requiredBy ? new Date(specialOrder.requiredBy).toLocaleDateString() : ''}
+              </Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as={'p'} variant="bodyMd">
+                {specialOrder.purchaseOrders.map(order => order.name).join(', ')}
+              </Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as={'p'} variant="bodyMd">
+                {specialOrder.orders.map(order => order.name).join(', ')}
+              </Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Text as={'p'} variant="bodyMd">
+                {specialOrder.workOrders.map(order => order.name).join(', ')}
+              </Text>
+            </IndexTable.Cell>
+          </IndexTable.Row>
+        ))}
+      </IndexTable>
+
+      {toast}
+    </LegacyCard>
+  );
+}

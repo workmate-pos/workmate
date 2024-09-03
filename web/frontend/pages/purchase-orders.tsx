@@ -26,7 +26,7 @@ import { PurchaseOrderCsvUploadDropZoneModal } from '@web/frontend/components/pu
 export default function () {
   return (
     <Frame>
-      <Page narrowWidth>
+      <Page>
         <PermissionBoundary permissions={['read_purchase_orders']}>
           <PurchaseOrders />
         </PermissionBoundary>
@@ -81,9 +81,14 @@ function PurchaseOrders() {
       <TitleBar
         title="Purchase Orders"
         secondaryActions={[
+          // TODO : test
           {
             content: 'Import CSV',
             onAction: () => setIsCsvUploadDropZoneModalOpen(true),
+          },
+          {
+            content: 'Merge Special Orders',
+            onAction: () => redirectToPurchaseOrder('merge'),
           },
         ]}
         primaryAction={{

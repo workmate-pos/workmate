@@ -438,11 +438,12 @@ function PurchaseOrder({
         <AddProductModal
           outputType="PURCHASE_ORDER"
           productType="PRODUCT"
+          createPurchaseOrder={createPurchaseOrder}
           open={isAddProductModalOpen}
           locationId={createPurchaseOrder.locationId}
+          vendorName={createPurchaseOrder.vendorName}
           setToastAction={setToastAction}
           onClose={() => setIsAddProductModalOpen(false)}
-          vendorName={createPurchaseOrder.vendorName}
           onAdd={products => dispatch.addProducts({ products })}
         />
       )}

@@ -19,7 +19,6 @@ import { Redirect } from '@shopify/app-bridge/actions';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useEffect, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useSpecialOrdersQuery } from '@work-orders/common/queries/use-special-orders-query.js';
 
 export default function () {
@@ -115,8 +114,8 @@ function SpecialOrders() {
               heading={'Special Orders'}
               image={emptyState}
               action={{
-                content: 'Create special order',
-                onAction: () => redirectToSpecialOrder('new'),
+                content: 'Create special orders through Work Orders',
+                onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/work-orders'),
               }}
             >
               Track and manage your special orders.

@@ -232,7 +232,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
               action={
                 !!createSpecialOrder.requiredBy
                   ? {
-                      label: 'Clear',
+                      label: 'Remove',
                       onPress: () => setRequiredBy(null),
                     }
                   : undefined

@@ -3,9 +3,10 @@ import { BadgeProps } from '@shopify/retail-ui-extensions-react';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
+import { getSubtitle } from './subtitle.js';
 
 export function getDetailedSpecialOrderSubtitle(specialOrder: DetailedSpecialOrder) {
-  return undefined;
+  return getSubtitle([specialOrder.requiredBy ? new Date(specialOrder.requiredBy).toLocaleDateString() : undefined]);
 }
 
 export function getDetailedSpecialOrderBadges(specialOrder: DetailedSpecialOrder): BadgeProps[] {

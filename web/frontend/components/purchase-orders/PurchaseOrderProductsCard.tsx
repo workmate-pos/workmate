@@ -71,9 +71,6 @@ export function PurchaseOrderProductsCard({
           <Button onClick={() => onAddProductClick()} disabled={disabled}>
             Add Product
           </Button>
-          <Button onClick={() => onAddSpecialOrderProductClick()} disabled={disabled}>
-            Select from Special Orders
-          </Button>
           {noLineItems || allAreReceived ? (
             <Button
               onClick={() => onMarkAllAsNotReceivedClick()}
