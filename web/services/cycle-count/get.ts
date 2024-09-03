@@ -77,7 +77,7 @@ export async function getDetailedCycleCountItems(cycleCountId: number) {
   ]);
 
   return items.map(item => {
-    const itemApplications = applications.filter(hasNestedPropertyValue('cycleCountItemUuid', item.uuid));
+    const itemApplications = applications.filter(hasPropertyValue('cycleCountItemUuid', item.uuid));
 
     const [lastItemApplication] = itemApplications.toSorted((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 

@@ -120,7 +120,7 @@ function mapWorkOrderCharge(charge: {
   workOrderId: number;
   uuid: UUID;
   shopifyOrderLineItemId: string | null;
-  workOrderItemUuid: string | null;
+  workOrderItemUuid: UUID | null;
   data: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -274,7 +274,7 @@ export async function upsertWorkOrderCharges(
     workOrderId: number;
     uuid: UUID;
     shopifyOrderLineItemId: ID | null;
-    workOrderItemUuid: string | null;
+    workOrderItemUuid: UUID | null;
     data: WorkOrderChargeData;
   }[],
 ) {
@@ -284,15 +284,13 @@ export async function upsertWorkOrderCharges(
 
   const { workOrderItemUuid, shopifyOrderLineItemId, workOrderId, uuid, data } = nest(charges);
 
-  const unbrandedShopifyOrderLineItemId = shopifyOrderLineItemId as (string | null)[];
-
   await sql`
     INSERT INTO "WorkOrderCharge" ("workOrderId", uuid, "shopifyOrderLineItemId", "workOrderItemUuid", data)
     SELECT *
     FROM UNNEST(${workOrderId} :: int[],
                 ${uuid} :: uuid[],
-                ${unbrandedShopifyOrderLineItemId} :: text[],
-                ${workOrderItemUuid} :: uuid[],
+                ${shopifyOrderLineItemId as string[]} :: text[],
+                ${workOrderItemUuid as string[]} :: uuid[],
                 ${data.map(data => JSON.stringify(data))} :: jsonb[])
     ON CONFLICT ("workOrderId", uuid)
       DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
@@ -374,13 +372,12 @@ export async function setWorkOrderItemShopifyOrderLineItemIds(
   }
 
   const { shopifyOrderLineItemId, uuid } = nest(items);
-  const _shopifyOrderLineItemId = shopifyOrderLineItemId as (string | null)[];
 
   const { count } = await sqlOne<{ count: number }>`
     WITH updated AS (
       UPDATE "WorkOrderItem" x
         SET "shopifyOrderLineItemId" = y."shopifyOrderLineItemId"
-        FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
+        FROM UNNEST(${shopifyOrderLineItemId as string[]} :: text[], ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
         WHERE x."workOrderId" = ${workOrderId}
           AND x.uuid = y.uuid
         RETURNING 1)
@@ -407,13 +404,12 @@ export async function setWorkOrderChargeShopifyOrderLineItemIds(
 
   const { shopifyOrderLineItemId, uuid } = nest(charges);
   const _uuid: (string | null)[] = uuid;
-  const _shopifyOrderLineItemId = shopifyOrderLineItemId as (string | null)[];
 
   const { count } = await sqlOne<{ count: number }>`
     WITH updated AS (
       UPDATE "WorkOrderCharge" x
         SET "shopifyOrderLineItemId" = y."shopifyOrderLineItemId"
-        FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${_uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
+        FROM UNNEST(${shopifyOrderLineItemId as string[]} :: text[], ${_uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
         WHERE x."workOrderId" = ${workOrderId}
           AND x.uuid = y.uuid
         RETURNING 1)

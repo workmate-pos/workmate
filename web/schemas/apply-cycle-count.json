@@ -9,7 +9,7 @@
         "type": "object",
         "properties": {
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           },
           "originalQuantity": {
             "$ref": "scalars.json#/definitions/Int"

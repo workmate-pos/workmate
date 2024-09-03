@@ -3,6 +3,10 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { nest } from '../../util/db.js';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { escapeLike } from '../db/like.js';
+import { UUID } from '../../util/types.js';
+import { assertUuid } from '../../util/assertions.js';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export type CycleCount = NonNullable<Awaited<ReturnType<typeof getCycleCount>>>;
 export type CycleCountItem = Awaited<ReturnType<typeof getCycleCountItems>>[number];
@@ -237,7 +241,7 @@ export async function createCycleCountItemApplications(
 export async function getCycleCountItems(cycleCountId: number) {
   const items = await sql<{
     cycleCountId: number;
-    uuid: string;
+    uuid: UUID;
     productVariantId: string;
     inventoryItemId: string;
     countQuantity: number;
@@ -264,22 +268,29 @@ function mapCycleCountItem(item: {
   createdAt: Date;
   updatedAt: Date;
 }) {
-  const { productVariantId, inventoryItemId } = item;
+  const { uuid, productVariantId, inventoryItemId } = item;
 
-  assertGid(productVariantId);
-  assertGid(inventoryItemId);
+  try {
+    assertGid(productVariantId);
+    assertGid(inventoryItemId);
+    assertUuid(uuid);
 
-  return {
-    ...item,
-    productVariantId,
-    inventoryItemId,
-  };
+    return {
+      ...item,
+      uuid,
+      productVariantId,
+      inventoryItemId,
+    };
+  } catch (error) {
+    sentryErr(error, { item });
+    throw new HttpError('Unable to parse cycle count item', 500);
+  }
 }
 
 export async function getCycleCountItemApplications(cycleCountId: number) {
-  return await sql<{
+  const applications = await sql<{
     id: number;
-    cycleCountItemUuid: string;
+    cycleCountItemUuid: UUID;
     cycleCountId: number;
     appliedQuantity: number;
     originalQuantity: number;
@@ -289,6 +300,32 @@ export async function getCycleCountItemApplications(cycleCountId: number) {
     SELECT *
     FROM "CycleCountItemApplication"
     WHERE "cycleCountId" = ${cycleCountId};`;
+
+  return applications.map(mapCycleCountItemApplication);
+}
+
+function mapCycleCountItemApplication(application: {
+  id: number;
+  cycleCountItemUuid: UUID;
+  cycleCountId: number;
+  appliedQuantity: number;
+  originalQuantity: number;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  const { cycleCountItemUuid } = application;
+
+  try {
+    assertUuid(cycleCountItemUuid);
+
+    return {
+      ...application,
+      cycleCountItemUuid,
+    };
+  } catch (error) {
+    sentryErr(error, { application });
+    throw new HttpError('Unable to parse cycle count item application', 500);
+  }
 }
 
 export async function getCycleCountEmployeeAssignments(cycleCountId: number) {

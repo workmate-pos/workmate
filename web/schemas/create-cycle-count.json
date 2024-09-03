@@ -25,7 +25,7 @@
         "title": "create-cycle-count-item",
         "properties": {
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           },
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"

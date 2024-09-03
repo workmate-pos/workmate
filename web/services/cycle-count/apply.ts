@@ -13,6 +13,7 @@ import { gql } from '../gql/gql.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { UUID } from '../../util/types.js';
 
 const COMPARE_QUANTITY_MISMATCH_ERROR_MESSAGE =
   'The compareQuantity argument no longer matches the persisted quantity.';
@@ -99,7 +100,7 @@ export type ApplyCycleCountPlan = {
   itemApplications: {
     originalQuantity: number;
     countQuantity: number;
-    uuid: string;
+    uuid: UUID;
   }[];
 };
 
