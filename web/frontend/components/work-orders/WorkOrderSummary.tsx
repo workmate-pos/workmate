@@ -160,7 +160,7 @@ export function WorkOrderSummary({
         </InlineGrid>
 
         <ButtonGroup fullWidth>
-          <Tooltip active={!canPrint} content={'You must save your work order before you can print'} dismissOnMouseOut>
+          <Tooltip content={canPrint ? '' : 'You must save your work order before you can print'} dismissOnMouseOut>
             <Button disabled={disabled || !canPrint} onClick={() => onPrint()}>
               Print
             </Button>

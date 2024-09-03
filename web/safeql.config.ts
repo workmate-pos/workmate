@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import { defineConfig } from '@ts-safeql/eslint-plugin';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -19,9 +18,8 @@ export default defineConfig({
       types: {
         json: 'unknown',
         jsonb: 'unknown',
+        uuid: 'UUID',
       },
     },
   },
 });
-
-type x = ID;

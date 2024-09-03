@@ -3,7 +3,7 @@
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertMoney, BigDecimal, Money, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { groupByKey } from '@teifi-digital/shopify-app-toolbox/array';
-import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 

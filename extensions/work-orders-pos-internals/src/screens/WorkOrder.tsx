@@ -33,14 +33,13 @@ import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { DateTime, WorkOrderPaymentTerms } from '@web/schemas/generated/create-work-order.js';
-import { getPurchaseOrderBadge } from '../util/badges.js';
+import { getPurchaseOrderBadge, getSpecialOrderBadge, getTransferOrderBadge } from '../util/badges.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
 import { DAY_IN_MS, MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import {
   CreateWorkOrderDispatchProxy,
@@ -55,6 +54,9 @@ import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
 import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
+import { UUID } from '@web/util/types.js';
+import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
+import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -63,7 +65,7 @@ export type WorkOrderProps = {
 type OpenConfigPopup = {
   configType: 'item' | 'charge';
   type: 'product' | 'custom-item';
-  uuid: string;
+  uuid: UUID;
 };
 
 export function WorkOrder({ initial }: WorkOrderProps) {
@@ -169,6 +171,22 @@ export function WorkOrder({ initial }: WorkOrderProps) {
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
           <FormButton
+            title={'Sourcing'}
+            type={'basic'}
+            action={'button'}
+            disabled={!createWorkOrder.name || hasUnsavedChanges}
+            onPress={() => {
+              const { name } = createWorkOrder;
+
+              if (!name) {
+                toast.show('You must save your work order before you can manage payments/print');
+                return;
+              }
+
+              router.push('WorkOrderItemSourcing', { name });
+            }}
+          />
+          <FormButton
             title={'Manage payments'}
             type={'basic'}
             action={'button'}
@@ -193,7 +211,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
             disabled={!createWorkOrder.name || hasUnsavedChanges}
             onPress={() => {
               if (createWorkOrder.name) {
-                router.push('PrintOverview', {
+                router.push('WorkOrderPrintOverview', {
                   name: createWorkOrder.name,
                   dueDateUtc: new Date(createWorkOrder.dueDate),
                 });
@@ -262,17 +280,32 @@ function WorkOrderProperties({
     .flatMap(query => query.data)
     .filter(isNonNullable);
 
+  const storePropertiesQuery = useStorePropertiesQuery({ fetch });
+  const storeProperties = storePropertiesQuery.data?.storeProperties;
+
   // TODO: Make Previous Order and Previous Work Orders clickable to view history (wrap in selectable or make it a button?)
 
   const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
 
   const router = useRouter();
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const openCompanySelector = () => {
     router.push('CompanySelector', {
-      onSelect: ({ companyId, customerId, companyContactId }) => {
-        dispatch.setCompany({ companyId, customerId, companyContactId, companyLocationId: null, paymentTerms: null });
-        openCompanyLocationSelector(companyId);
+      onSelect: company => {
+        if (!company.mainContact) {
+          toast.show('No company contact found');
+          return;
+        }
+
+        dispatch.setCompany({
+          companyId: company.id,
+          customerId: company.mainContact.customer.id,
+          companyContactId: company.mainContact.id,
+          companyLocationId: null,
+          paymentTerms: null,
+        });
+        openCompanyLocationSelector(company.id);
       },
     });
   };
@@ -302,6 +335,8 @@ function WorkOrderProperties({
     });
   };
 
+  const canSelectCompany = storeProperties && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
+
   return (
     <ResponsiveGrid columns={4} grow>
       {createWorkOrder.name && <FormStringField label="Work Order ID" disabled value={createWorkOrder.name} />}
@@ -325,7 +360,7 @@ function WorkOrderProperties({
         onFocus={() => router.push('StatusSelector', { onSelect: status => dispatch.setPartial({ status }) })}
         value={createWorkOrder.status}
       />
-      {createWorkOrder.companyId && (
+      {canSelectCompany && (
         <FormStringField
           label={'Company'}
           onFocus={() => openCompanySelector()}
@@ -401,8 +436,7 @@ function WorkOrderProperties({
         required
         onFocus={() =>
           router.push('CustomerSelector', {
-            onSelect: customerId => dispatch.setCustomer({ customerId }),
-            onSelectCompany: () => openCompanySelector(),
+            onSelect: customer => dispatch.setCustomer({ customerId: customer.id }),
           })
         }
         disabled={hasOrder}
@@ -841,17 +875,20 @@ function useItemRows(
       const isMutableService =
         getProductServiceType(variant?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;
 
-      const purchaseOrders = (() => {
-        if (item.type === 'product') {
-          return (
-            workOrderQuery.data?.workOrder?.items
-              .filter(hasPropertyValue('uuid', item.uuid))
-              .find(hasPropertyValue('type', item.type))?.purchaseOrders ?? []
-          );
-        }
+      const specialOrders =
+        workOrderQuery.data?.workOrder?.items
+          .filter(hasPropertyValue('type', item.type))
+          .find(hasPropertyValue('uuid', item.uuid))?.specialOrders ?? [];
 
-        return [];
-      })();
+      const purchaseOrders =
+        workOrderQuery.data?.workOrder?.items
+          .filter(hasPropertyValue('type', item.type))
+          .find(hasPropertyValue('uuid', item.uuid))?.purchaseOrders ?? [];
+
+      const transferOrders =
+        workOrderQuery.data?.workOrder?.items
+          .filter(hasPropertyValue('type', item.type))
+          .find(hasPropertyValue('uuid', item.uuid))?.transferOrders ?? [];
 
       const itemPrice = calculatedWorkOrderQuery.getItemPrice(item);
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
@@ -888,7 +925,9 @@ function useItemRows(
           },
           badges: [
             ...orderNames.map<BadgeProps>(orderName => ({ text: orderName, variant: 'highlight' })),
+            ...specialOrders.map<BadgeProps>(so => getSpecialOrderBadge(so, true)),
             ...purchaseOrders.map<BadgeProps>(po => getPurchaseOrderBadge(po, true)),
+            ...transferOrders.map<BadgeProps>(to => getTransferOrderBadge(to, true)),
           ],
         },
         rightSide: {

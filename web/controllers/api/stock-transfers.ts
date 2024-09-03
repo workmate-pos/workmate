@@ -1,11 +1,14 @@
 import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Permission } from '../../decorators/permission.js';
 import { CreateStockTransfer } from '../../schemas/generated/create-stock-transfer.js';
-import { StockTransfer } from '../../services/stock-transfers/types.js';
+import { DetailedStockTransfer } from '../../services/stock-transfers/types.js';
 import { Session } from '@shopify/shopify-api';
-import { upsertStockTransfer } from '../../services/stock-transfers/upsert.js';
-import { getStockTransfer, getStockTransferCount, getStockTransferPage } from '../../services/stock-transfers/get.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { upsertCreateStockTransfer } from '../../services/stock-transfers/upsert.js';
+import {
+  getDetailedStockTransfer,
+  getStockTransferCount,
+  getStockTransferPage,
+} from '../../services/stock-transfers/get.js';
 import { Request, Response } from 'express-serve-static-core';
 import { StockTransferPaginationOptions } from '../../schemas/generated/stock-transfer-pagination-options.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
@@ -23,10 +26,10 @@ export default class StockTransfersController {
     const session: Session = res.locals.shopify.session;
     const createStockTransfer = req.body;
 
-    const { name } = await upsertStockTransfer(session, createStockTransfer);
-    const stockTransfer = await getStockTransfer(session, name);
+    const { name } = await upsertCreateStockTransfer(session, createStockTransfer);
+    const stockTransfer = await getDetailedStockTransfer(session, name);
 
-    return res.json(stockTransfer ?? never());
+    return res.json(stockTransfer);
   }
 
   @Get('/count')
@@ -65,7 +68,7 @@ export default class StockTransfersController {
     const session: Session = res.locals.shopify.session;
     const { name } = req.params;
 
-    const stockTransfer = await getStockTransfer(session, name);
+    const stockTransfer = await getDetailedStockTransfer(session, name);
 
     if (!stockTransfer) {
       throw new HttpError(`Stock transfer ${name} not found`, 404);
@@ -75,10 +78,10 @@ export default class StockTransfersController {
   }
 }
 
-export type CreateStockTransferResponse = StockTransfer;
+export type CreateStockTransferResponse = DetailedStockTransfer;
 
-export type FetchStockTransferPageResponse = StockTransfer[];
+export type FetchStockTransferPageResponse = DetailedStockTransfer[];
 
 export type FetchStockTransferCountResponse = { count: number };
 
-export type FetchStockTransferResponse = StockTransfer;
+export type FetchStockTransferResponse = DetailedStockTransfer;

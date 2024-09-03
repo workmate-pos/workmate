@@ -2,10 +2,9 @@ import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.j
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import {
   hasNestedPropertyValue,
   hasNonNullableProperty,
@@ -53,6 +52,7 @@ import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orde
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
+import { UUID } from '@web/util/types.js';
 
 export function WorkOrderItemModal({
   createWorkOrder,
@@ -64,7 +64,7 @@ export function WorkOrderItemModal({
   onSave,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
-  item: { uuid: string };
+  item: { uuid: UUID };
   workOrder: DetailedWorkOrder | null;
   open: boolean;
   onClose: () => void;
@@ -264,7 +264,7 @@ export function WorkOrderItemModal({
                   employeeId =>
                     ({
                       type: 'fixed-price-labour',
-                      uuid: uuid(),
+                      uuid: uuid() as UUID,
                       name: settingsQuery.data?.settings?.labourLineItemName || 'Labour',
                       amount: BigDecimal.ZERO.toMoney(),
                       employeeId,
@@ -364,7 +364,7 @@ function extractInitialGeneralCharge(
   if (generalCharges.length > 1) {
     return {
       type: 'fixed-price-labour',
-      uuid: uuid(),
+      uuid: uuid() as UUID,
       employeeId: null,
       name: generalCharges[0]!.name,
       amount: getTotalPriceForCharges(generalCharges),
@@ -422,11 +422,11 @@ function Charges({
             }
 
             if (charge.type === 'fixed-price-labour') {
-              return { ...charge, uuid: current?.uuid ?? uuid(), employeeId: null };
+              return { ...charge, uuid: current?.uuid ?? (uuid() as UUID), employeeId: null };
             }
 
             if (charge.type === 'hourly-labour') {
-              return { ...charge, uuid: current?.uuid ?? uuid(), employeeId: null };
+              return { ...charge, uuid: current?.uuid ?? (uuid() as UUID), employeeId: null };
             }
 
             return charge satisfies never;

@@ -1,5 +1,5 @@
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { getPurchaseOrder } from '../../purchase-orders/get.js';
+import { getDetailedPurchaseOrder } from '../../purchase-orders/get.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -67,7 +67,7 @@ export async function getPurchaseOrderTemplateData(
   const { shop } = session;
 
   const [purchaseOrder, vendors] = await Promise.all([
-    getPurchaseOrder({ shop }, purchaseOrderName),
+    getDetailedPurchaseOrder({ shop }, purchaseOrderName),
     getVendors(session),
   ]);
 

@@ -37,6 +37,8 @@ import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
+import { UUID } from '@web/util/types.js';
+import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
 
 type AddProductModalProps = AddProductModalPropsBase &
   (
@@ -63,6 +65,10 @@ type AddProductModalPropsBase = {
    */
   vendorName?: string;
   /**
+   * Optional create purchase order. Required to import special orders.
+   */
+  createPurchaseOrder?: Pick<CreatePurchaseOrder, 'name' | 'lineItems'>;
+  /**
    * Product type filter, workmate specific.
    */
   productType: 'PRODUCT' | 'SERVICE';
@@ -85,6 +91,7 @@ export function AddProductModal({
   vendorName,
   productType,
   companyLocationId,
+  createPurchaseOrder,
 }: AddProductModalProps) {
   const [page, setPage] = useState(0);
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
@@ -155,10 +162,27 @@ export function AddProductModal({
 
   const shouldShowPrice = companyLocationId === null;
 
+  const [isSpecialOrderModalOpen, setIsSpecialOrderModalOpen] = useState(false);
+
   return (
     <>
+      {outputType === 'PURCHASE_ORDER' && vendorName && locationId && createPurchaseOrder && (
+        <ImportSpecialOrderModal
+          open={isSpecialOrderModalOpen}
+          onClose={() => setIsSpecialOrderModalOpen(false)}
+          createPurchaseOrder={createPurchaseOrder}
+          locationId={locationId}
+          vendorName={vendorName}
+          onSelect={lineItems => {
+            onAdd(lineItems);
+            setToastAction({ content: 'Special order imported' });
+            onClose();
+          }}
+        />
+      )}
+
       <Modal
-        open={open}
+        open={open && !isSpecialOrderModalOpen}
         onClose={onClose}
         title={`Add ${titleCase(thing)}`}
         secondaryActions={[
@@ -166,6 +190,10 @@ export function AddProductModal({
             content: 'Reload',
             onAction: () => productVariantsQuery.refetch(),
             loading: productVariantsQuery.isRefetching,
+          },
+          {
+            content: 'Import Special Order',
+            onAction: () => setIsSpecialOrderModalOpen(true),
           },
           productType === 'SERVICE'
             ? {
@@ -189,7 +217,7 @@ export function AddProductModal({
                         quantity: 1 as Int,
                         absorbCharges: false,
                         customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                        uuid: uuid(),
+                        uuid: uuid() as UUID,
                         name: 'Unnamed product',
                         unitPrice: BigDecimal.ONE.toMoney(),
                       },
@@ -230,8 +258,6 @@ export function AddProductModal({
           renderItem={productVariant => {
             const name = getProductVariantName(productVariant) ?? `Unknown ${thing}`;
             const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
-
-            // TODO: Do this on pos too
 
             // the product variants to add. will be more than 1 if this PV is a bundle
             const productVariants = productVariant.requiresComponents
@@ -302,13 +328,13 @@ export function AddProductModal({
                   if (outputType === 'WORK_ORDER') {
                     const charges: CreateWorkOrder['charges'][number][] = [];
                     const items = productVariants.map(pv => {
-                      const itemUuid = uuid();
+                      const itemUuid = uuid() as UUID;
 
                       for (const charge of pv.productVariant.defaultCharges) {
                         const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
                         charges.push({
                           ...defaultCharge,
-                          uuid: uuid(),
+                          uuid: uuid() as UUID,
                           workOrderItemUuid: itemUuid,
                         });
                       }
@@ -333,8 +359,8 @@ export function AddProductModal({
                           inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
 
                         return {
-                          uuid: uuid(),
-                          shopifyOrderLineItem: null,
+                          uuid: uuid() as UUID,
+                          specialOrderLineItem: null,
                           unitCost: BigDecimal.fromString(unitCost ?? '0.00')
                             .round(2)
                             .toMoney(),

@@ -1,4 +1,4 @@
-import { sentryErr, WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, sentryErr, WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
 import { db } from './db/db.js';
 import { AppPlanName } from './db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
@@ -14,6 +14,7 @@ import { syncProductServiceTypeTag } from './metafields/product-service-type-met
 import { cleanManyOrphanedDraftOrders, cleanOrphanedDraftOrders } from './work-orders/clean-orphaned-draft-orders.js';
 import { unit } from './db/unit-of-work.js';
 import { getWorkOrder } from './work-orders/queries.js';
+import { unreserveLineItem } from './sourcing/reserve.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -145,16 +146,50 @@ export default {
   },
 
   DRAFT_ORDERS_UPDATE: {
-    async handler(session, topic, shop, body: { admin_graphql_api_id: ID; name: string }) {
-      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({
-        orderId: body.admin_graphql_api_id,
-      });
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: ID;
+        name: string;
+        order_id: string | null;
+      },
+    ) {
+      async function sync() {
+        const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({
+          orderId: body.admin_graphql_api_id,
+        });
 
-      await cleanManyOrphanedDraftOrders(
-        session,
-        relatedWorkOrders.map(({ id }) => id),
-        () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
-      );
+        await cleanManyOrphanedDraftOrders(
+          session,
+          relatedWorkOrders.map(({ id }) => id),
+          () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
+        );
+      }
+
+      async function removeReservations() {
+        if (body.order_id === null) {
+          return;
+        }
+
+        // We want to remove all reservations the moment the draft order is converted into a real order
+        // because real orders will set the inventory state to committed until fulfillment.
+        // So we must get rid of the "reserved" state for reserved items
+
+        const lineItems = await db.shopifyOrder.getLineItems({ orderId: body.admin_graphql_api_id });
+
+        if (!lineItems.length) {
+          return;
+        }
+
+        // TODO: Bulk
+        await Promise.all(
+          lineItems.map(lineItem => unreserveLineItem(session, { lineItemId: lineItem.lineItemId as ID })),
+        );
+      }
+
+      await Promise.all([sync(), removeReservations()]);
     },
   },
 
@@ -162,23 +197,39 @@ export default {
     async handler(session, topic, shop, body: { id: number }) {
       const orderId = createGid('DraftOrder', body.id);
 
-      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId });
+      async function sync() {
+        const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId });
 
-      await cleanManyOrphanedDraftOrders(
-        session,
-        relatedWorkOrders.map(({ id }) => id),
-        () =>
-          unit(async () => {
-            await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
-            await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });
+        await cleanManyOrphanedDraftOrders(
+          session,
+          relatedWorkOrders.map(({ id }) => id),
+          () =>
+            unit(async () => {
+              await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
+              await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });
 
-            await syncWorkOrders(
-              session,
-              relatedWorkOrders.map(({ id }) => id),
-              { onlySyncIfUnlinked: true, updateCustomAttributes: false },
-            );
-          }),
-      );
+              await syncWorkOrders(
+                session,
+                relatedWorkOrders.map(({ id }) => id),
+                { onlySyncIfUnlinked: true, updateCustomAttributes: false },
+              );
+            }),
+        );
+      }
+
+      async function removeReservations() {
+        const lineItems = await db.shopifyOrder.getLineItems({ orderId: createGid('DraftOrder', body.id) });
+
+        if (!lineItems.length) {
+          return;
+        }
+
+        await Promise.all(
+          lineItems.map(lineItem => unreserveLineItem(session, { lineItemId: lineItem.lineItemId as ID })),
+        );
+      }
+
+      await Promise.all([sync(), removeReservations()]);
     },
   },
 

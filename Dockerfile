@@ -3,11 +3,9 @@ FROM node:20 AS build
 ARG SHOPIFY_API_KEY
 ARG SHOPIFY_SHOP
 ARG VITE_INTERCOM_APP_ID
-ARG NODE_ENV
 ENV SHOPIFY_API_KEY=$SHOPIFY_API_KEY
 ENV SHOPIFY_SHOP=$SHOPIFY_SHOP
 ENV VITE_INTERCOM_APP_ID=$VITE_INTERCOM_APP_ID
-ENV NODE_ENV=$NODE_ENV
 EXPOSE 8081
 
 WORKDIR /app
@@ -56,6 +54,7 @@ RUN --mount=type=secret,id=NPM_GITHUB_TOKEN \
     --mount=type=cache,target=/app/.npm \
     npm set cache /app/.npm && \
     NPM_GITHUB_TOKEN=$(cat /run/secrets/NPM_GITHUB_TOKEN) \
+    NODE_ENV=production \
     npm run admin:install
 
 COPY --from=build /app/web/dist web/dist/

@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Product"
+  ADD COLUMN "vendor" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "Product"
+  ALTER COLUMN "vendor" DROP DEFAULT;

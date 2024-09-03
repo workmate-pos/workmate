@@ -9,7 +9,6 @@ export const defaultCreateProduct: CreateProduct = {
   allowOutOfStockPurchases: true,
   productType: null,
   price: BigDecimal.ONE.round(2).toMoney(),
-  options: [],
   costPrice: null,
   vendor: null,
   locationId: null,

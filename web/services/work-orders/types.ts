@@ -1,6 +1,7 @@
 import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ID, DateTime, Int, Money } from '../gql/queries/generated/schema.js';
 import { ShopifyOrderType } from '../db/queries/generated/shopify-order.sql.js';
+import { UUID } from '../../util/types.js';
 
 /**
  * A work order with all available data.
@@ -40,15 +41,18 @@ export type WorkOrderPaymentTerms = {
 };
 
 export type DetailedWorkOrderItem = {
-  uuid: string;
+  uuid: UUID;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   quantity: Int;
   absorbCharges: boolean;
   customFields: Record<string, string>;
+  purchaseOrders: WorkOrderPurchaseOrder[];
+  transferOrders: WorkOrderTransferOrder[];
+  reservations: LineItemReservation[];
+  specialOrders: WorkOrderSpecialOrder[];
 } & (
   | {
       type: 'product';
-      purchaseOrders: WorkOrderPurchaseOrder[];
       productVariantId: ID;
     }
   | {
@@ -69,12 +73,37 @@ export type WorkOrderPurchaseOrderItem = {
   availableQuantity: Int;
 };
 
+export type WorkOrderSpecialOrder = {
+  name: string;
+  items: WorkOrderSpecialOrderItem[];
+};
+
+export type WorkOrderSpecialOrderItem = {
+  quantity: Int;
+  orderedQuantity: Int;
+};
+
+export type WorkOrderTransferOrder = {
+  name: string;
+  items: WorkOrderTransferOrderItem[];
+};
+
+export type LineItemReservation = {
+  locationId: ID;
+  quantity: Int;
+};
+
+export type WorkOrderTransferOrderItem = {
+  status: 'PENDING' | 'IN_TRANSIT' | 'RECEIVED' | 'REJECTED';
+  quantity: Int;
+};
+
 export type DetailedWorkOrderCharge = FixedPriceLabour | HourlyLabour;
 
 export type FixedPriceLabour = {
   type: 'fixed-price-labour';
-  uuid: string;
-  workOrderItemUuid: string | null;
+  uuid: UUID;
+  workOrderItemUuid: UUID | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;
@@ -85,8 +114,8 @@ export type FixedPriceLabour = {
 
 export type HourlyLabour = {
   type: 'hourly-labour';
-  uuid: string;
-  workOrderItemUuid: string | null;
+  uuid: UUID;
+  workOrderItemUuid: UUID | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;

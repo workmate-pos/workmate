@@ -1,4 +1,3 @@
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useState } from 'react';
 import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useRouter } from '../routes.js';
@@ -7,18 +6,24 @@ import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/Control
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useVendorsQuery, Vendor } from '@work-orders/common/queries/use-vendors-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
+import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { Int } from '@web/schemas/generated/create-product.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 
-export function VendorSelector({ onSelect }: { onSelect: (vendorName: string, productVariantIds: ID[]) => void }) {
+export function VendorSelector({
+  onSelect,
+  loadProductVariants = true,
+}: {
+  onSelect: (vendorName: string, productVariants: ProductVariant[]) => void;
+  loadProductVariants?: boolean;
+}) {
   const [query, setQuery] = useState('');
 
   const fetch = useAuthenticatedFetch();
   const vendorsQuery = useVendorsQuery({ fetch });
   const vendors = vendorsQuery.data ?? [];
 
-  const rows = useVendorRows(vendors, query, onSelect);
+  const rows = useVendorRows(vendors, query, loadProductVariants, onSelect);
 
   return (
     <ScrollView>
@@ -62,7 +67,8 @@ export function VendorSelector({ onSelect }: { onSelect: (vendorName: string, pr
 function useVendorRows(
   vendors: Vendor[],
   query: string,
-  onSelect: (vendorName: string, productVariantIds: ID[]) => void,
+  loadProductVariants: boolean,
+  onSelect: (vendorName: string, productVariants: ProductVariant[]) => void,
 ) {
   query = query.trim();
 
@@ -98,7 +104,7 @@ function useVendorRows(
     } else {
       setVendorName(undefined);
       screen.setIsLoading(false);
-      onSelect(vendorName, productVariantsQuery.data?.pages.flat().map(pv => pv.id) ?? []);
+      onSelect(vendorName, productVariantsQuery.data?.pages.flat() ?? []);
       router.popCurrent();
     }
   }
@@ -106,6 +112,12 @@ function useVendorRows(
   return vendors.filter(queryFilter).map<ListRow>(vendor => ({
     id: vendor.name,
     onPress: () => {
+      if (!loadProductVariants) {
+        onSelect(vendor.name, []);
+        router.popCurrent();
+        return;
+      }
+
       setVendorName(vendor.name);
     },
     leftSide: {

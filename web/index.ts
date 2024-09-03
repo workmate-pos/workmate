@@ -35,7 +35,7 @@ const isAppMigrate = process.env.APP_MIGRATE === 'true';
 
 const appConfig: ShopifyAppConfig = {
   api: {
-    apiVersion: ApiVersion.January24, // TODO: @Tim update to latest
+    apiVersion: ApiVersion.July24,
     restResources,
   },
   sessionStorage,

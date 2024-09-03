@@ -1,6 +1,9 @@
 import { ID, assertGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Int } from '../schemas/generated/pagination-options.js';
 import { Money, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { UUID } from './types.js';
+import { validate, version } from 'uuid';
+import { isGidWithNamespace } from '@work-orders/common/util/gid.js';
 
 export function assertGidOrNull(gid: string | null): asserts gid is ID | null {
   if (gid !== null) {
@@ -14,16 +17,16 @@ export function assertInt(value: number): asserts value is Int {
   }
 }
 
+export function assertUuid(value: string): asserts value is UUID {
+  if (!validate(value) || version(value) !== 4) {
+    throw new Error(`Invalid uuid ${value}`);
+  }
+}
+
 export function assertMoneyOrNull(value: string | null): asserts value is Money | null {
   if (value !== null) {
     assertMoney(value);
   }
-}
-
-export function isGidWithNamespace(namespace: string) {
-  return (id: string | null | undefined): id is ID => {
-    return !!id && parseGid(id).objectName === namespace;
-  };
 }
 
 export const isLineItemId = isGidWithNamespace('LineItem');

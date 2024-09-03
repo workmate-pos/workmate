@@ -1,6 +1,6 @@
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { uuid } from '../../util/uuid.js';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
@@ -30,6 +30,7 @@ import { useLocationQueries } from '@work-orders/common/queries/use-location-que
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
+import { UUID } from '@web/util/types.js';
 
 export function ProductSelector({
   onSelect,
@@ -81,7 +82,6 @@ export function ProductSelector({
     charges: CreateWorkOrderCharge[],
     name: string = 'Product',
   ) => {
-    setQuery('', true);
     onSelect({ items, charges });
     toast.show(`${name} added to cart`, { duration: 750 });
   };
@@ -178,12 +178,9 @@ export function ProductSelector({
           <Button
             title={'Select Locations'}
             onPress={() =>
-              router.push('LocationSelector', {
-                selection: {
-                  type: 'toggle',
-                  onSelection: setInventoryLocationIds,
-                  initialSelection: inventoryLocationIds,
-                },
+              router.push('MultiLocationSelector', {
+                initialSelection: inventoryLocationIds,
+                onSelect: locations => setInventoryLocationIds(locations.map(location => location.id)),
               })
             }
           />

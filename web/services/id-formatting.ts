@@ -3,6 +3,7 @@ import { db } from './db/db.js';
 import { useClient } from './db/client.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { getCount } from './counter/queries.js';
 
 type Formatters = Record<string, ({ shop }: { shop: string }) => Promise<string> | string>;
 
@@ -14,6 +15,8 @@ const baseFormatters: Formatters = {
   hour: () => new Date().getHours().toString(),
   minute: () => new Date().getMinutes().toString(),
 };
+
+// TODO: Migrate all of these to new counter table
 
 const workOrderFormatters: Formatters = {
   ...baseFormatters,
@@ -28,6 +31,16 @@ const purchaseOrderFormatters: Formatters = {
 const stockTransferFormatters: Formatters = {
   ...baseFormatters,
   id: ({ shop }) => getNextStockTransferIdForShop(shop).then(String),
+};
+
+const cycleCountFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getCount(`cycle-count.${shop}`).then(String),
+};
+
+const specialOrderFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getCount(`special-order.${shop}`).then(String),
 };
 
 async function applyFormatters<Arg>(
@@ -61,6 +74,16 @@ export async function getNewPurchaseOrderName(shop: string) {
 export async function getNewStockTransferName(shop: string) {
   const settings = await getShopSettings(shop);
   return await applyFormatters(settings.stockTransferIdFormat, stockTransferFormatters, { shop });
+}
+
+export async function getNewSpecialOrderName(shop: string): Promise<string> {
+  const settings = await getShopSettings(shop);
+  return await applyFormatters(settings.specialOrders.idFormat, specialOrderFormatters, { shop });
+}
+
+export async function getNewCycleCountName(shop: string) {
+  const settings = await getShopSettings(shop);
+  return await applyFormatters(settings.cycleCount.idFormat, cycleCountFormatters, { shop });
 }
 
 async function getNextWorkOrderIdForShop(shop: string) {

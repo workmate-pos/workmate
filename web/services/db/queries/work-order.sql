@@ -53,7 +53,8 @@ FROM "WorkOrder" wo
   woc."shopifyOrderLineItemId" = soli."lineItemId"
   )
        LEFT JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
-       LEFT JOIN "PurchaseOrderLineItem" poli ON soli."lineItemId" = poli."shopifyOrderLineItemId"
+       LEFT JOIN "SpecialOrderLineItem" spoli on soli."lineItemId" = spoli."shopifyOrderLineItemId"
+       LEFT JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
 WHERE wo.shop = :shop!
   AND wo.status = COALESCE(:status, wo.status)
   AND wo."dueDate" >= COALESCE(:afterDueDate, wo."dueDate")

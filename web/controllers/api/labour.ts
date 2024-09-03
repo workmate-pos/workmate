@@ -81,8 +81,8 @@ export default class LabourController {
 
     if (submission.status !== 'success') {
       return res.status(200).json({
-        type: 'submission-result',
         submissionResult: submission.reply(),
+        labour: null,
       });
     }
 
@@ -170,7 +170,7 @@ export default class LabourController {
       }
 
       return res.json({
-        type: 'success',
+        submissionResult: submission.reply(),
         labour,
       });
     } else {
@@ -196,7 +196,7 @@ export default class LabourController {
       }
 
       return res.json({
-        type: 'success',
+        submissionResult: submission.reply(),
         labour,
       });
     }
@@ -223,12 +223,7 @@ export type GetLabourResponse = {
   labour: ParsedMetaobject<'$app:hourly-labour-charge' | '$app:fixed-price-labour-charge'> | null;
 };
 
-export type UpsertLabourResponse =
-  | {
-      type: 'submission-result';
-      submissionResult: SubmissionResult;
-    }
-  | {
-      type: 'success';
-      labour: ParsedMetaobject<'$app:hourly-labour-charge' | '$app:fixed-price-labour-charge'>;
-    };
+export type UpsertLabourResponse = {
+  submissionResult: SubmissionResult;
+  labour: ParsedMetaobject<'$app:hourly-labour-charge' | '$app:fixed-price-labour-charge'> | null;
+};

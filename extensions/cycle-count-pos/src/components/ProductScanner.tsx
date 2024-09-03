@@ -6,7 +6,6 @@ import {
   useStatefulSubscribableScannerData,
 } from '@shopify/retail-ui-extensions-react';
 import { useRouter } from '../routes.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useEffect, useState } from 'react';
 import { useProductVariantByBarcodeQueries } from '@work-orders/common/queries/use-product-variant-by-barcode-query.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -14,6 +13,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 
 /**
  * Component that handles product scanning.
@@ -21,7 +21,13 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
  * Displays whether a scanner has been found or not.
  * Allows for opening the camera if present.
  */
-export function ProductScanner({ onProductScanned }: { onProductScanned: (productVariantId: ID) => void }) {
+export function ProductScanner({
+  onProductScanned,
+  disabled = false,
+}: {
+  onProductScanned: (productVariant: ProductVariant) => void;
+  disabled?: boolean;
+}) {
   const sources = useScannerSourcesSubscription();
 
   const noSourcesAvailableText = sources.length === 0 ? <Text color={'TextCritical'}>No scanners found</Text> : null;
@@ -30,7 +36,7 @@ export function ProductScanner({ onProductScanned }: { onProductScanned: (produc
 
   // TODO: Banner in camera somehow?
   const openCameraButton = sources.includes('camera') ? (
-    <Button title={'Open Camera'} onPress={() => router.push('Camera', {})} />
+    <Button title={'Open Camera'} isDisabled={disabled} onPress={() => router.push('Camera', {})} />
   ) : null;
 
   const scannerDataSubscribable = useStatefulSubscribableScannerData();
@@ -67,7 +73,7 @@ export function ProductScanner({ onProductScanned }: { onProductScanned: (produc
           return false;
         }
 
-        onProductScanned(query.data.id);
+        onProductScanned(query.data);
         const name = getProductVariantName(query.data) ?? 'Unknown Product';
         toast.show(`Scanned ${name}`);
         return false;

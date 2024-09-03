@@ -55,14 +55,6 @@ ON CONFLICT ("lineItemId") DO UPDATE
       "totalTax"            = EXCLUDED."totalTax",
       "discountedUnitPrice" = EXCLUDED."discountedUnitPrice";
 
-/*
-  @name removeLineItemsByIds
-  @param lineItemIds -> (...)
-*/
-DELETE
-FROM "ShopifyOrderLineItem"
-WHERE "lineItemId" IN :lineItemIds!;
-
 /* @name getRelatedWorkOrdersByShopifyOrderId */
 SELECT DISTINCT "WorkOrder"."id", "WorkOrder".name
 FROM "ShopifyOrder"
@@ -91,8 +83,10 @@ WHERE wo.id = :workOrderId!;
 SELECT DISTINCT "ShopifyOrder".*
 FROM "ShopifyOrder"
        INNER JOIN "ShopifyOrderLineItem" ON "ShopifyOrder"."orderId" = "ShopifyOrderLineItem"."orderId"
+       INNER JOIN "SpecialOrderLineItem"
+                  ON "ShopifyOrderLineItem"."lineItemId" = "SpecialOrderLineItem"."shopifyOrderLineItemId"
        INNER JOIN "PurchaseOrderLineItem"
-                  ON "ShopifyOrderLineItem"."lineItemId" = "PurchaseOrderLineItem"."shopifyOrderLineItemId"
+                  ON "SpecialOrderLineItem"."id" = "PurchaseOrderLineItem"."specialOrderLineItemId"
 WHERE "PurchaseOrderLineItem"."purchaseOrderId" = :purchaseOrderId!;
 
 /*

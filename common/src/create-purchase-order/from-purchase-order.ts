@@ -1,14 +1,14 @@
-import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 
-export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: PurchaseOrder): CreatePurchaseOrder {
+export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: DetailedPurchaseOrder): CreatePurchaseOrder {
   return {
     lineItems: purchaseOrder.lineItems.map(lineItem => ({
       uuid: lineItem.uuid,
-      shopifyOrderLineItem: lineItem.shopifyOrderLineItem
+      specialOrderLineItem: lineItem.specialOrderLineItem
         ? {
-            id: lineItem.shopifyOrderLineItem.id,
-            orderId: lineItem.shopifyOrderLineItem.order.id,
+            name: lineItem.specialOrderLineItem.name,
+            uuid: lineItem.specialOrderLineItem.uuid,
           }
         : null,
       availableQuantity: lineItem.availableQuantity,

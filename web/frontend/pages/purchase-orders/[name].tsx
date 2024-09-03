@@ -41,12 +41,10 @@ import { PurchaseOrderEmployeesCard } from '@web/frontend/components/purchase-or
 import { PurchaseOrderProductsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderProductsCard.js';
 import { PurchaseOrderSummary } from '@web/frontend/components/purchase-orders/PurchaseOrderSummary.js';
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
-import { AddOrderProductModal } from '@web/frontend/components/purchase-orders/modals/AddOrderProductModal.js';
 import { Int } from '@web/schemas/generated/create-product.js';
-import type { PurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
+import type { DetailedPurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
-import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 
@@ -201,7 +199,6 @@ function PurchaseOrder({
   const [isLocationSelectorModalOpen, setIsLocationSelectorModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
-  const [isAddOrderProductModalOpen, setIsAddOrderProductModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   if (!settingsQuery.data) {
@@ -298,7 +295,7 @@ function PurchaseOrder({
 
             setIsAddProductModalOpen(true);
           }}
-          onAddOrderProductClick={() => {
+          onAddSpecialOrderProductClick={() => {
             if (!createPurchaseOrder.locationId) {
               setToastAction({ content: 'You must select a location to add products' });
               return;
@@ -309,7 +306,7 @@ function PurchaseOrder({
               return;
             }
 
-            setIsAddOrderProductModalOpen(true);
+            setToastAction({ content: 'Not implemented yet' });
           }}
           onMarkAllAsNotReceivedClick={() => {
             for (const product of createPurchaseOrder.lineItems) {
@@ -441,20 +438,12 @@ function PurchaseOrder({
         <AddProductModal
           outputType="PURCHASE_ORDER"
           productType="PRODUCT"
+          createPurchaseOrder={createPurchaseOrder}
           open={isAddProductModalOpen}
           locationId={createPurchaseOrder.locationId}
+          vendorName={createPurchaseOrder.vendorName}
           setToastAction={setToastAction}
           onClose={() => setIsAddProductModalOpen(false)}
-          vendorName={createPurchaseOrder.vendorName}
-          onAdd={products => dispatch.addProducts({ products })}
-        />
-      )}
-
-      {isAddOrderProductModalOpen && (
-        <AddOrderProductModal
-          open={isAddOrderProductModalOpen}
-          setToastAction={setToastAction}
-          onClose={() => setIsAddOrderProductModalOpen(false)}
           onAdd={products => dispatch.addProducts({ products })}
         />
       )}

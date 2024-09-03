@@ -14,7 +14,6 @@ import {
   WorkOrderLabourCharge,
 } from '@work-orders/work-order-shopify-order';
 import { getShopSettings } from '../settings.js';
-import { db } from '../db/db.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull, isLineItemId } from '../../util/assertions.js';
@@ -37,9 +36,10 @@ import {
   getWorkOrderItems,
   WorkOrder,
 } from './queries.js';
+import { UUID } from '../../util/types.js';
 
-export type SelectedItem = { uuid: string };
-export type SelectedCharge = { uuid: string };
+export type SelectedItem = { uuid: UUID };
+export type SelectedCharge = { uuid: UUID };
 
 /**
  * Plan an order for some items and charges of a work order.
@@ -288,6 +288,7 @@ export async function getDraftOrderInputForWorkOrder(
         customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
         originalUnitPrice: customSale.unitPrice,
         taxable: customSale.taxable,
+        requiresShipping: false,
       })),
     ],
     note,

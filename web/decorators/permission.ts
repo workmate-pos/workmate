@@ -89,7 +89,6 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     assertMoneyOrNull(employee.rate);
 
     if (!doesSuperuserExist) {
-      console.log('creating superuser xddddd', employee);
       [employee = never('just made it')] = await db.employee.upsert({
         shop: session.shop,
         staffMemberId: employee.staffMemberId,

@@ -15,7 +15,7 @@
     "itemUuids": {
       "type": "array",
       "items": {
-        "type": "string"
+        "$ref": "scalars.json#/definitions/UUID"
       }
     },
     "chargeTypes": {
@@ -27,7 +27,7 @@
     "chargeUuids": {
       "type": "array",
       "items": {
-        "type": "string"
+        "$ref": "scalars.json#/definitions/UUID"
       }
     }
   },

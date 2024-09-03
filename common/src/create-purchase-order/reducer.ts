@@ -109,7 +109,8 @@ function shouldMergeProducts(a: Product, b: Product) {
   // we only merge into a if a and b both have not been received yet. if a has received the unit price is locked, which we don't want after merging
   return (
     a.productVariantId === b.productVariantId &&
-    a.shopifyOrderLineItem?.id === b.shopifyOrderLineItem?.id &&
+    a.specialOrderLineItem?.name === b.specialOrderLineItem?.name &&
+    a.specialOrderLineItem?.uuid === b.specialOrderLineItem?.uuid &&
     a.availableQuantity === 0 &&
     b.availableQuantity === 0
   );

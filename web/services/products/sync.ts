@@ -2,9 +2,11 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
 import { Session } from '@shopify/shopify-api';
-import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unit } from '../db/unit-of-work.js';
+import { createIsStaleFn } from '../../util/db.js';
+import { HOUR_IN_MS } from '@work-orders/common/time/constants.js';
 
 export async function ensureProductsExist(session: Session, productIds: ID[]) {
   if (productIds.length === 0) {
@@ -66,6 +68,7 @@ export async function upsertProducts(shop: string, products: gql.products.Databa
         description: product.description,
         productType: product.productType,
         handle: product.handle,
+        vendor: product.vendor,
         productId: product.id,
         title: product.title,
         shop,

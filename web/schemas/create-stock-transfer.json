@@ -21,7 +21,7 @@
         "type": "object",
         "properties": {
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           },
           "inventoryItemId": {
             "$ref": "scalars.json#/definitions/ID"
@@ -38,9 +38,54 @@
           "status": {
             "title": "create-stock-transfer-line-item-status",
             "enum": ["PENDING", "IN_TRANSIT", "RECEIVED", "REJECTED"]
+          },
+          "shopifyOrderLineItem": {
+            "anyOf": [
+              { "const": null },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "$ref": "scalars.json#/definitions/ID"
+                  },
+                  "orderId": {
+                    "$ref": "scalars.json#/definitions/ID"
+                  }
+                },
+                "required": ["id", "orderId"],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "purchaseOrderLineItem": {
+            "anyOf": [
+              { "const": null },
+              {
+                "type": "object",
+                "properties": {
+                  "purchaseOrderName": {
+                    "type": "string"
+                  },
+                  "uuid": {
+                    "$ref": "scalars.json#/definitions/UUID"
+                  }
+                },
+                "required": ["purchaseOrderName", "uuid"],
+                "additionalProperties": false
+              }
+            ]
           }
         },
-        "required": ["uuid", "inventoryItemId", "productTitle", "productVariantTitle", "quantity", "status"],
+        "required": [
+          "uuid",
+          "inventoryItemId",
+          "productTitle",
+          "productVariantTitle",
+          "quantity",
+          "status",
+          "shopifyOrderLineItem",
+          "purchaseOrderLineItem"
+        ],
         "additionalProperties": false
       }
     }

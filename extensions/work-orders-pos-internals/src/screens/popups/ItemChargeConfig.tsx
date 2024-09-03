@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { CreateWorkOrderCharge } from '../../types.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { uuid } from '../../util/uuid.js';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import {
   hasNestedPropertyValue,
   hasNonNullableProperty,
@@ -29,13 +29,14 @@ import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { UUID } from '@web/util/types.js';
 
 export function ItemChargeConfig({
   item: { uuid: itemUuid },
   createWorkOrder,
   dispatch,
 }: {
-  item: { uuid: string };
+  item: { uuid: UUID };
   createWorkOrder: WIPCreateWorkOrder;
   dispatch: CreateWorkOrderDispatchProxy;
 }) {
@@ -233,7 +234,7 @@ export function ItemChargeConfig({
             charge={generalLabourCharge}
             onChange={charge =>
               charge !== null
-                ? setGeneralLabourCharge({ ...charge, uuid: uuid(), employeeId: null })
+                ? setGeneralLabourCharge({ ...charge, uuid: uuid() as UUID, employeeId: null })
                 : setGeneralLabourCharge(null)
             }
           />
@@ -246,30 +247,39 @@ export function ItemChargeConfig({
                   title={'Add employees'}
                   type={'primary'}
                   onPress={() =>
-                    router.push('EmployeeSelector', {
-                      selected: employeeLabourCharges.map(e => e.employeeId),
+                    router.push('MultiEmployeeSelector', {
+                      initialSelection: employeeLabourCharges.map(e => e.employeeId),
                       disabled: employeeLabourCharges
                         .filter(charge => !!calculatedDraftOrderQuery.getChargeLineItem(charge)?.order)
                         .map(e => e.employeeId),
-                      onSelect: employeeId => {
-                        setHasUnsavedChanges(true);
+                      onSelect: employees => {
+                        let changed = false;
+                        setEmployeeLabourCharges(current => {
+                          const currentEmployeeIds = current.map(e => e.employeeId);
+                          const selectedEmployeeIds = employees.map(e => e.id);
+                          const newEmployeeIds = selectedEmployeeIds.filter(id => !currentEmployeeIds.includes(id));
 
-                        const defaultLabourCharge = {
-                          employeeId,
-                          type: 'fixed-price-labour',
-                          uuid: uuid(),
-                          name: settings?.labourLineItemName || 'Labour',
-                          amount: BigDecimal.ZERO.toMoney(),
-                          workOrderItemUuid: item.uuid,
-                          amountLocked: false,
-                          removeLocked: false,
-                        } as const;
+                          changed ||= newEmployeeIds.length > 0;
+                          changed ||= currentEmployeeIds.length !== selectedEmployeeIds.length;
 
-                        setEmployeeLabourCharges(current => [...current, defaultLabourCharge]);
-                      },
-                      onDeselect: employeeId => {
-                        setHasUnsavedChanges(true);
-                        setEmployeeLabourCharges(current => current.filter(l => l.employeeId !== employeeId));
+                          return [
+                            ...newEmployeeIds.map(
+                              employeeId =>
+                                ({
+                                  employeeId,
+                                  type: 'fixed-price-labour',
+                                  uuid: uuid() as UUID,
+                                  name: settings?.labourLineItemName || 'Labour',
+                                  amount: BigDecimal.ZERO.toMoney(),
+                                  workOrderItemUuid: item.uuid,
+                                  amountLocked: false,
+                                  removeLocked: false,
+                                }) as const,
+                            ),
+                            ...current.filter(charge => selectedEmployeeIds.includes(charge.employeeId)),
+                          ];
+                        });
+                        setHasUnsavedChanges(changed);
                       },
                     })
                   }
@@ -377,7 +387,7 @@ function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOr
     // pos only supports setting one general labour, so just use the total as fixed price
     return {
       type: 'fixed-price-labour',
-      uuid: uuid(),
+      uuid: uuid() as UUID,
       employeeId: null,
       name: generalLabours[0]!.name,
       amount: getTotalPriceForCharges(generalLabours),

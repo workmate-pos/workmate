@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { fetchAllPages, gql } from '../gql/gql.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getChargeUnitPrice, getUuidsFromCustomAttributes } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { db } from '../db/db.js';
@@ -25,6 +25,7 @@ import { randomBytes } from 'node:crypto';
 import { Int, type String } from '../gql/queries/generated/schema.js';
 import { getDraftOrderInputForWorkOrder } from './draft-order.js';
 import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.js';
+import { UUID } from '../../util/types.js';
 
 type CalculateWorkOrderResult = {
   outstanding: Money;
@@ -276,7 +277,7 @@ async function getExistingOrderInfo(session: Session, name: string) {
       ...data,
       uuid,
       shopifyOrderLineItemId,
-      workOrderItemUuid,
+      workOrderItemUuid: workOrderItemUuid as UUID | null,
     }));
 
   for (const item of items) {
@@ -352,8 +353,8 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
   }
 
   const graphql = new Graphql(session);
-  const result = await gql.calculate.draftOrderCalculate.run(graphql, { input: draftOrderInput });
 
+  const result = await gql.calculate.draftOrderCalculate.run(graphql, { input: draftOrderInput });
   if (!result.draftOrderCalculate?.calculatedDraftOrder) {
     throw new HttpError('Calculation failed', 400);
   }

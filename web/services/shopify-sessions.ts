@@ -1,8 +1,8 @@
 import { TeifiSessionStorage } from '@teifi-digital/shopify-app-express';
-import { ShopifySession } from '@prisma/client';
 import { Session } from '@shopify/shopify-api';
 import { db } from './db/db.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { IGetResult as ShopifySession } from './db/queries/generated/shopify-session.sql.js';
 
 export class ShopifySessionStorage implements TeifiSessionStorage {
   deleteSession(id: string): Promise<boolean> {

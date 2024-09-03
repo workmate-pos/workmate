@@ -14,7 +14,12 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { getPurchaseOrderBadges } from '../util/badges.js';
+import {
+  getPurchaseOrderBadges,
+  getReservationBadges,
+  getSpecialOrderBadges,
+  getTransferOrderBadges,
+} from '../util/badges.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
@@ -106,18 +111,14 @@ export function Entry() {
   );
 }
 
-function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number][]): ListRow[] {
+function useWorkOrderRows(workOrders: FetchWorkOrderInfoPageResponse[number][]): ListRow[] {
   const currencyFormatter = useCurrencyFormatter();
   const fetch = useAuthenticatedFetch();
 
   const workOrderQueries = useWorkOrderQueries(
-    { fetch, names: workOrderInfos.map(({ name }) => name) },
-    { staleTime: 30 * SECOND_IN_MS },
+    { fetch, names: workOrders.map(({ name }) => name) },
+    { staleTime: 0, enabled: false },
   );
-
-  const workOrders = Object.values(workOrderQueries)
-    .map(query => query.data?.workOrder)
-    .filter(isNonNullable);
 
   const calculateWorkOrderQueries = useCalculateWorkOrderQueries({
     fetch,
@@ -137,17 +138,30 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
     })),
   });
 
-  const customerIds = unique(workOrderInfos.map(info => info.customerId));
+  const customerIds = unique(workOrders.map(info => info.customerId));
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
 
   const router = useRouter();
+  const screen = useScreen();
 
-  return workOrders.flatMap<ListRow>(workOrder => {
+  screen.setIsLoading(Object.values(workOrderQueries).some(query => query.isRefetching));
+
+  return workOrders.map<ListRow>(workOrder => {
     const workOrderQuery = workOrderQueries[workOrder.name];
     const customerQuery = customerQueries[workOrder.customerId];
     const calculateWorkOrderQuery = calculateWorkOrderQueries[workOrder.name];
 
-    if (!workOrderQuery || !customerQuery || !calculateWorkOrderQuery) return [];
+    if (!workOrderQuery || !customerQuery || !calculateWorkOrderQuery)
+      return {
+        id: workOrder.name,
+        onPress: () => {},
+        leftSide: {
+          label: workOrder.name,
+        },
+        rightSide: {
+          label: 'Loading...',
+        },
+      };
 
     const customer = customerQuery.data;
     const calculation = calculateWorkOrderQuery.data;
@@ -185,9 +199,11 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
       calculation &&
       BigDecimal.fromMoney(calculation.outstanding).compare(BigDecimal.ZERO) > 0;
 
-    const purchaseOrders = workOrder.items
-      .filter(hasPropertyValue('type', 'product'))
-      .flatMap(item => item.purchaseOrders);
+    const products = workOrder.items.filter(hasPropertyValue('type', 'product'));
+    const reservations = products.flatMap(item => item.reservations);
+    const transferOrders = products.flatMap(item => item.transferOrders);
+    const specialOrders = products.flatMap(item => item.specialOrders);
+    const purchaseOrders = products.flatMap(item => item.purchaseOrders);
 
     return {
       id: workOrder.name,
@@ -209,7 +225,10 @@ function useWorkOrderRows(workOrderInfos: FetchWorkOrderInfoPageResponse[number]
             { variant: 'warning', text: `Due ${dueDateString}` },
             isOverdue ? ({ variant: 'critical', text: 'Overdue' } as const) : undefined,
             financialStatus ? ({ variant: 'highlight', text: financialStatus } as const) : undefined,
-            ...getPurchaseOrderBadges(purchaseOrders, false),
+            ...getReservationBadges(reservations, true),
+            ...getTransferOrderBadges(transferOrders, true),
+            ...getSpecialOrderBadges(specialOrders, true),
+            ...getPurchaseOrderBadges(purchaseOrders, true),
           ] as const
         ).filter(isNonNullable),
       },

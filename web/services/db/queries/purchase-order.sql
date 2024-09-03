@@ -7,12 +7,13 @@ WITH "CustomFieldFilters" AS (SELECT row_number() over () as row, key, val, inve
 SELECT DISTINCT po.id, po.name
 FROM "PurchaseOrder" po
        LEFT JOIN "PurchaseOrderLineItem" poli ON po.id = poli."purchaseOrderId"
+       LEFT JOIN "SpecialOrderLineItem" spoli ON poli."specialOrderLineItemId" = spoli.id
        LEFT JOIN "ProductVariant" pv ON poli."productVariantId" = pv."productVariantId"
        LEFT JOIN "Product" p ON pv."productId" = p."productId"
        LEFT JOIN "PurchaseOrderEmployeeAssignment" poea ON po.id = poea."purchaseOrderId"
        LEFT JOIN "Employee" e ON poea."employeeId" = e."staffMemberId"
        LEFT JOIN "Location" l ON po."locationId" = l."locationId"
-       LEFT JOIN "ShopifyOrderLineItem" soli ON poli."shopifyOrderLineItemId" = soli."lineItemId"
+       LEFT JOIN "ShopifyOrderLineItem" soli ON spoli."shopifyOrderLineItemId" = soli."lineItemId"
        LEFT JOIN "ShopifyOrder" so ON soli."orderId" = so."orderId"
        LEFT JOIN "Customer" c ON so."customerId" = c."customerId"
        LEFT JOIN "WorkOrderItem" woi ON soli."lineItemId" = woi."shopifyOrderLineItemId"
@@ -49,60 +50,6 @@ WHERE po.shop = :shop!
 ORDER BY po.id DESC
 LIMIT :limit! OFFSET :offset;
 
-/* @name get */
-SELECT *
-FROM "PurchaseOrder"
-WHERE id = COALESCE(:id, id)
-  AND shop = COALESCE(:shop, shop)
-  AND name = COALESCE(:name, name);
-
-/*
-  @name getMany
-  @param purchaseOrderIds -> (...)
-*/
-SELECT *
-FROM "PurchaseOrder"
-WHERE id IN :purchaseOrderIds!;
-
-/* @name upsert */
-INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
-                             "shipTo", note, "vendorName", "placedDate")
-VALUES (:shop!, :locationId, :discount, :tax, :shipping, :deposited, :paid, :name!, :status!, :shipFrom!, :shipTo!,
-        :note!, :vendorName, :placedDate)
-ON CONFLICT (shop, name) DO UPDATE
-  SET "shipFrom"   = EXCLUDED."shipFrom",
-      "shipTo"     = EXCLUDED."shipTo",
-      "locationId" = EXCLUDED."locationId",
-      note         = EXCLUDED.note,
-      discount     = EXCLUDED.discount,
-      tax          = EXCLUDED.tax,
-      shipping     = EXCLUDED.shipping,
-      deposited    = EXCLUDED.deposited,
-      paid         = EXCLUDED.paid,
-      status       = EXCLUDED.status,
-      "vendorName" = EXCLUDED."vendorName",
-      "placedDate" = EXCLUDED."placedDate"
-RETURNING id;
-
-/* @name getLineItems */
-SELECT *
-FROM "PurchaseOrderLineItem"
-WHERE "purchaseOrderId" = :purchaseOrderId!;
-
-/*
-  @name getLineItemsByUuids
-  @param uuids -> (...)
-*/
-SELECT *
-FROM "PurchaseOrderLineItem"
-WHERE uuid IN :uuids!
-  AND "purchaseOrderId" = :purchaseOrderId!;
-
-/* @name getCustomFields */
-SELECT *
-FROM "PurchaseOrderCustomField"
-WHERE "purchaseOrderId" = :purchaseOrderId!;
-
 /* @name getCommonCustomFieldsForShop */
 SELECT DISTINCT key, COUNT(*)
 FROM "PurchaseOrderCustomField"
@@ -113,95 +60,12 @@ GROUP BY key
 ORDER BY COUNT(*)
 LIMIT :limit! OFFSET :offset!;
 
-/* @name insertLineItemCustomField */
-INSERT INTO "PurchaseOrderLineItemCustomField" ("purchaseOrderId", "purchaseOrderLineItemUuid", key, value)
-VALUES (:purchaseOrderId!, :purchaseOrderLineItemUuid!, :key!, :value!);
-
-/* @name removeLineItemCustomFields */
-DELETE
-FROM "PurchaseOrderLineItemCustomField"
-WHERE "purchaseOrderId" = :purchaseOrderId!;
-
-/* @name getLineItemCustomFields */
-SELECT *
-FROM "PurchaseOrderLineItemCustomField"
-WHERE "purchaseOrderId" = :purchaseOrderId!;
-
-/* @name getAssignedEmployees */
-SELECT *
-FROM "PurchaseOrderEmployeeAssignment"
-WHERE "purchaseOrderId" = :purchaseOrderId!;
-
-/* @name removeLineItems */
-DELETE
-FROM "PurchaseOrderLineItem"
-WHERE "purchaseOrderId" = :purchaseOrderId!;
-
-/*
-  @name removeLineItemsByUuids
-  @param uuids -> (...)
-*/
-DELETE
-FROM "PurchaseOrderLineItem"
-WHERE uuid IN :uuids!
-  AND "purchaseOrderId" = :purchaseOrderId!;
-
-/* @name removeCustomFields */
-DELETE
-FROM "PurchaseOrderCustomField"
-WHERE "purchaseOrderId" = :purchaseOrderId!;
-
-/* @name removeAssignedEmployees */
-DELETE
-FROM "PurchaseOrderEmployeeAssignment"
-WHERE "purchaseOrderId" = :purchaseOrderId!;
-
-/* @name upsertLineItem */
-INSERT INTO "PurchaseOrderLineItem" (uuid, "purchaseOrderId", "productVariantId", "shopifyOrderLineItemId", quantity,
-                                     "availableQuantity", "unitCost")
-VALUES (:uuid!, :purchaseOrderId!, :productVariantId!, :shopifyOrderLineItemId, :quantity!, :availableQuantity!,
-        :unitCost!)
-ON CONFLICT ("purchaseOrderId", uuid)
-  DO UPDATE
-  SET "productVariantId"       = EXCLUDED."productVariantId",
-      "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
-      quantity                 = EXCLUDED.quantity,
-      "availableQuantity"      = EXCLUDED."availableQuantity",
-      "unitCost"               = EXCLUDED."unitCost";
-
-/* @name setLineItemShopifyOrderLineItemId */
-UPDATE "PurchaseOrderLineItem"
-SET "shopifyOrderLineItemId" = :shopifyOrderLineItemId
-WHERE uuid = :uuid!
-AND "purchaseOrderId" = :purchaseOrderId!;
-
-/* @name insertCustomField */
-INSERT INTO "PurchaseOrderCustomField" ("purchaseOrderId", key, value)
-VALUES (:purchaseOrderId!, :key!, :value!);
-
-/* @name insertAssignedEmployee */
-INSERT INTO "PurchaseOrderEmployeeAssignment" ("purchaseOrderId", "employeeId")
-VALUES (:purchaseOrderId!, :employeeId!);
-
 /* @name getProductVariantCostsForShop */
 SELECT "unitCost", "quantity"
 FROM "PurchaseOrderLineItem"
        INNER JOIN "PurchaseOrder" po ON "purchaseOrderId" = po.id
 WHERE po.shop = :shop!
   AND "productVariantId" = :productVariantId!;
-
-/* @name getPurchaseOrderLineItemsByShopifyOrderLineItemId */
-SELECT *
-FROM "PurchaseOrderLineItem"
-WHERE "shopifyOrderLineItemId" = :shopifyOrderLineItemId!;
-
-/*
-  @name getPurchaseOrderLineItemsByShopifyOrderLineItemIds
-  @param shopifyOrderLineItemIds -> (...)
-*/
-SELECT *
-FROM "PurchaseOrderLineItem"
-WHERE "shopifyOrderLineItemId" IN :shopifyOrderLineItemIds!;
 
 /*
   @name getLinkedPurchaseOrdersByShopifyOrderIds
@@ -210,7 +74,8 @@ WHERE "shopifyOrderLineItemId" IN :shopifyOrderLineItemIds!;
 SELECT DISTINCT po.*
 FROM "ShopifyOrder" so
        INNER JOIN "ShopifyOrderLineItem" soli USING ("orderId")
-       INNER JOIN "PurchaseOrderLineItem" poli ON poli."shopifyOrderLineItemId" = soli."lineItemId"
+       INNER JOIN "SpecialOrderLineItem" spoli ON spoli."shopifyOrderLineItemId" = soli."lineItemId"
+       INNER JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
        INNER JOIN "PurchaseOrder" po ON po.id = poli."purchaseOrderId"
 WHERE so."orderId" in :shopifyOrderIds!;
 

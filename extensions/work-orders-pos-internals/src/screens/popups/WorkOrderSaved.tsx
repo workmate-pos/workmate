@@ -2,6 +2,8 @@ import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-r
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
+import { getUnsourcedWorkOrderItems } from './WorkOrderItemSourcing.js';
+import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 
 export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) {
   const title = `Work order ${workOrder.name} saved`;
@@ -10,6 +12,8 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
   const screen = useScreen();
   screen.setTitle(title);
 
+  const hasUnsourcedItems = getUnsourcedWorkOrderItems(workOrder).length > 0;
+
   return (
     <ScrollView>
       <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
@@ -17,19 +21,26 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
           <Text variant={'headingLarge'}>{title}</Text>
         </Stack>
       </Stack>
-      <Stack direction={'vertical'} alignment={'center'} paddingVertical={'ExtraLarge'}>
-        <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'} flexChildren>
-          <Button title={'Back to work order'} onPress={() => router.popCurrent()} />
+      <ResponsiveGrid columns={2}>
+        <Button title={'Back to work order'} onPress={() => router.popCurrent()} />
 
+        <Button
+          title={'Manage payments'}
+          onPress={async () => {
+            await router.popCurrent();
+            router.push('PaymentOverview', { name: workOrder.name });
+          }}
+        />
+        {hasUnsourcedItems && (
           <Button
-            title={'Manage payments'}
+            title={'Sourcing'}
             onPress={async () => {
               await router.popCurrent();
-              router.push('PaymentOverview', { name: workOrder.name });
+              router.push('WorkOrderItemSourcing', { name: workOrder.name });
             }}
           />
-        </Stack>
-      </Stack>
+        )}
+      </ResponsiveGrid>
     </ScrollView>
   );
 }

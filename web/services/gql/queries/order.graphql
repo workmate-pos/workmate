@@ -204,3 +204,16 @@ mutation updateCustomAttributes($id: ID!, $customAttributes: [AttributeInput!]!)
     }
   }
 }
+
+query getFulfillmentOrders($id: ID!) {
+  order(id: $id) {
+    fulfillmentOrders(first: 250) {
+      nodes {
+        id
+      }
+      pageInfo {
+        hasNextPage
+      }
+    }
+  }
+}

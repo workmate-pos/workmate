@@ -3,7 +3,7 @@ import { WorkOrderChargeData } from './charges.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { WorkOrderItemData } from './items.js';
 import { assertGidOrNull } from '../../util/assertions.js';
-import { MergeUnion } from '../../util/types.js';
+import { MergeUnion, UUID } from '../../util/types.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
@@ -36,13 +36,37 @@ export async function getWorkOrder(filters: MergeUnion<{ id: number } | { shop: 
     FROM "WorkOrder"
     WHERE shop = COALESCE(${filters?.shop ?? null}, shop)
       AND name = COALESCE(${filters?.name ?? null}, name)
-      AND id = COALESCE(${filters?.id ?? null}, id);
-  `;
+      AND id = COALESCE(${filters?.id ?? null}, id);`;
 
   if (!workOrder) {
     return null;
   }
 
+  return mapWorkOrder(workOrder);
+}
+
+function mapWorkOrder<
+  T extends {
+    id: number;
+    shop: string;
+    name: string;
+    customerId: string;
+    derivedFromOrderId: string | null;
+    dueDate: Date;
+    note: string;
+    status: string;
+    updatedAt: Date;
+    createdAt: Date;
+    discountAmount: string | null;
+    discountType: 'FIXED_AMOUNT' | 'PERCENTAGE' | null;
+    internalNote: string;
+    companyId: string | null;
+    companyLocationId: string | null;
+    companyContactId: string | null;
+    paymentFixedDueDate: Date | null;
+    paymentTermsTemplateId: string | null;
+  },
+>(workOrder: T) {
   const { customerId, derivedFromOrderId, companyId, companyLocationId, companyContactId, paymentTermsTemplateId } =
     workOrder;
 
@@ -72,9 +96,9 @@ export async function getWorkOrder(filters: MergeUnion<{ id: number } | { shop: 
 export async function getWorkOrderCharges(workOrderId: number) {
   const charges = await sql<{
     workOrderId: number;
-    uuid: string;
+    uuid: UUID;
     shopifyOrderLineItemId: string | null;
-    workOrderItemUuid: string | null;
+    workOrderItemUuid: UUID | null;
     data: unknown;
     createdAt: Date;
     updatedAt: Date;
@@ -94,7 +118,7 @@ export async function getWorkOrderCharges(workOrderId: number) {
 
 function mapWorkOrderCharge(charge: {
   workOrderId: number;
-  uuid: string;
+  uuid: UUID;
   shopifyOrderLineItemId: string | null;
   workOrderItemUuid: string | null;
   data: unknown;
@@ -104,13 +128,17 @@ function mapWorkOrderCharge(charge: {
   const { shopifyOrderLineItemId } = charge;
   assertGidOrNull(shopifyOrderLineItemId);
   const data = WorkOrderChargeData.parse(charge.data);
-  return { ...charge, shopifyOrderLineItemId, data };
+  return {
+    ...charge,
+    shopifyOrderLineItemId,
+    data,
+  };
 }
 
 export async function getWorkOrderItems(workOrderId: number) {
   const items = await sql<{
     workOrderId: number;
-    uuid: string;
+    uuid: UUID;
     shopifyOrderLineItemId: string | null;
     data: unknown;
     createdAt: Date;
@@ -131,7 +159,7 @@ export async function getWorkOrderItems(workOrderId: number) {
 
 function mapWorkOrderItem(item: {
   workOrderId: number;
-  uuid: string;
+  uuid: UUID;
   shopifyOrderLineItemId: string | null;
   data: unknown;
   createdAt: Date;
@@ -147,7 +175,7 @@ export async function getWorkOrderItemCustomFields(workOrderId: number) {
   return await sql<{
     id: number;
     workOrderId: number;
-    workOrderItemUuid: string;
+    workOrderItemUuid: UUID;
     key: string;
     value: string;
     createdAt: Date;
@@ -169,7 +197,7 @@ export async function getWorkOrderCustomFields(workOrderId: number) {
 export async function getWorkOrderItemsByUuids({ workOrderId, uuids }: { workOrderId: number; uuids: string[] }) {
   const items = await sql<{
     workOrderId: number;
-    uuid: string;
+    uuid: UUID;
     shopifyOrderLineItemId: string | null;
     data: unknown;
     createdAt: Date;
@@ -192,9 +220,9 @@ export async function getWorkOrderItemsByUuids({ workOrderId, uuids }: { workOrd
 export async function getWorkOrderChargesByUuids({ workOrderId, uuids }: { workOrderId: number; uuids: string[] }) {
   const charges = await sql<{
     workOrderId: number;
-    uuid: string;
+    uuid: UUID;
     shopifyOrderLineItemId: string | null;
-    workOrderItemUuid: string | null;
+    workOrderItemUuid: UUID | null;
     data: unknown;
     createdAt: Date;
     updatedAt: Date;
@@ -216,7 +244,7 @@ export async function getWorkOrderChargesByUuids({ workOrderId, uuids }: { workO
 export async function upsertWorkOrderItems(
   items: {
     workOrderId: number;
-    uuid: string;
+    uuid: UUID;
     shopifyOrderLineItemId: ID | null;
     data: WorkOrderItemData;
   }[],
@@ -244,7 +272,7 @@ export async function upsertWorkOrderItems(
 export async function upsertWorkOrderCharges(
   charges: {
     workOrderId: number;
-    uuid: string;
+    uuid: UUID;
     shopifyOrderLineItemId: ID | null;
     workOrderItemUuid: string | null;
     data: WorkOrderChargeData;
@@ -295,7 +323,7 @@ export async function insertWorkOrderCustomFields(workOrderId: number, customFie
 
 export async function insertWorkOrderItemCustomFields(
   workOrderId: number,
-  customFields: { uuid: string; customFields: Record<string, string> }[],
+  customFields: { uuid: UUID; customFields: Record<string, string> }[],
 ) {
   const flatCustomFields = customFields.flatMap(({ uuid, customFields }) =>
     Object.entries(customFields).map(([key, value]) => ({ uuid, key, value })),
@@ -339,7 +367,7 @@ export async function removeWorkOrderCharges(workOrderId: number, uuids: string[
 
 export async function setWorkOrderItemShopifyOrderLineItemIds(
   workOrderId: number,
-  items: { uuid: string; shopifyOrderLineItemId: ID | null }[],
+  items: { uuid: UUID; shopifyOrderLineItemId: ID | null }[],
 ) {
   if (!isNonEmptyArray(items)) {
     return;
@@ -371,20 +399,21 @@ export async function setWorkOrderItemShopifyOrderLineItemIds(
 
 export async function setWorkOrderChargeShopifyOrderLineItemIds(
   workOrderId: number,
-  charges: { uuid: string; shopifyOrderLineItemId: ID | null }[],
+  charges: { uuid: UUID; shopifyOrderLineItemId: ID | null }[],
 ) {
   if (!isNonEmptyArray(charges)) {
     return;
   }
 
   const { shopifyOrderLineItemId, uuid } = nest(charges);
+  const _uuid: (string | null)[] = uuid;
   const _shopifyOrderLineItemId = shopifyOrderLineItemId as (string | null)[];
 
   const { count } = await sqlOne<{ count: number }>`
     WITH updated AS (
       UPDATE "WorkOrderCharge" x
         SET "shopifyOrderLineItemId" = y."shopifyOrderLineItemId"
-        FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
+        FROM UNNEST(${_shopifyOrderLineItemId} :: text[], ${_uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
         WHERE x."workOrderId" = ${workOrderId}
           AND x.uuid = y.uuid
         RETURNING 1)
@@ -399,4 +428,43 @@ export async function setWorkOrderChargeShopifyOrderLineItemIds(
     });
     throw new HttpError('Could not set shopify order line charge ids', 500);
   }
+}
+
+export async function getWorkOrdersForSpecialOrder(specialOrderId: number) {
+  const workOrders = await sql<{
+    id: number;
+    shop: string;
+    name: string;
+    customerId: string;
+    derivedFromOrderId: string | null;
+    dueDate: Date;
+    note: string;
+    status: string;
+    updatedAt: Date;
+    createdAt: Date;
+    discountAmount: string | null;
+    discountType: 'FIXED_AMOUNT' | 'PERCENTAGE' | null;
+    internalNote: string;
+    companyId: string | null;
+    companyLocationId: string | null;
+    companyContactId: string | null;
+    paymentFixedDueDate: Date | null;
+    paymentTermsTemplateId: string | null;
+    orderIds: string[] | null;
+  }>`
+    SELECT DISTINCT wo.*, array_agg(DISTINCT soli."orderId") AS "orderIds"
+    FROM "WorkOrder" wo
+           INNER JOIN "WorkOrderItem" woi ON woi."workOrderId" = wo.id
+           INNER JOIN "SpecialOrderLineItem" spoli ON spoli."shopifyOrderLineItemId" = woi."shopifyOrderLineItemId"
+           INNER JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = woi."shopifyOrderLineItemId"
+    WHERE spoli."specialOrderId" = ${specialOrderId}
+    GROUP BY wo.id;
+  `;
+
+  return workOrders.map(workOrder =>
+    mapWorkOrder({
+      ...workOrder,
+      orderIds: workOrder.orderIds?.map(orderId => (assertGid(orderId), orderId)) ?? [],
+    }),
+  );
 }

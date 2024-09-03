@@ -68,7 +68,7 @@
             "type": "object",
             "properties": {
               "uuid": {
-                "type": "string"
+                "$ref": "scalars.json#/definitions/UUID"
               },
               "quantity": {
                 "$ref": "scalars.json#/definitions/Int"
@@ -96,7 +96,7 @@
             "type": "object",
             "properties": {
               "uuid": {
-                "type": "string"
+                "$ref": "scalars.json#/definitions/UUID"
               },
               "quantity": {
                 "$ref": "scalars.json#/definitions/Int"
@@ -139,10 +139,10 @@
                 "const": "hourly-labour"
               },
               "uuid": {
-                "type": "string"
+                "$ref": "scalars.json#/definitions/UUID"
               },
               "workOrderItemUuid": {
-                "anyOf": [{ "const": null }, { "type": "string" }]
+                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/UUID" }]
               },
               "employeeId": {
                 "anyOf": [
@@ -196,10 +196,10 @@
                 "const": "fixed-price-labour"
               },
               "uuid": {
-                "type": "string"
+                "$ref": "scalars.json#/definitions/UUID"
               },
               "workOrderItemUuid": {
-                "anyOf": [{ "const": null }, { "type": "string" }]
+                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/UUID" }]
               },
               "employeeId": {
                 "anyOf": [

@@ -112,7 +112,6 @@ fragment CompanyAddressFragment on CompanyAddress {
   firstName
   lastName
   phone
-  province
   zip
   id
   country

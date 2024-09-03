@@ -56,7 +56,7 @@ type StoredClient = {
   client: DisposablePoolClient;
 };
 
-const asyncLocalStorage = new AsyncLocalStorage<StoredClient>();
+const asyncLocalStorage = new AsyncLocalStorage<StoredClient | undefined>();
 
 export function runWithStoredClient<T>(storedClient: StoredClient, fn: () => T): T {
   return asyncLocalStorage.run(storedClient, fn);
@@ -84,4 +84,11 @@ export async function stickyClient<T>(fn: () => Promise<T>): Promise<T> {
 
   using client = await useClient();
   return await runWithStoredClient({ transactional: false, client }, fn);
+}
+
+/**
+ * Gets rid of a transactional context. Pretty dangerous but has some use cases.
+ */
+export async function escapeTransaction<T>(fn: () => Promise<T>): Promise<T> {
+  return await asyncLocalStorage.run(undefined, fn);
 }

@@ -1,6 +1,6 @@
 import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { uuid } from '../../util/uuid.js';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
@@ -27,6 +27,7 @@ import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reduce
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { UUID } from '@web/util/types.js';
 
 type OnSelect = (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 
@@ -111,7 +112,7 @@ export function ServiceSelector({
                 onSelect({
                   item: {
                     type: 'product',
-                    uuid: uuid(),
+                    uuid: uuid() as UUID,
                     productVariantId: product.productVariantId,
                     absorbCharges: product.serviceType === QUANTITY_ADJUSTING_SERVICE,
                     customFields: customFieldsPresetsQuery.data.defaultCustomFields,
@@ -217,7 +218,7 @@ function useProductVariantRows(
       return {
         id: variant.id,
         onPress: async () => {
-          const itemUuid = uuid();
+          const itemUuid = uuid() as UUID;
 
           await router.popCurrent();
 
@@ -232,7 +233,7 @@ function useProductVariantRows(
             },
             charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
               ...charge,
-              uuid: uuid(),
+              uuid: uuid() as UUID,
               workOrderItemUuid: itemUuid,
             })),
           });

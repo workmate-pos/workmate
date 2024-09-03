@@ -66,10 +66,10 @@ model WorkOrder {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  items                           WorkOrderItem[]
-  charges                         WorkOrderCharge[]
-  customFields                    WorkOrderCustomField[]
-  itemCustomFields                WorkOrderItemCustomField[]
+  items            WorkOrderItem[]
+  charges          WorkOrderCharge[]
+  customFields     WorkOrderCustomField[]
+  itemCustomFields WorkOrderItemCustomField[]
 
   @@unique([shop, name])
 }
@@ -119,13 +119,14 @@ model WorkOrderCharge {
 
   data Json @db.JsonB
 
-  createdAt                    DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt                    DateTime           @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([workOrderId, uuid])
   @@index([shopifyOrderLineItemId])
 }
 
+// TODO: rethink whether we want this in the database or whether to store parts of info in the database (eg instead of having lineitem table, have lineitemid+orderid+ordername)
 model ShopifyOrder {
   orderId String @id
 
@@ -187,11 +188,20 @@ model ShopifyOrderLineItem {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  workOrderItems                  WorkOrderItem[]
-  workOrderCharges                WorkOrderCharge[]
-  purchaseOrderLineItems          PurchaseOrderLineItem[]
+  workOrderItems        WorkOrderItem[]
+  workOrderCharges      WorkOrderCharge[]
+  specialOrderLineItems SpecialOrderLineItem[]
 
   @@index([orderId])
+}
+
+// We track the source of line item quantity. Sources can be POs, TOs, or directly from inventory.
+model ShopifyOrderLineItemReservation {
+  lineItemId String @id
+  locationId String
+  quantity   Int
+
+  @@index([locationId])
 }
 
 enum ShopifyOrderType {
@@ -214,8 +224,8 @@ model Employee {
 
   purchaseOrderEmployeeAssignments PurchaseOrderEmployeeAssignment[]
 
-  createdAt                       DateTime                          @default(now()) @db.Timestamptz(3)
-  updatedAt                       DateTime                          @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@index([shop])
 }
@@ -234,6 +244,8 @@ enum PermissionNode {
   cycle_count
   read_stock_transfers
   write_stock_transfers
+  read_special_orders
+  write_special_orders
 }
 
 model AppPlanSubscription {
@@ -356,30 +368,31 @@ model PurchaseOrder {
   @@unique([shop, name])
 }
 
+// TODO: Add serial PK to all tables like this instead of composite PK (remove all @relation with more than 1 field)
 model PurchaseOrderLineItem {
   uuid String @db.Uuid
 
   purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
   purchaseOrderId Int
 
-  shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
-  shopifyOrderLineItemId String?
+  specialOrderLineItem   SpecialOrderLineItem? @relation(fields: [specialOrderLineItemId], references: [id], onDelete: Cascade)
+  specialOrderLineItemId Int?
 
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [productVariantId])
   productVariantId String
 
   unitCost          String
   quantity          Int
-  /// Quantity that is added Shopify as available inventory
+  /// Quantity that has been added to Shopify as available inventory
   availableQuantity Int
 
-  createdAt                        DateTime                           @default(now()) @db.Timestamptz(3)
-  updatedAt                        DateTime                           @default(now()) @db.Timestamptz(3)
-  PurchaseOrderLineItemCustomField PurchaseOrderLineItemCustomField[]
+  createdAt              DateTime                           @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime                           @default(now()) @db.Timestamptz(3)
+  customFields           PurchaseOrderLineItemCustomField[]
+  stockTransferLineItems StockTransferLineItem[]
 
   @@id([purchaseOrderId, uuid])
   @@index([purchaseOrderId])
-  @@index([shopifyOrderLineItemId])
 }
 
 model PurchaseOrderEmployeeAssignment {
@@ -436,9 +449,21 @@ model StockTransferLineItem {
   // The status of this line item. Line item can be split to have different statuses.
   status StockTransferLineItemStatus
 
+  // The SO line item that this stock transfer line item will fulfill
+  shopifyOrderLineItemId String?
+  // We require the order id as well, as the GraphQL API does not link line item to order id, only the other way around
+  shopifyOrderId         String?
+
   // The quantity pending/sent/received/rejected depending on the status.
   // Line item is split if there are multiple statuses.
   quantity Int
+
+  // Stock transfer line items can be linked to purchase order line items.
+  // This is used for cases where a purchase order should immediatelly be shipped to a different location.
+  // Linking the two allows us to determine how many items were transferred, and how many remain.
+  purchaseOrderId           Int?
+  purchaseOrderLineItemUuid String?                @db.Uuid
+  purchaseOrderLineItem     PurchaseOrderLineItem? @relation(fields: [purchaseOrderId, purchaseOrderLineItemUuid], references: [purchaseOrderId, uuid])
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
@@ -509,8 +534,8 @@ model WorkOrderItemCustomField {
   key   String
   value String
 
-  createdAt                    DateTime           @default(now()) @db.Timestamptz(3)
-  updatedAt                    DateTime           @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([workOrderId, workOrderItemUuid, key])
   @@index([key, value])
@@ -570,6 +595,7 @@ model ProductVariant {
 
   purchaseOrderLineItems PurchaseOrderLineItem[]
   shopifyOrderLineItems  ShopifyOrderLineItem[]
+  specialOrderLineItems  SpecialOrderLineItem[]
 }
 
 model Product {
@@ -581,6 +607,7 @@ model Product {
   title       String
   description String
   productType String
+  vendor      String
 
   productVariants ProductVariant[]
 
@@ -605,6 +632,7 @@ model Customer {
 
   workOrders    WorkOrder[]
   shopifyOrders ShopifyOrder[]
+  specialOrders SpecialOrder[]
 
   createdAt DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt DateTime  @default(now()) @db.Timestamptz(3)
@@ -621,6 +649,7 @@ model Location {
   name String
 
   purchaseOrders PurchaseOrder[]
+  specialOrders  SpecialOrder[]
 
   createdAt DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt DateTime  @default(now()) @db.Timestamptz(3)
@@ -689,4 +718,145 @@ enum AppMigrationStatus {
   PENDING
   SUCCESS
   FAILURE
+}
+
+model CycleCount {
+  id Int @id @default(autoincrement())
+
+  shop String
+  name String
+
+  status     String
+  locationId String
+  note       String
+
+  dueDate    DateTime?
+
+  items CycleCountItem[]
+
+  createdAt                    DateTime                       @default(now()) @db.Timestamptz(3)
+  updatedAt                    DateTime                       @default(now()) @db.Timestamptz(3)
+
+  employees CycleCountEmployeeAssignment[]
+
+  @@unique([shop, name])
+  @@index([createdAt])
+  @@index([dueDate])
+}
+
+model CycleCountEmployeeAssignment {
+  id Int @id @default(autoincrement())
+
+  cycleCountId Int
+  cycleCount   CycleCount @relation(fields: [cycleCountId], references: [id])
+
+  employeeId String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([cycleCountId, employeeId])
+}
+
+model CycleCountItem {
+  cycleCountId Int
+  cycleCount   CycleCount @relation(fields: [cycleCountId], references: [id])
+
+  uuid String @db.Uuid
+
+  productVariantId String
+  inventoryItemId  String
+  countQuantity    Int
+
+  productTitle        String
+  productVariantTitle String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  applications CycleCountItemApplication[]
+
+  @@id([cycleCountId, uuid])
+}
+
+// We track individual applications for auditing purposes, and to allow partial cycle counts.
+model CycleCountItemApplication {
+  id Int @id @default(autoincrement())
+
+  cycleCountItemUuid String         @db.Uuid
+  cycleCountId       Int
+  cycleCountItem     CycleCountItem @relation(fields: [cycleCountId, cycleCountItemUuid], references: [cycleCountId, uuid])
+
+  appliedQuantity Int
+
+  // Quantity before this application
+  originalQuantity Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// General purpose table for storing counters.
+// Key should be namespaced or something like that.
+model Counter {
+  id Int @id @default(autoincrement())
+
+  key        String
+  last_value Int
+
+  @@unique([key])
+}
+
+// request to resupply products by some customer/company.
+// links shopify orders to purchase orders.
+model SpecialOrder {
+  id Int @id @default(autoincrement())
+
+  shop String
+  name String
+
+  customer   Customer? @relation(fields: [customerId], references: [customerId])
+  customerId String
+
+  locationId String
+  location   Location @relation(fields: [locationId], references: [locationId])
+
+  companyId         String?
+  companyContactId  String?
+  companyLocationId String?
+
+  requiredBy DateTime?
+  note       String
+
+  lineItems SpecialOrderLineItem[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([shop, name])
+}
+
+model SpecialOrderLineItem {
+  id Int @id @default(autoincrement())
+
+  specialOrderId Int
+  specialOrder   SpecialOrder @relation(fields: [specialOrderId], references: [id])
+
+  uuid String @db.Uuid
+
+  shopifyOrderLineItemId String?
+  shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: Cascade)
+
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [productVariantId])
+  productVariantId String
+
+  // This quantity is not allowed to go below the PO quantity
+  quantity Int
+
+  purchaseOrderLineItems PurchaseOrderLineItem[]
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([specialOrderId, uuid])
 }
