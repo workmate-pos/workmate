@@ -23,11 +23,12 @@ import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sec
 import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
 import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
 import { CycleCountSettings } from '@web/frontend/components/settings/sections/CycleCountSettings.js';
+import { SpecialOrderSettings } from '@web/frontend/components/settings/sections/SpecialOrderSettings.js';
 
 export default function () {
   return (
     <Frame>
-      <Page narrowWidth>
+      <Page>
         <PermissionBoundary permissions={['read_settings']}>
           <Settings />
         </PermissionBoundary>
@@ -152,6 +153,10 @@ function Settings() {
           defaultStatus={settings.cycleCount.defaultStatus}
         />
       ),
+    },
+    {
+      name: 'Special Orders',
+      tab: <SpecialOrderSettings settings={settings} setSettings={setSettings} />,
     },
     {
       name: 'Printing',

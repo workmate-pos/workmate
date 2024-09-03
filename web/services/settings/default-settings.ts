@@ -13,6 +13,9 @@ const defaultShopSettings: ShopSettings = {
     statuses: ['Draft', 'Completed'],
     defaultStatus: 'Draft',
   },
+  specialOrders: {
+    idFormat: 'SO-#{{id}}',
+  },
   discountShortcuts: [
     { percentage: '10.00' as Decimal, unit: 'percentage' },
     { money: '10.00' as Money, unit: 'currency' },

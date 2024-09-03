@@ -78,7 +78,7 @@ export async function getNewStockTransferName(shop: string) {
 
 export async function getNewSpecialOrderName(shop: string): Promise<string> {
   const settings = await getShopSettings(shop);
-  return await applyFormatters('SO-#{{id}}', specialOrderFormatters, { shop });
+  return await applyFormatters(settings.specialOrders.idFormat, specialOrderFormatters, { shop });
 }
 
 export async function getNewCycleCountName(shop: string) {
