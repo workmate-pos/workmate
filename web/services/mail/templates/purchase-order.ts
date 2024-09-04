@@ -1,6 +1,5 @@
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getDetailedPurchaseOrder } from '../../purchase-orders/get.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ShopSettings } from '../../../schemas/generated/shop-settings.js';
@@ -8,6 +7,7 @@ import { Liquid } from 'liquidjs';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { getVendors } from '../../vendors/get.js';
 import { Session } from '@shopify/shopify-api';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export async function getRenderedPurchaseOrderTemplate(
   printTemplate: ShopSettings['purchaseOrderPrintTemplates'][string],
@@ -105,7 +105,7 @@ export async function getPurchaseOrderTemplateData(
         .multiply(BigDecimal.fromString(lineItem.quantity.toFixed(0)))
         .toString();
       return {
-        name: getProductVariantName(lineItem.productVariant) ?? never(),
+        name: getProductVariantName(lineItem.productVariant) ?? never('fk'),
         description: lineItem.productVariant.product.description,
         quantity: lineItem.quantity,
         unitCost: lineItem.unitCost,

@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string"
+    },
+    "productVariantId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "locationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "customerId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "limit": {
+      "$ref": "scalars.json#/definitions/Int",
+      "minimum": 1,
+      "maximum": 25
+    },
+    "offset": {
+      "$ref": "scalars.json#/definitions/Int",
+      "minimum": 0
+    },
+    "sort": {
+      "title": "serial-sort-column",
+      "enum": ["created-at", "updated-at", "serial", "product-name"]
+    },
+    "order": {
+      "title": "serial-sort-order",
+      "enum": ["ascending", "descending"]
+    }
+  },
+  "additionalProperties": false,
+  "required": ["limit"]
+}

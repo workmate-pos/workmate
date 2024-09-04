@@ -1,5 +1,4 @@
 import { Session } from '@shopify/shopify-api';
-import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getNewPurchaseOrderName } from '../id-formatting.js';
@@ -35,10 +34,13 @@ import {
   removePurchaseOrderLineItemsByUuids,
   upsertPurchaseOrderLineItems,
   upsertPurchaseOrder,
+  getPurchaseOrdersForSerial,
 } from './queries.js';
-import { getProducts, getProductVariants } from '../products/queries.js';
+import { getProducts } from '../products/queries.js';
 import { getSpecialOrderLineItemsByNameAndUuids, getSpecialOrdersByNames } from '../special-orders/queries.js';
 import { httpError } from '../../util/http-error.js';
+import { getProductVariants } from '../product-variants/queries.js';
+import { getSerial, getSerialsByProductVariantSerials, upsertSerials } from '../serials/queries.js';
 
 export async function upsertCreatePurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -71,23 +73,34 @@ export async function upsertCreatePurchaseOrder(session: Session, createPurchase
       name,
     });
 
-    const newLineItemUuids = new Set(createPurchaseOrder.lineItems.map(li => li.uuid));
-    const oldLineItemUuids = new Set(existingPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
+    const specialOrderLineItemNameUuids = createPurchaseOrder.lineItems
+      .map(lineItem => lineItem.specialOrderLineItem)
+      .filter(isNonNullable);
 
-    const uuids = [...oldLineItemUuids].filter(oldUuid => !newLineItemUuids.has(oldUuid));
+    const lineItemSerials = createPurchaseOrder.lineItems
+      .map(lineItem => ({
+        productVariantId: lineItem.productVariantId,
+        serial: lineItem.serialNumber,
+        locationId: createPurchaseOrder.locationId,
+        customerId: null,
+        note: '',
+      }))
+      .filter(hasNonNullableProperty('serial'));
 
-    await Promise.all([
-      removePurchaseOrderLineItemsByUuids(purchaseOrderId, uuids),
+    const existingLineItemUuids = new Set(existingPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
+    const createLineItemUuids = new Set(createPurchaseOrder.lineItems.map(li => li.uuid));
+    const uuidsToRemove = [...existingLineItemUuids].filter(oldUuid => !createLineItemUuids.has(oldUuid));
+
+    const [specialOrderLineItems, serials] = await Promise.all([
+      getSpecialOrderLineItemsByNameAndUuids(shop, specialOrderLineItemNameUuids),
+      upsertSerials(shop, lineItemSerials).then(() => getSerialsByProductVariantSerials(shop, lineItemSerials)),
+      removePurchaseOrderLineItemsByUuids(purchaseOrderId, uuidsToRemove),
       removePurchaseOrderCustomFields(purchaseOrderId),
       removePurchaseOrderLineItemCustomFields(purchaseOrderId),
       removePurchaseOrderAssignedEmployees(purchaseOrderId),
     ]);
 
-    const specialOrderLineItemNameUuids = createPurchaseOrder.lineItems
-      .map(lineItem => lineItem.specialOrderLineItem)
-      .filter(isNonNullable);
-
-    const specialOrderLineItems = await getSpecialOrderLineItemsByNameAndUuids(shop, specialOrderLineItemNameUuids);
+    await assertNoIllegalSerials(shop, createPurchaseOrder, existingPurchaseOrder);
 
     await Promise.all([
       upsertPurchaseOrderLineItems(
@@ -96,10 +109,15 @@ export async function upsertCreatePurchaseOrder(session: Session, createPurchase
           ...lineItem,
           specialOrderLineItemId: !lineItem.specialOrderLineItem
             ? null
-            : specialOrderLineItems
+            : (specialOrderLineItems
                 .filter(hasPropertyValue('uuid', lineItem.specialOrderLineItem.uuid))
                 .find(hasPropertyValue('specialOrderName', lineItem.specialOrderLineItem.name))?.id ??
-              httpError('Special order line item not found', 400),
+              httpError('Special order line item not found', 400)),
+          productVariantSerialId: !lineItem.serialNumber
+            ? null
+            : (serials
+                .filter(hasPropertyValue('productVariantId', lineItem.productVariantId))
+                .find(hasPropertyValue('serial', lineItem.serialNumber))?.id ?? httpError('Serial not found', 400)),
         })),
       ).then(() => insertPurchaseOrderLineItemCustomFields(purchaseOrderId, createPurchaseOrder.lineItems)),
       insertPurchaseOrderCustomFields(purchaseOrderId, createPurchaseOrder.customFields),
@@ -399,19 +417,7 @@ async function adjustShopifyInventoryItemCosts(
     }),
   );
 
-  const productVariants = productVariantIds.length
-    ? await db.productVariants.getMany({ productVariantIds }).then(rows =>
-        rows.map(row => {
-          assertGid(row.productVariantId);
-          assertGid(row.inventoryItemId);
-          return {
-            ...row,
-            productVariantId: row.productVariantId,
-            inventoryItemId: row.inventoryItemId,
-          };
-        }),
-      )
-    : [];
+  const productVariants = await getProductVariants(productVariantIds);
 
   if (productVariantIds.length !== productVariants.length) {
     sentryErr('Failed to get all product variants', {
@@ -437,4 +443,32 @@ async function adjustShopifyInventoryItemCosts(
   };
 
   return await Promise.all(productVariants.map(processProductVariant));
+}
+
+async function assertNoIllegalSerials(
+  shop: string,
+  createPurchaseOrder: CreatePurchaseOrder,
+  oldPurchaseOrder: DetailedPurchaseOrder | null,
+) {
+  const existingUuids = new Set(oldPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
+  const newLineItems = createPurchaseOrder.lineItems.filter(li => !existingUuids.has(li.uuid));
+
+  const newSerialPurchaseOrders = await Promise.all(
+    newLineItems.filter(hasNonNullableProperty('serialNumber')).map(async lineItem => ({
+      lineItem,
+      purchaseOrders: await getPurchaseOrdersForSerial({
+        shop,
+        serial: lineItem.serialNumber,
+        productVariantId: lineItem.productVariantId,
+      }),
+    })),
+  ).then(result => result.filter(({ purchaseOrders }) => purchaseOrders.length > 0));
+
+  if (newSerialPurchaseOrders.length > 0) {
+    const offendingSerials = newSerialPurchaseOrders.map(({ lineItem }) => lineItem.serialNumber);
+    throw new HttpError(
+      `Serial numbers can only be received in one purchase order (${offendingSerials.join(', ')})`,
+      400,
+    );
+  }
 }

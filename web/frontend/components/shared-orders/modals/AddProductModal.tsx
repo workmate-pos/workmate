@@ -368,6 +368,7 @@ export function AddProductModal({
                           quantity: pv.quantity,
                           availableQuantity: 0 as Int,
                           customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                          serialNumber: null,
                         } as const;
                       }),
                     );

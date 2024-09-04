@@ -2,6 +2,7 @@ import {
   DateTime,
   DraftOrderInput,
   Int,
+  PaymentTerms,
   PaymentTermsInput,
   PaymentTermsType,
   PurchasingEntityInput,

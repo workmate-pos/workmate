@@ -13,6 +13,7 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { UseRouter } from './router.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { PaginationControls } from '../components/PaginationControls.js';
 
 export type ListPopupItem<ID> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
   id: ID;
@@ -67,6 +68,13 @@ export type ListPopupProps<ID extends string = string> = {
   resourceName?: { singular: string; plural: string };
   onEndReached?: () => void;
   isLoadingMore?: boolean;
+  pagination?: {
+    page: number;
+    pageCount: number;
+    onPageChange: (page: number) => void;
+    hasNextPage: boolean;
+    onFetchNextPage: () => void;
+  };
   emptyState?: ReactNode;
   imageDisplayStrategy?: ListProps['imageDisplayStrategy'];
   useRouter: UseRouter;
@@ -74,12 +82,12 @@ export type ListPopupProps<ID extends string = string> = {
 };
 
 // TODO: Get rid of the <ScrollView> and add it inside the createRouter component only
+// TODO: optional pagination options
 
 /**
  * Similar to dropdown, but shows a list of items instead of a dropdown.
  * Can be used to select from many items or from just one.
  * @TODO: Use this from pos-tools once WorkMate migrates to new POS SDK
- * @TODO: Create wrappers: StaticListPopup and QueryListPopup, where latter takes a query and render fn
  */
 export function ListPopup<ID extends string = string>({
   title,
@@ -91,6 +99,7 @@ export function ListPopup<ID extends string = string>({
   onEndReached,
   useRouter,
   children,
+  pagination,
   resourceName = { singular: 'item', plural: 'items' },
 }: ListPopupProps<ID>) {
   const router = useRouter();
@@ -117,6 +126,10 @@ export function ListPopup<ID extends string = string>({
   const bottomActions = selection.actions?.filter(action => (action.position ?? defaultActionPosition) === 'bottom');
   const topActions = selection.actions?.filter(action => (action.position ?? defaultActionPosition) === 'top');
 
+  const paginationControls = pagination && (
+    <PaginationControls {...pagination} isLoadingNextPage={isLoadingMore ?? false} />
+  );
+
   return (
     <ScrollView>
       <Stack direction={'vertical'} spacing={2}>
@@ -132,6 +145,8 @@ export function ListPopup<ID extends string = string>({
             editable
           />
         )}
+
+        {paginationControls}
 
         <List
           imageDisplayStrategy={imageDisplayStrategy}
@@ -186,6 +201,8 @@ export function ListPopup<ID extends string = string>({
             </Text>
           </Stack>
         )}
+
+        {paginationControls}
 
         {children}
 

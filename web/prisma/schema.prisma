@@ -43,6 +43,9 @@ model WorkOrder {
   note         String
   internalNote String
 
+  productVariantSerial   ProductVariantSerial? @relation(fields: [productVariantSerialId], references: [id])
+  productVariantSerialId Int?
+
   customer   Customer? @relation(fields: [customerId], references: [customerId])
   customerId String
 
@@ -381,6 +384,9 @@ model PurchaseOrderLineItem {
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [productVariantId])
   productVariantId String
 
+  productVariantSerial   ProductVariantSerial? @relation(fields: [productVariantSerialId], references: [id])
+  productVariantSerialId Int?
+
   unitCost          String
   quantity          Int
   /// Quantity that has been added to Shopify as available inventory
@@ -596,6 +602,7 @@ model ProductVariant {
   purchaseOrderLineItems PurchaseOrderLineItem[]
   shopifyOrderLineItems  ShopifyOrderLineItem[]
   specialOrderLineItems  SpecialOrderLineItem[]
+  productVariantSerial   ProductVariantSerial[]
 }
 
 model Product {
@@ -603,11 +610,12 @@ model Product {
 
   shop String
 
-  handle      String
-  title       String
-  description String
-  productType String
-  vendor      String
+  handle                String
+  title                 String
+  description           String
+  productType           String
+  vendor                String
+  hasOnlyDefaultVariant Boolean
 
   productVariants ProductVariant[]
 
@@ -634,9 +642,10 @@ model Customer {
   shopifyOrders ShopifyOrder[]
   specialOrders SpecialOrder[]
 
-  createdAt DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt DateTime?
+  createdAt            DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime               @default(now()) @db.Timestamptz(3)
+  deletedAt            DateTime?
+  ProductVariantSerial ProductVariantSerial[]
 
   @@index([shop])
 }
@@ -651,9 +660,10 @@ model Location {
   purchaseOrders PurchaseOrder[]
   specialOrders  SpecialOrder[]
 
-  createdAt DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
-  deletedAt DateTime?
+  createdAt            DateTime               @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime               @default(now()) @db.Timestamptz(3)
+  deletedAt            DateTime?
+  ProductVariantSerial ProductVariantSerial[]
 
   @@index([shop])
 }
@@ -730,12 +740,12 @@ model CycleCount {
   locationId String
   note       String
 
-  dueDate    DateTime?
+  dueDate DateTime?
 
   items CycleCountItem[]
 
-  createdAt                    DateTime                       @default(now()) @db.Timestamptz(3)
-  updatedAt                    DateTime                       @default(now()) @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   employees CycleCountEmployeeAssignment[]
 
@@ -859,4 +869,31 @@ model SpecialOrderLineItem {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([specialOrderId, uuid])
+}
+
+// A unique instance of some product variant that has a serial number
+model ProductVariantSerial {
+  id Int @id @default(autoincrement())
+
+  shop String
+
+  serial String
+  note   String
+
+  productVariantId String
+  productVariant   ProductVariant @relation(fields: [productVariantId], references: [productVariantId])
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [customerId])
+
+  locationId String?
+  location   Location? @relation(fields: [locationId], references: [locationId])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  purchaseOrderLineItems PurchaseOrderLineItem[]
+  workOrders             WorkOrder[]
+
+  @@unique([shop, productVariantId, serial])
 }

@@ -160,6 +160,7 @@ export default class WorkOrderController {
       companyLocationId: null,
       companyId: null,
       paymentTerms: null,
+      serial: null,
     });
 
     return res.json({ name });

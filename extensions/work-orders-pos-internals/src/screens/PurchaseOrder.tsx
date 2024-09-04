@@ -46,6 +46,7 @@ import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveS
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer-line-item-status-badge-props.js';
 import { getSpecialOrderBadge } from '../util/badges.js';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -533,7 +534,7 @@ function useProductRows(
           source: imageUrl,
           badge: product.quantity,
         },
-        subtitle: [`${product.availableQuantity} received`],
+        subtitle: getSubtitle([product.serialNumber, `${product.availableQuantity} received`]),
         badges: [
           product.specialOrderLineItem
             ? getSpecialOrderBadge({ name: product.specialOrderLineItem.name, items: [] }, false)

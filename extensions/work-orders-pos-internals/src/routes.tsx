@@ -99,6 +99,16 @@ import {
   MultiSpecialOrderLineItemSelector,
   MultiSpecialOrderLineItemSelectorProps,
 } from '@work-orders/common-pos/screens/selector/MultiSpecialOrderLineItemSelector.js';
+import { SerialsList } from './screens/serials/SerialsList.js';
+import { SerialsFilters } from './screens/serials/SerialsFilters.js';
+import { Serial } from './screens/serials/Serial.js';
+import {
+  ProductVariantSelector,
+  ProductVariantSelectorProps,
+} from '@work-orders/common-pos/screens/selector/ProductVariantSelector.js';
+import { WorkOrderLoader } from './screens/work-order/WorkOrderLoader.js';
+import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoader.js';
+import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -118,6 +128,10 @@ export const { Router, useRouter } = createRouter({
   WorkOrder: {
     title: 'Work Order',
     Component: WorkOrder,
+  },
+  WorkOrderLoader: {
+    title: 'Work Order',
+    Component: WorkOrderLoader,
   },
   NewWorkOrder: {
     title: 'New Work Order',
@@ -345,6 +359,10 @@ export const { Router, useRouter } = createRouter({
     title: 'Purchase Order',
     Component: PurchaseOrder,
   },
+  PurchaseOrderLoader: {
+    title: 'Purchase Order',
+    Component: PurchaseOrderLoader,
+  },
   PurchaseOrderVendorSelector: {
     title: 'Select Vendor',
     Component: PurchaseOrderVendorSelector,
@@ -415,5 +433,28 @@ export const { Router, useRouter } = createRouter({
     Component: (props: Omit<MultiSpecialOrderLineItemSelectorProps, 'useRouter'>) => (
       <MultiSpecialOrderLineItemSelector {...props} useRouter={useRouter} />
     ),
+  },
+
+  SerialsList: {
+    title: 'Serials',
+    Component: SerialsList,
+  },
+  SerialsFilters: {
+    title: 'Filter Serials',
+    Component: SerialsFilters,
+  },
+  Serial: {
+    title: 'Serial',
+    Component: Serial,
+  },
+  ProductVariantSelector: {
+    title: 'Product Selector',
+    Component: (props: Omit<ProductVariantSelectorProps, 'useRouter'>) => (
+      <ProductVariantSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  SerialSelector: {
+    title: 'Serial Selector',
+    Component: (props: Omit<SerialSelectorProps, 'useRouter'>) => <SerialSelector {...props} useRouter={useRouter} />,
   },
 });

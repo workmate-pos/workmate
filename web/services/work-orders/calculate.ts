@@ -22,7 +22,7 @@ import {
 } from '../../util/money.js';
 import { getMissingNonPaidWorkOrderProduct, validateCalculateWorkOrder } from './validate.js';
 import { randomBytes } from 'node:crypto';
-import { Int, type String } from '../gql/queries/generated/schema.js';
+import { Int, PaymentTermsInput, type String } from '../gql/queries/generated/schema.js';
 import { getDraftOrderInputForWorkOrder } from './draft-order.js';
 import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.js';
 import { UUID } from '../../util/types.js';
@@ -335,7 +335,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     workOrderName: calculateWorkOrder.name,
     customFields: null,
     customerId: calculateWorkOrder.customerId,
-    paymentTerms: calculateWorkOrder.paymentTerms,
+    paymentTerms: calculateWorkOrder.paymentTerms as PaymentTermsInput | null,
     companyContactId: calculateWorkOrder.companyContactId,
     companyLocationId: calculateWorkOrder.companyLocationId,
     companyId: calculateWorkOrder.companyId,
@@ -354,6 +354,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
 
   const graphql = new Graphql(session);
 
+  console.log(draftOrderInput.paymentTerms);
   const result = await gql.calculate.draftOrderCalculate.run(graphql, { input: draftOrderInput });
   if (!result.draftOrderCalculate?.calculatedDraftOrder) {
     throw new HttpError('Calculation failed', 400);
@@ -399,7 +400,7 @@ function getOrderPriceInformation(order: OrderWithAllLineItems | CalculatedDraft
   const orderDiscount = decimalToMoney(
     order.__typename === 'Order'
       ? order.currentTotalDiscountsSet.shopMoney.amount
-      : order.appliedDiscount?.amountSet.shopMoney.amount ?? BigDecimal.ZERO.toDecimal(),
+      : (order.appliedDiscount?.amountSet.shopMoney.amount ?? BigDecimal.ZERO.toDecimal()),
   );
 
   return {

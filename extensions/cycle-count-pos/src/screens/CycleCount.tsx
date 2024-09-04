@@ -28,7 +28,7 @@ import { getCreateCycleCountFromDetailedCycleCount } from '../create-cycle-count
 import { DetailedCycleCount } from '@web/services/cycle-count/types.js';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getCycleCountApplicationStateBadge } from './Entry.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';

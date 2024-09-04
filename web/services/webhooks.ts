@@ -15,6 +15,8 @@ import { cleanManyOrphanedDraftOrders, cleanOrphanedDraftOrders } from './work-o
 import { unit } from './db/unit-of-work.js';
 import { getWorkOrder } from './work-orders/queries.js';
 import { unreserveLineItem } from './sourcing/reserve.js';
+import { getProduct, softDeleteProducts } from './products/queries.js';
+import { softDeleteProductVariantsByProductIds } from './product-variants/queries.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -127,8 +129,8 @@ export default {
       // shopify sends this webhook whenever the product is ordered, so we throttle a bit here
       // (we cannot use shopify's product.updatedAt because it updates even if the inventory item changes...)
       const FIVE_MINUTES = 5 * 60 * 1000;
-      const [databaseProduct] = await db.products.get({ productId: body.admin_graphql_api_id });
-      if (databaseProduct && databaseProduct.updatedAt.getTime() - Date.now() < FIVE_MINUTES) {
+      const product = await getProduct(body.admin_graphql_api_id);
+      if (product && product.updatedAt.getTime() - Date.now() < FIVE_MINUTES) {
         return;
       }
 
@@ -140,8 +142,8 @@ export default {
 
   PRODUCTS_DELETE: {
     async handler(_session, _topic, _shop, body: { admin_graphql_api_id: ID }) {
-      await db.productVariants.softDeleteProductVariantsByProductId({ productId: body.admin_graphql_api_id });
-      await db.products.softDeleteProducts({ productIds: [body.admin_graphql_api_id] });
+      await softDeleteProductVariantsByProductIds([body.admin_graphql_api_id]);
+      await softDeleteProducts([body.admin_graphql_api_id]);
     },
   },
 

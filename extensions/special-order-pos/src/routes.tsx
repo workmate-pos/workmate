@@ -21,11 +21,9 @@ export const { Router, useRouter } = createRouter({
   Entry: {
     title: 'Special Orders',
     Component: () => (
-      <ScrollView>
-        <ScreenPermissionBoundary permissions={['read_special_orders']}>
-          <Entry />
-        </ScreenPermissionBoundary>
-      </ScrollView>
+      <ScreenPermissionBoundary permissions={['read_special_orders']}>
+        <Entry />
+      </ScreenPermissionBoundary>
     ),
   },
   SpecialOrder: {

@@ -6,14 +6,15 @@ INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId
                          "discountAmount",
                          "discountType",
                          "paymentTermsTemplateId",
-                         "paymentFixedDueDate")
+                         "paymentFixedDueDate", "productVariantSerialId")
 VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId,
         :derivedFromOrderId, :note!,
         :internalNote!,
         :discountAmount,
         :discountType,
         :paymentTermsTemplateId,
-        :paymentFixedDueDate)
+        :paymentFixedDueDate,
+        :productVariantSerialId)
 ON CONFLICT ("shop", "name") DO UPDATE SET status                   = EXCLUDED.status,
                                            "dueDate"                = EXCLUDED."dueDate",
                                            "customerId"             = EXCLUDED."customerId",
@@ -26,7 +27,8 @@ ON CONFLICT ("shop", "name") DO UPDATE SET status                   = EXCLUDED.s
                                            "discountAmount"         = EXCLUDED."discountAmount",
                                            "discountType"           = EXCLUDED."discountType",
                                            "paymentTermsTemplateId" = EXCLUDED."paymentTermsTemplateId",
-                                           "paymentFixedDueDate"    = EXCLUDED."paymentFixedDueDate"
+                                           "paymentFixedDueDate"    = EXCLUDED."paymentFixedDueDate",
+                                           "productVariantSerialId" = EXCLUDED."productVariantSerialId"
 RETURNING *;
 
 /* @name updateDiscount */

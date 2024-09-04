@@ -65,6 +65,10 @@
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
           },
+          "serialNumber": {
+            "description": "Optional serial number of the incoming product. If provided, the serial number will automatically be registered upon receipt. If a serial number is set the quantity must equal 1.",
+            "anyOf": [{ "const": null }, { "type": "string" }]
+          },
           "specialOrderLineItem": {
             "anyOf": [
               { "const": null },
@@ -110,7 +114,8 @@
           "quantity",
           "availableQuantity",
           "unitCost",
-          "customFields"
+          "customFields",
+          "serialNumber"
         ],
         "additionalProperties": false
       }

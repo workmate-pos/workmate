@@ -18,6 +18,7 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
+import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 
 export function PurchaseOrderProductConfig({
   product: initialProduct,
@@ -142,6 +143,45 @@ export function PurchaseOrderProductConfig({
           <Stack direction="vertical" spacing={2}>
             <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="headingSmall" color="TextSubdued">
+                Serial Number
+              </Text>
+            </Stack>
+            <FormStringField
+              label={'Serial Number'}
+              value={product.serialNumber ?? ''}
+              onChange={serialNumber => {
+                setHasUnsavedChanges(true);
+                setProduct(product => ({ ...product, serialNumber: serialNumber || null }));
+              }}
+            />
+          </Stack>
+
+          <Stack direction="vertical" spacing={2}>
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="headingSmall" color="TextSubdued">
+                Quantity
+              </Text>
+            </Stack>
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="body" color="TextSubdued">
+                The quantity that has been ordered
+              </Text>
+            </Stack>
+            <Stepper
+              minimumValue={isImmutable ? savedProduct.quantity : 1}
+              initialValue={product.quantity}
+              value={product.quantity}
+              disabled={!!product.serialNumber}
+              onValueChanged={(quantity: Int) => {
+                setProduct({ ...product, quantity });
+                setHasUnsavedChanges(true);
+              }}
+            />
+          </Stack>
+
+          <Stack direction="vertical" spacing={2}>
+            <Stack direction={'horizontal'} alignment={'center'}>
+              <Text variant="headingSmall" color="TextSubdued">
                 Quantity
               </Text>
             </Stack>
@@ -156,28 +196,6 @@ export function PurchaseOrderProductConfig({
               value={product.quantity}
               onValueChanged={(quantity: Int) => {
                 setProduct({ ...product, quantity });
-                setHasUnsavedChanges(true);
-              }}
-            />
-          </Stack>
-
-          <Stack direction="vertical" spacing={2}>
-            <Stack direction={'horizontal'} alignment={'center'}>
-              <Text variant="headingSmall" color="TextSubdued">
-                Available Quantity
-              </Text>
-            </Stack>
-            <Stack direction={'horizontal'} alignment={'center'}>
-              <Text variant="body" color="TextSubdued">
-                The quantity that has been delivered
-              </Text>
-            </Stack>
-            <Stepper
-              minimumValue={isImmutable ? savedProduct.availableQuantity : 0}
-              initialValue={product.availableQuantity}
-              value={product.availableQuantity}
-              onValueChanged={(availableQuantity: Int) => {
-                setProduct({ ...product, availableQuantity });
                 setHasUnsavedChanges(true);
               }}
             />
