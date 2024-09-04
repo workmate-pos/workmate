@@ -9,6 +9,7 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { useState } from 'react';
 import { DateTime } from '@web/schemas/generated/create-special-order.js';
 import { useRouter } from '../../routes.js';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 
 export function CreateSpecialOrderList({
   workOrder,
@@ -44,7 +45,7 @@ export function CreateSpecialOrderList({
                 note,
                 requiredBy: requiredBy ? (requiredBy.toISOString() as DateTime) : null,
                 lineItems: selectedItems.map(item => ({
-                  uuid: item.uuid,
+                  uuid: uuid(),
                   shopifyOrderLineItem: {
                     id: item.shopifyOrderLineItem.id,
                     orderId: item.shopifyOrderLineItem.orderId,

@@ -15,6 +15,7 @@ import { useRouter } from '../../routes.js';
 import { defaultCreateStockTransfer } from '../../create-stock-transfer/default.js';
 import { UUID } from '@web/util/types.js';
 import { ListPopup, ListPopupItem } from '@work-orders/common-pos/screens/ListPopup.js';
+import { uuid } from '@work-orders/common-pos/util/uuid.js';
 
 type SelectablePurchaseOrderLineItem = {
   uuid: UUID;
@@ -199,7 +200,7 @@ export function SelectPurchaseOrderProductsToTransfer({ name }: { name: string }
                     quantity: item.selectedQuantity,
                     inventoryItemId: item.inventoryItemId,
                     status: 'PENDING',
-                    uuid: item.uuid,
+                    uuid: uuid(),
                     shopifyOrderLineItem: item.shopifyOrderLineItem
                       ? {
                           id: item.shopifyOrderLineItem.id,

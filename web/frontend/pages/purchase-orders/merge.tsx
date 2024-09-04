@@ -30,6 +30,8 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { useAppBridge } from '@shopify/app-bridge-react';
+import { v4 as uuid } from 'uuid';
+import { UUID } from '@web/util/types.js';
 
 export default function () {
   return (
@@ -283,7 +285,7 @@ function Merge() {
                         : BigDecimal.ZERO.toMoney();
 
                       return {
-                        uuid: lineItem.uuid,
+                        uuid: uuid() as UUID,
                         productVariantId: lineItem.productVariantId,
                         specialOrderLineItem: {
                           name: specialOrder.name,
