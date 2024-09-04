@@ -38,24 +38,41 @@ WITH -- Create a special order for every PO x SO combination
        INSERT INTO "SpecialOrder" (shop, name, "customerId", "locationId", "companyId", "companyContactId",
                                    "companyLocationId", "requiredBy", note)
          SELECT poso.shop
-              , 'SO-#' || poso.shop_po_idx
+              , 'SPO-#' || poso.shop_po_idx
               , poso."customerId"
               , poso."locationId"
               , NULL
               , NULL
               , NULL
               , NULL
-              , 'This special order was automatically created for PO ' || poso.name || '.'
+              , 'This special order was automatically created for ' || poso.name || '.'
          FROM "POSO" poso
-         RETURNING *)
+         RETURNING *),
+-- Create special order line items for purchase order line items (one per PO line item)
+     "SpecialOrderLineItems" AS (
+       INSERT
+         INTO "SpecialOrderLineItem" ("specialOrderId", uuid, "shopifyOrderLineItemId", "productVariantId", quantity)
+           SELECT spo.id, poli.uuid, poli."shopifyOrderLineItemId", poli."productVariantId", poli.quantity
+           FROM "PurchaseOrderLineItem" poli
+                  INNER JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = poli."shopifyOrderLineItemId"
+                  INNER JOIN "POSO" poso ON poso.id = poli."purchaseOrderId" AND poso."orderId" = soli."orderId"
+                  INNER JOIN "PurchaseOrderSpecialOrders" spo
+                             ON spo.shop = poso.shop AND spo.name = 'SPO-#' || poso.shop_po_idx
+           RETURNING *)
 -- Connect purchase order line items to the special order
-INSERT
-INTO "SpecialOrderLineItem" ("specialOrderId", uuid, "shopifyOrderLineItemId", "productVariantId", quantity)
-SELECT spo.id, poli.uuid, poli."shopifyOrderLineItemId", poli."productVariantId", poli.quantity
-FROM "PurchaseOrderLineItem" poli
-       INNER JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = poli."shopifyOrderLineItemId"
-       INNER JOIN "POSO" poso ON poso.id = poli."purchaseOrderId" AND poso."orderId" = soli."orderId"
-       INNER JOIN "PurchaseOrderSpecialOrders" spo ON spo.shop = poso.shop AND spo.name = 'SO-#' || poso.shop_po_idx;
+UPDATE "PurchaseOrderLineItem" poli
+SET "specialOrderLineItemId" = (SELECT x.id
+                                FROM "SpecialOrderLineItems" x
+                                       INNER JOIN "ShopifyOrderLineItem" soli
+                                                  ON soli."lineItemId" = poli."shopifyOrderLineItemId"
+                                       INNER JOIN "POSO" poso
+                                                  ON poso.id = poli."purchaseOrderId" AND poso."orderId" = soli."orderId"
+                                       INNER JOIN "PurchaseOrderSpecialOrders" spo
+                                                  ON spo.shop = poso.shop AND spo.name = 'SPO-#' || poso.shop_po_idx
+                                WHERE x.uuid = poli.uuid
+                                  AND x."shopifyOrderLineItemId" = poli."shopifyOrderLineItemId"
+                                  AND x."productVariantId" = poli."productVariantId"
+                                  AND x.quantity = poli.quantity);
 
 -- DropIndex
 DROP INDEX "PurchaseOrderLineItem_shopifyOrderLineItemId_idx";
