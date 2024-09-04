@@ -25,7 +25,6 @@ export const db = {
   workOrder: wrapPreparedQueries(workOrder),
   employee: wrapPreparedQueries(employee),
   types: wrapPreparedQueries(types),
-  sequence: wrapPreparedQueries(sequence),
   appPlan: wrapPreparedQueries(appPlan),
   purchaseOrder: wrapPreparedQueries(purchaseOrder),
   stockTransfers: wrapPreparedQueries(stockTransfers),
