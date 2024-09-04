@@ -61,10 +61,6 @@ ALTER TABLE "WorkOrderCharge"
 ALTER TABLE "WorkOrderCharge"
   ADD CONSTRAINT "WorkOrderCharge_workOrderId_workOrderItemUuid_fkey" FOREIGN KEY ("workOrderId", "workOrderItemUuid") REFERENCES "New_WorkOrderItem" ("workOrderId", "uuid") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "WorkOrderItemCustomField"
-  ADD CONSTRAINT "New_WorkOrderItemCustomField_workOrderId_workOrderItemUuid_fkey" FOREIGN KEY ("workOrderId", "workOrderItemUuid") REFERENCES "New_WorkOrderItem" ("workOrderId", "uuid") ON DELETE RESTRICT ON UPDATE CASCADE;
-
 -- migrate items and charges to new jsonb table format
 -- this new format makes the database schema far simpler.
 -- to add new charge types or items types you can just extend the zod schema,
@@ -161,6 +157,10 @@ SELECT charge."workOrderId",
        charge."createdAt",
        charge."updatedAt"
 FROM "WorkOrderFixedPriceLabourCharge" charge;
+
+-- AddForeignKey
+ALTER TABLE "WorkOrderItemCustomField"
+  ADD CONSTRAINT "New_WorkOrderItemCustomField_workOrderId_workOrderItemUuid_fkey" FOREIGN KEY ("workOrderId", "workOrderItemUuid") REFERENCES "New_WorkOrderItem" ("workOrderId", "uuid") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- DropForeignKey
 ALTER TABLE "WorkOrderCustomItem"
