@@ -151,7 +151,7 @@ export function PurchaseOrderProductConfig({
               value={product.serialNumber ?? ''}
               onChange={serialNumber => {
                 setHasUnsavedChanges(true);
-                setProduct(product => ({ ...product, serialNumber: serialNumber || null }));
+                setProduct(product => ({ ...product, serialNumber: serialNumber.toUpperCase() || null }));
               }}
             />
           </Stack>
