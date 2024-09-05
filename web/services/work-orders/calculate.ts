@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { fetchAllPages, gql } from '../gql/gql.js';
-import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getChargeUnitPrice, getUuidsFromCustomAttributes } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { db } from '../db/db.js';
@@ -22,7 +22,7 @@ import {
 } from '../../util/money.js';
 import { getMissingNonPaidWorkOrderProduct, validateCalculateWorkOrder } from './validate.js';
 import { randomBytes } from 'node:crypto';
-import { Int, PaymentTermsInput, type String } from '../gql/queries/generated/schema.js';
+import { Int, type String } from '../gql/queries/generated/schema.js';
 import { getDraftOrderInputForWorkOrder } from './draft-order.js';
 import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.js';
 import { UUID } from '../../util/types.js';
@@ -335,7 +335,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     workOrderName: calculateWorkOrder.name,
     customFields: null,
     customerId: calculateWorkOrder.customerId,
-    paymentTerms: calculateWorkOrder.paymentTerms as PaymentTermsInput | null,
+    paymentTerms: null,
     companyContactId: calculateWorkOrder.companyContactId,
     companyLocationId: calculateWorkOrder.companyLocationId,
     companyId: calculateWorkOrder.companyId,
