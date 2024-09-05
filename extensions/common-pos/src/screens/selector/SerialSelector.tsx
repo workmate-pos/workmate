@@ -14,8 +14,13 @@ import { CustomerSelectorProps } from './CustomerSelector.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
+import {
+  useProductVariantQueries,
+  useProductVariantQuery,
+} from '@work-orders/common/queries/use-product-variant-query.js';
 import { ProductVariantSelectorProps } from './ProductVariantSelector.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 
 export type SerialSelectorProps = {
   onSelect: (serial: DetailedSerial) => void;
@@ -61,11 +66,15 @@ export function SerialSelector({
 
   const serials = serialsQuery.data?.pages.flat() ?? [];
 
+  const productVariantIds = unique(serials.map(serial => serial.productVariant.id));
+  const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
+
   const router = useRouter();
 
   return (
     <ListPopup
       title={'Select Serial'}
+      imageDisplayStrategy="always"
       query={{ query, setQuery }}
       resourceName={{ singular: 'serial', plural: 'serials' }}
       isLoadingMore={serialsQuery.isFetching}
@@ -74,7 +83,7 @@ export function SerialSelector({
         type: 'select',
         items: [
           onClear ? { id: '', leftSide: { label: 'Clear' } } : null,
-          ...serials.map(serial => getSerialItem(serial)),
+          ...serials.map(serial => getSerialItem(serial, productVariantQueries[serial.productVariant.id]?.data)),
         ].filter(isNonNullable),
         onSelect: serialId =>
           serialId === ''
@@ -141,16 +150,19 @@ export function SerialSelector({
   );
 }
 
-export function getSerialItem(serial: DetailedSerial) {
+export function getSerialItem(serial: DetailedSerial, productVariant?: ProductVariant | undefined | null) {
   return {
     id: `${serial.productVariant.id}-${serial.serial}`,
     leftSide: {
-      label: getProductVariantName(serial.productVariant) ?? 'Unknown product',
+      label: getProductVariantName(productVariant ?? serial.productVariant) ?? 'Unknown product',
       subtitle: getSubtitle([serial.serial]),
       badges: [
         serial.location ? ({ variant: 'highlight', text: serial.location.name } as const) : null,
         serial.customer ? ({ variant: 'highlight', text: serial.customer.displayName } as const) : null,
       ].filter(isNonNullable),
+      image: {
+        source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
+      },
     },
   };
 }

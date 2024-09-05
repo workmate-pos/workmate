@@ -458,7 +458,7 @@ function WorkOrderProperties({
         }
       />
       <FormStringField
-        label={'Product and Serial Number'}
+        label={'Serial'}
         onFocus={() =>
           router.push('SerialSelector', {
             onSelect: serial =>
@@ -473,7 +473,7 @@ function WorkOrderProperties({
             ? ''
             : serialProductVariantQuery.isLoading
               ? 'Loading...'
-              : `#${createWorkOrder.serial.serial} ` + getProductVariantName(serialProductVariant) ?? 'Unknown product'
+              : `${createWorkOrder.serial.serial} - ` + getProductVariantName(serialProductVariant) ?? 'Unknown product'
         }
       />
     </ResponsiveGrid>

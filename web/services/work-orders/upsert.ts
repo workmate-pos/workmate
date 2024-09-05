@@ -32,6 +32,8 @@ import {
 import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 import { UUID } from '../../util/types.js';
+import { getSerial, upsertSerials } from '../serials/queries.js';
+import { httpError } from '../../util/http-error.js';
 
 // TODO: Support deleted customer/company
 // TODO: Handle case where special order/ purchase order items are deleted
@@ -53,6 +55,15 @@ export async function upsertWorkOrder(
 async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: null }) {
   return await unit(async () => {
     await ensureRequiredDatabaseDataExists(session, createWorkOrder);
+    const serial = createWorkOrder.serial
+      ? await getSerial({ ...createWorkOrder.serial, shop: session.shop }).then(
+          serial => serial ?? httpError('Serial not found', 400),
+        )
+      : null;
+
+    if (serial) {
+      await upsertSerials(session.shop, [{ ...serial, customerId: createWorkOrder.customerId }]);
+    }
 
     const [workOrder = never()] = await db.workOrder.upsert({
       shop: session.shop,
@@ -70,6 +81,7 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
       discountType: createWorkOrder.discount?.type,
       paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
       paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
+      productVariantSerialId: serial?.id,
     });
 
     await upsertItems(session, createWorkOrder, workOrder.id, []);
@@ -115,6 +127,15 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
       // nothing illegal, so we can upsert and delete items/charges safely
 
       await ensureRequiredDatabaseDataExists(session, createWorkOrder);
+      const serial = createWorkOrder.serial
+        ? await getSerial({ ...createWorkOrder.serial, shop: session.shop }).then(
+            serial => serial ?? httpError('Serial not found', 400),
+          )
+        : null;
+
+      if (serial) {
+        await upsertSerials(session.shop, [{ ...serial, customerId: createWorkOrder.customerId }]);
+      }
 
       await db.workOrder.upsert({
         name: workOrder.name,
@@ -133,6 +154,7 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
         discountType: createWorkOrder.discount?.type,
         paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
         paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
+        productVariantSerialId: serial?.id,
       });
 
       const [currentItems, currentCharges] = await Promise.all([
