@@ -461,10 +461,16 @@ function WorkOrderProperties({
         label={'Serial'}
         onFocus={() =>
           router.push('SerialSelector', {
-            onSelect: serial =>
+            onSelect: serial => {
               dispatch.setPartial({
                 serial: { productVariantId: serial.productVariant.id, serial: serial.serial },
-              }),
+              });
+
+              if (serial.customer && createWorkOrder.customerId !== serial.customer.id) {
+                toast.show(`Customer changed to the owner of serial ${serial.serial} (${serial.customer.displayName})`);
+                dispatch.setCustomer({ customerId: serial.customer.id });
+              }
+            },
             onClear: () => dispatch.setPartial({ serial: null }),
           })
         }
