@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { fetchAllPages, gql } from '../gql/gql.js';
-import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getChargeUnitPrice, getUuidsFromCustomAttributes } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { db } from '../db/db.js';
@@ -335,7 +335,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
     workOrderName: calculateWorkOrder.name,
     customFields: null,
     customerId: calculateWorkOrder.customerId,
-    paymentTerms: calculateWorkOrder.paymentTerms,
+    paymentTerms: null,
     companyContactId: calculateWorkOrder.companyContactId,
     companyLocationId: calculateWorkOrder.companyLocationId,
     companyId: calculateWorkOrder.companyId,
@@ -399,7 +399,7 @@ function getOrderPriceInformation(order: OrderWithAllLineItems | CalculatedDraft
   const orderDiscount = decimalToMoney(
     order.__typename === 'Order'
       ? order.currentTotalDiscountsSet.shopMoney.amount
-      : order.appliedDiscount?.amountSet.shopMoney.amount ?? BigDecimal.ZERO.toDecimal(),
+      : (order.appliedDiscount?.amountSet.shopMoney.amount ?? BigDecimal.ZERO.toDecimal()),
   );
 
   return {
