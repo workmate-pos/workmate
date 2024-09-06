@@ -1,8 +1,7 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getSerial, getSerialsPage } from './queries.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { getCustomerForSerial, getCustomers } from '../customer/queries.js';
+import { getCustomers } from '../customer/queries.js';
 import { getProductVariant } from '../product-variants/queries.js';
 import { getLocationForSerial, getLocations } from '../locations/queries.js';
 import { getWorkOrdersForSerial } from '../work-orders/queries.js';
@@ -13,8 +12,9 @@ import { DateTime } from '../gql/queries/generated/schema.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProduct } from '../products/queries.js';
+import { httpError } from '../../util/http-error.js';
 
-export type DetailedSerial = Awaited<ReturnType<typeof getDetailedSerial>>;
+export type DetailedSerial = NonNullable<Awaited<ReturnType<typeof getDetailedSerial>>>;
 
 export async function getDetailedSerial(
   shop: string,
@@ -23,19 +23,18 @@ export async function getDetailedSerial(
     serial: string;
   }>,
 ) {
-  const [serial, [productVariant, product], customer, location, workOrders, purchaseOrders] = await Promise.all([
+  const [serial, [productVariant, product], location, workOrders, purchaseOrders] = await Promise.all([
     getSerial({ ...filter, shop }),
     getProductVariant(filter.productVariantId).then(
       async pv => [pv, pv ? await getProduct(pv.productId) : null] as const,
     ),
-    getCustomerForSerial({ ...filter, shop }),
     getLocationForSerial({ ...filter, shop }),
     getWorkOrdersForSerial({ ...filter, shop }),
     getPurchaseOrdersForSerial({ ...filter, shop }),
   ]);
 
   if (!serial) {
-    throw new HttpError('Serial not found', 404);
+    return null;
   }
 
   if (!productVariant || !product) {
@@ -64,17 +63,6 @@ export async function getDetailedSerial(
         hasOnlyDefaultVariant: product.hasOnlyDefaultVariant,
       },
     },
-    customer: customer
-      ? {
-          id: customer.customerId,
-          displayName: customer.displayName,
-          email: customer.email,
-          phone: customer.phone,
-          address: customer.address,
-          firstName: customer.firstName,
-          lastName: customer.lastName,
-        }
-      : null,
     location: location
       ? {
           id: location.locationId,
@@ -148,7 +136,13 @@ export async function getDetailedSerialsPage(shop: string, paginationOptions: Se
   const { serials, hasNextPage } = await getSerialsPage(shop, paginationOptions);
 
   return {
-    serials: await Promise.all(serials.map(serial => getDetailedSerial(shop, serial))),
+    serials: await Promise.all(
+      serials.map(serial =>
+        getDetailedSerial(shop, serial).then(
+          detailedSerial => detailedSerial ?? httpError(`Serial ${serial.serial} not found`),
+        ),
+      ),
+    ),
     hasNextPage,
   };
 }

@@ -416,7 +416,8 @@ export async function upsertPurchaseOrderLineItems(
                     quantity                 = EXCLUDED.quantity,
                     "availableQuantity"      = EXCLUDED."availableQuantity",
                     "unitCost"               = EXCLUDED."unitCost",
-                    "specialOrderLineItemId" = EXCLUDED."specialOrderLineItemId";
+                    "specialOrderLineItemId" = EXCLUDED."specialOrderLineItemId",
+                    "productVariantSerialId" = EXCLUDED."productVariantSerialId";
   `;
 }
 

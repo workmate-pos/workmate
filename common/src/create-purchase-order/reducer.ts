@@ -172,6 +172,7 @@ function splitSerials(products: Product[]) {
       {
         ...product,
         uuid: uuid(),
+        serialNumber: null,
         quantity: product.quantity - 1,
       },
     ];

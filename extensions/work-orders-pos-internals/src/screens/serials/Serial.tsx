@@ -1,6 +1,4 @@
-import { WIPCreateSerial } from '../../create-serial/default.js';
 import { useState } from 'react';
-import { getCreateSerialSetter } from '../../create-serial/getCreateSerialSetter.js';
 import { useForm } from '@teifi-digital/pos-tools/form';
 import { Banner, Image, List, ListRow, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
@@ -15,12 +13,14 @@ import { useSerialMutation } from '@work-orders/common/queries/use-serial-mutati
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { CreateSerial } from '@web/schemas/generated/create-serial.js';
-import { getCreateSerialFromDetailedSerial } from '../../create-serial/get-create-serial-from-detailed-serial.js';
 import { useSerialQuery } from '@work-orders/common/queries/use-serial-query.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { WIPCreateSerial } from '@work-orders/common/create-serial/default.js';
+import { getCreateSerialSetter } from '@work-orders/common/create-serial/get-create-serial-setter.js';
+import { getCreateSerialFromDetailedSerial } from '@work-orders/common/create-serial/get-create-serial-from-detailed-serial.js';
 
 export function Serial({ initial }: { initial: WIPCreateSerial }) {
   const [lastSavedSerial, setLastSavedSerial] = useState(initial);

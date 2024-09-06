@@ -7,6 +7,7 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { SerialPaginationOptions } from '../../schemas/generated/serial-pagination-options.js';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
+import { escapeLike } from '../db/like.js';
 
 export async function getSerial({
   serial,
@@ -143,7 +144,7 @@ export async function getSerialsPage(
   const _customerId: string | null = customerId ?? null;
   const _locationId: string | null = locationId ?? null;
   const _productVariantId: string | null = productVariantId ?? null;
-  const _query = query || null;
+  const _query = query ? `%${escapeLike(query)}%` : null;
 
   const serials = await sql<{ productVariantId: string; serial: string }>`
     SELECT pvs."productVariantId", pvs.serial

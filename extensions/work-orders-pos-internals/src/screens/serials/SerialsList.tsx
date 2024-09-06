@@ -6,7 +6,6 @@ import { SerialSortColumn, SerialSortOrder } from '@web/schemas/generated/serial
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useSerialQuery } from '@work-orders/common/queries/use-serial-query.js';
-import { getCreateSerialFromDetailedSerial } from '../../create-serial/get-create-serial-from-detailed-serial.js';
 import { useRouter } from '../../routes.js';
 import { Banner, Button, List, ListRow, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
@@ -15,10 +14,11 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
-import { getDefaultCreateSerial } from '../../create-serial/default.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { getCreateSerialFromDetailedSerial } from '@work-orders/common/create-serial/get-create-serial-from-detailed-serial.js';
+import { getDefaultCreateSerial } from '@work-orders/common/create-serial/default.js';
 
 const sortColumns = ['created-at', 'updated-at', 'serial', 'product-name'] as const satisfies SerialSortColumn[];
 const sortOrders = ['ascending', 'descending'] as const satisfies SerialSortOrder[];
@@ -176,7 +176,7 @@ export function SerialsList() {
               onPress: () => setSelectedSerial({ serial: serial.serial, productVariantId: serial.productVariant.id }),
               leftSide: {
                 label: getProductVariantName(productVariant ?? serial.productVariant) ?? 'Unknown Product',
-                subtitle: getSubtitle([serial.serial, serial.customer?.displayName, serial.location?.name]),
+                subtitle: getSubtitle([serial.serial, serial.location?.name]),
                 image: {
                   source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
                 },

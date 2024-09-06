@@ -40,6 +40,10 @@
       "default": "./dist/create-special-order/*",
       "types": "./src/create-special-order/*"
     },
+    "./create-serial/*": {
+      "default": "./dist/create-serial/*",
+      "types": "./src/create-serial/*"
+    },
     "./metafields/*": {
       "default": "./dist/metafields/*",
       "types": "./src/metafields/*"

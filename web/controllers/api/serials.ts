@@ -7,6 +7,7 @@ import { SerialPaginationOptions } from '../../schemas/generated/serial-paginati
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CreateSerial } from '../../schemas/generated/create-serial.js';
 import { upsertSerial } from '../../services/serials/upsert.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
 
 @Authenticated()
 export default class SerialsController {
@@ -49,7 +50,7 @@ export default class SerialsController {
       await getDetailedSerial(session.shop, {
         serial: createSerial.serial,
         productVariantId: createSerial.productVariantId,
-      }),
+      }).then(serial => serial ?? never()),
     );
   }
 }
@@ -59,6 +60,6 @@ export type FetchSerialsResponse = {
   hasNextPage: boolean;
 };
 
-export type FetchSerialResponse = DetailedSerial;
+export type FetchSerialResponse = DetailedSerial | null;
 
 export type CreateSerialResponse = DetailedSerial;

@@ -156,10 +156,9 @@ export function getSerialItem(serial: DetailedSerial, productVariant?: ProductVa
     leftSide: {
       label: getProductVariantName(productVariant ?? serial.productVariant) ?? 'Unknown product',
       subtitle: getSubtitle([serial.serial]),
-      badges: [
-        serial.location ? ({ variant: 'highlight', text: serial.location.name } as const) : null,
-        serial.customer ? ({ variant: 'highlight', text: serial.customer.displayName } as const) : null,
-      ].filter(isNonNullable),
+      badges: [serial.location ? ({ variant: 'highlight', text: serial.location.name } as const) : null].filter(
+        isNonNullable,
+      ),
       image: {
         source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
       },

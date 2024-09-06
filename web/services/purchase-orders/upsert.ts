@@ -40,7 +40,7 @@ import { getProducts } from '../products/queries.js';
 import { getSpecialOrderLineItemsByNameAndUuids, getSpecialOrdersByNames } from '../special-orders/queries.js';
 import { httpError } from '../../util/http-error.js';
 import { getProductVariants } from '../product-variants/queries.js';
-import { getSerial, getSerialsByProductVariantSerials, upsertSerials } from '../serials/queries.js';
+import { getSerialsByProductVariantSerials, upsertSerials } from '../serials/queries.js';
 
 export async function upsertCreatePurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
@@ -101,6 +101,24 @@ export async function upsertCreatePurchaseOrder(session: Session, createPurchase
     ]);
 
     await assertNoIllegalSerials(shop, createPurchaseOrder, existingPurchaseOrder);
+    console.log('lineItemSerials', lineItemSerials);
+    console.log(
+      'lineItemSerials2',
+      createPurchaseOrder.lineItems.map(lineItem => ({
+        ...lineItem,
+        specialOrderLineItemId: !lineItem.specialOrderLineItem
+          ? null
+          : (specialOrderLineItems
+              .filter(hasPropertyValue('uuid', lineItem.specialOrderLineItem.uuid))
+              .find(hasPropertyValue('specialOrderName', lineItem.specialOrderLineItem.name))?.id ??
+            httpError('Special order line item not found', 400)),
+        productVariantSerialId: !lineItem.serialNumber
+          ? null
+          : (serials
+              .filter(hasPropertyValue('productVariantId', lineItem.productVariantId))
+              .find(hasPropertyValue('serial', lineItem.serialNumber))?.id ?? httpError('Serial not found', 400)),
+      })),
+    );
 
     await Promise.all([
       upsertPurchaseOrderLineItems(

@@ -28,43 +28,6 @@ export async function getCustomerForSpecialOrder(specialOrderId: number) {
   return mapCustomer(customer);
 }
 
-export async function getCustomerForSerial({
-  shop,
-  serial,
-  id,
-  productVariantId,
-}: MergeUnion<{ id: number } | { shop: string; serial: string; productVariantId: ID }>) {
-  const _productVariantId: string | null = productVariantId ?? null;
-
-  const [customer] = await sql<{
-    customerId: string;
-    shop: string;
-    displayName: string;
-    firstName: string | null;
-    lastName: string | null;
-    email: string | null;
-    phone: string | null;
-    address: string | null;
-    createdAt: Date;
-    updatedAt: Date;
-    deletedAt: Date | null;
-  }>`
-    SELECT c.*
-    FROM "ProductVariantSerial" pvs
-    INNER JOIN "Customer" c USING ("customerId")
-    WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
-      AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
-      AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
-      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
-  `;
-
-  if (!customer) {
-    return null;
-  }
-
-  return mapCustomer(customer);
-}
-
 function mapCustomer(customer: {
   customerId: string;
   shop: string;

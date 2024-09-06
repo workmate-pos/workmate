@@ -16,6 +16,6 @@
       "type": "string"
     }
   },
-  "required": ["serial", "productVariantId", "locationId", "customerId", "note"],
+  "required": ["serial", "productVariantId", "locationId", "note"],
   "additionalProperties": false
 }
