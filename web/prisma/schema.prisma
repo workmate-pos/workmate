@@ -645,7 +645,6 @@ model Customer {
   createdAt            DateTime               @default(now()) @db.Timestamptz(3)
   updatedAt            DateTime               @default(now()) @db.Timestamptz(3)
   deletedAt            DateTime?
-  ProductVariantSerial ProductVariantSerial[]
 
   @@index([shop])
 }
@@ -882,9 +881,6 @@ model ProductVariantSerial {
 
   productVariantId String
   productVariant   ProductVariant @relation(fields: [productVariantId], references: [productVariantId])
-
-  customerId String?
-  customer   Customer? @relation(fields: [customerId], references: [customerId])
 
   locationId String?
   location   Location? @relation(fields: [locationId], references: [locationId])

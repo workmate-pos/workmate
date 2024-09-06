@@ -12,9 +12,6 @@
     "locationId": {
       "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
     },
-    "customerId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
-    },
     "note": {
       "type": "string"
     }

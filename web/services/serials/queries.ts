@@ -29,7 +29,6 @@ export async function getSerial({
     note: string;
     serial: string;
     productVariantId: string;
-    customerId: string | null;
     locationId: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -55,22 +54,19 @@ function mapSerial(pvs: {
   note: string;
   serial: string;
   productVariantId: string;
-  customerId: string | null;
   locationId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }) {
-  const { productVariantId, customerId, locationId } = pvs;
+  const { productVariantId, locationId } = pvs;
 
   try {
     assertGid(productVariantId);
-    assertGidOrNull(customerId);
     assertGidOrNull(locationId);
 
     return {
       ...pvs,
       productVariantId,
-      customerId,
       locationId,
     };
   } catch (error) {
@@ -86,7 +82,6 @@ export async function getSerialsByIds(serialIds: number[]) {
     note: string;
     serial: string;
     productVariantId: string;
-    customerId: string | null;
     locationId: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -115,7 +110,6 @@ export async function getSerialsByProductVariantSerials(
     note: string;
     serial: string;
     productVariantId: string;
-    customerId: string | null;
     locationId: string | null;
     createdAt: Date;
     updatedAt: Date;
@@ -156,10 +150,11 @@ export async function getSerialsPage(
     FROM "ProductVariantSerial" pvs
            INNER JOIN "ProductVariant" pv ON pvs."productVariantId" = pv."productVariantId"
            INNER JOIN "Product" p ON pv."productId" = p."productId"
-           LEFT JOIN "Customer" c ON pvs."customerId" = c."customerId"
+           LEFT JOIN "WorkOrder" wo ON wo."productVariantSerialId" = pvs.id
+           LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
            LEFT JOIN "Location" l ON pvs."locationId" = l."locationId"
     WHERE pvs.shop = ${shop}
-      AND pvs."customerId" IS NOT DISTINCT FROM COALESCE(${_customerId}, pvs."customerId")
+      AND wo."customerId" IS NOT DISTINCT FROM COALESCE(${_customerId}, wo."customerId")
       AND pvs."locationId" IS NOT DISTINCT FROM COALESCE(${_locationId}, pvs."locationId")
       AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
       AND (
@@ -170,6 +165,7 @@ export async function getSerialsPage(
       c.email ILIKE COALESCE(${_query}, c.email) OR
       l.name ILIKE COALESCE(${_query}, l.name)
       )
+    GROUP BY pvs.id, pvs."createdAt", pvs."updatedAt", pvs.serial, p.title
     ORDER BY CASE WHEN ${order} = 'ascending' AND ${sort} = 'created-at' THEN pvs."createdAt" END ASC NULLS LAST,
              CASE WHEN ${order} = 'descending' AND ${sort} = 'created-at' THEN pvs."createdAt" END DESC NULLS LAST,
              --
@@ -198,7 +194,6 @@ export async function upsertSerials(
   serials: {
     serial: string;
     productVariantId: ID;
-    customerId: ID | null;
     locationId: ID | null;
     note: string;
   }[],
@@ -207,15 +202,14 @@ export async function upsertSerials(
     return;
   }
 
-  const { serial, productVariantId, customerId, locationId, note } = nest(serials);
+  const { serial, productVariantId, locationId, note } = nest(serials);
 
   await sql`
-    INSERT INTO "ProductVariantSerial" (shop, serial, "productVariantId", "customerId", "locationId", note)
+    INSERT INTO "ProductVariantSerial" (shop, serial, "productVariantId", "locationId", note)
     SELECT ${shop}, *
     FROM UNNEST(
       ${serial} :: text[],
       ${productVariantId as string[]} :: text[],
-      ${customerId as string[]} :: text[],
       ${locationId as string[]} :: text[],
       ${note} :: text[]
          )
@@ -223,7 +217,6 @@ export async function upsertSerials(
       DO UPDATE SET shop               = EXCLUDED.shop,
                     "productVariantId" = EXCLUDED."productVariantId",
                     serial             = EXCLUDED.serial,
-                    "customerId"       = EXCLUDED."customerId",
                     "locationId"       = EXCLUDED."locationId",
                     note               = EXCLUDED.note
   `;

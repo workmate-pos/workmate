@@ -364,7 +364,7 @@ export async function getWorkOrderSerial(
   if (!workOrder.productVariantSerialId) return null;
 
   const pvs = await getSerial({ id: workOrder.productVariantSerialId });
-  const { productVariantId, serial, locationId, customerId } = pvs ?? never('fk');
+  const { productVariantId, serial, locationId } = pvs ?? never('fk');
 
   // TODO: Warnings on front end in case data doesnt match, e.g. customer and pvs customer
 
@@ -372,6 +372,5 @@ export async function getWorkOrderSerial(
     productVariantId,
     serial,
     locationId,
-    customerId,
   };
 }

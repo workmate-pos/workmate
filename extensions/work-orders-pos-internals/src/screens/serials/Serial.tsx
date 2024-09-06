@@ -9,7 +9,6 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useRouter } from '../../routes.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { useSerialMutation } from '@work-orders/common/queries/use-serial-mutation.js';
@@ -30,12 +29,10 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
   const setSerialNumber = getCreateSerialSetter(setCreateSerial, 'serial');
   const setLocationId = getCreateSerialSetter(setCreateSerial, 'locationId');
   const setNote = getCreateSerialSetter(setCreateSerial, 'note');
-  const setCustomerId = getCreateSerialSetter(setCreateSerial, 'customerId');
 
   const fetch = useAuthenticatedFetch();
   const productVariantQuery = useProductVariantQuery({ fetch, id: createSerial.productVariantId });
   const locationQuery = useLocationQuery({ fetch, id: createSerial.locationId });
-  const customerQuery = useCustomerQuery({ fetch, id: createSerial.customerId });
   const serialMutation = useSerialMutation({ fetch });
   const serialQuery = useSerialQuery({
     fetch,
@@ -45,7 +42,6 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
 
   const productVariant = productVariantQuery.data;
   const location = locationQuery.data;
-  const customer = customerQuery.data;
   const serial = serialQuery.data;
 
   const { Form } = useForm();
@@ -116,23 +112,6 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
               router.push('LocationSelector', {
                 onSelect: location => setLocationId(location.id),
                 onClear: () => setLocationId(null),
-              })
-            }
-          />
-
-          <FormStringField
-            label={'Customer'}
-            value={
-              createSerial.customerId
-                ? customerQuery.isLoading
-                  ? 'Loading...'
-                  : customer?.displayName ?? 'Unknown customer'
-                : ''
-            }
-            onFocus={() =>
-              router.push('CustomerSelector', {
-                onSelect: customer => setCustomerId(customer.id),
-                onClear: () => setCustomerId(null),
               })
             }
           />

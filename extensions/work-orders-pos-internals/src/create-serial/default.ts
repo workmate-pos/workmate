@@ -7,7 +7,6 @@ export type WIPCreateSerial = Omit<CreateSerial, 'serial'> & {
 
 export const getDefaultCreateSerial = (productVariantId: ID): WIPCreateSerial => ({
   productVariantId,
-  customerId: null,
   locationId: null,
   serial: null,
   note: '',

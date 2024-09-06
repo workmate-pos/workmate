@@ -30,7 +30,6 @@ export type WorkOrderSerial = {
   productVariantId: ID;
   serial: string;
   locationId: ID | null;
-  customerId: ID | null;
 };
 
 export type WorkOrderDiscount =

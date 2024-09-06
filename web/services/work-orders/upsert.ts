@@ -61,10 +61,6 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
         )
       : null;
 
-    if (serial) {
-      await upsertSerials(session.shop, [{ ...serial, customerId: createWorkOrder.customerId }]);
-    }
-
     const [workOrder = never()] = await db.workOrder.upsert({
       shop: session.shop,
       name: await getNewWorkOrderName(session.shop),
@@ -132,10 +128,6 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
             serial => serial ?? httpError('Serial not found', 400),
           )
         : null;
-
-      if (serial) {
-        await upsertSerials(session.shop, [{ ...serial, customerId: createWorkOrder.customerId }]);
-      }
 
       await db.workOrder.upsert({
         name: workOrder.name,
