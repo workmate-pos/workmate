@@ -30,8 +30,8 @@ export type CustomFieldConfigProps = {
 };
 
 export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type }: CustomFieldConfigProps) {
-  const [customFields, setCustomFields] = useState<Record<string, string>>(initialCustomFields);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [customFields, setCustomFields] = useState<Record<string, string>>({ ...initialCustomFields });
+  const hasUnsavedChanges = JSON.stringify(customFields) !== JSON.stringify(initialCustomFields);
 
   const [newCustomFieldName, setNewCustomFieldName] = useState('');
   const [newCustomFieldNameError, setNewCustomFieldNameError] = useState('');
@@ -49,20 +49,19 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
 
   const router = useRouter();
 
-  function createNewCustomField() {
+  const createNewCustomField = () => {
     if (newCustomFieldName.trim().length === 0) {
       setNewCustomFieldNameError('Custom field name is required');
       return;
     }
 
-    setHasUnsavedChanges(true);
     setNewCustomFieldName('');
     setNewCustomFieldNameError('');
     setCustomFields({
       ...customFields,
       [newCustomFieldName]: '',
     });
-  }
+  };
 
   const screen = useScreen();
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
@@ -113,34 +112,29 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
         <ResponsiveGrid columns={1}>
-          {Object.entries(customFields).flatMap(([key, value]) => (
-            <ResponsiveGrid columns={2}>
+          {Object.entries(customFields).map(([key, value]) => (
+            <ResponsiveGrid columns={2} key={key}>
               <CustomField
-                key={`${key}-value`}
                 name={key}
                 value={value}
-                onChange={value => {
-                  setHasUnsavedChanges(true);
+                onChange={value =>
                   setCustomFields({
                     ...customFields,
                     [key]: value,
-                  });
-                }}
+                  })
+                }
                 useRouter={useRouter}
               />
 
               <ResponsiveGrid columns={2}>
                 <Button
-                  key={`${key}-remove-button`}
                   title={'Remove'}
                   type={'destructive'}
-                  onPress={() => {
-                    setHasUnsavedChanges(true);
-                    setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)));
-                  }}
+                  onPress={() =>
+                    setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)))
+                  }
                 />
                 <Button
-                  key={`${key}-manage`}
                   title={'Values'}
                   onPress={() => router.push('CustomFieldValuesConfig', { name: key, useRouter })}
                 />
