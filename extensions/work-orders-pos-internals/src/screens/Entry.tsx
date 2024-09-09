@@ -24,7 +24,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useCalculateWorkOrderQueries } from '@work-orders/common/queries/use-calculate-work-order-queries.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
-import { DAY_IN_MS, MINUTE_IN_MS, SECOND_IN_MS } from '@work-orders/common/time/constants.js';
+import { DAY_IN_MS, MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { WorkOrderFiltersDisplay, WorkOrderFiltersObj } from './popups/WorkOrderFilters.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
@@ -81,11 +81,7 @@ export function Entry() {
         onSearch={() => {}}
         placeholder="Search work orders"
       />
-      <List
-        data={rows}
-        onEndReached={() => workOrderInfoQuery.fetchNextPage()}
-        isLoadingMore={workOrderInfoQuery.isLoading}
-      />
+      <List data={rows} isLoadingMore={workOrderInfoQuery.isFetching} />
       {workOrderInfoQuery.isLoading && (
         <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
@@ -106,6 +102,9 @@ export function Entry() {
             {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
           </Text>
         </Stack>
+      )}
+      {!workOrderInfoQuery.isFetching && workOrderInfoQuery.hasNextPage && (
+        <Button title="Load more" onPress={() => workOrderInfoQuery.fetchNextPage()} type="plain" />
       )}
     </ScrollView>
   );

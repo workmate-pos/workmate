@@ -28,6 +28,7 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 
 export function WorkOrderItemsCard({
   createWorkOrder,
@@ -161,10 +162,7 @@ function ProductsList({
     fetch,
     ids: createWorkOrder.items.filter(hasPropertyValue('type', 'product')).map(item => item.productVariantId),
   });
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    { fetch, ...createWorkOrder },
-    { enabled: false, keepPreviousData: true },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({ fetch, ...createWorkOrder });
 
   const onItemClick = (item: CreateWorkOrder['items'][number]) => {
     if (disabled) return;
@@ -179,12 +177,11 @@ function ProductsList({
     <>
       <ResourceList
         items={createWorkOrder.items}
-        loading={calculatedDraftOrderQuery.isLoading}
         resourceName={{ singular: 'product', plural: 'products' }}
         resolveItemId={item => item.uuid}
         renderItem={item => {
           const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
-          const variant =
+          const productVariant =
             itemLineItem?.variant ??
             (item.type === 'product' ? productVariantQueries[item.productVariantId]?.data : null);
 
@@ -192,15 +189,27 @@ function ProductsList({
 
           const name =
             itemLineItem?.name ??
-            getProductVariantName(variant) ??
+            getProductVariantName(productVariant) ??
             (calculatedDraftOrderQuery.isFetching ? 'Loading...' : 'Unknown item');
-          const sku = itemLineItem?.sku ?? variant?.sku;
-          const imageUrl = itemLineItem?.image?.url ?? variant?.image?.url ?? variant?.product?.featuredImage?.url;
+          const sku = itemLineItem?.sku ?? productVariant?.sku;
+          const imageUrl =
+            itemLineItem?.image?.url ?? productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
 
           const charges = createWorkOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
-          const itemPrice = calculatedDraftOrderQuery.getItemPrice(item);
-          const chargePrices = charges.map(charge => calculatedDraftOrderQuery.getChargePrice(charge));
+          const fallbackItemPrice =
+            !createWorkOrder.companyId && productVariant?.price
+              ? BigDecimal.fromMoney(productVariant.price)
+                  .multiply(BigDecimal.fromString(item.quantity.toString()))
+                  .toMoney()
+              : undefined;
+
+          const itemPrice = calculatedDraftOrderQuery.getItemPrice(item) ?? fallbackItemPrice;
+          const chargePrices = calculatedDraftOrderQuery
+            ? charges.map(charge => calculatedDraftOrderQuery.getChargePrice(charge))
+            : createWorkOrder.companyId
+              ? []
+              : [getTotalPriceForCharges(charges)];
 
           const totalPrice = BigDecimal.sum(
             ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),
@@ -223,7 +232,7 @@ function ProductsList({
                     {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
                   </InlineStack>
                   <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                    {!!itemLineItem && currencyFormatter(totalPrice)}
+                    {currencyFormatter(totalPrice)}
                   </Text>
                 </InlineStack>
                 <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>

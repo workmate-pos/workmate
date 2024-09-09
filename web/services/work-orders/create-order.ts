@@ -2,7 +2,6 @@ import { Session } from '@shopify/shopify-api';
 import { CreateWorkOrderOrder } from '../../schemas/generated/create-work-order-order.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
-import { db } from '../db/db.js';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { gql } from '../gql/gql.js';
 import { getWorkOrder } from './queries.js';
@@ -22,6 +21,10 @@ export async function createWorkOrderOrder(session: Session, createWorkOrderOrde
 
   if (!workOrder) {
     throw new HttpError('Work order not found', 404);
+  }
+
+  if (!workOrder.companyId) {
+    throw new HttpError('Only b2b work orders can be converted to an order');
   }
 
   const input = await getDraftOrderInputForExistingWorkOrder(session, createWorkOrderOrder.name, {

@@ -58,6 +58,7 @@ import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
 import { UUID } from '@web/util/types.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -891,9 +892,21 @@ function useItemRows(
           .filter(hasPropertyValue('type', item.type))
           .find(hasPropertyValue('uuid', item.uuid))?.transferOrders ?? [];
 
-      const itemPrice = calculatedWorkOrderQuery.getItemPrice(item);
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
-      const chargePrices = charges.map(calculatedWorkOrderQuery.getChargePrice);
+
+      const fallbackItemPrice =
+        !createWorkOrder.companyId && productVariant?.price
+          ? BigDecimal.fromMoney(productVariant.price)
+              .multiply(BigDecimal.fromString(item.quantity.toString()))
+              .toMoney()
+          : undefined;
+
+      const itemPrice = calculatedWorkOrderQuery.getItemPrice(item) ?? fallbackItemPrice;
+      const chargePrices = calculatedWorkOrderQuery
+        ? charges.map(calculatedWorkOrderQuery.getChargePrice)
+        : createWorkOrder.companyId
+          ? []
+          : [getTotalPriceForCharges(charges)];
       const totalPrice = BigDecimal.sum(
         ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),
       );
@@ -913,8 +926,6 @@ function useItemRows(
       const sku = lineItem?.sku ?? variant?.sku;
       const imageUrl = lineItem?.image?.url ?? variant?.image?.url ?? variant?.product?.featuredImage?.url;
 
-      const disabled = !lineItem;
-
       return {
         id: item.uuid,
         leftSide: {
@@ -932,14 +943,10 @@ function useItemRows(
           ],
         },
         rightSide: {
-          label: lineItem ? currencyFormatter(totalPrice.toMoney()) : '',
-          showChevron: !disabled,
+          label: currencyFormatter(totalPrice.toMoney()),
+          showChevron: true,
         },
         onPress() {
-          if (disabled) {
-            return;
-          }
-
           if (charges.length > 0 || isMutableService) {
             router.push('ItemChargeConfig', {
               item,
