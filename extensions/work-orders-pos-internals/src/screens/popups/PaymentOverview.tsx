@@ -174,13 +174,15 @@ export function PaymentOverview({ name }: { name: string }) {
         <List data={rows} imageDisplayStrategy={'always'} isLoadingMore={false} onEndReached={() => {}} />
       </ResponsiveStack>
       <ResponsiveGrid columns={2}>
-        <Button
-          title={'Create Order'}
-          isLoading={createWorkOrderOrderMutation.isLoading}
-          isDisabled={isLoading || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length}
-          onPress={() => createOrder()}
-          type={'primary'}
-        />
+        {!!workOrder.companyId && (
+          <Button
+            title={'Create Order'}
+            isLoading={createWorkOrderOrderMutation.isLoading}
+            isDisabled={isLoading || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length}
+            onPress={() => createOrder()}
+            type={'primary'}
+          />
+        )}
 
         {!workOrder.companyId && (
           <Button
