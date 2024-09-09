@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BlockStack, DropZone, Icon, InlineGrid, InlineStack, Modal, Text } from '@shopify/polaris';
+import { BlockStack, DropZone, Icon, InlineGrid, Modal, Text } from '@shopify/polaris';
 import { FileMinor } from '@shopify/polaris-icons';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -9,7 +9,15 @@ export function PurchaseOrderCsvUploadDropZoneModal({ open, onClose }: { open: b
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const purchaseOrdersUploadCsvMutation = usePurchaseOrdersUploadCsvMutation({ fetch });
+  const purchaseOrdersUploadCsvMutation = usePurchaseOrdersUploadCsvMutation(
+    { fetch },
+    {
+      onSuccess() {
+        setToastAction({ content: 'Imported purchase orders!' });
+        onClose();
+      },
+    },
+  );
 
   const [purchaseOrderInfoFile, setPurchaseOrderInfoFile] = useState<File>();
   const [lineItemsFile, setLineItemsFile] = useState<File>();
