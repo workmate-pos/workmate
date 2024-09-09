@@ -1,4 +1,13 @@
-import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import {
+  Badge,
+  Button,
+  List,
+  ListRow,
+  ScrollView,
+  Stack,
+  Text,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
@@ -20,6 +29,7 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { useRouter } from '../../routes.js';
 import { Fetch } from '@work-orders/common/queries/fetch.js';
 import { usePlanWorkOrderOrderQuery } from '@work-orders/common/queries/use-plan-work-order-order-query.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 /**
  * Page that allows initializing payments for line items.
@@ -147,55 +157,80 @@ export function PaymentOverview({ name }: { name: string }) {
 
   const canChangeSelection = selectableItems.length !== 0 || selectableCharges.length !== 0;
 
+  let financialStatus = undefined;
+
+  const { outstanding, total } = calculateWorkOrderQuery.data;
+
+  const outstandingBigDecimal = BigDecimal.fromMoney(outstanding);
+  const totalBigDecimal = BigDecimal.fromMoney(total);
+
+  if (outstandingBigDecimal.compare(BigDecimal.ZERO) <= 0) {
+    financialStatus = 'Fully Paid';
+  } else if (outstandingBigDecimal.compare(totalBigDecimal) < 0) {
+    financialStatus = 'Partially paid';
+  } else {
+    financialStatus = 'Unpaid';
+  }
+
   return (
     <ScrollView>
-      {selectedItems.length === selectableItems.length && selectedCharges.length === selectableCharges.length ? (
-        <Button
-          title={'Deselect all items'}
-          isDisabled={isLoading || !canChangeSelection}
-          type={'plain'}
-          onPress={() => {
-            setSelectedItems([]);
-            setSelectedCharges([]);
-          }}
-        />
-      ) : (
-        <Button
-          title={'Select all items'}
-          isDisabled={isLoading || !canChangeSelection}
-          type={'plain'}
-          onPress={() => {
-            setSelectedItems(selectableItems);
-            setSelectedCharges(selectableCharges);
-          }}
-        />
-      )}
-      <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'}>
-        <List data={rows} imageDisplayStrategy={'always'} isLoadingMore={false} onEndReached={() => {}} />
-      </ResponsiveStack>
-      <ResponsiveGrid columns={2}>
-        {!!workOrder.companyId && (
-          <Button
-            title={'Create Order'}
-            isLoading={createWorkOrderOrderMutation.isLoading}
-            isDisabled={isLoading || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length}
-            onPress={() => createOrder()}
-            type={'primary'}
-          />
+      <ResponsiveStack direction={'vertical'} spacing={2}>
+        <Badge text={financialStatus} variant={'highlight'} />
+        {financialStatus === 'Partially paid' && (
+          <Text variant={'bodyMd'} color={'TextSubdued'}>
+            {workOrder.name} is partially paid. To pay the outstanding balance of products that have been partially
+            paid, please navigate to the respective Shopify Order (e.g. via the Orders tab outside of WorkMate).
+          </Text>
         )}
 
-        {!workOrder.companyId && (
+        {selectedItems.length === selectableItems.length && selectedCharges.length === selectableCharges.length ? (
           <Button
-            title={'Create Payment'}
-            isLoading={planOrderQuery.isFetching || paymentHandler.isLoading}
-            isDisabled={
-              isLoading || !!workOrder.companyId || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length
-            }
-            onPress={() => pay()}
-            type={'primary'}
+            title={'Deselect all items'}
+            isDisabled={isLoading || !canChangeSelection}
+            type={'plain'}
+            onPress={() => {
+              setSelectedItems([]);
+              setSelectedCharges([]);
+            }}
+          />
+        ) : (
+          <Button
+            title={'Select all items'}
+            isDisabled={isLoading || !canChangeSelection}
+            type={'plain'}
+            onPress={() => {
+              setSelectedItems(selectableItems);
+              setSelectedCharges(selectableCharges);
+            }}
           />
         )}
-      </ResponsiveGrid>
+        <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'}>
+          <List data={rows} imageDisplayStrategy={'always'} isLoadingMore={false} onEndReached={() => {}} />
+        </ResponsiveStack>
+        <ResponsiveGrid columns={2}>
+          {!!workOrder.companyId && (
+            <Button
+              title={'Create Order'}
+              isLoading={createWorkOrderOrderMutation.isLoading}
+              isDisabled={isLoading || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length}
+              onPress={() => createOrder()}
+              type={'primary'}
+            />
+          )}
+
+          {!workOrder.companyId && (
+            <Button
+              title={'Create Payment'}
+              isLoading={planOrderQuery.isFetching || paymentHandler.isLoading}
+              isDisabled={
+                isLoading || !!workOrder.companyId || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length
+              }
+              onPress={() => pay()}
+              type={'primary'}
+            />
+          )}
+        </ResponsiveGrid>
+      </ResponsiveStack>
     </ScrollView>
   );
 }
