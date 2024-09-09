@@ -123,7 +123,7 @@ export function PurchaseOrderProductConfig({
             )}
 
             <Stack direction={'horizontal'} flex={1} flexChildren paddingVertical={'Medium'}>
-              <ResponsiveGrid columns={2}>
+              <ResponsiveGrid columns={2} smColumns={2}>
                 {inventoryLevel?.quantities?.flatMap(({ name, quantity }) => [
                   <Stack key={`${name}-title`} direction={'horizontal'} alignment={'center'}>
                     <Text variant="body" color="TextSubdued">
