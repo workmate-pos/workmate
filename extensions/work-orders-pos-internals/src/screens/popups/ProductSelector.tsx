@@ -1,6 +1,6 @@
 import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
@@ -14,10 +14,7 @@ import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-s
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
-import {
-  getProductServiceType,
-  SERVICE_METAFIELD_VALUE_TAG_NAME,
-} from '@work-orders/common/metafields/product-service-type.js';
+import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -30,7 +27,6 @@ import { useLocationQueries } from '@work-orders/common/queries/use-location-que
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
-import { UUID } from '@web/util/types.js';
 
 export function ProductSelector({
   onSelect,

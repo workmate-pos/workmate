@@ -4,7 +4,6 @@ import { escapeLike } from '../db/like.js';
 import { db } from '../db/db.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { groupByKey, indexBy, unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -20,9 +19,11 @@ import {
   getPurchaseOrderLineItems,
 } from './queries.js';
 import { getStockTransferLineItemsForPurchaseOrder } from '../stock-transfers/queries.js';
-import { assertInt } from '../../util/assertions.js';
 import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getSpecialOrderLineItemsForPurchaseOrder, getSpecialOrdersByIds } from '../special-orders/queries.js';
+import { getProductVariants } from '../product-variants/queries.js';
+import { getProducts } from '../products/queries.js';
+import { getSerialsByIds } from '../serials/queries.js';
 
 export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
   const purchaseOrder = await getPurchaseOrder({ shop, name });
@@ -126,12 +127,16 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
   ]);
 
   const productVariantIds = unique(lineItems.map(({ productVariantId }) => productVariantId));
-  const productVariants = productVariantIds.length ? await db.productVariants.getMany({ productVariantIds }) : [];
+  const productVariants = await getProductVariants(productVariantIds);
   const productVariantById = indexBy(productVariants, pv => pv.productVariantId);
 
   const productIds = unique(productVariants.map(({ productId }) => productId));
-  const products = productIds.length ? await db.products.getMany({ productIds }) : [];
+  const products = await getProducts(productIds);
   const productById = indexBy(products, p => p.productId);
+
+  const serialIds = unique(lineItems.map(lineItem => lineItem.productVariantSerialId).filter(isNonNullable));
+  const serials = await getSerialsByIds(serialIds);
+  const serialById = indexBy(serials, s => s.id.toString());
 
   const shopifyOrderLineItemIds = unique(
     specialOrderLineItems.map(({ shopifyOrderLineItemId }) => shopifyOrderLineItemId).filter(isNonNullable),
@@ -149,87 +154,98 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
   const specialOrders = await getSpecialOrdersByIds(specialOrderIds);
   const specialOrderById = indexBy(specialOrders, so => String(so.id));
 
-  return lineItems.map(({ uuid, quantity, availableQuantity, productVariantId, unitCost, specialOrderLineItemId }) => {
-    const productVariant = productVariantById[productVariantId] ?? never('fk');
-    const product = productById[productVariant.productId] ?? never('fk');
-
-    const specialOrderLineItem = specialOrderLineItemId
-      ? specialOrderLineItems.find(hasPropertyValue('id', specialOrderLineItemId))
-      : null;
-
-    const shopifyOrderLineItem = specialOrderLineItem?.shopifyOrderLineItemId
-      ? shopifyOrderLineItemById[specialOrderLineItem.shopifyOrderLineItemId] ?? never('fk')
-      : null;
-
-    const linkedStockTransferLineItems = stockTransferLineItems.filter(
-      hasPropertyValue('purchaseOrderLineItemUuid', uuid),
-    );
-
-    const shopifyOrder = shopifyOrderLineItem ? orderById[shopifyOrderLineItem.orderId] ?? never('fk') : null;
-
-    assertGid(productVariant.productVariantId);
-    assertGid(productVariant.inventoryItemId);
-    assertGid(product.productId);
-    assertInt(quantity);
-    assertInt(availableQuantity);
-    assertMoney(unitCost);
-
-    return {
+  return lineItems.map(
+    ({
       uuid,
-      productVariant: {
-        id: productVariant.productVariantId,
-        title: productVariant.title,
-        sku: productVariant.sku,
-        inventoryItemId: productVariant.inventoryItemId,
-        product: {
-          id: product.productId,
-          title: product.title,
-          handle: product.handle,
-          hasOnlyDefaultVariant: product.productVariantCount === 1,
-          description: product.description,
-          productType: product.productType,
-        },
-      },
-      // TODO: Warn if this is undefined but special order line item is defined
-      shopifyOrderLineItem: (() => {
-        if (shopifyOrderLineItem == null) {
-          return null;
-        }
-
-        const order = shopifyOrder ?? never('fk');
-
-        assertGid(shopifyOrderLineItem.lineItemId);
-        assertGid(order.orderId);
-
-        return {
-          id: shopifyOrderLineItem.lineItemId,
-          order: {
-            id: order.orderId,
-            name: order.name,
-          },
-        };
-      })(),
-      stockTransferLineItems: linkedStockTransferLineItems.map(({ stockTransferName, status, quantity, uuid }) => ({
-        stockTransferName,
-        uuid,
-        status,
-        quantity,
-      })),
-      customFields: Object.fromEntries(
-        lineItemCustomFields.filter(cf => cf.purchaseOrderLineItemUuid === uuid).map(({ key, value }) => [key, value]),
-      ),
-      unitCost,
       quantity,
       availableQuantity,
-      specialOrderLineItem: specialOrderLineItem
-        ? {
-            uuid: specialOrderLineItem.uuid,
-            name: specialOrderById[specialOrderLineItem.specialOrderId]?.name ?? never('fk'),
-            quantity: specialOrderLineItem.quantity,
+      productVariantId,
+      unitCost,
+      specialOrderLineItemId,
+      productVariantSerialId,
+    }) => {
+      const productVariant = productVariantById[productVariantId] ?? never('fk');
+      const product = productById[productVariant.productId] ?? never('fk');
+      const serial = productVariantSerialId ? (serialById[productVariantSerialId] ?? never('fk')) : null;
+
+      const specialOrderLineItem = specialOrderLineItemId
+        ? specialOrderLineItems.find(hasPropertyValue('id', specialOrderLineItemId))
+        : null;
+
+      const shopifyOrderLineItem = specialOrderLineItem?.shopifyOrderLineItemId
+        ? (shopifyOrderLineItemById[specialOrderLineItem.shopifyOrderLineItemId] ?? never('fk'))
+        : null;
+
+      const linkedStockTransferLineItems = stockTransferLineItems.filter(
+        hasPropertyValue('purchaseOrderLineItemUuid', uuid),
+      );
+
+      const shopifyOrder = shopifyOrderLineItem ? (orderById[shopifyOrderLineItem.orderId] ?? never('fk')) : null;
+
+      return {
+        uuid,
+        productVariant: {
+          id: productVariant.productVariantId,
+          title: productVariant.title,
+          sku: productVariant.sku,
+          inventoryItemId: productVariant.inventoryItemId,
+          product: {
+            id: product.productId,
+            title: product.title,
+            handle: product.handle,
+            description: product.description,
+            productType: product.productType,
+            hasOnlyDefaultVariant: product.hasOnlyDefaultVariant,
+          },
+        },
+        // TODO: Warn if this is undefined but special order line item is defined
+        shopifyOrderLineItem: (() => {
+          if (shopifyOrderLineItem == null) {
+            return null;
           }
-        : null,
-    };
-  });
+
+          const order = shopifyOrder ?? never('fk');
+
+          assertGid(shopifyOrderLineItem.lineItemId);
+          assertGid(order.orderId);
+
+          return {
+            id: shopifyOrderLineItem.lineItemId,
+            order: {
+              id: order.orderId,
+              name: order.name,
+            },
+          };
+        })(),
+        stockTransferLineItems: linkedStockTransferLineItems.map(({ stockTransferName, status, quantity, uuid }) => ({
+          stockTransferName,
+          uuid,
+          status,
+          quantity,
+        })),
+        customFields: Object.fromEntries(
+          lineItemCustomFields
+            .filter(cf => cf.purchaseOrderLineItemUuid === uuid)
+            .map(({ key, value }) => [key, value]),
+        ),
+        unitCost,
+        quantity,
+        availableQuantity,
+        specialOrderLineItem: specialOrderLineItem
+          ? {
+              uuid: specialOrderLineItem.uuid,
+              name: specialOrderById[specialOrderLineItem.specialOrderId]?.name ?? never('fk'),
+              quantity: specialOrderLineItem.quantity,
+            }
+          : null,
+        serial: serial
+          ? {
+              serial: serial.serial,
+            }
+          : null,
+      };
+    },
+  );
 }
 
 async function getPurchaseOrderCustomFieldsRecord(purchaseOrderId: number) {

@@ -6,7 +6,7 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
-import { Badge, BlockStack, Box, DataTable, InlineStack, Modal, Text } from '@shopify/polaris';
+import { Badge, BlockStack, Box, DataTable, InlineStack, Modal, Text, TextField } from '@shopify/polaris';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useState } from 'react';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
@@ -143,6 +143,12 @@ export function PurchaseOrderLineItemModal({
               min={0}
               requiredIndicator
               readOnly={isImmutable}
+            />
+            <TextField
+              label={'Serial Number'}
+              autoComplete="off"
+              value={product.serialNumber ?? ''}
+              onChange={value => setProduct(product => ({ ...product, serialNumber: value.toUpperCase() || null }))}
             />
             <IntegerField
               label={'Quantity'}

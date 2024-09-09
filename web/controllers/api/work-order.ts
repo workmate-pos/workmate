@@ -28,6 +28,7 @@ import { DraftOrderInput } from '../../services/gql/queries/generated/schema.js'
 import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
 import { getWorkOrderCsvTemplatesZip, readWorkOrderCsvImport } from '../../services/work-orders/csv-import.js';
 import { transaction } from '../../services/db/transaction.js';
+import * as Sentry from '@sentry/node';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -162,6 +163,7 @@ export default class WorkOrderController {
       companyLocationId: null,
       companyId: null,
       paymentTerms: null,
+      serial: null,
     });
 
     return res.json({ name });
@@ -226,14 +228,26 @@ export default class WorkOrderController {
     const { subject, html } = await getRenderedWorkOrderTemplate(printTemplate, context);
     const file = await renderHtmlToPdfCustomFile(subject, html);
 
-    await mg.send(
-      { emailReplyTo, emailFromTitle },
+    await Sentry.startSpan(
       {
-        to: printEmail,
-        attachment: [file],
-        subject,
-        text: 'WorkMate Work Order',
+        name: 'Sending work order print email',
+        attributes: {
+          emailFromTitle,
+          emailReplyTo,
+          printEmail,
+          subject,
+        },
       },
+      () =>
+        mg.send(
+          { emailReplyTo, emailFromTitle },
+          {
+            to: printEmail,
+            attachment: [file],
+            subject,
+            text: 'WorkMate Work Order',
+          },
+        ),
     );
 
     return res.json({ success: true });

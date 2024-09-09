@@ -55,7 +55,7 @@ export function CustomField({
           });
         }
       }}
-      disabled={!customFieldValueOptionsQuery.data}
+      disabled={customFieldValueOptionsQuery.data === undefined}
     />
   );
 }

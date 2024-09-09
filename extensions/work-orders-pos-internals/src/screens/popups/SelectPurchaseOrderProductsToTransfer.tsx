@@ -15,7 +15,7 @@ import { useRouter } from '../../routes.js';
 import { defaultCreateStockTransfer } from '../../create-stock-transfer/default.js';
 import { UUID } from '@web/util/types.js';
 import { ListPopup, ListPopupItem } from '@work-orders/common-pos/screens/ListPopup.js';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 type SelectablePurchaseOrderLineItem = {
   uuid: UUID;

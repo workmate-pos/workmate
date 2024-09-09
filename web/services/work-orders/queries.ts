@@ -31,6 +31,7 @@ export async function getWorkOrder(filters: MergeUnion<{ id: number } | { shop: 
     companyContactId: string | null;
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
+    productVariantSerialId: number | null;
   }>`
     SELECT *
     FROM "WorkOrder"
@@ -65,6 +66,7 @@ function mapWorkOrder<
     companyContactId: string | null;
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
+    productVariantSerialId: number | null;
   },
 >(workOrder: T) {
   const { customerId, derivedFromOrderId, companyId, companyLocationId, companyContactId, paymentTermsTemplateId } =
@@ -255,14 +257,12 @@ export async function upsertWorkOrderItems(
 
   const { shopifyOrderLineItemId, workOrderId, uuid, data } = nest(items);
 
-  const unbrandedShopifyOrderLineItemId = shopifyOrderLineItemId as (string | null)[];
-
   await sql`
     INSERT INTO "WorkOrderItem" ("workOrderId", uuid, "shopifyOrderLineItemId", data)
     SELECT *
     FROM UNNEST(${workOrderId} :: int[],
                 ${uuid} :: uuid[],
-                ${unbrandedShopifyOrderLineItemId} :: text[],
+                ${shopifyOrderLineItemId as string[]} :: text[],
                 ${data.map(data => JSON.stringify(data))} :: jsonb[])
     ON CONFLICT ("workOrderId", uuid)
       DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
@@ -403,13 +403,12 @@ export async function setWorkOrderChargeShopifyOrderLineItemIds(
   }
 
   const { shopifyOrderLineItemId, uuid } = nest(charges);
-  const _uuid: (string | null)[] = uuid;
 
   const { count } = await sqlOne<{ count: number }>`
     WITH updated AS (
       UPDATE "WorkOrderCharge" x
         SET "shopifyOrderLineItemId" = y."shopifyOrderLineItemId"
-        FROM UNNEST(${shopifyOrderLineItemId as string[]} :: text[], ${_uuid} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
+        FROM UNNEST(${shopifyOrderLineItemId as string[]} :: text[], ${uuid as string[]} :: uuid[]) AS y("shopifyOrderLineItemId", uuid)
         WHERE x."workOrderId" = ${workOrderId}
           AND x.uuid = y.uuid
         RETURNING 1)
@@ -446,6 +445,7 @@ export async function getWorkOrdersForSpecialOrder(specialOrderId: number) {
     companyContactId: string | null;
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
+    productVariantSerialId: number | null;
     orderIds: string[] | null;
   }>`
     SELECT DISTINCT wo.*, array_agg(DISTINCT soli."orderId") AS "orderIds"
@@ -463,4 +463,45 @@ export async function getWorkOrdersForSpecialOrder(specialOrderId: number) {
       orderIds: workOrder.orderIds?.map(orderId => (assertGid(orderId), orderId)) ?? [],
     }),
   );
+}
+
+export async function getWorkOrdersForSerial({
+  shop,
+  serial,
+  id,
+  productVariantId,
+}: MergeUnion<{ id: number } | { shop: string; serial: string; productVariantId: ID }>) {
+  const _productVariantId: string | null = productVariantId ?? null;
+
+  const workOrders = await sql<{
+    id: number;
+    shop: string;
+    name: string;
+    customerId: string;
+    derivedFromOrderId: string | null;
+    dueDate: Date;
+    note: string;
+    status: string;
+    updatedAt: Date;
+    createdAt: Date;
+    discountAmount: string | null;
+    discountType: 'FIXED_AMOUNT' | 'PERCENTAGE' | null;
+    internalNote: string;
+    companyId: string | null;
+    companyLocationId: string | null;
+    companyContactId: string | null;
+    paymentFixedDueDate: Date | null;
+    paymentTermsTemplateId: string | null;
+    productVariantSerialId: number | null;
+  }>`
+    SELECT wo.*
+    FROM "ProductVariantSerial" pvs
+           INNER JOIN "WorkOrder" wo ON wo."productVariantSerialId" = pvs.id
+    WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
+      AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
+      AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+  `;
+
+  return workOrders.map(mapWorkOrder);
 }

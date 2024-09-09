@@ -26,7 +26,7 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 export function CreatePurchaseOrderSpecialOrderSelector() {
   const { session, toast } = useExtensionApi<'pos.home.modal.render'>();
@@ -232,6 +232,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
                         availableQuantity: 0,
                         unitCost,
                         customFields: lineItemCustomFields,
+                        serialNumber: null,
                       };
                     })
                     .filter(isNonNullable),

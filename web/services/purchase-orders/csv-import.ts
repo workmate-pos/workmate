@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { zCsvNullable, zDateTime, zID, zMoney, zNamespacedID } from '../../util/zod.js';
-import { PassThrough, Readable } from 'node:stream';
+import { zCsvNullable, zDateTime, zMoney, zNamespacedID } from '../../util/zod.js';
+import { Readable } from 'node:stream';
 import { buffer } from 'node:stream/consumers';
 import busboy from 'busboy';
 import { IncomingHttpHeaders } from 'node:http';
@@ -8,9 +8,9 @@ import csv from 'csv-parser';
 import { finished } from 'node:stream/promises';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { v4 as uuid } from 'uuid';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import archiver from 'archiver';
+import { uuid } from '@work-orders/common/util/uuid.js';
 import { UUID } from '../../util/types.js';
 
 const CsvPurchaseOrderId = z
@@ -46,6 +46,7 @@ const CsvPurchaseOrderLineItem = z.object({
   Quantity: z.coerce.number().int(),
   UnitCost: zMoney,
   AvailableQuantity: z.coerce.number().int(),
+  SerialNumber: zCsvNullable(z.string()),
 });
 
 const CsvPurchaseOrderCustomField = z.object({
@@ -56,7 +57,7 @@ const CsvPurchaseOrderCustomField = z.object({
 
 const CsvPurchaseOrderEmployeeAssignment = z.object({
   ID: CsvPurchaseOrderId,
-  EmployeeId: zID,
+  EmployeeID: zNamespacedID('Employee'),
 });
 
 const CsvPurchaseOrderLineItemCustomField = z.object({
@@ -100,7 +101,7 @@ export async function readPurchaseOrderCsvImport({
 
     const createPurchaseOrders: Record<string, CreatePurchaseOrder> = Object.create(null);
     // map [purchase order id][line item id] to line item uuid
-    const lineItemUuidMapping: Record<string, Record<string, string>> = Object.create(null);
+    const lineItemUuidMapping: Record<string, Record<string, UUID>> = Object.create(null);
 
     const handlePurchaseOrderInfo = (data: z.infer<typeof CsvPurchaseOrderInfo>) => {
       if (data.ID in createPurchaseOrders) {
@@ -140,7 +141,7 @@ export async function readPurchaseOrderCsvImport({
         throw new HttpError('Duplicate purchase order line item id', 400);
       }
 
-      const lineItemUuid = uuid() as UUID;
+      const lineItemUuid = uuid();
 
       (lineItemUuidMapping[data.PurchaseOrderID] ??= {})[data.LineItemID] = lineItemUuid;
 
@@ -152,6 +153,7 @@ export async function readPurchaseOrderCsvImport({
         unitCost: data.UnitCost,
         availableQuantity: data.AvailableQuantity,
         customFields: Object.create(null),
+        serialNumber: data.SerialNumber,
       });
     };
 
@@ -176,15 +178,15 @@ export async function readPurchaseOrderCsvImport({
       const createPurchaseOrder = createPurchaseOrders[data.ID];
 
       if (!createPurchaseOrder) {
-        throw new HttpError(`Purchase order ${data.ID} not found for employee assignment ${data.EmployeeId}`, 400);
+        throw new HttpError(`Purchase order ${data.ID} not found for employee assignment ${data.EmployeeID}`, 400);
       }
 
-      if (createPurchaseOrder.employeeAssignments.map(ea => ea.employeeId).includes(data.EmployeeId)) {
+      if (createPurchaseOrder.employeeAssignments.map(ea => ea.employeeId).includes(data.EmployeeID)) {
         throw new HttpError('Duplicate purchase order employee assignment', 400);
       }
 
       createPurchaseOrder.employeeAssignments.push({
-        employeeId: data.EmployeeId,
+        employeeId: data.EmployeeID,
       });
     };
 

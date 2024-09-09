@@ -17,7 +17,7 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useEffect, useState } from 'react';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { UUID } from '@web/util/types.js';
@@ -141,7 +141,12 @@ export function PurchaseOrderProductSelector({
               },
               onCreate: product => {
                 selectProducts([
-                  { ...product, uuid: uuid() as UUID, customFields: customFieldsPresetsQuery.data.defaultCustomFields },
+                  {
+                    ...product,
+                    uuid: uuid(),
+                    customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                    serialNumber: null,
+                  },
                 ]);
                 router.popCurrent();
               },
@@ -252,13 +257,14 @@ function useProductVariantRows(
         if (!variant.requiresComponents) {
           selectProducts([
             {
-              uuid: uuid() as UUID,
+              uuid: uuid(),
               specialOrderLineItem: null,
               productVariantId: variant.id,
               availableQuantity: 0 as Int,
               quantity: 1 as Int,
               unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
               customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+              serialNumber: null,
             },
           ]);
           return;
@@ -271,7 +277,7 @@ function useProductVariantRows(
             const inventoryItem = inventoryItemQueries[productVariant.inventoryItem.id]?.data;
 
             return Array.from({ length: quantity }, () => ({
-              uuid: uuid() as UUID,
+              uuid: uuid(),
               specialOrderLineItem: null,
               handle: productVariant.product.handle,
               productVariantId: productVariant.id,
@@ -281,6 +287,7 @@ function useProductVariantRows(
               sku: productVariant.sku,
               unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
               customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+              serialNumber: null,
             }));
           }),
         );

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "rootDir": "./src",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsx": "react-native",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "paths": {
+      "@web/*": ["../../web/*"]
+    },
+    "typeRoots": ["./node_modules/@types", "../node_modules/@types"]
+  },
+  "references": [
+    {
+      "path": "../../web/tsconfig.json"
+    }
+  ]
+}

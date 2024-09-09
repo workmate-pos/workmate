@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { zCsvBool, zCsvNullable, zDateTime, zDecimal, zID, zMoney } from '../../util/zod.js';
+import { zCsvBool, zCsvNullable, zDateTime, zDecimal, zMoney, zNamespacedID } from '../../util/zod.js';
 import { IncomingHttpHeaders } from 'node:http';
 import { Readable } from 'node:stream';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
@@ -11,10 +11,10 @@ import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { httpError } from '../../util/http-error.js';
-import { UUID } from '../../util/types.js';
-import { v4 as uuid } from 'uuid';
 import csv from 'csv-parser';
 import { finished } from 'node:stream/promises';
+import { uuid } from '@work-orders/common/util/uuid.js';
+import { UUID } from '../../util/types.js';
 
 const CsvWorkOrderId = z
   .string()
@@ -27,24 +27,27 @@ const CsvWorkOrderInfo = z.object({
   DueDate: zDateTime,
   Note: z.string(),
   InternalNote: z.string(),
-  CustomerID: zID,
-  CompanyID: zCsvNullable(zID),
-  CompanyLocationID: zCsvNullable(zID),
-  CompanyContactID: zCsvNullable(zID),
-  DerivedFromOrderID: zCsvNullable(zID),
+  CustomerID: zNamespacedID('Customer'),
+  CompanyID: zCsvNullable(zNamespacedID('Company')),
+  CompanyLocationID: zCsvNullable(zNamespacedID('CompanyLocation')),
+  CompanyContactID: zCsvNullable(zNamespacedID('CompanyContact')),
+  DerivedFromOrderID: zCsvNullable(zNamespacedID('Order')),
 
-  PaymentTermsTemplateID: zCsvNullable(zID),
+  PaymentTermsTemplateID: zCsvNullable(zNamespacedID('PaymentTermsTemplate')),
   PaymentTermsDate: zCsvNullable(zDateTime).describe(
     'Only required if the payment terms template requires a date, e.g. fixed date',
   ),
 
   DiscountType: zCsvNullable(z.union([z.literal('FIXED_AMOUNT'), z.literal('PERCENTAGE')])),
   DiscountAmount: zCsvNullable(z.union([zMoney, zDecimal])),
+
+  SerialNumber: zCsvNullable(z.string()),
+  SerialProductVariantID: zCsvNullable(zNamespacedID('ProductVariant')),
 });
 
 const CsvWorkOrderInfoPaymentTerms = z
   .object({
-    PaymentTermsTemplateID: zID,
+    PaymentTermsTemplateID: zNamespacedID('PaymentTermsTemplate'),
     PaymentTermsDate: zCsvNullable(zDateTime).describe(
       'Only required if the payment terms template requires a date, e.g. fixed date',
     ),
@@ -74,6 +77,18 @@ const CsvWorkOrderInfoDiscount = z
     }),
   );
 
+const CsvWorkOrderInfoSerial = z
+  .object({
+    SerialNumber: z.string(),
+    SerialProductVariantID: zNamespacedID('ProductVariant'),
+  })
+  .or(
+    z.object({
+      SerialNumber: zCsvNullable(z.null()),
+      SerialProductVariantID: zCsvNullable(z.null()),
+    }),
+  );
+
 const CsvWorkOrderLineItemId = z
   .string()
   .min(1)
@@ -86,14 +101,14 @@ const CsvWorkOrderLineItem = z.object({
   AbsorbCharges: zCsvBool,
 
   Type: z.union([z.literal('PRODUCT'), z.literal('CUSTOM-ITEM')]),
-  ProductVariantID: zCsvNullable(zID),
+  ProductVariantID: zCsvNullable(zNamespacedID('ProductVariant')),
   Name: zCsvNullable(z.string().min(1)),
   UnitPrice: zCsvNullable(zMoney),
 });
 
 const CsvWorkOrderLineItemProduct = z.object({
   Type: z.literal('PRODUCT'),
-  ProductVariantID: zID,
+  ProductVariantID: zNamespacedID('ProductVariant'),
 });
 
 const CsvWorkOrderLineItemCustomItem = z.object({
@@ -106,7 +121,7 @@ const CsvWorkOrderCharge = z.object({
   WorkOrderID: CsvWorkOrderId,
   ChargeID: CsvWorkOrderLineItemId,
   LineItemID: zCsvNullable(CsvWorkOrderLineItemId),
-  EmployeeID: zCsvNullable(zID),
+  EmployeeID: zCsvNullable(zNamespacedID('Employee')),
   Name: z.string().min(1),
   CanRemove: zCsvBool,
 
@@ -124,7 +139,7 @@ const CsvWorkOrderHourlyLabourCharge = z.object({
   ChargeID: CsvWorkOrderLineItemId,
   LineItemID: zCsvNullable(CsvWorkOrderLineItemId),
   Type: z.literal('HOURLY-LABOUR'),
-  EmployeeID: zCsvNullable(zID),
+  EmployeeID: zCsvNullable(zNamespacedID('Employee')),
   Name: z.string().min(1),
   Rate: zMoney,
   Hours: zDecimal,
@@ -138,7 +153,7 @@ const CsvWorkOrderFixedPriceLabourCharge = z.object({
   ChargeID: CsvWorkOrderLineItemId,
   LineItemID: zCsvNullable(CsvWorkOrderLineItemId),
   Type: z.literal('FIXED-PRICE-LABOUR'),
-  EmployeeID: zCsvNullable(zID),
+  EmployeeID: zCsvNullable(zNamespacedID('Employee')),
   Name: z.string().min(1),
   Amount: zMoney,
   CanChangeAmount: zCsvBool,
@@ -203,6 +218,7 @@ export async function readWorkOrderCsvImport({
 
       const paymentTerms = CsvWorkOrderInfoPaymentTerms.safeParse(data);
       const discount = CsvWorkOrderInfoDiscount.safeParse(data);
+      const serial = CsvWorkOrderInfoSerial.safeParse(data);
 
       if (!paymentTerms.success) {
         throw new HttpError(`Invalid payment terms for work order ${data.ID}`, 400);
@@ -210,6 +226,10 @@ export async function readWorkOrderCsvImport({
 
       if (!discount.success) {
         throw new HttpError(`Invalid discount for work order ${data.ID}`, 400);
+      }
+
+      if (!serial.success) {
+        throw new HttpError(`Invalid serial for work order ${data.ID}`, 400);
       }
 
       createWorkOrders[data.ID] = {
@@ -229,6 +249,11 @@ export async function readWorkOrderCsvImport({
               date: paymentTerms.data.PaymentTermsDate,
             }
           : null,
+        serial: match(serial.data)
+          .returnType<CreateWorkOrder['serial']>()
+          .with({ SerialNumber: null, SerialProductVariantID: null }, () => null)
+          .with({ SerialNumber: P.select('serial'), SerialProductVariantID: P.select('productVariantId') }, identity)
+          .exhaustive(),
         discount: match(discount.data)
           .returnType<CreateWorkOrder['discount']>()
           .with({ DiscountType: P.select('type', 'FIXED_AMOUNT'), DiscountAmount: P.select('value') }, identity)
@@ -255,7 +280,7 @@ export async function readWorkOrderCsvImport({
       }
 
       const base = {
-        uuid: uuid() as UUID,
+        uuid: uuid(),
         quantity: data.Quantity,
         customFields: {},
         absorbCharges: data.AbsorbCharges,
@@ -310,7 +335,7 @@ export async function readWorkOrderCsvImport({
       }
 
       const base = {
-        uuid: uuid() as UUID,
+        uuid: uuid(),
         name: data.Name,
         removeLocked: !data.CanRemove,
         workOrderItemUuid,

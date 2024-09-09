@@ -1,6 +1,7 @@
 import {
   BadgeProps,
   Banner,
+  Button,
   DateField,
   List,
   ListRow,
@@ -48,7 +49,10 @@ import {
 } from '@work-orders/common/create-work-order/reducer.js';
 import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
 import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
-import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
+import {
+  useProductVariantQueries,
+  useProductVariantQuery,
+} from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -57,6 +61,7 @@ import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
 import { UUID } from '@web/util/types.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
+import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -283,6 +288,12 @@ function WorkOrderProperties({
   const storePropertiesQuery = useStorePropertiesQuery({ fetch });
   const storeProperties = storePropertiesQuery.data?.storeProperties;
 
+  const serialProductVariantQuery = useProductVariantQuery({
+    fetch,
+    id: createWorkOrder.serial?.productVariantId ?? null,
+  });
+  const serialProductVariant = serialProductVariantQuery.data;
+
   // TODO: Make Previous Order and Previous Work Orders clickable to view history (wrap in selectable or make it a button?)
 
   const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
@@ -446,6 +457,26 @@ function WorkOrderProperties({
             : customerQuery.isLoading
               ? 'Loading...'
               : customer?.displayName ?? 'Unknown customer'
+        }
+      />
+      <FormStringField
+        label={'Serial'}
+        onFocus={() =>
+          router.push('SerialSelector', {
+            onSelect: serial => {
+              dispatch.setPartial({
+                serial: { productVariantId: serial.productVariant.id, serial: serial.serial },
+              });
+            },
+            onClear: () => dispatch.setPartial({ serial: null }),
+          })
+        }
+        value={
+          createWorkOrder.serial === null
+            ? ''
+            : serialProductVariantQuery.isLoading
+              ? 'Loading...'
+              : `${createWorkOrder.serial.serial} - ` + getProductVariantName(serialProductVariant) ?? 'Unknown product'
         }
       />
     </ResponsiveGrid>
@@ -621,13 +652,13 @@ function WorkOrderCustomFields({
 
       <FormButton
         title={'Custom Fields'}
-        onPress={() => {
+        onPress={() =>
           router.push('CustomFieldConfig', {
             initialCustomFields: createWorkOrder.customFields,
             onSave: customFields => dispatch.setPartial({ customFields }),
             type: 'WORK_ORDER',
-          });
-        }}
+          })
+        }
       />
     </ResponsiveGrid>
   );
@@ -890,9 +921,21 @@ function useItemRows(
           .filter(hasPropertyValue('type', item.type))
           .find(hasPropertyValue('uuid', item.uuid))?.transferOrders ?? [];
 
-      const itemPrice = calculatedWorkOrderQuery.getItemPrice(item);
       const charges = createWorkOrder.charges?.filter(hasPropertyValue('workOrderItemUuid', item.uuid)) ?? [];
-      const chargePrices = charges.map(calculatedWorkOrderQuery.getChargePrice);
+
+      const fallbackItemPrice =
+        !createWorkOrder.companyId && productVariant?.price
+          ? BigDecimal.fromMoney(productVariant.price)
+              .multiply(BigDecimal.fromString(item.quantity.toString()))
+              .toMoney()
+          : undefined;
+
+      const itemPrice = calculatedWorkOrderQuery.getItemPrice(item) ?? fallbackItemPrice;
+      const chargePrices = calculatedWorkOrderQuery
+        ? charges.map(calculatedWorkOrderQuery.getChargePrice)
+        : createWorkOrder.companyId
+          ? []
+          : [getTotalPriceForCharges(charges)];
       const totalPrice = BigDecimal.sum(
         ...[itemPrice, ...chargePrices].filter(isNonNullable).map(price => BigDecimal.fromMoney(price)),
       );
@@ -912,8 +955,6 @@ function useItemRows(
       const sku = lineItem?.sku ?? variant?.sku;
       const imageUrl = lineItem?.image?.url ?? variant?.image?.url ?? variant?.product?.featuredImage?.url;
 
-      const disabled = !lineItem;
-
       return {
         id: item.uuid,
         leftSide: {
@@ -931,14 +972,10 @@ function useItemRows(
           ],
         },
         rightSide: {
-          label: lineItem ? currencyFormatter(totalPrice.toMoney()) : '',
-          showChevron: !disabled,
+          label: currencyFormatter(totalPrice.toMoney()),
+          showChevron: true,
         },
         onPress() {
-          if (disabled) {
-            return;
-          }
-
           if (charges.length > 0 || isMutableService) {
             router.push('ItemChargeConfig', {
               item,

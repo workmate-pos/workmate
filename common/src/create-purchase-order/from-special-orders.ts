@@ -3,12 +3,10 @@ import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
 import { Location } from '../queries/use-locations-query.js';
 import { ProductVariant } from '../queries/use-product-variants-query.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-// TODO: swap to common uuid after merge
-import { v4 as uuid } from 'uuid';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { UUID } from '@web/util/types.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
+import { uuid } from '../util/uuid.js';
 
 export function getCreatePurchaseOrderForSpecialOrders({
   location,
@@ -71,7 +69,7 @@ export function getCreatePurchaseOrderForSpecialOrders({
           }
 
           return {
-            uuid: uuid() as UUID,
+            uuid: uuid(),
             productVariantId: lineItem.productVariantId,
             specialOrderLineItem: {
               name: specialOrder.name,
@@ -81,6 +79,7 @@ export function getCreatePurchaseOrderForSpecialOrders({
             availableQuantity: 0,
             unitCost,
             customFields: lineItemCustomFields,
+            serialNumber: null,
           };
         })
         .filter(isNonNullable),

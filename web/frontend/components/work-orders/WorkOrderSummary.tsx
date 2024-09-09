@@ -165,15 +165,17 @@ export function WorkOrderSummary({
               Print
             </Button>
           </Tooltip>
-          <Tooltip
-            active={hasUnsavedChanges}
-            content={'You must save your work order before you can create orders for it'}
-            dismissOnMouseOut
-          >
-            <Button disabled={disabled || hasUnsavedChanges} onClick={() => onCreateOrder()}>
-              Create Unpaid Order
-            </Button>
-          </Tooltip>
+          {!!createWorkOrder.companyId && (
+            <Tooltip
+              active={hasUnsavedChanges}
+              content={'You must save your work order before you can create orders for it'}
+              dismissOnMouseOut
+            >
+              <Button disabled={disabled || hasUnsavedChanges} onClick={() => onCreateOrder()}>
+                Create Unpaid Order
+              </Button>
+            </Tooltip>
+          )}
           <Button variant={'primary'} disabled={disabled} onClick={() => onSave()} loading={isSaving}>
             Save
           </Button>

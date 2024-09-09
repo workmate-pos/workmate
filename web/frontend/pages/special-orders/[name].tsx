@@ -100,7 +100,9 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const [lastSavedSpecialOrder, setLastSavedSpecialOrder] = useState(initial);
   const [createSpecialOrder, setCreateSpecialOrder] = useState(initial);
 
-  const hasUnsavedChanges = JSON.stringify(createSpecialOrder) !== JSON.stringify(lastSavedSpecialOrder);
+  const hasUnsavedChanges =
+    JSON.stringify(createSpecialOrder, Object.keys(createSpecialOrder).sort()) !==
+    JSON.stringify(lastSavedSpecialOrder, Object.keys(lastSavedSpecialOrder).sort());
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });

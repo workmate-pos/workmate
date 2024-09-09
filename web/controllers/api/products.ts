@@ -15,6 +15,7 @@ import { MetafieldInput } from '../../services/gql/queries/generated/schema.js';
 import { productServiceTypeMetafield } from '../../services/metafields/product-service-type-metafield.js';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { ensureMetafieldDefinitionExists } from '../../services/metafields/installable-metafield-service.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 @Authenticated()
 export default class ProductsController {
@@ -92,7 +93,7 @@ export default class ProductsController {
             barcode,
             inventoryPolicy: allowOutOfStockPurchases ? 'CONTINUE' : 'DENY',
             inventoryItem: {
-              cost: costPrice,
+              cost: costPrice ? BigDecimal.fromMoney(costPrice).toDecimal() : null,
               tracked: true,
             },
             inventoryQuantities: locationId ? [{ availableQuantity, locationId }] : [],
