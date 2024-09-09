@@ -544,6 +544,29 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
   return purchaseOrders.map(mapPurchaseOrder);
 }
 
+export async function getPurchaseOrderCount(shop: string, filters: MergeUnion<{ vendor: string }>) {
+  const { count } = await sqlOne<{ count: number }>`
+    SELECT COUNT(*) :: int AS count
+    FROM "PurchaseOrder"
+    WHERE "shop" = COALESCE(${shop ?? null}, "shop")
+      AND "vendorName" = COALESCE(${filters?.vendor ?? null}, "vendorName");
+  `;
+
+  return count;
+}
+
+export async function getPurchaseOrderCountByVendor(shop: string) {
+  const counts = await sql<{ vendorName: string; count: number }>`
+    SELECT "vendorName", COUNT(*) :: int AS count
+    FROM "PurchaseOrder"
+    WHERE "shop" = COALESCE(${shop ?? null}, "shop")
+      AND "vendorName" IS NOT NULL
+    GROUP BY "vendorName";
+  `;
+
+  return Object.fromEntries(counts.map(({ vendorName, count }) => [vendorName, count]));
+}
+
 export async function getPurchaseOrdersForSerial({
   shop,
   serial,

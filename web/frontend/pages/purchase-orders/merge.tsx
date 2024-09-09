@@ -1,5 +1,6 @@
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import {
+  Badge,
   EmptyState,
   Frame,
   IndexFilters,
@@ -20,18 +21,16 @@ import { useSpecialOrdersQuery } from '@work-orders/common/queries/use-special-o
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useNotFullyOrderedSpecialOrderVendorsQuery } from '@work-orders/common/queries/use-not-fully-ordered-special-order-vendors-query.js';
+import { hasNonNullableProperty, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
-import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { useAppBridge } from '@shopify/app-bridge-react';
-import { v4 as uuid } from 'uuid';
-import { UUID } from '@web/util/types.js';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
+import { getCreatePurchaseOrderForSpecialOrders } from '@work-orders/common/create-purchase-order/from-special-orders.js';
 
 export default function () {
   return (
@@ -54,7 +53,13 @@ function Merge() {
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const vendorsQuery = useNotFullyOrderedSpecialOrderVendorsQuery({ fetch, locationId: locationId ?? null });
+  const vendorsQuery = useVendorsQuery({
+    fetch,
+    filters: {
+      specialOrderLocationId: locationId,
+      specialOrderLineItemOrderState: 'NOT_FULLY_ORDERED',
+    },
+  });
   const locationsQuery = useLocationsQuery({ fetch, params: {} });
   const specialOrdersQuery = useSpecialOrdersQuery({
     fetch,
@@ -188,6 +193,8 @@ function Merge() {
       <IndexTable
         headings={[
           { title: 'Special Order' },
+          { title: 'Order State' },
+          { title: 'PO State' },
           { title: 'Location' },
           { title: 'Customer' },
           { title: 'Required By' },
@@ -230,15 +237,21 @@ function Merge() {
               }
 
               const status = settingsQuery.data?.settings.defaultPurchaseOrderStatus;
-              const customFields = purchaseOrderCustomFieldsPresetsQuery.data?.defaultCustomFields;
+              const purchaseOrderCustomFields = purchaseOrderCustomFieldsPresetsQuery.data?.defaultCustomFields;
               const lineItemCustomFields = lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields;
 
-              if (!status || !customFields || !lineItemCustomFields) {
+              if (!status || !purchaseOrderCustomFields || !lineItemCustomFields) {
                 setToastAction({ content: 'Settings not loaded, please try again' });
                 return;
               }
 
               const location = locations.find(location => location.id === locationId);
+
+              if (!location) {
+                setToastAction({ content: 'Location not found' });
+                return;
+              }
+
               const selectedSpecialOrders = selectedResources
                 .map(name => specialOrdersQuery.data?.pages.flat().find(specialOrder => specialOrder.name === name))
                 .filter(isNonNullable);
@@ -248,59 +261,24 @@ function Merge() {
                 return;
               }
 
-              const createPurchaseOrder: CreatePurchaseOrder = {
-                name: null,
-                status,
-                placedDate: null,
-                locationId,
+              const createPurchaseOrder = getCreatePurchaseOrderForSpecialOrders({
+                location,
                 vendorName,
-                shipFrom: '',
-                shipTo: location?.address?.formatted.join('\n') ?? '',
-                note: '',
-                discount: null,
-                tax: null,
-                shipping: null,
-                deposited: null,
-                paid: null,
-                customFields,
-                employeeAssignments: [],
-                lineItems: selectedSpecialOrders.flatMap(specialOrder =>
-                  specialOrder.lineItems
-                    .map(lineItem => {
-                      const productVariant = productVariantQueries[lineItem.productVariantId]?.data;
-
-                      if (!productVariant) {
-                        setToastAction({ content: 'Product variant not found' });
-                        throw new Error('Product variant not found');
-                      }
-
-                      if (productVariant.product.vendor !== vendorName) {
-                        return null;
-                      }
-
-                      const inventoryItem = productVariant.inventoryItem;
-
-                      const unitCost = inventoryItem.unitCost
-                        ? BigDecimal.fromDecimal(inventoryItem.unitCost.amount).toMoney()
-                        : BigDecimal.ZERO.toMoney();
-
-                      return {
-                        uuid: uuid() as UUID,
-                        productVariantId: lineItem.productVariantId,
-                        specialOrderLineItem: {
-                          name: specialOrder.name,
-                          uuid: lineItem.uuid,
-                        },
-                        quantity: lineItem.quantity,
-                        availableQuantity: 0,
-                        unitCost,
-                        customFields: lineItemCustomFields,
-                        serialNumber: null,
-                      };
-                    })
-                    .filter(isNonNullable),
+                status,
+                purchaseOrderCustomFields,
+                lineItemCustomFields,
+                productVariants: Object.fromEntries(
+                  Object.values(productVariantQueries)
+                    .filter(hasNonNullableProperty('data'))
+                    .map(query => [query.data.id, query.data]),
                 ),
-              };
+                specialOrders: selectedSpecialOrders,
+              });
+
+              if (createPurchaseOrder.lineItems.length === 0) {
+                setToastAction({ content: 'Cannot merge special orders - no line items found' });
+                return;
+              }
 
               setToastAction({ content: 'Merging special orders...' });
               purchaseOrderMutation.mutate(createPurchaseOrder, {
@@ -327,6 +305,14 @@ function Merge() {
               <Text as={'p'} fontWeight={'bold'} variant="bodyMd">
                 {specialOrder.name}
               </Text>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Badge tone={'info'}>{titleCase(specialOrder.orderState)}</Badge>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              {specialOrder.purchaseOrders.length > 0 && (
+                <Badge tone={'info'}>{titleCase(specialOrder.purchaseOrderState)}</Badge>
+              )}
             </IndexTable.Cell>
             <IndexTable.Cell>
               <Text as={'p'} variant="bodyMd">

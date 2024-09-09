@@ -3,58 +3,62 @@ import { BlockStack, DropZone, Icon, InlineGrid, Modal, Text } from '@shopify/po
 import { FileMinor } from '@shopify/polaris-icons';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { usePurchaseOrdersUploadCsvMutation } from '@work-orders/common/queries/use-purchase-orders-upload-csv-mutation.js';
+import { useWorkOrdersUploadCsvMutation } from '@work-orders/common/queries/use-work-orders-upload-csv-mutation.js';
 
-export function PurchaseOrderCsvUploadDropZoneModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function WorkOrderCsvUploadDropZoneModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const purchaseOrdersUploadCsvMutation = usePurchaseOrdersUploadCsvMutation(
+  const workOrdersUploadCsvMutation = useWorkOrdersUploadCsvMutation(
     { fetch },
     {
       onSuccess() {
-        setToastAction({ content: 'Imported purchase orders!' });
+        setToastAction({ content: 'Imported work orders!' });
         onClose();
       },
     },
   );
 
-  const [purchaseOrderInfoFile, setPurchaseOrderInfoFile] = useState<File>();
+  const [workOrderInfoFile, setWorkOrderInfoFile] = useState<File>();
   const [lineItemsFile, setLineItemsFile] = useState<File>();
   const [customFieldsFile, setCustomFieldsFile] = useState<File>();
-  const [employeeAssignmentsFile, setEmployeeAssignmentsFile] = useState<File>();
+  const [chargesFile, setChargesFile] = useState<File>();
   const [lineItemCustomFieldsFile, setLineItemCustomFieldsFile] = useState<File>();
 
   const files = [
-    { name: 'purchase-order-info.csv', file: purchaseOrderInfoFile, setFile: setPurchaseOrderInfoFile },
-    { name: 'line-items.csv', file: lineItemsFile, setFile: setLineItemsFile },
-    { name: 'custom-fields.csv', file: customFieldsFile, setFile: setCustomFieldsFile },
-    { name: 'employee-assignments.csv', file: employeeAssignmentsFile, setFile: setEmployeeAssignmentsFile },
-    { name: 'line-item-custom-fields.csv', file: lineItemCustomFieldsFile, setFile: setLineItemCustomFieldsFile },
+    { name: 'work-order-info.csv', file: workOrderInfoFile, setFile: setWorkOrderInfoFile },
+    { name: 'work-order-line-items.csv', file: lineItemsFile, setFile: setLineItemsFile },
+    { name: 'work-order-custom-fields.csv', file: customFieldsFile, setFile: setCustomFieldsFile },
+    { name: 'work-order-charges.csv', file: chargesFile, setFile: setChargesFile },
+    {
+      name: 'work-order-line-item-custom-fields.csv',
+      file: lineItemCustomFieldsFile,
+      setFile: setLineItemCustomFieldsFile,
+    },
   ] as const;
 
   return (
     <>
       <Modal
         open={open}
-        title={'Import Purchase Orders'}
+        title={'Import Work Orders'}
         onClose={onClose}
         primaryAction={{
           content: 'Import',
-          loading: purchaseOrdersUploadCsvMutation.isLoading,
-          disabled: !purchaseOrderInfoFile,
+          loading: workOrdersUploadCsvMutation.isLoading,
+          disabled: !workOrderInfoFile,
           onAction: () => {
-            if (!purchaseOrderInfoFile) {
-              setToastAction({ content: 'purchase-order-info.csv is required' });
+            if (!workOrderInfoFile) {
+              setToastAction({ content: 'work-order-info.csv is required' });
               return;
             }
 
-            purchaseOrdersUploadCsvMutation.mutate({
-              'custom-fields.csv': customFieldsFile,
-              'purchase-order-info.csv': purchaseOrderInfoFile,
-              'employee-assignments.csv': employeeAssignmentsFile,
-              'line-item-custom-fields.csv': lineItemCustomFieldsFile,
-              'line-items.csv': lineItemsFile,
+            workOrdersUploadCsvMutation.mutate({
+              'work-order-custom-fields.csv': customFieldsFile,
+              'work-order-info.csv': workOrderInfoFile,
+              'work-order-charges.csv': chargesFile,
+              'work-order-line-item-custom-fields.csv': lineItemCustomFieldsFile,
+              'work-order-line-items.csv': lineItemsFile,
             });
           },
         }}
@@ -62,12 +66,12 @@ export function PurchaseOrderCsvUploadDropZoneModal({ open, onClose }: { open: b
         <Modal.Section>
           <BlockStack gap={'200'}>
             <Text as="p" variant={'bodyMd'}>
-              Import purchase orders from CSV files. Line items, custom fields, and employee assignments can optionally
-              be included by uploading additional CSV files.
+              Import work orders from CSV files. Line items and custom fields can optionally be included by uploading
+              additional CSV files.
             </Text>
             <Text as="p" variant={'bodyMd'} fontWeight={'bold'}>
               You can download CSV templates{' '}
-              <a href="/api/purchase-orders/upload/csv/templates" download>
+              <a href="/api/work-order/upload/csv/templates" download>
                 here
               </a>
             </Text>

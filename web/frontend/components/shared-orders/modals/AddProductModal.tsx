@@ -22,7 +22,6 @@ import { useInventoryItemQueries } from '@work-orders/common/queries/use-invento
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
-import { v4 as uuid } from 'uuid';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import {
   getProductServiceType,
@@ -37,8 +36,8 @@ import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { UUID } from '@web/util/types.js';
 import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 type AddProductModalProps = AddProductModalPropsBase &
   (
@@ -217,7 +216,7 @@ export function AddProductModal({
                         quantity: 1 as Int,
                         absorbCharges: false,
                         customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                        uuid: uuid() as UUID,
+                        uuid: uuid(),
                         name: 'Unnamed product',
                         unitPrice: BigDecimal.ONE.toMoney(),
                       },
@@ -328,13 +327,13 @@ export function AddProductModal({
                   if (outputType === 'WORK_ORDER') {
                     const charges: CreateWorkOrder['charges'][number][] = [];
                     const items = productVariants.map(pv => {
-                      const itemUuid = uuid() as UUID;
+                      const itemUuid = uuid();
 
                       for (const charge of pv.productVariant.defaultCharges) {
                         const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
                         charges.push({
                           ...defaultCharge,
-                          uuid: uuid() as UUID,
+                          uuid: uuid(),
                           workOrderItemUuid: itemUuid,
                         });
                       }
@@ -359,7 +358,7 @@ export function AddProductModal({
                           inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
 
                         return {
-                          uuid: uuid() as UUID,
+                          uuid: uuid(),
                           specialOrderLineItem: null,
                           unitCost: BigDecimal.fromString(unitCost ?? '0.00')
                             .round(2)

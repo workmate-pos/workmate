@@ -9,7 +9,7 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { useState } from 'react';
 import { DateTime } from '@web/schemas/generated/create-special-order.js';
 import { useRouter } from '../../routes.js';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 export function CreateSpecialOrderList({
   workOrder,

@@ -33,7 +33,6 @@ import {
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
-import { v4 as uuid } from 'uuid';
 import { SegmentedChargeConfig } from '@web/frontend/components/work-orders/components/SegmentedChargeConfig.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { AddEmployeeModal } from '@web/frontend/components/shared-orders/modals/AddEmployeeModal.js';
@@ -52,6 +51,7 @@ import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orde
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 import { UUID } from '@web/util/types.js';
 
 export function WorkOrderItemModal({
@@ -264,7 +264,7 @@ export function WorkOrderItemModal({
                   employeeId =>
                     ({
                       type: 'fixed-price-labour',
-                      uuid: uuid() as UUID,
+                      uuid: uuid(),
                       name: settingsQuery.data?.settings?.labourLineItemName || 'Labour',
                       amount: BigDecimal.ZERO.toMoney(),
                       employeeId,
@@ -364,7 +364,7 @@ function extractInitialGeneralCharge(
   if (generalCharges.length > 1) {
     return {
       type: 'fixed-price-labour',
-      uuid: uuid() as UUID,
+      uuid: uuid(),
       employeeId: null,
       name: generalCharges[0]!.name,
       amount: getTotalPriceForCharges(generalCharges),
@@ -422,11 +422,11 @@ function Charges({
             }
 
             if (charge.type === 'fixed-price-labour') {
-              return { ...charge, uuid: current?.uuid ?? (uuid() as UUID), employeeId: null };
+              return { ...charge, uuid: current?.uuid ?? uuid(), employeeId: null };
             }
 
             if (charge.type === 'hourly-labour') {
-              return { ...charge, uuid: current?.uuid ?? (uuid() as UUID), employeeId: null };
+              return { ...charge, uuid: current?.uuid ?? uuid(), employeeId: null };
             }
 
             return charge satisfies never;

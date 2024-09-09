@@ -26,6 +26,8 @@ import { PlanWorkOrderOrder } from '../../schemas/generated/plan-work-order-orde
 import { getDraftOrderInputForExistingWorkOrder } from '../../services/work-orders/draft-order.js';
 import { DraftOrderInput } from '../../services/gql/queries/generated/schema.js';
 import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
+import { getWorkOrderCsvTemplatesZip, readWorkOrderCsvImport } from '../../services/work-orders/csv-import.js';
+import { transaction } from '../../services/db/transaction.js';
 import * as Sentry from '@sentry/node';
 
 export default class WorkOrderController {
@@ -249,6 +251,36 @@ export default class WorkOrderController {
     );
 
     return res.json({ success: true });
+  }
+
+  @Post('/upload/csv')
+  @Authenticated()
+  @Permission('write_work_orders')
+  async uploadWorkOrdersCsv(req: Request, res: Response) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+
+    const createWorkOrders = await readWorkOrderCsvImport({
+      formData: req.body,
+      headers: req.headers,
+    });
+
+    await transaction(async () => {
+      for (const createWorkOrder of createWorkOrders) {
+        await upsertWorkOrder(session, user, createWorkOrder);
+      }
+    });
+
+    return res.json({ success: true });
+  }
+
+  @Get('/upload/csv/templates')
+  async getWorkOrderCsvTemplates(req: Request, res: Response) {
+    const zip = await getWorkOrderCsvTemplatesZip();
+
+    res.attachment('work-order-csv-templates.zip');
+    res.setHeader('Content-Type', 'application/zip');
+    res.end(zip);
   }
 }
 

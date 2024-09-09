@@ -26,6 +26,7 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { WorkOrderCsvUploadDropZoneModal } from '@web/frontend/components/work-orders/WorkOrderCsvUploadDropZoneModal.js';
 
 export default function () {
   return (
@@ -45,6 +46,7 @@ function WorkOrders() {
   const [query, setQuery, internalQuery] = useDebouncedState('');
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
+  const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -86,6 +88,12 @@ function WorkOrders() {
           content: 'New Work Order',
           onAction: () => redirectToWorkOrder('new'),
         }}
+        secondaryActions={[
+          {
+            content: 'Import CSV',
+            onAction: () => setIsCsvUploadDropZoneModalOpen(true),
+          },
+        ]}
       />
 
       <IndexFilters
@@ -206,6 +214,12 @@ function WorkOrders() {
           </IndexTable.Row>
         ))}
       </IndexTable>
+
+      <WorkOrderCsvUploadDropZoneModal
+        open={isCsvUploadDropZoneModalOpen}
+        onClose={() => setIsCsvUploadDropZoneModalOpen(false)}
+      />
+
       {toast}
     </>
   );

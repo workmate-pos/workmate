@@ -23,10 +23,9 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { useEffect, useState } from 'react';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
-import { v4 as uuid } from 'uuid';
-import { UUID } from '@web/util/types.js';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { emptyState } from '@web/frontend/assets/index.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 export function ImportSpecialOrderModal({
   open,
@@ -147,7 +146,7 @@ export function ImportSpecialOrderModal({
           }
 
           return {
-            uuid: uuid() as UUID,
+            uuid: uuid(),
             specialOrderLineItem: {
               name: selectedSpecialOrder.name,
               uuid: lineItem.uuid,

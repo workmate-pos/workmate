@@ -12,7 +12,16 @@ export const zDateTime = z
 export const zMoney = z.string().refine((text): text is Money => BigDecimal.isValid(text));
 export const zDecimal = z.string().refine((text): text is Decimal => BigDecimal.isValid(text));
 
-export const qsBool = z
-  .boolean()
-  .optional()
-  .transform(value => value === true || value === undefined);
+export const zQsBool = z
+  .string()
+  .refine(value => value === 'true' || value === 'false' || value === '1' || value === '0' || value === '')
+  .transform(value => value === 'true' || value === '1' || value === '');
+
+// CSV files can't have undefined/null, so transform empty strings to null instead when making something optional
+export const zCsvNullable = <const T extends z.ZodType>(type: T) =>
+  z.preprocess(arg => (arg === '' ? null : arg), type.nullable());
+
+export const zCsvBool = z
+  .string()
+  .refine(value => value === 'true' || value === 'false' || value === '1' || value === '0' || value === '')
+  .transform(value => value === 'true' || value === '1');

@@ -1,8 +1,11 @@
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
 import { PurchaseOrderImportFileName } from '@web/services/purchase-orders/csv-import.js';
 import { Fetch } from './fetch.js';
 
-export const usePurchaseOrdersUploadCsvMutation = ({ fetch }: { fetch: Fetch }) => {
+export const usePurchaseOrdersUploadCsvMutation = (
+  { fetch }: { fetch: Fetch },
+  { onSuccess }: { onSuccess?: () => void } = {},
+) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -39,6 +42,7 @@ export const usePurchaseOrdersUploadCsvMutation = ({ fetch }: { fetch: Fetch }) 
     onSuccess() {
       queryClient.invalidateQueries(['purchase-orders']);
       queryClient.invalidateQueries(['purchase-order-info']);
+      onSuccess?.();
     },
   });
 };

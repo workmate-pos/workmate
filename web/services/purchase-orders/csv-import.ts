@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { zDateTime, zID, zMoney, zNamespacedID } from '../../util/zod.js';
-import { PassThrough, Readable } from 'node:stream';
+import { zCsvNullable, zDateTime, zMoney, zNamespacedID } from '../../util/zod.js';
+import { Readable } from 'node:stream';
 import { buffer } from 'node:stream/consumers';
 import busboy from 'busboy';
 import { IncomingHttpHeaders } from 'node:http';
@@ -8,37 +8,30 @@ import csv from 'csv-parser';
 import { finished } from 'node:stream/promises';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { v4 as uuid } from 'uuid';
-import { UUID } from '../../util/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import archiver from 'archiver';
-
-// CSV files can't have undefined/null, so transform empty strings to null instead when making something optional
-const optional = <const T extends z.ZodType>(type: T) =>
-  z.preprocess(
-    arg => (arg === '' ? null : arg),
-    type.optional().transform(value => value ?? null),
-  );
+import { uuid } from '@work-orders/common/util/uuid.js';
+import { UUID } from '../../util/types.js';
 
 const CsvPurchaseOrderId = z
   .string()
   .min(1)
-  .describe('Mandatory purchase order id used to associate it with line items');
+  .describe('Mandatory purchase order id used to associate it with line items, custom fields, etc.');
 
 const CsvPurchaseOrderInfo = z.object({
   ID: CsvPurchaseOrderId,
   Status: z.string(),
-  PlacedDate: optional(zDateTime),
-  LocationID: optional(zNamespacedID('Location')),
-  VendorName: optional(z.string()),
+  PlacedDate: zCsvNullable(zDateTime),
+  LocationID: zCsvNullable(zNamespacedID('Location')),
+  VendorName: zCsvNullable(z.string()),
   ShipFrom: z.string(),
   ShipTo: z.string(),
   Note: z.string(),
-  Discount: optional(zMoney),
-  Tax: optional(zMoney),
-  Shipping: optional(zMoney),
-  Deposited: optional(zMoney),
-  Paid: optional(zMoney),
+  Discount: zCsvNullable(zMoney),
+  Tax: zCsvNullable(zMoney),
+  Shipping: zCsvNullable(zMoney),
+  Deposited: zCsvNullable(zMoney),
+  Paid: zCsvNullable(zMoney),
 });
 
 const CsvPurchaseOrderLineItemId = z
@@ -53,18 +46,18 @@ const CsvPurchaseOrderLineItem = z.object({
   Quantity: z.coerce.number().int(),
   UnitCost: zMoney,
   AvailableQuantity: z.coerce.number().int(),
-  SerialNumber: optional(z.string()),
+  SerialNumber: zCsvNullable(z.string()),
 });
 
 const CsvPurchaseOrderCustomField = z.object({
-  ID: CsvPurchaseOrderId,
+  PurchaseOrderID: CsvPurchaseOrderId,
   CustomFieldName: z.string(),
   CustomFieldValue: z.string(),
 });
 
 const CsvPurchaseOrderEmployeeAssignment = z.object({
   ID: CsvPurchaseOrderId,
-  EmployeeId: zID,
+  EmployeeID: zNamespacedID('Employee'),
 });
 
 const CsvPurchaseOrderLineItemCustomField = z.object({
@@ -96,23 +89,19 @@ export async function readPurchaseOrderCsvImport({
   headers: IncomingHttpHeaders;
 }) {
   return new Promise<CreatePurchaseOrder[]>(async (resolve, reject) => {
-    if (!headers['content-type']?.includes('multipart/form-data')) {
-      throw new HttpError('Invalid content type', 400);
-    }
-
     const bb = busboy({
       headers,
       limits: {
         fileSize: 5 * 2 ** 20,
-        files: 5,
+        files: Object.keys(FILE_SCHEMA).length,
       },
     });
 
-    const filePromises: Promise<void>[] = [];
+    const fileFinishedPromises: Promise<void>[] = [];
 
     const createPurchaseOrders: Record<string, CreatePurchaseOrder> = Object.create(null);
     // map [purchase order id][line item id] to line item uuid
-    const lineItemUuidMapping: Record<string, Record<string, string>> = Object.create(null);
+    const lineItemUuidMapping: Record<string, Record<string, UUID>> = Object.create(null);
 
     const handlePurchaseOrderInfo = (data: z.infer<typeof CsvPurchaseOrderInfo>) => {
       if (data.ID in createPurchaseOrders) {
@@ -146,14 +135,18 @@ export async function readPurchaseOrderCsvImport({
         throw new HttpError(`Purchase order ${data.PurchaseOrderID} not found for line item ${data.LineItemID}`, 400);
       }
 
-      const lineItemUuid = lineItemUuidMapping[data.PurchaseOrderID]?.[data.LineItemID];
+      const existingLineItemUuid = lineItemUuidMapping[data.PurchaseOrderID]?.[data.LineItemID];
 
-      if (lineItemUuid) {
+      if (existingLineItemUuid) {
         throw new HttpError('Duplicate purchase order line item id', 400);
       }
 
+      const lineItemUuid = uuid();
+
+      (lineItemUuidMapping[data.PurchaseOrderID] ??= {})[data.LineItemID] = lineItemUuid;
+
       createPurchaseOrder.lineItems.push({
-        uuid: uuid() as UUID,
+        uuid: lineItemUuid,
         quantity: data.Quantity,
         specialOrderLineItem: null,
         productVariantId: data.ProductVariantID,
@@ -165,10 +158,13 @@ export async function readPurchaseOrderCsvImport({
     };
 
     const handleCustomField = (data: z.infer<typeof CsvPurchaseOrderCustomField>) => {
-      const createPurchaseOrder = createPurchaseOrders[data.ID];
+      const createPurchaseOrder = createPurchaseOrders[data.PurchaseOrderID];
 
       if (!createPurchaseOrder) {
-        throw new HttpError(`Purchase order ${data.ID} not found for custom field ${data.CustomFieldName}`, 400);
+        throw new HttpError(
+          `Purchase order ${data.PurchaseOrderID} not found for custom field ${data.CustomFieldName}`,
+          400,
+        );
       }
 
       if (data.CustomFieldName in createPurchaseOrder.customFields) {
@@ -182,15 +178,15 @@ export async function readPurchaseOrderCsvImport({
       const createPurchaseOrder = createPurchaseOrders[data.ID];
 
       if (!createPurchaseOrder) {
-        throw new HttpError(`Purchase order ${data.ID} not found for employee assignment ${data.EmployeeId}`, 400);
+        throw new HttpError(`Purchase order ${data.ID} not found for employee assignment ${data.EmployeeID}`, 400);
       }
 
-      if (createPurchaseOrder.employeeAssignments.map(ea => ea.employeeId).includes(data.EmployeeId)) {
+      if (createPurchaseOrder.employeeAssignments.map(ea => ea.employeeId).includes(data.EmployeeID)) {
         throw new HttpError('Duplicate purchase order employee assignment', 400);
       }
 
       createPurchaseOrder.employeeAssignments.push({
-        employeeId: data.EmployeeId,
+        employeeId: data.EmployeeID,
       });
     };
 
@@ -223,12 +219,9 @@ export async function readPurchaseOrderCsvImport({
 
     // we stream down files instantly without persisting them to disk - node/os will do necessary backpressure and buffering
     bb.on('file', async (name, stream) => {
-      console.log('name', name);
-      const passThrough = new PassThrough();
-      passThrough.on('data', chunk => console.log(name, chunk.toString()));
-      const csvStream = stream.pipe(passThrough).pipe(csv());
+      const csvStream = stream.pipe(csv());
 
-      filePromises.push(finished(csvStream));
+      fileFinishedPromises.push(finished(csvStream));
 
       if (!isPurchaseOrderImportFileName(name)) {
         stream.resume();
@@ -296,7 +289,7 @@ export async function readPurchaseOrderCsvImport({
     formData.pipe(bb);
 
     await finished(bb);
-    await Promise.all(filePromises);
+    await Promise.all(fileFinishedPromises);
 
     resolve(Object.values(createPurchaseOrders));
   });

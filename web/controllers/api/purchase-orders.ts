@@ -154,6 +154,7 @@ export default class PurchaseOrdersController {
 
   @Post('/upload/csv')
   @Authenticated()
+  @Permission('write_purchase_orders')
   async uploadPurchaseOrdersCsv(req: Request, res: Response) {
     const session = res.locals.shopify.session;
 

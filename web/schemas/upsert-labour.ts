@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { qsBool, zDecimal, zID, zMoney } from '../util/zod.js';
+import { zQsBool, zDecimal, zID, zMoney } from '../util/zod.js';
 
 const Base = z.object({
   metaobjectId: zID.optional(),
   name: z.string().min(1),
-  removable: qsBool,
+  removable: zQsBool,
 });
 
 export const UpsertLabour = z.discriminatedUnion('type', [
@@ -12,13 +12,13 @@ export const UpsertLabour = z.discriminatedUnion('type', [
     type: z.literal('hourly'),
     rate: zMoney,
     hours: zDecimal,
-    customizeRate: qsBool,
-    customizeHours: qsBool,
+    customizeRate: zQsBool,
+    customizeHours: zQsBool,
   }),
   Base.extend({
     type: z.literal('fixed'),
     amount: zMoney,
-    customizeAmount: qsBool,
+    customizeAmount: zQsBool,
   }),
 ]);
 

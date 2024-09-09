@@ -1,11 +1,10 @@
 import { sql } from '../db/sql-tag.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { VendorFilter } from '../../schemas/generated/get-vendors-filters.js';
 
-/**
- * Get vendors for which there are special orders at some location that still need to be converted to a purchase order.
- */
-export async function getNotFullyOrderedSpecialOrderVendors(locationId?: ID) {
-  const _locationId: string | null = locationId ?? null;
+export async function getSpecialOrderVendors({ specialOrderLocationId, specialOrderLineItemOrderState }: VendorFilter) {
+  const _locationId: string | null = specialOrderLocationId ?? null;
+  const _lineItemOrderState: string | null = specialOrderLineItemOrderState ?? null;
 
   const vendors = await sql<{ vendor: string }>`
     SELECT DISTINCT p.vendor
@@ -17,7 +16,11 @@ export async function getNotFullyOrderedSpecialOrderVendors(locationId?: ID) {
                                         LEFT JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
                                  WHERE spo."locationId" = COALESCE(${_locationId}, spo."locationId")
                                  GROUP BY spoli.id
-                                 HAVING spoli.quantity > COALESCE(SUM(poli.quantity), 0))
+                                 HAVING CASE ${_lineItemOrderState}
+                                          WHEN 'FULLY_ORDERED' THEN spoli.quantity <= COALESCE(SUM(poli.quantity), 0)
+                                          WHEN 'NOT_FULLY_ORDERED' THEN spoli.quantity > COALESCE(SUM(poli.quantity), 0)
+                                          ELSE TRUE
+                                          END)
   `;
 
   return vendors.map(vendor => vendor.vendor);
