@@ -104,7 +104,9 @@ export default function Serial() {
   const location = locationQuery.data;
   const serial = serialQuery.data;
 
-  const hasUnsavedChanges = JSON.stringify(createSerial) !== JSON.stringify(lastSavedSerial);
+  const hasUnsavedChanges =
+    JSON.stringify(createSerial, Object.keys(createSerial).sort()) !==
+    JSON.stringify(lastSavedSerial, Object.keys(lastSavedSerial).sort());
   const isSerialNumberInUse = !lastSavedSerial.serial && !!serial;
 
   const disabled = serialMutation.isLoading;

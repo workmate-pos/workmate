@@ -50,7 +50,9 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  const hasUnsavedChanges = JSON.stringify(createCycleCount) !== JSON.stringify(lastSavedCreateCycleCount);
+  const hasUnsavedChanges =
+    JSON.stringify(createCycleCount, Object.keys(createCycleCount).sort()) !==
+    JSON.stringify(lastSavedCreateCycleCount, Object.keys(lastSavedCreateCycleCount).sort());
 
   const fetch = useAuthenticatedFetch();
   const cycleCountQuery = useCycleCountQuery({ fetch, name: createCycleCount.name });

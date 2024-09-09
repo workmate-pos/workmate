@@ -55,7 +55,9 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
     .join(' - ');
   screen.setTitle(title || 'New Serial');
 
-  const hasUnsavedChanges = JSON.stringify(createSerial) !== JSON.stringify(lastSavedSerial);
+  const hasUnsavedChanges =
+    JSON.stringify(createSerial, Object.keys(createSerial).sort()) !==
+    JSON.stringify(lastSavedSerial, Object.keys(lastSavedSerial).sort());
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
