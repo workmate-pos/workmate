@@ -1,4 +1,4 @@
-name: Build
+name: Push
 
 on:
   push:
@@ -8,10 +8,10 @@ on:
       - "v[0-9]+.[0-9]+.[0-9]+"
 
 jobs:
-  teifi-shopify-app:
+  app:
+    name: App
     uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@master
     with:
-      name: "WorkMate"
       shopify_api_key: ${{ vars.SHOPIFY_API_KEY }}
       shopify_shop: ${{ vars.SHOPIFY_SHOP }}
       sentry_org: ${{ vars.SENTRY_ORG }}
