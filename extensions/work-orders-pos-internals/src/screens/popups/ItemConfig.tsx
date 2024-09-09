@@ -17,7 +17,7 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export function ItemConfig({
   item: { uuid: itemUuid, type: itemType },

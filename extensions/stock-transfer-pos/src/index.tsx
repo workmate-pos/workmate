@@ -11,7 +11,7 @@ import { Router, WorkOrdersApp } from '@work-orders/work-orders-pos-internals';
 
 function SmartGridTile() {
   return (
-    <AppProvider appUrl={process.env.APP_URL!}>
+    <AppProvider appUrl={"https://work-orders-staging.teifi.dev"!}>
       <ReactQueryProvider>
         <TileWithNotifications />
       </ReactQueryProvider>

@@ -14,7 +14,7 @@ import { httpError } from '../../util/http-error.js';
 import csv from 'csv-parser';
 import { finished } from 'node:stream/promises';
 import { uuid } from '@work-orders/common/util/uuid.js';
-import { UUID } from '../../util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 const CsvWorkOrderId = z
   .string()

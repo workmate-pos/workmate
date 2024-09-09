@@ -58,7 +58,7 @@ import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
 import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';

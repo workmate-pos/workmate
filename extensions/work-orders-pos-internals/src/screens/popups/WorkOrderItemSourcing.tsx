@@ -26,7 +26,7 @@ import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { useReserveLineItemsInventoryMutation } from '@work-orders/common/queries/use-reserve-line-items-inventory-mutation.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 
 /**

@@ -1,6 +1,4 @@
-import { UnionToIntersection } from '@teifi-digital/shopify-app-toolbox/types';
-
-export type UUID = string & { __brand: 'UUID' };
+import type { UnionToIntersection } from '@teifi-digital/shopify-app-toolbox/types';
 
 export type Permutations<T, O = T> = [T] extends [never]
   ? readonly []

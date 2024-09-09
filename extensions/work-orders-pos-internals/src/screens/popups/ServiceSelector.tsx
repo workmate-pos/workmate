@@ -27,7 +27,7 @@ import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reduce
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 type OnSelect = (arg: { item: CreateWorkOrderItem; charges: CreateWorkOrderCharge[] }) => void;
 

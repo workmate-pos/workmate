@@ -13,7 +13,7 @@ import { gql } from '../gql/gql.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { UUID } from '../../util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 const COMPARE_QUANTITY_MISMATCH_ERROR_MESSAGE =
   'The compareQuantity argument no longer matches the persisted quantity.';

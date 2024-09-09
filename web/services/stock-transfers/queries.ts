@@ -1,5 +1,5 @@
 import { sql, sqlOne } from '../db/sql-tag.js';
-import { MergeUnion, UUID } from '../../util/types.js';
+import { MergeUnion } from '../../util/types.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
@@ -10,6 +10,7 @@ import { unit } from '../db/unit-of-work.js';
 import { getPurchaseOrderLineItemsByNameAndUuid } from '../purchase-orders/queries.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type StockTransfer = NonNullable<Awaited<ReturnType<typeof getStockTransfer>>>;
 export type StockTransferLineItem = Awaited<ReturnType<typeof getStockTransferLineItems>>[number];

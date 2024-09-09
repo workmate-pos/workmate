@@ -1,4 +1,4 @@
-import { MergeUnion, UUID } from '../../util/types.js';
+import { MergeUnion } from '../../util/types.js';
 import { sql, sqlOne } from '../db/sql-tag.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
@@ -9,6 +9,7 @@ import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
 import { SpecialOrderPaginationOptions } from '../../schemas/generated/special-order-pagination-options.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type SpecialOrder = NonNullable<Awaited<ReturnType<typeof getSpecialOrder>>>;
 

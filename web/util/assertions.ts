@@ -1,7 +1,7 @@
-import { ID, assertGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Int } from '../schemas/generated/pagination-options.js';
 import { Money, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { UUID } from './types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 import { validate, version } from 'uuid';
 import { isGidWithNamespace } from '@work-orders/common/util/gid.js';
 

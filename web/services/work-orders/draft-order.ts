@@ -37,7 +37,7 @@ import {
   getWorkOrderItems,
   WorkOrder,
 } from './queries.js';
-import { UUID } from '../../util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type SelectedItem = { uuid: UUID };
 export type SelectedCharge = { uuid: UUID };

@@ -14,7 +14,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export function StockTransferProductSelector({
   locationId,

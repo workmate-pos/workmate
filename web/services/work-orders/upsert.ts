@@ -31,8 +31,8 @@ import {
 } from './queries.js';
 import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
-import { UUID } from '../../util/types.js';
-import { getSerial, upsertSerials } from '../serials/queries.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
+import { getSerial } from '../serials/queries.js';
 import { httpError } from '../../util/http-error.js';
 
 // TODO: Support deleted customer/company

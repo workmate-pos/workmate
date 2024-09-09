@@ -1,6 +1,6 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
-import { assertGid, createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { escapeLike } from '../db/like.js';
 import { StockTransferPaginationOptions } from '../../schemas/generated/stock-transfer-pagination-options.js';
 import { StockTransferCountOptions } from '../../schemas/generated/stock-transfer-count-options.js';
@@ -61,7 +61,7 @@ export async function getDetailedStockTransfer(session: Session, name: string) {
           productTitle,
           productVariantTitle,
           shopifyOrderLineItem: shopifyOrderLineItemId
-            ? shopifyLineItemById[shopifyOrderLineItemId] ?? never('fk')
+            ? (shopifyLineItemById[shopifyOrderLineItemId] ?? never('fk'))
             : null,
           purchaseOrderLineItem: purchaseOrderLineItemUuid
             ? pick(

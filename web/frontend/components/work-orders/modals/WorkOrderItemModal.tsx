@@ -52,7 +52,7 @@ import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-
 import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export function WorkOrderItemModal({
   createWorkOrder,

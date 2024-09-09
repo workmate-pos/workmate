@@ -1,5 +1,6 @@
 import { v4 } from 'uuid';
-import { UUID } from '@web/util/types.js';
+
+export type UUID = string & { __brand: 'UUID' };
 
 /**
  * Uuid with fallback rng because shopify sucks

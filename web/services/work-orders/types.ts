@@ -1,7 +1,7 @@
 import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ID, DateTime, Int, Money } from '../gql/queries/generated/schema.js';
 import { ShopifyOrderType } from '../db/queries/generated/shopify-order.sql.js';
-import { UUID } from '../../util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 /**
  * A work order with all available data.

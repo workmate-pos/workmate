@@ -3,11 +3,12 @@ import { WorkOrderChargeData } from './charges.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { WorkOrderItemData } from './items.js';
 import { assertGidOrNull } from '../../util/assertions.js';
-import { MergeUnion, UUID } from '../../util/types.js';
+import { MergeUnion } from '../../util/types.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type WorkOrder = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
 

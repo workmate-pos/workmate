@@ -4,7 +4,6 @@ import { assertGidOrNull, assertMoneyOrNull } from '../../util/assertions.js';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export async function getShopifyOrderLineItem(id: ID) {
   const _id: string = id;

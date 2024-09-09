@@ -8,7 +8,7 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { useRouter } from '../../routes.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 import { ListPopup } from '@work-orders/common-pos/screens/ListPopup.js';
 
 export type UnsourcedItemListSelectedItem = {

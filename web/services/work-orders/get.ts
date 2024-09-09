@@ -39,7 +39,7 @@ import {
   getTransferOrderLineItemsByShopifyOrderLineItemIds,
 } from '../stock-transfers/queries.js';
 import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js';
-import { UUID } from '../../util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
 import { getSerial } from '../serials/queries.js';
 

@@ -20,7 +20,7 @@ import { PaginationControls } from '@work-orders/common-pos/components/Paginatio
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';

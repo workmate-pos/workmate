@@ -11,7 +11,7 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import archiver from 'archiver';
 import { uuid } from '@work-orders/common/util/uuid.js';
-import { UUID } from '../../util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 const CsvPurchaseOrderId = z
   .string()

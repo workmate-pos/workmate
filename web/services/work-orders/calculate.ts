@@ -25,7 +25,7 @@ import { randomBytes } from 'node:crypto';
 import { Int, type String } from '../gql/queries/generated/schema.js';
 import { getDraftOrderInputForWorkOrder } from './draft-order.js';
 import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.js';
-import { UUID } from '../../util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 type CalculateWorkOrderResult = {
   outstanding: Money;

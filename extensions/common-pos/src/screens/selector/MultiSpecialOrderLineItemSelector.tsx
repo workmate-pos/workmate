@@ -10,7 +10,7 @@ import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-or
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type MultiSpecialOrderLineItemSelectorProps = {
   name: string;

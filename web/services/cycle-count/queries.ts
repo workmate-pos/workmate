@@ -3,7 +3,7 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { nest } from '../../util/db.js';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { escapeLike } from '../db/like.js';
-import { UUID } from '../../util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 import { assertUuid } from '../../util/assertions.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';

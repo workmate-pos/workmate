@@ -28,7 +28,7 @@ import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
-import { UUID } from '@web/util/types.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export function ItemChargeConfig({
   item: { uuid: itemUuid },
