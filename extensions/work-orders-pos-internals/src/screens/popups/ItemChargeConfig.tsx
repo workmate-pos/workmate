@@ -19,7 +19,6 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
@@ -57,25 +56,17 @@ export function ItemChargeConfig({
     {
       fetch,
       ...createWorkOrder,
-      items: useMemo(
-        () =>
-          [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
-            isNonNullable,
-          ),
-        [item],
+      items: [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
+        isNonNullable,
       ),
-      charges: useMemo(
-        () =>
-          [
-            ...createWorkOrder.charges.filter(x => x.workOrderItemUuid !== item?.uuid),
-            generalLabourCharge,
-            ...employeeLabourCharges,
-          ]
-            .filter(isNonNullable)
-            .map(charge => ({ ...charge, workOrderItemUuid: item?.uuid ?? null }))
-            .filter(hasNonNullableProperty('workOrderItemUuid')),
-        [generalLabourCharge, employeeLabourCharges, item],
-      ),
+      charges: [
+        ...createWorkOrder.charges.filter(x => x.workOrderItemUuid !== item?.uuid),
+        generalLabourCharge,
+        ...employeeLabourCharges,
+      ]
+        .filter(isNonNullable)
+        .map(charge => ({ ...charge, workOrderItemUuid: item?.uuid ?? null }))
+        .filter(hasNonNullableProperty('workOrderItemUuid')),
     },
     { keepPreviousData: true },
   );

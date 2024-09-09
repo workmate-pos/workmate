@@ -81,11 +81,7 @@ export function Entry() {
         onSearch={() => {}}
         placeholder="Search work orders"
       />
-      <List
-        data={rows}
-        onEndReached={() => workOrderInfoQuery.fetchNextPage()}
-        isLoadingMore={workOrderInfoQuery.isLoading}
-      />
+      <List data={rows} isLoadingMore={workOrderInfoQuery.isFetching} />
       {workOrderInfoQuery.isLoading && (
         <Stack direction="horizontal" alignment="center" flex={1} paddingVertical="ExtraLarge">
           <Text variant="body" color="TextSubdued">
@@ -106,6 +102,9 @@ export function Entry() {
             {extractErrorMessage(workOrderInfoQuery.error, 'An error occurred while loading work orders')}
           </Text>
         </Stack>
+      )}
+      {!workOrderInfoQuery.isFetching && workOrderInfoQuery.hasNextPage && (
+        <Button title="Load more" onPress={() => workOrderInfoQuery.fetchNextPage()} type="plain" />
       )}
     </ScrollView>
   );

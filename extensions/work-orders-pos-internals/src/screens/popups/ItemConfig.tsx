@@ -43,12 +43,8 @@ export function ItemConfig({
     {
       fetch,
       ...createWorkOrder,
-      items: useMemo(
-        () =>
-          [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
-            isNonNullable,
-          ),
-        [item],
+      items: [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
+        isNonNullable,
       ),
     },
     { keepPreviousData: true },
