@@ -18,10 +18,10 @@ export const zQsBool = z
   .transform(value => value === 'true' || value === '1' || value === '');
 
 // CSV files can't have undefined/null, so transform empty strings to null instead when making something optional
-export const csvNullable = <const T extends z.ZodType>(type: T) =>
+export const zCsvNullable = <const T extends z.ZodType>(type: T) =>
   z.preprocess(arg => (arg === '' ? null : arg), type.nullable());
 
-export const csvBool = z
+export const zCsvBool = z
   .string()
   .refine(value => value === 'true' || value === 'false' || value === '1' || value === '0' || value === '')
   .transform(value => value === 'true' || value === '1');

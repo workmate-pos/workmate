@@ -261,7 +261,6 @@ export default class WorkOrderController {
   }
 
   @Get('/upload/csv/templates')
-  @Authenticated()
   async getWorkOrderCsvTemplates(req: Request, res: Response) {
     const zip = await getWorkOrderCsvTemplatesZip();
 

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { csvBool, csvNullable, zDateTime, zDecimal, zID, zMoney } from '../../util/zod.js';
+import { zCsvBool, zCsvNullable, zDateTime, zDecimal, zID, zMoney } from '../../util/zod.js';
 import { IncomingHttpHeaders } from 'node:http';
 import { Readable } from 'node:stream';
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
@@ -28,31 +28,31 @@ const CsvWorkOrderInfo = z.object({
   Note: z.string(),
   InternalNote: z.string(),
   CustomerID: zID,
-  CompanyID: csvNullable(zID),
-  CompanyLocationID: csvNullable(zID),
-  CompanyContactID: csvNullable(zID),
-  DerivedFromOrderID: csvNullable(zID),
+  CompanyID: zCsvNullable(zID),
+  CompanyLocationID: zCsvNullable(zID),
+  CompanyContactID: zCsvNullable(zID),
+  DerivedFromOrderID: zCsvNullable(zID),
 
-  PaymentTermsTemplateID: csvNullable(zID),
-  PaymentTermsDate: csvNullable(zDateTime).describe(
+  PaymentTermsTemplateID: zCsvNullable(zID),
+  PaymentTermsDate: zCsvNullable(zDateTime).describe(
     'Only required if the payment terms template requires a date, e.g. fixed date',
   ),
 
-  DiscountType: csvNullable(z.union([z.literal('FIXED_AMOUNT'), z.literal('PERCENTAGE')])),
-  DiscountAmount: csvNullable(z.union([zMoney, zDecimal])),
+  DiscountType: zCsvNullable(z.union([z.literal('FIXED_AMOUNT'), z.literal('PERCENTAGE')])),
+  DiscountAmount: zCsvNullable(z.union([zMoney, zDecimal])),
 });
 
 const CsvWorkOrderInfoPaymentTerms = z
   .object({
     PaymentTermsTemplateID: zID,
-    PaymentTermsDate: csvNullable(zDateTime).describe(
+    PaymentTermsDate: zCsvNullable(zDateTime).describe(
       'Only required if the payment terms template requires a date, e.g. fixed date',
     ),
   })
   .or(
     z.object({
-      PaymentTermsTemplateID: csvNullable(z.null()),
-      PaymentTermsDate: csvNullable(z.null()),
+      PaymentTermsTemplateID: zCsvNullable(z.null()),
+      PaymentTermsDate: zCsvNullable(z.null()),
     }),
   );
 
@@ -69,8 +69,8 @@ const CsvWorkOrderInfoDiscount = z
   )
   .or(
     z.object({
-      DiscountType: csvNullable(z.null()),
-      DiscountAmount: csvNullable(z.null()),
+      DiscountType: zCsvNullable(z.null()),
+      DiscountAmount: zCsvNullable(z.null()),
     }),
   );
 
@@ -83,12 +83,12 @@ const CsvWorkOrderLineItem = z.object({
   WorkOrderID: CsvWorkOrderId,
   LineItemID: CsvWorkOrderLineItemId,
   Quantity: z.coerce.number().int(),
-  AbsorbCharges: csvBool,
+  AbsorbCharges: zCsvBool,
 
   Type: z.union([z.literal('PRODUCT'), z.literal('CUSTOM-ITEM')]),
-  ProductVariantID: csvNullable(zID),
-  Name: csvNullable(z.string().min(1)),
-  UnitPrice: csvNullable(zMoney),
+  ProductVariantID: zCsvNullable(zID),
+  Name: zCsvNullable(z.string().min(1)),
+  UnitPrice: zCsvNullable(zMoney),
 });
 
 const CsvWorkOrderLineItemProduct = z.object({
@@ -105,44 +105,44 @@ const CsvWorkOrderLineItemCustomItem = z.object({
 const CsvWorkOrderCharge = z.object({
   WorkOrderID: CsvWorkOrderId,
   ChargeID: CsvWorkOrderLineItemId,
-  LineItemID: csvNullable(CsvWorkOrderLineItemId),
-  EmployeeID: csvNullable(zID),
+  LineItemID: zCsvNullable(CsvWorkOrderLineItemId),
+  EmployeeID: zCsvNullable(zID),
   Name: z.string().min(1),
-  CanRemove: csvBool,
+  CanRemove: zCsvBool,
 
   Type: z.union([z.literal('FIXED-PRICE-LABOUR'), z.literal('HOURLY-LABOUR')]),
-  Rate: csvNullable(zMoney),
-  Hours: csvNullable(zDecimal),
-  CanChangeRate: csvNullable(csvBool),
-  CanChangeHours: csvNullable(csvBool),
-  Amount: csvNullable(zMoney),
-  CanChangeAmount: csvNullable(csvBool),
+  Rate: zCsvNullable(zMoney),
+  Hours: zCsvNullable(zDecimal),
+  CanChangeRate: zCsvNullable(zCsvBool),
+  CanChangeHours: zCsvNullable(zCsvBool),
+  Amount: zCsvNullable(zMoney),
+  CanChangeAmount: zCsvNullable(zCsvBool),
 });
 
 const CsvWorkOrderHourlyLabourCharge = z.object({
   WorkOrderID: CsvWorkOrderId,
   ChargeID: CsvWorkOrderLineItemId,
-  LineItemID: csvNullable(CsvWorkOrderLineItemId),
+  LineItemID: zCsvNullable(CsvWorkOrderLineItemId),
   Type: z.literal('HOURLY-LABOUR'),
-  EmployeeID: csvNullable(zID),
+  EmployeeID: zCsvNullable(zID),
   Name: z.string().min(1),
   Rate: zMoney,
   Hours: zDecimal,
-  CanChangeRate: csvBool,
-  CanChangeHours: csvBool,
-  CanRemove: csvBool,
+  CanChangeRate: zCsvBool,
+  CanChangeHours: zCsvBool,
+  CanRemove: zCsvBool,
 });
 
 const CsvWorkOrderFixedPriceLabourCharge = z.object({
   WorkOrderID: CsvWorkOrderId,
   ChargeID: CsvWorkOrderLineItemId,
-  LineItemID: csvNullable(CsvWorkOrderLineItemId),
+  LineItemID: zCsvNullable(CsvWorkOrderLineItemId),
   Type: z.literal('FIXED-PRICE-LABOUR'),
-  EmployeeID: csvNullable(zID),
+  EmployeeID: zCsvNullable(zID),
   Name: z.string().min(1),
   Amount: zMoney,
-  CanChangeAmount: csvBool,
-  CanRemove: csvBool,
+  CanChangeAmount: zCsvBool,
+  CanRemove: zCsvBool,
 });
 
 const CsvWorkOrderCustomField = z.object({

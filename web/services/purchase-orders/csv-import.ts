@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { csvNullable, zDateTime, zID, zMoney, zNamespacedID } from '../../util/zod.js';
+import { zCsvNullable, zDateTime, zID, zMoney, zNamespacedID } from '../../util/zod.js';
 import { PassThrough, Readable } from 'node:stream';
 import { buffer } from 'node:stream/consumers';
 import busboy from 'busboy';
@@ -21,17 +21,17 @@ const CsvPurchaseOrderId = z
 const CsvPurchaseOrderInfo = z.object({
   ID: CsvPurchaseOrderId,
   Status: z.string(),
-  PlacedDate: csvNullable(zDateTime),
-  LocationID: csvNullable(zNamespacedID('Location')),
-  VendorName: csvNullable(z.string()),
+  PlacedDate: zCsvNullable(zDateTime),
+  LocationID: zCsvNullable(zNamespacedID('Location')),
+  VendorName: zCsvNullable(z.string()),
   ShipFrom: z.string(),
   ShipTo: z.string(),
   Note: z.string(),
-  Discount: csvNullable(zMoney),
-  Tax: csvNullable(zMoney),
-  Shipping: csvNullable(zMoney),
-  Deposited: csvNullable(zMoney),
-  Paid: csvNullable(zMoney),
+  Discount: zCsvNullable(zMoney),
+  Tax: zCsvNullable(zMoney),
+  Shipping: zCsvNullable(zMoney),
+  Deposited: zCsvNullable(zMoney),
+  Paid: zCsvNullable(zMoney),
 });
 
 const CsvPurchaseOrderLineItemId = z
