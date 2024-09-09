@@ -1,6 +1,7 @@
 import {
   BadgeProps,
   Banner,
+  Button,
   DateField,
   List,
   ListRow,
@@ -622,13 +623,13 @@ function WorkOrderCustomFields({
 
       <FormButton
         title={'Custom Fields'}
-        onPress={() => {
+        onPress={() =>
           router.push('CustomFieldConfig', {
             initialCustomFields: createWorkOrder.customFields,
             onSave: customFields => dispatch.setPartial({ customFields }),
             type: 'WORK_ORDER',
-          });
-        }}
+          })
+        }
       />
     </ResponsiveGrid>
   );
