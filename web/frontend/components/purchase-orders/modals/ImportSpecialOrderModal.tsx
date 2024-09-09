@@ -159,6 +159,7 @@ export function ImportSpecialOrderModal({
             customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             productVariantId: lineItem.productVariantId,
             availableQuantity: 0,
+            serialNumber: null,
           };
         })
         .filter(isNonNullable),

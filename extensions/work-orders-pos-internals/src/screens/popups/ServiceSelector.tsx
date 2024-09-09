@@ -1,6 +1,6 @@
 import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { CreateWorkOrderCharge, CreateWorkOrderItem } from '../../types.js';

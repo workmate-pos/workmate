@@ -53,6 +53,7 @@ const CsvPurchaseOrderLineItem = z.object({
   Quantity: z.coerce.number().int(),
   UnitCost: zMoney,
   AvailableQuantity: z.coerce.number().int(),
+  SerialNumber: optional(z.string()),
 });
 
 const CsvPurchaseOrderCustomField = z.object({
@@ -159,6 +160,7 @@ export async function readPurchaseOrderCsvImport({
         unitCost: data.UnitCost,
         availableQuantity: data.AvailableQuantity,
         customFields: Object.create(null),
+        serialNumber: data.SerialNumber,
       });
     };
 

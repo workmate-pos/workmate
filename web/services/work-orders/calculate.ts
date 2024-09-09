@@ -354,6 +354,7 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
 
   const graphql = new Graphql(session);
 
+  console.log(draftOrderInput.paymentTerms);
   const result = await gql.calculate.draftOrderCalculate.run(graphql, { input: draftOrderInput });
   if (!result.draftOrderCalculate?.calculatedDraftOrder) {
     throw new HttpError('Calculation failed', 400);

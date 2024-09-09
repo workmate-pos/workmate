@@ -100,6 +100,7 @@ export async function getSpecialOrderLineItems(specialOrderId: number) {
           updatedAt: Date;
           uuid: UUID;
           specialOrderLineItemId: number | null;
+          productVariantSerialId: number | null;
         }[]
       | null;
   }>`
@@ -127,6 +128,7 @@ function mapSpecialOrderLineItem<
     productVariantId: string;
     quantity: number;
     shopifyOrderLineItemQuantity: number | null;
+    // TODO: Get rid of this and just have its own query for it
     purchaseOrderLineItems:
       | ({
           purchaseOrderId: number;
@@ -138,6 +140,7 @@ function mapSpecialOrderLineItem<
           updatedAt: Date;
           uuid: UUID;
           specialOrderLineItemId: number | null;
+          productVariantSerialId: number | null;
         } | null)[]
       | null;
   },
@@ -410,6 +413,7 @@ export async function getSpecialOrderLineItemsByShopifyOrderLineItemIds(shopifyO
           updatedAt: Date;
           uuid: UUID;
           specialOrderLineItemId: number | null;
+          productVariantSerialId: number | null;
         }[]
       | null;
   }>`
@@ -497,6 +501,7 @@ export async function getSpecialOrderLineItemsForPurchaseOrder(purchaseOrderId: 
           updatedAt: Date;
           uuid: UUID;
           specialOrderLineItemId: number | null;
+          productVariantSerialId: number | null;
         }[]
       | null;
   }>`
@@ -550,6 +555,7 @@ export async function getSpecialOrderLineItemsByNameAndUuids(
           updatedAt: Date;
           uuid: UUID;
           specialOrderLineItemId: number | null;
+          productVariantSerialId: number | null;
         }[]
       | null;
   }>`

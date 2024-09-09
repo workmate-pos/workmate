@@ -201,6 +201,7 @@ export async function getPurchaseOrderLineItems(purchaseOrderId: number) {
     updatedAt: Date;
     uuid: UUID;
     specialOrderLineItemId: number | null;
+    productVariantSerialId: number | null;
   }>`
     SELECT *
     FROM "PurchaseOrderLineItem"
@@ -220,6 +221,7 @@ function mapPurchaseOrderLineItem<
     updatedAt: Date;
     specialOrderLineItemId: number | null;
     uuid: UUID;
+    productVariantSerialId: number | null;
   },
 >(purchaseOrderLineItem: T) {
   const { productVariantId, unitCost } = purchaseOrderLineItem;
@@ -377,19 +379,28 @@ export async function upsertPurchaseOrderLineItems(
     unitCost: Money;
     uuid: UUID;
     specialOrderLineItemId: number | null;
+    productVariantSerialId: number | null;
   }[],
 ) {
   if (!isNonEmptyArray(lineItems)) {
     return;
   }
 
-  const { unitCost, quantity, availableQuantity, productVariantId, uuid, specialOrderLineItemId } = nest(lineItems);
+  const {
+    unitCost,
+    quantity,
+    availableQuantity,
+    productVariantId,
+    uuid,
+    specialOrderLineItemId,
+    productVariantSerialId,
+  } = nest(lineItems);
   const _productVariantId: string[] = productVariantId;
   const _unitCost: string[] = unitCost;
 
   await sql`
     INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", quantity, "availableQuantity",
-                                         "unitCost", uuid, "specialOrderLineItemId")
+                                         "unitCost", uuid, "specialOrderLineItemId", "productVariantSerialId")
     SELECT ${purchaseOrderId}, *
     FROM UNNEST(
       ${_productVariantId} :: text[],
@@ -397,14 +408,16 @@ export async function upsertPurchaseOrderLineItems(
       ${availableQuantity} :: int[],
       ${_unitCost} :: text[],
       ${uuid} :: uuid[],
-      ${specialOrderLineItemId} :: int[]
+      ${specialOrderLineItemId} :: int[],
+      ${productVariantSerialId} :: int[]
          )
     ON CONFLICT ("purchaseOrderId", uuid)
       DO UPDATE SET "productVariantId"       = EXCLUDED."productVariantId",
                     quantity                 = EXCLUDED.quantity,
                     "availableQuantity"      = EXCLUDED."availableQuantity",
                     "unitCost"               = EXCLUDED."unitCost",
-                    "specialOrderLineItemId" = EXCLUDED."specialOrderLineItemId";
+                    "specialOrderLineItemId" = EXCLUDED."specialOrderLineItemId",
+                    "productVariantSerialId" = EXCLUDED."productVariantSerialId";
   `;
 }
 
@@ -444,6 +457,7 @@ export async function getPurchaseOrderLineItemsByNameAndUuid(
     updatedAt: Date;
     uuid: UUID;
     specialOrderLineItemId: number | null;
+    productVariantSerialId: number | null;
     purchaseOrderName: string;
   }>`
     SELECT li.*, po.name AS "purchaseOrderName"
@@ -484,11 +498,12 @@ export async function getPurchaseOrderLineItemsByIdAndUuid(
     updatedAt: Date;
     uuid: UUID;
     specialOrderLineItemId: number | null;
+    productVariantSerialId: number | null;
     purchaseOrderName: string;
   }>`
     SELECT li.*, po.name AS "purchaseOrderName"
     FROM "PurchaseOrderLineItem" li
-    INNER JOIN "PurchaseOrder" po ON li."purchaseOrderId" = po.id
+           INNER JOIN "PurchaseOrder" po ON li."purchaseOrderId" = po.id
     WHERE (li."purchaseOrderId", li.uuid) = ANY (SELECT *
                                                  FROM UNNEST(
                                                    ${_purchaseOrderId} :: int[],
@@ -527,4 +542,91 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
   `;
 
   return purchaseOrders.map(mapPurchaseOrder);
+}
+
+export async function getPurchaseOrdersForSerial({
+  shop,
+  serial,
+  id,
+  productVariantId,
+}: MergeUnion<
+  | { id: number }
+  | {
+      shop: string;
+      serial: string;
+      productVariantId: ID;
+    }
+>) {
+  const _productVariantId: string | null = productVariantId ?? null;
+
+  const purchaseOrders = await sql<{
+    id: number;
+    shop: string;
+    locationId: string | null;
+    discount: string | null;
+    tax: string | null;
+    shipping: string | null;
+    deposited: string | null;
+    paid: string | null;
+    name: string;
+    status: string;
+    shipFrom: string;
+    shipTo: string;
+    note: string;
+    vendorName: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    placedDate: Date | null;
+  }>`
+    SELECT DISTINCT po.*
+    FROM "ProductVariantSerial" pvs
+           INNER JOIN "PurchaseOrderLineItem" poli ON poli."productVariantSerialId" = pvs.id
+           INNER JOIN "PurchaseOrder" po ON po.id = poli."purchaseOrderId"
+    WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
+      AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
+      AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+  `;
+
+  return purchaseOrders.map(mapPurchaseOrder);
+}
+
+export async function getPurchaseOrderLineItemsForSerial({
+  shop,
+  serial,
+  id,
+  productVariantId,
+}: MergeUnion<
+  | { id: number }
+  | {
+      shop: string;
+      serial: string;
+      productVariantId: ID;
+    }
+>) {
+  const _productVariantId: string | null = productVariantId ?? null;
+
+  const lineItems = await sql<{
+    purchaseOrderId: number;
+    productVariantId: string;
+    quantity: number;
+    availableQuantity: number;
+    unitCost: string;
+    createdAt: Date;
+    updatedAt: Date;
+    uuid: UUID;
+    specialOrderLineItemId: number | null;
+    productVariantSerialId: number | null;
+  }>`
+    SELECT poli.*
+    FROM "ProductVariantSerial" pvs
+           INNER JOIN "PurchaseOrderLineItem" poli ON poli."productVariantSerialId" = pvs.id
+           INNER JOIN "PurchaseOrder" po ON po.id = poli."purchaseOrderId"
+    WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
+      AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
+      AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+  `;
+
+  return lineItems.map(mapPurchaseOrderLineItem);
 }

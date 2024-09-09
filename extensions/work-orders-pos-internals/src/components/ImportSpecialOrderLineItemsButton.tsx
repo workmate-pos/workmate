@@ -8,7 +8,7 @@ import { useRouter } from '../routes.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import {
   hasNestedPropertyValue,
@@ -132,6 +132,7 @@ export function ImportSpecialOrderLineItemsButton({
             customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             productVariantId: lineItem.productVariantId,
             availableQuantity: 0,
+            serialNumber: null,
           };
         })
         .filter(isNonNullable),

@@ -24,6 +24,7 @@ import {
   getPurchaseOrderCsvTemplatesZip,
   readPurchaseOrderCsvImport,
 } from '../../services/purchase-orders/csv-import.js';
+import * as Sentry from '@sentry/node';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -126,14 +127,26 @@ export default class PurchaseOrdersController {
     const { subject, html } = await getRenderedPurchaseOrderTemplate(printTemplate, context);
     const file = await renderHtmlToPdfCustomFile(subject, html);
 
-    await mg.send(
-      { emailReplyTo, emailFromTitle },
+    await Sentry.startSpan(
       {
-        to: printEmail,
-        attachment: [file],
-        subject,
-        text: 'WorkMate Purchase Order',
+        name: 'Sending purchase order print email',
+        attributes: {
+          emailFromTitle,
+          emailReplyTo,
+          printEmail,
+          subject,
+        },
       },
+      () =>
+        mg.send(
+          { emailReplyTo, emailFromTitle },
+          {
+            to: printEmail,
+            attachment: [file],
+            subject,
+            text: 'WorkMate Purchase Order',
+          },
+        ),
     );
 
     return res.json({ success: true });

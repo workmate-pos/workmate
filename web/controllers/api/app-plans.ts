@@ -3,11 +3,12 @@ import { Request, Response } from 'express-serve-static-core';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../../services/gql/gql.js';
 import { CreateAppPlanSubscription } from '../../schemas/generated/create-app-plan-subscription.js';
-import { Int } from '../../services/gql/queries/generated/schema.js';
+import { CurrencyCode, Int } from '../../services/gql/queries/generated/schema.js';
 import { Permission } from '../../decorators/permission.js';
 import { getAppPlan, getAppPlanSubscription, getAvailableAppPlans } from '../../services/app-plans/app-plans.js';
 import { Session } from '@shopify/shopify-api';
 import { IGetSubscriptionResult } from '../../services/db/queries/generated/app-plan.sql.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 export type AppSubscriptionCreate = gql.appSubscriptions.appSubscriptionCreate.Result['appSubscriptionCreate'];
 
@@ -60,8 +61,8 @@ export default class AppPlansController {
           appRecurringPricingDetails: {
             interval: appPlan.interval,
             price: {
-              amount,
-              currencyCode: appPlan.currencyCode,
+              amount: BigDecimal.fromString(amount.toString()).toDecimal(),
+              currencyCode: appPlan.currencyCode as CurrencyCode,
             },
             discount,
           },

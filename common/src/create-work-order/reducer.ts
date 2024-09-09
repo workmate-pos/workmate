@@ -1,10 +1,10 @@
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
-import { v4 as uuid } from 'uuid';
 import type { useReducer, useRef, useState } from 'react';
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { UUID } from '@web/util/types.js';
+import { uuid } from '../util/uuid.js';
 
 export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
   customerId: CreateWorkOrder['customerId'] | null;
@@ -280,7 +280,7 @@ function getSplitItems(items: CreateWorkOrder['items'][number][], charges: Creat
         },
         {
           ...item,
-          uuid: uuid() as UUID,
+          uuid: uuid(),
           quantity: (item.quantity - 1) as Int,
         },
       ];

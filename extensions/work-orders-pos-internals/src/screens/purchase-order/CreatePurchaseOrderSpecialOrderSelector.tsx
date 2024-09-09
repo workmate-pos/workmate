@@ -232,6 +232,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
                         availableQuantity: 0,
                         unitCost,
                         customFields: lineItemCustomFields,
+                        serialNumber: null,
                       };
                     })
                     .filter(isNonNullable),

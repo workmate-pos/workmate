@@ -213,6 +213,7 @@ fragment DatabaseProductFragment on Product {
   description
   productType
   vendor
+  hasOnlyDefaultVariant
 }
 
 

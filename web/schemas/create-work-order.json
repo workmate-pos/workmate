@@ -4,11 +4,37 @@
   "properties": {
     "name": {
       "description": "The name of the work order to update (if applicable). If not provided, a new work order will be created. Unique within a store.",
-      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
     },
     "status": {
       "type": "string",
       "minLength": 1
+    },
+    "serial": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "object",
+          "properties": {
+            "serial": {
+              "type": "string"
+            },
+            "productVariantId": {
+              "$ref": "scalars.json#/definitions/ID"
+            }
+          },
+          "required": ["productVariantId", "serial"],
+          "additionalProperties": false
+        }
+      ]
     },
     "dueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
@@ -23,17 +49,40 @@
       "$ref": "scalars.json#/definitions/ID"
     },
     "companyId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     },
     "companyLocationId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     },
     "companyContactId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     },
     "paymentTerms": {
       "anyOf": [
-        { "const": null },
+        {
+          "const": null
+        },
         {
           "title": "work-order-payment-terms",
           "type": "object",
@@ -42,7 +91,14 @@
               "$ref": "scalars.json#/definitions/ID"
             },
             "date": {
-              "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+              "anyOf": [
+                {
+                  "const": null
+                },
+                {
+                  "$ref": "scalars.json#/definitions/DateTime"
+                }
+              ]
             }
           },
           "additionalProperties": false,
@@ -52,7 +108,14 @@
     },
     "derivedFromOrderId": {
       "description": "A Shopify Order ID from which this work order was derived",
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     },
     "customFields": {
       "type": "object",
@@ -142,7 +205,14 @@
                 "$ref": "scalars.json#/definitions/UUID"
               },
               "workOrderItemUuid": {
-                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/UUID" }]
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "$ref": "scalars.json#/definitions/UUID"
+                  }
+                ]
               },
               "employeeId": {
                 "anyOf": [
@@ -199,7 +269,14 @@
                 "$ref": "scalars.json#/definitions/UUID"
               },
               "workOrderItemUuid": {
-                "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/UUID" }]
+                "anyOf": [
+                  {
+                    "const": null
+                  },
+                  {
+                    "$ref": "scalars.json#/definitions/UUID"
+                  }
+                ]
               },
               "employeeId": {
                 "anyOf": [
@@ -243,7 +320,9 @@
     "discount": {
       "title": "discount",
       "anyOf": [
-        { "const": null },
+        {
+          "const": null
+        },
         {
           "type": "object",
           "anyOf": [
@@ -291,7 +370,8 @@
     "companyId",
     "companyLocationId",
     "companyContactId",
-    "paymentTerms"
+    "paymentTerms",
+    "serial"
   ],
   "additionalProperties": false
 }

@@ -12,9 +12,9 @@ import {
   DetailedWorkOrderItem,
   WorkOrderOrder,
   WorkOrderPaymentTerms,
+  WorkOrderSerial,
 } from './types.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { indexBy, indexByMap, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -41,6 +41,7 @@ import {
 import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js';
 import { UUID } from '../../util/types.js';
 import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
+import { getSerial } from '../serials/queries.js';
 
 export async function getDetailedWorkOrder(session: Session, name: string): Promise<DetailedWorkOrder | null> {
   const { shop } = session;
@@ -49,12 +50,6 @@ export async function getDetailedWorkOrder(session: Session, name: string): Prom
   if (!workOrder) {
     return null;
   }
-
-  assertGid(workOrder.customerId);
-  assertGidOrNull(workOrder.derivedFromOrderId);
-  assertGidOrNull(workOrder.companyId);
-  assertGidOrNull(workOrder.companyLocationId);
-  assertGidOrNull(workOrder.companyContactId);
 
   return await awaitNested({
     name: workOrder.name,
@@ -73,6 +68,7 @@ export async function getDetailedWorkOrder(session: Session, name: string): Prom
     customFields: getWorkOrderCustomFieldsRecord(workOrder.id),
     discount: getWorkOrderDiscount(workOrder),
     paymentTerms: getWorkOrderPaymentTerms(workOrder),
+    serial: getWorkOrderSerial(workOrder),
   });
 }
 
@@ -161,7 +157,7 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
       quantity: item.data.quantity,
       absorbCharges: item.data.absorbCharges,
       shopifyOrderLineItem: item.shopifyOrderLineItemId
-        ? lineItemById[item.shopifyOrderLineItemId] ?? never('fk')
+        ? (lineItemById[item.shopifyOrderLineItemId] ?? never('fk'))
         : null,
       purchaseOrders: itemPurchaseOrders.map(po => ({
         name: po.name,
@@ -217,7 +213,7 @@ async function getDetailedWorkOrderCharges(workOrderId: number): Promise<Detaile
       removeLocked: charge.data.removeLocked,
       workOrderItemUuid: charge.workOrderItemUuid as UUID | null,
       shopifyOrderLineItem: charge.shopifyOrderLineItemId
-        ? lineItemById[charge.shopifyOrderLineItemId] ?? never()
+        ? (lineItemById[charge.shopifyOrderLineItemId] ?? never())
         : null,
     };
 
@@ -360,4 +356,21 @@ export async function getWorkOrderInfoPage(
   return await Promise.all(
     page.map(workOrder => getDetailedWorkOrder(session, workOrder.name).then(wo => wo ?? never())),
   );
+}
+
+export async function getWorkOrderSerial(
+  workOrder: Pick<WorkOrder, 'productVariantSerialId'>,
+): Promise<WorkOrderSerial | null> {
+  if (!workOrder.productVariantSerialId) return null;
+
+  const pvs = await getSerial({ id: workOrder.productVariantSerialId });
+  const { productVariantId, serial, locationId } = pvs ?? never('fk');
+
+  // TODO: Warnings on front end in case data doesnt match, e.g. customer and pvs customer
+
+  return {
+    productVariantId,
+    serial,
+    locationId,
+  };
 }

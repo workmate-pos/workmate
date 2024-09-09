@@ -44,7 +44,9 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const [lastSavedSpecialOrder, setLastSavedSpecialOrder] = useState(initial);
   const [createSpecialOrder, setCreateSpecialOrder] = useState(initial);
 
-  const hasUnsavedChanges = JSON.stringify(createSpecialOrder) !== JSON.stringify(lastSavedSpecialOrder);
+  const hasUnsavedChanges =
+    JSON.stringify(createSpecialOrder, Object.keys(createSpecialOrder).sort()) !==
+    JSON.stringify(lastSavedSpecialOrder, Object.keys(lastSavedSpecialOrder).sort());
 
   const setCustomerId = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'customerId');
   const setCompanyId = getCreateSpecialOrderSetter(setCreateSpecialOrder, 'companyId');

@@ -3,7 +3,7 @@
 NPM_GITHUB_TOKEN
 SHOPIFY_ACCESS_TOKEN
 
-dump.sql
+/*.sql
 
 # Logs
 logs

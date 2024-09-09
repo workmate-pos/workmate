@@ -1,5 +1,4 @@
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
@@ -8,7 +7,8 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { syncProducts } from '../products/sync.js';
 import { unit } from '../db/unit-of-work.js';
 import { createIsStaleFn } from '../../util/db.js';
-import { escapeTransaction, stickyClient } from '../db/client.js';
+import { escapeTransaction } from '../db/client.js';
+import { getProductVariants, upsertProductVariants } from './queries.js';
 
 // TODO: Do we need webhooks for this anymore if we just update when stale?
 // TODO: Update on stale everywhere where it makes sense
@@ -18,7 +18,7 @@ export async function ensureProductVariantsExist(session: Session, productVarian
     return;
   }
 
-  const databaseProductVariants = await db.productVariants.getMany({ productVariantIds });
+  const databaseProductVariants = await getProductVariants(productVariantIds);
   const existingProductVariantIds = new Set(
     databaseProductVariants.map(productVariant => productVariant.productVariantId),
   );
@@ -46,7 +46,7 @@ export async function syncProductVariantsIfExists(session: Session, productVaria
     return;
   }
 
-  const databaseProductVariants = await db.productVariants.getMany({ productVariantIds });
+  const databaseProductVariants = await getProductVariants(productVariantIds);
   const existingProductVariantIds = databaseProductVariants.map(
     productVariant => (assertGid(productVariant.productVariantId), productVariant.productVariantId),
   );
@@ -68,7 +68,7 @@ export async function syncProductVariants(session: Session, productVariantIds: I
 
   await unit(async () => {
     await syncProducts(session, productIds)
-      .then(() => upsertProductVariants(productVariants))
+      .then(() => upsertGqlProductVariants(productVariants))
       .catch(error => errors.push(error));
   });
 
@@ -83,13 +83,13 @@ export async function syncProductVariants(session: Session, productVariantIds: I
   }
 }
 
-export async function upsertProductVariants(productVariants: gql.products.DatabaseProductVariantFragment.Result[]) {
+export async function upsertGqlProductVariants(productVariants: gql.products.DatabaseProductVariantFragment.Result[]) {
   if (productVariants.length === 0) {
     return;
   }
 
-  await db.productVariants.upsertMany({
-    productVariants: productVariants.map(
+  await upsertProductVariants(
+    productVariants.map(
       ({ id: productVariantId, product: { id: productId }, inventoryItem: { id: inventoryItemId }, title, sku }) => ({
         productVariantId,
         productId,
@@ -98,5 +98,5 @@ export async function upsertProductVariants(productVariants: gql.products.Databa
         inventoryItemId,
       }),
     ),
-  });
+  );
 }

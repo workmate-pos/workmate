@@ -32,6 +32,10 @@ export default function App() {
                     destination: '/special-orders',
                   },
                   {
+                    label: 'Serials',
+                    destination: '/serials',
+                  },
+                  {
                     label: 'Services & Labour',
                     destination: '/services-and-labour',
                   },
