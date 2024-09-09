@@ -1,11 +1,9 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { useVendorsQuery, Vendor } from '@work-orders/common/queries/use-vendors-query.js';
+import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useState } from 'react';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { UseRouter } from '../router.js';
 import { ListPopup } from '../ListPopup.js';
-import { getSubtitle } from '../../util/subtitle.js';
-import { useNotFullyOrderedSpecialOrderVendorsQuery } from '@work-orders/common/queries/use-not-fully-ordered-special-order-vendors-query.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getVendorItem } from './VendorSelector.js';
 
@@ -16,6 +14,8 @@ export type NotFullyOrderedSpecialOrderVendorSelectorProps = {
   useRouter: UseRouter;
 };
 
+// TODO: Merge with VendorSelector
+
 export function NotFullyOrderedSpecialOrderVendorSelector({
   locationId,
   onSelect,
@@ -23,7 +23,13 @@ export function NotFullyOrderedSpecialOrderVendorSelector({
   useRouter,
 }: NotFullyOrderedSpecialOrderVendorSelectorProps) {
   const fetch = useAuthenticatedFetch();
-  const vendorsQuery = useNotFullyOrderedSpecialOrderVendorsQuery({ fetch, locationId });
+  const vendorsQuery = useVendorsQuery({
+    fetch,
+    filters: {
+      specialOrderLocationId: locationId,
+      specialOrderLineItemOrderState: 'NOT_FULLY_ORDERED',
+    },
+  });
   const [query, setQuery] = useState('');
 
   const vendors = vendorsQuery.data ?? [];

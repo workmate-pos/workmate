@@ -8,6 +8,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { MINUTE_IN_MILLIS } from '../../util/date-utils.js';
 import { getShopSettings } from '../settings.js';
 import { Int } from '../gql/queries/generated/schema.js';
+import { getPurchaseOrderCountByVendor } from '../purchase-orders/queries.js';
 
 type CachedVendorCustomers = {
   /**
@@ -71,7 +72,12 @@ export async function getVendors(session: Session): Promise<Vendor[]> {
       shop: { productVendors },
     },
     vendorCustomers,
-  ] = await Promise.all([gql.productVendors.getProductVendors.run(graphql, {}), getVendorCustomers(session)]);
+    purchaseOrderCount,
+  ] = await Promise.all([
+    gql.productVendors.getProductVendors.run(graphql, {}),
+    getVendorCustomers(session),
+    getPurchaseOrderCountByVendor(session.shop),
+  ]);
 
   const vendorNames = productVendors.edges.map(({ node }) => node);
 
@@ -81,11 +87,13 @@ export async function getVendors(session: Session): Promise<Vendor[]> {
     return {
       name: vendor,
       customer,
+      purchaseOrderCount: purchaseOrderCount[vendor] ?? 0,
     };
   });
 }
 
 export type Vendor = {
   name: string;
+  purchaseOrderCount: number;
   customer: gql.segments.CustomerSegmentMemberFragment.Result | null;
 };

@@ -488,7 +488,7 @@ export async function getPurchaseOrderLineItemsByIdAndUuid(
   }>`
     SELECT li.*, po.name AS "purchaseOrderName"
     FROM "PurchaseOrderLineItem" li
-    INNER JOIN "PurchaseOrder" po ON li."purchaseOrderId" = po.id
+           INNER JOIN "PurchaseOrder" po ON li."purchaseOrderId" = po.id
     WHERE (li."purchaseOrderId", li.uuid) = ANY (SELECT *
                                                  FROM UNNEST(
                                                    ${_purchaseOrderId} :: int[],
@@ -527,4 +527,27 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
   `;
 
   return purchaseOrders.map(mapPurchaseOrder);
+}
+
+export async function getPurchaseOrderCount(shop: string, filters: MergeUnion<{ vendor: string }>) {
+  const { count } = await sqlOne<{ count: number }>`
+    SELECT COUNT(*) :: int AS count
+    FROM "PurchaseOrder"
+    WHERE "shop" = COALESCE(${shop ?? null}, "shop")
+      AND "vendorName" = COALESCE(${filters?.vendor ?? null}, "vendorName");
+  `;
+
+  return count;
+}
+
+export async function getPurchaseOrderCountByVendor(shop: string) {
+  const counts = await sql<{ vendorName: string; count: number }>`
+    SELECT "vendorName", COUNT(*) :: int AS count
+    FROM "PurchaseOrder"
+    WHERE "shop" = COALESCE(${shop ?? null}, "shop")
+      AND "vendorName" IS NOT NULL
+    GROUP BY "vendorName";
+  `;
+
+  return Object.fromEntries(counts.map(({ vendorName, count }) => [vendorName, count]));
 }
