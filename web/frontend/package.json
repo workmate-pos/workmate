@@ -6,7 +6,8 @@
   "scripts": {
     "build": "npm install && vite build",
     "dev": "vite",
-    "clean": "rm -fr dist node_modules"
+    "clean": "rm -fr dist node_modules",
+    "watch": "tsc -w"
   },
   "engines": {
     "node": ">= 18.15"

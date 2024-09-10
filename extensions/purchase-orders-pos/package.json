@@ -16,6 +16,7 @@
   },
   "scripts": {
     "clean": "rm -fr node_modules",
-    "build": "tsc"
+    "build": "tsc",
+    "watch": "tsc -w"
   }
 }
