@@ -642,9 +642,9 @@ model Customer {
   shopifyOrders ShopifyOrder[]
   specialOrders SpecialOrder[]
 
-  createdAt            DateTime               @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime               @default(now()) @db.Timestamptz(3)
-  deletedAt            DateTime?
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime?
 
   @@index([shop])
 }
@@ -892,4 +892,29 @@ model ProductVariantSerial {
   workOrders             WorkOrder[]
 
   @@unique([shop, productVariantId, serial])
+}
+
+// Table for storing arbitrary shopify objects, e.g. products, customers, orders, etc.
+// Data is stored as jsonb, allowing the data to be changed on the fly in a type-safe way through zod schemas and GraphQL fragments.
+// ShopifyObjects are kept up-to-date through webhooks and syncs when the data has not changed for a while.
+// Client calls fetch directly from this table given that the data matches the expected schema and is not stale.
+// In either of these cases the data will be revalidated and updated in the database before serving it to the client.
+model ShopifyObject {
+  id Int @id @default(autoincrement())
+
+  shop  String
+  // The key is used to identify the object in the database.
+  // It is usually equal to the shopify object's GID, but can technically be any string.
+  // It may for instance be useful to store non-node objects (i.e. without a GID) in the database,
+  // e.g. a list of all product vendors or all shop location ids.
+  key   String
+  data  Json    @db.JsonB
+  // If true, the data is considered stale and should be revalidated.
+  stale Boolean
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime?
+
+  @@unique([shop, key])
 }

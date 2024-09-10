@@ -52,7 +52,7 @@ export async function useClient(): Promise<DisposablePoolClient> {
 }
 
 type StoredClient = {
-  transactional: boolean;
+  transactionUuid: string | null;
   client: DisposablePoolClient;
 };
 
@@ -66,8 +66,12 @@ function getStoredClient(): StoredClient | undefined {
   return asyncLocalStorage.getStore();
 }
 
+export function getTransactionUuid(): string | null {
+  return getStoredClient()?.transactionUuid ?? null;
+}
+
 export function inTransaction(): boolean {
-  return getStoredClient()?.transactional === true;
+  return getTransactionUuid() !== null;
 }
 
 /**
@@ -83,11 +87,11 @@ export async function stickyClient<T>(fn: () => Promise<T>): Promise<T> {
   }
 
   using client = await useClient();
-  return await runWithStoredClient({ transactional: false, client }, fn);
+  return await runWithStoredClient({ transactionUuid: null, client }, fn);
 }
 
 /**
- * Gets rid of a transactional context. Pretty dangerous but has some use cases.
+ * Gets rid of a transactional context.
  */
 export async function escapeTransaction<T>(fn: () => Promise<T>): Promise<T> {
   return await asyncLocalStorage.run(undefined, fn);

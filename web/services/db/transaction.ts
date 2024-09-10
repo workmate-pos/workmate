@@ -1,4 +1,5 @@
 import { inTransaction, runWithStoredClient, useClient } from './client.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 export type IsolationLevel = 'READ UNCOMMITTED' | 'READ COMMITTED' | 'REPEATABLE READ' | 'SERIALIZABLE';
 
@@ -24,7 +25,7 @@ export async function transaction<T>(
   }
 
   try {
-    const result = await runWithStoredClient({ transactional: true, client }, tx);
+    const result = await runWithStoredClient({ transactionUuid: uuid(), client }, tx);
 
     if (isTransactionRollback(result)) {
       await client.query('ROLLBACK');

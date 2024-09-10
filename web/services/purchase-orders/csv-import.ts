@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { zCsvNullable, zDateTime, zMoney, zNamespacedID } from '../../util/zod.js';
+import { zCsvNullable, zDateTime, zMoney, zObjectGid } from '../../util/zod.js';
 import { Readable } from 'node:stream';
 import { buffer } from 'node:stream/consumers';
 import busboy from 'busboy';
@@ -22,7 +22,7 @@ const CsvPurchaseOrderInfo = z.object({
   ID: CsvPurchaseOrderId,
   Status: z.string(),
   PlacedDate: zCsvNullable(zDateTime),
-  LocationID: zCsvNullable(zNamespacedID('Location')),
+  LocationID: zCsvNullable(zObjectGid('Location')),
   VendorName: zCsvNullable(z.string()),
   ShipFrom: z.string(),
   ShipTo: z.string(),
@@ -42,7 +42,7 @@ const CsvPurchaseOrderLineItemId = z
 const CsvPurchaseOrderLineItem = z.object({
   PurchaseOrderID: CsvPurchaseOrderId,
   LineItemID: CsvPurchaseOrderLineItemId,
-  ProductVariantID: zNamespacedID('ProductVariant'),
+  ProductVariantID: zObjectGid('ProductVariant'),
   Quantity: z.coerce.number().int(),
   UnitCost: zMoney,
   AvailableQuantity: z.coerce.number().int(),
@@ -57,7 +57,7 @@ const CsvPurchaseOrderCustomField = z.object({
 
 const CsvPurchaseOrderEmployeeAssignment = z.object({
   ID: CsvPurchaseOrderId,
-  EmployeeID: zNamespacedID('Employee'),
+  EmployeeID: zObjectGid('Employee'),
 });
 
 const CsvPurchaseOrderLineItemCustomField = z.object({

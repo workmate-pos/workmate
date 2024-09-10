@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { zID, zMoney } from '../../util/zod.js';
+import { zGid, zMoney } from '../../util/zod.js';
 
 export type WorkOrderItemData = z.infer<typeof WorkOrderItemData>;
 
@@ -17,7 +17,7 @@ export const WorkOrderItemData = z
     z.discriminatedUnion('type', [
       z.object({
         type: z.literal('product'),
-        productVariantId: zID,
+        productVariantId: zGid,
       }),
       z.object({
         type: z.literal('custom-item'),

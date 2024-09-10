@@ -1,8 +1,8 @@
 import { z } from 'zod';
-import { zID, zMoney } from '../util/zod.js';
+import { zGid, zMoney } from '../util/zod.js';
 
 const Base = z.object({
-  productVariantId: zID.optional(),
+  productVariantId: zGid.optional(),
   title: z.string().min(1),
   description: z.string().optional().default(''),
   sku: z.string().min(1),
@@ -16,7 +16,7 @@ export const UpsertService = z.discriminatedUnion('type', [
       .string()
       .optional()
       .transform(value => value?.split(',') ?? [])
-      .pipe(z.array(zID)),
+      .pipe(z.array(zGid)),
   }),
   Base.extend({
     type: z.literal('fixed'),

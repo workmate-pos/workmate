@@ -29,3 +29,5 @@ export type RequireOneProperty<T> = {
  * Results in a new intersection where each type is a base type + optionally any property from other types.
  */
 export type MergeUnion<T> = Partial<UnionToIntersection<T>> & ([T] extends [infer U] ? U : never);
+
+export type LastElement<T extends unknown[]> = T extends [...infer _, infer L] ? L : never;

@@ -3,19 +3,23 @@ import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 
-let appId: ID | null = null;
+let appIdPromise: Promise<ID> | null = null;
 
 export async function getAppId(session: Session): Promise<ID> {
-  if (appId) {
-    return appId;
+  if (appIdPromise) {
+    return await appIdPromise;
   }
 
-  const graphql = new Graphql(session);
-  const { currentAppInstallation } = await gql.app.getAppId.run(graphql, {});
+  appIdPromise = new Promise<ID>(async resolve => {
+    const graphql = new Graphql(session);
+    const { currentAppInstallation } = await gql.app.getAppId.run(graphql, {});
+    resolve(currentAppInstallation.app.id);
+  }).catch(error => {
+    appIdPromise = null;
+    throw error;
+  });
 
-  appId = currentAppInstallation.app.id;
-
-  return appId;
+  return await appIdPromise;
 }
 
 export async function getAppNamespace(session: Session): Promise<string> {

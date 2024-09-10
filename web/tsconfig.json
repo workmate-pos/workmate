@@ -4,7 +4,7 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": ["dom", "dom.iterable", "ES2023"],
     "outDir": "dist",
     "allowJs": true,
     "jsx": "react-jsx",
@@ -19,7 +19,13 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "composite": true,
-    "declaration": true
+    "plugins": [
+      {
+        "name": "gql.tada/ts-plugin",
+        "schema": "./schema.graphql",
+        "tadaOutputLocation": "./graphql-env.d.ts"
+      }
+    ]
   },
   "exclude": ["node_modules", "frontend", "dist"]
 }

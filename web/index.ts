@@ -33,9 +33,11 @@ export const sessionStorage = new ShopifySessionStorage();
 
 const isAppMigrate = process.env.APP_MIGRATE === 'true';
 
+export const apiVersion = ApiVersion.July24;
+
 const appConfig: ShopifyAppConfig = {
   api: {
-    apiVersion: ApiVersion.July24,
+    apiVersion,
     restResources,
   },
   sessionStorage,

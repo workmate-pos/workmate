@@ -32,7 +32,7 @@ export const fixedPriceLabourChargeMetaobject = {
         key: 'customize-amount',
         type: 'boolean',
         description: 'Whether the amount can be changed by inside of POS',
-        // required: true,
+        required: true,
       },
       {
         name: 'Removable',
