@@ -24,12 +24,14 @@ export const permissionNodes = [
   'read_employees',
   'read_purchase_orders',
   'read_settings',
+  'read_special_orders',
   'read_stock_transfers',
   'read_work_orders',
   'write_app_plan',
   'write_employees',
   'write_purchase_orders',
   'write_settings',
+  'write_special_orders',
   'write_stock_transfers',
   'write_work_orders',
 ] as const satisfies readonly PermissionNode[];
@@ -42,6 +44,8 @@ export const defaultPermissionNodes: PermissionNode[] = [
   'write_work_orders',
   'read_purchase_orders',
   'read_stock_transfers',
+  'read_special_orders',
+  'write_special_orders',
 ];
 
 export function isPermissionNode(node: string): node is PermissionNode {
