@@ -182,20 +182,20 @@ export function PurchaseOrderProductConfig({
           <Stack direction="vertical" spacing={2}>
             <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="headingSmall" color="TextSubdued">
-                Quantity
+                Available Quantity
               </Text>
             </Stack>
             <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="body" color="TextSubdued">
-                The quantity that has been ordered
+                The quantity that has been delivered
               </Text>
             </Stack>
             <Stepper
-              minimumValue={isImmutable ? savedProduct.quantity : 1}
-              initialValue={product.quantity}
-              value={product.quantity}
-              onValueChanged={(quantity: Int) => {
-                setProduct({ ...product, quantity });
+              minimumValue={isImmutable ? savedProduct.availableQuantity : 0}
+              initialValue={product.availableQuantity}
+              value={product.availableQuantity}
+              onValueChanged={(availableQuantity: Int) => {
+                setProduct({ ...product, availableQuantity });
                 setHasUnsavedChanges(true);
               }}
             />
