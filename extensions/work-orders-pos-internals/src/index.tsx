@@ -6,7 +6,7 @@ import { ReactQueryProvider } from '@work-orders/common-pos/providers/ReactQuery
 
 export function WorkOrdersApp({ children }: { children: ReactNode }) {
   return (
-    <AppProvider appUrl={"https://work-orders-staging.teifi.dev"!}>
+    <AppProvider appUrl={process.env.APP_URL!}>
       <ReactQueryProvider>
         <DialogProvider>
           <ScreenSizeProvider>{children}</ScreenSizeProvider>
