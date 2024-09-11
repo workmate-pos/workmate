@@ -13,7 +13,7 @@ import { installableAppPlansService } from './services/app-plans/index.js';
 import { installableSegmentService } from './services/segments/index.js';
 import { runMigrations } from './services/db/migrations/index.js';
 import { ApiVersion } from '@shopify/shopify-api';
-import { restResources } from '@shopify/shopify-api/rest/admin/2024-01';
+import { restResources } from '@shopify/shopify-api/rest/admin/2024-07';
 import { shopifyPlanHandler, ShopifyPlanKey } from './decorators/shopify-plan.js';
 import { formBodyHandler, FormBodyKey } from './decorators/form-body.js';
 

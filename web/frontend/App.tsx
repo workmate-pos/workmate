@@ -40,6 +40,10 @@ export default function App() {
                     destination: '/services-and-labour',
                   },
                   {
+                    label: 'Notifications',
+                    destination: '/notifications',
+                  },
+                  {
                     label: 'Employee Rates',
                     destination: '/employee-rates',
                   },

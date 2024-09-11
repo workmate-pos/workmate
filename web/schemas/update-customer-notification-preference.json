@@ -1,0 +1,11 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "preference": {
+      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+    }
+  },
+  "additionalProperties": false,
+  "required": ["preference"]
+}

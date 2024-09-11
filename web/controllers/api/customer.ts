@@ -1,4 +1,4 @@
-import { Get, Authenticated, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
+import { Get, Authenticated, QuerySchema, Post, BodySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Session } from '@shopify/shopify-api';
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
@@ -6,6 +6,16 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { fetchAllPages, gql } from '../../services/gql/gql.js';
 import { ID } from '../../services/gql/queries/generated/schema.js';
 import { Ids } from '../../schemas/generated/ids.js';
+import { Permission } from '../../decorators/permission.js';
+import { UpdateCustomerNotificationPreference } from '../../schemas/generated/update-customer-notification-preference.js';
+import { getNotificationPreference } from '../../services/customer-notification-preference/notification-preference.js';
+import { httpError } from '../../util/http-error.js';
+import {
+  deleteCustomerNotificationPreference,
+  getCustomerNotificationPreference,
+  upsertCustomerNotificationPreference,
+} from '../../services/customer-notification-preference/queries.js';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 @Authenticated()
 export default class CustomerController {
@@ -75,6 +85,47 @@ export default class CustomerController {
 
     return res.json({ customer });
   }
+
+  @Get('/:id/notification-preference')
+  async fetchCustomerNotificationPreference(
+    req: Request<{ id: ID }>,
+    res: Response<FetchCustomerNotificationPreferenceResponse>,
+  ) {
+    const { id } = req.params;
+
+    const customerId = createGid('Customer', id);
+    const customerNotificationPreference = await getCustomerNotificationPreference(customerId);
+
+    if (!customerNotificationPreference) {
+      return res.json({ preference: null });
+    }
+
+    return res.json({
+      preference: getNotificationPreference(customerNotificationPreference, null),
+    });
+  }
+
+  @Post('/:id/notification-preference')
+  @BodySchema('update-customer-notification-preference')
+  async updateCustomerNotificationPreference(
+    req: Request<{ id: ID }, unknown, UpdateCustomerNotificationPreference>,
+    res: Response<UpdateCustomerNotificationPreferenceResponse>,
+  ) {
+    const preference = req.body.preference
+      ? (getNotificationPreference(req.body.preference, null) ??
+        httpError(`Invalid preference '${req.body.preference}'`))
+      : null;
+
+    const customerId = createGid('Customer', req.params.id);
+
+    if (preference) {
+      await upsertCustomerNotificationPreference(customerId, preference);
+    } else {
+      await deleteCustomerNotificationPreference(customerId);
+    }
+
+    return res.json({ success: true });
+  }
 }
 
 export type FetchCustomersResponse = {
@@ -96,4 +147,12 @@ export type FetchCustomerMetafieldsResponse = {
     key: string;
     name: string;
   }[];
+};
+
+export type FetchCustomerNotificationPreferenceResponse = {
+  preference: string | null;
+};
+
+export type UpdateCustomerNotificationPreferenceResponse = {
+  success: true;
 };

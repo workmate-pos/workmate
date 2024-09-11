@@ -642,9 +642,9 @@ model Customer {
   shopifyOrders ShopifyOrder[]
   specialOrders SpecialOrder[]
 
-  createdAt            DateTime               @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime               @default(now()) @db.Timestamptz(3)
-  deletedAt            DateTime?
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime?
 
   @@index([shop])
 }
@@ -892,4 +892,35 @@ model ProductVariantSerial {
   workOrders             WorkOrder[]
 
   @@unique([shop, productVariantId, serial])
+}
+
+model Notification {
+  uuid String @id @db.Uuid
+
+  shop      String
+  type      String
+  recipient String
+  message   String
+  failed    Boolean
+
+  // Optional id used by an external service provider
+  externalId String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([shop, uuid])
+  @@index([externalId])
+  @@index([updatedAt])
+}
+
+
+model CustomerNotificationPreference {
+  id Int @id @default(autoincrement())
+
+  customerId String @unique
+  preference String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }

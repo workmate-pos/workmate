@@ -17,7 +17,7 @@ export default reactExtension(TARGET, () => (
 ));
 
 function App() {
-  const { close, data, intents } = useApi(TARGET);
+  const { close, data } = useApi(TARGET);
 
   const id = data.selected.map(order => order.id).filter(isGid)[0] ?? null;
 
