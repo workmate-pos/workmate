@@ -33,7 +33,7 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { DateTime, WorkOrderPaymentTerms } from '@web/schemas/generated/create-work-order.js';
+import { CreateWorkOrder, DateTime, WorkOrderPaymentTerms } from '@web/schemas/generated/create-work-order.js';
 import { getPurchaseOrderBadge, getSpecialOrderBadge, getTransferOrderBadge } from '../util/badges.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import {
@@ -62,6 +62,16 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useCustomerNotificationPreferenceQuery } from '@work-orders/common/queries/use-customer-notification-preference-query.js';
+import {
+  getNotificationType,
+  OnStatusChangeNotificationVariables,
+  replaceNotificationVariables,
+} from '@work-orders/common/notifications/on-status-change.js';
+import { ListPopupItem } from '@work-orders/common-pos/screens/ListPopup.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -78,15 +88,27 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   const [name, setName] = useState(initial.name);
   const workOrderQuery = useWorkOrderQuery({ fetch, name });
 
+  const [lastSavedCreateWorkOrder, setLastSavedCreateWorkOrder] = useState<CreateWorkOrder>();
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(
     initial,
     !workOrderQuery.isFetching ? workOrderQuery.data?.workOrder : undefined,
     { useRef, useState, useReducer },
   );
 
+  if (!lastSavedCreateWorkOrder && workOrderQuery.data?.workOrder) {
+    setLastSavedCreateWorkOrder(workOrderToCreateWorkOrder(workOrderQuery.data.workOrder));
+  }
+
   if (name !== createWorkOrder.name) {
     setName(createWorkOrder.name);
   }
+
+  const settingsQuery = useSettingsQuery({ fetch });
+  const customerQuery = useCustomerQuery({ fetch, id: createWorkOrder.customerId });
+  const customerNotificationPreferenceQuery = useCustomerNotificationPreferenceQuery({
+    fetch,
+    customerId: createWorkOrder.customerId,
+  });
 
   const router = useRouter();
   const screen = useScreen();
@@ -94,6 +116,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
 
   screen.setTitle(createWorkOrder.name ?? 'New Work Order');
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
+  screen.setIsLoading(settingsQuery.isLoading);
 
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
@@ -107,9 +130,113 @@ export function WorkOrder({ initial }: WorkOrderProps) {
         toast.show('Error saving work order');
       },
       onSuccess(workOrder) {
-        dispatch.set(workOrderToCreateWorkOrder(workOrder));
+        const createWorkOrder = workOrderToCreateWorkOrder(workOrder);
+        dispatch.set(createWorkOrder);
+        setLastSavedCreateWorkOrder(createWorkOrder);
         setHasUnsavedChanges(false);
         router.push('WorkOrderSaved', { workOrder });
+
+        // TODO: Cleanup
+        if (workOrder.status !== lastSavedCreateWorkOrder?.status) {
+          if (!settingsQuery.data || !customerQuery.data || customerNotificationPreferenceQuery.data === undefined) {
+            toast.show('Cannot send notification, settings or customer not loaded');
+            return;
+          }
+
+          const settings = settingsQuery.data.settings;
+          const customer = customerQuery.data;
+          const customerNotificationPreference = customerNotificationPreferenceQuery.data;
+
+          const availableNotifications = settings.workOrder.notifications.filter(notification => {
+            if (notification.type === 'on-status-change') {
+              return notification.status === workOrder.status;
+            }
+
+            return notification.type satisfies never;
+          });
+
+          if (!availableNotifications.length) {
+            return;
+          }
+
+          const notificationVariables: OnStatusChangeNotificationVariables = {
+            name: workOrder.name,
+            status: workOrder.status,
+            'customer.displayName': customer.displayName,
+            'customer.phone': customer.phone,
+            'customer.email': customer.email,
+          };
+
+          const notificationType = getNotificationType(
+            customerQuery.data,
+            customerNotificationPreference ?? settings.defaultNotificationPreference,
+          );
+
+          const openNotificationModal = ({ email, sms }: (typeof availableNotifications)[number]) => {
+            const openSmsModal = (phone: string) =>
+              router.push('SendWorkOrderNotification', {
+                name: workOrder.name,
+                notification: {
+                  type: 'sms',
+                  message: replaceNotificationVariables(sms.message, notificationVariables),
+                  recipient: phone,
+                },
+              });
+
+            const openEmailModal = (emailAddress: string) =>
+              router.push('SendWorkOrderNotification', {
+                name: workOrder.name,
+                notification: {
+                  type: 'email',
+                  from: settings.emailFromTitle,
+                  replyTo: settings.emailReplyTo,
+                  subject: replaceNotificationVariables(email.subject, notificationVariables),
+                  message: replaceNotificationVariables(email.message, notificationVariables),
+                  recipient: emailAddress,
+                },
+              });
+
+            if (notificationType === 'sms') {
+              if (customer.phone) {
+                openSmsModal(customer.phone);
+              }
+            } else if (notificationType === 'email') {
+              if (customer.email) {
+                openEmailModal(customer.email);
+              }
+            } else {
+              toast.show(`Unsupported notification '${notificationType}'`);
+            }
+          };
+
+          if (availableNotifications.length === 1) {
+            const [notification = never()] = availableNotifications;
+            openNotificationModal(notification);
+            return;
+          }
+
+          router.push('ListPopup', {
+            title: 'Select notification to send',
+            selection: {
+              type: 'select',
+              items: availableNotifications.map<ListPopupItem<string>>((notification, i) => ({
+                id: String(i),
+                leftSide: {
+                  label: notification.status,
+                  subtitle: getSubtitle([
+                    notification.sms.message,
+                    notification.email.subject,
+                    notification.email.message,
+                  ]),
+                },
+              })),
+              onSelect: idx => {
+                const notification = availableNotifications[Number(idx)] ?? never();
+                openNotificationModal(notification);
+              },
+            },
+          });
+        }
       },
     },
   );
@@ -117,7 +244,14 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   const { Form } = useForm();
 
   return (
-    <Form disabled={saveWorkOrderMutation.isLoading}>
+    <Form
+      disabled={
+        saveWorkOrderMutation.isLoading ||
+        settingsQuery.isLoading ||
+        customerQuery.isLoading ||
+        customerNotificationPreferenceQuery.isLoading
+      }
+    >
       <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {saveWorkOrderMutation.error && (

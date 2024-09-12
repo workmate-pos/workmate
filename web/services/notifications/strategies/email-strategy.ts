@@ -18,8 +18,7 @@ export const emailNotificationStrategy = defineNotificationStrategy({
       {
         subject: context.subject,
         to: notification.recipient,
-        // TODO: Do some formatting / allow the user to pick a format
-        text: notification.message,
+        html: notification.message,
       },
     );
 

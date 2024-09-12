@@ -1,7 +1,7 @@
 import { Fetch } from './fetch.js';
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions } from 'react-query';
 import { ReplayNotificationResponse } from '@web/controllers/api/notifications.js';
-import { UseQueryData } from './react-query.js';
+import { UseQueryData, useQueryClient } from './react-query.js';
 import { useNotificationsQuery } from './use-notifications-query.js';
 
 export const useReplayNotificationMutation = (
@@ -30,12 +30,14 @@ export const useReplayNotificationMutation = (
       for (const [queryKey, data] of queryClient.getQueriesData<UseQueryData<typeof useNotificationsQuery>>([
         'notifications',
       ])) {
-        queryClient.setQueryData(queryKey, {
-          ...data,
-          pages: data.pages.map(page =>
-            page.map(notification => (notification.uuid === result.uuid ? result : notification)),
-          ),
-        });
+        // queryClient.setQueryData(queryKey, {
+        //   ...data,
+        //   pages: data.pages.map(page =>
+        //     page.map(notification => (notification.uuid === result.uuid ? result : notification)),
+        //   ),
+        // });
+        //
+        // queryClient.invalidateQueries(queryKey);
       }
 
       queryClient.invalidateQueries(['notifications']);

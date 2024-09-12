@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "notification": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "sms"
+            },
+            "message": {
+              "type": "string"
+            },
+            "recipient": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "message", "recipient"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "const": "email"
+            },
+            "from": {
+              "title": "The name of the sender. Can be customized to the sales associate's name for a personal touch",
+              "type": "string"
+            },
+            "replyTo": {
+              "title": "The email address to reply to",
+              "type": "string"
+            },
+            "subject": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "recipient": {
+              "type": "string"
+            }
+          },
+          "required": ["type", "subject", "message", "recipient", "replyTo", "from"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": ["notification"],
+  "additionalProperties": false
+}

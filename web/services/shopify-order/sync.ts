@@ -196,30 +196,6 @@ async function syncShopifyOrderLineItems(
     sentryErr(error, {});
   }
 
-  console.log('removing all except', lineItems);
-
-  console.log(
-    'removing:',
-    await sql<{
-      lineItemId: string;
-      orderId: string;
-      productVariantId: string | null;
-      title: string;
-      quantity: number;
-      unfulfilledQuantity: number;
-      discountedUnitPrice: string;
-      unitPrice: string;
-      totalTax: string;
-      createdAt: Date;
-      updatedAt: Date;
-    }>`
-    SELECT *
-    FROM "ShopifyOrderLineItem"
-    WHERE "orderId" = ${order.order.id as string}
-      AND "lineItemId" != ALL (${lineItems.map(lineItem => lineItem.id) as string[]} :: text[]);
-  `,
-  );
-
   await removeShopifyOrderLineItemsExceptIds(
     order.order.id,
     lineItems.map(lineItem => lineItem.id),

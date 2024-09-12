@@ -69,10 +69,11 @@ model WorkOrder {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  items            WorkOrderItem[]
-  charges          WorkOrderCharge[]
-  customFields     WorkOrderCustomField[]
-  itemCustomFields WorkOrderItemCustomField[]
+  items                 WorkOrderItem[]
+  charges               WorkOrderCharge[]
+  customFields          WorkOrderCustomField[]
+  itemCustomFields      WorkOrderItemCustomField[]
+  WorkOrderNotification WorkOrderNotification[]
 
   @@unique([shop, name])
 }
@@ -912,8 +913,9 @@ model Notification {
 
   context Json @db.JsonB
 
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt             DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt             DateTime                @default(now()) @db.Timestamptz(3)
+  WorkOrderNotification WorkOrderNotification[]
 
   @@index([shop, uuid])
   @@index([externalId])
@@ -928,4 +930,20 @@ model CustomerNotificationPreference {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// Log of all notifications sent for some work order
+model WorkOrderNotification {
+  id Int @id @default(autoincrement())
+
+  workOrderId      Int
+  notificationUuid String @db.Uuid
+
+  workOrder    WorkOrder    @relation(fields: [workOrderId], references: [id])
+  notification Notification @relation(fields: [notificationUuid], references: [uuid])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([workOrderId, notificationUuid])
 }

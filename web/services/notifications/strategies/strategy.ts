@@ -47,7 +47,6 @@ export async function sendNotification<const StrategyName extends RegisteredStra
   type: StrategyName,
   notification: Omit<Notification, 'uuid'>,
   context: NotificationStrategyContext<RegisteredStrategy & { name: StrategyName }>,
-  replayUuid: UUID | null = null,
 ) {
   const strategy = Object.values(notificationStrategies).find(s => s.name === type) ?? never();
 
@@ -107,7 +106,7 @@ export async function replayNotification({ shop, uuid }: { shop: string; uuid: s
 
   const { data: context } = parseContext;
 
-  const replayUuid = await sendNotification(strategy.name, notification, context, notification.uuid);
+  const replayUuid = await sendNotification(strategy.name, notification, context);
 
   await upsertNotification({
     notification: notification,

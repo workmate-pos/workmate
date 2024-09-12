@@ -1,13 +1,4 @@
-import {
-  Button,
-  ButtonType,
-  List,
-  ListProps,
-  ListRow,
-  ScrollView,
-  Stack,
-  Text,
-} from '@shopify/retail-ui-extensions-react';
+import { ButtonType, List, ListProps, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { ReactNode, useEffect, useState } from 'react';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { UseRouter } from './router.js';
@@ -20,7 +11,7 @@ export type ListPopupItem<ID> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & 
   disabled?: boolean;
 };
 
-export type BaseListPopupAction<ID> = {
+export type BaseListPopupAction = {
   title?: string;
   type?: ButtonType;
   disabled?: boolean;
@@ -29,8 +20,8 @@ export type BaseListPopupAction<ID> = {
   submit?: boolean;
 };
 
-export type SelectListPopupAction<ID> = BaseListPopupAction<ID> & { onAction: () => void };
-export type MultiSelectListPopupAction<ID> = BaseListPopupAction<ID> & {
+export type SelectListPopupAction = BaseListPopupAction & { onAction: () => void };
+export type MultiSelectListPopupAction<ID> = BaseListPopupAction & {
   onAction: (ids: ID[]) => void;
 };
 
@@ -49,7 +40,7 @@ export type ListPopupProps<ID extends string = string> = {
         items: ListPopupItem<ID>[];
         onSelect: (id: ID) => void;
         onClose?: () => void;
-        actions?: SelectListPopupAction<ID>[];
+        actions?: SelectListPopupAction[];
       }
     | {
         type: 'multi-select';
@@ -213,7 +204,7 @@ export function ListPopup<ID extends string = string>({
 }
 
 function getActionButton<ID extends string = string>(
-  action: SelectListPopupAction<ID> | MultiSelectListPopupAction<ID>,
+  action: SelectListPopupAction | MultiSelectListPopupAction<ID>,
   selectedIds: ID[],
 ) {
   return (

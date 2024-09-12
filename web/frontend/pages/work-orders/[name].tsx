@@ -41,7 +41,6 @@ import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orde
 import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { WorkOrderPrintModal } from '@web/frontend/components/work-orders/modals/WorkOrderPrintModal.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
@@ -50,9 +49,11 @@ import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/Cr
 import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';
 import { CompanyLocationSelectorModal } from '@web/frontend/components/work-orders/modals/CompanyLocationSelectorModal.js';
 import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
-import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { CreateWorkOrder, DateTime } from '@web/schemas/generated/create-work-order.js';
 import { PaymentTermsSelectorModal } from '@web/frontend/components/work-orders/modals/PaymentTermsSelectorModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
+import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import { WorkOrderNotificationModal } from '@web/frontend/components/work-orders/modals/WorkOrderNotificationModal.js';
 
 export default function () {
   return (
@@ -150,11 +151,18 @@ function WorkOrder({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
+  const [lastSavedCreateWorkOrder, setLastSavedCreateWorkOrder] = useState<CreateWorkOrder>();
   const [createWorkOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateWorkOrderReducer(
     initialCreateWorkOrder,
     workOrder,
     { useReducer, useState, useRef },
   );
+
+  if (!lastSavedCreateWorkOrder && workOrder) {
+    setLastSavedCreateWorkOrder(workOrderToCreateWorkOrder(workOrder));
+  }
+
+  const [availableNotifications, setAvailableNotifications] = useState<ShopSettings['workOrder']['notifications']>([]);
 
   const workOrderMutation = useSaveWorkOrderMutation(
     { fetch },
@@ -162,9 +170,23 @@ function WorkOrder({
       onSuccess: workOrder => {
         const message = createWorkOrder.name ? 'Work order updated' : 'Work order created';
         setToastAction({ content: message });
-        dispatch.set(workOrderToCreateWorkOrder(workOrder));
+        const newCreateWorkOrder = workOrderToCreateWorkOrder(workOrder);
+        dispatch.set(newCreateWorkOrder);
+        setLastSavedCreateWorkOrder(newCreateWorkOrder);
         setHasUnsavedChanges(false);
         Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrder.name)}`);
+
+        const statusChanged = workOrder.status !== lastSavedCreateWorkOrder?.status;
+
+        setAvailableNotifications(
+          settings.workOrder.notifications.filter(notification => {
+            if (notification.type === 'on-status-change') {
+              return statusChanged && notification.status === workOrder.status;
+            }
+
+            return notification.type satisfies never;
+          }),
+        );
       },
     },
   );
@@ -451,6 +473,12 @@ function WorkOrder({
           initialPaymentTerms={createWorkOrder.paymentTerms}
         />
       )}
+
+      <WorkOrderNotificationModal
+        name={createWorkOrder.name}
+        notifications={availableNotifications}
+        setNotifications={setAvailableNotifications}
+      />
 
       {toast}
     </Box>

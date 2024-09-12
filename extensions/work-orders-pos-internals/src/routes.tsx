@@ -109,6 +109,7 @@ import {
 import { WorkOrderLoader } from './screens/work-order/WorkOrderLoader.js';
 import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoader.js';
 import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
+import { SendWorkOrderNotification } from './screens/work-order/SendWorkOrderNotification.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -456,5 +457,10 @@ export const { Router, useRouter } = createRouter({
   SerialSelector: {
     title: 'Serial Selector',
     Component: (props: Omit<SerialSelectorProps, 'useRouter'>) => <SerialSelector {...props} useRouter={useRouter} />,
+  },
+
+  SendWorkOrderNotification: {
+    title: 'Send Notification',
+    Component: SendWorkOrderNotification,
   },
 });

@@ -24,6 +24,18 @@ export type DetailedWorkOrder = {
   companyContactId: ID | null;
   paymentTerms: WorkOrderPaymentTerms | null;
   serial: WorkOrderSerial | null;
+  notifications: WorkOrderNotification[];
+};
+
+export type WorkOrderNotification = {
+  uuid: string;
+  type: string;
+  recipient: string;
+  message: string;
+  failed: boolean;
+  replayUuid: UUID | null;
+  createdAt: DateTime;
+  updatedAt: DateTime;
 };
 
 export type WorkOrderSerial = {

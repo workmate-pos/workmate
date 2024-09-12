@@ -3,6 +3,7 @@ import { sql } from '../db/sql-tag.js';
 import { MergeUnion } from '../../util/types.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { escapeLike } from '../db/like.js';
+import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 
 export async function upsertNotification({
   failed,
@@ -113,4 +114,44 @@ export async function getNotifications({
     notifications: notifications.slice(0, limit),
     hasNextPage: !!limit && notifications.length > limit,
   };
+}
+
+export async function getWorkOrderNotifications(workOrderId: number) {
+  const notifications = await sql<{
+    uuid: UUID;
+    shop: string;
+    type: string;
+    recipient: string;
+    message: string;
+    failed: boolean;
+    externalId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    context: unknown;
+    replayUuid: UUID | null;
+  }>`
+    SELECT n.*
+    FROM "WorkOrderNotification" won
+           INNER JOIN "Notification" n ON n."uuid" = won."notificationUuid"
+    WHERE won."workOrderId" = ${workOrderId};
+  `;
+
+  return notifications;
+}
+
+export async function upsertWorkOrderNotifications(workOrderId: number, notificationUuids: UUID[]) {
+  if (!isNonEmptyArray(notificationUuids)) {
+    return;
+  }
+
+  const _notificationUuids: (string | null)[] = notificationUuids;
+
+  await sql`
+    INSERT INTO "WorkOrderNotification" ("workOrderId", "notificationUuid")
+    SELECT ${workOrderId}, *
+    FROM UNNEST(${_notificationUuids} :: uuid[])
+    ON CONFLICT ("workOrderId", "notificationUuid")
+      DO UPDATE SET "workOrderId"      = EXCLUDED."workOrderId",
+                    "notificationUuid" = EXCLUDED."notificationUuid";
+  `;
 }

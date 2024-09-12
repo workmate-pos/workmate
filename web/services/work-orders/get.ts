@@ -13,6 +13,7 @@ import {
   WorkOrderOrder,
   WorkOrderPaymentTerms,
   WorkOrderSerial,
+  WorkOrderNotification,
 } from './types.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
@@ -42,6 +43,7 @@ import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
 import { getSerial } from '../serials/queries.js';
+import { getWorkOrderNotifications as getWorkOrderNotificationsQuery } from '../notifications/queries.js';
 
 export async function getDetailedWorkOrder(session: Session, name: string): Promise<DetailedWorkOrder | null> {
   const { shop } = session;
@@ -69,6 +71,7 @@ export async function getDetailedWorkOrder(session: Session, name: string): Prom
     discount: getWorkOrderDiscount(workOrder),
     paymentTerms: getWorkOrderPaymentTerms(workOrder),
     serial: getWorkOrderSerial(workOrder),
+    notifications: getWorkOrderNotifications(workOrder.id),
   });
 }
 
@@ -373,4 +376,21 @@ export async function getWorkOrderSerial(
     serial,
     locationId,
   };
+}
+
+export async function getWorkOrderNotifications(workOrderId: number): Promise<WorkOrderNotification[]> {
+  const notifications = await getWorkOrderNotificationsQuery(workOrderId);
+
+  return notifications.map<WorkOrderNotification>(
+    ({ uuid, type, failed, replayUuid, createdAt, message, recipient, updatedAt }) => ({
+      uuid,
+      type,
+      failed,
+      replayUuid,
+      message,
+      recipient,
+      createdAt: createdAt.toISOString() as DateTime,
+      updatedAt: updatedAt.toISOString() as DateTime,
+    }),
+  );
 }

@@ -61,8 +61,6 @@ async function linkItems(session: Session, lineItems: LineItem[], workOrderId: n
       newShopifyOrderLineItemId: lineItemIdByItemUuid[uuid] ?? never(),
     }));
 
-  console.log('replacements', replacements);
-
   await Promise.all([
     setWorkOrderItemShopifyOrderLineItemIds(
       workOrderId,

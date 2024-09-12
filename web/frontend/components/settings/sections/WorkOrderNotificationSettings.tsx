@@ -188,7 +188,7 @@ function WorkOrderNotification({
     <>
       Available variables:{' '}
       <Text as="p" fontWeight="semibold">
-        {'{{name}}, {{status}}'}
+        {'{{name}}, {{status}}, {{customer.displayName}}, {{customer.phone}}, {{customer.email}}'}
       </Text>
     </>
   );
