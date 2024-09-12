@@ -5,7 +5,10 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { UnionToIntersection } from '@teifi-digital/shopify-app-toolbox/types';
 import { uuid, UUID } from '@work-orders/common/util/uuid.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
-import { upsertNotification } from '../queries.js';
+import { getNotifications, upsertNotification } from '../queries.js';
+import { z } from 'zod';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { unit } from '../../db/unit-of-work.js';
 
 export type Notification = {
   uuid: UUID;
@@ -16,6 +19,10 @@ export type Notification = {
 
 export type NotificationStrategy<Name extends string, Context> = {
   name: Name;
+  /**
+   * Schema used to parse the Context. Required to allow merchants to replay failed notifications.
+   */
+  schema: z.ZodType<Context>;
   handler: (notification: Notification, context: Context) => Promise<string | null>;
 };
 
@@ -40,6 +47,7 @@ export async function sendNotification<const StrategyName extends RegisteredStra
   type: StrategyName,
   notification: Omit<Notification, 'uuid'>,
   context: NotificationStrategyContext<RegisteredStrategy & { name: StrategyName }>,
+  replayUuid: UUID | null = null,
 ) {
   const strategy = Object.values(notificationStrategies).find(s => s.name === type) ?? never();
 
@@ -59,7 +67,54 @@ export async function sendNotification<const StrategyName extends RegisteredStra
   await upsertNotification({
     notification: notificationWithUuid,
     externalId,
+    replayUuid: null,
+    context,
     failed,
     type,
+  });
+
+  return notificationUuid;
+}
+
+export async function replayNotification({ shop, uuid }: { shop: string; uuid: string }) {
+  const {
+    notifications: [notification],
+  } = await getNotifications({ shop, uuid, limit: 1 });
+
+  if (!notification) {
+    throw new HttpError('Notification not found', 404);
+  }
+
+  if (!notification.failed) {
+    throw new HttpError('Notification did not fail', 400);
+  }
+
+  if (notification.replayUuid) {
+    throw new HttpError('Notification has already been replayed', 400);
+  }
+
+  const strategy = Object.values(notificationStrategies).find(s => s.name === notification.type);
+
+  if (!strategy) {
+    throw new HttpError('Unsupported notification type', 400);
+  }
+
+  const parseContext = strategy.schema.safeParse(notification.context);
+
+  if (!parseContext.success) {
+    throw new HttpError('Notification cannot be replayed', 400);
+  }
+
+  const { data: context } = parseContext;
+
+  const replayUuid = await sendNotification(strategy.name, notification, context, notification.uuid);
+
+  await upsertNotification({
+    notification: notification,
+    context: notification.context,
+    replayUuid,
+    type: notification.type,
+    failed: notification.failed,
+    externalId: notification.externalId,
   });
 }

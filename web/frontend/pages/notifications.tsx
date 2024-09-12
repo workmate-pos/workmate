@@ -22,8 +22,9 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useNotificationsQuery } from '@work-orders/common/queries/use-notifications-query.js';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { emptyState } from '@web/frontend/assets/index.js';
-import { CircleAlertMajor, SendMajor, SkeletonMajor, StatusActiveMajor } from '@shopify/polaris-icons';
+import { CircleAlertMajor, ReplayMinor, SendMajor, SkeletonMajor, StatusActiveMajor } from '@shopify/polaris-icons';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { useReplayNotificationMutation } from '@work-orders/common/queries/use-replay-notification-mutation.js';
 
 const PAGE_LIMIT = 100;
 
@@ -35,15 +36,19 @@ export default function Notifications() {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const [resentNotificationUuids, setResentNotificationUuids] = useState<UUID[]>([]);
-
   const notificationsQuery = useNotificationsQuery(
     { fetch, filters: { ...filters, limit: PAGE_LIMIT, query } },
+    { keepPreviousData: true, refetchInterval: 5_000 },
+  );
+  const replayNotificationMutation = useReplayNotificationMutation(
+    { fetch },
     {
-      keepPreviousData: true,
-      refetchInterval: resentNotificationUuids.length > 0 ? 5_000 : undefined,
+      onSuccess(replayed) {
+        setToastAction({ content: `Replayed notification ${replayed.uuid}` });
+      },
     },
   );
+
   const [pageIndex, setPageIndex] = useState(0);
   const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, notificationsQuery);
   const page = notificationsQuery.data?.pages[pageIndex] ?? [];
@@ -97,11 +102,9 @@ export default function Notifications() {
           }}
           resourceName={{ singular: 'notification', plural: 'notifications' }}
           emptyState={
-            <Card>
-              <EmptyState heading={'Notifications'} image={emptyState}>
-                No notifications yet
-              </EmptyState>
-            </Card>
+            <EmptyState heading={'Notifications'} image={emptyState}>
+              No notifications yet
+            </EmptyState>
           }
           selectable={false}
         >
@@ -142,27 +145,35 @@ export default function Notifications() {
 
               <IndexTable.Cell>{notification.recipient}</IndexTable.Cell>
 
-              <IndexTable.Cell>{notification.message}</IndexTable.Cell>
+              <IndexTable.Cell>
+                <Text as="p" truncate>
+                  {notification.message}
+                </Text>
+              </IndexTable.Cell>
 
               <IndexTable.Cell>
-                {resentNotificationUuids.includes(notification.uuid) ? (
-                  <Icon source={SendMajor} tone="magic" />
+                {notification.replayUuid !== null ? (
+                  <Tooltip content={`This notification has been replayed (${notification.replayUuid})`}>
+                    <Icon source={ReplayMinor} tone="magic" />
+                  </Tooltip>
                 ) : notification.failed ? (
-                  // <Tooltip content={'This notification failed to send. Click to retry.'}>
-                  //   <BlockStack align="center" inlineAlign="center">
-                  //     <Button
-                  //       variant="plain"
-                  //       icon={<Icon source={CircleAlertMajor} tone="critical" />}
-                  //       onClick={() => {
-                  //         // TODO: send req to backend to resend it, but only allow recent notifications to prevent context changing somehow (or version mbby?)
-                  //         setResentNotificationUuids([...resentNotificationUuids, notification.uuid]);
-                  //       }}
-                  //     >
-                  //       {''}
-                  //     </Button>
-                  //   </BlockStack>
-                  // </Tooltip>
-                  <Icon source={CircleAlertMajor} tone="critical" />
+                  <Tooltip content={'This notification failed to send. Click to retry.'}>
+                    <BlockStack align="center" inlineAlign="center">
+                      <Button
+                        variant="plain"
+                        loading={
+                          replayNotificationMutation.isLoading &&
+                          replayNotificationMutation.variables === notification.uuid
+                        }
+                        icon={<Icon source={CircleAlertMajor} tone="critical" />}
+                        onClick={() => {
+                          replayNotificationMutation.mutate(notification.uuid);
+                        }}
+                      >
+                        {''}
+                      </Button>
+                    </BlockStack>
+                  </Tooltip>
                 ) : (
                   <Icon source={StatusActiveMajor} tone="success" />
                 )}
@@ -172,9 +183,9 @@ export default function Notifications() {
             </IndexTable.Row>
           ))}
         </IndexTable>
-      </Page>
 
-      {toast}
+        {toast}
+      </Page>
     </Frame>
   );
 }

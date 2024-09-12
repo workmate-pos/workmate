@@ -31,6 +31,9 @@
     },
     "failed": {
       "type": "boolean"
+    },
+    "replayUuid": {
+      "type": "string"
     }
   },
   "required": ["limit"],

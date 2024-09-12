@@ -1,9 +1,15 @@
 import { defineNotificationStrategy } from './strategy.js';
 import { mg } from '../../mail/mailgun.js';
+import { z } from 'zod';
 
 export const emailNotificationStrategy = defineNotificationStrategy({
   name: 'email',
-  handler: async (notification, context: { subject: string; replyTo: string; from: string }) => {
+  schema: z.object({
+    subject: z.string(),
+    replyTo: z.string(),
+    from: z.string(),
+  }),
+  handler: async (notification, context) => {
     const message = await mg.send(
       {
         emailReplyTo: context.replyTo,

@@ -61,6 +61,8 @@ export default class TwilioController {
           shop: notification.shop,
           uuid: notification.uuid,
         },
+        context: notification.context,
+        replayUuid: notification.replayUuid,
       });
     }
 

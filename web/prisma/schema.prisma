@@ -903,8 +903,14 @@ model Notification {
   message   String
   failed    Boolean
 
+  replayUuid         String?       @unique @db.Uuid
+  replayNotification Notification? @relation("ReplayNotification", fields: [replayUuid], references: [uuid])
+  replayedBy         Notification? @relation("ReplayNotification")
+
   // Optional id used by an external service provider
   externalId String?
+
+  context Json @db.JsonB
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
@@ -913,7 +919,6 @@ model Notification {
   @@index([externalId])
   @@index([updatedAt])
 }
-
 
 model CustomerNotificationPreference {
   id Int @id @default(autoincrement())
