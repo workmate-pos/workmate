@@ -5,6 +5,21 @@ import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchas
 import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
 
 const defaultShopSettings: ShopSettings = {
+  workOrder: {
+    notifications: [
+      {
+        type: 'on-status-change',
+        status: 'Done',
+        sms: {
+          message: 'Your order {{ name }} is done and ready for pickup.',
+        },
+        email: {
+          subject: '{{ name }}',
+          message: 'Hi {{ customer.displayName }}, your order {{ name }} is done and ready for pickup.',
+        },
+      },
+    ],
+  },
   defaultNotificationPreference: 'email',
   statuses: ['Draft', 'In Progress', 'Done'],
   defaultStatus: 'Draft',

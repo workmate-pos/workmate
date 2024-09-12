@@ -25,6 +25,7 @@ import { CustomFieldSettings } from '@web/frontend/components/settings/sections/
 import { CycleCountSettings } from '@web/frontend/components/settings/sections/CycleCountSettings.js';
 import { SpecialOrderSettings } from '@web/frontend/components/settings/sections/SpecialOrderSettings.js';
 import { NotificationSettings } from '@web/frontend/components/settings/sections/NotificationSettings.js';
+import { WorkOrderNotificationSettings } from '@web/frontend/components/settings/sections/WorkOrderNotificationSettings.js';
 
 export default function () {
   return (
@@ -108,6 +109,8 @@ function Settings() {
             setSettings={setSettings}
             defaultWorkOrderStatusValue={settings.defaultStatus}
           />
+          <Divider />
+          <WorkOrderNotificationSettings settings={settings} setSettings={setSettings} />
           <Divider />
           <DiscountSettings settings={settings} setSettings={setSettings} />
           <Divider />
@@ -223,7 +226,7 @@ function Settings() {
           }}
         >
           <Box paddingBlock={'400'} paddingInline={'400'}>
-            <BlockStack gap={'400'}>{tabs[selectedTab]?.tab}</BlockStack>
+            <BlockStack gap={'800'}>{tabs[selectedTab]?.tab}</BlockStack>
           </Box>
         </Tabs>
       </LegacyCard>
