@@ -3,22 +3,16 @@ name: Push
 on:
   push:
     branches:
-      - main
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - staging
+      - production
 
 jobs:
   app:
     name: App
-    uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@master
+    uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@feature/k8s-deployment
+    secrets: inherit
     with:
-      shopify_api_key: ${{ vars.SHOPIFY_API_KEY }}
-      shopify_shop: ${{ vars.SHOPIFY_SHOP }}
-      sentry_org: ${{ vars.SENTRY_ORG }}
-      sentry_project: ${{ vars.SENTRY_PROJECT }}
-      docker_username: ${{ vars.DOCKER_USERNAME }}
       extensions_install_command: npm run all:install && npm run all:build
       custom_build_args: |
         VITE_INTERCOM_APP_ID=${{ vars.VITE_INTERCOM_APP_ID }}
-        NODE_ENV=production
-    secrets: inherit
+      deploy-autogen-values: false

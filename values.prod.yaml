@@ -1,0 +1,8 @@
+app:
+  ingress:
+    enabled: true
+    hosts:
+      - host: app.workmatepos.co
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
