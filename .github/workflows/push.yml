@@ -9,10 +9,9 @@ on:
 jobs:
   app:
     name: App
-    uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@feature/k8s-deployment
+    uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@main
     secrets: inherit
     with:
       extensions_install_command: npm run all:install && npm run all:build
-      custom_build_args: |
-        VITE_INTERCOM_APP_ID=${{ vars.VITE_INTERCOM_APP_ID }}
+      build_arg_env_vars: VITE_INTERCOM_APP_ID
       deploy-autogen-values: ${{ github.ref != 'refs/heads/production' }}
