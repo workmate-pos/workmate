@@ -1,7 +1,6 @@
 import {
   BadgeProps,
   Banner,
-  Button,
   DateField,
   List,
   ListRow,
@@ -64,13 +63,6 @@ import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useCustomerNotificationPreferenceQuery } from '@work-orders/common/queries/use-customer-notification-preference-query.js';
-import {
-  getNotificationType,
-  OnStatusChangeNotificationVariables,
-  replaceNotificationVariables,
-} from '@work-orders/common/notifications/on-status-change.js';
-import { ListPopupItem } from '@work-orders/common-pos/screens/ListPopup.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 export type WorkOrderProps = {
@@ -136,7 +128,6 @@ export function WorkOrder({ initial }: WorkOrderProps) {
         setHasUnsavedChanges(false);
         router.push('WorkOrderSaved', { workOrder });
 
-        // TODO: Cleanup
         if (workOrder.status !== lastSavedCreateWorkOrder?.status) {
           if (!settingsQuery.data || !customerQuery.data || customerNotificationPreferenceQuery.data === undefined) {
             toast.show('Cannot send notification, settings or customer not loaded');
@@ -144,9 +135,6 @@ export function WorkOrder({ initial }: WorkOrderProps) {
           }
 
           const settings = settingsQuery.data.settings;
-          const customer = customerQuery.data;
-          const customerNotificationPreference = customerNotificationPreferenceQuery.data;
-
           const availableNotifications = settings.workOrder.notifications.filter(notification => {
             if (notification.type === 'on-status-change') {
               return notification.status === workOrder.status;
@@ -159,83 +147,17 @@ export function WorkOrder({ initial }: WorkOrderProps) {
             return;
           }
 
-          const notificationVariables: OnStatusChangeNotificationVariables = {
-            name: workOrder.name,
-            status: workOrder.status,
-            'customer.displayName': customer.displayName,
-            'customer.phone': customer.phone,
-            'customer.email': customer.email,
-          };
-
-          const notificationType = getNotificationType(
-            customerQuery.data,
-            customerNotificationPreference ?? settings.defaultNotificationPreference,
-          );
-
-          const openNotificationModal = ({ email, sms }: (typeof availableNotifications)[number]) => {
-            const openSmsModal = (phone: string) =>
-              router.push('SendWorkOrderNotification', {
-                name: workOrder.name,
-                notification: {
-                  type: 'sms',
-                  message: replaceNotificationVariables(sms.message, notificationVariables),
-                  recipient: phone,
-                },
-              });
-
-            const openEmailModal = (emailAddress: string) =>
-              router.push('SendWorkOrderNotification', {
-                name: workOrder.name,
-                notification: {
-                  type: 'email',
-                  from: settings.emailFromTitle,
-                  replyTo: settings.emailReplyTo,
-                  subject: replaceNotificationVariables(email.subject, notificationVariables),
-                  message: replaceNotificationVariables(email.message, notificationVariables),
-                  recipient: emailAddress,
-                },
-              });
-
-            if (notificationType === 'sms') {
-              if (customer.phone) {
-                openSmsModal(customer.phone);
-              }
-            } else if (notificationType === 'email') {
-              if (customer.email) {
-                openEmailModal(customer.email);
-              }
-            } else {
-              toast.show(`Unsupported notification '${notificationType}'`);
-            }
-          };
-
           if (availableNotifications.length === 1) {
-            const [notification = never()] = availableNotifications;
-            openNotificationModal(notification);
-            return;
+            router.push('WorkOrderNotificationConfig', {
+              name,
+              notification: availableNotifications[0]!,
+            });
+          } else {
+            router.push('WorkOrderNotificationPicker', {
+              name,
+              notifications: availableNotifications,
+            });
           }
-
-          router.push('ListPopup', {
-            title: 'Select notification to send',
-            selection: {
-              type: 'select',
-              items: availableNotifications.map<ListPopupItem<string>>((notification, i) => ({
-                id: String(i),
-                leftSide: {
-                  label: notification.status,
-                  subtitle: getSubtitle([
-                    notification.sms.message,
-                    notification.email.subject,
-                    notification.email.message,
-                  ]),
-                },
-              })),
-              onSelect: idx => {
-                const notification = availableNotifications[Number(idx)] ?? never();
-                openNotificationModal(notification);
-              },
-            },
-          });
         }
       },
     },
@@ -310,52 +232,95 @@ export function WorkOrder({ initial }: WorkOrderProps) {
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
           <FormButton
-            title={'Sourcing'}
+            title={'Actions'}
             type={'basic'}
             action={'button'}
             disabled={!createWorkOrder.name || hasUnsavedChanges}
-            onPress={() => {
-              const { name } = createWorkOrder;
+            onPress={() =>
+              router.push('ListPopup', {
+                title: 'Select action',
+                selection: {
+                  type: 'select',
+                  items: [
+                    {
+                      id: 'sourcing',
+                      leftSide: {
+                        label: 'Sourcing',
+                        subtitle: getSubtitle([
+                          !createWorkOrder.name || hasUnsavedChanges ? 'You must save first' : null,
+                        ]),
+                      },
+                      disabled: !createWorkOrder.name || hasUnsavedChanges,
+                    },
+                    {
+                      id: 'notifications',
+                      leftSide: {
+                        label: 'Notifications',
+                        subtitle: getSubtitle([!createWorkOrder.name ? 'You must save first' : null]),
+                      },
+                      disabled: !createWorkOrder.name,
+                    },
+                    {
+                      id: 'print',
+                      leftSide: {
+                        label: 'Print',
+                        subtitle: getSubtitle([
+                          !createWorkOrder.name || hasUnsavedChanges ? 'You must save first' : null,
+                        ]),
+                      },
+                      disabled: !createWorkOrder.name || hasUnsavedChanges,
+                    },
+                    {
+                      id: 'manage-payments',
+                      leftSide: {
+                        label: 'Manage Payments',
+                        subtitle: getSubtitle([
+                          !createWorkOrder.name || hasUnsavedChanges ? 'You must save first' : null,
+                          createWorkOrder.items.length + createWorkOrder.charges.length === 0 ? 'No items added' : null,
+                        ]),
+                      },
+                      disabled:
+                        !createWorkOrder.name ||
+                        hasUnsavedChanges ||
+                        createWorkOrder.items.length + createWorkOrder.charges.length === 0,
+                    },
+                  ],
+                  onSelect: id => {
+                    if (id === 'sourcing') {
+                      router.push('WorkOrderItemSourcing', {
+                        name: createWorkOrder.name!,
+                      });
+                      return;
+                    }
 
-              if (!name) {
-                toast.show('You must save your work order before you can manage payments/print');
-                return;
-              }
+                    if (id === 'notifications') {
+                      router.push('WorkOrderNotificationHistory', {
+                        name: createWorkOrder.name!,
+                        disabled: hasUnsavedChanges,
+                      });
+                      return;
+                    }
 
-              router.push('WorkOrderItemSourcing', { name });
-            }}
-          />
-          <FormButton
-            title={'Manage payments'}
-            type={'basic'}
-            action={'button'}
-            disabled={
-              !createWorkOrder.name ||
-              hasUnsavedChanges ||
-              createWorkOrder.items.length + createWorkOrder.charges.length === 0
+                    if (id === 'print') {
+                      router.push('WorkOrderPrintOverview', {
+                        name: createWorkOrder.name!,
+                        dueDateUtc: new Date(createWorkOrder.dueDate),
+                      });
+                      return;
+                    }
+
+                    if (id === 'manage-payments') {
+                      router.push('PaymentOverview', {
+                        name: createWorkOrder.name!,
+                      });
+                      return;
+                    }
+
+                    toast.show(`Unsupported action '${id}'`);
+                  },
+                },
+              })
             }
-            onPress={() => {
-              if (createWorkOrder.name) {
-                router.push('PaymentOverview', {
-                  name: createWorkOrder.name,
-                });
-              }
-            }}
-          />
-
-          <FormButton
-            title={'Print'}
-            type={'basic'}
-            action={'button'}
-            disabled={!createWorkOrder.name || hasUnsavedChanges}
-            onPress={() => {
-              if (createWorkOrder.name) {
-                router.push('WorkOrderPrintOverview', {
-                  name: createWorkOrder.name,
-                  dueDateUtc: new Date(createWorkOrder.dueDate),
-                });
-              }
-            }}
           />
 
           <FormButton

@@ -109,7 +109,9 @@ import {
 import { WorkOrderLoader } from './screens/work-order/WorkOrderLoader.js';
 import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoader.js';
 import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
-import { SendWorkOrderNotification } from './screens/work-order/SendWorkOrderNotification.js';
+import { WorkOrderNotificationConfig } from './screens/work-order/WorkOrderNotificationConfig.js';
+import { WorkOrderNotificationHistory } from './screens/work-order/WorkOrderNotificationHistory.js';
+import { WorkOrderNotificationPicker } from './screens/work-order/WorkOrderNotificationPicker.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -459,8 +461,16 @@ export const { Router, useRouter } = createRouter({
     Component: (props: Omit<SerialSelectorProps, 'useRouter'>) => <SerialSelector {...props} useRouter={useRouter} />,
   },
 
-  SendWorkOrderNotification: {
+  WorkOrderNotificationConfig: {
     title: 'Send Notification',
-    Component: SendWorkOrderNotification,
+    Component: WorkOrderNotificationConfig,
+  },
+  WorkOrderNotificationHistory: {
+    title: 'Notification History',
+    Component: WorkOrderNotificationHistory,
+  },
+  WorkOrderNotificationPicker: {
+    title: 'Notification Picker',
+    Component: WorkOrderNotificationPicker,
   },
 });

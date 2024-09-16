@@ -67,13 +67,13 @@ function NotificationPickerModal({
                 {notification.status}
               </Text>
               <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                {notification.sms.message}
+                Subject: {notification.email.subject}
               </Text>
               <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                {notification.email.subject}
+                Email: {notification.email.message}
               </Text>
               <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                {notification.email.message}
+                SMS: {notification.sms.message}
               </Text>
             </BlockStack>
           </ResourceItem>
@@ -202,7 +202,7 @@ function NotificationConfigModal({
                   onAction: () => query.refetch(),
                 }}
               >
-                {extractErrorMessage(query.error, 'An error occurred while loading the query')}
+                {extractErrorMessage(query.error, 'unknown error')}
               </Banner>
             ))}
 

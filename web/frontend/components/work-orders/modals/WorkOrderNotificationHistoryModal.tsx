@@ -4,19 +4,8 @@ import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fet
 import { useState } from 'react';
 import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import {
-  BlockStack,
-  Box,
-  EmptyState,
-  Icon,
-  InlineStack,
-  Modal,
-  ResourceItem,
-  ResourceList,
-  Text,
-} from '@shopify/polaris';
+import { BlockStack, Box, EmptyState, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
-import { ReplayMinor } from '@shopify/polaris-icons';
 import { NotificationStatusIcon } from '@web/frontend/components/notifications/NotificationStatusIcon.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 
@@ -60,6 +49,7 @@ export function WorkOrderNotificationHistoryModal({
           {
             content: 'Send Notification',
             onAction: () => setAvailableNotifications(allNotifications),
+            disabled,
           },
         ]}
       >
