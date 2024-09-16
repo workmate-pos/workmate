@@ -31,6 +31,7 @@ const defaultShopSettings: ShopSettings = {
   },
   specialOrders: {
     idFormat: 'SPO-#{{id}}',
+    notifications: [],
   },
   discountShortcuts: [
     { percentage: '10.00' as Decimal, unit: 'percentage' },

@@ -16,6 +16,7 @@ import {
 import { escapeLike } from '../db/like.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
+import { getSpecialOrderNotifications } from '../notifications/queries.js';
 
 export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
   const specialOrder = await getSpecialOrder({ shop, name });
@@ -24,13 +25,14 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
     return null;
   }
 
-  const [shopifyOrders, purchaseOrders, workOrders, customer, location, lineItems] = await Promise.all([
+  const [shopifyOrders, purchaseOrders, workOrders, customer, location, lineItems, notifications] = await Promise.all([
     getShopifyOrdersForSpecialOrder(specialOrder.id),
     getPurchaseOrdersForSpecialOrder(specialOrder.id),
     getWorkOrdersForSpecialOrder(specialOrder.id),
     getCustomerForSpecialOrder(specialOrder.id),
     getLocationForSpecialOrder(specialOrder.id),
     getSpecialOrderLineItems(specialOrder.id),
+    getSpecialOrderNotifications(specialOrder.id),
   ]);
 
   const purchaseOrderState: PurchaseOrderState = !lineItems
@@ -104,6 +106,18 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
         availableQuantity: lineItem.availableQuantity,
       })),
     })),
+    notifications: notifications.map(
+      ({ uuid, type, failed, replayUuid, message, recipient, createdAt, updatedAt }) => ({
+        uuid,
+        type,
+        failed,
+        replayUuid,
+        message,
+        recipient,
+        createdAt: createdAt.toISOString() as DateTime,
+        updatedAt: updatedAt.toISOString() as DateTime,
+      }),
+    ),
   };
 }
 

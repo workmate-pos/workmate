@@ -9,6 +9,8 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Liquid } from 'liquidjs';
 
+// TODO: Use zod to maintain this schema so we can easily migrate the schema
+
 function serialize(value: ShopSettings[keyof ShopSettings]) {
   return JSON.stringify(value);
 }

@@ -20,6 +20,9 @@ import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 import { SpecialOrderGeneralCard } from '@web/frontend/components/special-orders/SpecialOrderGeneralCard.js';
 import { SpecialOrderLineItemsCard } from '@web/frontend/components/special-orders/SpecialOrderLineItemsCard.js';
+import { SpecialOrderNotificationHistoryModal } from '@web/frontend/components/special-orders/modals/SpecialOrderNotificationHistoryModal.js';
+import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import { SpecialOrderNotificationModal } from '@web/frontend/components/special-orders/modals/SpecialOrderNotificationModal.js';
 
 export default function () {
   return (
@@ -96,6 +99,8 @@ function SpecialOrderLoader() {
   );
 }
 
+type SpecialOrderNotification = NonNullable<ShopSettings['specialOrders']['notifications']>[number];
+
 function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const [lastSavedSpecialOrder, setLastSavedSpecialOrder] = useState(initial);
   const [createSpecialOrder, setCreateSpecialOrder] = useState(initial);
@@ -112,6 +117,7 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const customerQuery = useCustomerQuery({ fetch, id: createSpecialOrder.customerId });
   const companyQuery = useCompanyQuery({ fetch, id: createSpecialOrder.companyId });
   const companyLocationQuery = useCompanyLocationQuery({ fetch, id: createSpecialOrder.companyLocationId });
+  const settingsQuery = useSettingsQuery({ fetch });
 
   const specialOrderMutation = useSpecialOrderMutation({ fetch });
 
@@ -122,9 +128,12 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
     customerQuery,
     companyQuery,
     companyLocationQuery,
+    settingsQuery,
   };
 
   const disabled = Object.values(bannerQueries).some(query => query.isError) || specialOrderMutation.isLoading;
+
+  const [availableNotifications, setAvailableNotifications] = useState<SpecialOrderNotification[]>([]);
 
   const saveSpecialOrder = () => {
     const { locationId, customerId } = createSpecialOrder;
@@ -147,14 +156,40 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
           setLastSavedSpecialOrder(createSpecialOrder);
           setCreateSpecialOrder(createSpecialOrder);
           setToastAction({ content: `Saved special order ${specialOrder.name}` });
+
+          if (settingsQuery.data) {
+            setAvailableNotifications(
+              settingsQuery.data.settings.specialOrders.notifications?.filter(notification => {
+                if (notification.type === 'on-create') {
+                  return !lastSavedSpecialOrder;
+                }
+
+                if (notification.type === 'on-any-item-received' || notification.type === 'on-all-items-received') {
+                  return false;
+                }
+
+                return notification satisfies never;
+              }) ?? [],
+            );
+          }
         },
       },
     );
   };
 
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
+
   return (
     <Box paddingBlockEnd={'1600'}>
-      <TitleBar title={'Special Orders'} />
+      <TitleBar
+        title={'Special Orders'}
+        secondaryActions={[
+          {
+            content: 'Notifications',
+            onAction: () => setIsNotificationsModalOpen(true),
+          },
+        ]}
+      />
 
       <ContextualSaveBar
         fullWidth
@@ -192,6 +227,19 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
           </Button>
         </ButtonGroup>
       </BlockStack>
+
+      <SpecialOrderNotificationHistoryModal
+        name={createSpecialOrder.name}
+        disabled={disabled}
+        open={isNotificationsModalOpen}
+        onClose={() => setIsNotificationsModalOpen(false)}
+      />
+
+      <SpecialOrderNotificationModal
+        name={createSpecialOrder.name}
+        notifications={availableNotifications}
+        setNotifications={setAvailableNotifications}
+      />
 
       {toast}
     </Box>

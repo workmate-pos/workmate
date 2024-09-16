@@ -112,6 +112,14 @@ import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/scr
 import { WorkOrderNotificationConfig } from './screens/work-order/WorkOrderNotificationConfig.js';
 import { WorkOrderNotificationHistory } from './screens/work-order/WorkOrderNotificationHistory.js';
 import { WorkOrderNotificationPicker } from './screens/work-order/WorkOrderNotificationPicker.js';
+import {
+  SpecialOrderNotificationConfig,
+  SpecialOrderNotificationConfigProps,
+} from '@work-orders/common-pos/screens/special-orders/SpecialOrderNotificationConfig.js';
+import {
+  SpecialOrderNotificationPicker,
+  SpecialOrderNotificationPickerProps,
+} from '@work-orders/common-pos/screens/special-orders/SpecialOrderNotificationPicker.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -472,5 +480,18 @@ export const { Router, useRouter } = createRouter({
   WorkOrderNotificationPicker: {
     title: 'Notification Picker',
     Component: WorkOrderNotificationPicker,
+  },
+
+  SpecialOrderNotificationConfig: {
+    title: 'Send Notification',
+    Component: (props: Omit<SpecialOrderNotificationConfigProps, 'useRouter'>) => (
+      <SpecialOrderNotificationConfig {...props} useRouter={useRouter} />
+    ),
+  },
+  SpecialOrderNotificationPicker: {
+    title: 'Notification Picker',
+    Component: (props: Omit<SpecialOrderNotificationPickerProps, 'useRouter'>) => (
+      <SpecialOrderNotificationPicker {...props} useRouter={useRouter} />
+    ),
   },
 });

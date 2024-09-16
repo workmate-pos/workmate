@@ -26,6 +26,7 @@ import { CycleCountSettings } from '@web/frontend/components/settings/sections/C
 import { SpecialOrderSettings } from '@web/frontend/components/settings/sections/SpecialOrderSettings.js';
 import { NotificationSettings } from '@web/frontend/components/settings/sections/NotificationSettings.js';
 import { WorkOrderNotificationSettings } from '@web/frontend/components/settings/sections/WorkOrderNotificationSettings.js';
+import { SpecialOrderNotificationSettings } from '@web/frontend/components/special-orders/SpecialOrderNotificationSettings.js';
 
 export default function () {
   return (
@@ -160,7 +161,13 @@ function Settings() {
     },
     {
       name: 'Special Orders',
-      tab: <SpecialOrderSettings settings={settings} setSettings={setSettings} />,
+      tab: (
+        <>
+          <SpecialOrderSettings settings={settings} setSettings={setSettings} />
+          <Divider />
+          <SpecialOrderNotificationSettings settings={settings} setSettings={setSettings} />
+        </>
+      ),
     },
     {
       name: 'Notifications',

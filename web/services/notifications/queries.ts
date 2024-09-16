@@ -21,25 +21,25 @@ export async function upsertNotification({
   replayUuid: UUID | null;
 }) {
   await sql`
-    INSERT INTO "Notification" (uuid, shop, type, recipient, message, failed, "externalId", context, "replayUuid")
-    VALUES (${notification.uuid},
-            ${notification.shop},
-            ${type},
-            ${notification.recipient},
-            ${notification.message},
-            ${failed},
-            ${externalId},
-            ${JSON.stringify(context)} :: jsonb,
-            ${replayUuid!})
-    ON CONFLICT (uuid) DO UPDATE
-      SET shop         = EXCLUDED.shop,
-          type         = EXCLUDED.type,
-          recipient    = EXCLUDED.recipient,
-          message      = EXCLUDED.message,
-          failed       = EXCLUDED.failed,
-          "externalId" = EXCLUDED."externalId",
-          context      = EXCLUDED.context,
-          "replayUuid" = EXCLUDED."replayUuid";
+      INSERT INTO "Notification" (uuid, shop, type, recipient, message, failed, "externalId", context, "replayUuid")
+      VALUES (${notification.uuid},
+              ${notification.shop},
+              ${type},
+              ${notification.recipient},
+              ${notification.message},
+              ${failed},
+              ${externalId},
+              ${JSON.stringify(context)} :: jsonb,
+              ${replayUuid!})
+      ON CONFLICT (uuid) DO UPDATE
+          SET shop         = EXCLUDED.shop,
+              type         = EXCLUDED.type,
+              recipient    = EXCLUDED.recipient,
+              message      = EXCLUDED.message,
+              failed       = EXCLUDED.failed,
+              "externalId" = EXCLUDED."externalId",
+              context      = EXCLUDED.context,
+              "replayUuid" = EXCLUDED."replayUuid";
   `;
 }
 
@@ -83,31 +83,31 @@ export async function getNotifications({
     context: unknown;
     replayUuid: UUID | null;
   }>`
-    SELECT n.*
-    FROM "Notification" n
-           -- a notification that n was replayed for
-           LEFT JOIN "Notification" r ON r."replayUuid" = n.uuid
-    WHERE n.uuid :: text = COALESCE(${uuid ?? null}, n.uuid :: text)
-      AND n."externalId" IS NOT DISTINCT FROM COALESCE(${externalId ?? null}, n."externalId")
-      AND n.recipient = COALESCE(${recipient ?? null}, n.recipient)
-      AND n.shop = COALESCE(${shop ?? null}, n.shop)
-      AND n.failed = COALESCE(${failed ?? null}, n.failed)
-      AND n.type = COALESCE(${type ?? null}, n.type)
-      AND n."replayUuid" :: text IS NOT DISTINCT FROM COALESCE(${replayUuid ?? null}, n."replayUuid" :: text)
-      AND (
-      n.uuid :: text ILIKE COALESCE(${_query ?? null}, n.uuid :: text) OR
-      n.recipient ILIKE COALESCE(${_query ?? null}, n.recipient) OR
-      n.message ILIKE COALESCE(${_query ?? null}, n.message) OR
-      n.type ILIKE COALESCE(${_query ?? null}, n.type) OR
-      n."replayUuid" :: text ILIKE COALESCE(${_query ?? null}, n."replayUuid" :: text) OR
-      r.uuid :: text ILIKE COALESCE(${_query ?? null}, r.uuid :: text)
-      )
-    ORDER BY CASE WHEN ${order} = 'ascending' AND ${orderBy} = 'updated-at' THEN n."updatedAt" END ASC NULLS LAST,
-             CASE WHEN ${order} = 'descending' AND ${orderBy} = 'updated-at' THEN n."updatedAt" END DESC NULLS LAST,
-             --
-             CASE WHEN ${order} = 'ascending' AND ${orderBy} = 'created-at' THEN n."createdAt" END ASC NULLS LAST,
-             CASE WHEN ${order} = 'descending' AND ${orderBy} = 'created-at' THEN n."createdAt" END DESC NULLS LAST
-    LIMIT ${_limit} OFFSET ${offset ?? 0};
+      SELECT n.*
+      FROM "Notification" n
+               -- a notification that n was replayed for
+               LEFT JOIN "Notification" r ON r."replayUuid" = n.uuid
+      WHERE n.uuid :: text = COALESCE(${uuid ?? null}, n.uuid :: text)
+        AND n."externalId" IS NOT DISTINCT FROM COALESCE(${externalId ?? null}, n."externalId")
+        AND n.recipient = COALESCE(${recipient ?? null}, n.recipient)
+        AND n.shop = COALESCE(${shop ?? null}, n.shop)
+        AND n.failed = COALESCE(${failed ?? null}, n.failed)
+        AND n.type = COALESCE(${type ?? null}, n.type)
+        AND n."replayUuid" :: text IS NOT DISTINCT FROM COALESCE(${replayUuid ?? null}, n."replayUuid" :: text)
+        AND (
+          n.uuid :: text ILIKE COALESCE(${_query ?? null}, n.uuid :: text) OR
+          n.recipient ILIKE COALESCE(${_query ?? null}, n.recipient) OR
+          n.message ILIKE COALESCE(${_query ?? null}, n.message) OR
+          n.type ILIKE COALESCE(${_query ?? null}, n.type) OR
+          n."replayUuid" :: text ILIKE COALESCE(${_query ?? null}, n."replayUuid" :: text) OR
+          r.uuid :: text ILIKE COALESCE(${_query ?? null}, r.uuid :: text)
+          )
+      ORDER BY CASE WHEN ${order} = 'ascending' AND ${orderBy} = 'updated-at' THEN n."updatedAt" END ASC NULLS LAST,
+               CASE WHEN ${order} = 'descending' AND ${orderBy} = 'updated-at' THEN n."updatedAt" END DESC NULLS LAST,
+               --
+               CASE WHEN ${order} = 'ascending' AND ${orderBy} = 'created-at' THEN n."createdAt" END ASC NULLS LAST,
+               CASE WHEN ${order} = 'descending' AND ${orderBy} = 'created-at' THEN n."createdAt" END DESC NULLS LAST
+      LIMIT ${_limit} OFFSET ${offset ?? 0};
   `;
 
   return {
@@ -130,10 +130,10 @@ export async function getWorkOrderNotifications(workOrderId: number) {
     context: unknown;
     replayUuid: UUID | null;
   }>`
-    SELECT n.*
-    FROM "WorkOrderNotification" won
-           INNER JOIN "Notification" n ON n."uuid" = won."notificationUuid"
-    WHERE won."workOrderId" = ${workOrderId};
+      SELECT n.*
+      FROM "WorkOrderNotification" won
+               INNER JOIN "Notification" n ON n."uuid" = won."notificationUuid"
+      WHERE won."workOrderId" = ${workOrderId};
   `;
 
   return notifications;
@@ -147,11 +147,51 @@ export async function upsertWorkOrderNotifications(workOrderId: number, notifica
   const _notificationUuids: (string | null)[] = notificationUuids;
 
   await sql`
-    INSERT INTO "WorkOrderNotification" ("workOrderId", "notificationUuid")
-    SELECT ${workOrderId}, *
-    FROM UNNEST(${_notificationUuids} :: uuid[])
-    ON CONFLICT ("workOrderId", "notificationUuid")
-      DO UPDATE SET "workOrderId"      = EXCLUDED."workOrderId",
-                    "notificationUuid" = EXCLUDED."notificationUuid";
+      INSERT INTO "WorkOrderNotification" ("workOrderId", "notificationUuid")
+      SELECT ${workOrderId}, *
+      FROM UNNEST(${_notificationUuids} :: uuid[])
+      ON CONFLICT ("workOrderId", "notificationUuid")
+          DO UPDATE SET "workOrderId"      = EXCLUDED."workOrderId",
+                        "notificationUuid" = EXCLUDED."notificationUuid";
+  `;
+}
+
+export async function getSpecialOrderNotifications(specialOrderId: number) {
+  const notifications = await sql<{
+    uuid: UUID;
+    shop: string;
+    type: string;
+    recipient: string;
+    message: string;
+    failed: boolean;
+    externalId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    context: unknown;
+    replayUuid: UUID | null;
+  }>`
+      SELECT n.*
+      FROM "SpecialOrderNotification" son
+               INNER JOIN "Notification" n ON n."uuid" = son."notificationUuid"
+      WHERE son."specialOrderId" = ${specialOrderId};
+  `;
+
+  return notifications;
+}
+
+export async function upsertSpecialOrderNotifications(specialOrderId: number, notificationUuids: UUID[]) {
+  if (!isNonEmptyArray(notificationUuids)) {
+    return;
+  }
+
+  const _notificationUuids: (string | null)[] = notificationUuids;
+
+  await sql`
+      INSERT INTO "SpecialOrderNotification" ("specialOrderId", "notificationUuid")
+      SELECT ${specialOrderId}, *
+      FROM UNNEST(${_notificationUuids} :: uuid[])
+      ON CONFLICT ("specialOrderId", "notificationUuid")
+          DO UPDATE SET "specialOrderId"   = EXCLUDED."specialOrderId",
+                        "notificationUuid" = EXCLUDED."notificationUuid";
   `;
 }

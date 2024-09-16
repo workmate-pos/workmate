@@ -190,10 +190,12 @@ export function AddProductModal({
             onAction: () => productVariantsQuery.refetch(),
             loading: productVariantsQuery.isRefetching,
           },
-          {
-            content: 'Import Special Order',
-            onAction: () => setIsSpecialOrderModalOpen(true),
-          },
+          outputType === 'PURCHASE_ORDER'
+            ? {
+                content: 'Import Special Order',
+                onAction: () => setIsSpecialOrderModalOpen(true),
+              }
+            : null,
           productType === 'SERVICE'
             ? {
                 content: 'Create Service',

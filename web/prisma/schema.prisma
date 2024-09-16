@@ -840,8 +840,9 @@ model SpecialOrder {
 
   lineItems SpecialOrderLineItem[]
 
-  createdAt DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+  createdAt                DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime                   @default(now()) @db.Timestamptz(3)
+  SpecialOrderNotification SpecialOrderNotification[]
 
   @@unique([shop, name])
 }
@@ -913,9 +914,10 @@ model Notification {
 
   context Json @db.JsonB
 
-  createdAt             DateTime                @default(now()) @db.Timestamptz(3)
-  updatedAt             DateTime                @default(now()) @db.Timestamptz(3)
-  WorkOrderNotification WorkOrderNotification[]
+  createdAt                DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt                DateTime                   @default(now()) @db.Timestamptz(3)
+  WorkOrderNotification    WorkOrderNotification[]
+  SpecialOrderNotification SpecialOrderNotification[]
 
   @@index([shop, uuid])
   @@index([externalId])
@@ -946,4 +948,19 @@ model WorkOrderNotification {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([workOrderId, notificationUuid])
+}
+
+model SpecialOrderNotification {
+  id Int @id @default(autoincrement())
+
+  specialOrderId   Int
+  notificationUuid String @db.Uuid
+
+  specialOrder SpecialOrder @relation(fields: [specialOrderId], references: [id])
+  notification Notification @relation(fields: [notificationUuid], references: [uuid])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([specialOrderId, notificationUuid])
 }

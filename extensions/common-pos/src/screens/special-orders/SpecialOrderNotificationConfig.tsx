@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Banner, ScrollView, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useForm } from '@teifi-digital/pos-tools/form';
-import { useSendWorkOrderNotificationMutation } from '@work-orders/common/queries/use-send-work-order-notification-mutation.js';
-import { useRouter } from '../../routes.js';
+import { useSendSpecialOrderNotificationMutation } from '@work-orders/common/queries/use-send-special-order-notification-mutation.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
@@ -10,51 +9,58 @@ import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveS
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
+import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useCustomerNotificationPreferenceQuery } from '@work-orders/common/queries/use-customer-notification-preference-query.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { getNotificationType } from '@work-orders/common/notifications/notifications.js';
 import { SendNotification } from '@web/schemas/generated/send-notification.js';
+import { UseRouter } from '../router.js';
 
-type WorkOrderNotification = ShopSettings['workOrder']['notifications'][number];
+// TODO: Merge with WorkOrderNotificationConfig
 
-export function WorkOrderNotificationConfig({
+type SpecialOrderNotification = NonNullable<ShopSettings['specialOrders']['notifications']>[number];
+
+export type SpecialOrderNotificationConfigProps = {
+  name: string | null;
+  notification: SpecialOrderNotification;
+  useRouter: UseRouter;
+};
+
+export function SpecialOrderNotificationConfig({
   name,
   notification: notificationTemplate,
-}: {
-  name: string | null;
-  notification: WorkOrderNotification;
-}) {
+  useRouter,
+}: SpecialOrderNotificationConfigProps) {
   const fetch = useAuthenticatedFetch();
 
-  const workOrderQuery = useWorkOrderQuery({ fetch, name });
-  const workOrder = workOrderQuery.data?.workOrder;
+  const specialOrderQuery = useSpecialOrderQuery({ fetch, name });
+  const specialOrder = specialOrderQuery.data;
 
-  const customerQuery = useCustomerQuery({ fetch, id: workOrder?.customerId ?? null });
+  const customerQuery = useCustomerQuery({ fetch, id: specialOrder?.customer?.id ?? null });
   const customer = customerQuery.data;
 
   const customerNotificationPreferenceQuery = useCustomerNotificationPreferenceQuery({
     fetch,
-    customerId: workOrder?.customerId ?? null,
+    customerId: specialOrder?.customer?.id ?? null,
   });
   const customerNotificationPreference = customerNotificationPreferenceQuery.data;
 
   const settingsQuery = useSettingsQuery({ fetch });
   const settings = settingsQuery.data?.settings;
 
-  const sendWorkOrderNotificationMutation = useSendWorkOrderNotificationMutation({ fetch });
+  const sendSpecialOrderNotificationMutation = useSendSpecialOrderNotificationMutation({ fetch });
 
   const queries = {
-    workOrderQuery,
+    specialOrderQuery,
     customerQuery,
     customerNotificationPreferenceQuery,
     settingsQuery,
   };
 
   const isLoading =
-    workOrderQuery.isLoading ||
+    specialOrderQuery.isLoading ||
     customerQuery.isLoading ||
     customerNotificationPreferenceQuery.isLoading ||
     settingsQuery.isLoading;
@@ -65,7 +71,7 @@ export function WorkOrderNotificationConfig({
   const [notification, setNotification] = useState<EmailNotification | SmsNotification>();
 
   useEffect(() => {
-    if (!!workOrder && !!settings && !!customer && customerNotificationPreference !== undefined) {
+    if (!!specialOrder && !!settings && !!customer && customerNotificationPreference !== undefined) {
       const notificationType = getNotificationType(
         customer,
         customerNotificationPreference ?? settings.defaultNotificationPreference,
@@ -111,7 +117,7 @@ export function WorkOrderNotificationConfig({
 
   return (
     <ScrollView>
-      <Form disabled={sendWorkOrderNotificationMutation.isLoading}>
+      <Form disabled={sendSpecialOrderNotificationMutation.isLoading}>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {Object.entries(queries)
             .filter(([, query]) => query.isError)
@@ -131,10 +137,10 @@ export function WorkOrderNotificationConfig({
               />
             ))}
 
-          {sendWorkOrderNotificationMutation.isError && (
+          {sendSpecialOrderNotificationMutation.isError && (
             <Banner
               visible
-              title={`Error sending notification: ${extractErrorMessage(sendWorkOrderNotificationMutation.error, 'unknown error')}`}
+              title={`Error sending notification: ${extractErrorMessage(sendSpecialOrderNotificationMutation.error, 'unknown error')}`}
               variant={'error'}
             />
           )}
@@ -146,9 +152,9 @@ export function WorkOrderNotificationConfig({
             type={'primary'}
             action={'submit'}
             disabled={!name || !notification}
-            loading={sendWorkOrderNotificationMutation.isLoading}
+            loading={sendSpecialOrderNotificationMutation.isLoading}
             onPress={() =>
-              sendWorkOrderNotificationMutation.mutate(
+              sendSpecialOrderNotificationMutation.mutate(
                 { name: name!, body: { notification: notification! } },
                 {
                   onSuccess() {

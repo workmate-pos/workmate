@@ -1,5 +1,4 @@
 import { createRouter } from '@teifi-digital/pos-tools/router';
-import { ScrollView } from '@shopify/retail-ui-extensions-react';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
 import { Entry } from './screens/Entry.js';
@@ -16,6 +15,15 @@ import {
   CompanyLocationSelectorProps,
 } from '@work-orders/common-pos/screens/selector/CompanyLocationSelector.js';
 import { SpecialOrderFilters } from './screens/special-order/SpecialOrderFilters.js';
+import {
+  SpecialOrderNotificationConfig,
+  SpecialOrderNotificationConfigProps,
+} from '@work-orders/common-pos/screens/special-orders/SpecialOrderNotificationConfig.js';
+import {
+  SpecialOrderNotificationPicker,
+  SpecialOrderNotificationPickerProps,
+} from '@work-orders/common-pos/screens/special-orders/SpecialOrderNotificationPicker.js';
+import { SpecialOrderNotificationHistory } from './screens/special-order/SpecialOrderNotificationHistory.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -78,5 +86,22 @@ export const { Router, useRouter } = createRouter({
   SpecialOrderFilters: {
     title: 'Special Order Filters',
     Component: SpecialOrderFilters,
+  },
+
+  SpecialOrderNotificationConfig: {
+    title: 'Send Notification',
+    Component: (props: Omit<SpecialOrderNotificationConfigProps, 'useRouter'>) => (
+      <SpecialOrderNotificationConfig {...props} useRouter={useRouter} />
+    ),
+  },
+  SpecialOrderNotificationPicker: {
+    title: 'Notification Picker',
+    Component: (props: Omit<SpecialOrderNotificationPickerProps, 'useRouter'>) => (
+      <SpecialOrderNotificationPicker {...props} useRouter={useRouter} />
+    ),
+  },
+  SpecialOrderNotificationHistory: {
+    title: 'Notification History',
+    Component: SpecialOrderNotificationHistory,
   },
 });

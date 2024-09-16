@@ -39,6 +39,9 @@ import {
   WIPCreateSpecialOrder,
 } from '@work-orders/common/create-special-order/default.js';
 import { getCreateSpecialOrderFromDetailedSpecialOrder } from '@work-orders/common/create-special-order/get-create-special-order-from-detailed-special-order.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { getSpecialOrderMutationNotifications } from '@work-orders/common/notifications/special-order.js';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const [lastSavedSpecialOrder, setLastSavedSpecialOrder] = useState(initial);
@@ -65,6 +68,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const customerQuery = useCustomerQuery({ fetch, id: createSpecialOrder.customerId });
   const companyQuery = useCompanyQuery({ fetch, id: createSpecialOrder.companyId });
   const companyLocationQuery = useCompanyLocationQuery({ fetch, id: createSpecialOrder.companyLocationId });
+  const settingsQuery = useSettingsQuery({ fetch });
 
   const specialOrderMutation = useSpecialOrderMutation({ fetch });
 
@@ -82,6 +86,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
     customerQuery,
     companyQuery,
     companyLocationQuery,
+    settingsQuery,
   };
 
   const router = useRouter();
@@ -265,6 +270,42 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
           <FormButton
+            title={'Actions'}
+            type={'basic'}
+            action={'button'}
+            disabled={!createSpecialOrder.name || hasUnsavedChanges}
+            onPress={() =>
+              router.push('ListPopup', {
+                title: 'Select action',
+                selection: {
+                  type: 'select',
+                  items: [
+                    {
+                      id: 'notifications',
+                      leftSide: {
+                        label: 'Notifications',
+                        subtitle: getSubtitle([!createSpecialOrder.name ? 'You must save first' : null]),
+                      },
+                      disabled: !createSpecialOrder.name,
+                    },
+                  ],
+                  onSelect: id => {
+                    if (id === 'notifications') {
+                      router.push('SpecialOrderNotificationHistory', {
+                        name: createSpecialOrder.name!,
+                        disabled: hasUnsavedChanges,
+                      });
+                      return;
+                    }
+
+                    toast.show(`Unsupported action '${id}'`);
+                  },
+                },
+              })
+            }
+          />
+
+          <FormButton
             title={'Save'}
             type={'primary'}
             action={'submit'}
@@ -276,6 +317,33 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
                   setLastSavedSpecialOrder(createSpecialOrder);
                   setCreateSpecialOrder(createSpecialOrder);
                   toast.show(`Saved special order ${specialOrder.name}`);
+
+                  if (!settingsQuery.data) {
+                    return;
+                  }
+
+                  const { settings } = settingsQuery.data;
+                  const notifications = getSpecialOrderMutationNotifications(
+                    settings.specialOrders.notifications ?? [],
+                    (lastSavedSpecialOrder ?? null) as CreateSpecialOrder | null,
+                    createSpecialOrder,
+                  );
+
+                  if (notifications.length === 0) {
+                    return;
+                  }
+
+                  if (notifications.length === 1) {
+                    router.push('SpecialOrderNotificationConfig', {
+                      name: specialOrder.name,
+                      notification: notifications[0]!,
+                    });
+                  } else {
+                    router.push('SpecialOrderNotificationPicker', {
+                      name: specialOrder.name,
+                      notifications,
+                    });
+                  }
                 },
               })
             }

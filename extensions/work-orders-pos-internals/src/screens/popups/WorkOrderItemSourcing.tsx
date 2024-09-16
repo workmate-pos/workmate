@@ -27,7 +27,6 @@ import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGr
 import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { useReserveLineItemsInventoryMutation } from '@work-orders/common/queries/use-reserve-line-items-inventory-mutation.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
-import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 
 /**
  * Fulfillment options for some work order.
@@ -52,9 +51,8 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
   screen.setIsLoading(workOrderQuery.isFetching);
 
   const reserveLineItemInventoryMutation = useReserveLineItemsInventoryMutation({ fetch });
-  const specialOrderMutation = useSpecialOrderMutation({ fetch });
 
-  const isSubmitting = reserveLineItemInventoryMutation.isLoading || specialOrderMutation.isLoading;
+  const isSubmitting = reserveLineItemInventoryMutation.isLoading;
 
   if (workOrderQuery.isError) {
     return (

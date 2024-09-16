@@ -55,6 +55,7 @@ import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-
 import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { WorkOrderNotificationModal } from '@web/frontend/components/work-orders/modals/WorkOrderNotificationModal.js';
 import { WorkOrderNotificationHistoryModal } from '@web/frontend/components/work-orders/modals/WorkOrderNotificationHistoryModal.js';
+import { getWorkOrderMutationNotifications } from '@work-orders/common/notifications/work-orders.js';
 
 export default function () {
   return (
@@ -177,20 +178,12 @@ function WorkOrder({
         setHasUnsavedChanges(false);
         Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrder.name)}`);
 
-        const statusChanged = workOrder.status !== lastSavedCreateWorkOrder?.status;
-
         setAvailableNotifications(
-          settings.workOrder.notifications.filter(notification => {
-            if (notification.type === 'on-status-change') {
-              return statusChanged && notification.status === workOrder.status;
-            }
-
-            if (notification.type === 'on-create') {
-              return !lastSavedCreateWorkOrder;
-            }
-
-            return notification satisfies never;
-          }),
+          getWorkOrderMutationNotifications(
+            settings.workOrder.notifications,
+            lastSavedCreateWorkOrder ?? null,
+            newCreateWorkOrder,
+          ),
         );
       },
     },

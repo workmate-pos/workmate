@@ -64,6 +64,7 @@ import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/c
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useCustomerNotificationPreferenceQuery } from '@work-orders/common/queries/use-customer-notification-preference-query.js';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
+import { getWorkOrderMutationNotifications } from '@work-orders/common/notifications/work-orders.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -128,40 +129,28 @@ export function WorkOrder({ initial }: WorkOrderProps) {
         setHasUnsavedChanges(false);
         router.push('WorkOrderSaved', { workOrder });
 
-        if (workOrder.status !== lastSavedCreateWorkOrder?.status) {
-          if (!settingsQuery.data || !customerQuery.data || customerNotificationPreferenceQuery.data === undefined) {
-            toast.show('Cannot send notification, settings or customer not loaded');
-            return;
-          }
+        if (!settingsQuery.data) {
+          return;
+        }
 
-          const settings = settingsQuery.data.settings;
-          const availableNotifications = settings.workOrder.notifications.filter(notification => {
-            if (notification.type === 'on-status-change') {
-              return notification.status === workOrder.status;
-            }
+        const { settings } = settingsQuery.data;
 
-            if (notification.type === 'on-create') {
-              return !lastSavedCreateWorkOrder;
-            }
+        const availableNotifications = getWorkOrderMutationNotifications(
+          settings.workOrder.notifications,
+          lastSavedCreateWorkOrder ?? null,
+          createWorkOrder,
+        );
 
-            return notification satisfies never;
+        if (availableNotifications.length === 1) {
+          router.push('WorkOrderNotificationConfig', {
+            name,
+            notification: availableNotifications[0]!,
           });
-
-          if (!availableNotifications.length) {
-            return;
-          }
-
-          if (availableNotifications.length === 1) {
-            router.push('WorkOrderNotificationConfig', {
-              name,
-              notification: availableNotifications[0]!,
-            });
-          } else {
-            router.push('WorkOrderNotificationPicker', {
-              name,
-              notifications: availableNotifications,
-            });
-          }
+        } else {
+          router.push('WorkOrderNotificationPicker', {
+            name,
+            notifications: availableNotifications,
+          });
         }
       },
     },

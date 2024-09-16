@@ -29,12 +29,14 @@ import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
 import { getWorkOrderCsvTemplatesZip, readWorkOrderCsvImport } from '../../services/work-orders/csv-import.js';
 import { transaction } from '../../services/db/transaction.js';
 import * as Sentry from '@sentry/node';
-import { SendWorkOrderNotification } from '../../schemas/generated/send-work-order-notification.js';
+import { SendNotification } from '../../schemas/generated/send-notification.js';
 import { sendNotification } from '../../services/notifications/strategies/strategy.js';
-import { unit } from '../../services/db/unit-of-work.js';
 import { match } from 'ts-pattern';
 import { upsertWorkOrderNotifications } from '../../services/notifications/queries.js';
 import { getWorkOrder } from '../../services/work-orders/queries.js';
+import { getDetailedSpecialOrder } from '../../services/special-orders/get.js';
+import { getCustomers } from '../../services/customer/queries.js';
+import { renderLiquid } from '../../services/liquid/render.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -290,29 +292,60 @@ export default class WorkOrderController {
   @Post('/:name/notification')
   @Authenticated()
   @Permission('write_work_orders')
-  @BodySchema('send-work-order-notification')
+  @BodySchema('send-notification')
   async sendWorkOrderNotification(
-    req: Request<{ name: string }, unknown, SendWorkOrderNotification>,
+    req: Request<{ name: string }, unknown, SendNotification>,
     res: Response<SendWorkOrderNotificationResponse>,
   ) {
-    const { shop }: Session = res.locals.shopify.session;
+    const session: Session = res.locals.shopify.session;
+    const { shop } = session;
     const { name } = req.params;
     const { notification } = req.body;
 
-    const workOrder = await getWorkOrder({ shop, name });
+    const workOrder = await getDetailedWorkOrder(session, name);
 
     if (!workOrder) {
       throw new HttpError('Work order not found', 404);
     }
 
+    const [{ id }, [customer]] = await Promise.all([
+      getWorkOrder({ shop, name }).then(wo => wo ?? never('just checked')),
+      getCustomers([workOrder.customerId]),
+    ]);
+
+    const variables = {
+      name: workOrder.name,
+      status: workOrder.status,
+      customer: {
+        displayName: customer?.displayName,
+        phone: customer?.phone,
+        email: customer?.email,
+      },
+    };
+
     const uuid = await match(notification)
-      .with({ type: 'sms' }, () => sendNotification('sms', { ...notification, shop }, {}))
-      .with({ type: 'email' }, ({ subject, from, replyTo }) =>
-        sendNotification('email', { ...notification, shop }, { subject, replyTo, from }),
+      .with({ type: 'sms' }, async ({ message, recipient }) =>
+        sendNotification(
+          'sms',
+          {
+            message: await renderLiquid(message, variables),
+            recipient,
+            shop,
+          },
+          {},
+        ),
       )
+      .with({ type: 'email' }, async ({ from, replyTo, recipient, ...notification }) => {
+        const [subject, message] = await Promise.all([
+          renderLiquid(notification.subject, variables),
+          renderLiquid(notification.message, variables),
+        ]);
+
+        return sendNotification('email', { message, recipient, shop }, { subject, replyTo, from });
+      })
       .exhaustive();
 
-    await upsertWorkOrderNotifications(workOrder.id, [uuid]);
+    await upsertWorkOrderNotifications(id, [uuid]);
 
     return res.json({ success: true });
   }

@@ -3,6 +3,7 @@ import { isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { DateTime } from '../services/gql/queries/generated/schema.js';
 import { BigDecimal, Decimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { isGidWithNamespace } from '@work-orders/common/util/gid.js';
+import { Liquid } from 'liquidjs';
 
 export const zID = z.string().refine(isGid);
 export const zNamespacedID = (type: string) => z.string().refine(isGidWithNamespace(type));
@@ -25,3 +26,16 @@ export const zCsvBool = z
   .string()
   .refine(value => value === 'true' || value === 'false' || value === '1' || value === '0' || value === '')
   .transform(value => value === 'true' || value === '1');
+
+const liquid = new Liquid();
+const isValidLiquid = (template: string) => {
+  try {
+    liquid.parse(template);
+    return true;
+  } catch (error) {
+    return false;
+  }
+};
+
+// TODO: Convert settings to zod schema and use this for print templates and notification subject/message
+export const zLiquidTemplate = z.string().refine(isValidLiquid, 'Liquid template is invalid');

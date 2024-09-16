@@ -1,15 +1,15 @@
-import { WorkOrderNotificationModal } from '@web/frontend/components/work-orders/modals/WorkOrderNotificationModal.js';
+import { SpecialOrderNotificationModal } from '@web/frontend/components/special-orders/modals/SpecialOrderNotificationModal.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
 import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
+import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
 import { NotificationHistoryModal } from '@web/frontend/components/notifications/NotificationHistoryModal.js';
 
-type WorkOrderNotification = ShopSettings['workOrder']['notifications'][number];
+type SpecialOrderNotification = NonNullable<ShopSettings['specialOrders']['notifications']>[number];
 
-export function WorkOrderNotificationHistoryModal({
+export function SpecialOrderNotificationHistoryModal({
   name,
   disabled,
   open,
@@ -23,31 +23,31 @@ export function WorkOrderNotificationHistoryModal({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const workOrderQuery = useWorkOrderQuery({ fetch, name });
-  const workOrder = workOrderQuery.data?.workOrder;
+  const specialOrderQuery = useSpecialOrderQuery({ fetch, name });
+  const specialOrder = specialOrderQuery.data;
 
   const settingsQuery = useSettingsQuery({ fetch });
   const settings = settingsQuery.data?.settings;
 
-  const allNotifications = settings?.workOrder.notifications ?? [];
+  const allNotifications = settings?.specialOrders.notifications ?? [];
   // notifications available for sending
-  const [availableNotifications, setAvailableNotifications] = useState<WorkOrderNotification[]>([]);
+  const [availableNotifications, setAvailableNotifications] = useState<SpecialOrderNotification[]>([]);
 
   return (
     <>
       <NotificationHistoryModal
-        subject="work-order"
+        subject="special-order"
         disabled={disabled}
         open={open && availableNotifications.length === 0}
         onClose={() => {
           setAvailableNotifications([]);
           onClose();
         }}
-        notifications={workOrder?.notifications ?? []}
+        notifications={specialOrder?.notifications ?? []}
         onSendNotification={() => setAvailableNotifications(allNotifications)}
       />
 
-      <WorkOrderNotificationModal
+      <SpecialOrderNotificationModal
         name={name}
         notifications={availableNotifications}
         setNotifications={setAvailableNotifications}

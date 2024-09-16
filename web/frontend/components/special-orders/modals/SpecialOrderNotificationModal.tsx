@@ -1,35 +1,35 @@
 import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
-import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
+import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { useSendWorkOrderNotificationMutation } from '@work-orders/common/queries/use-send-work-order-notification-mutation.js';
+import { useSendSpecialOrderNotificationMutation } from '@work-orders/common/queries/use-send-special-order-notification-mutation.js';
 import { NotificationPickerModal } from '@web/frontend/components/notifications/NotificationPickerModal.js';
 import { NotificationConfigModal } from '@web/frontend/components/notifications/NotificationConfigModal.js';
 
-type WorkOrderNotification = ShopSettings['workOrder']['notifications'][number];
+type SpecialOrderNotification = NonNullable<ShopSettings['specialOrders']['notifications']>[number];
 
-export function WorkOrderNotificationModal({
+export function SpecialOrderNotificationModal({
   name,
   notifications,
   setNotifications,
 }: {
   name: string | null;
-  notifications: WorkOrderNotification[];
-  setNotifications: (notifications: WorkOrderNotification[]) => void;
+  notifications: SpecialOrderNotification[];
+  setNotifications: (notifications: SpecialOrderNotification[]) => void;
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
   const notificationTemplate = notifications.length === 1 ? notifications[0]! : null;
-  const workOrderQuery = useWorkOrderQuery({ fetch, name });
-  const workOrder = workOrderQuery.data?.workOrder;
+  const specialOrderQuery = useSpecialOrderQuery({ fetch, name });
+  const specialOrder = specialOrderQuery.data;
 
-  const sendWorkOrderNotificationMutation = useSendWorkOrderNotificationMutation({ fetch });
+  const sendSpecialOrderNotificationMutation = useSendSpecialOrderNotificationMutation({ fetch });
 
   return (
     <>
       <NotificationPickerModal
-        subject="work-order"
+        subject="special-order"
         notifications={notifications}
         onSelect={notification => setNotifications([notification])}
         onClose={() => setNotifications([])}
@@ -38,11 +38,11 @@ export function WorkOrderNotificationModal({
       <NotificationConfigModal
         onClose={() => setNotifications([])}
         notificationTemplate={notificationTemplate}
-        customerId={workOrder?.customerId ?? null}
-        loading={workOrderQuery.isLoading}
+        customerId={specialOrder?.customer?.id ?? null}
+        loading={specialOrderQuery.isLoading}
         send={{
           send: notification => {
-            sendWorkOrderNotificationMutation.mutate(
+            sendSpecialOrderNotificationMutation.mutate(
               {
                 name: name!,
                 body: { notification },
@@ -55,9 +55,9 @@ export function WorkOrderNotificationModal({
               },
             );
           },
-          isLoading: sendWorkOrderNotificationMutation.isLoading,
-          isError: sendWorkOrderNotificationMutation.isError,
-          error: sendWorkOrderNotificationMutation.error,
+          isLoading: sendSpecialOrderNotificationMutation.isLoading,
+          isError: sendSpecialOrderNotificationMutation.isError,
+          error: sendSpecialOrderNotificationMutation.error,
         }}
       />
 
