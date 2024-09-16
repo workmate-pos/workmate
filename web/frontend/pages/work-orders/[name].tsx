@@ -54,6 +54,7 @@ import { PaymentTermsSelectorModal } from '@web/frontend/components/work-orders/
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 import { WorkOrderNotificationModal } from '@web/frontend/components/work-orders/modals/WorkOrderNotificationModal.js';
+import { WorkOrderNotificationHistoryModal } from '@web/frontend/components/work-orders/modals/WorkOrderNotificationHistoryModal.js';
 
 export default function () {
   return (
@@ -193,6 +194,7 @@ function WorkOrder({
 
   const settingsQuery = useSettingsQuery({ fetch });
 
+  // TODO: move these modals to the components where they are opened (this is already done for new modals)
   const [isCustomerSelectorModalOpen, setIsCustomerSelectorModalOpen] = useState(false);
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
@@ -204,6 +206,7 @@ function WorkOrder({
   const [isCompanySelectorModalOpen, setIsCompanySelectorModalOpen] = useState(false);
   const [isCompanyLocationSelectorModalOpen, setIsCompanyLocationSelectorModalOpen] = useState(false);
   const [isPaymentTermsSelectorModalOpen, setIsPaymentTermsSelectorModalOpen] = useState(false);
+  const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
 
   const isModalOpen = [
     isCustomerSelectorModalOpen,
@@ -233,7 +236,15 @@ function WorkOrder({
 
   return (
     <Box paddingBlockEnd={'1600'}>
-      <TitleBar title={'Work Orders'} />
+      <TitleBar
+        title={'Work Orders'}
+        secondaryActions={[
+          {
+            content: 'Notifications',
+            onAction: () => setIsNotificationsModalOpen(true),
+          },
+        ]}
+      />
 
       <ContextualSaveBar
         fullWidth
@@ -478,6 +489,13 @@ function WorkOrder({
         name={createWorkOrder.name}
         notifications={availableNotifications}
         setNotifications={setAvailableNotifications}
+      />
+
+      <WorkOrderNotificationHistoryModal
+        name={createWorkOrder.name}
+        disabled={hasUnsavedChanges}
+        onClose={() => setIsNotificationsModalOpen(false)}
+        open={isNotificationsModalOpen}
       />
 
       {toast}

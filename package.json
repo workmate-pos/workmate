@@ -61,7 +61,7 @@
   },
   "dependencies": {
     "@shopify/app": "^3.58.2",
-    "@shopify/cli": "^3.66.0",
+    "@shopify/cli": "^3.66.1",
     "@shopify/ui-extensions": "2024.7.0",
     "@shopify/ui-extensions-react": "2024.7.0",
     "archiver": "^7.0.1",

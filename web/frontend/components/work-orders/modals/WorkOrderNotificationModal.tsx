@@ -60,26 +60,24 @@ function NotificationPickerModal({
       <ResourceList
         items={notifications}
         resourceName={{ singular: 'notification', plural: 'notifications' }}
-        renderItem={(notification, _, idx) => {
-          return (
-            <ResourceItem id={String(idx)} onClick={() => setNotifications([notification])}>
-              <BlockStack gap={'050'}>
-                <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
-                  {notification.status}
-                </Text>
-                <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                  {notification.sms.message}
-                </Text>
-                <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                  {notification.email.subject}
-                </Text>
-                <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                  {notification.email.message}
-                </Text>
-              </BlockStack>
-            </ResourceItem>
-          );
-        }}
+        renderItem={(notification, _, idx) => (
+          <ResourceItem id={String(idx)} onClick={() => setNotifications([notification])}>
+            <BlockStack gap={'050'}>
+              <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
+                {notification.status}
+              </Text>
+              <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+                {notification.sms.message}
+              </Text>
+              <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+                {notification.email.subject}
+              </Text>
+              <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+                {notification.email.message}
+              </Text>
+            </BlockStack>
+          </ResourceItem>
+        )}
       />
     </Modal>
   );

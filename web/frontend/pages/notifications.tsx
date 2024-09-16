@@ -1,7 +1,4 @@
 import {
-  BlockStack,
-  Button,
-  Card,
   EmptyState,
   Frame,
   Icon,
@@ -11,7 +8,6 @@ import {
   Page,
   SkeletonBodyText,
   Text,
-  Tooltip,
 } from '@shopify/polaris';
 import { TitleBar } from '@shopify/app-bridge-react';
 import { useState } from 'react';
@@ -22,9 +18,8 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useNotificationsQuery } from '@work-orders/common/queries/use-notifications-query.js';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { emptyState } from '@web/frontend/assets/index.js';
-import { CircleAlertMajor, ReplayMinor, SendMajor, SkeletonMajor, StatusActiveMajor } from '@shopify/polaris-icons';
-import { UUID } from '@work-orders/common/util/uuid.js';
-import { useReplayNotificationMutation } from '@work-orders/common/queries/use-replay-notification-mutation.js';
+import { SkeletonMajor } from '@shopify/polaris-icons';
+import { NotificationStatusIcon } from '@web/frontend/components/notifications/NotificationStatusIcon.js';
 
 const PAGE_LIMIT = 100;
 
@@ -40,14 +35,6 @@ export default function Notifications() {
     { fetch, filters: { ...filters, limit: PAGE_LIMIT, query } },
     { keepPreviousData: true, refetchInterval: 5_000 },
   );
-  const replayNotificationMutation = useReplayNotificationMutation(
-    { fetch },
-    {
-      onSuccess(replayed) {
-        setToastAction({ content: `Replayed notification ${replayed.uuid}` });
-      },
-    },
-  );
 
   const [pageIndex, setPageIndex] = useState(0);
   const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, notificationsQuery);
@@ -56,7 +43,7 @@ export default function Notifications() {
 
   return (
     <Frame>
-      <Page>
+      <Page fullWidth>
         <TitleBar title="Notifications" />
 
         <IndexFilters
@@ -152,31 +139,7 @@ export default function Notifications() {
               </IndexTable.Cell>
 
               <IndexTable.Cell>
-                {notification.replayUuid !== null ? (
-                  <Tooltip content={`This notification has been replayed (${notification.replayUuid})`}>
-                    <Icon source={ReplayMinor} tone="magic" />
-                  </Tooltip>
-                ) : notification.failed ? (
-                  <Tooltip content={'This notification failed to send. Click to retry.'}>
-                    <BlockStack align="center" inlineAlign="center">
-                      <Button
-                        variant="plain"
-                        loading={
-                          replayNotificationMutation.isLoading &&
-                          replayNotificationMutation.variables === notification.uuid
-                        }
-                        icon={<Icon source={CircleAlertMajor} tone="critical" />}
-                        onClick={() => {
-                          replayNotificationMutation.mutate(notification.uuid);
-                        }}
-                      >
-                        {''}
-                      </Button>
-                    </BlockStack>
-                  </Tooltip>
-                ) : (
-                  <Icon source={StatusActiveMajor} tone="success" />
-                )}
+                <NotificationStatusIcon notification={notification} />
               </IndexTable.Cell>
 
               <IndexTable.Cell>{new Date(notification.createdAt).toLocaleString()}</IndexTable.Cell>
