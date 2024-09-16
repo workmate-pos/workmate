@@ -14,4 +14,5 @@ jobs:
     with:
       extensions_install_command: npm run all:install && npm run all:build
       build_arg_env_vars: VITE_INTERCOM_APP_ID
+      app_proxy: true
       deploy-autogen-values: ${{ github.ref != 'refs/heads/production' }}
