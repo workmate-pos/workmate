@@ -48,6 +48,39 @@
                 },
                 "additionalProperties": false,
                 "required": ["type", "status", "email", "sms"]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "const": "on-create"
+                  },
+                  "email": {
+                    "type": "object",
+                    "properties": {
+                      "subject": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["subject", "message"],
+                    "additionalProperties": false
+                  },
+                  "sms": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["message"],
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false,
+                "required": ["type", "email", "sms"]
               }
             ]
           }

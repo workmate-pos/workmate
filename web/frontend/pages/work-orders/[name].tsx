@@ -185,7 +185,11 @@ function WorkOrder({
               return statusChanged && notification.status === workOrder.status;
             }
 
-            return notification.type satisfies never;
+            if (notification.type === 'on-create') {
+              return !lastSavedCreateWorkOrder;
+            }
+
+            return notification satisfies never;
           }),
         );
       },

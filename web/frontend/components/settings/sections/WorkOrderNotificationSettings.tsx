@@ -14,6 +14,7 @@ import {
   TextField,
 } from '@shopify/polaris';
 import { CaretUpMinor } from '@shopify/polaris-icons';
+import { useToast } from '@teifi-digital/shopify-app-react';
 
 type Notification = ShopSettings['workOrder']['notifications'][number];
 
@@ -36,7 +37,11 @@ export function WorkOrderNotificationSettings({
             return statusExists;
           }
 
-          return notification.type satisfies never;
+          if (notification.type === 'on-create') {
+            return true;
+          }
+
+          return notification satisfies never;
         }),
       },
     };
@@ -134,7 +139,7 @@ export function WorkOrderNotificationSettings({
                 })
               }
             >
-              Create Notification
+              New Notification
             </Button>
           </InlineStack>
           {settings.statuses.length === 0 && (
@@ -163,13 +168,7 @@ function WorkOrderNotification({
   onRemove: () => void;
   open?: boolean;
 }) {
-  const type = (() => {
-    if (notification.type === 'on-status-change') {
-      return 'Status Change';
-    }
-
-    return notification.type satisfies never;
-  })();
+  const [toast, setToastAction] = useToast();
 
   const id = useId();
   const [open, setOpen] = useState(_open);
@@ -178,11 +177,21 @@ function WorkOrderNotification({
     setOpen(_open);
   }, [_open]);
 
-  const isValid =
-    settings.statuses.includes(notification.status) &&
+  let isValid =
     notification.sms.message.trim().length > 0 &&
     notification.email.subject.trim().length > 0 &&
     notification.email.message.trim().length > 0;
+
+  let title = 'Notification';
+
+  if (notification.type === 'on-status-change') {
+    isValid ||= settings.statuses.includes(notification.status);
+    title = `When Status Changes to ${notification.status}`;
+  } else if (notification.type === 'on-create') {
+    title = 'Work Order Created';
+  } else {
+    return notification satisfies never;
+  }
 
   const helpText = (
     <>
@@ -198,7 +207,7 @@ function WorkOrderNotification({
       <BlockStack gap={'400'}>
         <InlineStack align="space-between" gap={'200'}>
           <Text as="p" variant="bodyMd" fontWeight="bold">
-            {type} Notification
+            {title}
           </Text>
 
           <span
@@ -215,13 +224,55 @@ function WorkOrderNotification({
         <Collapsible id={id} open={open}>
           <FormLayout>
             <Select
-              label={'Status'}
-              name="status"
-              value={notification.status}
-              options={settings.statuses.map(status => ({ id: status, label: status, value: status }))}
-              onChange={status => setNotification({ ...notification, status })}
+              label={'Notification Type'}
+              name="notification-type"
+              options={[
+                {
+                  label: 'When Status Changes',
+                  value: 'on-status-change',
+                  disabled: settings.statuses.length === 0,
+                },
+                {
+                  label: 'Work Order Created',
+                  value: 'on-create',
+                },
+              ]}
               requiredIndicator
+              value={notification.type}
+              onChange={type => {
+                if (type === notification.type) {
+                  return;
+                }
+
+                if (type === 'on-status-change') {
+                  setNotification({
+                    type: 'on-status-change',
+                    status: settings.statuses[0]!,
+                    sms: { message: '' },
+                    email: { subject: '', message: '' },
+                  });
+                } else if (type === 'on-create') {
+                  setNotification({
+                    type: 'on-create',
+                    sms: { message: '' },
+                    email: { subject: '', message: '' },
+                  });
+                } else {
+                  setToastAction({ content: 'Unknown notification type' });
+                }
+              }}
             />
+
+            {notification.type === 'on-status-change' && (
+              <Select
+                label={'Status'}
+                name="status"
+                value={notification.status}
+                options={settings.statuses.map(status => ({ id: status, label: status, value: status }))}
+                onChange={status => setNotification({ ...notification, status })}
+                requiredIndicator
+              />
+            )}
 
             <Divider />
 
@@ -275,6 +326,8 @@ function WorkOrderNotification({
           </FormLayout>
         </Collapsible>
       </BlockStack>
+
+      {toast}
     </Card>
   );
 }

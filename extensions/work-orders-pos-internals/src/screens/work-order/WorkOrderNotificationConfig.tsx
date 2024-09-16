@@ -20,6 +20,7 @@ import {
   replaceNotificationVariables,
 } from '@work-orders/common/notifications/on-status-change.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 type WorkOrderNotification = ShopSettings['workOrder']['notifications'][number];
 
@@ -61,6 +62,9 @@ export function WorkOrderNotificationConfig({
     customerQuery.isLoading ||
     customerNotificationPreferenceQuery.isLoading ||
     settingsQuery.isLoading;
+
+  const screen = useScreen();
+  screen.setIsLoading(isLoading);
 
   const [notification, setNotification] = useState<EmailNotification | SmsNotification>();
 

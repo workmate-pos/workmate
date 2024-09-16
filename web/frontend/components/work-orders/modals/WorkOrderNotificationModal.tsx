@@ -28,6 +28,7 @@ import { useEffect, useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useSendWorkOrderNotificationMutation } from '@work-orders/common/queries/use-send-work-order-notification-mutation.js';
+import { match, P } from 'ts-pattern';
 
 type WorkOrderNotification = ShopSettings['workOrder']['notifications'][number];
 
@@ -64,7 +65,10 @@ function NotificationPickerModal({
           <ResourceItem id={String(idx)} onClick={() => setNotifications([notification])}>
             <BlockStack gap={'050'}>
               <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
-                {notification.status}
+                {match(notification)
+                  .with({ type: 'on-status-change', status: P.select() }, status => `Status Changed to ${status}`)
+                  .with({ type: 'on-create' }, () => 'Work Order Created')
+                  .exhaustive()}
               </Text>
               <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
                 Subject: {notification.email.subject}

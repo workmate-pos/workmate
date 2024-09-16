@@ -2,10 +2,8 @@ import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from 
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useMemo, useState } from 'react';
-import { WorkOrderNotification } from '@web/services/work-orders/types.js';
+import { useMemo } from 'react';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
-import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
 
 export function WorkOrderNotificationHistory({ name, disabled }: { name: string; disabled: boolean }) {
