@@ -28,7 +28,7 @@ import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-qu
 import { useCreateWorkOrderReducer, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { defaultCreateWorkOrder } from '@work-orders/common/create-work-order/default.js';
-import { WorkOrder as WorkOrderType } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder as WorkOrderType } from '@web/services/work-orders/types.js';
 import {
   SaveWorkOrderValidationErrors,
   useSaveWorkOrderMutation,
@@ -44,12 +44,8 @@ import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-ca
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
-import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
-import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
-import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/CreateOrderModal.js';
 import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';
 import { CompanyLocationSelectorModal } from '@web/frontend/components/work-orders/modals/CompanyLocationSelectorModal.js';
@@ -168,9 +164,7 @@ function WorkOrder({
         setToastAction({ content: message });
         dispatch.set(workOrderToCreateWorkOrder(workOrder));
         setHasUnsavedChanges(false);
-        if (createWorkOrder.name === null) {
-          Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrder.name)}`);
-        }
+        Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrder.name)}`);
       },
     },
   );
@@ -205,20 +199,7 @@ function WorkOrder({
 
   // all nested useCalculatedDraftOrderQuery's are disabled s.t. only this one fetches when no modals are opened
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'customerId',
-        'items',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-      ),
-    },
+    { fetch, ...createWorkOrder },
     { enabled: !isModalOpen },
   );
 

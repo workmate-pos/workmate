@@ -47,7 +47,7 @@ export const useServiceMutation = ({ fetch }: { fetch: Fetch }) => {
       return result;
     },
     onSuccess(result) {
-      if (result.type === 'success') {
+      if (result.variant) {
         queryClient.invalidateQueries(['services']);
         queryClient.setQueryData(
           ['service', result.variant.id],

@@ -1,7 +1,7 @@
-import type { WorkOrder } from '@web/services/work-orders/types.js';
+import type { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 
-export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrder {
+export function workOrderToCreateWorkOrder(workOrder: DetailedWorkOrder): CreateWorkOrder {
   return {
     name: workOrder.name,
     derivedFromOrderId: workOrder.derivedFromOrderId,
@@ -18,10 +18,16 @@ export function workOrderToCreateWorkOrder(workOrder: WorkOrder): CreateWorkOrde
     companyLocationId: workOrder.companyLocationId,
     companyContactId: workOrder.companyContactId,
     paymentTerms: workOrder.paymentTerms,
+    serial: workOrder.serial
+      ? {
+          productVariantId: workOrder.serial.productVariantId,
+          serial: workOrder.serial.serial,
+        }
+      : null,
   };
 }
 
-function mapItem(item: WorkOrder['items'][number]): CreateWorkOrder['items'][number] {
+function mapItem(item: DetailedWorkOrder['items'][number]): CreateWorkOrder['items'][number] {
   if (item.type === 'product') {
     return {
       type: 'product',
@@ -48,11 +54,11 @@ function mapItem(item: WorkOrder['items'][number]): CreateWorkOrder['items'][num
   return item satisfies never;
 }
 
-function mapCharge(charge: WorkOrder['charges'][number]): CreateWorkOrder['charges'][number] {
+function mapCharge(charge: DetailedWorkOrder['charges'][number]): CreateWorkOrder['charges'][number] {
   if (charge.type === 'hourly-labour') {
     return {
       type: 'hourly-labour',
-      workOrderItem: charge.workOrderItem,
+      workOrderItemUuid: charge.workOrderItemUuid,
       employeeId: charge.employeeId,
       uuid: charge.uuid,
       hours: charge.hours,
@@ -67,7 +73,7 @@ function mapCharge(charge: WorkOrder['charges'][number]): CreateWorkOrder['charg
   if (charge.type === 'fixed-price-labour') {
     return {
       type: 'fixed-price-labour',
-      workOrderItem: charge.workOrderItem,
+      workOrderItemUuid: charge.workOrderItemUuid,
       employeeId: charge.employeeId,
       amount: charge.amount,
       uuid: charge.uuid,

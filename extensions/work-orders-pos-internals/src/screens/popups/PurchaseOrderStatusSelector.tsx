@@ -1,29 +1,43 @@
-import { Button, Stack } from '@shopify/retail-ui-extensions-react';
-import { useRouter } from '../../routes.js';
-import { PurchaseOrderStatus } from '@web/schemas/generated/work-order-pagination-options.js';
+import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { useRouter } from '../../routes.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
+import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 
-export function PurchaseOrderStatusSelector({
-  onSelect,
-}: {
-  onSelect: (purchaseOrderStatus: PurchaseOrderStatus) => void;
-}) {
+export function PurchaseOrderStatusSelector({ onSelect }: { onSelect: (status: string) => void }) {
+  const fetch = useAuthenticatedFetch();
+  const settingsQuery = useSettingsQuery({ fetch });
+
   const router = useRouter();
+  const screen = useScreen();
+  screen.setIsLoading(settingsQuery.isLoading);
 
-  const statuses: PurchaseOrderStatus[] = ['FULFILLED', 'PENDING'];
+  if (settingsQuery.isError || !settingsQuery.data?.settings) {
+    return (
+      <Stack alignment="center" direction="vertical" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(settingsQuery.error, 'An error occurred while loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
 
   return (
-    <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
-      {statuses.map(status => (
-        <Button
-          key={status}
-          title={titleCase(status)}
-          onPress={() => {
-            onSelect(status);
-            router.popCurrent();
-          }}
-        />
-      ))}
-    </Stack>
+    <ScrollView>
+      <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
+        {settingsQuery.data.settings.purchaseOrderStatuses.map(status => (
+          <Button
+            key={status}
+            title={titleCase(status)}
+            onPress={() => {
+              onSelect(status);
+              router.popCurrent();
+            }}
+          />
+        ))}
+      </Stack>
+    </ScrollView>
   );
 }

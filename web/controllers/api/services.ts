@@ -24,7 +24,7 @@ import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { UpsertService } from '../../schemas/upsert-service.js';
 import { FormBody } from '../../decorators/form-body.js';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import {
   baseProductVariantDefaultChargesMetafield,
   getProductVariantDefaultChargesMetafield,
@@ -121,27 +121,22 @@ export default class ServicesController {
 
     if (submission.status !== 'success') {
       return res.status(200).json({
-        type: 'submission-result',
         submissionResult: submission.reply(),
+        variant: null,
       });
     }
 
     const session: Session = res.locals.shopify.session;
     const graphql = new Graphql(session);
 
-    const { productVariantId, sku, type, title, description } = submission.value;
+    const { productVariantId, sku, type, title, description, price } = submission.value;
 
     const serviceType = match(type)
       .returnType<ProductServiceType>()
       .with('fixed', () => FIXED_PRICE_SERVICE)
       .with('dynamic', () => QUANTITY_ADJUSTING_SERVICE)
       .exhaustive();
-    const tags: string[] = [SERVICE_METAFIELD_VALUE_TAG_NAME[serviceType]];
-
-    const price = match(submission.value)
-      .with({ type: 'fixed', price: P.select() }, identity)
-      .with({ type: 'dynamic' }, () => BigDecimal.ONE.toMoney())
-      .exhaustive();
+    const serviceTags: string[] = [SERVICE_METAFIELD_VALUE_TAG_NAME[serviceType]];
 
     const defaultChargeIds = match(submission.value)
       .with({ type: 'fixed' }, () => null)
@@ -208,7 +203,12 @@ export default class ServicesController {
       const { productUpdate } = await gql.products.updateProduct.run(graphql, {
         input: {
           id: productVariant.product.id,
-          tags,
+          tags: [
+            ...productVariant.product.tags.filter(
+              tag => !Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).some(t => tag === t),
+            ),
+            ...serviceTags,
+          ],
           metafields: productMetafields,
           title,
           descriptionHtml: description,
@@ -220,28 +220,36 @@ export default class ServicesController {
       }
 
       const { productVariantUpdate } = await gql.products.updateVariant.run(graphql, {
-        input: { id: productVariantId, sku, price, metafields: productVariantMetafields },
+        input: { id: productVariantId, price, metafields: productVariantMetafields },
       });
 
       if (!productVariantUpdate?.productVariant) {
         throw new HttpError('Failed to update service product variant', 500);
       }
 
+      const { inventoryItemUpdate } = await gql.inventoryItems.updateInventoryItem.run(graphql, {
+        id: productVariantUpdate.productVariant.inventoryItem.id,
+        input: { sku },
+      });
+
+      if (!inventoryItemUpdate?.inventoryItem?.id) {
+        throw new HttpError('Failed to update inventory item', 500);
+      }
+
       return res.json({
-        type: 'success',
+        submissionResult: submission.reply(),
         variant: {
-          ...parseProductVariantMetafields(productVariantUpdate.productVariant),
-          errors: getServiceProductVariantErrors(productVariantUpdate.productVariant),
+          ...parseProductVariantMetafields(inventoryItemUpdate.inventoryItem.variant),
+          errors: getServiceProductVariantErrors(inventoryItemUpdate.inventoryItem.variant),
         },
       });
     } else {
       const { productCreate } = await gql.products.create.run(graphql, {
         input: {
-          tags,
+          tags: serviceTags,
           metafields: productMetafields,
           title,
           descriptionHtml: description,
-          variants: [{ sku, price, metafields: productVariantMetafields }],
         },
       });
 
@@ -249,14 +257,33 @@ export default class ServicesController {
         throw new HttpError('Failed to create service product', 500);
       }
 
-      const [variant] = productCreate.product.variants.nodes;
+      const { productVariantsBulkCreate } = await gql.products.createVariants.run(graphql, {
+        productId: productCreate.product.id,
+        strategy: 'REMOVE_STANDALONE_VARIANT',
+        variants: [{ price, metafields: productVariantMetafields }],
+      });
+
+      if (!productVariantsBulkCreate?.productVariants) {
+        throw new HttpError('Failed to create service product variant', 500);
+      }
+
+      const [variant] = productVariantsBulkCreate?.productVariants;
 
       if (!variant) {
         throw new HttpError('Failed to create service product variant', 500);
       }
 
+      const { inventoryItemUpdate } = await gql.inventoryItems.updateInventoryItem.run(graphql, {
+        id: variant.inventoryItem.id,
+        input: { sku },
+      });
+
+      if (!inventoryItemUpdate?.inventoryItem?.id) {
+        throw new HttpError('Failed to update inventory item', 500);
+      }
+
       return res.json({
-        type: 'success',
+        submissionResult: submission.reply(),
         variant: {
           ...parseProductVariantMetafields(variant),
           errors: getServiceProductVariantErrors(variant),
@@ -270,9 +297,15 @@ type ServiceProductVariant = ProductVariantFragmentWithMetafields & { errors: st
 
 function getServiceProductVariantErrors(productVariant: gql.products.ProductVariantFragment.Result) {
   return match(productVariant)
-    .with({ price: P.not('1.00'), product: { serviceType: { value: QUANTITY_ADJUSTING_SERVICE } } }, () => [
-      'Dynamic services must have a unit price of $1.00 - save to repair',
-    ])
+    .with(
+      {
+        price: P.select(P.when(price => BigDecimal.fromMoney(price).compare(BigDecimal.ONE) > 0)),
+        product: { serviceType: { value: QUANTITY_ADJUSTING_SERVICE } },
+      },
+      price => [
+        `Dynamic services with a price of $${BigDecimal.fromMoney(price).round(2, RoundingMode.CEILING)} may cause excessive rounding. Use $1.00, $0.10, or $0.01 instead.`,
+      ],
+    )
     .otherwise(() => null);
 }
 
@@ -285,12 +318,8 @@ export type GetServiceResponse = {
   service: ServiceProductVariant | null;
 };
 
-export type UpsertServiceResponse =
-  | {
-      type: 'submission-result';
-      submissionResult: SubmissionResult;
-    }
-  | {
-      type: 'success';
-      variant: ServiceProductVariant;
-    };
+// TODO: Update in labour too
+export type UpsertServiceResponse = {
+  submissionResult: SubmissionResult;
+  variant: ServiceProductVariant | null;
+};

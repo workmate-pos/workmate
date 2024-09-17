@@ -11,14 +11,11 @@
       "items": {
         "type": "object",
         "properties": {
-          "type": {
-            "enum": ["product", "custom-item"]
-          },
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           }
         },
-        "required": ["type", "uuid"],
+        "required": ["uuid"],
         "additionalProperties": false
       }
     },
@@ -27,18 +24,15 @@
       "items": {
         "type": "object",
         "properties": {
-          "type": {
-            "enum": ["hourly-labour", "fixed-price-labour"]
-          },
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           }
         },
-        "required": ["type", "uuid"],
+        "required": ["uuid"],
         "additionalProperties": false
       }
     }
   },
-  "required": ["name", "items"],
+  "required": ["name", "items", "charges"],
   "additionalProperties": false
 }

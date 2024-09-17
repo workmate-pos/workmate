@@ -1,7 +1,7 @@
 import { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { assertValidUuid } from '../../util/uuid.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
@@ -11,12 +11,11 @@ import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
+import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.js';
 
 export async function validateCreateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder, superuser: boolean) {
   assertValidUuids(createWorkOrder);
-  assertUniqueItemUuids(createWorkOrder);
-  assertUniqueHourlyLabourChargeUuids(createWorkOrder);
-  assertUniqueFixedPriceLabourChargeUuids(createWorkOrder);
+  assertUniqueUuids(createWorkOrder);
   assertPositiveItemQuantities(createWorkOrder);
   assertValidChargeItemUuids(createWorkOrder);
   assertValidCompanyDetails(createWorkOrder);
@@ -34,9 +33,7 @@ export async function validateCalculateWorkOrder(
   superuser: boolean,
 ) {
   assertValidUuids(calculateWorkOrder);
-  assertUniqueItemUuids(calculateWorkOrder);
-  assertUniqueHourlyLabourChargeUuids(calculateWorkOrder);
-  assertUniqueFixedPriceLabourChargeUuids(calculateWorkOrder);
+  assertUniqueUuids(calculateWorkOrder);
   assertPositiveItemQuantities(calculateWorkOrder);
   assertValidChargeItemUuids(calculateWorkOrder);
 
@@ -52,51 +49,27 @@ function assertValidUuids(createWorkOrder: Pick<CreateWorkOrder, 'items' | 'char
   }
 }
 
-function assertUniqueItemUuids(createWorkOrder: Pick<CreateWorkOrder, 'items'>) {
+function assertUniqueUuids(createWorkOrder: Pick<CreateWorkOrder, 'items' | 'charges'>) {
   const itemUuids = createWorkOrder.items.map(li => li.uuid);
   const itemUuidsSet = new Set(itemUuids);
 
   if (itemUuidsSet.size !== itemUuids.length) {
     throw new HttpError('Work order items must have unique uuids', 400);
   }
-}
 
-function assertUniqueHourlyLabourChargeUuids(createWorkOrder: Pick<CreateWorkOrder, 'charges'>) {
-  const hourlyLabourChargeUuids = createWorkOrder.charges
-    .filter(hasPropertyValue('type', 'hourly-labour'))
-    .map(charge => charge.uuid);
+  const chargeUuids = createWorkOrder.charges.map(charge => charge.uuid);
+  const chargeUuidsSet = new Set(chargeUuids);
 
-  const hourlyLabourChargeUuidsSet = new Set(hourlyLabourChargeUuids);
-
-  if (hourlyLabourChargeUuidsSet.size !== hourlyLabourChargeUuids.length) {
-    throw new HttpError('Hourly labour charges must have unique uuids', 400);
-  }
-}
-
-function assertUniqueFixedPriceLabourChargeUuids(createWorkOrder: Pick<CreateWorkOrder, 'charges'>) {
-  const fixedPriceLabourChargeUuids = createWorkOrder.charges
-    .filter(hasPropertyValue('type', 'fixed-price-labour'))
-    .map(charge => charge.uuid);
-
-  const fixedPriceLabourChargeUuidsSet = new Set(fixedPriceLabourChargeUuids);
-
-  if (fixedPriceLabourChargeUuidsSet.size !== fixedPriceLabourChargeUuids.length) {
-    throw new HttpError('Fixed price labour charges must have unique uuids', 400);
+  if (chargeUuidsSet.size !== chargeUuids.length) {
+    throw new HttpError('Work order charges must have unique uuids', 400);
   }
 }
 
 function assertValidChargeItemUuids(createWorkOrder: Pick<CreateWorkOrder, 'items' | 'charges'>) {
   for (const charge of createWorkOrder.charges) {
-    if (charge.workOrderItem !== null) {
-      if (
-        !createWorkOrder.items
-          .filter(hasPropertyValue('type', charge.workOrderItem.type))
-          .some(hasPropertyValue('uuid', charge.workOrderItem.uuid))
-      ) {
-        throw new HttpError(
-          `Charge references non-existent work order ${charge.workOrderItem.type} ${charge.workOrderItem.uuid}`,
-          400,
-        );
+    if (charge.workOrderItemUuid !== null) {
+      if (!createWorkOrder.items.some(hasPropertyValue('uuid', charge.workOrderItemUuid))) {
+        throw new HttpError(`Charge references non-existent work order item ${charge.workOrderItemUuid}`, 400);
       }
     }
 
@@ -148,7 +121,7 @@ async function assertValidWorkOrderName(session: Session, createWorkOrder: Pick<
   if (createWorkOrder.name) {
     // if a name is provided it must already exist (deciding the name in the request is not allowed)
 
-    const [workOrder] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
+    const workOrder = await getWorkOrder({ shop: session.shop, name: createWorkOrder.name });
 
     if (!workOrder) {
       throw new HttpError('Work order not found', 404);
@@ -189,7 +162,7 @@ export async function getMissingNonPaidWorkOrderProduct(
   if (createWorkOrder.name) {
     // if this work order already exists we should only check product variant ids that have not been paid for yet
 
-    const [{ id: workOrderId } = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
+    const { id: workOrderId } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
 
     const uuids = createWorkOrder.items.map(li => li.uuid);
     const items = uuids.length ? await db.workOrder.getItemsByUuids({ workOrderId, uuids }) : [];
@@ -219,7 +192,6 @@ export async function getMissingNonPaidWorkOrderProduct(
   );
 
   const missingProductVariantIds = [...productVariantIds].filter(id => !existingProductVariantIds.has(id));
-
   return missingProductVariantIds;
 }
 
@@ -228,8 +200,8 @@ async function assertNoIllegalItemChanges(session: Session, createWorkOrder: Pic
     return;
   }
 
-  const [{ id: workOrderId } = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
-  const currentItems = await db.workOrder.getItems({ workOrderId });
+  const { id: workOrderId } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+  const currentItems = await getWorkOrderItems(workOrderId);
 
   const newItemsByUuid = Object.fromEntries(createWorkOrder.items.map(item => [item.uuid, item]));
 
@@ -241,17 +213,26 @@ async function assertNoIllegalItemChanges(session: Session, createWorkOrder: Pic
 
       const newItem = newItemsByUuid[currentItem.uuid] ?? never();
 
-      if (newItem.type == 'product' && newItem.productVariantId !== currentItem.productVariantId) {
+      if (newItem.type !== currentItem.data.type) {
+        throw new HttpError(`Cannot change type of item ${currentItem.uuid}`, 400);
+      }
+
+      if (
+        newItem.type === 'product' &&
+        currentItem.data.type === 'product' &&
+        newItem.productVariantId !== currentItem.data.productVariantId
+      ) {
         throw new HttpError(`Cannot change product variant of item ${currentItem.uuid}`, 400);
       }
 
-      if (newItem.quantity !== currentItem.quantity) {
+      if (newItem.quantity !== currentItem.data.quantity) {
         throw new HttpError(`Cannot change quantity of item ${currentItem.uuid}`, 400);
       }
     }
   }
 }
 
+// TODO: Merge with fixed price labour
 async function assertNoIllegalHourlyChargeChanges(
   session: Session,
   createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items' | 'charges'>,
@@ -261,8 +242,10 @@ async function assertNoIllegalHourlyChargeChanges(
     return;
   }
 
-  const [{ id: workOrderId } = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
-  const currentHourlyCharges = await db.workOrderCharges.getHourlyLabourCharges({ workOrderId });
+  const { id: workOrderId } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+  const currentHourlyCharges = await getWorkOrderCharges(workOrderId).then(charges =>
+    charges.filter(hasNestedPropertyValue('data.type', 'hourly-labour')),
+  );
 
   const newHourlyChargesByUuid = Object.fromEntries(
     createWorkOrder.charges.filter(hasPropertyValue('type', 'hourly-labour')).map(charge => [charge.uuid, charge]),
@@ -278,7 +261,7 @@ async function assertNoIllegalHourlyChargeChanges(
       throw new HttpError(`Cannot delete hourly charge ${oldCharge.uuid} as it is connected to an order`, 400);
     }
 
-    if (oldCharge.removeLocked && !canUnlock && !(oldCharge.uuid in newHourlyChargesByUuid)) {
+    if (oldCharge.data.removeLocked && !canUnlock && !(oldCharge.uuid in newHourlyChargesByUuid)) {
       throw new HttpError(`Cannot remove hourly charge ${oldCharge.uuid} as it is locked`, 400);
     }
 
@@ -288,37 +271,37 @@ async function assertNoIllegalHourlyChargeChanges(
       continue;
     }
 
-    if (isLineItem && newCharge.name !== oldCharge.name) {
+    if (isLineItem && newCharge.name !== oldCharge.data.name) {
       throw new HttpError(`Cannot change name of hourly charge ${newCharge.uuid}`, 400);
     }
 
-    const rateIsLocked = oldCharge.rateLocked && !superuser;
+    const rateIsLocked = oldCharge.data.rateLocked && !superuser;
 
-    if ((isLineItem || rateIsLocked) && newCharge.rate !== oldCharge.rate) {
+    if ((isLineItem || rateIsLocked) && newCharge.rate !== oldCharge.data.rate) {
       throw new HttpError(`Cannot change rate of hourly charge ${newCharge.uuid}`, 400);
     }
 
-    const hoursIsLocked = oldCharge.hoursLocked && !superuser;
+    const hoursIsLocked = oldCharge.data.hoursLocked && !superuser;
 
-    if ((isLineItem || hoursIsLocked) && newCharge.hours !== oldCharge.hours) {
+    if ((isLineItem || hoursIsLocked) && newCharge.hours !== oldCharge.data.hours) {
       throw new HttpError(`Cannot change hours of hourly charge ${newCharge.uuid}`, 400);
     }
 
-    const unlocksRateLock = oldCharge.rateLocked && !newCharge.rateLocked;
+    const unlocksRateLock = oldCharge.data.rateLocked && !newCharge.rateLocked;
 
-    if ((isLineItem && newCharge.rateLocked !== oldCharge.rateLocked) || (!canUnlock && unlocksRateLock)) {
+    if ((isLineItem && newCharge.rateLocked !== oldCharge.data.rateLocked) || (!canUnlock && unlocksRateLock)) {
       throw new HttpError(`Cannot change rate lock of hourly charge ${newCharge.uuid}`, 400);
     }
 
-    const unlocksHoursLock = oldCharge.hoursLocked && !newCharge.hoursLocked;
+    const unlocksHoursLock = oldCharge.data.hoursLocked && !newCharge.hoursLocked;
 
-    if ((isLineItem && newCharge.hoursLocked !== oldCharge.hoursLocked) || (!canUnlock && unlocksHoursLock)) {
+    if ((isLineItem && newCharge.hoursLocked !== oldCharge.data.hoursLocked) || (!canUnlock && unlocksHoursLock)) {
       throw new HttpError(`Cannot change hours lock of hourly charge ${newCharge.uuid}`, 400);
     }
 
-    const unlocksRemoveLock = oldCharge.removeLocked && !newCharge.removeLocked;
+    const unlocksRemoveLock = oldCharge.data.removeLocked && !newCharge.removeLocked;
 
-    if ((isLineItem && newCharge.removeLocked !== oldCharge.removeLocked) || (!canUnlock && unlocksRemoveLock)) {
+    if ((isLineItem && newCharge.removeLocked !== oldCharge.data.removeLocked) || (!canUnlock && unlocksRemoveLock)) {
       throw new HttpError(`Cannot change remove lock of hourly charge ${newCharge.uuid}`, 400);
     }
   }
@@ -333,8 +316,10 @@ async function assertNoIllegalFixedPriceChargeChanges(
     return;
   }
 
-  const [{ id: workOrderId } = never()] = await db.workOrder.get({ shop: session.shop, name: createWorkOrder.name });
-  const currentFixedPriceCharges = await db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId });
+  const { id: workOrderId } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+  const currentFixedPriceCharges = await getWorkOrderCharges(workOrderId).then(charges =>
+    charges.filter(hasNestedPropertyValue('data.type', 'fixed-price-labour')),
+  );
 
   const newFixedPriceChargesByUuid = Object.fromEntries(
     createWorkOrder.charges.filter(hasPropertyValue('type', 'fixed-price-labour')).map(charge => [charge.uuid, charge]),
@@ -349,7 +334,7 @@ async function assertNoIllegalFixedPriceChargeChanges(
       throw new HttpError(`Cannot delete fixed price charge ${oldCharge.uuid} as it is connected to an order`, 400);
     }
 
-    if (oldCharge.removeLocked && !canUnlock && !(oldCharge.uuid in newFixedPriceChargesByUuid)) {
+    if (oldCharge.data.removeLocked && !canUnlock && !(oldCharge.uuid in newFixedPriceChargesByUuid)) {
       throw new HttpError(`Cannot remove fixed price charge ${oldCharge.uuid} as it is locked`, 400);
     }
 
@@ -359,25 +344,25 @@ async function assertNoIllegalFixedPriceChargeChanges(
       continue;
     }
 
-    if (isLineItem && newCharge.name !== oldCharge.name) {
+    if (isLineItem && newCharge.name !== oldCharge.data.name) {
       throw new HttpError(`Cannot change name of fixed price charge ${newCharge.uuid}`, 400);
     }
 
-    const amountIsLocked = oldCharge.amountLocked && !superuser;
+    const amountIsLocked = oldCharge.data.amountLocked && !superuser;
 
-    if ((isLineItem || amountIsLocked) && newCharge.amount !== oldCharge.amount) {
+    if ((isLineItem || amountIsLocked) && newCharge.amount !== oldCharge.data.amount) {
       throw new HttpError(`Cannot change amount of fixed price charge ${newCharge.uuid}`, 400);
     }
 
-    const unlocksAmountLock = oldCharge.amountLocked && !newCharge.amountLocked;
+    const unlocksAmountLock = oldCharge.data.amountLocked && !newCharge.amountLocked;
 
-    if ((isLineItem && newCharge.amountLocked !== oldCharge.amountLocked) || (!canUnlock && unlocksAmountLock)) {
+    if ((isLineItem && newCharge.amountLocked !== oldCharge.data.amountLocked) || (!canUnlock && unlocksAmountLock)) {
       throw new HttpError(`Cannot change amount lock of fixed price charge ${newCharge.uuid}`, 400);
     }
 
-    const unlocksRemoveLock = oldCharge.removeLocked && !newCharge.removeLocked;
+    const unlocksRemoveLock = oldCharge.data.removeLocked && !newCharge.removeLocked;
 
-    if ((isLineItem && newCharge.removeLocked !== oldCharge.removeLocked) || (!canUnlock && unlocksRemoveLock)) {
+    if ((isLineItem && newCharge.removeLocked !== oldCharge.data.removeLocked) || (!canUnlock && unlocksRemoveLock)) {
       throw new HttpError(`Cannot change remove lock of fixed price charge ${newCharge.uuid}`, 400);
     }
   }

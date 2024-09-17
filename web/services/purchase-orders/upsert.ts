@@ -1,128 +1,148 @@
 import { Session } from '@shopify/shopify-api';
-import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getNewPurchaseOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
-import { getPurchaseOrder } from './get.js';
+import { getDetailedPurchaseOrder } from './get.js';
 import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { gql } from '../gql/gql.js';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { sendPurchaseOrderWebhook } from './webhook.js';
-import { hasNonNullableProperty, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import {
+  hasNestedPropertyValue,
+  hasNonNullableProperty,
+  hasPropertyValue,
+  isNonNullable,
+} from '@teifi-digital/shopify-app-toolbox/guards';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
-import { PurchaseOrder } from './types.js';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { ensureShopifyOrdersExist } from '../shopify-order/sync.js';
+import { DetailedPurchaseOrder } from './types.js';
+import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureLocationsExist } from '../locations/sync.js';
 import { ensureEmployeesExist } from '../employee/sync.js';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { validateCreatePurchaseOrder } from './validate.js';
+import {
+  insertPurchaseOrderAssignedEmployees,
+  insertPurchaseOrderCustomFields,
+  insertPurchaseOrderLineItemCustomFields,
+  removePurchaseOrderAssignedEmployees,
+  removePurchaseOrderCustomFields,
+  removePurchaseOrderLineItemCustomFields,
+  removePurchaseOrderLineItemsByUuids,
+  upsertPurchaseOrderLineItems,
+  upsertPurchaseOrder,
+  getPurchaseOrdersForSerial,
+} from './queries.js';
+import { getProducts } from '../products/queries.js';
+import { getSpecialOrderLineItemsByNameAndUuids, getSpecialOrdersByNames } from '../special-orders/queries.js';
+import { httpError } from '../../util/http-error.js';
+import { getProductVariants } from '../product-variants/queries.js';
+import { getSerialsByProductVariantSerials, upsertSerials } from '../serials/queries.js';
 
-export async function upsertPurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
+export async function upsertCreatePurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
   const { shop } = session;
 
   return await unit(async () => {
-    validateCreatePurchaseOrder(createPurchaseOrder);
-
     const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
 
     const isNew = createPurchaseOrder.name === null;
-    const existingPurchaseOrder = isNew ? null : await getPurchaseOrder(session, name);
-
-    const productVariantIds = createPurchaseOrder.lineItems.map(({ productVariantId }) => productVariantId);
-    await ensureProductVariantsExist(session, productVariantIds);
-
-    if (createPurchaseOrder.locationId !== null) {
-      await ensureLocationsExist(session, [createPurchaseOrder.locationId]);
-    }
-
-    const employeeIds = createPurchaseOrder.employeeAssignments.map(({ employeeId }) => employeeId);
-    await ensureEmployeesExist(session, employeeIds);
-
-    const orderIds = unique(
-      createPurchaseOrder.lineItems
-        .map(({ shopifyOrderLineItem }) => shopifyOrderLineItem?.orderId)
-        .filter(isNonNullable),
-    );
-
-    await ensureShopifyOrdersExist(session, orderIds);
+    const existingPurchaseOrder = isNew ? null : await getDetailedPurchaseOrder(session, name);
 
     assertNoIllegalPurchaseOrderChanges(createPurchaseOrder, existingPurchaseOrder);
     assertNoIllegalLineItems(createPurchaseOrder);
     assertNoIllegalLineItemChanges(createPurchaseOrder, existingPurchaseOrder?.lineItems ?? []);
 
-    const [{ id: purchaseOrderId } = never()] = await db.purchaseOrder.upsert({
-      shop,
-      name,
-      placedDate: createPurchaseOrder.placedDate,
-      status: createPurchaseOrder.status,
-      vendorName: createPurchaseOrder.vendorName,
-      locationId: createPurchaseOrder.locationId,
-      note: createPurchaseOrder.note,
-      shipFrom: createPurchaseOrder.shipFrom,
-      shipTo: createPurchaseOrder.shipTo,
-      deposited: createPurchaseOrder.deposited,
-      paid: createPurchaseOrder.paid,
-      discount: createPurchaseOrder.discount,
-      tax: createPurchaseOrder.tax,
-      shipping: createPurchaseOrder.shipping,
-    });
-
-    const newLineItemUuids = new Set(createPurchaseOrder.lineItems.map(li => li.uuid));
-    const oldLineItemUuids = new Set(existingPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
-
-    const uuids = [...oldLineItemUuids].filter(oldUuid => !newLineItemUuids.has(oldUuid));
+    const productVariantIds = createPurchaseOrder.lineItems.map(({ productVariantId }) => productVariantId);
+    const locationIds = [createPurchaseOrder.locationId].filter(isNonNullable);
+    const employeeIds = createPurchaseOrder.employeeAssignments.map(({ employeeId }) => employeeId);
 
     await Promise.all([
-      uuids.length && db.purchaseOrder.removeLineItemsByUuids({ purchaseOrderId, uuids }),
-      db.purchaseOrder.removeCustomFields({ purchaseOrderId }),
-      db.purchaseOrder.removeLineItemCustomFields({ purchaseOrderId }),
-      db.purchaseOrder.removeAssignedEmployees({ purchaseOrderId }),
+      ensureProductVariantsExist(session, productVariantIds),
+      ensureLocationsExist(session, locationIds),
+      ensureEmployeesExist(session, employeeIds),
+      assertAllSameVendor(createPurchaseOrder),
+      assertValidSpecialOrderLineItems(shop, createPurchaseOrder, existingPurchaseOrder),
     ]);
 
-    const createLineItemsPromise = Promise.all(
-      createPurchaseOrder.lineItems.map(lineItem =>
-        db.purchaseOrder.upsertLineItem({
-          uuid: lineItem.uuid,
-          productVariantId: lineItem.productVariantId,
-          purchaseOrderId: purchaseOrderId,
-          availableQuantity: lineItem.availableQuantity,
-          quantity: lineItem.quantity,
-          unitCost: lineItem.unitCost,
-          shopifyOrderLineItemId: lineItem.shopifyOrderLineItem?.id,
-        }),
-      ),
+    const { id: purchaseOrderId } = await upsertPurchaseOrder({
+      ...createPurchaseOrder,
+      shop,
+      name,
+    });
+
+    const specialOrderLineItemNameUuids = createPurchaseOrder.lineItems
+      .map(lineItem => lineItem.specialOrderLineItem)
+      .filter(isNonNullable);
+
+    const lineItemSerials = createPurchaseOrder.lineItems
+      .map(lineItem => ({
+        productVariantId: lineItem.productVariantId,
+        serial: lineItem.serialNumber,
+        locationId: createPurchaseOrder.locationId,
+        customerId: null,
+        note: '',
+      }))
+      .filter(hasNonNullableProperty('serial'));
+
+    const existingLineItemUuids = new Set(existingPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
+    const createLineItemUuids = new Set(createPurchaseOrder.lineItems.map(li => li.uuid));
+    const uuidsToRemove = [...existingLineItemUuids].filter(oldUuid => !createLineItemUuids.has(oldUuid));
+
+    const [specialOrderLineItems, serials] = await Promise.all([
+      getSpecialOrderLineItemsByNameAndUuids(shop, specialOrderLineItemNameUuids),
+      upsertSerials(shop, lineItemSerials).then(() => getSerialsByProductVariantSerials(shop, lineItemSerials)),
+      removePurchaseOrderLineItemsByUuids(purchaseOrderId, uuidsToRemove),
+      removePurchaseOrderCustomFields(purchaseOrderId),
+      removePurchaseOrderLineItemCustomFields(purchaseOrderId),
+      removePurchaseOrderAssignedEmployees(purchaseOrderId),
+    ]);
+
+    await assertNoIllegalSerials(shop, createPurchaseOrder, existingPurchaseOrder);
+    console.log('lineItemSerials', lineItemSerials);
+    console.log(
+      'lineItemSerials2',
+      createPurchaseOrder.lineItems.map(lineItem => ({
+        ...lineItem,
+        specialOrderLineItemId: !lineItem.specialOrderLineItem
+          ? null
+          : (specialOrderLineItems
+              .filter(hasPropertyValue('uuid', lineItem.specialOrderLineItem.uuid))
+              .find(hasPropertyValue('specialOrderName', lineItem.specialOrderLineItem.name))?.id ??
+            httpError('Special order line item not found', 400)),
+        productVariantSerialId: !lineItem.serialNumber
+          ? null
+          : (serials
+              .filter(hasPropertyValue('productVariantId', lineItem.productVariantId))
+              .find(hasPropertyValue('serial', lineItem.serialNumber))?.id ?? httpError('Serial not found', 400)),
+      })),
     );
 
     await Promise.all([
-      createLineItemsPromise.then(() =>
-        Promise.all(
-          createPurchaseOrder.lineItems.flatMap(lineItem =>
-            Object.entries(lineItem.customFields).map(([key, value]) =>
-              db.purchaseOrder.insertLineItemCustomField({
-                purchaseOrderId,
-                purchaseOrderLineItemUuid: lineItem.uuid,
-                key,
-                value,
-              }),
-            ),
-          ),
-        ),
-      ),
-      ...Object.entries(createPurchaseOrder.customFields).map(([key, value]) =>
-        db.purchaseOrder.insertCustomField({ purchaseOrderId, key, value }),
-      ),
-      ...createPurchaseOrder.employeeAssignments.map(employee =>
-        db.purchaseOrder.insertAssignedEmployee({ employeeId: employee.employeeId, purchaseOrderId }),
-      ),
+      upsertPurchaseOrderLineItems(
+        purchaseOrderId,
+        createPurchaseOrder.lineItems.map(lineItem => ({
+          ...lineItem,
+          specialOrderLineItemId: !lineItem.specialOrderLineItem
+            ? null
+            : (specialOrderLineItems
+                .filter(hasPropertyValue('uuid', lineItem.specialOrderLineItem.uuid))
+                .find(hasPropertyValue('specialOrderName', lineItem.specialOrderLineItem.name))?.id ??
+              httpError('Special order line item not found', 400)),
+          productVariantSerialId: !lineItem.serialNumber
+            ? null
+            : (serials
+                .filter(hasPropertyValue('productVariantId', lineItem.productVariantId))
+                .find(hasPropertyValue('serial', lineItem.serialNumber))?.id ?? httpError('Serial not found', 400)),
+        })),
+      ).then(() => insertPurchaseOrderLineItemCustomFields(purchaseOrderId, createPurchaseOrder.lineItems)),
+      insertPurchaseOrderCustomFields(purchaseOrderId, createPurchaseOrder.customFields),
+      insertPurchaseOrderAssignedEmployees(purchaseOrderId, createPurchaseOrder.employeeAssignments),
     ]);
 
-    const newPurchaseOrder = (await getPurchaseOrder(session, name)) ?? never('We just made it');
+    const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name)) ?? never('We just made it');
 
     await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
     await adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
@@ -137,7 +157,7 @@ export async function upsertPurchaseOrder(session: Session, createPurchaseOrder:
 
 function assertNoIllegalPurchaseOrderChanges(
   createPurchaseOrder: CreatePurchaseOrder,
-  existingPurchaseOrder: PurchaseOrder | null,
+  existingPurchaseOrder: DetailedPurchaseOrder | null,
 ) {
   if (!existingPurchaseOrder) {
     return;
@@ -156,6 +176,12 @@ function assertNoIllegalPurchaseOrderChanges(
 }
 
 function assertNoIllegalLineItems(createPurchaseOrder: CreatePurchaseOrder) {
+  const uuids = createPurchaseOrder.lineItems.map(li => li.uuid);
+
+  if (unique(uuids).length !== uuids.length) {
+    throw new HttpError('Duplicate line item uuids', 400);
+  }
+
   for (const lineItem of createPurchaseOrder.lineItems) {
     if (lineItem.availableQuantity < 0) {
       throw new HttpError('Available quantity cannot be negative', 400);
@@ -183,7 +209,7 @@ function assertNoIllegalLineItems(createPurchaseOrder: CreatePurchaseOrder) {
  */
 function assertNoIllegalLineItemChanges(
   createPurchaseOrder: CreatePurchaseOrder,
-  oldLineItems: PurchaseOrder['lineItems'][number][],
+  oldLineItems: DetailedPurchaseOrder['lineItems'][number][],
 ) {
   for (const oldLineItem of oldLineItems) {
     const newLineItem = createPurchaseOrder.lineItems.find(newLineItem => newLineItem.uuid === oldLineItem.uuid);
@@ -196,6 +222,7 @@ function assertNoIllegalLineItemChanges(
       continue;
     }
 
+    // TODO: Maybe allow this again
     if (newLineItem.availableQuantity < oldLineItem.availableQuantity) {
       throw new HttpError('Cannot decrease available quantity', 400);
     }
@@ -213,9 +240,15 @@ function assertNoIllegalLineItemChanges(
         throw new HttpError('Cannot change product variant for (partially) received line items', 400);
       }
 
-      if (newLineItem.shopifyOrderLineItem !== oldLineItem.shopifyOrderLineItem) {
-        // this may be fine
-        throw new HttpError('Cannot change linked order line item for (partially) received line items', 400);
+      if (newLineItem.productVariantId !== oldLineItem.productVariant.id) {
+        throw new HttpError('Cannot change product variant for (partially) received line items', 400);
+      }
+
+      if (
+        newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.name ||
+        newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.uuid
+      ) {
+        throw new HttpError('Cannot change linked special order line item for (partially) received line items', 400);
       }
     }
   }
@@ -226,8 +259,8 @@ function assertNoIllegalLineItemChanges(
  */
 async function adjustShopifyInventory(
   session: Session,
-  oldPurchaseOrder: PurchaseOrder | null,
-  newPurchaseOrder: PurchaseOrder,
+  oldPurchaseOrder: DetailedPurchaseOrder | null,
+  newPurchaseOrder: DetailedPurchaseOrder,
 ) {
   const deltasByLocationByInventoryItemId: Record<ID, Record<ID, Record<'incoming' | 'available', number>>> = {};
 
@@ -326,13 +359,71 @@ async function adjustShopifyInventory(
   }
 }
 
+async function assertAllSameVendor(createPurchaseOrder: CreatePurchaseOrder) {
+  const productVariantIds = unique(createPurchaseOrder.lineItems.map(li => li.productVariantId));
+  const productVariants = await getProductVariants(productVariantIds);
+  const productIds = unique(productVariants.map(pv => pv.productId));
+  const products = await getProducts(productIds);
+
+  const vendors = products.map(pv => pv.vendor);
+
+  if (unique(vendors).length > 1) {
+    throw new HttpError('All products must have the same vendor', 400);
+  }
+}
+
+async function assertValidSpecialOrderLineItems(
+  shop: string,
+  createPurchaseOrder: CreatePurchaseOrder,
+  existingPurchaseOrder: DetailedPurchaseOrder | null,
+) {
+  const lineItemsWithLink = createPurchaseOrder.lineItems.filter(hasNonNullableProperty('specialOrderLineItem'));
+  const specialOrderNames = unique(lineItemsWithLink.map(li => li.specialOrderLineItem.name));
+
+  const [specialOrders, specialOrderLineItems] = await Promise.all([
+    getSpecialOrdersByNames(shop, specialOrderNames),
+    getSpecialOrderLineItemsByNameAndUuids(
+      shop,
+      lineItemsWithLink.map(lineItem => lineItem.specialOrderLineItem),
+    ),
+  ]);
+
+  if (specialOrderLineItems.length !== lineItemsWithLink.length) {
+    throw new HttpError('Unknown special order line item(s)', 400);
+  }
+
+  for (const lineItem of specialOrderLineItems) {
+    const specialOrderName = specialOrders.find(hasPropertyValue('id', lineItem.specialOrderId))?.name ?? never('fk');
+
+    const createUsedQuantity = sum(
+      lineItemsWithLink
+        .filter(hasNestedPropertyValue('specialOrderLineItem.uuid', lineItem.uuid))
+        .filter(hasNestedPropertyValue('specialOrderLineItem.name', specialOrderName))
+        .map(lineItem => lineItem.quantity),
+    );
+
+    const existingUsedQuantity = sum(
+      existingPurchaseOrder?.lineItems
+        .filter(hasNestedPropertyValue('specialOrderLineItem.uuid', lineItem.uuid))
+        .filter(hasNestedPropertyValue('specialOrderLineItem.name', specialOrderName))
+        .map(lineItem => lineItem.quantity) ?? [],
+    );
+
+    const usedQuantity = sum(lineItem.purchaseOrderLineItems.map(poli => poli.quantity));
+
+    if (usedQuantity - existingUsedQuantity + createUsedQuantity > lineItem.quantity) {
+      throw new HttpError('Cannot use more special order line item quantity than requested', 400);
+    }
+  }
+}
+
 /**
  * Updates the Inventory Item cost for each product in this purchase order to the average cost of this product over all time
  */
 async function adjustShopifyInventoryItemCosts(
   session: Session,
-  oldPurchaseOrder: PurchaseOrder | null,
-  newPurchaseOrder: PurchaseOrder,
+  oldPurchaseOrder: DetailedPurchaseOrder | null,
+  newPurchaseOrder: DetailedPurchaseOrder,
 ) {
   const graphql = new Graphql(session);
 
@@ -344,19 +435,7 @@ async function adjustShopifyInventoryItemCosts(
     }),
   );
 
-  const productVariants = productVariantIds.length
-    ? await db.productVariants.getMany({ productVariantIds }).then(rows =>
-        rows.map(row => {
-          assertGid(row.productVariantId);
-          assertGid(row.inventoryItemId);
-          return {
-            ...row,
-            productVariantId: row.productVariantId,
-            inventoryItemId: row.inventoryItemId,
-          };
-        }),
-      )
-    : [];
+  const productVariants = await getProductVariants(productVariantIds);
 
   if (productVariantIds.length !== productVariants.length) {
     sentryErr('Failed to get all product variants', {
@@ -382,4 +461,32 @@ async function adjustShopifyInventoryItemCosts(
   };
 
   return await Promise.all(productVariants.map(processProductVariant));
+}
+
+async function assertNoIllegalSerials(
+  shop: string,
+  createPurchaseOrder: CreatePurchaseOrder,
+  oldPurchaseOrder: DetailedPurchaseOrder | null,
+) {
+  const existingUuids = new Set(oldPurchaseOrder?.lineItems.map(li => li.uuid) ?? []);
+  const newLineItems = createPurchaseOrder.lineItems.filter(li => !existingUuids.has(li.uuid));
+
+  const newSerialPurchaseOrders = await Promise.all(
+    newLineItems.filter(hasNonNullableProperty('serialNumber')).map(async lineItem => ({
+      lineItem,
+      purchaseOrders: await getPurchaseOrdersForSerial({
+        shop,
+        serial: lineItem.serialNumber,
+        productVariantId: lineItem.productVariantId,
+      }),
+    })),
+  ).then(result => result.filter(({ purchaseOrders }) => purchaseOrders.length > 0));
+
+  if (newSerialPurchaseOrders.length > 0) {
+    const offendingSerials = newSerialPurchaseOrders.map(({ lineItem }) => lineItem.serialNumber);
+    throw new HttpError(
+      `Serial numbers can only be received in one purchase order (${offendingSerials.join(', ')})`,
+      400,
+    );
+  }
 }

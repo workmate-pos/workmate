@@ -1,28 +1,34 @@
 import { Session } from '@shopify/shopify-api';
 import { CreateStockTransfer } from '../../schemas/generated/create-stock-transfer.js';
 import { validateCreateStockTransfer } from './validate.js';
-import { db } from '../db/db.js';
 import { getNewStockTransferName } from '../id-formatting.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { unit } from '../db/unit-of-work.js';
-import { IGetLineItemsResult, IGetResult } from '../db/queries/generated/stock-transfers.sql.js';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
-import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { gql } from '../gql/gql.js';
+import {
+  getStockTransfer,
+  getStockTransferLineItems,
+  removeStockTransferLineItems,
+  StockTransfer,
+  StockTransferLineItem,
+  upsertStockTransfer,
+  upsertStockTransferLineItems,
+} from './queries.js';
 
-export async function upsertStockTransfer(session: Session, createStockTransfer: CreateStockTransfer) {
+export async function upsertCreateStockTransfer(session: Session, createStockTransfer: CreateStockTransfer) {
   await validateCreateStockTransfer(session, createStockTransfer);
 
   return await unit(async () => {
-    const [previousStockTransfer] = createStockTransfer.name
-      ? await db.stockTransfers.get({ shop: session.shop, name: createStockTransfer.name })
-      : [];
+    const previousStockTransfer = createStockTransfer.name
+      ? await getStockTransfer({ shop: session.shop, name: createStockTransfer.name })
+      : null;
 
-    const [stockTransfer = never()] = await db.stockTransfers.upsert({
+    const stockTransfer = await upsertStockTransfer({
       shop: session.shop,
       name: createStockTransfer.name || (await getNewStockTransferName(session.shop)),
       fromLocationId: createStockTransfer.fromLocationId,
@@ -32,12 +38,11 @@ export async function upsertStockTransfer(session: Session, createStockTransfer:
 
     const { id: stockTransferId } = stockTransfer;
 
-    const previousLineItems = await db.stockTransfers.getLineItems({ stockTransferId });
+    const previousLineItems = await getStockTransferLineItems(stockTransferId);
+    await removeStockTransferLineItems(stockTransferId);
+    await upsertStockTransferLineItems(stockTransferId, createStockTransfer.lineItems);
 
-    await db.stockTransfers.removeLineItems({ stockTransferId: stockTransfer.id });
-    await upsertLineItems(createStockTransfer, stockTransfer.id);
-
-    const getLocationIds = (stockTransfer: IGetResult | undefined) => {
+    const getLocationIds = (stockTransfer: StockTransfer | null) => {
       const from = stockTransfer?.fromLocationId ?? null;
       const to = stockTransfer?.toLocationId ?? null;
       assertGidOrNull(from);
@@ -61,36 +66,18 @@ export async function upsertStockTransfer(session: Session, createStockTransfer:
   });
 }
 
-async function upsertLineItems(createStockTransfer: CreateStockTransfer, stockTransferId: number) {
-  if (!createStockTransfer.lineItems.length) {
-    return [];
-  }
-
-  return await db.stockTransfers.upsertLineItems({
-    lineItems: createStockTransfer.lineItems.map(lineItem => ({
-      uuid: lineItem.uuid,
-      stockTransferId,
-      quantity: lineItem.quantity,
-      inventoryItemId: lineItem.inventoryItemId,
-      productTitle: lineItem.productTitle,
-      productVariantTitle: lineItem.productVariantTitle,
-      status: lineItem.status,
-    })),
-  });
-}
-
 async function adjustShopifyInventory(
   session: Session,
   name: string,
   previousLocations: { from: ID | null; to: ID | null },
   currentLocations: { from: ID | null; to: ID | null },
-  previousLineItems: IGetLineItemsResult[],
+  previousLineItems: StockTransferLineItem[],
   currentLineItems: CreateStockTransfer['lineItems'],
 ) {
   const deltaByLocationByInventoryItem: Record<ID, Record<ID, Record<'incoming' | 'available', number>>> = {};
 
   const transfers: {
-    lineItems: Pick<IGetLineItemsResult, 'uuid' | 'quantity' | 'inventoryItemId' | 'status'>[];
+    lineItems: Pick<StockTransferLineItem, 'uuid' | 'quantity' | 'inventoryItemId' | 'status'>[];
     factor: number;
     fromLocationId: ID | null;
     toLocationId: ID | null;
@@ -111,8 +98,6 @@ async function adjustShopifyInventory(
 
   for (const { lineItems, factor, fromLocationId, toLocationId } of transfers) {
     for (const lineItem of lineItems) {
-      assertGid(lineItem.inventoryItemId);
-
       if (['IN_TRANSIT', 'RECEIVED', 'REJECTED'].includes(lineItem.status)) {
         // Remove quantity from the source inventory.
         if (fromLocationId) {

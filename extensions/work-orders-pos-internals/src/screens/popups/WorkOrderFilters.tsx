@@ -84,7 +84,7 @@ export function WorkOrderFilters({
           title={'Filter purchase order status'}
           type={'plain'}
           onPress={() =>
-            router.push('PurchaseOrderStatusSelector', {
+            router.push('PurchaseOrderFilterStatusSelector', {
               onSelect: status => setFilters(f => ({ ...f, purchaseOrderStatus: status })),
             })
           }
@@ -94,7 +94,7 @@ export function WorkOrderFilters({
           type={'plain'}
           onPress={() =>
             router.push('CustomerSelector', {
-              onSelect: customer => setFilters(f => ({ ...f, customerId: customer })),
+              onSelect: customer => setFilters(f => ({ ...f, customerId: customer.id })),
             })
           }
         />
@@ -102,10 +102,9 @@ export function WorkOrderFilters({
           title={'Filter employees'}
           type={'plain'}
           onPress={() =>
-            router.push('EmployeeSelector', {
-              selected: employeeIds,
-              onSelect: id => setFilters(f => ({ ...f, employeeIds: [...f.employeeIds, id] })),
-              onDeselect: id => setFilters(f => ({ ...f, employeeIds: f.employeeIds.filter(e => e !== id) })),
+            router.push('MultiEmployeeSelector', {
+              initialSelection: employeeIds,
+              onSelect: employees => setFilters(f => ({ ...f, employeeIds: employees.map(e => e.id) })),
             })
           }
         />

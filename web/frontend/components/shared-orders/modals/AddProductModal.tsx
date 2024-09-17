@@ -22,7 +22,6 @@ import { useInventoryItemQueries } from '@work-orders/common/queries/use-invento
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
-import { v4 as uuid } from 'uuid';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import {
   getProductServiceType,
@@ -37,6 +36,8 @@ import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
+import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 type AddProductModalProps = AddProductModalPropsBase &
   (
@@ -63,6 +64,10 @@ type AddProductModalPropsBase = {
    */
   vendorName?: string;
   /**
+   * Optional create purchase order. Required to import special orders.
+   */
+  createPurchaseOrder?: Pick<CreatePurchaseOrder, 'name' | 'lineItems'>;
+  /**
    * Product type filter, workmate specific.
    */
   productType: 'PRODUCT' | 'SERVICE';
@@ -85,6 +90,7 @@ export function AddProductModal({
   vendorName,
   productType,
   companyLocationId,
+  createPurchaseOrder,
 }: AddProductModalProps) {
   const [page, setPage] = useState(0);
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
@@ -155,10 +161,27 @@ export function AddProductModal({
 
   const shouldShowPrice = companyLocationId === null;
 
+  const [isSpecialOrderModalOpen, setIsSpecialOrderModalOpen] = useState(false);
+
   return (
     <>
+      {outputType === 'PURCHASE_ORDER' && vendorName && locationId && createPurchaseOrder && (
+        <ImportSpecialOrderModal
+          open={isSpecialOrderModalOpen}
+          onClose={() => setIsSpecialOrderModalOpen(false)}
+          createPurchaseOrder={createPurchaseOrder}
+          locationId={locationId}
+          vendorName={vendorName}
+          onSelect={lineItems => {
+            onAdd(lineItems);
+            setToastAction({ content: 'Special order imported' });
+            onClose();
+          }}
+        />
+      )}
+
       <Modal
-        open={open}
+        open={open && !isSpecialOrderModalOpen}
         onClose={onClose}
         title={`Add ${titleCase(thing)}`}
         secondaryActions={[
@@ -166,6 +189,10 @@ export function AddProductModal({
             content: 'Reload',
             onAction: () => productVariantsQuery.refetch(),
             loading: productVariantsQuery.isRefetching,
+          },
+          {
+            content: 'Import Special Order',
+            onAction: () => setIsSpecialOrderModalOpen(true),
           },
           productType === 'SERVICE'
             ? {
@@ -307,7 +334,7 @@ export function AddProductModal({
                         charges.push({
                           ...defaultCharge,
                           uuid: uuid(),
-                          workOrderItem: { type: 'product', uuid: itemUuid },
+                          workOrderItemUuid: itemUuid,
                         });
                       }
 
@@ -332,7 +359,7 @@ export function AddProductModal({
 
                         return {
                           uuid: uuid(),
-                          shopifyOrderLineItem: null,
+                          specialOrderLineItem: null,
                           unitCost: BigDecimal.fromString(unitCost ?? '0.00')
                             .round(2)
                             .toMoney(),
@@ -340,6 +367,7 @@ export function AddProductModal({
                           quantity: pv.quantity,
                           availableQuantity: 0 as Int,
                           customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                          serialNumber: null,
                         } as const;
                       }),
                     );

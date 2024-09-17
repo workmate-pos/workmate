@@ -37,7 +37,7 @@ async function getLocalMigrations() {
       run: runMigration.default,
     });
   }
-  return migrations.sort((a, b) => a.name.localeCompare(b.name));
+  return migrations.toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
 /**

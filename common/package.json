@@ -36,6 +36,14 @@
       "default": "./dist/create-work-order/*",
       "types": "./src/create-work-order/*"
     },
+    "./create-special-order/*": {
+      "default": "./dist/create-special-order/*",
+      "types": "./src/create-special-order/*"
+    },
+    "./create-serial/*": {
+      "default": "./dist/create-serial/*",
+      "types": "./src/create-serial/*"
+    },
     "./metafields/*": {
       "default": "./dist/metafields/*",
       "types": "./src/metafields/*"
@@ -48,7 +56,8 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc -w",
-    "clean": "rm -fr dist node_modules"
+    "clean": "rm -fr dist node_modules tsconfig.tsbuildinfo",
+    "watch": "tsc -w"
   },
   "author": "Tim van Dam",
   "devDependencies": {
@@ -58,7 +67,7 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.56",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.67",
     "react-query": "^3.39.3",
     "ts-pattern": "^5.2.0",
     "uuid": "^9.0.1",

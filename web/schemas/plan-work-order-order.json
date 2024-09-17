@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "description": "Plan an order containing current draft work order items",
+  "properties": {
+    "name": {
+      "type": "string"
+    },
+    "itemTypes": {
+      "type": "array",
+      "items": {
+        "enum": ["product", "custom-item"]
+      }
+    },
+    "itemUuids": {
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/UUID"
+      }
+    },
+    "chargeTypes": {
+      "type": "array",
+      "items": {
+        "enum": ["hourly-labour", "fixed-price-labour"]
+      }
+    },
+    "chargeUuids": {
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/UUID"
+      }
+    }
+  },
+  "required": ["name"],
+  "additionalProperties": false
+}

@@ -36,7 +36,14 @@ export function getMailingAddressInput(companyAddress: gql.companies.CompanyAddr
   };
 }
 
-export async function getMailingAddressInputsForCompanyLocation(session: Session, companyLocationId: ID) {
+export async function getMailingAddressInputsForCompanyLocation(
+  session: Session,
+  companyLocationId?: ID | undefined | null,
+) {
+  if (!companyLocationId) {
+    return { billingAddress: null, shippingAddress: null };
+  }
+
   const graphql = new Graphql(session);
 
   const result = await gql.companies.getCompanyLocation.run(graphql, { id: companyLocationId });

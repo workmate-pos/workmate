@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Filters for fetching vendors",
+  "title": "vendor-filter",
+  "type": "object",
+  "properties": {
+    "specialOrderLocationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "specialOrderLineItemOrderState": {
+      "$ref": "special-order-pagination-options.json#/properties/orderState"
+    }
+  },
+  "additionalProperties": false
+}

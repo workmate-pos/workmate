@@ -2,10 +2,7 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { Route, UseRouter } from '../screens/router.js';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
-import { DropdownProps } from '../screens/Dropdown.js';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { ListPopupProps } from '../screens/ListPopup.js';
 
 export function CustomField({
   name,
@@ -17,7 +14,7 @@ export function CustomField({
   value: string;
   onChange: (value: string) => void;
   useRouter: UseRouter<{
-    Dropdown: Route<DropdownProps<string>>;
+    ListPopup: Route<ListPopupProps>;
   }>;
 }) {
   const fetch = useAuthenticatedFetch();
@@ -34,17 +31,31 @@ export function CustomField({
         const options = customFieldValueOptionsQuery.data;
 
         if (options && options.length > 0) {
-          const clearValue = 'Clear Value';
-
-          router.push('Dropdown', {
+          router.push('ListPopup', {
             title: name,
-            options: unique([clearValue, value.trim() || null, ...options].filter(isNonNullable)),
-            onSelect: selected => onChange(selected === clearValue ? '' : selected),
+            selection: {
+              type: 'select',
+              items: [
+                {
+                  id: '',
+                  leftSide: {
+                    label: 'Clear',
+                  },
+                },
+                ...options.map(option => ({
+                  id: option,
+                  leftSide: {
+                    label: option,
+                  },
+                })),
+              ],
+              onSelect: selected => onChange(selected),
+            },
             useRouter,
           });
         }
       }}
-      disabled={!customFieldValueOptionsQuery.data}
+      disabled={customFieldValueOptionsQuery.data === undefined}
     />
   );
 }

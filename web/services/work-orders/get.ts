@@ -5,38 +5,51 @@ import { escapeLike } from '../db/like.js';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import {
   ShopifyOrderLineItem,
-  WorkOrder,
-  WorkOrderCharge,
+  DetailedWorkOrder,
+  DetailedWorkOrderCharge,
   WorkOrderDiscount,
   WorkOrderInfo,
-  WorkOrderItem,
+  DetailedWorkOrderItem,
   WorkOrderOrder,
   WorkOrderPaymentTerms,
+  WorkOrderSerial,
 } from './types.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { assertGidOrNull } from '../../util/assertions.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { indexBy, indexByMap, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { CustomFieldFilterSchema } from '../custom-field-filters.js';
-import { IGetResult } from '../db/queries/generated/work-order.sql.js';
+import {
+  WorkOrder,
+  getWorkOrder,
+  getWorkOrderCharges,
+  getWorkOrderCustomFields,
+  getWorkOrderItemCustomFields,
+  getWorkOrderItems,
+} from './queries.js';
+import { match, P } from 'ts-pattern';
+import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
+import { getPurchaseOrdersByIds } from '../purchase-orders/queries.js';
+import {
+  getStockTransfersByIds,
+  getTransferOrderLineItemsByShopifyOrderLineItemIds,
+} from '../stock-transfers/queries.js';
+import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
+import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
+import { getSerial } from '../serials/queries.js';
 
-export async function getWorkOrder(session: Session, name: string): Promise<WorkOrder | null> {
-  const [workOrder] = await db.workOrder.get({ shop: session.shop, name });
+export async function getDetailedWorkOrder(session: Session, name: string): Promise<DetailedWorkOrder | null> {
+  const { shop } = session;
+  const workOrder = await getWorkOrder({ shop, name });
 
   if (!workOrder) {
     return null;
   }
-
-  assertGid(workOrder.customerId);
-  assertGidOrNull(workOrder.derivedFromOrderId);
-  assertGidOrNull(workOrder.companyId);
-  assertGidOrNull(workOrder.companyLocationId);
-  assertGidOrNull(workOrder.companyContactId);
 
   return await awaitNested({
     name: workOrder.name,
@@ -49,16 +62,17 @@ export async function getWorkOrder(session: Session, name: string): Promise<Work
     derivedFromOrderId: workOrder.derivedFromOrderId,
     note: workOrder.note,
     internalNote: workOrder.internalNote,
-    items: getWorkOrderItems(workOrder.id),
-    charges: getWorkOrderCharges(workOrder.id),
+    items: getDetailedWorkOrderItems(workOrder.id),
+    charges: getDetailedWorkOrderCharges(workOrder.id),
     orders: getWorkOrderOrders(workOrder.id),
-    customFields: getWorkOrderCustomFields(workOrder.id),
+    customFields: getWorkOrderCustomFieldsRecord(workOrder.id),
     discount: getWorkOrderDiscount(workOrder),
     paymentTerms: getWorkOrderPaymentTerms(workOrder),
+    serial: getWorkOrderSerial(workOrder),
   });
 }
 
-async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string, ShopifyOrderLineItem>> {
+export async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string, ShopifyOrderLineItem>> {
   const lineItems = lineItemIds.length ? await db.shopifyOrder.getLineItemsByIds({ lineItemIds }) : [];
   return indexByMap(
     lineItems,
@@ -78,167 +92,155 @@ async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string, Shopi
   );
 }
 
-async function getWorkOrderItems(workOrderId: number): Promise<WorkOrderItem[]> {
-  const [items, allItemCustomFields, customItems, allCustomItemCustomFields] = await Promise.all([
-    db.workOrder.getItems({ workOrderId }),
-    db.workOrder.getItemCustomFields({ workOrderId }),
-    db.workOrder.getCustomItems({ workOrderId }),
-    db.workOrder.getCustomItemCustomFields({ workOrderId }),
+async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedWorkOrderItem[]> {
+  const [items, customFields] = await Promise.all([
+    getWorkOrderItems(workOrderId),
+    getWorkOrderItemCustomFields(workOrderId),
   ]);
 
-  const lineItemIds = unique(
-    [...items, ...customItems]
-      .map(item => {
-        assertGidOrNull(item.shopifyOrderLineItemId);
-        return item.shopifyOrderLineItemId;
-      })
-      .filter(isNonNullable),
+  const lineItemIds = unique(items.map(item => item.shopifyOrderLineItemId).filter(isNonNullable));
+
+  const [lineItemById, lineItemReservations, transferOrderLineItems, specialOrderLineItems] = await Promise.all([
+    getLineItemsById(lineItemIds),
+    // TODO: Show reservations inside the work order
+    // TODO: Show special orders inside the work order
+    getShopifyOrderLineItemReservationsByIds(lineItemIds),
+    getTransferOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
+    getSpecialOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
+  ]);
+
+  const transferOrderIds = unique(transferOrderLineItems.map(lineItem => lineItem.stockTransferId));
+  const specialOrderIds = unique(specialOrderLineItems.map(lineItem => lineItem.specialOrderId));
+  const purchaseOrderIds = unique(
+    specialOrderLineItems.flatMap(lineItem =>
+      lineItem.purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId),
+    ),
   );
 
-  const [lineItemById, purchaseOrderLineItems] = await Promise.all([
-    getLineItemsById(lineItemIds),
-    lineItemIds.length
-      ? await db.purchaseOrder.getPurchaseOrderLineItemsByShopifyOrderLineItemIds({
-          shopifyOrderLineItemIds: lineItemIds,
-        })
-      : [],
+  const [transferOrders, specialOrders, purchaseOrders] = await Promise.all([
+    getStockTransfersByIds(transferOrderIds),
+    getSpecialOrdersByIds(specialOrderIds),
+    getPurchaseOrdersByIds(purchaseOrderIds),
   ]);
 
-  const purchaseOrderIds = unique(purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId));
-
-  const purchaseOrders = purchaseOrderIds.length ? await db.purchaseOrder.getMany({ purchaseOrderIds }) : [];
+  const transferOrderById = indexBy(transferOrders, po => String(po.id));
+  const specialOrderById = indexBy(specialOrders, so => String(so.id));
   const purchaseOrderById = indexBy(purchaseOrders, po => String(po.id));
 
-  return [
-    ...items.map<WorkOrderItem>(item => {
-      assertGidOrNull(item.shopifyOrderLineItemId);
-      assertGid(item.productVariantId);
+  return items.map<DetailedWorkOrderItem>(item => {
+    const itemCustomFields = customFields.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
-      const itemCustomFields = allItemCustomFields.filter(cf => cf.workOrderItemUuid === item.uuid);
+    const itemReservations = !!item.shopifyOrderLineItemId
+      ? lineItemReservations.filter(hasPropertyValue('lineItemId', item.shopifyOrderLineItemId))
+      : [];
+    const itemTransferOrderLineItems = transferOrderLineItems
+      .filter(hasPropertyValue('shopifyOrderLineItemId', item.shopifyOrderLineItemId))
+      .filter(hasNonNullableProperty('stockTransferId'));
+    const itemSpecialOrderLineItems = item.shopifyOrderLineItemId
+      ? specialOrderLineItems
+          .filter(hasPropertyValue('shopifyOrderLineItemId', item.shopifyOrderLineItemId))
+          .filter(hasNonNullableProperty('specialOrderId'))
+      : [];
 
-      const itemPurchaseOrderLineItems = purchaseOrderLineItems.filter(
-        li => li.shopifyOrderLineItemId === item.shopifyOrderLineItemId && item.shopifyOrderLineItemId !== null,
-      );
+    const itemTransferOrders = itemTransferOrderLineItems.map(
+      poLineItem => transferOrderById[poLineItem.stockTransferId] ?? never('fk'),
+    );
+    const itemSpecialOrders = itemSpecialOrderLineItems.map(
+      poLineItem => specialOrderById[poLineItem.specialOrderId] ?? never('fk'),
+    );
+    const itemPurchaseOrders = itemSpecialOrderLineItems.flatMap(lineItem =>
+      lineItem.purchaseOrderLineItems.map(lineItem => purchaseOrderById[lineItem.purchaseOrderId] ?? never('fk')),
+    );
 
-      const itemPurchaseOrders = itemPurchaseOrderLineItems.map(
-        poLineItem => purchaseOrderById[poLineItem.purchaseOrderId] ?? never('fk'),
-      );
-
-      return {
-        type: 'product',
-        uuid: item.uuid,
-        shopifyOrderLineItem: item.shopifyOrderLineItemId
-          ? lineItemById[item.shopifyOrderLineItemId] ?? never('fk')
-          : null,
-        purchaseOrders: itemPurchaseOrders.map(po => ({
-          name: po.name,
-          items: itemPurchaseOrderLineItems
-            .filter(li => li.purchaseOrderId === po.id)
-            .map(li => {
-              assertMoney(li.unitCost);
-
-              return {
-                unitCost: li.unitCost,
-                quantity: li.quantity as Int,
-                availableQuantity: li.availableQuantity as Int,
-              };
-            }),
+    const base = {
+      uuid: item.uuid,
+      quantity: item.data.quantity,
+      absorbCharges: item.data.absorbCharges,
+      shopifyOrderLineItem: item.shopifyOrderLineItemId
+        ? (lineItemById[item.shopifyOrderLineItemId] ?? never('fk'))
+        : null,
+      purchaseOrders: itemPurchaseOrders.map(po => ({
+        name: po.name,
+        items: itemSpecialOrderLineItems
+          .flatMap(lineItem => lineItem.purchaseOrderLineItems)
+          .filter(hasPropertyValue('purchaseOrderId', po.id)),
+      })),
+      transferOrders: itemTransferOrders.map(to => ({
+        name: to.name,
+        items: itemTransferOrderLineItems.filter(hasPropertyValue('stockTransferId', to.id)),
+      })),
+      specialOrders: itemSpecialOrders.map(so => ({
+        name: so.name,
+        items: itemSpecialOrderLineItems.filter(hasPropertyValue('specialOrderId', so.id)).map(lineItem => ({
+          quantity: lineItem.quantity,
+          orderedQuantity: sum(lineItem.purchaseOrderLineItems.map(lineItem => lineItem.quantity)),
         })),
-        productVariantId: item.productVariantId,
-        quantity: item.quantity as Int,
-        absorbCharges: item.absorbCharges,
-        customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
-      };
-    }),
-    ...customItems.map<WorkOrderItem>(item => {
-      assertGidOrNull(item.shopifyOrderLineItemId);
-      assertMoney(item.unitPrice);
+      })),
+      reservations: itemReservations.map(({ quantity, locationId }) => ({ quantity, locationId })),
+      customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
+    } as const satisfies Partial<DetailedWorkOrderItem>;
 
-      const itemCustomFields = allCustomItemCustomFields.filter(cf => cf.workOrderCustomItemUuid === item.uuid);
-
+    if (item.data.type === 'product') {
       return {
-        type: 'custom-item',
-        uuid: item.uuid,
-        shopifyOrderLineItem: item.shopifyOrderLineItemId
-          ? lineItemById[item.shopifyOrderLineItemId] ?? never('fk')
-          : null,
-        name: item.name,
-        unitPrice: item.unitPrice,
-        quantity: item.quantity as Int,
-        absorbCharges: item.absorbCharges,
-        customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
+        ...base,
+        type: 'product',
+        productVariantId: item.data.productVariantId,
       };
-    }),
-  ];
+    } else if (item.data.type === 'custom-item') {
+      return {
+        ...base,
+        type: 'custom-item',
+        name: item.data.name,
+        unitPrice: item.data.unitPrice,
+      };
+    } else {
+      return item.data satisfies never;
+    }
+  });
 }
 
-async function getWorkOrderCharges(workOrderId: number): Promise<WorkOrderCharge[]> {
-  const [fixedPriceLabour, hourlyLabour] = await Promise.all([
-    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
-    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
-  ]);
+async function getDetailedWorkOrderCharges(workOrderId: number): Promise<DetailedWorkOrderCharge[]> {
+  const charges = await getWorkOrderCharges(workOrderId);
 
-  const lineItemIds = unique(
-    [...fixedPriceLabour, ...hourlyLabour]
-      .map(element => {
-        assertGidOrNull(element.shopifyOrderLineItemId);
-        return element.shopifyOrderLineItemId;
-      })
-      .filter(isNonNullable),
-  );
+  const lineItemIds = unique(charges.map(element => element.shopifyOrderLineItemId).filter(isNonNullable));
   const lineItemById = await getLineItemsById(lineItemIds);
 
-  return [
-    ...fixedPriceLabour.map<WorkOrderCharge>(charge => {
-      assertGidOrNull(charge.shopifyOrderLineItemId);
-      assertGidOrNull(charge.employeeId);
-      assertMoney(charge.amount);
+  return charges.map<DetailedWorkOrderCharge>(charge => {
+    const base = {
+      uuid: charge.uuid as UUID,
+      employeeId: charge.data.employeeId,
+      name: charge.data.name,
+      removeLocked: charge.data.removeLocked,
+      workOrderItemUuid: charge.workOrderItemUuid as UUID | null,
+      shopifyOrderLineItem: charge.shopifyOrderLineItemId
+        ? (lineItemById[charge.shopifyOrderLineItemId] ?? never())
+        : null,
+    };
 
-      return {
-        type: 'fixed-price-labour',
-        uuid: charge.uuid,
-        workOrderItem: charge.workOrderItemUuid
-          ? { type: 'product', uuid: charge.workOrderItemUuid }
-          : charge.workOrderCustomItemUuid
-            ? { type: 'custom-item', uuid: charge.workOrderCustomItemUuid }
-            : null,
-        shopifyOrderLineItem: charge.shopifyOrderLineItemId
-          ? lineItemById[charge.shopifyOrderLineItemId] ?? never()
-          : null,
-        name: charge.name,
-        amount: charge.amount,
-        employeeId: charge.employeeId,
-        amountLocked: charge.amountLocked,
-        removeLocked: charge.removeLocked,
-      };
-    }),
-    ...hourlyLabour.map<WorkOrderCharge>(charge => {
-      assertGidOrNull(charge.shopifyOrderLineItemId);
-      assertGidOrNull(charge.employeeId);
-      assertMoney(charge.rate);
-      assertDecimal(charge.hours);
-
-      return {
-        type: 'hourly-labour',
-        uuid: charge.uuid,
-        workOrderItem: charge.workOrderItemUuid
-          ? { type: 'product', uuid: charge.workOrderItemUuid }
-          : charge.workOrderCustomItemUuid
-            ? { type: 'custom-item', uuid: charge.workOrderCustomItemUuid }
-            : null,
-        shopifyOrderLineItem: charge.shopifyOrderLineItemId
-          ? lineItemById[charge.shopifyOrderLineItemId] ?? never()
-          : null,
-        name: charge.name,
-        rate: charge.rate,
-        hours: charge.hours,
-        employeeId: charge.employeeId,
-        rateLocked: charge.rateLocked,
-        hoursLocked: charge.hoursLocked,
-        removeLocked: charge.removeLocked,
-      };
-    }),
-  ];
+    return {
+      ...base,
+      ...match(charge.data)
+        .with(
+          {
+            type: P.select('type', 'fixed-price-labour'),
+            amount: P.select('amount'),
+            amountLocked: P.select('amountLocked'),
+          },
+          identity,
+        )
+        .with(
+          {
+            type: P.select('type', 'hourly-labour'),
+            rate: P.select('rate'),
+            hours: P.select('hours'),
+            rateLocked: P.select('rateLocked'),
+            hoursLocked: P.select('hoursLocked'),
+          },
+          identity,
+        )
+        .exhaustive(),
+    };
+  });
 }
 
 async function getWorkOrderOrders(workOrderId: number): Promise<WorkOrderOrder[]> {
@@ -255,13 +257,13 @@ async function getWorkOrderOrders(workOrderId: number): Promise<WorkOrderOrder[]
   });
 }
 
-async function getWorkOrderCustomFields(workOrderId: number): Promise<Record<string, string>> {
-  const customFields = await db.workOrder.getCustomFields({ workOrderId });
+export async function getWorkOrderCustomFieldsRecord(workOrderId: number): Promise<Record<string, string>> {
+  const customFields = await getWorkOrderCustomFields(workOrderId);
   return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
 }
 
 export function getWorkOrderDiscount(
-  workOrder: Pick<IGetResult, 'discountType' | 'discountAmount'>,
+  workOrder: Pick<WorkOrder, 'discountType' | 'discountAmount'>,
 ): WorkOrderDiscount | null {
   if (!workOrder.discountAmount) return null;
   if (!workOrder.discountType) return null;
@@ -286,7 +288,7 @@ export function getWorkOrderDiscount(
 }
 
 export function getWorkOrderPaymentTerms(
-  workOrder: Pick<IGetResult, 'id' | 'paymentTermsTemplateId' | 'paymentFixedDueDate'>,
+  workOrder: Pick<WorkOrder, 'id' | 'paymentTermsTemplateId' | 'paymentFixedDueDate'>,
 ): WorkOrderPaymentTerms | null {
   if (workOrder.paymentTermsTemplateId === null) {
     return null;
@@ -351,5 +353,24 @@ export async function getWorkOrderInfoPage(
     fullyPaid: paginationOptions.paymentStatus === 'FULLY_PAID',
   });
 
-  return await Promise.all(page.map(workOrder => getWorkOrder(session, workOrder.name).then(wo => wo ?? never())));
+  return await Promise.all(
+    page.map(workOrder => getDetailedWorkOrder(session, workOrder.name).then(wo => wo ?? never())),
+  );
+}
+
+export async function getWorkOrderSerial(
+  workOrder: Pick<WorkOrder, 'productVariantSerialId'>,
+): Promise<WorkOrderSerial | null> {
+  if (!workOrder.productVariantSerialId) return null;
+
+  const pvs = await getSerial({ id: workOrder.productVariantSerialId });
+  const { productVariantId, serial, locationId } = pvs ?? never('fk');
+
+  // TODO: Warnings on front end in case data doesnt match, e.g. customer and pvs customer
+
+  return {
+    productVariantId,
+    serial,
+    locationId,
+  };
 }

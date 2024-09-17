@@ -1,5 +1,5 @@
 import { Session } from '@shopify/shopify-api';
-import { getPurchaseOrder } from './get.js';
+import { getDetailedPurchaseOrder } from './get.js';
 import { getShopSettings } from '../settings.js';
 import { PurchaseOrderWebhookBody } from './types.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
@@ -7,11 +7,11 @@ import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import fetch from 'node-fetch';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { db } from '../db/db.js';
 import { getVendors } from '../vendors/get.js';
+import { getPurchaseOrder } from './queries.js';
 
 export async function sendPurchaseOrderWebhook(session: Session, name: string) {
-  const purchaseOrder = await getPurchaseOrder(session, name);
+  const purchaseOrder = await getDetailedPurchaseOrder(session, name);
 
   if (!purchaseOrder) {
     throw new Error(`Purchase order with name ${name} not found`);
@@ -21,9 +21,13 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
     {
       purchaseOrderWebhook: { endpointUrl },
     },
-    [{ id, createdAt, updatedAt } = never()],
+    { id, createdAt, updatedAt },
     vendors,
-  ] = await Promise.all([getShopSettings(session.shop), db.purchaseOrder.get({ name }), getVendors(session)]);
+  ] = await Promise.all([
+    getShopSettings(session.shop),
+    getPurchaseOrder({ shop: session.shop, name }).then(po => po ?? never()),
+    getVendors(session),
+  ]);
 
   if (!endpointUrl) {
     return;

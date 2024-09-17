@@ -21,6 +21,7 @@ export type Order = {
     displayName: string;
   } | null;
   workOrders: { name: string }[];
+  customAttributes: { key: string; value: string | null }[];
 };
 
 /**

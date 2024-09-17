@@ -6,6 +6,7 @@ const Base = z.object({
   title: z.string().min(1),
   description: z.string().optional().default(''),
   sku: z.string().min(1),
+  price: zMoney,
 });
 
 export const UpsertService = z.discriminatedUnion('type', [
@@ -19,7 +20,6 @@ export const UpsertService = z.discriminatedUnion('type', [
   }),
   Base.extend({
     type: z.literal('fixed'),
-    price: zMoney,
   }),
 ]);
 

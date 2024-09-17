@@ -4,3 +4,5 @@
 export type DiscriminatedUnionOmit<T, K extends UnionKeys<T>> = T extends unknown ? Omit<T, K> : never;
 
 type UnionKeys<T> = T extends T ? keyof T : never;
+
+export {};

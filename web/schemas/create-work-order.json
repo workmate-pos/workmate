@@ -4,11 +4,37 @@
   "properties": {
     "name": {
       "description": "The name of the work order to update (if applicable). If not provided, a new work order will be created. Unique within a store.",
-      "anyOf": [{ "const": null }, { "type": "string", "minLength": 1 }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
     },
     "status": {
       "type": "string",
       "minLength": 1
+    },
+    "serial": {
+      "anyOf": [
+        { "const": null },
+        {
+          "type": "object",
+          "properties": {
+            "serial": {
+              "type": "string"
+            },
+            "productVariantId": {
+              "$ref": "scalars.json#/definitions/ID"
+            }
+          },
+          "required": ["productVariantId", "serial"],
+          "additionalProperties": false
+        }
+      ]
     },
     "dueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
@@ -23,17 +49,40 @@
       "$ref": "scalars.json#/definitions/ID"
     },
     "companyId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     },
     "companyLocationId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     },
     "companyContactId": {
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     },
     "paymentTerms": {
       "anyOf": [
-        { "const": null },
+        {
+          "const": null
+        },
         {
           "title": "work-order-payment-terms",
           "type": "object",
@@ -42,7 +91,14 @@
               "$ref": "scalars.json#/definitions/ID"
             },
             "date": {
-              "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+              "anyOf": [
+                {
+                  "const": null
+                },
+                {
+                  "$ref": "scalars.json#/definitions/DateTime"
+                }
+              ]
             }
           },
           "additionalProperties": false,
@@ -52,7 +108,14 @@
     },
     "derivedFromOrderId": {
       "description": "A Shopify Order ID from which this work order was derived",
-      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
     },
     "customFields": {
       "type": "object",
@@ -68,7 +131,7 @@
             "type": "object",
             "properties": {
               "uuid": {
-                "type": "string"
+                "$ref": "scalars.json#/definitions/UUID"
               },
               "quantity": {
                 "$ref": "scalars.json#/definitions/Int"
@@ -96,7 +159,7 @@
             "type": "object",
             "properties": {
               "uuid": {
-                "type": "string"
+                "$ref": "scalars.json#/definitions/UUID"
               },
               "quantity": {
                 "$ref": "scalars.json#/definitions/Int"
@@ -139,25 +202,15 @@
                 "const": "hourly-labour"
               },
               "uuid": {
-                "type": "string"
+                "$ref": "scalars.json#/definitions/UUID"
               },
-              "workOrderItem": {
+              "workOrderItemUuid": {
                 "anyOf": [
                   {
                     "const": null
                   },
                   {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "enum": ["product", "custom-item"]
-                      },
-                      "uuid": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["type", "uuid"],
-                    "additionalProperties": false
+                    "$ref": "scalars.json#/definitions/UUID"
                   }
                 ]
               },
@@ -194,7 +247,7 @@
             "required": [
               "type",
               "uuid",
-              "workOrderItem",
+              "workOrderItemUuid",
               "employeeId",
               "name",
               "rate",
@@ -213,25 +266,15 @@
                 "const": "fixed-price-labour"
               },
               "uuid": {
-                "type": "string"
+                "$ref": "scalars.json#/definitions/UUID"
               },
-              "workOrderItem": {
+              "workOrderItemUuid": {
                 "anyOf": [
                   {
                     "const": null
                   },
                   {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "enum": ["product", "custom-item"]
-                      },
-                      "uuid": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["type", "uuid"],
-                    "additionalProperties": false
+                    "$ref": "scalars.json#/definitions/UUID"
                   }
                 ]
               },
@@ -262,7 +305,7 @@
             "required": [
               "type",
               "uuid",
-              "workOrderItem",
+              "workOrderItemUuid",
               "employeeId",
               "name",
               "amount",
@@ -277,7 +320,9 @@
     "discount": {
       "title": "discount",
       "anyOf": [
-        { "const": null },
+        {
+          "const": null
+        },
         {
           "type": "object",
           "anyOf": [
@@ -325,7 +370,8 @@
     "companyId",
     "companyLocationId",
     "companyContactId",
-    "paymentTerms"
+    "paymentTerms",
+    "serial"
   ],
   "additionalProperties": false
 }

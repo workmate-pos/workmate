@@ -31,23 +31,7 @@ export function WorkOrderSummary({
   const fetch = useAuthenticatedFetch({ setToastAction });
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-      ),
-    },
-    { enabled: false },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({ fetch, ...createWorkOrder }, { enabled: false });
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
 
   let appliedDiscount = BigDecimal.ZERO;
@@ -176,20 +160,22 @@ export function WorkOrderSummary({
         </InlineGrid>
 
         <ButtonGroup fullWidth>
-          <Tooltip active={!canPrint} content={'You must save your work order before you can print'} dismissOnMouseOut>
+          <Tooltip content={canPrint ? '' : 'You must save your work order before you can print'} dismissOnMouseOut>
             <Button disabled={disabled || !canPrint} onClick={() => onPrint()}>
               Print
             </Button>
           </Tooltip>
-          <Tooltip
-            active={hasUnsavedChanges}
-            content={'You must save your work order before you can create orders for it'}
-            dismissOnMouseOut
-          >
-            <Button disabled={disabled || hasUnsavedChanges} onClick={() => onCreateOrder()}>
-              Create Unpaid Order
-            </Button>
-          </Tooltip>
+          {!!createWorkOrder.companyId && (
+            <Tooltip
+              active={hasUnsavedChanges}
+              content={'You must save your work order before you can create orders for it'}
+              dismissOnMouseOut
+            >
+              <Button disabled={disabled || hasUnsavedChanges} onClick={() => onCreateOrder()}>
+                Create Unpaid Order
+              </Button>
+            </Tooltip>
+          )}
           <Button variant={'primary'} disabled={disabled} onClick={() => onSave()} loading={isSaving}>
             Save
           </Button>

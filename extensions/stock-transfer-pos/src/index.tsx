@@ -1,15 +1,13 @@
 import { render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { AppProvider } from '@teifi-digital/pos-tools/providers/AppProvider.js';
-import { DialogProvider } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
-import { ScreenSizeProvider } from '@teifi-digital/pos-tools/providers/ScreenSizeProvider.js';
-import { Router } from './routes.js';
-import { ReactQueryProvider } from './providers/ReactQueryProvider.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useStockTransferCountQuery } from '@work-orders/common/queries/use-stock-transfer-count-query.js';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
 import { SECOND_IN_MS } from '@work-orders/common/time/constants.js';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { ReactQueryProvider } from '@work-orders/common-pos/providers/ReactQueryProvider.js';
+import { Router, WorkOrdersApp } from '@work-orders/work-orders-pos-internals';
 
 function SmartGridTile() {
   return (
@@ -67,15 +65,9 @@ function TileWithNotifications() {
 
 function SmartGridModal() {
   return (
-    <AppProvider appUrl={process.env.APP_URL!}>
-      <ReactQueryProvider>
-        <DialogProvider>
-          <ScreenSizeProvider>
-            <Router mainRoute={'Entry'} />
-          </ScreenSizeProvider>
-        </DialogProvider>
-      </ReactQueryProvider>
-    </AppProvider>
+    <WorkOrdersApp>
+      <Router mainRoute={'StockTransferEntry'} />
+    </WorkOrdersApp>
   );
 }
 

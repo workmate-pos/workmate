@@ -4,7 +4,7 @@ import { DiscriminatedUnionOmit } from '../types/DiscriminatedUnionOmit.js';
 
 export function productVariantDefaultChargeToCreateWorkOrderCharge(
   charge: ProductVariant['defaultCharges'][number],
-): DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItem' | 'uuid'> {
+): DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid' | 'uuid'> {
   switch (charge.type) {
     case 'fixed-price-labour-charge': {
       return {

@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "A plan presented to the user before applying a cycle count. This contains exactly what will change, and subsequent operations must fail if any information is outdated/mismatched",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "$ref": "scalars.json#/definitions/UUID"
+          },
+          "originalQuantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          },
+          "countQuantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          }
+        },
+        "required": ["uuid", "originalQuantity", "countQuantity"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}

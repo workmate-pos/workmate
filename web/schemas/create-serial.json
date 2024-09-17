@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "serial": {
+      "type": "string",
+      "minLength": 1
+    },
+    "productVariantId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "locationId": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/ID" }]
+    },
+    "note": {
+      "type": "string"
+    }
+  },
+  "required": ["serial", "productVariantId", "locationId", "note"],
+  "additionalProperties": false
+}

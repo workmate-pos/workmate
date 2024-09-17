@@ -5,7 +5,6 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { CreateProduct } from '../../schemas/generated/create-product.js';
 import { gql } from '../../services/gql/gql.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import {
   parseProductVariantMetafields,
@@ -16,6 +15,7 @@ import { MetafieldInput } from '../../services/gql/queries/generated/schema.js';
 import { productServiceTypeMetafield } from '../../services/metafields/product-service-type-metafield.js';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { ensureMetafieldDefinitionExists } from '../../services/metafields/installable-metafield-service.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 @Authenticated()
 export default class ProductsController {
@@ -29,7 +29,6 @@ export default class ProductsController {
       price,
       vendor,
       barcode,
-      options,
       costPrice,
       locationId,
       productType,
@@ -61,21 +60,19 @@ export default class ProductsController {
           vendor,
           productType,
           status: 'ACTIVE',
-          options: options.map(option => option.name),
-          variants: [
-            {
-              sku,
-              price,
-              barcode,
-              options: options.map(option => option.value),
-              inventoryPolicy: allowOutOfStockPurchases ? 'CONTINUE' : 'DENY',
-              inventoryItem: {
-                cost: costPrice,
-                tracked: true,
-              },
-              inventoryQuantities: locationId ? [{ availableQuantity, locationId }] : [],
-            },
-          ],
+          // variants: [
+          //   {
+          //     sku,
+          //     price,
+          //     barcode,
+          //     inventoryPolicy: allowOutOfStockPurchases ? 'CONTINUE' : 'DENY',
+          //     inventoryItem: {
+          //       cost: costPrice,
+          //       tracked: true,
+          //     },
+          //     inventoryQuantities: locationId ? [{ availableQuantity, locationId }] : [],
+          //   },
+          // ],
           metafields,
           tags,
         },
@@ -86,7 +83,42 @@ export default class ProductsController {
       }
 
       const product = productCreate.product;
-      const [productVariant = never()] = product.variants.nodes;
+
+      const { productVariantsBulkCreate } = await gql.products.createVariants.run(graphql, {
+        productId: product.id,
+        strategy: 'REMOVE_STANDALONE_VARIANT',
+        variants: [
+          {
+            price,
+            barcode,
+            inventoryPolicy: allowOutOfStockPurchases ? 'CONTINUE' : 'DENY',
+            inventoryItem: {
+              cost: costPrice ? BigDecimal.fromMoney(costPrice).toDecimal() : null,
+              tracked: true,
+            },
+            inventoryQuantities: locationId ? [{ availableQuantity, locationId }] : [],
+          },
+        ],
+      });
+
+      if (!productVariantsBulkCreate?.productVariants) {
+        throw new HttpError('Failed to create product variants', 500);
+      }
+
+      const [productVariant] = productVariantsBulkCreate.productVariants;
+
+      if (!productVariant) {
+        throw new HttpError('Failed to create product variant', 500);
+      }
+
+      const { inventoryItemUpdate } = await gql.inventoryItems.updateInventoryItem.run(graphql, {
+        id: productVariant.inventoryItem.id,
+        input: { sku },
+      });
+
+      if (!inventoryItemUpdate?.inventoryItem?.id) {
+        throw new HttpError('Failed to update inventory item', 500);
+      }
 
       return res.json({
         product: {

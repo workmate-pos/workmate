@@ -24,6 +24,8 @@
     "printEmail",
     "workOrderPrintTemplates",
     "purchaseOrderPrintTemplates",
-    "vendorCustomerMetafieldsToShow"
+    "vendorCustomerMetafieldsToShow",
+    "cycleCount",
+    "specialOrders"
   ]
 }

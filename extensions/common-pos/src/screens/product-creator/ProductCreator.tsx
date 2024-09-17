@@ -23,6 +23,7 @@ import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.
 
 export type CreatedProduct = {
   shopifyOrderLineItem: null;
+  specialOrderLineItem: null;
   productVariantId: ID;
   availableQuantity: Int;
   quantity: Int;
@@ -64,6 +65,7 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
 
         onCreate({
           shopifyOrderLineItem: null,
+          specialOrderLineItem: null,
           productVariantId: product.variant.id,
           availableQuantity: 0 as Int,
           quantity,

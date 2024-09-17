@@ -1,3 +1,3 @@
-import { getStockTransfer } from './get.js';
+import { getDetailedStockTransfer } from './get.js';
 
-export type StockTransfer = NonNullable<Awaited<ReturnType<typeof getStockTransfer>>>;
+export type DetailedStockTransfer = NonNullable<Awaited<ReturnType<typeof getDetailedStockTransfer>>>;

@@ -4,8 +4,6 @@ import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use
 import { Select, TextField } from '@shopify/polaris';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
-// TODO: button to manage values
-
 export function CustomField({
   name,
   value,
@@ -21,7 +19,7 @@ export function CustomField({
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const customFieldValueOptionsQuery = useCustomFieldValueOptionsQuery({ fetch, name });
+  const customFieldValueOptionsQuery = useCustomFieldValueOptionsQuery({ fetch, name }, { enabled: !!name });
   const options = customFieldValueOptionsQuery.data ?? [];
 
   const disabled = _disabled || customFieldValueOptionsQuery.isLoading;

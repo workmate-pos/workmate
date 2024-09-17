@@ -60,36 +60,42 @@
         "title": "product",
         "properties": {
           "uuid": {
-            "type": "string"
+            "$ref": "scalars.json#/definitions/UUID"
           },
           "productVariantId": {
             "$ref": "scalars.json#/definitions/ID"
           },
-          "shopifyOrderLineItem": {
+          "serialNumber": {
+            "description": "Optional serial number of the incoming product. If provided, the serial number will automatically be registered upon receipt. If a serial number is set the quantity must equal 1.",
+            "anyOf": [{ "const": null }, { "type": "string" }]
+          },
+          "specialOrderLineItem": {
             "anyOf": [
               { "const": null },
               {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "$ref": "scalars.json#/definitions/ID"
+                  "name": {
+                    "type": "string"
                   },
-                  "orderId": {
-                    "$ref": "scalars.json#/definitions/ID"
+                  "uuid": {
+                    "$ref": "scalars.json#/definitions/UUID"
                   }
                 },
-                "required": ["id", "orderId"],
+                "required": ["name", "uuid"],
                 "additionalProperties": false
               }
             ]
           },
           "quantity": {
             "description": "The quantity of this product variant in the PO",
-            "$ref": "scalars.json#/definitions/Int"
+            "$ref": "scalars.json#/definitions/Int",
+            "minimum": 1
           },
           "availableQuantity": {
             "description": "The quantity of this product variant available in the inventory",
-            "$ref": "scalars.json#/definitions/Int"
+            "$ref": "scalars.json#/definitions/Int",
+            "minimum": 0
           },
           "unitCost": {
             "$ref": "scalars.json#/definitions/Money"
@@ -104,11 +110,12 @@
         "required": [
           "uuid",
           "productVariantId",
-          "shopifyOrderLineItem",
+          "specialOrderLineItem",
           "quantity",
           "availableQuantity",
           "unitCost",
-          "customFields"
+          "customFields",
+          "serialNumber"
         ],
         "additionalProperties": false
       }

@@ -47,7 +47,7 @@ export const useLabourMutation = ({ fetch }: { fetch: Fetch }) => {
       return result;
     },
     onSuccess(result) {
-      if (result.type === 'success') {
+      if (result.labour) {
         queryClient.invalidateQueries(['labours']);
         queryClient.setQueryData(
           ['labour', result.labour.id],

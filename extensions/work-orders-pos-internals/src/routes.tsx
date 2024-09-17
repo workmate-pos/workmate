@@ -1,11 +1,9 @@
 import { StatusSelector } from './screens/popups/StatusSelector.js';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { Entry } from './screens/Entry.js';
-import { EmployeeSelector } from './screens/popups/EmployeeSelector.js';
 import { ProductSelector } from './screens/popups/ProductSelector.js';
 import { createRouter } from '@teifi-digital/pos-tools/router';
 import { OrderPreview } from './screens/popups/OrderPreview.js';
-import { CustomerSelector } from './screens/popups/CustomerSelector.js';
 import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
 import { ServiceSelector } from './screens/popups/ServiceSelector.js';
 import { ItemConfig } from './screens/popups/ItemConfig.js';
@@ -20,7 +18,7 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldConfig.js';
 import { SavePreset, SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 import { ProductCreator, ProductCreatorProps } from '@work-orders/common-pos/screens/product-creator/ProductCreator.js';
-import { PrintOverview } from './screens/popups/PrintOverview.js';
+import { WorkOrderPrintOverview } from './screens/popups/WorkOrderPrintOverview.js';
 import {
   CustomFieldFilterConfig,
   CustomFieldFilterConfigProps,
@@ -39,19 +37,78 @@ import {
 } from '@work-orders/common-pos/screens/custom-fields/SelectPresetToEdit.js';
 import { SelectPreset, SelectPresetProps } from '@work-orders/common-pos/screens/custom-fields/SelectPreset.js';
 import { WorkOrderFilters } from './screens/popups/WorkOrderFilters.js';
-import { CompanySelector } from './screens/popups/CompanySelector.js';
-import {
-  CompanyLocationSelector,
-  CompanyLocationSelectorProps,
-} from '@work-orders/common-pos/screens/CompanyLocationSelector.js';
 import { PaymentTermsSelector } from './screens/popups/PaymentTermsSelector.js';
-import { Dropdown, DropdownProps } from '@work-orders/common-pos/screens/Dropdown.js';
 import {
   CustomFieldValuesConfig,
   CustomFieldValuesConfigProps,
 } from '@work-orders/common-pos/screens/custom-fields/CustomFieldValuesConfig.js';
 import { PermissionBoundary } from '@work-orders/common-pos/components/PermissionBoundary.js';
-import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/LocationSelector.js';
+import { WorkOrderItemSourcing } from './screens/popups/WorkOrderItemSourcing.js';
+import { WorkOrderItemSourcingHelp } from './screens/popups/WorkOrderItemSourcingHelp.js';
+import { WorkOrderItemSourcingItem } from './screens/popups/WorkOrderItemSourcingItem.js';
+import { StockTransferEntry } from './screens/StockTransferEntry.js';
+import { StockTransfer } from './screens/StockTransfer.js';
+import { StockTransferProductSelector } from './screens/popups/StockTransferProductSelector.js';
+import { StockTransferLineItemScanner } from './screens/popups/StockTransferLineItemScanner.js';
+import { StockTransferLineItemConfig } from './screens/popups/StockTransferLineItemConfig.js';
+import { StockTransferLineItemStatusSelector } from './screens/popups/StockTransferLineItemStatusSelector.js';
+import { ExistingStockTransfer } from './screens/popups/ExistingStockTransfer.js';
+import { ScrollView } from '@shopify/retail-ui-extensions-react';
+import { PurchaseOrderEntry } from './screens/PurchaseOrderEntry.js';
+import { PurchaseOrder } from './screens/PurchaseOrder.js';
+import { PurchaseOrderVendorSelector } from './screens/popups/PurchaseOrderVendorSelector.js';
+import { PurchaseOrderEmployeeSelector } from './screens/popups/PurchaseOrderEmployeeSelector.js';
+import { PurchaseOrderProductSelector } from './screens/popups/PurchaseOrderProductSelector.js';
+import { PurchaseOrderProductConfig } from './screens/popups/PurchaseOrderProductConfig.js';
+import { PurchaseOrderPrintOverview } from './screens/PurchaseOrderPrintOverview.js';
+import { PurchaseOrderOrderSelector } from './screens/popups/PurchaseOrderOrderSelector.js';
+import { PurchaseOrderFilterStatusSelector } from './screens/popups/PurchaseOrderFilterStatusSelector.js';
+import { CreateTransferOrderForLocation } from './screens/popups/CreateTransferOrderForLocation.js';
+import { QuantityAdjustmentList } from './screens/popups/QuantityAdjustmentList.js';
+import { UnsourcedItemList } from './screens/popups/UnsourcedItemList.js';
+import { SelectPurchaseOrderProductsToTransfer } from './screens/popups/SelectPurchaseOrderProductsToTransfer.js';
+import { CreateSpecialOrderList } from './screens/popups/CreateSpecialOrderList.js';
+import { CreatePurchaseOrderSpecialOrderSelector } from './screens/purchase-order/CreatePurchaseOrderSpecialOrderSelector.js';
+import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
+import {
+  CompanyLocationSelector,
+  CompanyLocationSelectorProps,
+} from '@work-orders/common-pos/screens/selector/CompanyLocationSelector.js';
+import { CompanySelector, CompanySelectorProps } from '@work-orders/common-pos/screens/selector/CompanySelector.js';
+import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/selector/LocationSelector.js';
+import { CustomerSelector, CustomerSelectorProps } from '@work-orders/common-pos/screens/selector/CustomerSelector.js';
+import {
+  MultiLocationSelector,
+  MultiLocationSelectorProps,
+} from '@work-orders/common-pos/screens/selector/MultiLocationSelector.js';
+import {
+  MultiEmployeeSelector,
+  MultiEmployeeSelectorProps,
+} from '@work-orders/common-pos/screens/selector/MultiEmployeeSelector.js';
+import { EmployeeSelector, EmployeeSelectorProps } from '@work-orders/common-pos/screens/selector/EmployeeSelector.js';
+import { VendorSelector, VendorSelectorProps } from '@work-orders/common-pos/screens/selector/VendorSelector.js';
+import {
+  NotFullyOrderedSpecialOrderVendorSelector,
+  NotFullyOrderedSpecialOrderVendorSelectorProps,
+} from '@work-orders/common-pos/screens/selector/NotFullyOrderedSpecialOrderVendorSelector.js';
+import {
+  SpecialOrderSelector,
+  SpecialOrderSelectorProps,
+} from '@work-orders/common-pos/screens/selector/SpecialOrderSelector.js';
+import {
+  MultiSpecialOrderLineItemSelector,
+  MultiSpecialOrderLineItemSelectorProps,
+} from '@work-orders/common-pos/screens/selector/MultiSpecialOrderLineItemSelector.js';
+import { SerialsList } from './screens/serials/SerialsList.js';
+import { SerialsFilters } from './screens/serials/SerialsFilters.js';
+import { Serial } from './screens/serials/Serial.js';
+import {
+  ProductVariantSelector,
+  ProductVariantSelectorProps,
+} from '@work-orders/common-pos/screens/selector/ProductVariantSelector.js';
+import { WorkOrderLoader } from './screens/work-order/WorkOrderLoader.js';
+import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoader.js';
+import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -72,6 +129,10 @@ export const { Router, useRouter } = createRouter({
     title: 'Work Order',
     Component: WorkOrder,
   },
+  WorkOrderLoader: {
+    title: 'Work Order',
+    Component: WorkOrderLoader,
+  },
   NewWorkOrder: {
     title: 'New Work Order',
     Component: () => (
@@ -82,7 +143,9 @@ export const { Router, useRouter } = createRouter({
   },
   EmployeeSelector: {
     title: 'Select Employee',
-    Component: EmployeeSelector,
+    Component: (props: Omit<EmployeeSelectorProps, 'useRouter'>) => (
+      <EmployeeSelector {...props} useRouter={useRouter} />
+    ),
   },
   ProductSelector: {
     title: 'Select Product',
@@ -110,11 +173,13 @@ export const { Router, useRouter } = createRouter({
   },
   CustomerSelector: {
     title: 'Select Customer',
-    Component: CustomerSelector,
+    Component: (props: Omit<CustomerSelectorProps, 'useRouter'>) => (
+      <CustomerSelector {...props} useRouter={useRouter} />
+    ),
   },
   CompanySelector: {
     title: 'Select Company',
-    Component: CompanySelector,
+    Component: (props: Omit<CompanySelectorProps, 'useRouter'>) => <CompanySelector {...props} useRouter={useRouter} />,
   },
   CompanyLocationSelector: {
     title: 'Select Company Location',
@@ -126,6 +191,22 @@ export const { Router, useRouter } = createRouter({
     title: 'Select Location',
     Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
       <LocationSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  MultiLocationSelector: {
+    title: 'Select Locations',
+    Component: (props: Omit<MultiLocationSelectorProps, 'useRouter'>) => (
+      <MultiLocationSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  VendorSelector: {
+    title: 'Select Vendor',
+    Component: (props: Omit<VendorSelectorProps, 'useRouter'>) => <VendorSelector {...props} useRouter={useRouter} />,
+  },
+  NotFullyOrderedSpecialOrderVendorSelector: {
+    title: 'Select Vendor',
+    Component: (props: Omit<NotFullyOrderedSpecialOrderVendorSelectorProps, 'useRouter'>) => (
+      <NotFullyOrderedSpecialOrderVendorSelector {...props} useRouter={useRouter} />
     ),
   },
   DiscountSelector: {
@@ -159,12 +240,6 @@ export const { Router, useRouter } = createRouter({
   PaymentOverview: {
     title: 'Payments',
     Component: PaymentOverview,
-  },
-  Dropdown: {
-    title: 'Dropdown',
-    Component: <const T extends string>(props: Omit<DropdownProps<T>, 'useRouter'>) => (
-      <Dropdown {...props} useRouter={useRouter} />
-    ),
   },
   CustomFieldValuesConfig: {
     title: 'Custom Field Values',
@@ -208,9 +283,9 @@ export const { Router, useRouter } = createRouter({
       <CustomFieldFilterConfig {...props} useRouter={useRouter} />
     ),
   },
-  PrintOverview: {
+  WorkOrderPrintOverview: {
     title: 'Print',
-    Component: PrintOverview,
+    Component: WorkOrderPrintOverview,
   },
   ItemSelector: {
     title: 'Select item',
@@ -219,5 +294,167 @@ export const { Router, useRouter } = createRouter({
   PaymentTermsSelector: {
     title: 'Select Payment Terms',
     Component: PaymentTermsSelector,
+  },
+  WorkOrderItemSourcing: {
+    title: 'Work Order Sourcing',
+    Component: WorkOrderItemSourcing,
+  },
+  WorkOrderItemSourcingHelp: {
+    title: 'Work Order Sourcing Help',
+    Component: WorkOrderItemSourcingHelp,
+  },
+  WorkOrderItemSourcingItem: {
+    title: 'Work Order Sourcing Item',
+    Component: WorkOrderItemSourcingItem,
+  },
+  StockTransferEntry: {
+    title: 'Stock Transfer',
+    Component: () => (
+      <ScreenPermissionBoundary permissions={requiredPermissions}>
+        <StockTransferEntry />
+      </ScreenPermissionBoundary>
+    ),
+  },
+  StockTransfer: {
+    title: 'Stock Transfer',
+    Component: StockTransfer,
+  },
+  StockTransferProductSelector: {
+    title: 'Select Product',
+    Component: StockTransferProductSelector,
+  },
+  StockTransferLineItemScanner: {
+    title: 'Scan Items',
+    Component: StockTransferLineItemScanner,
+  },
+  StockTransferLineItemConfig: {
+    title: 'Line Item Config',
+    Component: StockTransferLineItemConfig,
+  },
+  StockTransferLineItemStatusSelector: {
+    title: 'Select Status',
+    Component: StockTransferLineItemStatusSelector,
+  },
+  ExistingStockTransfer: {
+    title: 'Stock Transfer',
+    Component: ExistingStockTransfer,
+  },
+  ListPopup: {
+    title: 'ListPopup',
+    Component: <ID extends string = string>(props: Omit<ListPopupProps<ID>, 'useRouter'>) => (
+      <ListPopup {...props} useRouter={useRouter} />
+    ),
+  },
+  PurchaseOrderEntry: {
+    title: 'Purchase Orders',
+    Component: () => (
+      <ScrollView>
+        <ScreenPermissionBoundary permissions={['read_settings', 'read_purchase_orders', 'read_employees']}>
+          <PurchaseOrderEntry />
+        </ScreenPermissionBoundary>
+      </ScrollView>
+    ),
+  },
+  PurchaseOrder: {
+    title: 'Purchase Order',
+    Component: PurchaseOrder,
+  },
+  PurchaseOrderLoader: {
+    title: 'Purchase Order',
+    Component: PurchaseOrderLoader,
+  },
+  PurchaseOrderVendorSelector: {
+    title: 'Select Vendor',
+    Component: PurchaseOrderVendorSelector,
+  },
+  PurchaseOrderEmployeeSelector: {
+    title: 'Select Employee',
+    // TODO: permission boundary here?
+    Component: PurchaseOrderEmployeeSelector,
+  },
+  PurchaseOrderProductSelector: {
+    title: 'Select Product',
+    Component: PurchaseOrderProductSelector,
+  },
+  PurchaseOrderProductConfig: {
+    title: 'Product Config',
+    Component: PurchaseOrderProductConfig,
+  },
+  PurchaseOrderPrintOverview: {
+    title: 'Print Overview',
+    Component: PurchaseOrderPrintOverview,
+  },
+  PurchaseOrderOrderSelector: {
+    title: 'Select Order',
+    Component: PurchaseOrderOrderSelector,
+  },
+  PurchaseOrderFilterStatusSelector: {
+    title: 'Select Purchase Order Status',
+    Component: PurchaseOrderFilterStatusSelector,
+  },
+  CreateTransferOrderForLocation: {
+    title: 'Select Transfer Order Location',
+    Component: CreateTransferOrderForLocation,
+  },
+  QuantityAdjustmentList: {
+    title: 'Quantity Adjustment List',
+    Component: QuantityAdjustmentList,
+  },
+  UnsourcedItemList: {
+    title: 'Unsourced Items',
+    Component: UnsourcedItemList,
+  },
+  SelectPurchaseOrderProductsToTransfer: {
+    title: 'Select Products to Transfer',
+    Component: SelectPurchaseOrderProductsToTransfer,
+  },
+  CreateSpecialOrderList: {
+    title: 'Create Special Order',
+    Component: CreateSpecialOrderList,
+  },
+  CreatePurchaseOrderSpecialOrderSelector: {
+    title: 'Select Special Orders',
+    Component: CreatePurchaseOrderSpecialOrderSelector,
+  },
+  MultiEmployeeSelector: {
+    title: 'Select Employees',
+    Component: (props: Omit<MultiEmployeeSelectorProps, 'useRouter'>) => (
+      <MultiEmployeeSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  SpecialOrderSelector: {
+    title: 'Select Special Order',
+    Component: (props: Omit<SpecialOrderSelectorProps, 'useRouter'>) => (
+      <SpecialOrderSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  MultiSpecialOrderLineItemSelector: {
+    title: 'Select Special Order Line Item',
+    Component: (props: Omit<MultiSpecialOrderLineItemSelectorProps, 'useRouter'>) => (
+      <MultiSpecialOrderLineItemSelector {...props} useRouter={useRouter} />
+    ),
+  },
+
+  SerialsList: {
+    title: 'Serials',
+    Component: SerialsList,
+  },
+  SerialsFilters: {
+    title: 'Filter Serials',
+    Component: SerialsFilters,
+  },
+  Serial: {
+    title: 'Serial',
+    Component: Serial,
+  },
+  ProductVariantSelector: {
+    title: 'Product Selector',
+    Component: (props: Omit<ProductVariantSelectorProps, 'useRouter'>) => (
+      <ProductVariantSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  SerialSelector: {
+    title: 'Serial Selector',
+    Component: (props: Omit<SerialSelectorProps, 'useRouter'>) => <SerialSelector {...props} useRouter={useRouter} />,
   },
 });
