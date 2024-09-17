@@ -9,8 +9,8 @@ import {
   ListRow,
   SegmentedControl,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -70,7 +70,7 @@ export function Entry() {
   const screen = useScreen();
   screen.setIsLoading(selectedCycleCountQuery.isFetching);
 
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
 
   useEffect(() => {
     if (selectedCycleCountQuery.data && !selectedCycleCountQuery.isFetching) {

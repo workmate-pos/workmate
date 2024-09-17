@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import type { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import type { CreateWorkOrderResponse } from '@web/controllers/api/work-order.js';
 import { Fetch } from './fetch.js';
@@ -37,11 +37,13 @@ export const useSaveWorkOrderMutation = (
         typeof useWorkOrderQuery
       >);
 
-      queryClient.invalidateQueries(['work-order-info']);
+      queryClient.invalidateQueries({ queryKey: ['work-order-info'] });
 
       if (workOrder.serial) {
-        queryClient.invalidateQueries(['serials']);
-        queryClient.invalidateQueries(['serial', workOrder.serial.productVariantId, workOrder.serial.serial]);
+        queryClient.invalidateQueries({ queryKey: ['serials'] });
+        queryClient.invalidateQueries({
+          queryKey: ['serial', workOrder.serial.productVariantId, workOrder.serial.serial],
+        });
       }
 
       options?.onSuccess?.(...args);

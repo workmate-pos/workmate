@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useRouter } from '../routes.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -80,7 +80,7 @@ function useVendorRows(
   const fetch = useAuthenticatedFetch();
   const screen = useScreen();
 
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
 
   const [vendorName, setVendorName] = useState<string>();
 
@@ -99,7 +99,7 @@ function useVendorRows(
   screen.setIsLoading(!!vendorName);
 
   if (vendorName && !productVariantsQuery.isFetching) {
-    if (productVariantsQuery.hasNextPage || productVariantsQuery.isIdle) {
+    if (productVariantsQuery.hasNextPage || productVariantsQuery.fetchStatus === 'idle') {
       productVariantsQuery.fetchNextPage();
     } else {
       setVendorName(undefined);

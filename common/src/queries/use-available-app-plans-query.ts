@@ -1,4 +1,4 @@
-import { useQuery, UseQueryOptions } from 'react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import type { GetAvailableAppPlansResponse } from '@web/controllers/api/app-plans.js';
 

@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useQueryClient } from 'react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { CycleCountPaginationOptions } from '@web/schemas/generated/cycle-count-pagination-options.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
@@ -19,7 +19,7 @@ export const useCycleCountPageQuery = ({
 
   return useInfiniteQuery({
     queryKey: ['cycle-count-page', filters],
-    queryFn: async ({ pageParam: offset = 0 }) => {
+    queryFn: async ({ pageParam: offset }) => {
       const searchParams = new URLSearchParams({
         offset: String(offset),
         limit: String(PAGE_SIZE),
@@ -50,6 +50,7 @@ export const useCycleCountPageQuery = ({
 
       return result;
     },
+    initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => {
       if (lastPage.length < PAGE_SIZE) return undefined;
       return pages.flat(1).length;

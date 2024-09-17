@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { PlanCycleCountResponse } from '@web/controllers/api/cycle-count.js';
 

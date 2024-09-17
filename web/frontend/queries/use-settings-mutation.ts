@@ -18,7 +18,7 @@ export const useSettingsMutation = (
       });
     },
     onSuccess(...args) {
-      queryClient.invalidateQueries(['settings']);
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
 
       options.onSuccess?.(...args);
     },

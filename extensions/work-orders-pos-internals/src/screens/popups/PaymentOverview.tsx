@@ -6,8 +6,8 @@ import {
   ScrollView,
   Stack,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
@@ -53,9 +53,9 @@ export function PaymentOverview({ name }: { name: string }) {
   const planOrderQuery = usePlanOrder({ fetch, workOrder, selectedItems, selectedCharges });
 
   const paymentHandler = usePaymentHandler();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
-  const isLoading = paymentHandler.isLoading || createWorkOrderOrderMutation.isLoading;
+  const isLoading = paymentHandler.isLoading || createWorkOrderOrderMutation.isPending;
 
   const router = useRouter();
   const screen = useScreen();
@@ -177,7 +177,7 @@ export function PaymentOverview({ name }: { name: string }) {
       <ResponsiveStack direction={'vertical'} spacing={2}>
         <Badge text={financialStatus} variant={'highlight'} />
         {financialStatus === 'Partially paid' && (
-          <Text variant={'bodyMd'} color={'TextSubdued'}>
+          <Text variant={'body'} color={'TextSubdued'}>
             {workOrder.name} is partially paid. To pay the outstanding balance of products that have been partially
             paid, please navigate to the respective Shopify Order (e.g. via the Orders tab outside of WorkMate).
           </Text>
@@ -211,7 +211,7 @@ export function PaymentOverview({ name }: { name: string }) {
           {!!workOrder.companyId && (
             <Button
               title={'Create Order'}
-              isLoading={createWorkOrderOrderMutation.isLoading}
+              isLoading={createWorkOrderOrderMutation.isPending}
               isDisabled={isLoading || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length}
               onPress={() => createOrder()}
               type={'primary'}
@@ -252,7 +252,7 @@ function useItemRows(
   const screen = useScreen();
   screen.setIsLoading(Object.values(employeeQueries).some(query => query.isLoading));
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const currencyFormatter = useCurrencyFormatter();
 
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;

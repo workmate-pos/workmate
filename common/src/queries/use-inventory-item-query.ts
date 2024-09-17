@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from 'react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import { Fetch } from './fetch.js';
 import { useBatcher } from '../batcher/use-batcher.js';
@@ -107,13 +107,13 @@ export const useInventoryItemQueries = (
   options?: { enabled?: boolean },
 ) => {
   const batcher = useInventoryItemBatcher(fetch);
-  const queries = useQueries(
-    ids.map(id => ({
+  const queries = useQueries({
+    queries: ids.map(id => ({
       ...options,
       queryKey: ['inventory-item', id, locationId],
       queryFn: () => batcher.fetch({ inventoryItemId: id, locationId }),
     })),
-  );
+  });
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));
 };
 
@@ -127,8 +127,8 @@ export const useUnbatchedInventoryItemQueries = ({
   fetch: Fetch;
   inventoryItems: { id: ID; locationId: ID }[];
 }) => {
-  const queries = useQueries(
-    inventoryItems.map(({ id, locationId }) => ({
+  const queries = useQueries({
+    queries: inventoryItems.map(({ id, locationId }) => ({
       queryKey: ['inventory-item', id, locationId],
       queryFn: async () => {
         const response = await fetch(
@@ -143,7 +143,7 @@ export const useUnbatchedInventoryItemQueries = ({
         return inventoryItem;
       },
     })),
-  );
+  });
 
   const inventoryItemQueriesByIdByLocation: Record<ID, Record<ID, (typeof queries)[number]>> = {};
 

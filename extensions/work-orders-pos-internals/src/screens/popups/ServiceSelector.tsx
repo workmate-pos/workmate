@@ -1,4 +1,4 @@
-import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { Int } from '@web/schemas/generated/create-work-order.js';
@@ -103,7 +103,7 @@ export function ServiceSelector({
       <ResponsiveGrid columns={2}>
         <Button
           title={'New Service'}
-          variant={'primary'}
+          type={'primary'}
           onPress={() =>
             router.push('ProductCreator', {
               initialProduct: {},
@@ -125,7 +125,7 @@ export function ServiceSelector({
         />
         <Button
           title={'Add labour to line item'}
-          variant={'primary'}
+          type={'primary'}
           onPress={() =>
             router.push('ItemSelector', {
               filter: 'can-add-labour',

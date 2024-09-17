@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { Button, ScrollView, Stack, Text, TextField, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text, TextField, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -67,7 +67,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
   const screen = useScreen();
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   return (
     <ScrollView>
@@ -196,7 +196,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
             onChange={setNewCustomFieldName}
             error={newCustomFieldNameError}
           />
-          <Button title={'Add'} disabled={!!newCustomFieldNameError} onPress={createNewCustomField} />
+          <Button title={'Add'} isDisabled={!!newCustomFieldNameError} onPress={createNewCustomField} />
         </ResponsiveGrid>
       </Stack>
 

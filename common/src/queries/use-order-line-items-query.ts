@@ -1,6 +1,6 @@
 import type { FetchOrderLineItemsResponse } from '@web/controllers/api/order.js';
 import { ID } from '@web/schemas/generated/ids.js';
-import { useInfiniteQuery } from 'react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
@@ -10,7 +10,6 @@ export const useOrderLineItemsQuery = (
 ) => {
   return useInfiniteQuery({
     ...options,
-
     queryKey: ['order-line-items', id],
     queryFn: async ({ pageParam }): Promise<FetchOrderLineItemsResponse> => {
       if (id === null) {
@@ -21,9 +20,9 @@ export const useOrderLineItemsQuery = (
       if (pageParam) searchParams.set('after', String(pageParam));
 
       const response = await fetch(`/api/order/${parseGid(id).id}/line-items?${searchParams}`);
-
       return await response.json();
     },
+    initialPageParam: undefined as undefined | string,
     select: ({ pages, pageParams }) => ({
       pages: pages.flatMap(page => page.lineItems),
       pageParams,

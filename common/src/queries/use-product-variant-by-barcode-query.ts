@@ -1,4 +1,4 @@
-import { useQueries, useQuery, useQueryClient, UseQueryOptions } from 'react-query';
+import { useQueries, useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import type { FetchProductVariantResponse } from '@web/controllers/api/product-variant.js';
 import { UseQueryData } from './react-query.js';
@@ -6,11 +6,13 @@ import { useProductVariantQuery } from './use-product-variant-query.js';
 
 export const useProductVariantByBarcodeQuery = (
   { fetch, barcode }: { fetch: Fetch; barcode: string },
-  options?: UseQueryOptions<
-    FetchProductVariantResponse['productVariant'],
-    unknown,
-    FetchProductVariantResponse['productVariant'],
-    string[]
+  options?: Partial<
+    UseQueryOptions<
+      FetchProductVariantResponse['productVariant'],
+      unknown,
+      FetchProductVariantResponse['productVariant'],
+      string[]
+    >
   >,
 ) => {
   const queryClient = useQueryClient();
@@ -35,17 +37,19 @@ export const useProductVariantByBarcodeQuery = (
 
 export const useProductVariantByBarcodeQueries = (
   { fetch, barcodes }: { fetch: Fetch; barcodes: string[] },
-  options?: UseQueryOptions<
-    FetchProductVariantResponse['productVariant'],
-    unknown,
-    FetchProductVariantResponse['productVariant'],
-    string[]
+  options?: Partial<
+    UseQueryOptions<
+      FetchProductVariantResponse['productVariant'],
+      unknown,
+      FetchProductVariantResponse['productVariant'],
+      string[]
+    >
   >,
 ) => {
   const queryClient = useQueryClient();
 
-  const queries = useQueries(
-    barcodes.map(barcode => ({
+  const queries = useQueries({
+    queries: barcodes.map(barcode => ({
       ...options,
       queryKey: ['product-variant-by-barcode', barcode],
       queryFn: async () => {
@@ -61,7 +65,7 @@ export const useProductVariantByBarcodeQueries = (
         return productVariant;
       },
     })),
-  );
+  });
 
   return Object.fromEntries(barcodes.map((barcode, i) => [barcode, queries[i]!]));
 };

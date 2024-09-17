@@ -1,6 +1,6 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { Route, UseRouter } from '../screens/router.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 import { useCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-custom-field-value-options-query.js';
 import { ListPopupProps } from '../screens/ListPopup.js';
 

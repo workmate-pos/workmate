@@ -2,7 +2,7 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { PurchaseOrder } from '../PurchaseOrder.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { Text } from '@shopify/retail-ui-extensions-react';
+import { Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';

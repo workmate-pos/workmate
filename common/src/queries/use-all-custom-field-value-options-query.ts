@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useQuery, useQueryClient } from 'react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   FetchCustomFieldNamesResponse,
   FetchCustomFieldValueOptionsResponse,
@@ -20,15 +20,15 @@ export const useAllCustomFieldValueOptionsQuery = ({ fetch }: { fetch: Fetch }) 
       }
 
       const { fields }: FetchCustomFieldNamesResponse = await response.json();
-      return fields;
-    },
-    onSuccess(fields) {
+
       for (const { name, options } of fields) {
         queryClient.setQueryData(
           ['custom-field-value-options', name],
           options satisfies UseQueryData<typeof useCustomFieldValueOptionsQuery>,
         );
       }
+
+      return fields;
     },
   });
 };

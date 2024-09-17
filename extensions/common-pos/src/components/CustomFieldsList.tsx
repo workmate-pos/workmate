@@ -1,8 +1,8 @@
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 import { Route, UseRouter } from '@work-orders/common-pos/screens/router.js';
 import { CustomFieldConfigProps } from '@work-orders/common-pos/screens/custom-fields/CustomFieldConfig.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/SavePreset.js';
 import { SelectPresetToEditProps } from '../screens/custom-fields/SelectPresetToEdit.js';
 import { EditPresetProps } from '../screens/custom-fields/EditPreset.js';

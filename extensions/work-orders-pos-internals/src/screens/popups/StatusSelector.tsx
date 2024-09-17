@@ -1,4 +1,4 @@
-import { Button, Stack } from '@shopify/retail-ui-extensions-react';
+import { Button, Stack } from '@shopify/ui-extensions-react/point-of-sale';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useRouter } from '../../routes.js';

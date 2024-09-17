@@ -1,4 +1,4 @@
-import { Button, Stack } from '@shopify/retail-ui-extensions-react';
+import { Button, Stack } from '@shopify/ui-extensions-react/point-of-sale';
 import { useRouter } from '../../routes.js';
 import { OverdueStatus } from '@work-orders/common/queries/use-work-order-info-query.js';
 

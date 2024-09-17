@@ -1,4 +1,4 @@
-import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
@@ -39,7 +39,7 @@ export function ProductSelector({
   inventoryLocationIds: ID[];
   onInventoryLocationIdsChange: Dispatch<SetStateAction<ID[]>>;
 }) {
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const [query, setQuery] = useDebouncedState('');
   const [inventoryLocationIds, _setInventoryLocationIds] = useState<ID[]>(initialInventoryLocationIds);
@@ -128,7 +128,7 @@ export function ProductSelector({
       <ResponsiveGrid columns={3}>
         <Button
           title={'New Product'}
-          variant={'primary'}
+          type={'primary'}
           onPress={() =>
             router.push('ProductCreator', {
               initialProduct: {},
@@ -151,7 +151,7 @@ export function ProductSelector({
         />
         <Button
           title={'Custom Product'}
-          variant={'primary'}
+          type={'primary'}
           onPress={async () => {
             await router.popCurrent();
             internalOnSelect(
@@ -181,7 +181,7 @@ export function ProductSelector({
             }
           />
           {inventoryLocationIds.length > 3 && (
-            <Text variant={'bodyMd'} color={'TextWarning'}>
+            <Text variant={'body'} color={'TextWarning'}>
               At most 3 locations can be shown, but you have selected {inventoryLocationIds.length}.
             </Text>
           )}

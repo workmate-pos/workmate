@@ -1,7 +1,7 @@
 import type { FetchCustomersResponse } from '@web/controllers/api/customer.js';
 import type { PaginationOptions } from '@web/schemas/generated/pagination-options.js';
 import { createPaginatedQuery } from './create-paginated-query.js';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCustomerQuery } from './use-customer-query.js';
 import { UseQueryData } from './react-query.js';
 
@@ -20,15 +20,15 @@ export const useCustomersQuery = (...[options, ...args]: Parameters<typeof query
       ...options,
       options: {
         ...options.options,
-        onSuccess: data => {
-          for (const customer of data.pages.flat()) {
+        onSuccess: page => {
+          for (const customer of page.customers) {
             queryClient.setQueryData(
               ['customer', customer.id],
               customer satisfies UseQueryData<typeof useCustomerQuery>,
             );
           }
 
-          options.options?.onSuccess?.(data);
+          options.options?.onSuccess?.(page);
         },
       },
     },

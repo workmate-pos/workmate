@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from 'react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import type { FetchCustomersByIdResponse } from '@web/controllers/api/customer.js';
 import { Fetch } from './fetch.js';
@@ -46,11 +46,11 @@ export const useCustomerQuery = ({ fetch, id }: { fetch: Fetch; id: ID | null })
 
 export const useCustomerQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID[] }) => {
   const batcher = useCustomerBatcher(fetch);
-  const queries = useQueries(
-    ids.map(id => ({
+  const queries = useQueries({
+    queries: ids.map(id => ({
       queryKey: ['customer', id],
       queryFn: () => batcher.fetch(id),
     })),
-  );
+  });
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));
 };

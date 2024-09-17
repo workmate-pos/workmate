@@ -7,7 +7,7 @@ import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-or
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../routes.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { Banner, Button, List, ListRow, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Banner, Button, List, ListRow, ScrollView, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
@@ -65,7 +65,7 @@ export function Entry() {
 
   const router = useRouter();
 
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
   const rows = useListRows(specialOrdersQuery.data?.pages.flat() ?? [], setSelectedSpecialOrderName);
 
   return (

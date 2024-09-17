@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import type { UpsertEmployees } from '@web/schemas/generated/upsert-employees.js';
 import type { UpsertEmployeesResponse } from '@web/controllers/api/employee.js';
@@ -27,8 +27,8 @@ export const useEmployeeMutation = (
       return result;
     },
     onSuccess: (...args) => {
-      queryClient.invalidateQueries(['employee']);
-      queryClient.invalidateQueries(['employees']);
+      queryClient.invalidateQueries({ queryKey: ['employee'] });
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
 
       options.onSuccess?.(...args);
     },

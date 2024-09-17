@@ -5,7 +5,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { ReactNode, useEffect, useState } from 'react';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useRouter } from '../../routes.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { UUID } from '@work-orders/common/util/uuid.js';

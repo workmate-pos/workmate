@@ -2,7 +2,7 @@ import { Fetch } from './fetch.js';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import type { FetchEmployeesByIdResponse } from '@web/controllers/api/employee.js';
 import { useBatcher } from '../batcher/use-batcher.js';
-import { useQueries, useQuery } from 'react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 
 const useEmployeeBatcher = (fetch: Fetch) =>
   useBatcher({
@@ -46,11 +46,11 @@ export const useEmployeeQuery = ({ fetch, id }: { fetch: Fetch; id: ID | null })
 
 export const useEmployeeQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID[] }) => {
   const batcher = useEmployeeBatcher(fetch);
-  const queries = useQueries(
-    ids.map(id => ({
+  const queries = useQueries({
+    queries: ids.map(id => ({
       queryKey: ['employee', id],
       queryFn: () => batcher.fetch(id),
     })),
-  );
+  });
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));
 };

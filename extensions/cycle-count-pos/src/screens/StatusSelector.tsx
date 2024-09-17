@@ -1,5 +1,5 @@
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { ListPopup, SelectListPopupAction } from '@work-orders/common-pos/screens/ListPopup.js';

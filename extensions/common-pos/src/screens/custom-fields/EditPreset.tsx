@@ -1,5 +1,5 @@
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
-import { Button, ScrollView, Text, TextField } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Text, TextField } from '@shopify/ui-extensions-react/point-of-sale';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -7,9 +7,9 @@ import { useEffect, useState } from 'react';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useCustomFieldsPresetsMutation } from '@work-orders/common/queries/use-custom-fields-presets-mutation.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
@@ -65,11 +65,10 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
       ),
   });
 
-  const { Form } = useForm();
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(`Edit Preset - ${name}`);
-  screen.setIsLoading(presetsQuery.isLoading || presetMutation.isLoading || presetDeleteMutation.isLoading);
+  screen.setIsLoading(presetsQuery.isLoading || presetMutation.isPending || presetDeleteMutation.isPending);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   useEffect(() => {
@@ -126,7 +125,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
         </ResponsiveStack>
       )}
 
-      <Form disabled={presetMutation.isLoading}>
+      <Form disabled={presetMutation.isPending}>
         <ResponsiveStack direction={'vertical'} paddingHorizontal={'ExtraExtraLarge'}>
           <FormStringField
             label={'Preset Name'}
@@ -182,7 +181,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
               />
               <Button
                 title={'Add'}
-                disabled={!!newCustomFieldNameError || !!newCustomFieldName.trim()}
+                isDisabled={!!newCustomFieldNameError || !!newCustomFieldName.trim()}
                 onPress={() => {
                   setKeys(keys => [...keys, newCustomFieldName]);
                   setNewCustomFieldName('');
@@ -196,7 +195,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
             title={'Save Preset'}
             type={'primary'}
             action={'submit'}
-            loading={presetMutation.isLoading}
+            loading={presetMutation.isPending}
             onPress={areYouSureYouWantToOverwriteDialog.show}
           />
 

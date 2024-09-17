@@ -1,6 +1,6 @@
 import { Fetch } from './fetch.js';
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
-import { useQuery, UseQueryOptions } from 'react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { FetchPurchaseOrderResponse } from '@web/controllers/api/purchase-orders.js';
 
 export const usePurchaseOrderQuery = (

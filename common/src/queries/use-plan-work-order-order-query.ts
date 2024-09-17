@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { PlanWorkOrderOrderResponse } from '@web/controllers/api/work-order.js';
 
 export const usePlanWorkOrderOrderQuery = (

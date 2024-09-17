@@ -7,12 +7,12 @@ import {
   ScrollView,
   Stack,
   Text,
-} from '@shopify/retail-ui-extensions-react';
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { ReactNode, useEffect, useState } from 'react';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { UseRouter } from './router.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { PaginationControls } from '../components/PaginationControls.js';
 
 export type ListPopupItem<ID> = Omit<ListRow, 'id' | 'onPress' | 'rightSide'> & {
@@ -107,7 +107,7 @@ export function ListPopup<ID extends string = string>({
   screen.setTitle(title);
 
   const [selectedIds, setSelectedIds] = useState<ID[]>(
-    selection.type === 'multi-select' ? selection.initialSelection ?? [] : [],
+    selection.type === 'multi-select' ? (selection.initialSelection ?? []) : [],
   );
 
   useEffect(() => {

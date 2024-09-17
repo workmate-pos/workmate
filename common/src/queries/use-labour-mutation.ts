@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UpsertLabour } from '@web/schemas/upsert-labour.js';
 import { match, P } from 'ts-pattern';
 import { UpsertLabourResponse } from '@web/controllers/api/labour.js';
@@ -48,7 +48,7 @@ export const useLabourMutation = ({ fetch }: { fetch: Fetch }) => {
     },
     onSuccess(result) {
       if (result.labour) {
-        queryClient.invalidateQueries(['labours']);
+        queryClient.invalidateQueries({ queryKey: ['labours'] });
         queryClient.setQueryData(
           ['labour', result.labour.id],
           result.labour satisfies UseQueryData<typeof useLabourQuery>,

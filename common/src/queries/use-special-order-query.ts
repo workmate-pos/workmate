@@ -1,4 +1,4 @@
-import { useQuery, UseQueryOptions } from 'react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { FetchSpecialOrderResponse } from '@web/controllers/api/special-orders.js';
 import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';

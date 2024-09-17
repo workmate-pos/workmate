@@ -8,8 +8,8 @@ import {
   ScrollView,
   Stack,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { Dispatch, SetStateAction, useEffect, useReducer, useRef, useState } from 'react';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
@@ -28,11 +28,11 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../routes.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMoneyField.js';
 import { DateTime, WorkOrderPaymentTerms } from '@web/schemas/generated/create-work-order.js';
 import { getPurchaseOrderBadge, getSpecialOrderBadge, getTransferOrderBadge } from '../util/badges.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
@@ -95,7 +95,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   screen.setTitle(createWorkOrder.name ?? 'New Work Order');
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const saveWorkOrderMutation = useSaveWorkOrderMutation(
     { fetch },
@@ -114,10 +114,8 @@ export function WorkOrder({ initial }: WorkOrderProps) {
     },
   );
 
-  const { Form } = useForm();
-
   return (
-    <Form disabled={saveWorkOrderMutation.isLoading}>
+    <Form disabled={saveWorkOrderMutation.isPending}>
       <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {saveWorkOrderMutation.error && (
@@ -159,7 +157,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
                   const dueDateUtc = new Date(dueDateLocal.getTime() - dueDateLocal.getTimezoneOffset() * MINUTE_IN_MS);
                   dispatch.setPartial({ dueDate: dueDateUtc.toISOString() as DateTime });
                 }}
-                disabled={saveWorkOrderMutation.isLoading}
+                disabled={saveWorkOrderMutation.isPending}
               />
               <WorkOrderMoneySummary createWorkOrder={createWorkOrder} dispatch={dispatch} />
             </ResponsiveGrid>
@@ -229,7 +227,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
             type="primary"
             action={'submit'}
             disabled={!hasUnsavedChanges}
-            loading={saveWorkOrderMutation.isLoading}
+            loading={saveWorkOrderMutation.isPending}
             onPress={() => saveWorkOrderMutation.mutate(createWorkOrder)}
           />
         </ResponsiveGrid>
@@ -299,7 +297,7 @@ function WorkOrderProperties({
   const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
 
   const router = useRouter();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const openCompanySelector = () => {
     router.push('CompanySelector', {
@@ -381,7 +379,7 @@ function WorkOrderProperties({
               ? ''
               : companyQuery.isLoading
                 ? 'Loading...'
-                : company?.name ?? 'Unknown company'
+                : (company?.name ?? 'Unknown company')
           }
         />
       )}
@@ -396,7 +394,7 @@ function WorkOrderProperties({
               ? 'No location selected'
               : companyLocationQuery.isLoading
                 ? 'Loading...'
-                : companyLocation?.name ?? 'Unknown location'
+                : (companyLocation?.name ?? 'Unknown location')
           }
         />
       )}
@@ -456,7 +454,7 @@ function WorkOrderProperties({
             ? ''
             : customerQuery.isLoading
               ? 'Loading...'
-              : customer?.displayName ?? 'Unknown customer'
+              : (customer?.displayName ?? 'Unknown customer')
         }
       />
       <FormStringField
@@ -476,7 +474,8 @@ function WorkOrderProperties({
             ? ''
             : serialProductVariantQuery.isLoading
               ? 'Loading...'
-              : `${createWorkOrder.serial.serial} - ` + getProductVariantName(serialProductVariant) ?? 'Unknown product'
+              : `${createWorkOrder.serial.serial} - ` +
+                (getProductVariantName(serialProductVariant) ?? 'Unknown product')
         }
       />
     </ResponsiveGrid>
@@ -531,7 +530,7 @@ function WorkOrderItems({
 
   const rows = useItemRows(createWorkOrder, dispatch, query, setOpenConfigPopup);
 
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
   const [inventoryLocationIds, setInventoryLocationIds] = useState<ID[]>([
     createGid('Location', session.currentSession.locationId),
   ]);
@@ -761,7 +760,7 @@ function WorkOrderMoneySummary({
         <Text variant={'headingLarge'}>Summary</Text>
       </Stack>
 
-      {calculatedDraftOrderQuery.error && (
+      {calculatedDraftOrderQuery.isError && (
         <Banner
           title={`Error calculating work order: ${extractErrorMessage(calculatedDraftOrderQuery.error)}`}
           variant={'error'}

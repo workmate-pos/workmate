@@ -8,8 +8,8 @@ import {
   SegmentedControl,
   Stack,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { useState } from 'react';
 import { useStockTransferCountQuery } from '@work-orders/common/queries/use-stock-transfer-count-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
@@ -40,7 +40,7 @@ export function StockTransferEntry() {
   const [selectedSegment, setSelectedSegment] = useState<SegmentId>(SEGMENT.INCOMING_TRANSFERS);
 
   const fetch = useAuthenticatedFetch();
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
 
   const locationId = createGid('Location', session.currentSession.locationId);
 
@@ -78,7 +78,7 @@ export function StockTransferEntry() {
             disabled: false,
           }))}
           selected={selectedSegment}
-          onSelect={setSelectedSegment}
+          onSelect={(selected: string) => setSelectedSegment(selected as SegmentId)}
         />
 
         {segment}

@@ -1,8 +1,8 @@
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import {
   Badge,
   Banner,
@@ -12,8 +12,8 @@ import {
   ScrollView,
   Stack,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { ProductScanner } from '../components/ProductScanner.js';
@@ -36,8 +36,7 @@ import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-que
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
 
 export function CycleCount({ initial }: { initial: CreateCycleCount }) {
-  const { Form } = useForm();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const [lastSavedCreateCycleCount, setLastSavedCreateCycleCount] = useState(initial);
   const [createCycleCount, setCreateCycleCount] = useState(initial);
@@ -70,7 +69,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
 
   const cycleCountMutation = useCycleCountMutation({ fetch });
 
-  const locationName = locationQuery.isLoading ? 'Loading...' : locationQuery.data?.name ?? 'Unknown location';
+  const locationName = locationQuery.isLoading ? 'Loading...' : (locationQuery.data?.name ?? 'Unknown location');
 
   const rows = useItemRows({ createCycleCount, setCreateCycleCount });
 
@@ -79,7 +78,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   screen.setIsLoading(cycleCountQuery.isLoading);
 
   return (
-    <Form disabled={cycleCountMutation.isLoading}>
+    <Form disabled={cycleCountMutation.isPending}>
       <ScrollView>
         <ResponsiveStack spacing={2} direction={'vertical'}>
           {cycleCountMutation.isError && (
@@ -198,7 +197,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
             />
 
             <ProductScanner
-              disabled={cycleCountMutation.isLoading}
+              disabled={cycleCountMutation.isPending}
               onProductScanned={productVariant =>
                 setItems(current => {
                   const { uuid: itemUuid, countQuantity } = current.find(
@@ -280,7 +279,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
                 onSuccess: onMutateSuccess('Saved cycle count'),
               })
             }
-            loading={cycleCountMutation.isLoading}
+            loading={cycleCountMutation.isPending}
             type={'primary'}
             disabled={!hasUnsavedChanges}
           />

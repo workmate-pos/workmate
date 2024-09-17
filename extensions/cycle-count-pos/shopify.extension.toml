@@ -1,8 +1,15 @@
-type = "pos_ui_extension"
-name = "cycle-count-pos"
-description = "cycle-count-pos"
+api_version = "2024-07"
 
-extension_points = [
-  'pos.home.tile.render',
-  'pos.home.modal.render'
-]
+[[extensions]]
+type = "ui_extension"
+name = "cycle-count-pos"
+handle = "cycle-count-pos"
+description = "Cycle Count"
+
+[[extensions.targeting]]
+module = "./src/Tile.tsx"
+target = "pos.home.tile.render"
+
+[[extensions.targeting]]
+module = "./src/Modal.tsx"
+target = "pos.home.modal.render"

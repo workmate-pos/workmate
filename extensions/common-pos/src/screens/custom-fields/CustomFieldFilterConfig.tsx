@@ -1,8 +1,8 @@
-import { Button, ScrollView, Stack } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack } from '@shopify/ui-extensions-react/point-of-sale';
 import { useState } from 'react';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 import { UseRouter } from '../router.js';
 

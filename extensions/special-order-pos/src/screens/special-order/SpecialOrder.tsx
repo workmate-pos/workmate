@@ -16,11 +16,11 @@ import {
   ListRow,
   ScrollView,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 import { useRouter } from '../../routes.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
@@ -28,7 +28,7 @@ import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-p
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
@@ -124,7 +124,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
       onSelect: location => setLocationId(location.id),
     });
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const canSelectCompany =
     storePropertiesQuery.data && SHOPIFY_B2B_PLANS.includes(storePropertiesQuery.data?.storeProperties.plan);
@@ -169,7 +169,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
                     ? ''
                     : companyQuery.isLoading
                       ? 'Loading...'
-                      : companyQuery.data?.name ?? 'Unknown company'
+                      : (companyQuery.data?.name ?? 'Unknown company')
                 }
               />
             )}
@@ -191,7 +191,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
                     ? ''
                     : companyLocationQuery.isLoading
                       ? 'Loading...'
-                      : companyLocationQuery.data?.name ?? 'Unknown location'
+                      : (companyLocationQuery.data?.name ?? 'Unknown location')
                 }
                 required
               />
@@ -204,7 +204,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
                   ? ''
                   : customerQuery.isLoading
                     ? 'Loading...'
-                    : customerQuery.data?.displayName ?? 'Unknown customer'
+                    : (customerQuery.data?.displayName ?? 'Unknown customer')
               }
               disabled={true || !!createSpecialOrder.companyId}
               onFocus={() => openCustomerSelector()}
@@ -214,7 +214,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
             <FormStringField
               disabled
               label={'Location'}
-              value={locationQuery.isLoading ? 'Loading...' : locationQuery.data?.name ?? 'Unknown location'}
+              value={locationQuery.isLoading ? 'Loading...' : (locationQuery.data?.name ?? 'Unknown location')}
               onFocus={() => openLocationSelector()}
               required
             />
@@ -313,7 +313,7 @@ function useListRows(
 
     const label = productVariantQuery?.isLoading
       ? 'Loading...'
-      : getProductVariantName(productVariant) ?? 'Unknown product';
+      : (getProductVariantName(productVariant) ?? 'Unknown product');
 
     const specialOrderLineItem = specialOrder?.lineItems.find(hasPropertyValue('uuid', lineItem.uuid));
 

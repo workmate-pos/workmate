@@ -1,4 +1,4 @@
-import { useQuery, UseQueryOptions } from 'react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
 import type { CalculateWorkOrder } from '@web/schemas/generated/calculate-work-order.js';
 import { Fetch } from './fetch.js';
@@ -30,22 +30,24 @@ export const useCalculatedDraftOrderQuery = (
     | 'companyId'
     | 'paymentTerms'
   >,
-  options?: UseQueryOptions<
-    CalculateDraftOrderResponse,
-    unknown,
-    CalculateDraftOrderResponse,
-    (
-      | string
-      | CalculateWorkOrder['name']
-      | CalculateWorkOrder['items']
-      | CalculateWorkOrder['customerId']
-      | CalculateWorkOrder['charges']
-      | CalculateWorkOrder['discount']
-      | CalculateWorkOrder['companyLocationId']
-      | CalculateWorkOrder['companyContactId']
-      | CalculateWorkOrder['companyId']
-      | CalculateWorkOrder['paymentTerms']
-    )[]
+  options?: Partial<
+    UseQueryOptions<
+      CalculateDraftOrderResponse,
+      unknown,
+      CalculateDraftOrderResponse,
+      (
+        | string
+        | CalculateWorkOrder['name']
+        | CalculateWorkOrder['items']
+        | CalculateWorkOrder['customerId']
+        | CalculateWorkOrder['charges']
+        | CalculateWorkOrder['discount']
+        | CalculateWorkOrder['companyLocationId']
+        | CalculateWorkOrder['companyContactId']
+        | CalculateWorkOrder['companyId']
+        | CalculateWorkOrder['paymentTerms']
+      )[]
+    >
   >,
 ) => {
   const query = useQuery({

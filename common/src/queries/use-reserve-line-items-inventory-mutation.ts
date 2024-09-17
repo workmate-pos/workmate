@@ -1,4 +1,4 @@
-import { useMutation } from 'react-query';
+import { useMutation } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { ReserveInventoryForLineItemsResponse } from '@web/controllers/api/sources.js';
 import { ReserveInventoryForLineItems } from '@web/schemas/generated/reserve-inventory-for-line-items.js';

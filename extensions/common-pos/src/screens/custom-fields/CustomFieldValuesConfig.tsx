@@ -9,14 +9,15 @@ import {
   Stack,
   Text,
   TextField,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useSaveCustomFieldValueOptionsMutation } from '@work-orders/common/queries/use-save-custom-field-value-options-mutation.js';
 import { useDeleteCustomFieldValueOptionsMutation } from '@work-orders/common/queries/use-delete-custom-field-value-options-mutation.js';
 import { UseRouter } from '../router.js';
+import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 
 const tabIds = ['allow-any-value', 'choose-from-options'] as const;
 type TabId = (typeof tabIds)[number];
@@ -37,7 +38,7 @@ export function CustomFieldValuesConfig({ name, useRouter }: CustomFieldValuesCo
   const [tab, setTab] = useState<TabId>('allow-any-value');
   const [options, setOptions] = useState<string[]>([]);
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
   const customFieldValueOptionsQuery = useCustomFieldValueOptionsQuery({
     fetch,
@@ -47,10 +48,10 @@ export function CustomFieldValuesConfig({ name, useRouter }: CustomFieldValuesCo
   const deleteCustomFieldValueOptionsMutation = useDeleteCustomFieldValueOptionsMutation({ fetch });
 
   const isLoading = [
-    customFieldValueOptionsQuery,
-    saveCustomFieldValueOptionsMutation,
-    deleteCustomFieldValueOptionsMutation,
-  ].some(query => query.isLoading);
+    customFieldValueOptionsQuery.isLoading,
+    saveCustomFieldValueOptionsMutation.isPending,
+    deleteCustomFieldValueOptionsMutation.isPending,
+  ].some(identity);
 
   const router = useRouter();
   const screen = useScreen();

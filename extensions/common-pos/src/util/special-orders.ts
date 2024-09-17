@@ -1,5 +1,5 @@
 import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
-import { BadgeProps } from '@shopify/retail-ui-extensions-react';
+import { BadgeProps } from '@shopify/ui-extensions-react/point-of-sale';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';

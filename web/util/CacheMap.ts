@@ -14,7 +14,7 @@ export class CacheMap<K, V> implements Map<K, V> {
     return this.map.size;
   }
 
-  *[Symbol.iterator](): IterableIterator<[K, V]> {
+  *[Symbol.iterator](): MapIterator<[K, V]> {
     for (const [key, { value }] of this.map) {
       yield [key, value];
     }
@@ -37,7 +37,7 @@ export class CacheMap<K, V> implements Map<K, V> {
     return false;
   }
 
-  entries(): IterableIterator<[K, V]> {
+  entries(): MapIterator<[K, V]> {
     return this[Symbol.iterator]();
   }
 
@@ -59,7 +59,7 @@ export class CacheMap<K, V> implements Map<K, V> {
     return this.map.has(key);
   }
 
-  keys(): IterableIterator<K> {
+  keys(): MapIterator<K> {
     return this.map.keys();
   }
 
@@ -75,7 +75,7 @@ export class CacheMap<K, V> implements Map<K, V> {
     return this;
   }
 
-  *values(): IterableIterator<V> {
+  *values(): MapIterator<V> {
     for (const { value } of this.map.values()) {
       yield value;
     }

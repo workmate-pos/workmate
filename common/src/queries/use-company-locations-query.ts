@@ -2,7 +2,7 @@ import { createPaginatedQuery } from './create-paginated-query.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PaginationOptions } from '@web/schemas/generated/pagination-options.js';
 import { FetchCompanyLocationsResponse } from '@web/controllers/api/companies.js';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { UseQueryData } from './react-query.js';
 import { useCompanyLocationQuery } from './use-company-location-query.js';
 
@@ -31,15 +31,15 @@ export const useCompanyLocationsQuery = (
     ...options,
     options: {
       ...options.options,
-      onSuccess: data => {
-        for (const location of data.pages.flat()) {
+      onSuccess: page => {
+        for (const location of page.locations) {
           queryClient.setQueryData(
             ['company-location', location.id],
             location satisfies UseQueryData<typeof useCompanyLocationQuery>,
           );
         }
 
-        options.options?.onSuccess?.(data);
+        options.options?.onSuccess?.(page);
       },
     },
   });

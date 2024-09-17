@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
-import { ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 

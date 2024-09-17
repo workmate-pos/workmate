@@ -1,6 +1,6 @@
 import { Fetch } from './fetch.js';
 import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
-import { useQueries } from 'react-query';
+import { useQueries } from '@tanstack/react-query';
 import { CalculateWorkOrder } from '@web/schemas/generated/calculate-work-order.js';
 import type { CalculateDraftOrderResponse } from '@web/controllers/api/work-order.js';
 
@@ -23,8 +23,8 @@ export const useCalculateWorkOrderQueries = ({
     | 'paymentTerms'
   >)[];
 }) => {
-  const queries = useQueries(
-    workOrders.map(
+  const queries = useQueries({
+    queries: workOrders.map(
       ({
         name,
         items,
@@ -74,7 +74,7 @@ export const useCalculateWorkOrderQueries = ({
         },
       }),
     ),
-  );
+  });
 
   return Object.fromEntries(workOrders.map(({ name }, i) => [name, queries[i]!]));
 };

@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useQueries, useQuery } from 'react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { match } from 'ts-pattern';
 import { LineItemSourcesResponse } from '@web/controllers/api/sources.js';
@@ -12,12 +12,12 @@ export const useLineItemSourcesQuery = ({ fetch, id }: { fetch: Fetch; id: ID })
   });
 
 export const useLineItemSourceQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID[] }) => {
-  const queries = useQueries(
-    ids.map(id => ({
+  const queries = useQueries({
+    queries: ids.map(id => ({
       queryKey: ['sources', id],
       queryFn: createQueryFn(fetch, id),
     })),
-  );
+  });
 
   const sources: Record<ID, LineItemSourcesResponse['sources']> = {};
 

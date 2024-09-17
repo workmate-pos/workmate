@@ -10,10 +10,10 @@ import {
   Segment,
   SegmentedControl,
   Text,
-  useExtensionApi,
+  useApi,
   useScannerSourcesSubscription,
   useStatefulSubscribableScannerData,
-} from '@shopify/retail-ui-extensions-react';
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { Dispatch, ReactNode, SetStateAction, useCallback, useEffect, useMemo, useState } from 'react';
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
@@ -130,7 +130,7 @@ export function StockTransferLineItemScanner({
   const [actions, setActions] = useState<Action[]>([]);
   const rows = useActionRows(actions, setActions);
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const lineItemByInventoryItemIdByStatus = useMemo(() => {
     const availableItemCounts: Record<ID, Record<StockTransferLineItemStatus, StockTransferLineItem[]>> = {};
@@ -249,12 +249,12 @@ export function StockTransferLineItemScanner({
   };
 
   const handleScannedProductVariant = useCallback(
-    productVariant => {
-      setProductVariant(productVariant);
+    (variant: ProductVariant) => {
+      setProductVariant(variant);
 
       // If auto-scan is enabled we automatically perform the action to perform.
       if (autoScanStatus !== null) {
-        createAction(autoScanStatus, productVariant);
+        createAction(autoScanStatus, variant);
       }
     },
     [autoScanStatus, createAction],

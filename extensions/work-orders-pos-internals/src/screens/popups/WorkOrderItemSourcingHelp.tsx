@@ -1,4 +1,4 @@
-import { ScrollView, Text } from '@shopify/retail-ui-extensions-react';
+import { ScrollView, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
 export function WorkOrderItemSourcingHelp() {

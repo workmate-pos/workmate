@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreateSpecialOrderResponse } from '@web/controllers/api/special-orders.js';
 import { CreateSpecialOrder } from '@web/schemas/generated/create-special-order.js';
 import { useSpecialOrderQuery } from './use-special-order-query.js';
@@ -26,13 +26,13 @@ export const useSpecialOrderMutation = ({ fetch }: { fetch: Fetch }) => {
     onSuccess(...args) {
       const [specialOrder] = args;
 
-      queryClient.invalidateQueries(['special-orders']);
+      queryClient.invalidateQueries({ queryKey: ['special-orders'] });
       queryClient.setQueryData(
         ['special-order', specialOrder.name],
         specialOrder satisfies UseQueryData<typeof useSpecialOrderQuery>,
       );
-      queryClient.invalidateQueries(['work-order']);
-      queryClient.invalidateQueries(['work-order-info']);
+      queryClient.invalidateQueries({ queryKey: ['work-order'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order-info'] });
     },
   });
 };

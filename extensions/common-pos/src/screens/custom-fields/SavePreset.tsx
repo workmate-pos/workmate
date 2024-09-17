@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { useForm } from '@teifi-digital/pos-tools/form';
+import { ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { UseRouter } from '../router.js';
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
@@ -21,8 +21,7 @@ export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
   const [name, setName] = useState<string>('');
   const [isDefault, setIsDefault] = useState(false);
 
-  const { Form } = useForm();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const router = useRouter();
 
   const fetch = useAuthenticatedFetch();
@@ -55,7 +54,7 @@ export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
         <Text variant={'headingLarge'}>Save Custom Field Preset</Text>
       </Stack>
 
-      <Form disabled={presetMutation.isLoading}>
+      <Form disabled={presetMutation.isPending}>
         <Stack direction={'vertical'} paddingHorizontal={'ExtraExtraLarge'}>
           <FormStringField label={'Preset Name'} value={name} onChange={setName} required />
           <FormButton
@@ -68,7 +67,7 @@ export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
             title={'Save Preset'}
             type={'primary'}
             action={'submit'}
-            loading={presetMutation.isLoading}
+            loading={presetMutation.isPending}
             onPress={presetNameInUseDialog.show}
           />
 

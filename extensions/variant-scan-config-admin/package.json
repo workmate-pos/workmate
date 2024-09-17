@@ -1,0 +1,19 @@
+{
+  "name": "variant-scan-config-admin",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "author": "Tim van Dam",
+  "dependencies": {
+    "@types/react": "^18.3.5",
+    "@work-orders/common": "file:../../common",
+    "@work-orders/common-pos": "file:../common-pos",
+    "@work-orders/work-orders-pos-internals": "file:../work-orders-pos-internals",
+    "react": "^18.3.1"
+  },
+  "scripts": {
+    "clean": "rm -fr node_modules",
+    "build": "tsc"
+  }
+}

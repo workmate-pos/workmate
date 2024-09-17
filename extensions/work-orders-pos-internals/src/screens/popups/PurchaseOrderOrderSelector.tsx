@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, SegmentedControl, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, SegmentedControl, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
 import { Int } from '@web/schemas/generated/create-product.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -40,7 +40,7 @@ export function PurchaseOrderOrderSelector({ onSelect }: { onSelect: (orderId: I
       </Stack>
       <SegmentedControl
         segments={orderTypeSegments.map(segment => ({ id: segment, label: segment, disabled: false }))}
-        onSelect={(orderType: OrderTypeSegment) => setOrderType(orderType)}
+        onSelect={orderType => setOrderType(orderType as OrderTypeSegment)}
         selected={orderType}
       />
       <ControlledSearchBar

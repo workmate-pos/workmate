@@ -1,6 +1,6 @@
 import type { FetchInventoryItemsResponse } from '@web/controllers/api/inventory-items.js';
 import { createPaginatedQuery } from './create-paginated-query.js';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { UseQueryData } from './react-query.js';
 import { useInventoryItemQuery } from './use-inventory-item-query.js';
 import { InventoryItemPaginationOptions } from '@web/schemas/generated/inventory-item-pagination-options.js';
@@ -20,15 +20,15 @@ export const useInventoryItemsQuery = (...[options, ...args]: Parameters<typeof 
       ...options,
       options: {
         ...options.options,
-        onSuccess: data => {
-          for (const inventoryItem of data.pages.flat()) {
+        onSuccess: page => {
+          for (const inventoryItem of page.inventoryItems) {
             queryClient.setQueryData(
               ['inventory-item', inventoryItem.inventoryLevel?.location.id, inventoryItem.id],
               inventoryItem satisfies UseQueryData<typeof useInventoryItemQuery>,
             );
           }
 
-          options.options?.onSuccess?.(data);
+          options.options?.onSuccess?.(page);
         },
       },
     },

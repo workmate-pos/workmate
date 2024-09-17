@@ -1,13 +1,13 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useSerialsQuery } from '@work-orders/common/queries/use-serials-query.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SerialSortColumn, SerialSortOrder } from '@web/schemas/generated/serial-pagination-options.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useSerialQuery } from '@work-orders/common/queries/use-serial-query.js';
 import { useRouter } from '../../routes.js';
-import { Banner, Button, List, ListRow, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Banner, Button, List, ListRow, ScrollView, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
@@ -52,22 +52,21 @@ export function SerialsList() {
       productVariantId: selectedSerial?.productVariantId ?? null,
       serial: selectedSerial?.serial ?? null,
     },
-    {
-      staleTime: 0,
-      onSuccess(serial) {
-        if (serial) {
-          const initial = getCreateSerialFromDetailedSerial(serial);
-          router.push('Serial', { initial });
-          setSelectedSerial(undefined);
-        }
-      },
-    },
+    { staleTime: 0 },
   );
+
+  useEffect(() => {
+    if (selectedSerial && selectedSerialQuery.data) {
+      const initial = getCreateSerialFromDetailedSerial(selectedSerialQuery.data);
+      router.push('Serial', { initial });
+      setSelectedSerial(undefined);
+    }
+  }, [selectedSerialQuery.data, selectedSerial]);
 
   const screen = useScreen();
   screen.setIsLoading(selectedSerialQuery.isFetching);
 
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
 
   return (
     <ScrollView>

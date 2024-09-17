@@ -1,4 +1,4 @@
-import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/retail-ui-extensions-react';
+import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
 import { useState } from 'react';
 import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
 import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
@@ -106,11 +106,11 @@ export function DiscountSelector({ onSelect }: { onSelect: (discount: CreateWork
 
             <Stack direction="horizontal" alignment="center" flexChildren paddingHorizontal="ExtraExtraLarge">
               <Stepper
-                minimumValue={allowedPercentageRange?.[0] ?? 0}
-                maximumValue={allowedPercentageRange?.[1]}
-                initialValue={percentageValue}
-                value={percentageValue}
-                onValueChanged={setPercentageValue}
+                minimumValue={allowedPercentageRange?.[0] ? Number(allowedPercentageRange[0]) : 0}
+                maximumValue={allowedPercentageRange?.[1] ? Number(allowedPercentageRange[1]) : undefined}
+                initialValue={Number(percentageValue)}
+                value={Number(percentageValue)}
+                onValueChanged={percentage => setPercentageValue(BigDecimal.fromString(String(percentage)).toDecimal())}
               />
               <Button
                 title={`${percentageValue}%`}

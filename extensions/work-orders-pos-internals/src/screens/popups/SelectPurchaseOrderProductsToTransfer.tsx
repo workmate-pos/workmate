@@ -1,7 +1,7 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useEffect, useMemo, useState } from 'react';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -121,7 +121,7 @@ export function SelectPurchaseOrderProductsToTransfer({ name }: { name: string }
   screen.setIsLoading(purchaseOrderQuery.isFetching);
 
   const router = useRouter();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   if (purchaseOrderQuery.isError) {
     return (
