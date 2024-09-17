@@ -3,7 +3,6 @@ import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
 
 type SpecialOrderNotification = NonNullable<ShopSettings['specialOrders']['notifications']>[number];
 
-// TODO: Also for work orders
 export function getSpecialOrderMutationNotifications(
   notifications: SpecialOrderNotification[],
   lastSavedSpecialOrder: CreateSpecialOrder | null,
