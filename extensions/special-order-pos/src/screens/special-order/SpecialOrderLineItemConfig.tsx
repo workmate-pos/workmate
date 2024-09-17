@@ -1,6 +1,6 @@
 import { CreateSpecialOrder } from '@web/schemas/generated/create-special-order.js';
 import { useState } from 'react';
-import { Badge, BadgeProps, Banner, Button, ScrollView, Stepper, Text } from '@shopify/retail-ui-extensions-react';
+import { Badge, Banner, Button, ScrollView, Stepper, Text } from '@shopify/retail-ui-extensions-react';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -8,13 +8,11 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { useRouter } from '../../routes.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { getSpecialOrderLineItemBadges } from '@work-orders/common-pos/util/special-orders.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export function SpecialOrderLineItemConfig({
   name,

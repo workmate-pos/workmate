@@ -56,7 +56,8 @@
   "scripts": {
     "build": "tsc",
     "build:watch": "tsc -w",
-    "clean": "rm -fr dist node_modules"
+    "clean": "rm -fr dist node_modules tsconfig.tsbuildinfo",
+    "watch": "tsc -w"
   },
   "author": "Tim van Dam",
   "devDependencies": {

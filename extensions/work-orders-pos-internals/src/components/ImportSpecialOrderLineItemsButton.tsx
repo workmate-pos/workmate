@@ -10,11 +10,7 @@ import { CreatePurchaseOrder, Product } from '@web/schemas/generated/create-purc
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import {
-  hasNestedPropertyValue,
-  hasNonNullableProperty,
-  isNonNullable,
-} from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
 
