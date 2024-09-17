@@ -105,8 +105,6 @@ function Merge() {
     },
   );
 
-  console.log(selectedResources);
-
   return (
     <LegacyCard>
       <IndexFilters
