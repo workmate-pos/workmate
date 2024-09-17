@@ -1,4 +1,4 @@
-import { sentryErr, WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, sentryErr, WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
 import { db } from './db/db.js';
 import { AppPlanName } from './db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
@@ -13,6 +13,10 @@ import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopif
 import { syncProductServiceTypeTag } from './metafields/product-service-type-metafield.js';
 import { cleanManyOrphanedDraftOrders, cleanOrphanedDraftOrders } from './work-orders/clean-orphaned-draft-orders.js';
 import { unit } from './db/unit-of-work.js';
+import { getWorkOrder } from './work-orders/queries.js';
+import { unreserveLineItem } from './sourcing/reserve.js';
+import { getProduct, softDeleteProducts } from './products/queries.js';
+import { softDeleteProductVariantsByProductIds } from './product-variants/queries.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -75,7 +79,7 @@ export default {
       const workOrderName = body.note_attributes.find(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
 
       if (workOrderName) {
-        const [workOrder] = await db.workOrder.get({ shop: session.shop, name: workOrderName.value });
+        const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName.value });
 
         if (!workOrder) {
           // can happen if a merchant manually adds the attribute. if this happens often something is wrong
@@ -125,8 +129,8 @@ export default {
       // shopify sends this webhook whenever the product is ordered, so we throttle a bit here
       // (we cannot use shopify's product.updatedAt because it updates even if the inventory item changes...)
       const FIVE_MINUTES = 5 * 60 * 1000;
-      const [databaseProduct] = await db.products.get({ productId: body.admin_graphql_api_id });
-      if (databaseProduct && databaseProduct.updatedAt.getTime() - Date.now() < FIVE_MINUTES) {
+      const product = await getProduct(body.admin_graphql_api_id);
+      if (product && product.updatedAt.getTime() - Date.now() < FIVE_MINUTES) {
         return;
       }
 
@@ -138,22 +142,56 @@ export default {
 
   PRODUCTS_DELETE: {
     async handler(_session, _topic, _shop, body: { admin_graphql_api_id: ID }) {
-      await db.productVariants.softDeleteProductVariantsByProductId({ productId: body.admin_graphql_api_id });
-      await db.products.softDeleteProducts({ productIds: [body.admin_graphql_api_id] });
+      await softDeleteProductVariantsByProductIds([body.admin_graphql_api_id]);
+      await softDeleteProducts([body.admin_graphql_api_id]);
     },
   },
 
   DRAFT_ORDERS_UPDATE: {
-    async handler(session, topic, shop, body: { admin_graphql_api_id: ID; name: string }) {
-      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({
-        orderId: body.admin_graphql_api_id,
-      });
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: ID;
+        name: string;
+        order_id: string | null;
+      },
+    ) {
+      async function sync() {
+        const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({
+          orderId: body.admin_graphql_api_id,
+        });
 
-      await cleanManyOrphanedDraftOrders(
-        session,
-        relatedWorkOrders.map(({ id }) => id),
-        () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
-      );
+        await cleanManyOrphanedDraftOrders(
+          session,
+          relatedWorkOrders.map(({ id }) => id),
+          () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
+        );
+      }
+
+      async function removeReservations() {
+        if (body.order_id === null) {
+          return;
+        }
+
+        // We want to remove all reservations the moment the draft order is converted into a real order
+        // because real orders will set the inventory state to committed until fulfillment.
+        // So we must get rid of the "reserved" state for reserved items
+
+        const lineItems = await db.shopifyOrder.getLineItems({ orderId: body.admin_graphql_api_id });
+
+        if (!lineItems.length) {
+          return;
+        }
+
+        // TODO: Bulk
+        await Promise.all(
+          lineItems.map(lineItem => unreserveLineItem(session, { lineItemId: lineItem.lineItemId as ID })),
+        );
+      }
+
+      await Promise.all([sync(), removeReservations()]);
     },
   },
 
@@ -161,23 +199,39 @@ export default {
     async handler(session, topic, shop, body: { id: number }) {
       const orderId = createGid('DraftOrder', body.id);
 
-      const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId });
+      async function sync() {
+        const relatedWorkOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId });
 
-      await cleanManyOrphanedDraftOrders(
-        session,
-        relatedWorkOrders.map(({ id }) => id),
-        () =>
-          unit(async () => {
-            await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
-            await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });
+        await cleanManyOrphanedDraftOrders(
+          session,
+          relatedWorkOrders.map(({ id }) => id),
+          () =>
+            unit(async () => {
+              await db.shopifyOrder.deleteLineItemsByOrderIds({ orderIds: [orderId] });
+              await db.shopifyOrder.deleteOrders({ orderIds: [orderId] });
 
-            await syncWorkOrders(
-              session,
-              relatedWorkOrders.map(({ id }) => id),
-              { onlySyncIfUnlinked: true, updateCustomAttributes: false },
-            );
-          }),
-      );
+              await syncWorkOrders(
+                session,
+                relatedWorkOrders.map(({ id }) => id),
+                { onlySyncIfUnlinked: true, updateCustomAttributes: false },
+              );
+            }),
+        );
+      }
+
+      async function removeReservations() {
+        const lineItems = await db.shopifyOrder.getLineItems({ orderId: createGid('DraftOrder', body.id) });
+
+        if (!lineItems.length) {
+          return;
+        }
+
+        await Promise.all(
+          lineItems.map(lineItem => unreserveLineItem(session, { lineItemId: lineItem.lineItemId as ID })),
+        );
+      }
+
+      await Promise.all([sync(), removeReservations()]);
     },
   },
 
@@ -195,11 +249,35 @@ export default {
         orderId: body.admin_graphql_api_id,
       });
 
-      await cleanManyOrphanedDraftOrders(
-        session,
-        relatedWorkOrders.map(({ id }) => id),
-        () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
-      );
+      if (relatedWorkOrders.length > 0) {
+        await cleanManyOrphanedDraftOrders(
+          session,
+          relatedWorkOrders.map(({ id }) => id),
+          () => syncShopifyOrdersIfExists(session, [body.admin_graphql_api_id]),
+        );
+      } else {
+        // No related work orders, maybe the order create webhook failed, so try to create it here
+
+        const workOrderName = body.note_attributes.find(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
+
+        if (workOrderName) {
+          const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName.value });
+
+          if (!workOrder) {
+            // can happen if a merchant manually adds the attribute. if this happens often something is wrong
+            sentryErr('Order with Work Order Attribute not found in db', {
+              shop: session.shop,
+              workOrderName,
+              orderId: body.admin_graphql_api_id,
+            });
+            return;
+          }
+
+          await cleanOrphanedDraftOrders(session, workOrder.id, () =>
+            syncShopifyOrders(session, [body.admin_graphql_api_id]),
+          );
+        }
+      }
     },
   },
 

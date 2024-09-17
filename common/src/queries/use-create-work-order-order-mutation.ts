@@ -27,9 +27,8 @@ export const useCreateWorkOrderOrderMutation = (
       return result;
     },
     onSuccess(...args) {
-      queryClient.invalidateQueries(['work-order']);
-      queryClient.invalidateQueries(['work-order-info']);
-      queryClient.invalidateQueries(['calculated-draft-order']);
+      // invalidate everything. this can change stock, work orders, etc
+      queryClient.invalidateQueries();
 
       options?.onSuccess?.(...args);
     },

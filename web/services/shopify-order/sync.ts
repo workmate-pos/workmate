@@ -13,6 +13,9 @@ import { unit } from '../db/unit-of-work.js';
 import { compareMoney, subtractMoney, ZERO_MONEY } from '../../util/money.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { getWorkOrderDiscount } from '../work-orders/get.js';
+import { removeShopifyOrderLineItemsExceptIds } from '../orders/queries.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { sql } from '../db/sql-tag.js';
 
 export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[]) {
   if (orderIds.length === 0) {
@@ -145,24 +148,15 @@ async function syncShopifyOrderLineItems(
     | { type: 'order'; order: gql.order.DatabaseShopifyOrderFragment.Result; isNewOrder: boolean }
     | { type: 'draft-order'; order: gql.draftOrder.DatabaseShopifyOrderFragment.Result },
 ) {
-  const databaseLineItems = await db.shopifyOrder.getLineItems({ orderId: order.order.id });
-  const databaseLineItemIds = databaseLineItems.map(lineItem => {
-    const lineItemId = lineItem.lineItemId;
-    assertGid(lineItemId);
-    return lineItemId;
-  });
-
   const lineItems =
     order.type === 'order'
       ? await getOrderLineItems(session, order.order.id)
       : await getDraftOrderLineItems(session, order.order.id);
 
-  const lineItemIds = new Set(lineItems.map(lineItem => lineItem.id));
-  const lineItemIdsToDelete = databaseLineItemIds.filter(lineItemId => !lineItemIds.has(lineItemId));
-
-  if (lineItemIdsToDelete.length) {
-    await db.shopifyOrder.removeLineItemsByIds({ lineItemIds: lineItemIdsToDelete });
-  }
+  await ensureProductVariantsExist(
+    session,
+    unique(lineItems.map(lineItem => lineItem.variant?.id).filter(isNonNullable)),
+  );
 
   await Promise.all(
     lineItems.map(
@@ -176,10 +170,6 @@ async function syncShopifyOrderLineItems(
         discountedUnitPriceSet,
         originalUnitPriceSet,
       }) => {
-        if (variant) {
-          await ensureProductVariantsExist(session, [variant.id]);
-        }
-
         const totalTax = BigDecimal.sum(
           ...taxLines.map(taxLine => BigDecimal.fromDecimal(taxLine.priceSet.shopMoney.amount)),
         ).toMoney();
@@ -205,6 +195,11 @@ async function syncShopifyOrderLineItems(
   } catch (error) {
     sentryErr(error, {});
   }
+
+  await removeShopifyOrderLineItemsExceptIds(
+    order.order.id,
+    lineItems.map(lineItem => lineItem.id),
+  );
 
   const workOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId: order.order.id });
 

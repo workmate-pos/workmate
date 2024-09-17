@@ -71,3 +71,28 @@ mutation activateItems($locationId: ID!, $inventoryItemId: ID!) {
     }
   }
 }
+
+mutation moveQuantities($input: InventoryMoveQuantitiesInput!) {
+  inventoryMoveQuantities(input: $input) {
+    userErrors {
+      field
+      message
+    }
+    inventoryAdjustmentGroup {
+      id
+    }
+  }
+}
+
+mutation setQuantities($input: InventorySetQuantitiesInput!) {
+  inventorySetQuantities(input: $input) {
+    userErrors {
+      field
+      message
+      code
+    }
+    inventoryAdjustmentGroup {
+      id
+    }
+  }
+}

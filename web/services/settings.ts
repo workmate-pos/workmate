@@ -69,6 +69,7 @@ function assertValidSettings(settings: ShopSettings) {
       defaultStatus: settings.defaultPurchaseOrderStatus,
       statuses: settings.purchaseOrderStatuses,
     },
+    settings.cycleCount,
   ]) {
     assertValidFormatString(idFormat);
 

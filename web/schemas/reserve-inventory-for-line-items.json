@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "reservations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "lineItemId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "locationId": {
+            "$ref": "scalars.json#/definitions/ID"
+          },
+          "quantity": {
+            "$ref": "scalars.json#/definitions/Int",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": ["lineItemId", "locationId", "quantity"]
+      }
+    }
+  },
+  "required": ["reservations"],
+  "additionalProperties": false
+}

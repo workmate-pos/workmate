@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
-import { Button, ScrollView, Stack, Text, TextField } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text, TextField, useExtensionApi } from '@shopify/retail-ui-extensions-react';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -12,8 +12,9 @@ import { SelectPresetToEditProps } from './SelectPresetToEdit.js';
 import { EditPresetProps } from './EditPreset.js';
 import { SelectPresetProps } from './SelectPreset.js';
 import { CustomField } from '../../components/CustomField.js';
-import { DropdownProps } from '../Dropdown.js';
 import { CustomFieldValuesConfigProps } from './CustomFieldValuesConfig.js';
+import { ListPopupProps } from '../ListPopup.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export type CustomFieldConfigProps = {
   initialCustomFields: Record<string, string>;
@@ -23,15 +24,15 @@ export type CustomFieldConfigProps = {
     SavePreset: Route<SavePresetProps>;
     SelectPresetToEdit: Route<SelectPresetToEditProps>;
     SelectPreset: Route<SelectPresetProps>;
-    Dropdown: Route<DropdownProps<string>>;
     CustomFieldValuesConfig: Route<CustomFieldValuesConfigProps>;
+    ListPopup: Route<ListPopupProps>;
   }>;
   type: CustomFieldsPresetType;
 };
 
 export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type }: CustomFieldConfigProps) {
-  const [customFields, setCustomFields] = useState<Record<string, string>>(initialCustomFields);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [customFields, setCustomFields] = useState<Record<string, string>>({ ...initialCustomFields });
+  const hasUnsavedChanges = JSON.stringify(customFields) !== JSON.stringify(initialCustomFields);
 
   const [newCustomFieldName, setNewCustomFieldName] = useState('');
   const [newCustomFieldNameError, setNewCustomFieldNameError] = useState('');
@@ -49,23 +50,24 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
 
   const router = useRouter();
 
-  function createNewCustomField() {
+  const createNewCustomField = () => {
     if (newCustomFieldName.trim().length === 0) {
       setNewCustomFieldNameError('Custom field name is required');
       return;
     }
 
-    setHasUnsavedChanges(true);
     setNewCustomFieldName('');
     setNewCustomFieldNameError('');
     setCustomFields({
       ...customFields,
       [newCustomFieldName]: '',
     });
-  }
+  };
 
   const screen = useScreen();
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
+
+  const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   return (
     <ScrollView>
@@ -73,74 +75,103 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
         <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center' }} paddingVertical={'ExtraLarge'}>
           <Text variant="headingLarge">Custom Fields</Text>
         </ResponsiveStack>
-        <ResponsiveGrid columns={4} grow>
-          <Button
-            title={'Save as Preset'}
-            type={'plain'}
-            isDisabled={Object.keys(customFields).length === 0}
-            onPress={() => {
-              const keys = Object.keys(customFields);
-              router.push('SavePreset', {
-                keys,
-                useRouter,
-                type,
-              });
-            }}
-          />
-          <Button
-            title={'Import Preset'}
-            type={'plain'}
-            onPress={() => {
-              router.push('SelectPreset', {
-                onSelect: ({ keys }) => overrideOrMergeDialog.show(keys),
-                useRouter,
-                type,
-              });
-            }}
-          />
-          <Button
-            title={'Edit Preset'}
-            type={'plain'}
-            onPress={() => {
-              router.push('SelectPresetToEdit', {
-                useRouter,
-                type,
-              });
-            }}
-          />
-        </ResponsiveGrid>
+
+        <Button
+          title={'Configure'}
+          type={'plain'}
+          onPress={() => {
+            const keys = Object.keys(customFields);
+
+            router.push('ListPopup', {
+              title: 'Configure Custom Fields',
+              selection: {
+                type: 'select',
+                items: [
+                  keys.length > 0 ? { id: 'save-as-preset', leftSide: { label: 'Save as Preset' } } : null,
+                  { id: 'import-preset', leftSide: { label: 'Import Preset' } },
+                  { id: 'edit-preset', leftSide: { label: 'Edit Preset' } },
+                  keys.length > 0
+                    ? { id: 'change-values', leftSide: { label: 'Change Allowed Custom Field Values' } }
+                    : null,
+                ].filter(isNonNullable),
+                onSelect: action => {
+                  if (action === 'save-as-preset') {
+                    router.push('SavePreset', {
+                      keys,
+                      useRouter,
+                      type,
+                    });
+                    return;
+                  }
+
+                  if (action === 'import-preset') {
+                    router.push('SelectPreset', {
+                      onSelect: ({ keys }) => overrideOrMergeDialog.show(keys),
+                      useRouter,
+                      type,
+                    });
+                    return;
+                  }
+
+                  if (action === 'edit-preset') {
+                    router.push('SelectPresetToEdit', {
+                      useRouter,
+                      type,
+                    });
+                    return;
+                  }
+
+                  if (action === 'change-values') {
+                    router.push('ListPopup', {
+                      title: 'Select Custom Field',
+                      selection: {
+                        type: 'select',
+                        items: keys.map(key => ({ id: key, leftSide: { label: key } })),
+                        onSelect: key =>
+                          router.push('CustomFieldValuesConfig', {
+                            name: key,
+                            useRouter,
+                          }),
+                      },
+                      useRouter,
+                    });
+                    return;
+                  }
+
+                  toast.show(`Unknown action ${action}`);
+                },
+              },
+              useRouter,
+            });
+          }}
+        />
       </ResponsiveGrid>
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
         <ResponsiveGrid columns={1}>
-          {Object.entries(customFields).flatMap(([key, value]) => (
-            <ResponsiveGrid columns={2}>
+          {Object.entries(customFields).map(([key, value]) => (
+            <ResponsiveGrid columns={2} key={key}>
               <CustomField
-                key={`${key}-value`}
                 name={key}
                 value={value}
-                onChange={value => {
-                  setHasUnsavedChanges(true);
+                onChange={value =>
                   setCustomFields({
                     ...customFields,
                     [key]: value,
-                  });
-                }}
+                  })
+                }
                 useRouter={useRouter}
               />
 
               <ResponsiveGrid columns={2}>
                 <Button
-                  key={`${key}-remove-button`}
                   title={'Remove'}
                   type={'destructive'}
-                  onPress={() => {
-                    setHasUnsavedChanges(true);
-                    setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)));
-                  }}
+                  onPress={() =>
+                    setCustomFields(Object.fromEntries(Object.entries(customFields).filter(([k]) => k !== key)))
+                  }
                 />
                 <Button
-                  key={`${key}-manage`}
                   title={'Values'}
                   onPress={() => router.push('CustomFieldValuesConfig', { name: key, useRouter })}
                 />

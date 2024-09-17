@@ -26,7 +26,7 @@ const segmentToggleName: Partial<Record<SegmentId, keyof ShopSettings['chargeSet
 
 type ChargeType<SegmentTypes extends SegmentId> = SegmentTypes extends 'none'
   ? null
-  : DiscriminatedUnionOmit<CreateWorkOrderCharge & { type: SegmentTypes }, 'uuid' | 'workOrderItem' | 'employeeId'>;
+  : DiscriminatedUnionOmit<CreateWorkOrderCharge & { type: SegmentTypes }, 'uuid' | 'workOrderItemUuid' | 'employeeId'>;
 
 /**
  * Segmented labour configuration control.

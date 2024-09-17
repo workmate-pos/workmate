@@ -39,10 +39,12 @@ export function PurchaseOrderSettings({
                 content: `Create status "${purchaseOrderStatusValue}"`,
                 prefix: <Icon source={CirclePlusMinor} />,
                 onAction: () => {
-                  setSettings({
-                    ...settings,
-                    purchaseOrderStatuses: [...settings.purchaseOrderStatuses, purchaseOrderStatusValue],
-                  });
+                  if (!settings.purchaseOrderStatuses.includes(purchaseOrderStatusValue)) {
+                    setSettings({
+                      ...settings,
+                      purchaseOrderStatuses: [...settings.purchaseOrderStatuses, purchaseOrderStatusValue],
+                    });
+                  }
                   setPurchaseOrderStatusValue('');
                 },
               }
@@ -65,6 +67,7 @@ export function PurchaseOrderSettings({
           </Tag>
         ))}
       </InlineStack>
+
       <Autocomplete
         options={settings.purchaseOrderStatuses.map(status => ({ id: status, label: status, value: status }))}
         selected={[settings.defaultPurchaseOrderStatus]}
@@ -86,6 +89,7 @@ export function PurchaseOrderSettings({
           />
         }
       />
+
       <TextField
         label="ID Format"
         autoComplete="off"

@@ -1,8 +1,12 @@
 import { Decimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import type { ID, DateTime, Int, Money } from '../gql/queries/generated/schema.js';
 import { ShopifyOrderType } from '../db/queries/generated/shopify-order.sql.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
-export type WorkOrder = {
+/**
+ * A work order with all available data.
+ */
+export type DetailedWorkOrder = {
   name: string;
   status: string;
   dueDate: DateTime;
@@ -10,8 +14,8 @@ export type WorkOrder = {
   internalNote: string;
   customerId: ID;
   derivedFromOrderId: ID | null;
-  items: WorkOrderItem[];
-  charges: WorkOrderCharge[];
+  items: DetailedWorkOrderItem[];
+  charges: DetailedWorkOrderCharge[];
   orders: WorkOrderOrder[];
   customFields: Record<string, string>;
   discount: WorkOrderDiscount | null;
@@ -19,6 +23,13 @@ export type WorkOrder = {
   companyLocationId: ID | null;
   companyContactId: ID | null;
   paymentTerms: WorkOrderPaymentTerms | null;
+  serial: WorkOrderSerial | null;
+};
+
+export type WorkOrderSerial = {
+  productVariantId: ID;
+  serial: string;
+  locationId: ID | null;
 };
 
 export type WorkOrderDiscount =
@@ -36,16 +47,19 @@ export type WorkOrderPaymentTerms = {
   date: DateTime | null;
 };
 
-export type WorkOrderItem = {
-  uuid: string;
+export type DetailedWorkOrderItem = {
+  uuid: UUID;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   quantity: Int;
   absorbCharges: boolean;
   customFields: Record<string, string>;
+  purchaseOrders: WorkOrderPurchaseOrder[];
+  transferOrders: WorkOrderTransferOrder[];
+  reservations: LineItemReservation[];
+  specialOrders: WorkOrderSpecialOrder[];
 } & (
   | {
       type: 'product';
-      purchaseOrders: WorkOrderPurchaseOrder[];
       productVariantId: ID;
     }
   | {
@@ -66,15 +80,37 @@ export type WorkOrderPurchaseOrderItem = {
   availableQuantity: Int;
 };
 
-export type WorkOrderCharge = FixedPriceLabour | HourlyLabour;
+export type WorkOrderSpecialOrder = {
+  name: string;
+  items: WorkOrderSpecialOrderItem[];
+};
+
+export type WorkOrderSpecialOrderItem = {
+  quantity: Int;
+  orderedQuantity: Int;
+};
+
+export type WorkOrderTransferOrder = {
+  name: string;
+  items: WorkOrderTransferOrderItem[];
+};
+
+export type LineItemReservation = {
+  locationId: ID;
+  quantity: Int;
+};
+
+export type WorkOrderTransferOrderItem = {
+  status: 'PENDING' | 'IN_TRANSIT' | 'RECEIVED' | 'REJECTED';
+  quantity: Int;
+};
+
+export type DetailedWorkOrderCharge = FixedPriceLabour | HourlyLabour;
 
 export type FixedPriceLabour = {
   type: 'fixed-price-labour';
-  uuid: string;
-  workOrderItem: {
-    type: 'product' | 'custom-item';
-    uuid: string;
-  } | null;
+  uuid: UUID;
+  workOrderItemUuid: UUID | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;
@@ -85,11 +121,8 @@ export type FixedPriceLabour = {
 
 export type HourlyLabour = {
   type: 'hourly-labour';
-  uuid: string;
-  workOrderItem: {
-    type: 'product' | 'custom-item';
-    uuid: string;
-  } | null;
+  uuid: UUID;
+  workOrderItemUuid: UUID | null;
   shopifyOrderLineItem: ShopifyOrderLineItem | null;
   employeeId: ID | null;
   name: string;
@@ -116,4 +149,4 @@ export type WorkOrderOrder = {
   type: ShopifyOrderType;
 };
 
-export type WorkOrderInfo = WorkOrder;
+export type WorkOrderInfo = DetailedWorkOrder;

@@ -1,15 +1,9 @@
 import { useExtensionApi, useStatefulSubscribableCart } from '@shopify/retail-ui-extensions-react';
 import { useEffect, useRef, useState } from 'react';
-import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { SetLineItemPropertiesInput } from '@shopify/retail-ui-extensions';
-import {
-  getWorkOrderLineItems,
-  getWorkOrderOrderCustomAttributes,
-  WorkOrderItem,
-} from '@work-orders/work-order-shopify-order';
-import { WorkOrderCharge } from '@web/services/work-orders/types.js';
-import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
+import { getCustomAttributeObjectFromArray } from '@work-orders/work-order-shopify-order';
+import { DraftOrderInput } from '@web/services/gql/queries/generated/schema.js';
 
 export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
 
@@ -17,60 +11,48 @@ export type PaymentHandler = ReturnType<typeof usePaymentHandler>;
  * Creates work order payments.
  */
 export const usePaymentHandler = () => {
-  const { cart, navigation } = useExtensionApi<'pos.home.modal.render'>();
+  const { cart, navigation, toast } = useExtensionApi<'pos.home.modal.render'>();
   const [isLoading, setIsLoading] = useState(false);
 
   const cartRef = useCartRef();
 
-  const handlePayment = async ({
-    workOrderName,
-    customFields,
-    items,
-    charges,
-    customerId,
-    labourSku,
-    discount,
-  }: {
-    workOrderName: string;
-    // TODO: Maybe fetch the work order directly in here?
-    customFields: Record<string, string>;
-    items: WorkOrderItem[];
-    charges: DiscriminatedUnionOmit<WorkOrderCharge, 'shopifyOrderLineItem'>[];
-    customerId: ID | null;
-    labourSku: string;
-    discount: {
-      type: 'FIXED_AMOUNT' | 'PERCENTAGE';
-      value: string;
-    } | null;
-  }) => {
+  const handlePayment = async (draftOrderInput: DraftOrderInput) => {
     setIsLoading(true);
 
-    const { lineItems, customSales } = getWorkOrderLineItems(
-      items.filter(hasPropertyValue('type', 'product')),
-      items.filter(hasPropertyValue('type', 'custom-item')),
-      charges.filter(hasPropertyValue('type', 'hourly-labour')),
-      charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
-      { labourSku, workOrderName },
-    );
-
     await cart.clearCart();
-    await cart.addCartProperties(
-      getWorkOrderOrderCustomAttributes({
-        name: workOrderName,
-        customFields,
-      }),
-    );
+    await cart.addCartProperties(getCustomAttributeObjectFromArray([...(draftOrderInput.customAttributes ?? [])]));
 
-    if (customerId) {
-      await cart.setCustomer({ id: Number(parseGid(customerId).id) });
+    if (draftOrderInput.purchasingEntity?.customerId) {
+      const id = Number(parseGid(draftOrderInput.purchasingEntity?.customerId).id);
+      await cart.setCustomer({ id });
     }
 
-    for (const { quantity, title, unitPrice, taxable } of customSales) {
-      await cart.addCustomSale({ quantity, title, price: unitPrice, taxable });
-    }
+    const lineItems = draftOrderInput.lineItems ?? [];
+    for (const lineItem of [...lineItems].reverse()) {
+      if (lineItem.variantId) {
+        const { variantId, quantity } = lineItem;
+        const id = Number(parseGid(variantId).id);
+        await cart.addLineItem(id, quantity);
+      } else {
+        const { title, originalUnitPrice: price, quantity, taxable } = lineItem;
 
-    for (const { productVariantId, quantity } of lineItems) {
-      await cart.addLineItem(Number(parseGid(productVariantId).id), quantity);
+        if (!title) {
+          toast.show('Unexpected line item without title, skipping');
+          continue;
+        }
+
+        if (!price) {
+          toast.show('Unexpected line item without price, skipping');
+          continue;
+        }
+
+        if (typeof taxable !== 'boolean') {
+          toast.show('Unexpected line item without taxable, skipping');
+          continue;
+        }
+
+        await cart.addCustomSale({ quantity, title, price, taxable });
+      }
     }
 
     const bulkAddLineItemProperties: SetLineItemPropertiesInput[] = [];
@@ -79,11 +61,15 @@ export const usePaymentHandler = () => {
       let customAttributes: Record<string, string> | undefined;
 
       if (lineItem.variantId) {
-        customAttributes = lineItems.find(
-          li => Number(parseGid(li.productVariantId).id) === lineItem.variantId,
-        )?.customAttributes;
+        const draftOrderInputLineItem = draftOrderInput.lineItems?.find(
+          li => !!li.variantId && parseGid(li.variantId).id === String(lineItem.variantId),
+        );
+        customAttributes = getCustomAttributeObjectFromArray([...(draftOrderInputLineItem?.customAttributes ?? [])]);
       } else if (lineItem.title) {
-        customAttributes = customSales.find(li => li.title === lineItem.title)?.customAttributes;
+        const draftOrderInputLineItem = draftOrderInput.lineItems?.find(
+          li => !li.variantId && li.title === lineItem.title,
+        );
+        customAttributes = getCustomAttributeObjectFromArray([...(draftOrderInputLineItem?.customAttributes ?? [])]);
       }
 
       if (customAttributes) {
@@ -93,9 +79,15 @@ export const usePaymentHandler = () => {
 
     await cart.bulkAddLineItemProperties(bulkAddLineItemProperties);
 
-    if (discount) {
-      const discountType = ({ FIXED_AMOUNT: 'FixedAmount', PERCENTAGE: 'Percentage' } as const)[discount.type];
-      await cart.applyCartDiscount(discountType, 'Discount', discount.value);
+    if (draftOrderInput.appliedDiscount) {
+      const type = (
+        {
+          FIXED_AMOUNT: 'FixedAmount',
+          PERCENTAGE: 'Percentage',
+        } as const
+      )[draftOrderInput.appliedDiscount.valueType];
+      const amount = String(draftOrderInput.appliedDiscount.value);
+      await cart.applyCartDiscount(type, 'Discount', amount);
     }
 
     navigation.dismiss();

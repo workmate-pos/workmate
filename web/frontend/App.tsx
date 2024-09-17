@@ -28,6 +28,14 @@ export default function App() {
                     destination: '/purchase-orders',
                   },
                   {
+                    label: 'Special Orders',
+                    destination: '/special-orders',
+                  },
+                  {
+                    label: 'Serials',
+                    destination: '/serials',
+                  },
+                  {
                     label: 'Services & Labour',
                     destination: '/services-and-labour',
                   },

@@ -22,11 +22,13 @@ import { WorkOrderRequestSettings } from '@web/frontend/components/settings/sect
 import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
 import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
 import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
+import { CycleCountSettings } from '@web/frontend/components/settings/sections/CycleCountSettings.js';
+import { SpecialOrderSettings } from '@web/frontend/components/settings/sections/SpecialOrderSettings.js';
 
 export default function () {
   return (
     <Frame>
-      <Page narrowWidth>
+      <Page>
         <PermissionBoundary permissions={['read_settings']}>
           <Settings />
         </PermissionBoundary>
@@ -47,9 +49,6 @@ function Settings() {
     setHasUnsavedChanges(true);
   };
 
-  const [defaultPurchaseOrderStatusValue, setDefaultPurchaseOrderStatusValue] = useState('');
-  const [defaultWorkOrderStatusValue, setDefaultWorkOrderStatusValue] = useState('');
-
   const [purchaseOrderWebhookIsValid, setPurchaseOrderWebhookIsValid] = useState(true);
 
   const isValid = purchaseOrderWebhookIsValid;
@@ -61,8 +60,6 @@ function Settings() {
       refetchOnWindowFocus: false,
       onSuccess({ settings }) {
         setSettings(settings);
-        setDefaultWorkOrderStatusValue(settings.defaultStatus);
-        setDefaultPurchaseOrderStatusValue(settings.defaultPurchaseOrderStatus);
         setHasUnsavedChanges(false);
       },
       onError() {
@@ -108,7 +105,7 @@ function Settings() {
           <WorkOrderSettings
             settings={settings}
             setSettings={setSettings}
-            defaultWorkOrderStatusValue={defaultWorkOrderStatusValue}
+            defaultWorkOrderStatusValue={settings.defaultStatus}
           />
           <Divider />
           <DiscountSettings settings={settings} setSettings={setSettings} />
@@ -130,7 +127,7 @@ function Settings() {
           <PurchaseOrderSettings
             settings={settings}
             setSettings={setSettings}
-            defaultPurchaseOrderStatusValue={defaultPurchaseOrderStatusValue}
+            defaultPurchaseOrderStatusValue={settings.defaultPurchaseOrderStatus}
           />
           <Divider />
           <CustomerMetafieldSettings settings={settings} setSettings={setSettings} />
@@ -146,6 +143,20 @@ function Settings() {
     {
       name: 'Stock Transfers',
       tab: <StockTransferSettings settings={settings} setSettings={setSettings} />,
+    },
+    {
+      name: 'Cycle Counts',
+      tab: (
+        <CycleCountSettings
+          settings={settings}
+          setSettings={setSettings}
+          defaultStatus={settings.cycleCount.defaultStatus}
+        />
+      ),
+    },
+    {
+      name: 'Special Orders',
+      tab: <SpecialOrderSettings settings={settings} setSettings={setSettings} />,
     },
     {
       name: 'Printing',

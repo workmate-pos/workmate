@@ -1,0 +1,15 @@
+{
+  "name": "serials-pos",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "@work-orders/work-orders-pos-internals": "file:../work-orders-pos-internals"
+  },
+  "scripts": {
+    "clean": "rm -fr node_modules",
+    "build": "tsc",
+    "watch": "tsc -w"
+  }
+}

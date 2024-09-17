@@ -6,7 +6,7 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
-import { Badge, BlockStack, Box, DataTable, InlineStack, Modal, Text } from '@shopify/polaris';
+import { Badge, BlockStack, Box, DataTable, InlineStack, Modal, Text, TextField } from '@shopify/polaris';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useState } from 'react';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
@@ -14,7 +14,7 @@ import { Int } from '@web/schemas/generated/create-product.js';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@web/frontend/components/shared-orders/CustomFieldsList.js';
 import { NewCustomFieldModal } from '@web/frontend/components/shared-orders/modals/NewCustomFieldModal.js';
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
@@ -33,7 +33,7 @@ export function PurchaseOrderLineItemModal({
   onSave,
 }: {
   initialProduct: CreatePurchaseOrder['lineItems'][number];
-  purchaseOrder: PurchaseOrder | null;
+  purchaseOrder: DetailedPurchaseOrder | null;
   locationId: ID | null;
   open: boolean;
   onClose: () => void;
@@ -60,7 +60,6 @@ export function PurchaseOrderLineItemModal({
   const fetch = useAuthenticatedFetch({ setToastAction });
   const locationQuery = useLocationQuery({ fetch, id: locationId });
   const productVariantQuery = useProductVariantQuery({ fetch, id: product.productVariantId });
-  const orderQuery = useOrderQuery({ fetch, id: product.shopifyOrderLineItem?.orderId ?? null });
   const inventoryItemQuery = useInventoryItemQuery({
     fetch,
     id: productVariantQuery?.data?.inventoryItem?.id ?? null,
@@ -68,15 +67,16 @@ export function PurchaseOrderLineItemModal({
   });
 
   const productVariant = productVariantQuery?.data;
-  const order = orderQuery?.data?.order;
   const inventoryItem = inventoryItemQuery?.data;
   const location = locationQuery?.data;
 
   const name = getProductVariantName(productVariant) ?? 'Product';
 
-  const isLoading = inventoryItemQuery.isLoading || locationQuery.isLoading || orderQuery.isLoading;
+  const isLoading = inventoryItemQuery.isLoading || locationQuery.isLoading;
 
   const isImmutable = savedProduct && savedProduct.availableQuantity > 0;
+
+  // TODO: TO/SO info (just like pos)
 
   return (
     <>
@@ -110,10 +110,10 @@ export function PurchaseOrderLineItemModal({
           },
         ]}
       >
-        {order && (
+        {product.specialOrderLineItem && (
           <Modal.Section>
             <Box>
-              <Badge tone={'info'}>{order.name}</Badge>
+              <Badge tone={'info'}>{product.specialOrderLineItem.name}</Badge>
             </Box>
           </Modal.Section>
         )}
@@ -143,6 +143,12 @@ export function PurchaseOrderLineItemModal({
               min={0}
               requiredIndicator
               readOnly={isImmutable}
+            />
+            <TextField
+              label={'Serial Number'}
+              autoComplete="off"
+              value={product.serialNumber ?? ''}
+              onChange={value => setProduct(product => ({ ...product, serialNumber: value.toUpperCase() || null }))}
             />
             <IntegerField
               label={'Quantity'}

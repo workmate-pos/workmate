@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { CreateWorkOrderCharge } from '../../types.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import { uuid } from '@work-orders/common-pos/util/uuid.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 import {
   hasNestedPropertyValue,
   hasNonNullableProperty,
@@ -19,7 +19,6 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { useRouter } from '../../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
@@ -29,24 +28,20 @@ import { useForm } from '@teifi-digital/pos-tools/form';
 import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export function ItemChargeConfig({
-  item: { uuid: itemUuid, type: itemType },
+  item: { uuid: itemUuid },
   createWorkOrder,
   dispatch,
 }: {
-  item: { type: 'product' | 'custom-item'; uuid: string };
+  item: { uuid: UUID };
   createWorkOrder: WIPCreateWorkOrder;
   dispatch: CreateWorkOrderDispatchProxy;
 }) {
-  const initialItem = createWorkOrder.items
-    .filter(hasPropertyValue('type', itemType))
-    .find(hasPropertyValue('uuid', itemUuid));
+  const initialItem = createWorkOrder.items.find(hasPropertyValue('uuid', itemUuid));
 
-  const initialItemCharges =
-    createWorkOrder.charges
-      .filter(hasNestedPropertyValue('workOrderItem.type', itemType))
-      .filter(hasNestedPropertyValue('workOrderItem.uuid', itemUuid)) ?? [];
+  const initialItemCharges = createWorkOrder.charges.filter(hasPropertyValue('workOrderItemUuid', itemUuid)) ?? [];
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [item, setItem] = useState(initialItem);
@@ -60,38 +55,18 @@ export function ItemChargeConfig({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
+      ...createWorkOrder,
+      items: [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
+        isNonNullable,
       ),
-      items: useMemo(
-        () =>
-          [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
-            isNonNullable,
-          ),
-        [item],
-      ),
-      charges: useMemo(
-        () =>
-          [
-            ...createWorkOrder.charges.filter(
-              x => !(x.workOrderItem?.uuid === item?.uuid && x.workOrderItem?.type === item?.type),
-            ),
-            generalLabourCharge,
-            ...employeeLabourCharges,
-          ]
-            .filter(isNonNullable)
-            .map(charge => ({ ...charge, workOrderItem: item ? { type: item.type, uuid: item.uuid } : null }))
-            .filter(hasNonNullableProperty('workOrderItem')),
-        [generalLabourCharge, employeeLabourCharges, item],
-      ),
+      charges: [
+        ...createWorkOrder.charges.filter(x => x.workOrderItemUuid !== item?.uuid),
+        generalLabourCharge,
+        ...employeeLabourCharges,
+      ]
+        .filter(isNonNullable)
+        .map(charge => ({ ...charge, workOrderItemUuid: item?.uuid ?? null }))
+        .filter(hasNonNullableProperty('workOrderItemUuid')),
     },
     { keepPreviousData: true },
   );
@@ -144,18 +119,7 @@ export function ItemChargeConfig({
     return null;
   }
 
-  const itemLineItemId = (() => {
-    if (item.type === 'product') {
-      return calculatedDraftOrder?.itemLineItemIds[item.uuid];
-    }
-
-    if (item.type === 'custom-item') {
-      return calculatedDraftOrder?.customItemLineItemIds[item.uuid];
-    }
-
-    return item satisfies never;
-  })();
-  const itemLineItem = calculatedDraftOrder?.lineItems.find(li => li.id === itemLineItemId);
+  const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
   if (!calculatedDraftOrder || !itemLineItem) {
     return (
@@ -189,30 +153,11 @@ export function ItemChargeConfig({
   const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
   const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabourCharges.length > 0;
 
-  const basePrice =
-    (() => {
-      if (item.type === 'product') {
-        return calculatedDraftOrder.itemPrices[item.uuid];
-      }
+  const basePrice = calculatedDraftOrderQuery.getItemPrice(item) ?? BigDecimal.ZERO.toMoney();
 
-      if (item.type === 'custom-item') {
-        return calculatedDraftOrder.customItemPrices[item.uuid];
-      }
-
-      return item satisfies never;
-    })() ?? BigDecimal.ZERO.toMoney();
-
-  const chargePrices = itemCharges.map(charge => {
-    if (charge.type === 'hourly-labour') {
-      return calculatedDraftOrder.hourlyLabourChargePrices[charge.uuid] ?? BigDecimal.ZERO.toMoney();
-    }
-
-    if (charge.type === 'fixed-price-labour') {
-      return calculatedDraftOrder.fixedPriceLabourChargePrices[charge.uuid] ?? BigDecimal.ZERO.toMoney();
-    }
-
-    return charge satisfies never;
-  });
+  const chargePrices = itemCharges.map(
+    charge => calculatedDraftOrderQuery.getChargePrice(charge) ?? BigDecimal.ZERO.toMoney(),
+  );
   const chargesPrice = BigDecimal.sum(...chargePrices.map(price => BigDecimal.fromMoney(price))).toMoney();
   const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(chargesPrice)).toMoney();
 
@@ -280,7 +225,7 @@ export function ItemChargeConfig({
             charge={generalLabourCharge}
             onChange={charge =>
               charge !== null
-                ? setGeneralLabourCharge({ ...charge, uuid: uuid(), employeeId: null })
+                ? setGeneralLabourCharge({ ...charge, uuid: uuid() as UUID, employeeId: null })
                 : setGeneralLabourCharge(null)
             }
           />
@@ -293,33 +238,39 @@ export function ItemChargeConfig({
                   title={'Add employees'}
                   type={'primary'}
                   onPress={() =>
-                    router.push('EmployeeSelector', {
-                      selected: employeeLabourCharges.map(e => e.employeeId),
+                    router.push('MultiEmployeeSelector', {
+                      initialSelection: employeeLabourCharges.map(e => e.employeeId),
                       disabled: employeeLabourCharges
                         .filter(charge => !!calculatedDraftOrderQuery.getChargeLineItem(charge)?.order)
                         .map(e => e.employeeId),
-                      onSelect: employeeId => {
-                        setHasUnsavedChanges(true);
+                      onSelect: employees => {
+                        let changed = false;
+                        setEmployeeLabourCharges(current => {
+                          const currentEmployeeIds = current.map(e => e.employeeId);
+                          const selectedEmployeeIds = employees.map(e => e.id);
+                          const newEmployeeIds = selectedEmployeeIds.filter(id => !currentEmployeeIds.includes(id));
 
-                        const defaultLabourCharge = {
-                          employeeId,
-                          type: 'fixed-price-labour',
-                          uuid: uuid(),
-                          name: settings?.labourLineItemName || 'Labour',
-                          amount: BigDecimal.ZERO.toMoney(),
-                          workOrderItem: {
-                            uuid: item.uuid,
-                            type: 'product',
-                          },
-                          amountLocked: false,
-                          removeLocked: false,
-                        } as const;
+                          changed ||= newEmployeeIds.length > 0;
+                          changed ||= currentEmployeeIds.length !== selectedEmployeeIds.length;
 
-                        setEmployeeLabourCharges(current => [...current, defaultLabourCharge]);
-                      },
-                      onDeselect: employeeId => {
-                        setHasUnsavedChanges(true);
-                        setEmployeeLabourCharges(current => current.filter(l => l.employeeId !== employeeId));
+                          return [
+                            ...newEmployeeIds.map(
+                              employeeId =>
+                                ({
+                                  employeeId,
+                                  type: 'fixed-price-labour',
+                                  uuid: uuid() as UUID,
+                                  name: settings?.labourLineItemName || 'Labour',
+                                  amount: BigDecimal.ZERO.toMoney(),
+                                  workOrderItemUuid: item.uuid,
+                                  amountLocked: false,
+                                  removeLocked: false,
+                                }) as const,
+                            ),
+                            ...current.filter(charge => selectedEmployeeIds.includes(charge.employeeId)),
+                          ];
+                        });
+                        setHasUnsavedChanges(changed);
                       },
                     })
                   }
@@ -341,14 +292,7 @@ export function ItemChargeConfig({
                         setEmployeeLabourCharges(
                           employeeLabourCharges.map(l =>
                             l === labour
-                              ? {
-                                  ...updatedLabour,
-                                  uuid: l.uuid,
-                                  workOrderItem: {
-                                    type: 'product',
-                                    uuid: l.workOrderItem.uuid,
-                                  },
-                                }
+                              ? { ...updatedLabour, uuid: l.uuid, workOrderItemUuid: l.workOrderItemUuid }
                               : l,
                           ),
                         );
@@ -423,7 +367,7 @@ export function ItemChargeConfig({
   );
 }
 
-function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItem'>[]) {
+function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOrderCharge, 'workOrderItemUuid'>[]) {
   const generalLabours = labour.filter(hasPropertyValue('employeeId', null));
 
   if (generalLabours.length === 1) {
@@ -434,7 +378,7 @@ function extractInitialGeneralLabour(labour: DiscriminatedUnionOmit<CreateWorkOr
     // pos only supports setting one general labour, so just use the total as fixed price
     return {
       type: 'fixed-price-labour',
-      uuid: uuid(),
+      uuid: uuid() as UUID,
       employeeId: null,
       name: generalLabours[0]!.name,
       amount: getTotalPriceForCharges(generalLabours),

@@ -26,6 +26,9 @@
     },
     "discount": {
       "$ref": "create-work-order.json#/properties/discount"
+    },
+    "paymentTerms": {
+      "$ref": "create-work-order.json#/properties/paymentTerms"
     }
   },
   "required": [
@@ -36,7 +39,8 @@
     "discount",
     "companyId",
     "companyLocationId",
-    "companyContactId"
+    "companyContactId",
+    "paymentTerms"
   ],
   "additionalProperties": false
 }

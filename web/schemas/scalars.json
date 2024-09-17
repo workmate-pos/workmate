@@ -23,7 +23,7 @@
     "Int": {
       "title": "Int",
       "type": "integer",
-      "tsType": "number & { __brand: 'Int' }"
+      "tsType": "number"
     },
     "DateTime": {
       "description": "ISO 8601 formatted string",
@@ -31,6 +31,13 @@
       "type": "string",
       "format": "date-time",
       "tsType": "string & { __brand: 'DateTime' }"
+    },
+    "UUID": {
+      "description": "A UUID",
+      "title": "UUID",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "tsType": "string & { __brand: 'UUID' }"
     }
   }
 }

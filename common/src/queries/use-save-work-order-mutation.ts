@@ -39,6 +39,11 @@ export const useSaveWorkOrderMutation = (
 
       queryClient.invalidateQueries(['work-order-info']);
 
+      if (workOrder.serial) {
+        queryClient.invalidateQueries(['serials']);
+        queryClient.invalidateQueries(['serial', workOrder.serial.productVariantId, workOrder.serial.serial]);
+      }
+
       options?.onSuccess?.(...args);
     },
   });

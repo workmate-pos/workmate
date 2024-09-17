@@ -1,5 +1,5 @@
 schema:
-  - "https://${SHOPIFY_SHOP}/admin/api/2024-01/graphql.json":
+  - "https://${SHOPIFY_SHOP}/admin/api/2024-07/graphql.json":
       headers:
         "X-Shopify-Access-Token": "${SHOPIFY_ACCESS_TOKEN}"
 documents: "**/queries/*.graphql"
@@ -22,10 +22,9 @@ extensions:
     documentHeader:
       - "/* eslint-disable */"
       - "import type { Graphql } from '@teifi-digital/shopify-app-express/services';"
-    queryTransformation: "(graphql: Graphql, variables: Variables & Record<string, any>) => graphql.query<Result>(query, Object.fromEntries(Object.entries(variables).filter(([k, v]) => v !== undefined && v !== null)))"
+    queryTransformation: "(graphql: Graphql, variables: Variables & Record<string, any>) => graphql.query<Result>(query, Object.fromEntries(Object.entries(variables).filter(([k, v]) => v !== undefined)))"
     brandedScalars:
       - "ID"
       - "Money"
-      - "Int"
       - "DateTime"
       - "Decimal"

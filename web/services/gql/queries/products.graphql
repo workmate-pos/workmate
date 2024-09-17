@@ -29,6 +29,7 @@ query getPage(
 query getMany($ids: [ID!]!) {
   nodes(ids: $ids) {
     __typename
+    id
     ...ProductVariantFragment
   }
 }
@@ -101,6 +102,7 @@ fragment ProductFragment on Product {
   handle
   hasOnlyDefaultVariant
   descriptionHtml
+  vendor
   featuredImage {
     url
   }
@@ -187,12 +189,31 @@ mutation create($input: ProductInput!) {
   }
 }
 
+mutation createVariants(
+  $productId: ID!,
+  $strategy: ProductVariantsBulkCreateStrategy!,
+  $variants: [ProductVariantsBulkInput!]!
+) {
+  productVariantsBulkCreate(productId: $productId, strategy: $strategy, variants: $variants) {
+    userErrors {
+      field
+      message
+    }
+    productVariants {
+      ...ProductVariantFragment
+    }
+
+  }
+}
+
 fragment DatabaseProductFragment on Product {
   id
   handle
   title
   description
   productType
+  vendor
+  hasOnlyDefaultVariant
 }
 
 

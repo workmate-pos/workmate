@@ -66,5 +66,20 @@ export async function getStaffMembersPage(
     };
   }
 
-  return await gql.staffMember.getPage.run(graphql, paginationOptions);
+  const {
+    shop: {
+      staffMembers: { nodes, pageInfo },
+    },
+  } = await gql.staffMember.getPage.run(graphql, paginationOptions);
+
+  return {
+    shop: {
+      staffMembers: {
+        nodes: nodes.filter(
+          node => !paginationOptions.query || node.name.toLowerCase().includes(paginationOptions.query.toLowerCase()),
+        ),
+        pageInfo,
+      },
+    },
+  };
 }

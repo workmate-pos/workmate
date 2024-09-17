@@ -13,14 +13,11 @@
   "dependencies": {
     "@work-orders/common": "file:../../common",
     "@work-orders/common-pos": "file:../common-pos",
-    "@work-orders/work-order-shopify-order": "file:../../work-order-shopify-order",
-    "uuid": "^9.0.1"
+    "@work-orders/work-order-shopify-order": "file:../../work-order-shopify-order"
   },
   "scripts": {
     "build": "tsc",
-    "clean": "rm -fr dist node_modules"
-  },
-  "devDependencies": {
-    "@types/uuid": "^9.0.8"
+    "clean": "rm -fr dist node_modules",
+    "watch": "tsc -w"
   }
 }

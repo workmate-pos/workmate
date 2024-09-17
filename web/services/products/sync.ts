@@ -1,17 +1,16 @@
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { unit } from '../db/unit-of-work.js';
+import { getProducts, upsertProducts } from './queries.js';
 
 export async function ensureProductsExist(session: Session, productIds: ID[]) {
   if (productIds.length === 0) {
     return;
   }
 
-  const databaseProducts = await db.products.getMany({ productIds });
+  const databaseProducts = await getProducts(productIds);
   const existingProductIds = new Set(databaseProducts.map(product => product.productId));
   const missingProductIds = productIds.filter(productId => !existingProductIds.has(productId));
 
@@ -23,7 +22,7 @@ export async function syncProductsIfExists(session: Session, productIds: ID[]) {
     return;
   }
 
-  const databaseProducts = await db.products.getMany({ productIds });
+  const databaseProducts = await getProducts(productIds);
   const existingProductIds = databaseProducts.map(product => {
     const productId = product.productId;
     assertGid(productId);
@@ -44,7 +43,7 @@ export async function syncProducts(session: Session, productIds: ID[]) {
 
   const errors: unknown[] = [];
 
-  await upsertProducts(session.shop, products).catch(e => errors.push(e));
+  await upsertGqlProducts(session.shop, products).catch(e => errors.push(e));
 
   if (products.length !== productIds.length) {
     errors.push(new Error(`Some products were not found (${products.length}/${productIds.length})`));
@@ -55,21 +54,21 @@ export async function syncProducts(session: Session, productIds: ID[]) {
   }
 }
 
-export async function upsertProducts(shop: string, products: gql.products.DatabaseProductFragment.Result[]) {
+export async function upsertGqlProducts(shop: string, products: gql.products.DatabaseProductFragment.Result[]) {
   if (products.length === 0) {
     return;
   }
 
-  await unit(async () => {
-    await db.products.upsertMany({
-      products: products.map(product => ({
-        description: product.description,
-        productType: product.productType,
-        handle: product.handle,
-        productId: product.id,
-        title: product.title,
-        shop,
-      })),
-    });
-  });
+  await upsertProducts(
+    products.map(product => ({
+      hasOnlyDefaultVariant: product.hasOnlyDefaultVariant,
+      description: product.description,
+      productType: product.productType,
+      handle: product.handle,
+      vendor: product.vendor,
+      productId: product.id,
+      title: product.title,
+      shop,
+    })),
+  );
 }

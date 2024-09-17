@@ -2,6 +2,7 @@ import type { useReducer, useRef, useState } from 'react';
 import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { DiscriminatedUnionOmit } from '../types/DiscriminatedUnionOmit.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 export type CreatePurchaseOrderAction =
   | ({
@@ -82,18 +83,18 @@ function createPurchaseOrderReducer(
     case 'addProducts': {
       return {
         ...createPurchaseOrder,
-        lineItems: mergeProducts(...createPurchaseOrder.lineItems, ...action.products).filter(
-          product => product.quantity > 0,
-        ),
+        lineItems: fixLineItems([...createPurchaseOrder.lineItems, ...action.products]),
       };
     }
 
     case 'updateProduct': {
       return {
         ...createPurchaseOrder,
-        lineItems: createPurchaseOrder.lineItems
-          .map(product => (product.uuid === action.product.uuid ? action.product : product))
-          .filter(product => product.quantity > 0),
+        lineItems: fixLineItems(
+          createPurchaseOrder.lineItems.map(product =>
+            product.uuid === action.product.uuid ? action.product : product,
+          ),
+        ),
       };
     }
 
@@ -109,13 +110,16 @@ function shouldMergeProducts(a: Product, b: Product) {
   // we only merge into a if a and b both have not been received yet. if a has received the unit price is locked, which we don't want after merging
   return (
     a.productVariantId === b.productVariantId &&
-    a.shopifyOrderLineItem?.id === b.shopifyOrderLineItem?.id &&
+    a.specialOrderLineItem?.name === b.specialOrderLineItem?.name &&
+    a.specialOrderLineItem?.uuid === b.specialOrderLineItem?.uuid &&
     a.availableQuantity === 0 &&
-    b.availableQuantity === 0
+    b.availableQuantity === 0 &&
+    a.serialNumber === null &&
+    b.serialNumber === null
   );
 }
 
-function mergeProducts(...products: Product[]) {
+function mergeProducts(products: Product[]) {
   const merged: Product[] = [];
 
   // efficient enough for hundreds of products
@@ -148,4 +152,33 @@ function mergeProducts(...products: Product[]) {
   }
 
   return merged;
+}
+
+// we should ensure that adding a serial number
+// splits a product into two products:
+// - one with a serial number and quantity 1
+// - one with the remaining quantity
+function splitSerials(products: Product[]) {
+  return products.flatMap<Product>(product => {
+    if (product.serialNumber === null) {
+      return product;
+    }
+
+    return [
+      {
+        ...product,
+        quantity: 1,
+      },
+      {
+        ...product,
+        uuid: uuid(),
+        serialNumber: null,
+        quantity: product.quantity - 1,
+      },
+    ];
+  });
+}
+
+function fixLineItems(products: Product[]) {
+  return mergeProducts(splitSerials(products)).filter(product => product.quantity > 0);
 }

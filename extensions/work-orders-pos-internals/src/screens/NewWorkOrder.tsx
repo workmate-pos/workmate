@@ -24,7 +24,7 @@ export function NewWorkOrder() {
     { refetchOnMount: 'always' },
   );
 
-  const isLoading = settingsQuery.isLoading || customFieldsPresetsQuery.isFetching;
+  const isLoading = settingsQuery.isLoading || customFieldsPresetsQuery.isLoading;
 
   const screen = useScreen();
   screen.setIsLoading(isLoading);

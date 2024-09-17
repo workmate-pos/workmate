@@ -3,6 +3,7 @@ import { AppInfoCard } from '../components/AppInfoCard.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { AppPlanCard } from '../components/AppPlanCard.js';
 import { WelcomeSection } from '@web/frontend/components/WelcomeSection.js';
+import { FreeConsultationSection } from '@web/frontend/components/FreeConsultationSection.js';
 
 export default function HomePage() {
   const [toast, setToastAction] = useToast();
@@ -13,6 +14,9 @@ export default function HomePage() {
         <Layout>
           <Layout.Section>
             <WelcomeSection />
+          </Layout.Section>
+          <Layout.Section>
+            <FreeConsultationSection />
           </Layout.Section>
           <Layout.Section>
             <AppPlanCard setToastAction={setToastAction} />

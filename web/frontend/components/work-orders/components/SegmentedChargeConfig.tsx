@@ -27,9 +27,15 @@ export function SegmentedChargeConfig({
   defaultHourlyRate,
 }: {
   types: TabId[];
-  charge: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'uuid' | 'workOrderItem' | 'employeeId'> | null;
+  charge: DiscriminatedUnionOmit<
+    CreateWorkOrder['charges'][number],
+    'uuid' | 'workOrderItemUuid' | 'employeeId'
+  > | null;
   setCharge: (
-    charge: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'uuid' | 'workOrderItem' | 'employeeId'> | null,
+    charge: DiscriminatedUnionOmit<
+      CreateWorkOrder['charges'][number],
+      'uuid' | 'workOrderItemUuid' | 'employeeId'
+    > | null,
   ) => void;
   disabled?: boolean;
   defaultHourlyRate?: Money;

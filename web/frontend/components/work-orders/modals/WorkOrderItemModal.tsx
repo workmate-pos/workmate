@@ -1,11 +1,10 @@
 import { CreateWorkOrder, Int } from '@web/schemas/generated/create-work-order.js';
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
-import { WorkOrder } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import {
   hasNestedPropertyValue,
   hasNonNullableProperty,
@@ -34,7 +33,6 @@ import {
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
-import { v4 as uuid } from 'uuid';
 import { SegmentedChargeConfig } from '@web/frontend/components/work-orders/components/SegmentedChargeConfig.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { AddEmployeeModal } from '@web/frontend/components/shared-orders/modals/AddEmployeeModal.js';
@@ -53,10 +51,12 @@ import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orde
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export function WorkOrderItemModal({
   createWorkOrder,
-  item: { type: itemType, uuid: itemUuid },
+  item: { uuid: itemUuid },
   workOrder,
   open,
   onClose,
@@ -64,14 +64,14 @@ export function WorkOrderItemModal({
   onSave,
 }: {
   createWorkOrder: WIPCreateWorkOrder;
-  item: { type: 'product' | 'custom-item'; uuid: string };
-  workOrder: WorkOrder | null;
+  item: { uuid: UUID };
+  workOrder: DetailedWorkOrder | null;
   open: boolean;
   onClose: () => void;
   setToastAction: ToastActionCallable;
   onSave: (
     item: CreateWorkOrder['items'][number],
-    charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItem'>[],
+    charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[],
   ) => void;
 }) {
   const [forceShowCharges, setForceShowCharges] = useState(false);
@@ -91,16 +91,8 @@ export function WorkOrderItemModal({
     !!customFieldPresetNameToEdit,
   ].some(Boolean);
 
-  const initialItem =
-    createWorkOrder.items.filter(hasPropertyValue('type', itemType)).find(hasPropertyValue('uuid', itemUuid)) ??
-    never('Invalid item');
-
-  const initialCharges =
-    createWorkOrder.charges
-      .filter(hasNestedPropertyValue('workOrderItem.type', 'product' as 'product' | 'custom-item'))
-      .filter(hasNestedPropertyValue('workOrderItem.uuid', itemUuid)) ?? [];
-
-  const shouldShowCharges = initialCharges.length > 0 || forceShowCharges;
+  const initialItem = createWorkOrder.items.find(hasPropertyValue('uuid', itemUuid)) ?? never('Invalid item');
+  const initialCharges = createWorkOrder.charges.filter(hasNestedPropertyValue('workOrderItemUuid', itemUuid)) ?? [];
 
   const [item, setItem] = useState(initialItem);
   const [generalCharge, setGeneralCharge] = useState(extractInitialGeneralCharge(initialCharges));
@@ -110,43 +102,20 @@ export function WorkOrderItemModal({
 
   const fetch = useAuthenticatedFetch({ setToastAction });
   const settingsQuery = useSettingsQuery({ fetch });
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'customerId',
-        'items',
-        'charges',
-        'discount',
-        'companyLocationId',
-        'companyId',
-        'companyContactId',
-      ),
-    },
-    { enabled: false },
-  );
+  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery({ fetch, ...createWorkOrder }, { enabled: false });
 
-  const itemLineItemId = (() => {
-    if (item.type === 'product') {
-      return calculatedDraftOrderQuery.data?.itemLineItemIds[item.uuid];
-    }
-
-    if (item.type === 'custom-item') {
-      return calculatedDraftOrderQuery.data?.customItemLineItemIds[item.uuid];
-    }
-
-    return item satisfies never;
-  })();
-  const itemLineItem = calculatedDraftOrderQuery.data?.lineItems.find(li => li.id === itemLineItemId);
+  const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
   const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
 
   const readonly = !!itemLineItem?.order;
+  const isServiceItem = getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== null;
+  const canRemoveLabour = !isServiceItem;
   const canAddLabour =
     item.type === 'custom-item' ||
     getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE;
+
+  const shouldShowCharges = initialCharges.length > 0 || isServiceItem || forceShowCharges;
 
   return (
     <>
@@ -164,16 +133,17 @@ export function WorkOrderItemModal({
           },
         }}
         secondaryActions={[
-          shouldShowCharges
+          canRemoveLabour && shouldShowCharges
             ? {
                 content: 'Remove Labour',
                 onAction: () => {
-                  onSave(item, []);
+                  setGeneralCharge(null);
+                  setEmployeeCharges([]);
                   setForceShowCharges(false);
                 },
               }
             : null,
-          canAddLabour
+          canAddLabour && !shouldShowCharges
             ? {
                 content: 'Add Labour',
                 onAction: () => {
@@ -213,7 +183,7 @@ export function WorkOrderItemModal({
                 label={'Name'}
                 autoComplete="off"
                 value={item.name}
-                onChange={name => setItem({ ...item, name: name.trim() || 'Unnamed item' })}
+                onChange={name => setItem({ ...item, name: name || 'Unnamed item' })}
                 requiredIndicator
               />
 
@@ -265,18 +235,16 @@ export function WorkOrderItemModal({
           </Modal.Section>
         )}
 
-        {itemType !== 'custom-item' && (
-          <Modal.Section>
-            <CustomFieldsList
-              customFields={item.customFields}
-              onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
-              onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
-              onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
-              onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
-              onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
-            />
-          </Modal.Section>
-        )}
+        <Modal.Section>
+          <CustomFieldsList
+            customFields={item.customFields}
+            onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
+            onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
+            onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
+            onUpdate={customFields => setItem(item => ({ ...item, customFields }))}
+            onFieldValuesClick={() => setIsFieldValuesModalOpen(true)}
+          />
+        </Modal.Section>
       </Modal>
 
       {isAddEmployeeModalOpen && (
@@ -300,11 +268,7 @@ export function WorkOrderItemModal({
                       name: settingsQuery.data?.settings?.labourLineItemName || 'Labour',
                       amount: BigDecimal.ZERO.toMoney(),
                       employeeId,
-                      workOrderItem: {
-                        uuid: itemUuid,
-                        // TODO: Support custom items
-                        type: 'product',
-                      },
+                      workOrderItemUuid: itemUuid,
                       amountLocked: false,
                       removeLocked: false,
                     }) as const,
@@ -389,7 +353,7 @@ export function WorkOrderItemModal({
  * @TODO: Shared with pos!!!
  */
 function extractInitialGeneralCharge(
-  charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItem'>[],
+  charges: DiscriminatedUnionOmit<CreateWorkOrder['charges'][number], 'workOrderItemUuid'>[],
 ) {
   const generalCharges = charges.filter(hasPropertyValue('employeeId', null));
 
@@ -413,7 +377,7 @@ function extractInitialGeneralCharge(
 }
 
 type LinkedEmployeeCharge = CreateWorkOrder['charges'][number] & {
-  workOrderItem: { type: 'product' | 'custom-item' };
+  workOrderItemUuid: string;
   employeeId: ID;
 };
 
@@ -561,7 +525,7 @@ function Charges({
                         return {
                           ...partialNewCharge,
                           uuid: charge.uuid,
-                          workOrderItem: charge.workOrderItem,
+                          workOrderItemUuid: charge.workOrderItemUuid,
                           employeeId: charge.employeeId,
                         };
                       }
@@ -570,7 +534,7 @@ function Charges({
                         return {
                           ...partialNewCharge,
                           uuid: charge.uuid,
-                          workOrderItem: charge.workOrderItem,
+                          workOrderItemUuid: charge.workOrderItemUuid,
                           employeeId: charge.employeeId,
                         };
                       }

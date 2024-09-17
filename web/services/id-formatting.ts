@@ -3,6 +3,7 @@ import { db } from './db/db.js';
 import { useClient } from './db/client.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { getCount } from './counter/queries.js';
 
 type Formatters = Record<string, ({ shop }: { shop: string }) => Promise<string> | string>;
 
@@ -17,17 +18,27 @@ const baseFormatters: Formatters = {
 
 const workOrderFormatters: Formatters = {
   ...baseFormatters,
-  id: ({ shop }) => getNextWorkOrderIdForShop(shop).then(String),
+  id: ({ shop }) => getCount(`work-order.${shop}`).then(String),
 };
 
 const purchaseOrderFormatters: Formatters = {
   ...baseFormatters,
-  id: ({ shop }) => getNextPurchaseOrderIdForShop(shop).then(String),
+  id: ({ shop }) => getCount(`purchase-order.${shop}`).then(String),
 };
 
 const stockTransferFormatters: Formatters = {
   ...baseFormatters,
-  id: ({ shop }) => getNextStockTransferIdForShop(shop).then(String),
+  id: ({ shop }) => getCount(`stock-transfer.${shop}`).then(String),
+};
+
+const cycleCountFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getCount(`cycle-count.${shop}`).then(String),
+};
+
+const specialOrderFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getCount(`special-order.${shop}`).then(String),
 };
 
 async function applyFormatters<Arg>(
@@ -63,64 +74,14 @@ export async function getNewStockTransferName(shop: string) {
   return await applyFormatters(settings.stockTransferIdFormat, stockTransferFormatters, { shop });
 }
 
-async function getNextWorkOrderIdForShop(shop: string) {
-  await createWorkOrderIdSequenceForShopIfNotExists(shop);
-  const [{ id } = never('Sequence not found')] = await db.sequence.getNextSequenceValue({
-    sequenceName: getWorkOrderIdSequenceNameForShop(shop),
-  });
-
-  return id;
+export async function getNewSpecialOrderName(shop: string): Promise<string> {
+  const settings = await getShopSettings(shop);
+  return await applyFormatters(settings.specialOrders.idFormat, specialOrderFormatters, { shop });
 }
 
-async function createWorkOrderIdSequenceForShopIfNotExists(shop: string) {
-  const query = `CREATE SEQUENCE IF NOT EXISTS "${getWorkOrderIdSequenceNameForShop(shop)}" AS INTEGER;`;
-
-  using client = await useClient();
-  await client.query(query);
-}
-
-function getWorkOrderIdSequenceNameForShop(shop: string) {
-  return `IdSeq_${shop}`;
-}
-
-async function getNextPurchaseOrderIdForShop(shop: string) {
-  await createPurchaseOrderIdSequenceForShopIfNotExists(shop);
-  const [{ id } = never('Sequence not found')] = await db.sequence.getNextSequenceValue({
-    sequenceName: getPurchaseOrderIdSequenceNameForShop(shop),
-  });
-
-  return id;
-}
-
-async function createPurchaseOrderIdSequenceForShopIfNotExists(shop: string) {
-  const query = `CREATE SEQUENCE IF NOT EXISTS "${getPurchaseOrderIdSequenceNameForShop(shop)}" AS INTEGER;`;
-
-  using client = await useClient();
-  await client.query(query);
-}
-
-function getPurchaseOrderIdSequenceNameForShop(shop: string) {
-  return `IdSeq_PO_${shop}`;
-}
-
-async function getNextStockTransferIdForShop(shop: string) {
-  await createStockTransferIdSequenceForShopIfNotExists(shop);
-  const [{ id } = never('Sequence not found')] = await db.sequence.getNextSequenceValue({
-    sequenceName: getStockTransferIdSequenceNameForShop(shop),
-  });
-
-  return id;
-}
-
-async function createStockTransferIdSequenceForShopIfNotExists(shop: string) {
-  const query = `CREATE SEQUENCE IF NOT EXISTS "${getStockTransferIdSequenceNameForShop(shop)}" AS INTEGER;`;
-
-  using client = await useClient();
-  await client.query(query);
-}
-
-function getStockTransferIdSequenceNameForShop(shop: string) {
-  return `IdSeq_ST_${shop}`;
+export async function getNewCycleCountName(shop: string) {
+  const settings = await getShopSettings(shop);
+  return await applyFormatters(settings.cycleCount.idFormat, cycleCountFormatters, { shop });
 }
 
 export function assertValidFormatString(format: string) {

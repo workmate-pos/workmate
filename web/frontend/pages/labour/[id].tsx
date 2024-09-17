@@ -42,7 +42,7 @@ export default function Labour() {
   const labourQuery = useLabourQuery({ fetch, id });
   const labourMutation = useLabourMutation({ fetch });
 
-  const lastResult = labourMutation.data?.type === 'submission-result' ? labourMutation.data.submissionResult : null;
+  const lastResult = labourMutation.data?.submissionResult;
 
   const [form, fields] = useForm({
     lastResult,
@@ -136,7 +136,7 @@ export default function Labour() {
                     event.preventDefault();
                     labourMutation.mutate(event.currentTarget, {
                       onSuccess(result) {
-                        if (result.type === 'success') {
+                        if (result.labour) {
                           setToastAction({ content: 'Saved labour!' });
                           Redirect.create(app).dispatch(
                             Redirect.Action.APP,
@@ -165,7 +165,7 @@ export default function Labour() {
                       onChange={setRemovable}
                       name={fields.removable.name}
                       error={fields.removable.errors?.join(', ')}
-                      helpText={'If enabled, this labour cannot be removed from the work order once added'}
+                      helpText={'If enabled, this labour cannot be removed from a line item once added'}
                     />
 
                     <Select

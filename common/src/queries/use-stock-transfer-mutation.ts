@@ -4,6 +4,7 @@ import { CreateStockTransferResponse } from '@web/controllers/api/stock-transfer
 import { Fetch } from './fetch.js';
 import { UseQueryData } from './react-query.js';
 import { useStockTransferQuery } from './use-stock-transfer-query.js';
+import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 
 export const useStockTransferMutation = ({ fetch }: { fetch: Fetch }) => {
   const queryClient = useQueryClient();
@@ -12,7 +13,15 @@ export const useStockTransferMutation = ({ fetch }: { fetch: Fetch }) => {
     mutationFn: async (createStockTransfer: CreateStockTransfer) => {
       const response = await fetch('/api/stock-transfers', {
         method: 'POST',
-        body: JSON.stringify(createStockTransfer),
+        body: JSON.stringify({
+          ...createStockTransfer,
+          lineItems: createStockTransfer.lineItems.map(lineItem => ({
+            ...lineItem,
+            shopifyOrderLineItem: lineItem.shopifyOrderLineItem
+              ? pick(lineItem.shopifyOrderLineItem, 'id', 'orderId')
+              : null,
+          })),
+        } satisfies CreateStockTransfer),
         headers: { 'Content-Type': 'application/json' },
       });
 
@@ -26,6 +35,10 @@ export const useStockTransferMutation = ({ fetch }: { fetch: Fetch }) => {
     onSuccess(stockTransfer) {
       queryClient.invalidateQueries(['stock-transfer-page']);
       queryClient.invalidateQueries(['stock-transfer-count']);
+      queryClient.invalidateQueries(['work-order']);
+      queryClient.invalidateQueries(['work-order-info']);
+      queryClient.invalidateQueries(['purchase-order']);
+      queryClient.invalidateQueries(['purchase-order-info']);
 
       queryClient.setQueryData(
         ['stock-transfer', stockTransfer.name],

@@ -2,143 +2,279 @@ import {
   DateTime,
   DraftOrderInput,
   Int,
+  PaymentTerms,
   PaymentTermsInput,
-  type PaymentTermsType,
+  PaymentTermsType,
+  PurchasingEntityInput,
 } from '../gql/queries/generated/schema.js';
 import {
   getCustomAttributeArrayFromObject,
   getWorkOrderLineItems,
   getWorkOrderOrderCustomAttributes,
+  WorkOrderItem,
+  WorkOrderLabourCharge,
 } from '@work-orders/work-order-shopify-order';
 import { getShopSettings } from '../settings.js';
-import { db } from '../db/db.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
-import { assertGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { assertGidOrNull } from '../../util/assertions.js';
+import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGidOrNull, isLineItemId } from '../../util/assertions.js';
 import { getWorkOrderDiscount, getWorkOrderPaymentTerms } from './get.js';
 import { getMailingAddressInputsForCompanyLocation } from '../draft-orders/util.js';
 import { Session } from '@shopify/shopify-api';
 import { gql } from '../gql/gql.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { IGetResult } from '../db/queries/generated/work-order.sql.js';
+import { match, P } from 'ts-pattern';
+import { httpError } from '../../util/http-error.js';
+import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
+import { WorkOrderDiscount } from './types.js';
+import {
+  getWorkOrder,
+  getWorkOrderCharges,
+  getWorkOrderCustomFields,
+  getWorkOrderItems,
+  WorkOrder,
+} from './queries.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
-export async function getWorkOrderDraftOrderInput(
+export type SelectedItem = { uuid: UUID };
+export type SelectedCharge = { uuid: UUID };
+
+/**
+ * Plan an order for some items and charges of a work order.
+ * Used to create draft orders, real orders, to populate the POS cart.
+ * If no items/charges are selected, all existing unlinked items/charges will be included.
+ * No items that are already in an order are ever included.
+ */
+export async function getDraftOrderInputForExistingWorkOrder(
   session: Session,
-  workOrderId: number,
+  workOrderName: string,
   options?: {
-    mustHaveUnlinkedItems?: boolean;
-    items?: { type: 'product' | 'custom-item'; uuid: string }[];
-    charges?: { type: 'hourly-labour' | 'fixed-price-labour'; uuid: string }[];
+    selectedItems?: SelectedItem[];
+    selectedCharges?: SelectedCharge[];
+    newItems?: WorkOrderItem[];
+    newCharges?: WorkOrderLabourCharge[];
   },
-): Promise<DraftOrderInput | null> {
-  const [
-    { labourLineItemSKU },
-    [workOrder],
-    customFields,
-    items,
-    customItems,
-    hourlyLabourCharges,
-    fixedPriceLabourCharges,
-  ] = await Promise.all([
-    getShopSettings(session.shop),
-    db.workOrder.getById({ id: workOrderId }),
-    db.workOrder.getCustomFields({ workOrderId }),
-    db.workOrder.getItems({ workOrderId }),
-    db.workOrder.getCustomItems({ workOrderId }),
-    db.workOrderCharges.getHourlyLabourCharges({ workOrderId }),
-    db.workOrderCharges.getFixedPriceLabourCharges({ workOrderId }),
-  ]);
+) {
+  const databaseWorkOrder = await getWorkOrder({ shop: session.shop, name: workOrderName });
 
-  if (!workOrder) {
-    throw new HttpError(`Work order with id ${workOrderId} not found`, 404);
+  if (!databaseWorkOrder) {
+    throw new HttpError('Work order not found', 404);
   }
 
-  if (options?.mustHaveUnlinkedItems) {
-    const hasUnlinkedItems = [...items, ...hourlyLabourCharges, ...fixedPriceLabourCharges].some(
-      el => el.shopifyOrderLineItemId === null,
-    );
+  const {
+    id: workOrderId,
+    discountType,
+    discountAmount,
+    companyId,
+    companyLocationId,
+    companyContactId,
+    customerId,
+    note,
+    paymentFixedDueDate,
+    paymentTermsTemplateId,
+  } = databaseWorkOrder;
 
-    if (!hasUnlinkedItems) {
-      return null;
-    }
-  }
-
-  const graphql = new Graphql(session);
-
-  assertGid(workOrder.customerId);
-
-  const { customer } = await gql.customer.get.run(graphql, { id: workOrder.customerId });
-  const customerId = customer?.id ?? null;
-
-  const { companyId, companyLocationId, companyContactId } = workOrder;
-
+  assertGid(customerId);
   assertGidOrNull(companyId);
   assertGidOrNull(companyLocationId);
   assertGidOrNull(companyContactId);
 
-  const lineItemToLinkFilter = (type: 'product' | 'custom-item' | 'hourly-labour' | 'fixed-price-labour') => {
-    const uuids = {
-      product: options?.items?.filter(hasPropertyValue('type', 'product')).map(item => item.uuid),
-      'custom-item': options?.items?.filter(hasPropertyValue('type', 'custom-item')).map(item => item.uuid),
-      'hourly-labour': options?.charges?.filter(hasPropertyValue('type', 'hourly-labour')).map(item => item.uuid),
-      'fixed-price-labour': options?.charges
-        ?.filter(hasPropertyValue('type', 'fixed-price-labour'))
-        .map(item => item.uuid),
-    }[type];
+  const workOrder = await awaitNested({
+    customFields: getWorkOrderCustomFields(workOrderId),
+    items: getWorkOrderItems(workOrderId),
+    charges: getWorkOrderCharges(workOrderId),
+  });
 
-    return (el: { uuid: string; shopifyOrderLineItemId: string | null }) =>
-      !isLineItemId(el.shopifyOrderLineItemId) && (!uuids || uuids.includes(el.uuid));
-  };
+  const availableItems = workOrder.items.filter(notInOrder);
+  const availableCharges = workOrder.charges.filter(notInOrder);
 
-  const draftItems = items.filter(lineItemToLinkFilter('product'));
-  const draftCustomItems = customItems.filter(lineItemToLinkFilter('custom-item'));
-  const draftHourlyLabourCharges = hourlyLabourCharges.filter(lineItemToLinkFilter('hourly-labour'));
-  const draftFixedPriceLabourCharges = fixedPriceLabourCharges.filter(lineItemToLinkFilter('fixed-price-labour'));
+  const selectedItems = options?.selectedItems ?? availableItems;
+  const selectedCharges = options?.selectedCharges ?? availableCharges;
 
-  const mapWorkOrderItem = <T extends { workOrderItemUuid: string | null; workOrderCustomItemUuid: string | null }>(
-    charge: T,
-  ) => {
-    const { workOrderCustomItemUuid, workOrderItemUuid, ...rest } = charge;
-
-    if (workOrderItemUuid && workOrderCustomItemUuid) {
-      // impossible by design of create-work-order.json
-      throw new Error('Cannot have both workOrderItemUuid and workOrderCustomItemUuid');
-    }
-
-    let workOrderItem = null;
-
-    if (workOrderItemUuid) {
-      workOrderItem = { type: 'product', uuid: workOrderItemUuid } as const;
-    } else if (workOrderCustomItemUuid) {
-      workOrderItem = { type: 'custom-item', uuid: workOrderCustomItemUuid } as const;
-    }
-
-    return {
-      ...charge,
-      workOrderItem,
-    };
-  };
-
-  const { lineItems, customSales } = getWorkOrderLineItems(
-    draftItems,
-    draftCustomItems,
-    draftHourlyLabourCharges.map(mapWorkOrderItem),
-    draftFixedPriceLabourCharges.map(mapWorkOrderItem),
-    { labourSku: labourLineItemSKU, workOrderName: workOrder.name },
+  const selectedWorkOrderItems = selectedItems.map(
+    ({ uuid }) => availableItems.find(hasPropertyValue('uuid', uuid)) ?? httpError('Item not found', 404),
+  );
+  const selectedWorkOrderCharges = selectedCharges.map(
+    ({ uuid }) => availableCharges.find(hasPropertyValue('uuid', uuid)) ?? httpError('Charge not found', 404),
   );
 
-  const discount = getWorkOrderDiscount(workOrder);
+  const items = selectedWorkOrderItems.map(item => {
+    return match(item)
+      .returnType<WorkOrderItem>()
+      .with(
+        {
+          uuid: P.select('uuid'),
+          data: {
+            type: P.select('type', 'product'),
+            quantity: P.select('quantity'),
+            absorbCharges: P.select('absorbCharges'),
+            productVariantId: P.select('productVariantId'),
+          },
+        },
+        identity,
+      )
+      .with(
+        {
+          uuid: P.select('uuid'),
+          data: {
+            type: P.select('type', 'custom-item'),
+            quantity: P.select('quantity'),
+            absorbCharges: P.select('absorbCharges'),
+            name: P.select('name'),
+            unitPrice: P.select('unitPrice'),
+          },
+        },
+        identity,
+      )
+      .exhaustive();
+  });
 
-  const { billingAddress = null, shippingAddress = null } = companyLocationId
-    ? await getMailingAddressInputsForCompanyLocation(session, companyLocationId)
-    : {};
+  const charges = selectedWorkOrderCharges.map(charge =>
+    match(charge)
+      .returnType<WorkOrderLabourCharge>()
+      .with(
+        {
+          uuid: P.select('uuid'),
+          workOrderItemUuid: P.select('workOrderItemUuid'),
+          data: {
+            type: P.select('type', 'hourly-labour'),
+            name: P.select('name'),
+            hours: P.select('hours'),
+            rate: P.select('rate'),
+          },
+        },
+        identity,
+      )
+      .with(
+        {
+          uuid: P.select('uuid'),
+          workOrderItemUuid: P.select('workOrderItemUuid'),
+          data: {
+            type: P.select('type', 'fixed-price-labour'),
+            name: P.select('name'),
+            amount: P.select('amount'),
+          },
+        },
+        identity,
+      )
+      .exhaustive(),
+  );
+
+  items.push(...(options?.newItems ?? []));
+  charges.push(...(options?.newCharges ?? []));
+
+  const discount = getWorkOrderDiscount({ discountType, discountAmount });
+
+  return await getDraftOrderInputForWorkOrder(session, {
+    items,
+    workOrderName,
+    customFields: workOrder.customFields,
+    companyId,
+    companyLocationId,
+    companyContactId,
+    customerId,
+    paymentTerms: await getPaymentTerms(session, {
+      id: workOrderId,
+      companyId,
+      paymentTermsTemplateId,
+      paymentFixedDueDate,
+    }),
+    charges,
+    discount,
+    note,
+  });
+}
+
+/**
+ * General function to create a draft order for a work order.
+ * Supports non-existent work orders.
+ * When working with existing work orders, use {@link getDraftOrderInputForExistingWorkOrder} instead
+ */
+export async function getDraftOrderInputForWorkOrder(
+  session: Session,
+  {
+    discount,
+    note,
+    workOrderName,
+    customFields,
+    companyId,
+    companyLocationId,
+    companyContactId,
+    customerId,
+    paymentTerms,
+    items,
+    charges,
+  }: {
+    discount: WorkOrderDiscount | null;
+    note: string | null;
+    workOrderName: string | null;
+    customFields: { key: string; value: string }[] | null;
+    companyId: ID | null;
+    companyLocationId: ID | null;
+    companyContactId: ID | null;
+    paymentTerms: PaymentTermsInput | null;
+    customerId: ID | null;
+    items: WorkOrderItem[];
+    charges: WorkOrderLabourCharge[];
+  },
+): Promise<DraftOrderInput> {
+  workOrderName ??= 'Unnamed work order';
+
+  // We must attach unit prices to products that absorb charges so we can calculate the quantity correctly
+  const absorbingProductVariantIds = unique(
+    items
+      .filter(hasPropertyValue('absorbCharges', true))
+      .filter(hasPropertyValue('type', 'product'))
+      .map(item => {
+        assertGid(item.productVariantId);
+        return item.productVariantId;
+      }),
+  );
+
+  const graphql = new Graphql(session);
+  const [{ labourLineItemSKU }, { billingAddress, shippingAddress }, response] = await Promise.all([
+    getShopSettings(session.shop),
+    getMailingAddressInputsForCompanyLocation(session, companyLocationId),
+    gql.products.getMany.run(graphql, { ids: absorbingProductVariantIds }),
+  ]);
+
+  const itemsWithUnitPrices = items.map(item => {
+    if (!item.absorbCharges || item.type !== 'product') {
+      return item;
+    }
+
+    const productVariantId = item.productVariantId;
+    assertGid(productVariantId);
+
+    return {
+      ...item,
+      unitPrice:
+        response.nodes
+          .filter(isNonNullable)
+          .filter(hasPropertyValue('__typename', 'ProductVariant'))
+          .find(hasPropertyValue('id', productVariantId))?.price ?? httpError('Product variant not found', 404),
+    };
+  });
+
+  const { lineItems, customSales } = getWorkOrderLineItems(
+    itemsWithUnitPrices.filter(hasPropertyValue('type', 'product')),
+    itemsWithUnitPrices.filter(hasPropertyValue('type', 'custom-item')),
+    charges.filter(hasPropertyValue('type', 'hourly-labour')),
+    charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
+    {
+      labourSku: labourLineItemSKU,
+      workOrderName,
+    },
+  );
 
   return {
     customAttributes: getCustomAttributeArrayFromObject(
       getWorkOrderOrderCustomAttributes({
-        name: workOrder.name,
-        customFields: Object.fromEntries(customFields.map(({ key, value }) => [key, value])),
+        name: workOrderName,
+        customFields: Object.fromEntries(customFields?.map(({ key, value }) => [key, value]) ?? []),
       }),
     ),
     lineItems: [
@@ -153,24 +289,34 @@ export async function getWorkOrderDraftOrderInput(
         customAttributes: getCustomAttributeArrayFromObject(customSale.customAttributes),
         originalUnitPrice: customSale.unitPrice,
         taxable: customSale.taxable,
+        requiresShipping: false,
       })),
     ],
-    note: workOrder.note,
+    note,
     billingAddress,
     shippingAddress,
-    purchasingEntity:
-      companyId && companyContactId && companyLocationId
-        ? { purchasingCompany: { companyId, companyContactId, companyLocationId } }
-        : customerId
-          ? { customerId }
-          : null,
+    purchasingEntity: match({ companyId, companyContactId, companyLocationId, customerId })
+      .returnType<PurchasingEntityInput | null>()
+      .with(
+        {
+          companyId: P.nonNullable.select('companyId'),
+          companyContactId: P.nonNullable.select('companyContactId'),
+          companyLocationId: P.nonNullable.select('companyLocationId'),
+        },
+        purchasingCompany => ({ purchasingCompany }),
+      )
+      .with({ customerId: P.nonNullable.select('customerId') }, identity)
+      .otherwise(() => null),
     appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
-    paymentTerms: await getPaymentTerms(session, workOrder),
+    paymentTerms,
     reserveInventoryUntil: null,
   };
 }
 
-async function getPaymentTerms(session: Session, workOrder: IGetResult): Promise<PaymentTermsInput | null> {
+async function getPaymentTerms(
+  session: Session,
+  workOrder: Pick<WorkOrder, 'id' | 'companyId' | 'paymentTermsTemplateId' | 'paymentFixedDueDate'>,
+): Promise<PaymentTermsInput | null> {
   const paymentTerms = getWorkOrderPaymentTerms(workOrder);
 
   if (paymentTerms === null || paymentTerms.templateId === null || workOrder.companyId === null) {
@@ -199,6 +345,6 @@ async function isPaymentTermTemplateType(session: Session, templateId: ID, type:
   return paymentTermsTemplates.some(hasPropertyValue('id', templateId));
 }
 
-function isLineItemId(id: string | null): id is ID {
-  return id !== null && parseGid(id).objectName === 'LineItem';
+function notInOrder(item: { shopifyOrderLineItemId: string | null }) {
+  return !isLineItemId(item.shopifyOrderLineItemId);
 }

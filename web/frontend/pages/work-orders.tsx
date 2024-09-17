@@ -1,11 +1,13 @@
 import {
   Badge,
+  Box,
   Card,
   EmptyState,
   Frame,
   IndexFilters,
   IndexFiltersMode,
   IndexTable,
+  InlineStack,
   Page,
   SkeletonBodyText,
   Text,
@@ -24,11 +26,12 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { WorkOrderCsvUploadDropZoneModal } from '@web/frontend/components/work-orders/WorkOrderCsvUploadDropZoneModal.js';
 
 export default function () {
   return (
     <Frame>
-      <Page narrowWidth>
+      <Page>
         <PermissionBoundary permissions={['read_work_orders']}>
           <WorkOrders />
         </PermissionBoundary>
@@ -43,6 +46,7 @@ function WorkOrders() {
   const [query, setQuery, internalQuery] = useDebouncedState('');
   const [page, setPage] = useState(0);
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
+  const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -84,6 +88,12 @@ function WorkOrders() {
           content: 'New Work Order',
           onAction: () => redirectToWorkOrder('new'),
         }}
+        secondaryActions={[
+          {
+            content: 'Import CSV',
+            onAction: () => setIsCsvUploadDropZoneModalOpen(true),
+          },
+        ]}
       />
 
       <IndexFilters
@@ -105,6 +115,7 @@ function WorkOrders() {
           { title: 'Status' },
           { title: 'Customer' },
           { title: 'SO #' },
+          { title: 'SPO #' },
           { title: 'PO #' },
         ]}
         itemCount={workOrders.length}
@@ -169,29 +180,46 @@ function WorkOrders() {
               })()}
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Text as={'p'} variant="bodyMd">
+              <InlineStack gap="100">
                 {workOrder.orders
                   .filter(hasPropertyValue('type', 'ORDER'))
                   .map(order => order.name)
-                  .join(', ')}
-              </Text>
+                  .map(sp => (
+                    <Badge tone="enabled">{sp}</Badge>
+                  ))}
+              </InlineStack>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Text as={'p'} variant="bodyMd">
-                {(() => {
-                  const purchaseOrderNames = unique(
-                    workOrder.items
-                      .filter(hasPropertyValue('type', 'product'))
-                      .flatMap(item => item.purchaseOrders.map(po => po.name)),
-                  );
-
-                  return purchaseOrderNames.join(', ');
-                })()}
-              </Text>
+              <InlineStack gap="100">
+                {unique(
+                  workOrder.items
+                    .filter(hasPropertyValue('type', 'product'))
+                    .flatMap(item => item.specialOrders.map(spo => spo.name)),
+                ).map(sp => (
+                  <Badge tone="enabled">{sp}</Badge>
+                ))}
+              </InlineStack>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <InlineStack gap="100">
+                {unique(
+                  workOrder.items
+                    .filter(hasPropertyValue('type', 'product'))
+                    .flatMap(item => item.purchaseOrders.map(po => po.name)),
+                ).map(sp => (
+                  <Badge tone="enabled">{sp}</Badge>
+                ))}
+              </InlineStack>
             </IndexTable.Cell>
           </IndexTable.Row>
         ))}
       </IndexTable>
+
+      <WorkOrderCsvUploadDropZoneModal
+        open={isCsvUploadDropZoneModalOpen}
+        onClose={() => setIsCsvUploadDropZoneModalOpen(false)}
+      />
+
       {toast}
     </>
   );

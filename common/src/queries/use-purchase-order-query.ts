@@ -1,11 +1,11 @@
 import { Fetch } from './fetch.js';
-import { PurchaseOrder } from '@web/services/purchase-orders/types.js';
+import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { useQuery, UseQueryOptions } from 'react-query';
 import { FetchPurchaseOrderResponse } from '@web/controllers/api/purchase-orders.js';
 
 export const usePurchaseOrderQuery = (
   { fetch, name }: { fetch: Fetch; name: string | null },
-  options?: UseQueryOptions<PurchaseOrder | null, unknown, PurchaseOrder | null, (string | null)[]>,
+  options?: UseQueryOptions<DetailedPurchaseOrder | null, unknown, DetailedPurchaseOrder | null, (string | null)[]>,
 ) =>
   useQuery({
     ...options,

@@ -1,8 +1,8 @@
 import { TeifiSessionStorage } from '@teifi-digital/shopify-app-express';
-import { ShopifySession } from '@prisma/client';
 import { Session } from '@shopify/shopify-api';
 import { db } from './db/db.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { IGetResult as ShopifySession } from './db/queries/generated/shopify-session.sql.js';
 
 export class ShopifySessionStorage implements TeifiSessionStorage {
   deleteSession(id: string): Promise<boolean> {
@@ -42,9 +42,9 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
       session = undefined;
     }
 
-    // fall back to an offline session if the online session is not found
-    // unfortunately required since POS does not do oauth, so not having this would require POS employees to log into admin for oauth
-    if (!session && !this.isOfflineSessionId(id)) {
+    // always use an offline session
+    // this ensures that you do not have to log into admin daily to use POS, and ensures that access scopes do not need to be updated per user
+    if (!this.isOfflineSessionId(id)) {
       // we should NOT fall back in case this is the first time the user logs in.
       // otherwise the staff member will never be added to the database in case they have a store without read_users capabilities
       const staffMemberId = this.getOnlineSessionIdStaffMemberId(id);

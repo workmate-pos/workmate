@@ -7,8 +7,8 @@ import { SavePresetProps } from '@work-orders/common-pos/screens/custom-fields/S
 import { SelectPresetToEditProps } from '../screens/custom-fields/SelectPresetToEdit.js';
 import { EditPresetProps } from '../screens/custom-fields/EditPreset.js';
 import { SelectPresetProps } from '../screens/custom-fields/SelectPreset.js';
-import { DropdownProps } from '../screens/Dropdown.js';
 import { CustomFieldValuesConfigProps } from '../screens/custom-fields/CustomFieldValuesConfig.js';
+import { ListPopupProps } from '../screens/ListPopup.js';
 
 /**
  * A list of custom fields with the option to add new ones.
@@ -25,7 +25,7 @@ export function CustomFieldsList({
     EditPreset: Route<EditPresetProps>;
     SelectPresetToEdit: Route<SelectPresetToEditProps>;
     SelectPreset: Route<SelectPresetProps>;
-    Dropdown: Route<DropdownProps<string>>;
+    ListPopup: Route<ListPopupProps>;
     CustomFieldValuesConfig: Route<CustomFieldValuesConfigProps>;
   }>;
   customFields: Record<string, string>;

@@ -88,13 +88,115 @@ query getPageWithLocationInventoryLevel($first: Int = 10, $after: String, $query
   }
 }
 
-mutation updateInventoryItem($id: ID!, $input: InventoryItemUpdateInput!) {
+mutation updateInventoryItem($id: ID!, $input: InventoryItemInput!) {
   inventoryItemUpdate(id: $id, input: $input) {
     userErrors {
       field
       message
     }
+    inventoryItem {
+      id
+      variant {
+        ...ProductVariantFragment
+      }
+    }
+  }
+}
+
+fragment ProductVariantFragment on ProductVariant {
+  id
+  title
+  sku
+  price
+  displayName
+  barcode
+  image {
+    url
+  }
+  inventoryItem {
+    id
+    unitCost {
+      currencyCode
+      amount
+    }
+  }
+  product {
+    ...ProductFragment
+  }
+  requiresComponents
+  defaultCharges: metafield(namespace: "$app", key: "default-charges") {
+    id
+    references(first: 10) {
+      nodes {
+        __typename
+        ...FixedPriceLabourChargeFragment
+        ...HourlyLabourChargeFragment
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+fragment ProductFragment on Product {
+  id
+  title
+  handle
+  hasOnlyDefaultVariant
+  descriptionHtml
+  vendor
+  featuredImage {
+    url
+  }
+  tags
+  description
+  productType
+  serviceType: metafield(namespace: "$app", key: "service-type") {
+    id
+    value
   }
 }
 
 
+
+fragment FixedPriceLabourChargeFragment on Metaobject {
+  id
+  type
+  name: field(key: "name") {
+    value
+  }
+  amount: field(key: "amount") {
+    value
+  }
+  customizeAmount: field(key: "customize-amount") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
+  }
+}
+
+fragment HourlyLabourChargeFragment on Metaobject {
+  id
+  type
+  name: field(key: "name") {
+    value
+  }
+  rate: field(key: "rate") {
+    value
+  }
+  hours: field(key: "hours") {
+    value
+  }
+  customizeRate: field(key: "customize-rate") {
+    value
+  }
+  customizeHours: field(key: "customize-hours") {
+    value
+  }
+  removable: field(key: "removable") {
+    value
+  }
+}

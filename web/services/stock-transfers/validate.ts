@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { CreateStockTransfer } from '../../schemas/generated/create-stock-transfer.js';
 import { assertValidUuid } from '../../util/uuid.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { db } from '../db/db.js';
+import { getStockTransfer } from './queries.js';
 
 export async function validateCreateStockTransfer(session: Session, createStockTransfer: CreateStockTransfer) {
   assertValidUuids(createStockTransfer);
@@ -37,10 +37,10 @@ function assertPositiveQuantities(createStockTransfer: CreateStockTransfer) {
 
 async function assertValidStockTransferName(session: Session, createStockTransfer: CreateStockTransfer) {
   if (createStockTransfer.name) {
-    const [stockTransfer] = await db.stockTransfers.get({ shop: session.shop, name: createStockTransfer.name });
+    const stockTransfer = await getStockTransfer({ shop: session.shop, name: createStockTransfer.name });
 
     if (!stockTransfer) {
-      throw new HttpError('Stock transfer with name already exists', 400);
+      throw new HttpError(`Stock transfer ${createStockTransfer.name} does not exist`, 404);
     }
   }
 }

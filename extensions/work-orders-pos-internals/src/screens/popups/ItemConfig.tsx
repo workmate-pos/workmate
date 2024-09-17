@@ -8,7 +8,6 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
 import { FIXED_PRICE_SERVICE, getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
@@ -18,6 +17,7 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { UUID } from '@work-orders/common/util/uuid.js';
 
 export function ItemConfig({
   item: { uuid: itemUuid, type: itemType },
@@ -25,7 +25,7 @@ export function ItemConfig({
   dispatch,
   onAddLabour,
 }: {
-  item: { type: 'product' | 'custom-item'; uuid: string };
+  item: { type: 'product' | 'custom-item'; uuid: UUID };
   createWorkOrder: WIPCreateWorkOrder;
   onAddLabour: () => void;
   dispatch: CreateWorkOrderDispatchProxy;
@@ -42,23 +42,9 @@ export function ItemConfig({
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     {
       fetch,
-      ...pick(
-        createWorkOrder,
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-      ),
-      items: useMemo(
-        () =>
-          [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
-            isNonNullable,
-          ),
-        [item],
+      ...createWorkOrder,
+      items: [...createWorkOrder.items.filter(x => !(x.uuid === item?.uuid && x.type === item?.type)), item].filter(
+        isNonNullable,
       ),
     },
     { keepPreviousData: true },
@@ -99,18 +85,7 @@ export function ItemConfig({
     return null;
   }
 
-  const itemLineItemId = (() => {
-    if (item.type === 'product') {
-      return calculatedDraftOrder?.itemLineItemIds[item.uuid];
-    }
-
-    if (item.type === 'custom-item') {
-      return calculatedDraftOrder?.customItemLineItemIds[item.uuid];
-    }
-
-    return item satisfies never;
-  })();
-  const itemLineItem = calculatedDraftOrder?.lineItems.find(li => li.id === itemLineItemId);
+  const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
   if (!calculatedDraftOrder || !itemLineItem) {
     return (
@@ -194,22 +169,20 @@ export function ItemConfig({
               value={item.quantity}
             />
           </Stack>
-          {itemType !== 'custom-item' && (
-            <Stack direction="vertical" spacing={2}>
-              <Text variant="body" color="TextSubdued">
-                Custom Fields
-              </Text>
-              <CustomFieldsList
-                customFields={item.customFields}
-                onSave={customFields => {
-                  setHasUnsavedChanges(true);
-                  setItem({ ...item, customFields });
-                }}
-                type={'LINE_ITEM'}
-                useRouter={useRouter}
-              />
-            </Stack>
-          )}
+          <Stack direction="vertical" spacing={2}>
+            <Text variant="body" color="TextSubdued">
+              Custom Fields
+            </Text>
+            <CustomFieldsList
+              customFields={item.customFields}
+              onSave={customFields => {
+                setHasUnsavedChanges(true);
+                setItem({ ...item, customFields });
+              }}
+              type={'LINE_ITEM'}
+              useRouter={useRouter}
+            />
+          </Stack>
           <Stack direction="vertical" flex={1} alignment="flex-end">
             {readonly && <Button title="Back" onPress={() => router.popCurrent()} />}
             {!readonly && (

@@ -28,7 +28,6 @@ export const useDraftOrderQuery = (
       }
 
       const order: FetchDraftOrderResponse = await response.json();
-
       return { order };
     },
   });
@@ -46,7 +45,6 @@ export const useDraftOrderQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID[] }
         }
 
         const order: FetchDraftOrderResponse = await response.json();
-
         return { order };
       },
     })),

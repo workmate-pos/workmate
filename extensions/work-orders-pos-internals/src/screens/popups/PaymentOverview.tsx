@@ -1,10 +1,19 @@
-import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import {
+  Badge,
+  Button,
+  List,
+  ListRow,
+  ScrollView,
+  Stack,
+  Text,
+  useExtensionApi,
+} from '@shopify/retail-ui-extensions-react';
 import { usePaymentHandler } from '../../hooks/use-payment-handler.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { WorkOrder, WorkOrderCharge, WorkOrderItem } from '@web/services/work-orders/types.js';
+import { DetailedWorkOrder, DetailedWorkOrderCharge, DetailedWorkOrderItem } from '@web/services/work-orders/types.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -15,10 +24,12 @@ import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
-import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useCreateWorkOrderOrderMutation } from '@work-orders/common/queries/use-create-work-order-order-mutation.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useRouter } from '../../routes.js';
+import { Fetch } from '@work-orders/common/queries/fetch.js';
+import { usePlanWorkOrderOrderQuery } from '@work-orders/common/queries/use-plan-work-order-order-query.js';
+import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 
 /**
  * Page that allows initializing payments for line items.
@@ -33,35 +44,13 @@ export function PaymentOverview({ name }: { name: string }) {
   const settingsQuery = useSettingsQuery({ fetch });
   const settings = settingsQuery.data?.settings;
 
-  const customerQuery = useCustomerQuery({ fetch, id: workOrder?.customerId ?? null });
-  const customer = customerQuery.data;
-
-  const calculateWorkOrder = workOrder
-    ? pick(
-        workOrderToCreateWorkOrder(workOrder),
-        'name',
-        'items',
-        'charges',
-        'discount',
-        'customerId',
-        'companyLocationId',
-        'companyContactId',
-        'companyId',
-      )
-    : null;
-
-  const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
-    {
-      fetch,
-      ...calculateWorkOrder!,
-    },
-    { enabled: !!calculateWorkOrder },
-  );
-
   const createWorkOrderOrderMutation = useCreateWorkOrderOrderMutation({ fetch });
 
-  const [selectedItems, setSelectedItems] = useState<WorkOrderItem[]>([]);
-  const [selectedCharges, setSelectedCharges] = useState<WorkOrderCharge[]>([]);
+  const [selectedItems, setSelectedItems] = useState<DetailedWorkOrderItem[]>([]);
+  const [selectedCharges, setSelectedCharges] = useState<DetailedWorkOrderCharge[]>([]);
+
+  const calculateWorkOrderQuery = useCalculateWorkOrder({ fetch, workOrder });
+  const planOrderQuery = usePlanOrder({ fetch, workOrder, selectedItems, selectedCharges });
 
   const paymentHandler = usePaymentHandler();
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
@@ -72,16 +61,12 @@ export function PaymentOverview({ name }: { name: string }) {
   const screen = useScreen();
   screen.setTitle(`Payment Overview - ${name}`);
   screen.setIsLoading(
-    workOrderQuery.isFetching ||
-      settingsQuery.isFetching ||
-      calculatedDraftOrderQuery.isFetching ||
-      customerQuery.isFetching ||
-      isLoading,
+    workOrderQuery.isFetching || calculateWorkOrderQuery.isFetching || settingsQuery.isFetching || isLoading,
   );
 
   const rows = useItemRows(
     workOrder ?? null,
-    calculatedDraftOrderQuery,
+    calculateWorkOrderQuery,
     selectedItems,
     selectedCharges,
     setSelectedItems,
@@ -109,35 +94,37 @@ export function PaymentOverview({ name }: { name: string }) {
     );
   }
 
-  if (calculatedDraftOrderQuery.isError) {
+  if (calculateWorkOrderQuery.isError) {
     return (
       <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
         <Text color="TextCritical" variant="body">
-          {extractErrorMessage(calculatedDraftOrderQuery.error, 'An error occurred while loading item details')}
+          {extractErrorMessage(calculateWorkOrderQuery.error, 'An error occurred while loading item details')}
         </Text>
       </Stack>
     );
   }
 
-  if (!workOrder || !settings || !calculatedDraftOrderQuery.data) {
+  if (!workOrder || !settings || !calculateWorkOrderQuery.data) {
     return null;
   }
 
   const pay = () => {
-    if (selectedItems.length === 0 && selectedCharges.length === 0) {
-      toast.show('You must select at least one item or charge to pay for');
+    if (planOrderQuery.isFetching) {
+      toast.show('Calculating work order...');
       return;
     }
 
-    paymentHandler.handlePayment({
-      workOrderName: workOrder.name,
-      customFields: workOrder.customFields,
-      items: selectedItems,
-      charges: selectedCharges,
-      customerId: customer?.id ?? null,
-      labourSku: settings.labourLineItemSKU,
-      discount: workOrder.discount,
-    });
+    if (!planOrderQuery.data) {
+      toast.show('Could not calculate work order');
+      return;
+    }
+
+    if (!planOrderQuery.data.lineItems?.length) {
+      toast.show('No items to pay for');
+      return;
+    }
+
+    paymentHandler.handlePayment(planOrderQuery.data);
   };
 
   const createOrder = () => {
@@ -149,8 +136,8 @@ export function PaymentOverview({ name }: { name: string }) {
     createWorkOrderOrderMutation.mutate(
       {
         name: workOrder.name,
-        items: selectedItems.map(item => pick(item, 'type', 'uuid')),
-        charges: selectedCharges.map(charge => pick(charge, 'type', 'uuid')),
+        items: selectedItems.map(item => pick(item, 'uuid')),
+        charges: selectedCharges.map(charge => pick(charge, 'uuid')),
       },
       {
         onSuccess(result) {
@@ -161,75 +148,100 @@ export function PaymentOverview({ name }: { name: string }) {
     );
   };
 
-  const selectableItems = workOrder.items.filter(
-    item => calculatedDraftOrderQuery.getItemLineItem(item)?.order === null,
-  );
+  const selectableItems = workOrder.items.filter(item => calculateWorkOrderQuery.getItemLineItem(item)?.order === null);
   const selectableCharges = workOrder.charges.filter(
-    charge => calculatedDraftOrderQuery.getChargeLineItem(charge)?.order === null,
+    charge => calculateWorkOrderQuery.getChargeLineItem(charge)?.order === null,
   );
 
   // TODO: Display total
 
   const canChangeSelection = selectableItems.length !== 0 || selectableCharges.length !== 0;
 
+  let financialStatus = undefined;
+
+  const { outstanding, total } = calculateWorkOrderQuery.data;
+
+  const outstandingBigDecimal = BigDecimal.fromMoney(outstanding);
+  const totalBigDecimal = BigDecimal.fromMoney(total);
+
+  if (outstandingBigDecimal.compare(BigDecimal.ZERO) <= 0) {
+    financialStatus = 'Fully Paid';
+  } else if (outstandingBigDecimal.compare(totalBigDecimal) < 0) {
+    financialStatus = 'Partially paid';
+  } else {
+    financialStatus = 'Unpaid';
+  }
+
   return (
     <ScrollView>
-      {selectedItems.length === selectableItems.length && selectedCharges.length === selectableCharges.length ? (
-        <Button
-          title={'Deselect all items'}
-          isDisabled={isLoading || !canChangeSelection}
-          type={'plain'}
-          onPress={() => {
-            setSelectedItems([]);
-            setSelectedCharges([]);
-          }}
-        />
-      ) : (
-        <Button
-          title={'Select all items'}
-          isDisabled={isLoading || !canChangeSelection}
-          type={'plain'}
-          onPress={() => {
-            setSelectedItems(selectableItems);
-            setSelectedCharges(selectableCharges);
-          }}
-        />
-      )}
-      <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'}>
-        <List data={rows} imageDisplayStrategy={'always'} isLoadingMore={false} onEndReached={() => {}} />
-      </ResponsiveStack>
-      <ResponsiveGrid columns={2}>
-        <Button
-          title={'Create Order'}
-          isLoading={createWorkOrderOrderMutation.isLoading}
-          isDisabled={isLoading || (selectedItems.length === 0 && selectedCharges.length === 0)}
-          onPress={() => createOrder()}
-          type={'primary'}
-        />
+      <ResponsiveStack direction={'vertical'} spacing={2}>
+        <Badge text={financialStatus} variant={'highlight'} />
+        {financialStatus === 'Partially paid' && (
+          <Text variant={'bodyMd'} color={'TextSubdued'}>
+            {workOrder.name} is partially paid. To pay the outstanding balance of products that have been partially
+            paid, please navigate to the respective Shopify Order (e.g. via the Orders tab outside of WorkMate).
+          </Text>
+        )}
 
-        {!workOrder.companyId && (
+        {selectedItems.length === selectableItems.length && selectedCharges.length === selectableCharges.length ? (
           <Button
-            title={'Create Payment'}
-            isLoading={paymentHandler.isLoading}
-            isDisabled={
-              isLoading || !!workOrder.companyId || (selectedItems.length === 0 && selectedCharges.length === 0)
-            }
-            onPress={() => pay()}
-            type={'primary'}
+            title={'Deselect all items'}
+            isDisabled={isLoading || !canChangeSelection}
+            type={'plain'}
+            onPress={() => {
+              setSelectedItems([]);
+              setSelectedCharges([]);
+            }}
+          />
+        ) : (
+          <Button
+            title={'Select all items'}
+            isDisabled={isLoading || !canChangeSelection}
+            type={'plain'}
+            onPress={() => {
+              setSelectedItems(selectableItems);
+              setSelectedCharges(selectableCharges);
+            }}
           />
         )}
-      </ResponsiveGrid>
+        <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'}>
+          <List data={rows} imageDisplayStrategy={'always'} isLoadingMore={false} onEndReached={() => {}} />
+        </ResponsiveStack>
+        <ResponsiveGrid columns={2}>
+          {!!workOrder.companyId && (
+            <Button
+              title={'Create Order'}
+              isLoading={createWorkOrderOrderMutation.isLoading}
+              isDisabled={isLoading || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length}
+              onPress={() => createOrder()}
+              type={'primary'}
+            />
+          )}
+
+          {!workOrder.companyId && (
+            <Button
+              title={'Create Payment'}
+              isLoading={planOrderQuery.isFetching || paymentHandler.isLoading}
+              isDisabled={
+                isLoading || !!workOrder.companyId || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length
+              }
+              onPress={() => pay()}
+              type={'primary'}
+            />
+          )}
+        </ResponsiveGrid>
+      </ResponsiveStack>
     </ScrollView>
   );
 }
 
 function useItemRows(
-  workOrder: WorkOrder | null,
+  workOrder: DetailedWorkOrder | null,
   calculatedDraftOrderQuery: ReturnType<typeof useCalculatedDraftOrderQuery>,
-  selectedItems: WorkOrderItem[],
-  selectedCharges: WorkOrderCharge[],
-  setSelectedItems: (items: WorkOrderItem[]) => void,
-  setSelectedCharges: (charges: WorkOrderCharge[]) => void,
+  selectedItems: DetailedWorkOrderItem[],
+  selectedCharges: DetailedWorkOrderCharge[],
+  setSelectedItems: (items: DetailedWorkOrderItem[]) => void,
+  setSelectedCharges: (charges: DetailedWorkOrderCharge[]) => void,
   isLoading: boolean,
 ) {
   const fetch = useAuthenticatedFetch();
@@ -252,21 +264,9 @@ function useItemRows(
   const itemRows = workOrder.items.flatMap<ListRow>(item => {
     const rows: ListRow[] = [];
 
-    const itemCharges = workOrder.charges
-      .filter(hasNestedPropertyValue('workOrderItem.uuid', item.uuid))
-      .filter(hasNestedPropertyValue('workOrderItem.type', item.type));
     const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
-    const itemPrice = (() => {
-      if (item.type === 'product') {
-        return calculatedDraftOrder.itemPrices[item.uuid];
-      }
-
-      if (item.type === 'custom-item') {
-        return calculatedDraftOrder.customItemPrices[item.uuid];
-      }
-
-      return item satisfies never;
-    })();
+    const itemPrice = calculatedDraftOrderQuery.getItemPrice(item);
+    const itemCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', item.uuid));
 
     rows.push({
       id: `item-${item.uuid}`,
@@ -304,17 +304,17 @@ function useItemRows(
     return rows;
   });
 
-  const unlinkedCharges = workOrder.charges.filter(hasPropertyValue('workOrderItem', null));
+  const unlinkedCharges = workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null));
 
   const unlinkedChargeRows = unlinkedCharges.map<ListRow>(charge => getChargeRow(charge));
 
-  function getChargeRow(charge: WorkOrderCharge): ListRow {
+  function getChargeRow(charge: DetailedWorkOrderCharge): ListRow {
     const employeeQuery = charge.employeeId ? employeeQueries[charge.employeeId] : undefined;
     const employee = employeeQuery?.data;
 
     let label = charge.name;
 
-    if (charge.workOrderItem) {
+    if (charge.workOrderItemUuid !== null) {
       label = `⮑ ${label}`;
     }
 
@@ -349,3 +349,52 @@ function useItemRows(
 
   return [...itemRows, ...unlinkedChargeRows];
 }
+
+const useCalculateWorkOrder = ({ fetch, workOrder }: { fetch: Fetch; workOrder?: DetailedWorkOrder | null }) => {
+  const calculateWorkOrder = workOrder
+    ? {
+        ...pick(
+          workOrderToCreateWorkOrder(workOrder),
+          'name',
+          'items',
+          'charges',
+          'discount',
+          'customerId',
+          'companyLocationId',
+          'companyContactId',
+          'companyId',
+          'paymentTerms',
+        ),
+      }
+    : null;
+
+  return useCalculatedDraftOrderQuery(
+    {
+      fetch,
+      ...calculateWorkOrder!,
+    },
+    { enabled: !!calculateWorkOrder },
+  );
+};
+
+const usePlanOrder = ({
+  fetch,
+  workOrder,
+  selectedItems,
+  selectedCharges,
+}: {
+  fetch: Fetch;
+  workOrder?: DetailedWorkOrder | null;
+  selectedItems: DetailedWorkOrderItem[];
+  selectedCharges: DetailedWorkOrderCharge[];
+}) => {
+  return usePlanWorkOrderOrderQuery(
+    {
+      fetch,
+      name: workOrder?.name!,
+      items: selectedItems,
+      charges: selectedCharges,
+    },
+    { enabled: !!workOrder?.name },
+  );
+};
