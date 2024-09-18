@@ -10,7 +10,7 @@ export function getWorkOrderMutationNotifications(
 ) {
   return notifications.filter(notification => {
     if (notification.type === 'on-status-change') {
-      return notification.status === lastSavedWorkOrder?.status;
+      return createWorkOrder.status !== lastSavedWorkOrder?.status && notification.status === createWorkOrder.status;
     }
 
     if (notification.type === 'on-create') {
