@@ -157,9 +157,14 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
     );
   }
 
-  const [staffMember = httpError('Invalid staff member. Try using a different account')] = await gql.staffMember.getMany
+  const [staffMember] = await gql.staffMember.getMany
     .run(graphql, { ids: [staffMemberId] })
     .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
+
+  if (!staffMember) {
+    console.log(`Could not find staff member ${staffMemberId}`);
+    throw new HttpError('Staff member not found. Try using a different account.');
+  }
 
   return {
     id: staffMemberId,
