@@ -80,6 +80,12 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
 
   return (
     <Form disabled={cycleCountMutation.isLoading}>
+      <DatePicker
+        inputMode={'spinner'}
+        visibleState={[datePickerOpen, setDatePickerOpen]}
+        onChange={(dueDate: string) => setDueDate(new Date(dueDate).toISOString() as DateTime)}
+      />
+
       <ScrollView>
         <ResponsiveStack spacing={2} direction={'vertical'}>
           {cycleCountMutation.isError && (
@@ -125,12 +131,6 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
                   onSelect: location => setLocationId(location.id),
                 })
               }
-            />
-
-            <DatePicker
-              inputMode={'spinner'}
-              visibleState={[datePickerOpen, setDatePickerOpen]}
-              onChange={(dueDate: string) => setDueDate(new Date(dueDate).toISOString() as DateTime)}
             />
 
             <FormStringField
