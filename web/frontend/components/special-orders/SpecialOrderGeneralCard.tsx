@@ -51,7 +51,9 @@ export function SpecialOrderGeneralCard({
   const companyLocationQuery = useCompanyLocationQuery({ fetch, id: createSpecialOrder.companyLocationId });
 
   const canSelectCompany =
-    storePropertiesQuery.data && SHOPIFY_B2B_PLANS.includes(storePropertiesQuery.data?.storeProperties.plan);
+    storePropertiesQuery.data &&
+    !!storePropertiesQuery.data?.storeProperties.plan &&
+    SHOPIFY_B2B_PLANS.includes(storePropertiesQuery.data?.storeProperties.plan);
 
   return (
     <Card>
@@ -81,7 +83,7 @@ export function SpecialOrderGeneralCard({
                 ? ''
                 : companyQuery.isLoading
                   ? 'Loading...'
-                  : companyQuery.data?.name ?? 'Unknown company'
+                  : (companyQuery.data?.name ?? 'Unknown company')
             }
             onFocus={() => setIsCompanySelectorOpen(true)}
             disabled={disabled || createSpecialOrder.name !== null}
@@ -109,7 +111,7 @@ export function SpecialOrderGeneralCard({
                 ? ''
                 : companyLocationQuery.isLoading
                   ? 'Loading...'
-                  : companyLocationQuery.data?.name ?? 'Unknown location'
+                  : (companyLocationQuery.data?.name ?? 'Unknown location')
             }
             onFocus={() => {
               if (!createSpecialOrder.companyId) {
@@ -145,7 +147,7 @@ export function SpecialOrderGeneralCard({
               ? ''
               : customerQuery.isLoading
                 ? 'Loading...'
-                : customerQuery.data?.displayName ?? 'Unknown customer'
+                : (customerQuery.data?.displayName ?? 'Unknown customer')
           }
           disabled={disabled || createSpecialOrder.name !== null}
           readOnly
@@ -168,7 +170,7 @@ export function SpecialOrderGeneralCard({
               ? ''
               : locationQuery.isLoading
                 ? 'Loading...'
-                : locationQuery.data?.name ?? 'Unknown location'
+                : (locationQuery.data?.name ?? 'Unknown location')
           }
           disabled={disabled || createSpecialOrder.name !== null}
           readOnly

@@ -10,9 +10,6 @@ import { createIsStaleFn } from '../../util/db.js';
 import { escapeTransaction } from '../db/client.js';
 import { getProductVariants, upsertProductVariants } from './queries.js';
 
-// TODO: Do we need webhooks for this anymore if we just update when stale?
-// TODO: Update on stale everywhere where it makes sense
-
 export async function ensureProductVariantsExist(session: Session, productVariantIds: ID[]) {
   if (productVariantIds.length === 0) {
     return;

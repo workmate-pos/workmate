@@ -127,7 +127,9 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const canSelectCompany =
-    storePropertiesQuery.data && SHOPIFY_B2B_PLANS.includes(storePropertiesQuery.data?.storeProperties.plan);
+    storePropertiesQuery.data &&
+    !!storePropertiesQuery.data?.storeProperties.plan &&
+    SHOPIFY_B2B_PLANS.includes(storePropertiesQuery.data?.storeProperties.plan);
 
   const { Form } = useForm();
 

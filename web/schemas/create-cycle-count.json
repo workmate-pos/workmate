@@ -67,8 +67,11 @@
         "required": ["employeeId"],
         "additionalProperties": false
       }
+    },
+    "locked": {
+      "type": "boolean"
     }
   },
-  "required": ["name", "status", "locationId", "note", "items", "employeeAssignments", "dueDate"],
+  "required": ["name", "status", "locationId", "note", "items", "employeeAssignments", "dueDate", "locked"],
   "additionalProperties": false
 }
