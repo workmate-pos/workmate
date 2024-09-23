@@ -19,5 +19,6 @@ export function getCreateCycleCountFromDetailedCycleCount(cycleCount: DetailedCy
       employeeId: assignment.employeeId,
     })),
     dueDate: cycleCount.dueDate,
+    locked: cycleCount.locked,
   };
 }

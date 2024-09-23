@@ -23,6 +23,7 @@ export async function getCycleCount({ shop, name }: { shop: string; name: string
     createdAt: Date;
     updatedAt: Date;
     dueDate: Date | null;
+    locked: boolean;
   }>`
     SELECT *
     FROM "CycleCount"
@@ -46,6 +47,7 @@ function mapCycleCount(cycleCount: {
   createdAt: Date;
   updatedAt: Date;
   dueDate: Date | null;
+  locked: boolean;
 }) {
   const { locationId } = cycleCount;
 
@@ -93,6 +95,7 @@ export async function getCycleCountsPage(
     createdAt: Date;
     updatedAt: Date;
     dueDate: Date | null;
+    locked: boolean;
   }>`
     SELECT cc.*
     FROM "CycleCount" cc
@@ -129,6 +132,7 @@ export async function upsertCycleCount({
   name,
   shop,
   dueDate,
+  locked,
 }: {
   shop: string;
   name: string;
@@ -136,6 +140,7 @@ export async function upsertCycleCount({
   locationId: ID;
   note: string;
   dueDate: Date | null;
+  locked: boolean;
 }) {
   const _locationId: string = locationId;
 
@@ -149,14 +154,16 @@ export async function upsertCycleCount({
     createdAt: Date;
     updatedAt: Date;
     dueDate: Date | null;
+    locked: boolean;
   }>`
-    INSERT INTO "CycleCount" (status, "locationId", note, name, shop, "dueDate")
-    VALUES (${status}, ${_locationId}, ${note}, ${name}, ${shop}, ${dueDate!})
+    INSERT INTO "CycleCount" (status, "locationId", note, name, shop, "dueDate", locked)
+    VALUES (${status}, ${_locationId}, ${note}, ${name}, ${shop}, ${dueDate!}, ${locked})
     ON CONFLICT (shop, name)
       DO UPDATE SET status       = EXCLUDED.status,
                     "locationId" = EXCLUDED."locationId",
                     note         = EXCLUDED.note,
-                    "dueDate"    = EXCLUDED."dueDate"
+                    "dueDate"    = EXCLUDED."dueDate",
+                    locked       = EXCLUDED.locked
     RETURNING *;`;
 
   return mapCycleCount(cycleCount);

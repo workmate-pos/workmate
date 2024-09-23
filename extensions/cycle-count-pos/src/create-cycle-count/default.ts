@@ -9,4 +9,5 @@ export const getDefaultCreateCycleCount = (locationId: ID): CreateCycleCount => 
   note: '',
   dueDate: null,
   employeeAssignments: [],
+  locked: false,
 });

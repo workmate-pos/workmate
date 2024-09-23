@@ -6,6 +6,7 @@ import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormSt
 import {
   Badge,
   Banner,
+  Button,
   DatePicker,
   List,
   ListRow,
@@ -34,10 +35,12 @@ import { getCycleCountApplicationStateBadge } from './Entry.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   const { Form } = useForm();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast, session } = useExtensionApi<'pos.home.modal.render'>();
 
   const [lastSavedCreateCycleCount, setLastSavedCreateCycleCount] = useState(initial);
   const [createCycleCount, setCreateCycleCount] = useState(initial);
@@ -47,6 +50,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   const setNote = getCreateCycleCountSetter(setCreateCycleCount, 'note');
   const setItems = getCreateCycleCountSetter(setCreateCycleCount, 'items');
   const setEmployeeAssignments = getCreateCycleCountSetter(setCreateCycleCount, 'employeeAssignments');
+  const setLocked = getCreateCycleCountSetter(setCreateCycleCount, 'locked');
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
@@ -58,7 +62,14 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   const cycleCountQuery = useCycleCountQuery({ fetch, name: createCycleCount.name });
   const locationQuery = useLocationQuery({ fetch, id: createCycleCount.locationId });
 
-  const employeeIds = unique(createCycleCount.employeeAssignments.map(assignment => assignment.employeeId));
+  const currentEmployeeId = createGid(
+    'StaffMember',
+    session.currentSession.staffMemberId ?? session.currentSession.userId,
+  );
+  const employeeIds = unique([
+    currentEmployeeId,
+    ...createCycleCount.employeeAssignments.map(assignment => assignment.employeeId),
+  ]);
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
 
   const onMutateSuccess = (message: string) => (cycleCount: DetailedCycleCount) => {
@@ -72,14 +83,30 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
 
   const locationName = locationQuery.isLoading ? 'Loading...' : locationQuery.data?.name ?? 'Unknown location';
 
-  const rows = useItemRows({ createCycleCount, setCreateCycleCount });
+  const isSuperuser = employeeQueries[currentEmployeeId]?.data?.superuser;
+  const isImmutable = createCycleCount.locked;
+
+  const rows = useItemRows({ createCycleCount, setCreateCycleCount }).map(row => ({
+    ...row,
+    onPress: () => {
+      if (isImmutable) {
+        return;
+      }
+
+      row.onPress?.();
+    },
+    rightSide: {
+      ...row.rightSide,
+      showChevron: !!row.rightSide?.showChevron && !isImmutable,
+    },
+  }));
 
   const router = useRouter();
   const screen = useScreen();
   screen.setIsLoading(cycleCountQuery.isLoading);
 
   return (
-    <Form disabled={cycleCountMutation.isLoading}>
+    <Form disabled={cycleCountMutation.isLoading || isImmutable}>
       <DatePicker
         inputMode={'spinner'}
         visibleState={[datePickerOpen, setDatePickerOpen]}
@@ -88,6 +115,13 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
 
       <ScrollView>
         <ResponsiveStack spacing={2} direction={'vertical'}>
+          <Banner
+            title={'This cycle count is locked'}
+            variant={'warning'}
+            visible={createCycleCount.locked}
+            hideAction
+          />
+
           {cycleCountMutation.isError && (
             <Banner
               visible
@@ -198,7 +232,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
             />
 
             <ProductScanner
-              disabled={cycleCountMutation.isLoading}
+              disabled={cycleCountMutation.isLoading || isImmutable}
               onProductScanned={productVariant =>
                 setItems(current => {
                   const { uuid: itemUuid, countQuantity } = current.find(
@@ -243,32 +277,80 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
         flex={0}
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
-          <FormButton
-            title={'History'}
-            onPress={() => router.push('CycleCountApplications', { name: createCycleCount.name })}
-            disabled={!createCycleCount.name}
-            type={'primary'}
-          />
+          <Button
+            title={'Actions'}
+            type={'basic'}
+            onPress={() =>
+              router.push('ListPopup', {
+                title: 'Actions',
+                selection: {
+                  type: 'select',
+                  items: [
+                    {
+                      id: 'history',
+                      leftSide: {
+                        label: 'View application history',
+                      },
+                    },
+                    {
+                      id: 'apply',
+                      leftSide: {
+                        label: 'Apply',
+                        subtitle: getSubtitle([
+                          !createCycleCount.name || hasUnsavedChanges
+                            ? 'You must save your changes before applying'
+                            : undefined,
+                          cycleCountQuery.data?.applicationStatus === 'APPLIED' ? 'Nothing to apply' : undefined,
+                          createCycleCount.locked ? 'Locked cycle counts cannot be applied' : undefined,
+                        ]),
+                      },
+                      disabled:
+                        createCycleCount.locked ||
+                        !createCycleCount.name ||
+                        hasUnsavedChanges ||
+                        cycleCountQuery.data?.applicationStatus === 'APPLIED',
+                    },
+                    {
+                      id: 'lock',
+                      leftSide: {
+                        label: createCycleCount.locked ? 'Unlock' : 'Lock',
+                        subtitle: getSubtitle([
+                          createCycleCount.locked && !isSuperuser
+                            ? 'You must be a superuser to unlock this cycle count'
+                            : undefined,
+                        ]),
+                      },
+                      disabled: createCycleCount.locked && !isSuperuser,
+                    },
+                  ],
+                  onSelect: action => {
+                    if (action === 'history') {
+                      router.push('CycleCountApplications', { name: createCycleCount.name });
+                      return;
+                    }
 
-          <FormButton
-            title={'Apply'}
-            onPress={() => {
-              if (!createCycleCount.name) {
-                toast.show('You must save your cycle count before applying it');
-                return;
-              }
+                    if (action === 'apply') {
+                      if (!createCycleCount.name) {
+                        toast.show('You must save your cycle count before applying');
+                        return;
+                      }
 
-              router.push('PlanCycleCount', {
-                name: createCycleCount.name,
-                onSuccess: onMutateSuccess('Applied cycle count'),
-              });
-            }}
-            type={'primary'}
-            disabled={
-              !createCycleCount.name ||
-              hasUnsavedChanges ||
-              !cycleCountQuery.data ||
-              cycleCountQuery.data.applicationStatus === 'APPLIED'
+                      router.push('PlanCycleCount', {
+                        name: createCycleCount.name,
+                        onSuccess: onMutateSuccess('Applied cycle count'),
+                      });
+                      return;
+                    }
+
+                    if (action === 'lock') {
+                      setLocked(current => !current);
+                      return;
+                    }
+
+                    toast.show(`Unknown action "${action}"`);
+                  },
+                },
+              })
             }
           />
 

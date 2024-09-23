@@ -739,6 +739,10 @@ model CycleCount {
   locationId String
   note       String
 
+  // If true, nothing can be changed except for the status and note.
+  // Applications are also not allowed.
+  locked Boolean
+
   dueDate DateTime?
 
   items CycleCountItem[]
