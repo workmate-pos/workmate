@@ -75,7 +75,7 @@ export async function getCycleCountsPage(
     offset: number;
     locationId?: ID;
     employeeId?: ID;
-    sortMode?: 'due-date' | 'created-date';
+    sortMode?: 'name' | 'due-date' | 'created-date';
     sortOrder?: 'ascending' | 'descending';
   },
 ) {
@@ -108,18 +108,14 @@ export async function getCycleCountsPage(
                   FROM "CycleCountEmployeeAssignment" ea
                   WHERE ea."cycleCountId" = cc.id
                     AND ea."employeeId" = ${_employeeId ?? null})
-    ORDER BY CASE
-               WHEN ${sortMode} = 'due-date' THEN
-                 CASE
-                   WHEN ${sortOrder} = 'ascending' THEN ("dueDate" - NOW())
-                   WHEN ${sortOrder} = 'descending' THEN (NOW() - "dueDate")
-                   END
-               WHEN ${sortMode} = 'created-date' THEN
-                 CASE
-                   WHEN ${sortOrder} = 'ascending' THEN ("createdAt" - NOW())
-                   WHEN ${sortOrder} = 'descending' THEN (NOW() - "createdAt")
-                   END
-               END NULLS LAST, "createdAt"
+    ORDER BY CASE WHEN ${sortMode} = 'due-date' AND ${sortOrder} = 'ascending' THEN "dueDate" END ASC NULLS LAST,
+             CASE WHEN ${sortMode} = 'due-date' AND ${sortOrder} = 'descending' THEN "dueDate" END DESC NULLS LAST,
+             --
+             CASE WHEN ${sortMode} = 'created-date' AND ${sortOrder} = 'ascending' THEN "createdAt" END ASC NULLS LAST,
+             CASE WHEN ${sortMode} = 'created-date' AND ${sortOrder} = 'descending' THEN "createdAt" END DESC NULLS LAST,
+             --
+             CASE WHEN ${sortMode} = 'name' AND ${sortOrder} = 'ascending' THEN "name" END ASC NULLS LAST,
+             CASE WHEN ${sortMode} = 'name' AND ${sortOrder} = 'descending' THEN "name" END DESC NULLS LAST
     LIMIT ${limit} OFFSET ${offset};
   `;
 

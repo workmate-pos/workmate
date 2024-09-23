@@ -20,7 +20,7 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
-const SORT_MODES = ['created-date', 'due-date'] as const;
+const SORT_MODES = ['name', 'created-date', 'due-date'] as const;
 const SORT_ORDERS = ['descending', 'ascending'] as const;
 
 export type SortMode = (typeof SORT_MODES)[number];
