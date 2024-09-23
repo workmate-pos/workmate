@@ -3,22 +3,17 @@ name: Push
 on:
   push:
     branches:
-      - main
-    tags:
-      - "v[0-9]+.[0-9]+.[0-9]+"
+      - staging
+      - production
 
 jobs:
   app:
     name: App
-    uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@master
-    with:
-      shopify_api_key: ${{ vars.SHOPIFY_API_KEY }}
-      shopify_shop: ${{ vars.SHOPIFY_SHOP }}
-      sentry_org: ${{ vars.SENTRY_ORG }}
-      sentry_project: ${{ vars.SENTRY_PROJECT }}
-      docker_username: ${{ vars.DOCKER_USERNAME }}
-      extensions_install_command: npm run all:install && npm run all:build
-      custom_build_args: |
-        VITE_INTERCOM_APP_ID=${{ vars.VITE_INTERCOM_APP_ID }}
-        NODE_ENV=production
+    uses: teifi-digital/workflows/.github/workflows/teifi-shopify-app.yml@main
     secrets: inherit
+    with:
+      extensions_install_command: npm run all:install && npm run all:build
+      build_arg_env_vars: VITE_INTERCOM_APP_ID
+      app_proxy: true
+      pos_embedded: true
+      deploy-autogen-values: ${{ github.ref != 'refs/heads/production' }}

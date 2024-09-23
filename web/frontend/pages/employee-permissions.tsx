@@ -105,6 +105,8 @@ function EmployeePermissions() {
     'cycle_count',
     'read_stock_transfers',
     'write_stock_transfers',
+    'read_special_orders',
+    'write_special_orders',
   ] as const satisfies readonly PermissionNode[];
 
   return (

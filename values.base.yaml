@@ -1,0 +1,10 @@
+migration:
+  volumes:
+    - name: npm
+      emptyDir: {}
+  volumeMounts:
+    - name: npm
+      mountPath: /home/node/.npm
+
+gotenberg:
+  enabled: true

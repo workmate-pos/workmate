@@ -1,0 +1,17 @@
+app:
+  ingress:
+    enabled: true
+    annotations:
+      external-dns.alpha.kubernetes.io/cloudflare-proxied: "true"
+      external-dns.alpha.kubernetes.io/hostname: app.workmatepos.co
+      external-dns.alpha.kubernetes.io/target: ingress.prod.teifi.dev
+      cert-manager.io/cluster-issuer: letsencrypt
+    hosts:
+      - host: app.workmatepos.co
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+    tls:
+      - secretName: app-workmatepos-co-tls
+        hosts:
+          - app.workmatepos.co

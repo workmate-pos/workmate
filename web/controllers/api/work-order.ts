@@ -110,8 +110,6 @@ export default class WorkOrderController {
       selectedCharges,
     });
 
-    console.log(name, draftOrderInput);
-
     return res.json(draftOrderInput);
   }
 

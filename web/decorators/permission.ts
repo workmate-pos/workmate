@@ -5,15 +5,18 @@ import { Session } from '@shopify/shopify-api';
 import { IGetManyResult, PermissionNode } from '../services/db/queries/generated/employee.sql.js';
 import { db } from '../services/db/db.js';
 import { gql } from '../services/gql/gql.js';
-import { assertGid, createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, createGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import jwt from 'jsonwebtoken';
 import type { Request, Response } from 'express-serve-static-core';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { hasReadUsersScope } from '../services/shop.js';
 import { assertMoneyOrNull } from '../util/assertions.js';
+import { IncomingHttpHeaders } from 'node:http';
+import { getShopifyApp } from '@teifi-digital/shopify-app-express';
+import { httpError } from '../util/http-error.js';
 
 export const permissionNodes = [
   'cycle_count',
@@ -21,12 +24,14 @@ export const permissionNodes = [
   'read_employees',
   'read_purchase_orders',
   'read_settings',
+  'read_special_orders',
   'read_stock_transfers',
   'read_work_orders',
   'write_app_plan',
   'write_employees',
   'write_purchase_orders',
   'write_settings',
+  'write_special_orders',
   'write_stock_transfers',
   'write_work_orders',
 ] as const satisfies readonly PermissionNode[];
@@ -39,6 +44,8 @@ export const defaultPermissionNodes: PermissionNode[] = [
   'write_work_orders',
   'read_purchase_orders',
   'read_stock_transfers',
+  'read_special_orders',
+  'write_special_orders',
 ];
 
 export function isPermissionNode(node: string): node is PermissionNode {
@@ -58,6 +65,7 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
     const session: Session = res.locals.shopify.session;
 
     const associatedUser = await getAssociatedUser(_req, res);
+
     if (!associatedUser) {
       return err(res, 'You must be a staff member to access this resource', 401);
     }
@@ -71,15 +79,10 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
 
     if (!employee) {
       const superuser = associatedUser.isShopOwner || !doesSuperuserExist || associatedUser.email.endsWith('@teifi.ca');
+      const { name, email, isShopOwner } = associatedUser;
 
       [employee = never('just made it')] = await createNewEmployees(session.shop, [
-        {
-          employeeId,
-          name: associatedUser.name,
-          isShopOwner: associatedUser.isShopOwner,
-          superuser,
-          email: associatedUser.email,
-        },
+        { superuser, employeeId, name, email, isShopOwner },
       ]);
 
       doesSuperuserExist ||= superuser;
@@ -121,16 +124,22 @@ export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
 
 async function getAssociatedUser(req: Request, res: Response): Promise<gql.staffMember.StaffMemberFragment.Result> {
   const session: Session = res.locals.shopify.session;
+  const graphql = new Graphql(session);
+
+  const [canReadStaffMembers, staffMemberId] = await Promise.all([
+    hasReadUsersScope(graphql),
+    getRequestStaffMemberId(req.headers),
+  ]);
 
   // this works for all requests coming from admin
-  if (session?.onlineAccessInfo?.associated_user) {
+  if (
+    session?.onlineAccessInfo?.associated_user &&
+    session.onlineAccessInfo.associated_user.id.toString() === parseGid(staffMemberId).id
+  ) {
     return associatedUserToStaffInfo(session.onlineAccessInfo.associated_user);
   }
 
-  // POS does not send associated_user, but will send the staff member's id in the session token
-  const staffMemberId = getBearerStaffMemberId(req.headers.authorization);
-
-  const [employee] = await db.employee.getMany({ employeeIds: [staffMemberId] });
+  const [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
 
   if (employee) {
     return {
@@ -141,41 +150,28 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
     };
   }
 
-  // if this is a completely new employee we should fetch their details here. will only happen the first time
-
-  const graphql = new Graphql(session);
-
-  if (!(await hasReadUsersScope(graphql))) {
-    // only happens for low shopify plans
-    throw new HttpError('Staff member not found - log in to WorkMate on Shopify Admin first.', 401);
+  if (!canReadStaffMembers) {
+    // logging in through admin will trigger the associated_user branch above
+    throw new HttpError(
+      'Staff member not found - log into WorkMate on Shopify Admin first to register the logged-in staff member.',
+    );
   }
 
   const [staffMember] = await gql.staffMember.getMany
     .run(graphql, { ids: [staffMemberId] })
     .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
 
-  return staffMember ?? never('Staff Member must exist because the signed token contained its id');
-}
-
-function getBearerStaffMemberId(authorizationHeader?: string): ID {
-  if (!authorizationHeader) {
-    throw new HttpError('You must be a staff member to access this resource', 401);
+  if (!staffMember) {
+    console.log(`Could not find staff member ${staffMemberId}`);
+    throw new HttpError('Staff member not found. Try using a different account.');
   }
 
-  const token = authorizationHeader.split(' ')[1] ?? never('bad token');
-  const content = jwt.decode(token, { json: true });
-
-  if (!content) {
-    throw new HttpError('Invalid token', 401);
-  }
-
-  const { sub } = content;
-
-  if (!sub) {
-    throw new HttpError('Invalid token', 401);
-  }
-
-  return createGid('StaffMember', sub);
+  return {
+    id: staffMemberId,
+    name: staffMember.name,
+    isShopOwner: staffMember.isShopOwner,
+    email: staffMember.email,
+  };
 }
 
 export type LocalsTeifiUser = {
@@ -193,7 +189,7 @@ function associatedUserToStaffInfo(
   associatedUser: NonNullable<Session['onlineAccessInfo']>['associated_user'],
 ): gql.staffMember.StaffMemberFragment.Result {
   return {
-    id: createGid('StaffMember', String(associatedUser.id)),
+    id: createGid('StaffMember', associatedUser.id),
     name: `${associatedUser.first_name} ${associatedUser.last_name}`,
     isShopOwner: associatedUser.account_owner,
     email: associatedUser.email_verified ? associatedUser.email : '',
@@ -224,4 +220,45 @@ export async function createNewEmployees(
       rate: null,
     })),
   });
+}
+
+/**
+ * Extracts the staff member id from request headers.
+ * The Authorization header contains a JWT with the staff member id as subject.
+ * On POS the JWT does not necessarily contain the pinned-in staff member id, so we also send x-pos-staff-member-id to override the jwt subject
+ * from pos.
+ */
+async function getRequestStaffMemberId(headers: IncomingHttpHeaders) {
+  if (headers['x-pos-staff-member-id']) {
+    const userId = headers['x-pos-staff-member-id'];
+
+    if (!Array.isArray(userId) && /^\d+$/.test(userId)) {
+      return createGid('StaffMember', userId);
+    }
+
+    sentryErr('Received invalid x-pos-staff-member-id', { userId });
+  }
+
+  return await getBearerStaffMemberId(headers.authorization);
+}
+
+async function getBearerStaffMemberId(authorizationHeader?: string) {
+  if (!authorizationHeader) {
+    throw new HttpError('You must be a staff member to access this resource', 401);
+  }
+
+  const token = authorizationHeader.split(' ')[1] ?? never('bad token');
+  const content = await getShopifyApp().api.session.decodeSessionToken(token);
+
+  if (!content) {
+    throw new HttpError('Invalid token', 401);
+  }
+
+  const { sub } = content;
+
+  if (!sub) {
+    throw new HttpError('Invalid token', 401);
+  }
+
+  return createGid('StaffMember', sub);
 }
