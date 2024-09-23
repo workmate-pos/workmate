@@ -41,7 +41,7 @@ export function PurchaseOrderCsvUploadDropZoneModal({ open, onClose }: { open: b
         onClose={onClose}
         primaryAction={{
           content: 'Import',
-          loading: purchaseOrdersUploadCsvMutation.isLoading,
+          loading: purchaseOrdersUploadCsvMutation.isPending,
           disabled: !purchaseOrderInfoFile,
           onAction: () => {
             if (!purchaseOrderInfoFile) {

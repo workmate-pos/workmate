@@ -267,7 +267,7 @@ export default function Labour() {
                     )}
 
                     <InlineStack align="end">
-                      <Button submit variant="primary" loading={labourMutation.isLoading}>
+                      <Button submit variant="primary" loading={labourMutation.isPending}>
                         Save
                       </Button>
                     </InlineStack>

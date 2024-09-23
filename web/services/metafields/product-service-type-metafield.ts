@@ -32,6 +32,7 @@ export const productServiceTypeMetafield: WithRequired<MetafieldDefinitionInput,
 
 /**
  * Syncs the Service Type metafield with the product tags.
+ * Returns whether the sync resulted in a change.
  */
 export async function syncProductServiceTypeTag(session: Session, productId: ID) {
   const graphql = new Graphql(session);
@@ -57,5 +58,8 @@ export async function syncProductServiceTypeTag(session: Session, productId: ID)
       removeTags,
       addTags,
     });
+    return true;
   }
+
+  return false;
 }

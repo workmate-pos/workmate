@@ -6,7 +6,12 @@ import { ListRowLeftSide, ListRowSubtitle } from '@shopify/ui-extensions/point-o
 export function getSubtitle(
   subtitle: (ListRowSubtitle | undefined | null)[] | undefined | null,
 ): ListRowLeftSide['subtitle'] {
-  return match(subtitle?.filter(isNonNullable).slice(0, 3))
+  return match(
+    subtitle
+      ?.filter(isNonNullable)
+      .filter(str => typeof str !== 'string' || str.trim().length > 0)
+      .slice(0, 3),
+  )
     .with([P._, P._, P._], identity)
     .with([P._, P._], identity)
     .with([P._], identity)

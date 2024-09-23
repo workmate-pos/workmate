@@ -642,9 +642,9 @@ model Customer {
   shopifyOrders ShopifyOrder[]
   specialOrders SpecialOrder[]
 
-  createdAt            DateTime               @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime               @default(now()) @db.Timestamptz(3)
-  deletedAt            DateTime?
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime?
 
   @@index([shop])
 }
@@ -892,4 +892,38 @@ model ProductVariantSerial {
   workOrders             WorkOrder[]
 
   @@unique([shop, productVariantId, serial])
+}
+
+// Metafield cache.
+// Currently used for finding product/variants by metafield values in the scanner extension.
+model Metafield {
+  id Int @id @default(autoincrement())
+
+  shop String
+
+  // The object that the metafield is attached to
+  objectId    String
+  metafieldId String @unique
+
+  namespace String
+  key       String
+  value     String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([objectId, namespace, key])
+  @@index([shop, namespace, key, value])
+}
+
+// Table used for blocking concurrent tasks and for tracking the progress of long-running tasks.
+model Task {
+  id Int @id @default(autoincrement())
+
+  name        String @unique
+  progress    Int
+  progressMax Int?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }

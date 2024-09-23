@@ -1,7 +1,7 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { Dispatch, SetStateAction, useState } from 'react';
-import { ContextualSaveBar, Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
-import { Loading, useAppBridge } from '@shopify/app-bridge-react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
+import { ContextualSaveBar, Loading, useAppBridge } from '@shopify/app-bridge-react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 import { useSettingsMutation } from '../queries/use-settings-mutation.js';
@@ -24,6 +24,7 @@ import { StockTransferSettings } from '@web/frontend/components/settings/section
 import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
 import { CycleCountSettings } from '@web/frontend/components/settings/sections/CycleCountSettings.js';
 import { SpecialOrderSettings } from '@web/frontend/components/settings/sections/SpecialOrderSettings.js';
+import { ScannerSettings } from '@web/frontend/components/settings/sections/ScannerSettings.js';
 
 export default function () {
   return (
@@ -54,27 +55,24 @@ function Settings() {
   const isValid = purchaseOrderWebhookIsValid;
 
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const settingsQuery = useSettingsQuery(
-    { fetch },
-    {
-      refetchOnWindowFocus: false,
-      onSuccess({ settings }) {
-        setSettings(settings);
-        setHasUnsavedChanges(false);
-      },
-      onError() {
-        setToastAction({
-          content: 'Could not load settings',
-          action: {
-            content: 'Retry',
-            onAction() {
-              settingsQuery.refetch();
-            },
+  const settingsQuery = useSettingsQuery({ fetch }, { refetchOnWindowFocus: false });
+
+  useEffect(() => {
+    if (settingsQuery.isSuccess) {
+      setSettings(settingsQuery.data.settings);
+      setHasUnsavedChanges(false);
+    } else if (settingsQuery.isError) {
+      setToastAction({
+        content: 'Could not load settings',
+        action: {
+          content: 'Retry',
+          onAction() {
+            settingsQuery.refetch();
           },
-        });
-      },
-    },
-  );
+        },
+      });
+    }
+  }, [settingsQuery.data]);
 
   const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
 
@@ -159,6 +157,10 @@ function Settings() {
       tab: <SpecialOrderSettings settings={settings} setSettings={setSettings} />,
     },
     {
+      name: 'Scanner',
+      tab: <ScannerSettings settings={settings} setSettings={setSettings} />,
+    },
+    {
       name: 'Printing',
       tab: (
         <>
@@ -191,26 +193,23 @@ function Settings() {
 
   return (
     <>
-      {hasUnsavedChanges && (
-        <ContextualSaveBar
-          message="Unsaved changes"
-          fullWidth
-          saveAction={{
-            disabled: !canWriteSettings || !isValid,
-            loading: saveSettingsMutation.isLoading,
-            onAction: () => saveSettingsMutation.mutate(settings),
-          }}
-          discardAction={{
-            onAction: () => {
-              if (settingsQuery.data?.settings) {
-                setSettings(settingsQuery.data.settings);
-                setHasUnsavedChanges(false);
-              }
-            },
-          }}
-          alignContentFlush
-        />
-      )}
+      <ContextualSaveBar
+        fullWidth
+        saveAction={{
+          disabled: !canWriteSettings || !isValid,
+          loading: saveSettingsMutation.isPending,
+          onAction: () => saveSettingsMutation.mutate(settings),
+        }}
+        visible={hasUnsavedChanges}
+        discardAction={{
+          onAction: () => {
+            if (settingsQuery.data?.settings) {
+              setSettings(settingsQuery.data.settings);
+              setHasUnsavedChanges(false);
+            }
+          },
+        }}
+      />
 
       <LegacyCard>
         <Tabs

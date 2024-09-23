@@ -27,7 +27,7 @@ import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -129,9 +129,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const canSelectCompany =
     storePropertiesQuery.data && SHOPIFY_B2B_PLANS.includes(storePropertiesQuery.data?.storeProperties.plan);
 
-  const { Form } = useForm();
-
-  const disabled = Object.values(bannerQueries).some(query => query.isError) || specialOrderMutation.isLoading;
+  const disabled = Object.values(bannerQueries).some(query => query.isError) || specialOrderMutation.isPending;
   const rows = useListRows(createSpecialOrder, setCreateSpecialOrder, disabled);
 
   return (
@@ -268,7 +266,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
             title={'Save'}
             type={'primary'}
             action={'submit'}
-            loading={specialOrderMutation.isLoading}
+            loading={specialOrderMutation.isPending}
             onPress={() =>
               specialOrderMutation.mutate(createSpecialOrder as CreateSpecialOrder, {
                 onSuccess(specialOrder) {

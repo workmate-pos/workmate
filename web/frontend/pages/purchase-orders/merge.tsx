@@ -208,7 +208,7 @@ function Merge() {
         loading={
           specialOrdersQuery.isLoading ||
           Object.values(productVariantQueries).some(query => query.isLoading) ||
-          purchaseOrderMutation.isLoading ||
+          purchaseOrderMutation.isPending ||
           settingsQuery.isLoading ||
           purchaseOrderCustomFieldsPresetsQuery.isLoading ||
           lineItemCustomFieldsPresetsQuery.isLoading
@@ -230,7 +230,7 @@ function Merge() {
           {
             id: 'merge',
             content: 'Merge',
-            disabled: selectedResources.length === 0 || !locationId || !vendorName || purchaseOrderMutation.isLoading,
+            disabled: selectedResources.length === 0 || !locationId || !vendorName || purchaseOrderMutation.isPending,
             onAction: () => {
               if (!locationId || !vendorName) {
                 return;

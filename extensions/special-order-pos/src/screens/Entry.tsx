@@ -1,6 +1,6 @@
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useSpecialOrdersQuery } from '@work-orders/common/queries/use-special-orders-query.js';
 import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
@@ -48,17 +48,16 @@ export function Entry() {
   const [selectedSpecialOrderName, setSelectedSpecialOrderName] = useState<string>();
   const selectedSpecialOrderQuery = useSpecialOrderQuery(
     { fetch, name: selectedSpecialOrderName ?? null },
-    {
-      staleTime: 0,
-      onSuccess(specialOrder) {
-        if (specialOrder) {
-          const initial = getCreateSpecialOrderFromDetailedSpecialOrder(specialOrder);
-          router.push('SpecialOrder', { initial });
-          setSelectedSpecialOrderName(undefined);
-        }
-      },
-    },
+    { staleTime: 0 },
   );
+
+  useEffect(() => {
+    if (selectedSpecialOrderName && selectedSpecialOrderQuery.data) {
+      const initial = getCreateSpecialOrderFromDetailedSpecialOrder(selectedSpecialOrderQuery.data);
+      router.push('SpecialOrder', { initial });
+      setSelectedSpecialOrderName(undefined);
+    }
+  }, [selectedSpecialOrderName, selectedSpecialOrderQuery.data]);
 
   const screen = useScreen();
   screen.setIsLoading(specialOrdersQuery.isLoading || selectedSpecialOrderQuery.isFetching);

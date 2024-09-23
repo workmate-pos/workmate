@@ -215,7 +215,7 @@ function PurchaseOrder({
         fullWidth
         visible={hasUnsavedChanges}
         saveAction={{
-          loading: purchaseOrderMutation.isLoading,
+          loading: purchaseOrderMutation.isPending,
           onAction: () => purchaseOrderMutation.mutate(createPurchaseOrder),
         }}
         discardAction={{
@@ -237,7 +237,7 @@ function PurchaseOrder({
             options={settings.purchaseOrderStatuses}
             onChange={status => dispatch.setPartial({ status })}
             value={createPurchaseOrder.status}
-            disabled={purchaseOrderMutation.isLoading}
+            disabled={purchaseOrderMutation.isPending}
           />
         </InlineStack>
 
@@ -245,7 +245,7 @@ function PurchaseOrder({
           <PurchaseOrderGeneralCard
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
-            disabled={purchaseOrderMutation.isLoading}
+            disabled={purchaseOrderMutation.isPending}
             selectedLocation={selectedLocation}
             isLoadingLocation={selectedLocationQuery.isLoading}
             onVendorSelectorClick={() => setIsVendorSelectorModalOpen(true)}
@@ -255,21 +255,21 @@ function PurchaseOrder({
           <PurchaseOrderShippingCard
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
-            disabled={purchaseOrderMutation.isLoading}
+            disabled={purchaseOrderMutation.isPending}
             selectedLocation={selectedLocation}
           />
 
           <PurchaseOrderEmployeesCard
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
-            disabled={purchaseOrderMutation.isLoading}
+            disabled={purchaseOrderMutation.isPending}
             onAssignEmployeesClick={() => setIsAddEmployeeModalOpen(true)}
           />
 
           <PurchaseOrderCustomFieldsCard
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
-            disabled={purchaseOrderMutation.isLoading}
+            disabled={purchaseOrderMutation.isPending}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
             onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
@@ -281,7 +281,7 @@ function PurchaseOrder({
           createPurchaseOrder={createPurchaseOrder}
           purchaseOrder={purchaseOrder}
           dispatch={dispatch}
-          disabled={purchaseOrderMutation.isLoading}
+          disabled={purchaseOrderMutation.isPending}
           onAddProductClick={() => {
             if (!createPurchaseOrder.locationId) {
               setToastAction({ content: 'You must select a location to add products' });
@@ -326,9 +326,9 @@ function PurchaseOrder({
           createPurchaseOrder={createPurchaseOrder}
           dispatch={dispatch}
           hasUnsavedChanges={hasUnsavedChanges}
-          disabled={purchaseOrderMutation.isLoading}
+          disabled={purchaseOrderMutation.isPending}
           onSave={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
-          isSaving={purchaseOrderMutation.isLoading}
+          isSaving={purchaseOrderMutation.isPending}
           onPrint={() => setIsPrintModalOpen(true)}
         />
       </BlockStack>

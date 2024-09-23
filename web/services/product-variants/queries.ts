@@ -129,3 +129,24 @@ export async function softDeleteProductVariantsByProductIds(productIds: ID[]) {
       AND "deletedAt" IS NULL;
   `;
 }
+
+export async function getProductVariantsByProductIds(productIds: ID[]) {
+  const _productIds: string[] = productIds;
+
+  const productVariants = await sql<{
+    productVariantId: string;
+    productId: string;
+    inventoryItemId: string;
+    sku: string | null;
+    title: string;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
+  }>`
+    SELECT *
+    FROM "ProductVariant"
+    WHERE "productId" = ANY (${_productIds} :: text[]);
+  `;
+
+  return productVariants.map(mapProductVariant);
+}

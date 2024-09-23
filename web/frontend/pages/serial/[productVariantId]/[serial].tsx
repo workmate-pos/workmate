@@ -18,7 +18,7 @@ import {
   Thumbnail,
 } from '@shopify/polaris';
 import { useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
@@ -86,19 +86,16 @@ export default function Serial() {
   const fetch = useAuthenticatedFetch({ setToastAction });
   const productVariantQuery = useProductVariantQuery({ fetch, id: productVariantId });
   const locationQuery = useLocationQuery({ fetch, id: createSerial.locationId });
-  const serialQuery = useSerialQuery(
-    { fetch, productVariantId, serial: createSerial.serial },
-    {
-      onSuccess(serial) {
-        if (routes.serial !== 'new' && serial) {
-          const createSerial = getCreateSerialFromDetailedSerial(serial);
-          setLastSavedSerial(createSerial);
-          setCreateSerial(createSerial);
-        }
-      },
-    },
-  );
+  const serialQuery = useSerialQuery({ fetch, productVariantId, serial: createSerial.serial });
   const serialMutation = useSerialMutation({ fetch });
+
+  useEffect(() => {
+    if (serialQuery.isSuccess && routes.serial !== 'new' && serialQuery.data) {
+      const createSerial = getCreateSerialFromDetailedSerial(serialQuery.data);
+      setLastSavedSerial(createSerial);
+      setCreateSerial(createSerial);
+    }
+  }, [serialQuery, routes.serial]);
 
   const productVariant = productVariantQuery.data;
   const location = locationQuery.data;
@@ -109,7 +106,7 @@ export default function Serial() {
     JSON.stringify(lastSavedSerial, Object.keys(lastSavedSerial).sort());
   const isSerialNumberInUse = !lastSavedSerial.serial && !!serial;
 
-  const disabled = serialMutation.isLoading;
+  const disabled = serialMutation.isPending;
   const app = useAppBridge();
 
   const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
@@ -139,7 +136,7 @@ export default function Serial() {
           visible={hasUnsavedChanges}
           saveAction={{
             onAction: save,
-            loading: serialMutation.isLoading,
+            loading: serialMutation.isPending,
           }}
           discardAction={{
             onAction: () => setCreateSerial(lastSavedSerial),
@@ -211,7 +208,7 @@ export default function Serial() {
                     ? ''
                     : locationQuery.isLoading
                       ? 'Loading...'
-                      : location?.name ?? 'Unknown location'
+                      : (location?.name ?? 'Unknown location')
                 }
                 onFocus={() => setIsLocationSelectorOpen(true)}
               />
@@ -228,7 +225,7 @@ export default function Serial() {
               <ButtonGroup fullWidth>
                 <Button
                   disabled={disabled || isSerialNumberInUse || !createSerial.serial || serialQuery.isFetching}
-                  loading={serialMutation.isLoading}
+                  loading={serialMutation.isPending}
                   onClick={() => save()}
                 >
                   Save

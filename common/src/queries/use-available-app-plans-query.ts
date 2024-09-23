@@ -4,7 +4,7 @@ import type { GetAvailableAppPlansResponse } from '@web/controllers/api/app-plan
 
 export const useAvailableAppPlansQuery = (
   { fetch }: { fetch: Fetch },
-  options?: UseQueryOptions<GetAvailableAppPlansResponse, unknown, GetAvailableAppPlansResponse, string[]>,
+  options?: Partial<UseQueryOptions<GetAvailableAppPlansResponse, unknown, GetAvailableAppPlansResponse, string[]>>,
 ) =>
   useQuery({
     ...options,

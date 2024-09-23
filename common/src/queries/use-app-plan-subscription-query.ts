@@ -4,7 +4,7 @@ import type { GetAppPlanSubscriptionResponse } from '@web/controllers/api/app-pl
 
 export const useAppPlanSubscriptionQuery = (
   { fetch }: { fetch: Fetch },
-  options?: UseQueryOptions<AppPlanSubscription | null, unknown, AppPlanSubscription | null, string[]>,
+  options?: Partial<UseQueryOptions<AppPlanSubscription | null, unknown, AppPlanSubscription | null, string[]>>,
 ) =>
   useQuery({
     ...options,

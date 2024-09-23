@@ -4,7 +4,7 @@ import { Fetch } from './fetch.js';
 
 export const useSettingsQuery = (
   { fetch }: { fetch: Fetch },
-  options?: UseQueryOptions<FetchSettingsResponse, unknown, FetchSettingsResponse, string[]>,
+  options?: Partial<UseQueryOptions<FetchSettingsResponse, unknown, FetchSettingsResponse, string[]>>,
 ) => {
   return useQuery<FetchSettingsResponse, unknown, FetchSettingsResponse, string[]>({
     ...options,

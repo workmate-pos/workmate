@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 

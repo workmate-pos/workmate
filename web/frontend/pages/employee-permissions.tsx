@@ -44,10 +44,10 @@ function EmployeePermissions() {
     params: { first: employeePageSize },
     options: {
       refetchOnWindowFocus: false,
-      onSuccess(data) {
+      onSuccess(page) {
         // when a new page is loaded, add those employees to the permissions state if they don't already exist
 
-        const employees = data.pages.flat(1);
+        const employees = page.employees;
         const employeePermissions = Object.fromEntries(
           employees.map(employee => [
             employee.id,
@@ -114,8 +114,8 @@ function EmployeePermissions() {
         primaryAction={{
           content: 'Save',
           target: 'APP',
-          loading: employeeMutation.isLoading,
-          disabled: employeeMutation.isLoading || !canWriteEmployees,
+          loading: employeeMutation.isPending,
+          disabled: employeeMutation.isPending || !canWriteEmployees,
           onAction() {
             employeeMutation.mutate({
               employees:

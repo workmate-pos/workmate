@@ -124,7 +124,7 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
     companyLocationQuery,
   };
 
-  const disabled = Object.values(bannerQueries).some(query => query.isError) || specialOrderMutation.isLoading;
+  const disabled = Object.values(bannerQueries).some(query => query.isError) || specialOrderMutation.isPending;
 
   const saveSpecialOrder = () => {
     const { locationId, customerId } = createSpecialOrder;
@@ -160,7 +160,7 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
         fullWidth
         visible={hasUnsavedChanges}
         saveAction={{
-          loading: specialOrderMutation.isLoading,
+          loading: specialOrderMutation.isPending,
           onAction: saveSpecialOrder,
           disabled,
         }}
@@ -187,7 +187,7 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
         />
 
         <ButtonGroup fullWidth>
-          <Button disabled={disabled} loading={specialOrderMutation.isLoading} onClick={saveSpecialOrder}>
+          <Button disabled={disabled} loading={specialOrderMutation.isPending} onClick={saveSpecialOrder}>
             Save
           </Button>
         </ButtonGroup>

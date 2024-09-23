@@ -129,7 +129,7 @@ function WorkOrderLoader() {
     <>
       <WorkOrder
         initialCreateWorkOrder={createWorkOrder}
-        workOrder={!workOrderQuery.isFetching ? workOrderQuery.data?.workOrder ?? null : undefined}
+        workOrder={!workOrderQuery.isFetching ? (workOrderQuery.data?.workOrder ?? null) : undefined}
       />
       {toast}
     </>
@@ -217,7 +217,7 @@ function WorkOrder({
         fullWidth
         visible={hasUnsavedChanges}
         saveAction={{
-          loading: workOrderMutation.isLoading,
+          loading: workOrderMutation.isPending,
           onAction: () => workOrderMutation.mutate(createWorkOrder),
         }}
         discardAction={{
@@ -253,7 +253,7 @@ function WorkOrder({
             options={settings.statuses}
             onChange={status => dispatch.setPartial({ status })}
             value={createWorkOrder.status}
-            disabled={workOrderMutation.isLoading}
+            disabled={workOrderMutation.isPending}
           />
         </InlineStack>
 
@@ -261,7 +261,7 @@ function WorkOrder({
           <WorkOrderGeneralCard
             createWorkOrder={createWorkOrder}
             dispatch={dispatch}
-            disabled={workOrderMutation.isLoading}
+            disabled={workOrderMutation.isPending}
             onCustomerSelectorClick={() => setIsCustomerSelectorModalOpen(true)}
             onCompanySelectorClick={() => setIsCompanySelectorModalOpen(true)}
             onCompanyLocationSelectorClick={() => setIsCompanyLocationSelectorModalOpen(true)}
@@ -271,7 +271,7 @@ function WorkOrder({
           <WorkOrderCustomFieldsCard
             createWorkOrder={createWorkOrder}
             dispatch={dispatch}
-            disabled={workOrderMutation.isLoading}
+            disabled={workOrderMutation.isPending}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
             onSavePresetClick={() => setIsSaveCustomFieldPresetModalOpen(true)}
             onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
@@ -283,16 +283,16 @@ function WorkOrder({
           createWorkOrder={createWorkOrder}
           dispatch={dispatch}
           workOrder={workOrder ?? null}
-          disabled={workOrderMutation.isLoading}
+          disabled={workOrderMutation.isPending}
           isLoading={calculatedDraftOrderQuery.isLoading}
         />
 
         <WorkOrderSummary
           createWorkOrder={createWorkOrder}
           hasUnsavedChanges={hasUnsavedChanges}
-          disabled={workOrderMutation.isLoading}
+          disabled={workOrderMutation.isPending}
           onSave={() => workOrderMutation.mutate(createWorkOrder)}
-          isSaving={workOrderMutation.isLoading}
+          isSaving={workOrderMutation.isPending}
           onPrint={() => setIsPrintModalOpen(true)}
           onCreateOrder={() => setIsCreateOrderModalOpen(true)}
         />

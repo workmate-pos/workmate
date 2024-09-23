@@ -407,7 +407,7 @@ function useMergeSpecialOrdersBulkAction(
     };
   }
 
-  if (purchaseOrderMutation.isLoading) {
+  if (purchaseOrderMutation.isPending) {
     return {
       id: 'merge',
       content: 'Creating purchase order...',

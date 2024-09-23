@@ -5,7 +5,9 @@ import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
 
 export const useSpecialOrderQuery = (
   { fetch, name }: { fetch: Fetch; name: string | null },
-  options?: UseQueryOptions<DetailedSpecialOrder | null, unknown, DetailedSpecialOrder | null, (string | null)[]>,
+  options?: Partial<
+    UseQueryOptions<DetailedSpecialOrder | null, unknown, DetailedSpecialOrder | null, (string | null)[]>
+  >,
 ) =>
   useQuery({
     ...options,

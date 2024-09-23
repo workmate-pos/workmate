@@ -5,7 +5,9 @@ import { FetchPurchaseOrderResponse } from '@web/controllers/api/purchase-orders
 
 export const usePurchaseOrderQuery = (
   { fetch, name }: { fetch: Fetch; name: string | null },
-  options?: UseQueryOptions<DetailedPurchaseOrder | null, unknown, DetailedPurchaseOrder | null, (string | null)[]>,
+  options?: Partial<
+    UseQueryOptions<DetailedPurchaseOrder | null, unknown, DetailedPurchaseOrder | null, (string | null)[]>
+  >,
 ) =>
   useQuery({
     ...options,
