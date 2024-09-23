@@ -143,12 +143,12 @@ export function WorkOrder({ initial }: WorkOrderProps) {
 
         if (availableNotifications.length === 1) {
           router.push('WorkOrderNotificationConfig', {
-            name,
+            name: workOrder.name,
             notification: availableNotifications[0]!,
           });
         } else {
           router.push('WorkOrderNotificationPicker', {
-            name,
+            name: workOrder.name,
             notifications: availableNotifications,
           });
         }

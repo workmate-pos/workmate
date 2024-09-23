@@ -27,30 +27,30 @@ export function WorkOrderNotificationSettings({
   setSettings: (settings: ShopSettings) => void;
 }) {
   // remove invalid notifications
-  useEffect(() => {
-    const newSettings = {
-      ...settings,
-      workOrder: {
-        ...settings.workOrder,
-        notifications: settings.workOrder.notifications.filter(notification => {
-          if (notification.type === 'on-status-change') {
-            const statusExists = settings.statuses.includes(notification.status);
-            return statusExists;
-          }
-
-          if (notification.type === 'on-create') {
-            return true;
-          }
-
-          return notification satisfies never;
-        }),
-      },
-    };
-
-    if (newSettings.workOrder.notifications.length !== settings.workOrder.notifications.length) {
-      setSettings(newSettings);
-    }
-  }, [settings]);
+  // useEffect(() => {
+  //   const newSettings = {
+  //     ...settings,
+  //     workOrder: {
+  //       ...settings.workOrder,
+  //       notifications: settings.workOrder.notifications.filter(notification => {
+  //         if (notification.type === 'on-status-change') {
+  //           const statusExists = settings.statuses.includes(notification.status);
+  //           return statusExists;
+  //         }
+  //
+  //         if (notification.type === 'on-create') {
+  //           return true;
+  //         }
+  //
+  //         return notification satisfies never;
+  //       }),
+  //     },
+  //   };
+  //
+  //   if (newSettings.workOrder.notifications.length !== settings.workOrder.notifications.length) {
+  //     setSettings(newSettings);
+  //   }
+  // }, [settings]);
 
   const [wipNotification, setWipNotification] = useState<Notification>();
 

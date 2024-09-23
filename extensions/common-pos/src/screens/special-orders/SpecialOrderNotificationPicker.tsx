@@ -4,6 +4,7 @@ import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 import { match } from 'ts-pattern';
 import { Route, UseRouter } from '../router.js';
 import { SpecialOrderNotificationConfigProps } from './SpecialOrderNotificationConfig.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 type SpecialOrderNotification = NonNullable<ShopSettings['specialOrders']['notifications']>[number];
 
@@ -21,6 +22,9 @@ export function SpecialOrderNotificationPicker({
   useRouter,
 }: SpecialOrderNotificationPickerProps) {
   const router = useRouter();
+
+  const screen = useScreen();
+  screen.setTitle(`Select Special Order ${name} Notification`);
 
   return (
     <ScrollView>

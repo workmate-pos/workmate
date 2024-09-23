@@ -66,6 +66,7 @@ export function SpecialOrderNotificationConfig({
     settingsQuery.isLoading;
 
   const screen = useScreen();
+  screen.setTitle(`Special Order ${name} Notification`);
   screen.setIsLoading(isLoading);
 
   const [notification, setNotification] = useState<EmailNotification | SmsNotification>();
@@ -98,7 +99,7 @@ export function SpecialOrderNotificationConfig({
         toast.show(`Unsupported notification type '${notificationType}'`);
       }
     }
-  }, [notificationTemplate]);
+  }, [notificationTemplate, specialOrder, settings, customer, customerNotificationPreference]);
 
   const router = useRouter();
 

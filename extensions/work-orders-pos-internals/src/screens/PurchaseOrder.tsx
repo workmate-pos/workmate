@@ -12,7 +12,7 @@ import {
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { CreatePurchaseOrder, DateTime, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
+import { groupBy, unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEffect, useState, useReducer, useRef } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
@@ -40,13 +40,14 @@ import {
   useCreatePurchaseOrderReducer,
 } from '@work-orders/common/create-purchase-order/reducer.js';
 import type { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
-import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer-line-item-status-badge-props.js';
 import { getSpecialOrderBadge } from '../util/badges.js';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
+import { useSpecialOrderQueries } from '@work-orders/common/queries/use-special-order-query.js';
+import { getPurchaseOrderMutationNotifications } from '@work-orders/common/notifications/purchase-order.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -59,6 +60,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const [query, setQuery] = useState('');
   const { Form } = useForm();
 
+  const [lastSavedCreatePurchaseOrder, setLastSavedCreatePurchaseOrder] = useState<CreatePurchaseOrder>();
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
     initial,
     { useReducer, useState, useRef },
@@ -67,6 +69,13 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: createPurchaseOrder.name });
   const purchaseOrder = purchaseOrderQuery.data;
 
+  if (!lastSavedCreatePurchaseOrder && purchaseOrderQuery.data) {
+    setLastSavedCreatePurchaseOrder(createPurchaseOrderFromPurchaseOrder(purchaseOrderQuery.data));
+  }
+
+  const settingsQuery = useSettingsQuery({ fetch });
+  const settings = settingsQuery.data?.settings;
+
   const { toast } = useExtensionApi<'pos.home.modal.render'>();
 
   const router = useRouter();
@@ -74,19 +83,57 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const screen = useScreen();
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
+  screen.setIsLoading(settingsQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, dispatch);
   const addProductPrerequisitesDialog = useAddProductPrerequisitesDialog(createPurchaseOrder, dispatch);
 
+  const specialOrderNames = unique(
+    purchaseOrderQuery.data?.lineItems.map(lineItem => lineItem.specialOrderLineItem?.name).filter(isNonNullable) ?? [],
+  );
+  const specialOrderQueries = useSpecialOrderQueries({ fetch, names: specialOrderNames });
+
   const purchaseOrderMutation = usePurchaseOrderMutation(
     { fetch },
     {
-      onSuccess: ({ purchaseOrder }) => {
+      onSuccess: async ({ purchaseOrder }) => {
         const message = createPurchaseOrder.name ? 'Purchase order updated' : 'Purchase order created';
         toast.show(message);
-        dispatch.set(createPurchaseOrderFromPurchaseOrder(purchaseOrder));
+
+        const newCreatePurchaseOrder = createPurchaseOrderFromPurchaseOrder(purchaseOrder);
+        dispatch.set(newCreatePurchaseOrder);
         setHasUnsavedChanges(false);
+
+        if (!settings) {
+          return;
+        }
+
+        const notifications = getPurchaseOrderMutationNotifications({
+          specialOrderNotifications: settings.specialOrders.notifications ?? [],
+          lastSavedCreatePurchaseOrder: lastSavedCreatePurchaseOrder ?? null,
+          createPurchaseOrder: newCreatePurchaseOrder,
+          specialOrders: await Promise.all(
+            Object.values(specialOrderQueries).map(query => query.refetch().then(result => result.data)),
+          ).then(results => results.filter(isNonNullable)),
+        });
+
+        const specialOrderNotifications = groupBy(notifications, ({ specialOrder }) => specialOrder.name);
+
+        for (const [name, notifications] of Object.entries(specialOrderNotifications)) {
+          if (notifications.length === 1) {
+            router.push('SpecialOrderNotificationConfig', {
+              name,
+              notification: notifications[0]!.notification,
+            });
+            continue;
+          }
+
+          router.push('SpecialOrderNotificationPicker', {
+            name,
+            notifications: notifications.map(({ notification }) => notification),
+          });
+        }
       },
     },
   );

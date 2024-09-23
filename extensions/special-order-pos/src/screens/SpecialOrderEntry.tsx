@@ -20,7 +20,7 @@ import {
 import { getCreateSpecialOrderFromDetailedSpecialOrder } from '@work-orders/common/create-special-order/get-create-special-order-from-detailed-special-order.js';
 import { defaultCreateSpecialOrder } from '@work-orders/common/create-special-order/default.js';
 
-export function Entry() {
+export function SpecialOrderEntry() {
   const [query, setQuery] = useDebouncedState('');
   const [locationId, setLocationId] = useState<ID>();
   const [customerId, setCustomerId] = useState<ID>();

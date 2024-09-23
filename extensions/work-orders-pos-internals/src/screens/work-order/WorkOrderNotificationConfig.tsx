@@ -92,7 +92,7 @@ export function WorkOrderNotificationConfig({
         toast.show(`Unsupported notification type '${notificationType}'`);
       }
     }
-  }, [notificationTemplate]);
+  }, [notificationTemplate, workOrder, settings, customer, customerNotificationPreference]);
 
   const router = useRouter();
 

@@ -236,6 +236,7 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
               uuid: specialOrderLineItem.uuid,
               name: specialOrderById[specialOrderLineItem.specialOrderId]?.name ?? never('fk'),
               quantity: specialOrderLineItem.quantity,
+              // TODO: Include total quantity of the special order?
             }
           : null,
         serial: serial

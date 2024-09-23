@@ -1,7 +1,7 @@
 import { createRouter } from '@teifi-digital/pos-tools/router';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
-import { Entry } from './screens/Entry.js';
+import { SpecialOrderEntry } from './screens/SpecialOrderEntry.js';
 import { OrderStateSelector } from './screens/selectors/OrderStateSelector.js';
 import { PurchaseOrderStateSelector } from './screens/selectors/PurchaseOrderStateSelector.js';
 import { VendorSelector, VendorSelectorProps } from '@work-orders/common-pos/screens/selector/VendorSelector.js';
@@ -26,11 +26,11 @@ import {
 import { SpecialOrderNotificationHistory } from './screens/special-order/SpecialOrderNotificationHistory.js';
 
 export const { Router, useRouter } = createRouter({
-  Entry: {
+  SpecialOrderEntry: {
     title: 'Special Orders',
     Component: () => (
       <ScreenPermissionBoundary permissions={['read_special_orders']}>
-        <Entry />
+        <SpecialOrderEntry />
       </ScreenPermissionBoundary>
     ),
   },

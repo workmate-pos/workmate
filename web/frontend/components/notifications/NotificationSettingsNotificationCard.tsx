@@ -61,7 +61,7 @@ export function NotificationSettingsNotificationCard({
   let availableVariables: string[] = [];
 
   if (notification.type === 'on-status-change') {
-    isValid ||= settings.statuses.includes(notification.status);
+    isValid &&= settings.statuses.includes(notification.status);
     title = `When the ${titleCase(subject).toLowerCase()} status changes to ${notification.status}`;
   } else if (notification.type === 'on-create') {
     title = `When a ${titleCase(subject).toLowerCase()} is created`;
@@ -71,6 +71,10 @@ export function NotificationSettingsNotificationCard({
     title = `When all ${titleCase(subject).toLowerCase()} items have arrived`;
   } else {
     return notification satisfies never;
+  }
+
+  if (!isValid) {
+    title += ' (invalid)';
   }
 
   if (subject === 'work-order') {
@@ -116,171 +120,187 @@ export function NotificationSettingsNotificationCard({
   ].filter(isNonNullable);
 
   return (
-    <Card>
-      <BlockStack gap={'400'}>
-        <InlineStack align="space-between" gap={'200'}>
-          <Text as="p" variant="bodyMd" fontWeight="bold">
-            {title}
-          </Text>
-
-          <span
-            style={{
-              transform: open ? 'rotate(180deg)' : undefined,
-              transition: 'all 0.2s ease-in-out',
-            }}
-            onClick={() => setOpen(current => !current)}
-          >
-            <Icon source={CaretUpMinor} tone={'subdued'} />
-          </span>
-        </InlineStack>
-
-        <Collapsible id={id} open={open}>
-          <FormLayout>
-            {availableVariables.length > 0 && (
-              <BlockStack gap={'100'}>
-                <Text as="p" variant="bodySm" tone="subdued">
-                  You can use numerous variables related to {titleCase(subject)}
-                  to mark up your notifications. The following variables are available:{' '}
-                </Text>
-
-                <InlineStack gap={'100'}>
-                  {availableVariables.map(variable => (
-                    <Text key={variable} as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
-                      {`{{${variable}}}`}
-                    </Text>
-                  ))}
-                </InlineStack>
-              </BlockStack>
-            )}
-
-            {notificationTypeOptions.length > 1 && (
-              <Select
-                label={'Notification Type'}
-                name="notification-type"
-                options={notificationTypeOptions}
-                requiredIndicator
-                value={notification.type}
-                onChange={type => {
-                  if (type === notification.type) {
-                    return;
-                  }
-
-                  if (subject === 'work-order' && type === 'on-status-change') {
-                    setNotification({
-                      type: 'on-status-change',
-                      status: settings.statuses[0]!,
-                      sms: { message: '' },
-                      email: { subject: '', message: '' },
-                    });
-                  } else if (type === 'on-create') {
-                    setNotification({
-                      type: 'on-create',
-                      sms: { message: '' },
-                      email: { subject: '', message: '' },
-                    });
-                  } else if (subject === 'special-order' && type === 'on-any-item-received') {
-                    setNotification({
-                      type: 'on-any-item-received',
-                      sms: { message: '' },
-                      email: { subject: '', message: '' },
-                    });
-                  } else if (subject === 'special-order' && type === 'on-all-items-received') {
-                    setNotification({
-                      type: 'on-all-items-received',
-                      sms: { message: '' },
-                      email: { subject: '', message: '' },
-                    });
-                  } else {
-                    setToastAction({ content: 'Unknown notification type' });
-                  }
-                }}
-              />
-            )}
-
-            {subject === 'work-order' && notification.type === 'on-status-change' && (
-              <Select
-                label={'Status'}
-                name="status"
-                value={notification.status}
-                options={settings.statuses.map(status => ({ id: status, label: status, value: status }))}
-                onChange={status => setNotification({ ...notification, status })}
-                requiredIndicator
-              />
-            )}
-
-            <Divider />
-
+    <span onClick={() => setOpen(!open)} style={{ cursor: 'pointer' }}>
+      <Card>
+        <BlockStack gap={'400'}>
+          <InlineStack align="space-between" gap={'200'}>
             <Text as="p" variant="bodyMd" fontWeight="bold">
-              SMS
+              {title}
             </Text>
 
-            <TextField
-              requiredIndicator
-              label={'Message'}
-              autoComplete="off"
-              value={notification.sms.message}
-              onChange={message =>
-                setNotification({
-                  ...notification,
-                  sms: { ...notification.sms, message },
-                } as UnionToIntersection<typeof notification>)
-              }
-              helpText={helpText}
-            />
+            <span
+              style={{
+                transform: open ? 'rotate(180deg)' : undefined,
+                transition: 'all 0.2s ease-in-out',
+              }}
+              onClick={() => setOpen(current => !current)}
+            >
+              <Icon source={CaretUpMinor} tone={'subdued'} />
+            </span>
+          </InlineStack>
 
-            <Divider />
+          <Collapsible id={id} open={open}>
+            <FormLayout>
+              {availableVariables.length > 0 && (
+                <BlockStack gap={'100'}>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    You can use numerous variables related to {titleCase(subject)}
+                    to mark up your notifications. The following variables are available:{' '}
+                  </Text>
 
-            <Text as="p" variant="bodyMd" fontWeight="bold">
-              Email
-            </Text>
-
-            <TextField
-              requiredIndicator
-              label={'Subject'}
-              autoComplete="off"
-              value={notification.email.subject}
-              onChange={subject =>
-                setNotification({
-                  ...notification,
-                  email: { ...notification.email, subject },
-                } as UnionToIntersection<typeof notification>)
-              }
-              helpText={helpText}
-            />
-
-            <TextField
-              requiredIndicator
-              label={'Message'}
-              autoComplete="off"
-              value={notification.email.message}
-              onChange={message =>
-                setNotification({
-                  ...notification,
-                  email: { ...notification.email, message },
-                } as UnionToIntersection<typeof notification>)
-              }
-              helpText={helpText}
-            />
-
-            <InlineStack align="end" gap={'200'}>
-              <Button variant="primary" tone="critical" onClick={() => onRemove()}>
-                Remove
-              </Button>
-              {!!onSave && (
-                <Button
-                  variant="primary"
-                  onClick={() => onSave(notification as UnionToIntersection<typeof notification>)}
-                  disabled={!isValid}
-                >
-                  Save
-                </Button>
+                  <InlineStack gap={'100'}>
+                    {availableVariables.map(variable => (
+                      <Text key={variable} as="p" variant="bodySm" fontWeight="semibold" tone="subdued">
+                        {`{{${variable}}}`}
+                      </Text>
+                    ))}
+                  </InlineStack>
+                </BlockStack>
               )}
-            </InlineStack>
-          </FormLayout>
-        </Collapsible>
-      </BlockStack>
 
-      {toast}
-    </Card>
+              {notificationTypeOptions.length > 1 && (
+                <Select
+                  label={'Notification Type'}
+                  name="notification-type"
+                  options={notificationTypeOptions}
+                  requiredIndicator
+                  value={notification.type}
+                  onChange={type => {
+                    if (type === notification.type) {
+                      return;
+                    }
+
+                    if (subject === 'work-order' && type === 'on-status-change') {
+                      setNotification({
+                        type: 'on-status-change',
+                        status: settings.statuses[0]!,
+                        sms: { message: '' },
+                        email: { subject: '', message: '' },
+                      });
+                    } else if (type === 'on-create') {
+                      setNotification({
+                        type: 'on-create',
+                        sms: { message: '' },
+                        email: { subject: '', message: '' },
+                      });
+                    } else if (subject === 'special-order' && type === 'on-any-item-received') {
+                      setNotification({
+                        type: 'on-any-item-received',
+                        sms: { message: '' },
+                        email: { subject: '', message: '' },
+                      });
+                    } else if (subject === 'special-order' && type === 'on-all-items-received') {
+                      setNotification({
+                        type: 'on-all-items-received',
+                        sms: { message: '' },
+                        email: { subject: '', message: '' },
+                      });
+                    } else {
+                      setToastAction({ content: 'Unknown notification type' });
+                    }
+                  }}
+                />
+              )}
+
+              {subject === 'work-order' && notification.type === 'on-status-change' && (
+                <Select
+                  label={'Status'}
+                  name="status"
+                  value={notification.status}
+                  options={[
+                    !settings.statuses.includes(notification.status)
+                      ? {
+                          id: notification.status,
+                          label: notification.status,
+                          value: notification.status,
+                          disabled: true,
+                        }
+                      : null,
+                    ...settings.statuses.map(status => ({ id: status, label: status, value: status })),
+                  ].filter(isNonNullable)}
+                  onChange={status => setNotification({ ...notification, status })}
+                  requiredIndicator
+                  error={!settings.statuses.includes(notification.status) ? 'Invalid status' : undefined}
+                />
+              )}
+
+              <Divider />
+
+              <Text as="p" variant="bodyMd" fontWeight="bold">
+                SMS
+              </Text>
+
+              <TextField
+                requiredIndicator
+                label={'Message'}
+                autoComplete="off"
+                value={notification.sms.message}
+                onChange={message =>
+                  setNotification({
+                    ...notification,
+                    sms: { ...notification.sms, message },
+                  } as UnionToIntersection<typeof notification>)
+                }
+                helpText={helpText}
+                error={!notification.sms.message ? 'Cannot be empty' : undefined}
+              />
+
+              <Divider />
+
+              <Text as="p" variant="bodyMd" fontWeight="bold">
+                Email
+              </Text>
+
+              <TextField
+                requiredIndicator
+                label={'Subject'}
+                autoComplete="off"
+                value={notification.email.subject}
+                onChange={subject =>
+                  setNotification({
+                    ...notification,
+                    email: { ...notification.email, subject },
+                  } as UnionToIntersection<typeof notification>)
+                }
+                helpText={helpText}
+                error={!notification.email.subject ? 'Cannot be empty' : undefined}
+              />
+
+              <TextField
+                requiredIndicator
+                label={'Message'}
+                autoComplete="off"
+                value={notification.email.message}
+                onChange={message =>
+                  setNotification({
+                    ...notification,
+                    email: { ...notification.email, message },
+                  } as UnionToIntersection<typeof notification>)
+                }
+                helpText={helpText}
+                error={!notification.email.message ? 'Cannot be empty' : undefined}
+              />
+
+              <InlineStack align="end" gap={'200'}>
+                <Button variant="primary" tone="critical" onClick={() => onRemove()}>
+                  Remove
+                </Button>
+                {!!onSave && (
+                  <Button
+                    variant="primary"
+                    onClick={() => onSave(notification as UnionToIntersection<typeof notification>)}
+                    disabled={!isValid}
+                  >
+                    Save
+                  </Button>
+                )}
+              </InlineStack>
+            </FormLayout>
+          </Collapsible>
+        </BlockStack>
+
+        {toast}
+      </Card>
+    </span>
   );
 }

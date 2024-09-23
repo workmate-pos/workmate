@@ -214,6 +214,7 @@ function Settings() {
           loading: saveSettingsMutation.isLoading,
           onAction: () => saveSettingsMutation.mutate(settings),
         }}
+        leaveConfirmationDisable
         discardAction={{
           onAction: () => {
             if (settingsQuery.data?.settings) {
