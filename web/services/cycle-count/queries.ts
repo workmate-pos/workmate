@@ -4,7 +4,7 @@ import { nest } from '../../util/db.js';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { escapeLike } from '../db/like.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
-import { assertUuid } from '../../util/assertions.js';
+import { assertGidOrNull, assertUuid } from '../../util/assertions.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
@@ -211,6 +211,7 @@ export async function upsertCycleCountItems(
 
 export async function createCycleCountItemApplications(
   cycleCountId: number,
+  staffMemberId: ID,
   applications: {
     cycleCountItemUuid: string;
     appliedQuantity: number;
@@ -222,11 +223,12 @@ export async function createCycleCountItemApplications(
   }
 
   const { originalQuantity, cycleCountItemUuid, appliedQuantity } = nest(applications);
+  const _staffMemberId: string = staffMemberId;
 
   await sql`
     INSERT INTO "CycleCountItemApplication" ("cycleCountId", "cycleCountItemUuid", "appliedQuantity",
-                                             "originalQuantity")
-    SELECT ${cycleCountId}, *
+                                             "originalQuantity", "staffMemberId")
+    SELECT ${cycleCountId}, *, ${_staffMemberId}
     FROM UNNEST(
       ${cycleCountItemUuid} :: uuid[],
       ${appliedQuantity} :: int[],
@@ -292,6 +294,7 @@ export async function getCycleCountItemApplications(cycleCountId: number) {
     originalQuantity: number;
     createdAt: Date;
     updatedAt: Date;
+    staffMemberId: string | null;
   }>`
     SELECT *
     FROM "CycleCountItemApplication"
@@ -308,15 +311,18 @@ function mapCycleCountItemApplication(application: {
   originalQuantity: number;
   createdAt: Date;
   updatedAt: Date;
+  staffMemberId: string | null;
 }) {
-  const { cycleCountItemUuid } = application;
+  const { cycleCountItemUuid, staffMemberId } = application;
 
   try {
     assertUuid(cycleCountItemUuid);
+    assertGidOrNull(staffMemberId);
 
     return {
       ...application,
       cycleCountItemUuid,
+      staffMemberId,
     };
   } catch (error) {
     sentryErr(error, { application });

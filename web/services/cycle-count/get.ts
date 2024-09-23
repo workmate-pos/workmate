@@ -103,7 +103,7 @@ export async function getDetailedCycleCountItems(cycleCountId: number) {
        */
       applications: itemApplications
         .map(application => ({
-          ...pick(application, 'originalQuantity', 'appliedQuantity'),
+          ...pick(application, 'originalQuantity', 'appliedQuantity', 'staffMemberId'),
           appliedAt: application.createdAt.toISOString() as DateTime,
         }))
         .toSorted((a, b) => new Date(a.appliedAt).getTime() - new Date(b.appliedAt).getTime()),

@@ -642,9 +642,9 @@ model Customer {
   shopifyOrders ShopifyOrder[]
   specialOrders SpecialOrder[]
 
-  createdAt            DateTime               @default(now()) @db.Timestamptz(3)
-  updatedAt            DateTime               @default(now()) @db.Timestamptz(3)
-  deletedAt            DateTime?
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @default(now()) @db.Timestamptz(3)
+  deletedAt DateTime?
 
   @@index([shop])
 }
@@ -800,6 +800,9 @@ model CycleCountItemApplication {
 
   // Quantity before this application
   originalQuantity Int
+
+  // optional GID of the staff member that applied this item
+  staffMemberId String?
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)

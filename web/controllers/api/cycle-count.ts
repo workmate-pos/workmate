@@ -1,7 +1,7 @@
 import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
-import { Permission } from '../../decorators/permission.js';
+import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { applyCycleCountItems, ApplyCycleCountPlan, getCycleCountApplyPlan } from '../../services/cycle-count/apply.js';
 import { upsertCycleCount } from '../../services/cycle-count/upsert.js';
 import { getDetailedCycleCount, getDetailedCycleCountsPage } from '../../services/cycle-count/get.js';
@@ -32,9 +32,10 @@ export default class CycleCountController {
     res: Response<ApplyCycleCountResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    await applyCycleCountItems(session, {
+    await applyCycleCountItems(session, user.staffMember.id, {
       cycleCountName: name,
       itemApplications: req.body.items,
     });
