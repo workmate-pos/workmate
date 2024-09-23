@@ -9,30 +9,54 @@ import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveS
 import { useRouter } from '../routes.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
+const SORT_MODES = ['name', 'created-date', 'due-date'] as const;
+const SORT_ORDERS = ['descending', 'ascending'] as const;
+
+export type SortMode = (typeof SORT_MODES)[number];
+export type SortOrder = (typeof SORT_ORDERS)[number];
+
 export function Filters({
   status: initialStatus,
   locationId: initialLocationId,
   employeeId: initialEmployeeId,
+  sortMode: initialSortMode,
+  sortOrder: initialSortOrder,
+
+  defaultSortMode,
+  defaultSortOrder,
 
   onStatusChange,
   onLocationIdChange,
   onEmployeeIdChange,
+  onSortModeChange,
+  onSortOrderChange,
 }: {
   status: string | undefined;
   locationId: ID | undefined;
   employeeId: ID | undefined;
+  sortMode: SortMode;
+  sortOrder: SortOrder;
+
+  defaultSortMode: SortMode;
+  defaultSortOrder: SortOrder;
 
   onStatusChange: (status: string | undefined) => void;
   onLocationIdChange: (locationId: ID | undefined) => void;
   onEmployeeIdChange: (employeeId: ID | undefined) => void;
+  onSortModeChange: (sortMode: SortMode) => void;
+  onSortOrderChange: (sortOrder: SortOrder) => void;
 }) {
   const [status, setStatus] = useState(initialStatus);
   const [locationId, setLocationId] = useState(initialLocationId);
   const [employeeId, setEmployeeId] = useState(initialEmployeeId);
+  const [sortMode, setSortMode] = useState(initialSortMode);
+  const [sortOrder, setSortOrder] = useState(initialSortOrder);
 
   useEffect(() => onStatusChange(status), [status]);
   useEffect(() => onLocationIdChange(locationId), [locationId]);
   useEffect(() => onEmployeeIdChange(employeeId), [employeeId]);
+  useEffect(() => onSortModeChange(sortMode), [sortMode]);
+  useEffect(() => onSortOrderChange(sortOrder), [sortOrder]);
 
   const activeFilterCount = [status, locationId, employeeId].filter(Boolean).length;
 
@@ -81,6 +105,23 @@ export function Filters({
               })
             }
           />
+
+          <ResponsiveGrid columns={2} smColumns={2} grow>
+            <Button
+              title={`Sort by ${titleCase(sortMode)}`}
+              onPress={() =>
+                setSortMode(current => SORT_MODES[(SORT_MODES.indexOf(sortMode) + 1) % SORT_MODES.length] ?? current)
+              }
+            />
+            <Button
+              title={titleCase(sortOrder)}
+              onPress={() =>
+                setSortOrder(
+                  current => SORT_ORDERS[(SORT_ORDERS.indexOf(sortOrder) + 1) % SORT_ORDERS.length] ?? current,
+                )
+              }
+            />
+          </ResponsiveGrid>
         </ResponsiveGrid>
 
         <Button
@@ -89,6 +130,8 @@ export function Filters({
             setStatus(undefined);
             setLocationId(undefined);
             setEmployeeId(undefined);
+            setSortMode(defaultSortMode);
+            setSortOrder(defaultSortOrder);
           }}
           type={'destructive'}
           isDisabled={activeFilterCount === 0}

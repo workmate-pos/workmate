@@ -19,12 +19,10 @@ import { useLocationQueries } from '@work-orders/common/queries/use-location-que
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { SortMode, SortOrder } from './Filters.js';
 
-const SORT_MODES = ['name', 'created-date', 'due-date'] as const;
-const SORT_ORDERS = ['descending', 'ascending'] as const;
-
-export type SortMode = (typeof SORT_MODES)[number];
-export type SortOrder = (typeof SORT_ORDERS)[number];
+export const DEFAULT_SORT_MODE: SortMode = 'created-date';
+export const DEFAULT_SORT_ORDER: SortOrder = 'descending';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
@@ -120,27 +118,20 @@ export function Entry() {
               status,
               locationId,
               employeeId,
+              sortMode,
+              sortOrder,
+
+              defaultSortMode: DEFAULT_SORT_MODE,
+              defaultSortOrder: DEFAULT_SORT_ORDER,
+
               onStatusChange: setStatus,
               onLocationIdChange: setLocationId,
               onEmployeeIdChange: setEmployeeId,
+              onSortModeChange: setSortMode,
+              onSortOrderChange: setSortOrder,
             })
           }
         />
-
-        <ResponsiveGrid columns={2} smColumns={2} grow>
-          <Button
-            title={`Sort by ${titleCase(sortMode)}`}
-            onPress={() =>
-              setSortMode(current => SORT_MODES[(SORT_MODES.indexOf(sortMode) + 1) % SORT_MODES.length] ?? current)
-            }
-          />
-          <Button
-            title={titleCase(sortOrder)}
-            onPress={() =>
-              setSortOrder(current => SORT_ORDERS[(SORT_ORDERS.indexOf(sortOrder) + 1) % SORT_ORDERS.length] ?? current)
-            }
-          />
-        </ResponsiveGrid>
       </ResponsiveGrid>
 
       <ControlledSearchBar
