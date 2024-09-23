@@ -27,8 +27,8 @@
     "dev:watch": "concurrently -k -p \"[{name}]\" -n \"pgtyped,graphql-codegen\" -c \"blue.bold,pink.bold\" \"npm run pgtyped:watch\" \"npm run graphql-codegen:watch\""
   },
   "dependencies": {
-    "@conform-to/react": "^1.1.5",
-    "@conform-to/zod": "^1.1.5",
+    "@conform-to/react": "^1.2.2",
+    "@conform-to/zod": "^1.2.2",
     "@pgtyped/runtime": "^2.3.0",
     "@prisma/client": "^5.5.2",
     "@sentry/node": "^7.74.1",

@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@apollo/client": "^3.8.1",
-    "@conform-to/react": "^1.1.5",
-    "@conform-to/zod": "^1.1.5",
+    "@conform-to/react": "^1.2.2",
+    "@conform-to/zod": "^1.2.2",
     "@shopify/app-bridge": "^3.7.9",
     "@shopify/app-bridge-react": "^3.7.9",
     "@shopify/polaris": "^12.1.1",

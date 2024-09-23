@@ -141,6 +141,10 @@ export function WorkOrder({ initial }: WorkOrderProps) {
           createWorkOrder,
         );
 
+        if (availableNotifications.length === 0) {
+          return;
+        }
+
         if (availableNotifications.length === 1) {
           router.push('WorkOrderNotificationConfig', {
             name: workOrder.name,

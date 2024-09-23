@@ -47,6 +47,12 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
+import { getPurchaseOrderMutationNotifications } from '@work-orders/common/notifications/purchase-order.js';
+import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import { SpecialOrderNotificationModal } from '@web/frontend/components/special-orders/modals/SpecialOrderNotificationModal.js';
+import { useSpecialOrderQueries } from '@work-orders/common/queries/use-special-order-query.js';
+import { groupBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function () {
   return (
@@ -144,31 +150,69 @@ function PurchaseOrder({
 }) {
   const app = useAppBridge();
 
+  const [lastSavedCreatePurchaseOrder, setLastSavedCreatePurchaseOrder] = useState<CreatePurchaseOrder>();
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
     initialCreatePurchaseOrder,
     { useReducer, useState, useRef },
   );
 
+  if (!lastSavedCreatePurchaseOrder && purchaseOrder) {
+    setLastSavedCreatePurchaseOrder(createPurchaseOrderFromPurchaseOrder(purchaseOrder));
+  }
+
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
+
+  const [specialOrderNotifications, setSpecialOrderNotifications] = useState<
+    Record<string, NonNullable<ShopSettings['specialOrders']['notifications']>>
+  >({});
+
+  const specialOrderNames = unique(
+    purchaseOrder?.lineItems.map(lineItem => lineItem.specialOrderLineItem?.name).filter(isNonNullable) ?? [],
+  );
+  const specialOrderQueries = useSpecialOrderQueries({ fetch, names: specialOrderNames });
+  const settingsQuery = useSettingsQuery({ fetch });
 
   const purchaseOrderMutation = usePurchaseOrderMutation(
     { fetch },
     {
-      onSuccess: ({ purchaseOrder }) => {
+      onSuccess: async ({ purchaseOrder }) => {
         const message = createPurchaseOrder.name ? 'Purchase order updated' : 'Purchase order created';
         setToastAction({ content: message });
-        dispatch.set(createPurchaseOrderFromPurchaseOrder(purchaseOrder));
+
+        const newCreatePurchaseOrder = createPurchaseOrderFromPurchaseOrder(purchaseOrder);
+        dispatch.set(newCreatePurchaseOrder);
         setHasUnsavedChanges(false);
         Redirect.create(app).dispatch(
           Redirect.Action.APP,
           `/purchase-orders/${encodeURIComponent(purchaseOrder.name)}`,
         );
+
+        if (!settingsQuery.data?.settings) {
+          return;
+        }
+
+        const { settings } = settingsQuery.data;
+
+        const notifications = getPurchaseOrderMutationNotifications({
+          specialOrderNotifications: settings.specialOrders.notifications ?? [],
+          lastSavedCreatePurchaseOrder: lastSavedCreatePurchaseOrder ?? null,
+          createPurchaseOrder,
+          specialOrders: await Promise.all(
+            Object.values(specialOrderQueries).map(query => query.refetch().then(result => result.data)),
+          ).then(results => results.filter(isNonNullable)),
+        });
+
+        setSpecialOrderNotifications(
+          Object.fromEntries(
+            Object.entries(groupBy(notifications, notification => notification.specialOrder.name)).map(
+              ([name, notifications]) => [name, notifications.map(n => n.notification)],
+            ),
+          ),
+        );
       },
     },
   );
-
-  const settingsQuery = useSettingsQuery({ fetch });
 
   const selectedLocationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
   const selectedLocation = selectedLocationQuery.data;
@@ -457,6 +501,16 @@ function PurchaseOrder({
           type="PURCHASE_ORDER"
         />
       )}
+
+      {Object.entries(specialOrderNotifications).map(([name, notifications]) => (
+        <SpecialOrderNotificationModal
+          name={name}
+          notifications={notifications}
+          setNotifications={notifications =>
+            setSpecialOrderNotifications(current => ({ ...current, [name]: notifications }))
+          }
+        />
+      ))}
 
       {toast}
     </Box>

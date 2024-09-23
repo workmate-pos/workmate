@@ -24,7 +24,7 @@ import {
 import { useParams } from 'react-router-dom';
 import { useServiceQuery } from '@work-orders/common/queries/use-service-query.js';
 import { createGid, ID, isGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { SubmissionResult, useForm } from '@conform-to/react';
+import { useForm } from '@conform-to/react';
 import { match } from 'ts-pattern';
 import { useServiceMutation } from '@work-orders/common/queries/use-service-mutation.js';
 import { parseWithZod } from '@conform-to/zod';
@@ -354,7 +354,7 @@ function LabourSelectorModal({
     >
       <LabourTabs labourType={labourType} onSelect={setLabourType} fitted>
         <ResourceList
-          items={isLoading ? loadingPage : page ?? []}
+          items={isLoading ? loadingPage : (page ?? [])}
           key={selectedLabourIds.length}
           loading={isLoading}
           pagination={{

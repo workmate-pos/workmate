@@ -103,6 +103,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
 
         const newCreatePurchaseOrder = createPurchaseOrderFromPurchaseOrder(purchaseOrder);
         dispatch.set(newCreatePurchaseOrder);
+        setLastSavedCreatePurchaseOrder(newCreatePurchaseOrder);
         setHasUnsavedChanges(false);
 
         if (!settings) {
@@ -117,6 +118,10 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
             Object.values(specialOrderQueries).map(query => query.refetch().then(result => result.data)),
           ).then(results => results.filter(isNonNullable)),
         });
+
+        if (notifications.length === 0) {
+          return;
+        }
 
         const specialOrderNotifications = groupBy(notifications, ({ specialOrder }) => specialOrder.name);
 
