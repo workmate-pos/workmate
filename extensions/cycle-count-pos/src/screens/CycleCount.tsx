@@ -114,12 +114,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
 
       <ScrollView>
         <ResponsiveStack spacing={2} direction={'vertical'}>
-          <Banner
-            title={'This cycle count is locked'}
-            variant={'warning'}
-            visible={createCycleCount.locked}
-            hideAction
-          />
+          <Banner title={'This cycle count is locked'} variant={'alert'} visible={createCycleCount.locked} hideAction />
 
           {cycleCountMutation.isError && (
             <Banner
