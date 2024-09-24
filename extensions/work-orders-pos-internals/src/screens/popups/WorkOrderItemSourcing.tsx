@@ -8,8 +8,8 @@ import {
   ScrollView,
   Selectable,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
@@ -38,7 +38,7 @@ import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special
  * Reservations can be made to reserve available stock for this work order.
  */
 export function WorkOrderItemSourcing({ name }: { name: string }) {
-  const { toast, session } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast, session } = useApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
 
   const { workOrderQuery, productVariantQueries, inventoryItemQueries } = useWorkOrderQueries(name);
@@ -54,7 +54,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
   const reserveLineItemInventoryMutation = useReserveLineItemsInventoryMutation({ fetch });
   const specialOrderMutation = useSpecialOrderMutation({ fetch });
 
-  const isSubmitting = reserveLineItemInventoryMutation.isLoading || specialOrderMutation.isLoading;
+  const isSubmitting = reserveLineItemInventoryMutation.isPending || specialOrderMutation.isPending;
 
   if (workOrderQuery.isError) {
     return (
@@ -79,12 +79,12 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
           <ResponsiveStack direction={'horizontal'} spacing={2} alignment={'space-between'} flexWrap={'wrap'}>
             <Text variant={'headingLarge'}>Work Order Sourcing</Text>
             <Selectable onPress={() => router.push('WorkOrderItemSourcingHelp', {})}>
-              <Text variant={'bodyMd'} color={'TextInteractive'}>
+              <Text variant={'body'} color={'TextInteractive'}>
                 Help
               </Text>
             </Selectable>
           </ResponsiveStack>
-          <Text variant={'bodyMd'} color={'TextSubdued'}>
+          <Text variant={'body'} color={'TextSubdued'}>
             Control line item inventory sourcing by creating purchase orders, transfer orders, and by committing
             inventory to this work order.
           </Text>
@@ -103,7 +103,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
           <Button
             title={'Layaway'}
             isDisabled={isSubmitting}
-            isLoading={reserveLineItemInventoryMutation.isLoading}
+            isLoading={reserveLineItemInventoryMutation.isPending}
             onPress={() => {
               router.push('UnsourcedItemList', {
                 title: 'Select items to layaway',
@@ -129,7 +129,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
                   }),
                 primaryAction: {
                   title: 'Reserve',
-                  loading: reserveLineItemInventoryMutation.isLoading,
+                  loading: reserveLineItemInventoryMutation.isPending,
                   onAction: selectedItems => {
                     reserveLineItemInventoryMutation.mutate(
                       {
@@ -269,7 +269,7 @@ function useItemListRows(name: string): ListRow[] {
 }
 
 function useWorkOrderQueries(name: string) {
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
 
   const workOrderQuery = useWorkOrderQuery({ fetch, name }, { staleTime: 10 * SECOND_IN_MS });

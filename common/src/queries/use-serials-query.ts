@@ -1,7 +1,7 @@
 import { SerialPaginationOptions } from '@web/schemas/generated/serial-pagination-options.js';
 import { FetchSerialsResponse } from '@web/controllers/api/serials.js';
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
+import { useInfiniteQuery, UseInfiniteQueryOptions } from '@tanstack/react-query';
 
 export const useSerialsQuery = ({
   fetch,
@@ -15,7 +15,7 @@ export const useSerialsQuery = ({
   useInfiniteQuery({
     ...options,
     queryKey: ['serials', params],
-    queryFn: async ({ pageParam: offset = 0 }) => {
+    queryFn: async ({ pageParam: offset }) => {
       const searchParams = new URLSearchParams();
 
       for (const [key, value] of Object.entries({ ...params, offset })) {
@@ -32,6 +32,7 @@ export const useSerialsQuery = ({
       const { serials, hasNextPage }: FetchSerialsResponse = await response.json();
       return { serials, hasNextPage };
     },
+    initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => {
       if (!lastPage.hasNextPage) return undefined;
       return pages.flat(1).length;

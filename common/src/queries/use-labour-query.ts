@@ -1,6 +1,6 @@
 import { Fetch } from './fetch.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useQueries, useQuery } from 'react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { FetchLabourResponse, GetLabourResponse } from '@web/controllers/api/labour.js';
 
 async function fetchLabour(fetch: Fetch, id: ID) {
@@ -27,12 +27,12 @@ export const useLabourQuery = ({ fetch, id }: { fetch: Fetch; id: ID | null }) =
   });
 
 export const useLabourQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID[] }) => {
-  const queries = useQueries(
-    ids.map(id => ({
+  const queries = useQueries({
+    queries: ids.map(id => ({
       queryKey: ['labour', id],
       queryFn: async () => await fetchLabour(fetch, id),
     })),
-  );
+  });
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));
 };
 

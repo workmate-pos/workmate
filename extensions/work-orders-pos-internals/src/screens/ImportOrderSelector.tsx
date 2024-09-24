@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { Order, useOrdersQuery } from '@work-orders/common/queries/use-orders-query.js';
 import {
   getFinancialStatusBadgeStatus,

@@ -1,4 +1,4 @@
-import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useRouter } from '../../routes.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';

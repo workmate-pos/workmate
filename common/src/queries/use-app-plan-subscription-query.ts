@@ -1,10 +1,10 @@
-import { UseQueryOptions, useQuery } from 'react-query';
+import { UseQueryOptions, useQuery } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import type { GetAppPlanSubscriptionResponse } from '@web/controllers/api/app-plans.js';
 
 export const useAppPlanSubscriptionQuery = (
   { fetch }: { fetch: Fetch },
-  options?: UseQueryOptions<AppPlanSubscription | null, unknown, AppPlanSubscription | null, string[]>,
+  options?: Partial<UseQueryOptions<AppPlanSubscription | null, unknown, AppPlanSubscription | null, string[]>>,
 ) =>
   useQuery({
     ...options,

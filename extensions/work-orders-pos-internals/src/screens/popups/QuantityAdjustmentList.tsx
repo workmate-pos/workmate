@@ -1,6 +1,6 @@
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useState } from 'react';
-import { ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
+import { ScrollView, Stack, Stepper, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 

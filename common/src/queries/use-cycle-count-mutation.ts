@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { CreateCycleCount } from '@web/schemas/generated/create-cycle-count.js';
 import { CreateCycleCountResponse } from '@web/controllers/api/cycle-count.js';
@@ -29,9 +29,9 @@ export const useCycleCountMutation = (
     },
     onSuccess: (...args) => {
       const [result] = args;
-      queryClient.invalidateQueries(['inventory-item']);
-      queryClient.invalidateQueries(['inventory-items']);
-      queryClient.invalidateQueries(['cycle-count-page']);
+      queryClient.invalidateQueries({ queryKey: ['inventory-item'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+      queryClient.invalidateQueries({ queryKey: ['cycle-count-page'] });
       queryClient.setQueryData(['cycle-count', result.name], result satisfies UseQueryData<typeof useCycleCountQuery>);
 
       options?.onSuccess?.(...args);

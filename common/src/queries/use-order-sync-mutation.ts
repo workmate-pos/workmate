@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation } from 'react-query';
+import { useMutation } from '@tanstack/react-query';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { SyncOrderResponse } from '@web/controllers/api/order.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';

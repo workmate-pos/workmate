@@ -5,6 +5,17 @@ import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchas
 import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
 
 const defaultShopSettings: ShopSettings = {
+  scanner: {
+    variants: {
+      sku: true,
+      tags: true,
+      barcode: true,
+      metafields: {
+        product: [],
+        variant: [],
+      },
+    },
+  },
   statuses: ['Draft', 'In Progress', 'Done'],
   defaultStatus: 'Draft',
   idFormat: 'WO-#{{id}}',

@@ -262,7 +262,7 @@ export default function Service() {
                     )}
 
                     <InlineStack align="end">
-                      <Button submit variant="primary" loading={serviceMutation.isLoading}>
+                      <Button submit variant="primary" loading={serviceMutation.isPending}>
                         Save
                       </Button>
                     </InlineStack>
@@ -354,7 +354,7 @@ function LabourSelectorModal({
     >
       <LabourTabs labourType={labourType} onSelect={setLabourType} fitted>
         <ResourceList
-          items={isLoading ? loadingPage : page ?? []}
+          items={isLoading ? loadingPage : (page ?? [])}
           key={selectedLabourIds.length}
           loading={isLoading}
           pagination={{

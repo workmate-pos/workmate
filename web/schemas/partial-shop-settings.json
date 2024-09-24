@@ -2,6 +2,50 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "properties": {
+    "scanner": {
+      "type": "object",
+      "properties": {
+        "variants": {
+          "type": "object",
+          "properties": {
+            "barcode": {
+              "type": "boolean"
+            },
+            "sku": {
+              "type": "boolean"
+            },
+            "tags": {
+              "type": "boolean"
+            },
+            "metafields": {
+              "type": "object",
+              "properties": {
+                "product": {
+                  "type": "array",
+                  "items": {
+                    "description": "namespace.key",
+                    "type": "string"
+                  }
+                },
+                "variant": {
+                  "type": "array",
+                  "items": {
+                    "description": "namespace.key",
+                    "type": "string"
+                  }
+                }
+              },
+              "additionalProperties": false,
+              "required": ["product", "variant"]
+            }
+          },
+          "additionalProperties": false,
+          "required": ["barcode", "sku", "tags", "metafields"]
+        }
+      },
+      "additionalProperties": false,
+      "required": ["variants"]
+    },
     "purchaseOrderWebhook": {
       "type": "object",
       "properties": {

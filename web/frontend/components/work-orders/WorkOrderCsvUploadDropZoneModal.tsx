@@ -45,7 +45,7 @@ export function WorkOrderCsvUploadDropZoneModal({ open, onClose }: { open: boole
         onClose={onClose}
         primaryAction={{
           content: 'Import',
-          loading: workOrdersUploadCsvMutation.isLoading,
+          loading: workOrdersUploadCsvMutation.isPending,
           disabled: !workOrderInfoFile,
           onAction: () => {
             if (!workOrderInfoFile) {

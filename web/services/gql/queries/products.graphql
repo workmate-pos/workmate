@@ -252,3 +252,63 @@ mutation updateProduct($input: ProductInput!) {
     }
   }
 }
+
+query getProductAndVariantMetafields($id: ID!) {
+  product(id: $id) {
+    metafields(first: 25) {
+      nodes {
+        id
+        namespace
+        key
+        value
+      }
+    }
+    variants(first: 10) {
+      nodes {
+        metafields(first: 25) {
+          nodes {
+            id
+            namespace
+            key
+            value
+          }
+        }
+      }
+    }
+  }
+}
+
+query getProductMetafields($id: ID!, $first: Int, $after: String) {
+  product(id: $id) {
+    metafields(first: $first, after: $after) {
+      nodes {
+        id
+        namespace
+        key
+        value
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+query getVariantMetafields($id: ID!, $first: Int, $after: String) {
+  productVariant(id: $id) {
+    metafields(first: $first, after: $after) {
+      nodes {
+        id
+        namespace
+        key
+        value
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+

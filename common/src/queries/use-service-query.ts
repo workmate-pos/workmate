@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { GetServiceResponse } from '@web/controllers/api/services.js';
 

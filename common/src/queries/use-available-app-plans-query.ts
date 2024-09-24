@@ -1,10 +1,10 @@
-import { useQuery, UseQueryOptions } from 'react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import type { GetAvailableAppPlansResponse } from '@web/controllers/api/app-plans.js';
 
 export const useAvailableAppPlansQuery = (
   { fetch }: { fetch: Fetch },
-  options?: UseQueryOptions<GetAvailableAppPlansResponse, unknown, GetAvailableAppPlansResponse, string[]>,
+  options?: Partial<UseQueryOptions<GetAvailableAppPlansResponse, unknown, GetAvailableAppPlansResponse, string[]>>,
 ) =>
   useQuery({
     ...options,

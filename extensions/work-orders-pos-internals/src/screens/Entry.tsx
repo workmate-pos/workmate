@@ -1,4 +1,4 @@
-import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';

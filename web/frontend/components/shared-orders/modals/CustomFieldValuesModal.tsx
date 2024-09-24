@@ -22,10 +22,10 @@ export function CustomFieldValuesModal({ open, onClose, name }: { open: boolean;
   const deleteCustomFieldValueOptionsMutation = useDeleteCustomFieldValueOptionsMutation({ fetch });
 
   const isLoading = [
-    customFieldValueOptionsQuery,
-    saveCustomFieldValueOptionsMutation,
-    deleteCustomFieldValueOptionsMutation,
-  ].some(query => query.isLoading);
+    customFieldValueOptionsQuery.isLoading,
+    saveCustomFieldValueOptionsMutation.isPending,
+    deleteCustomFieldValueOptionsMutation.isPending,
+  ].includes(true);
 
   useEffect(() => {
     if (customFieldValueOptionsQuery.data) {
@@ -42,7 +42,7 @@ export function CustomFieldValuesModal({ open, onClose, name }: { open: boolean;
         title={'Custom Field Values'}
         primaryAction={{
           content: 'Save',
-          loading: saveCustomFieldValueOptionsMutation.isLoading || deleteCustomFieldValueOptionsMutation.isLoading,
+          loading: saveCustomFieldValueOptionsMutation.isPending || deleteCustomFieldValueOptionsMutation.isPending,
           onAction: () => {
             const onSuccess = () => {
               setToastAction({ content: 'Saved custom field options!' });

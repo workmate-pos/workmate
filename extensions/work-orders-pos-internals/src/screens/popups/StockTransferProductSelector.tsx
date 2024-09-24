@@ -1,5 +1,5 @@
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { ID } from '@web/schemas/generated/ids.js';
 import { CreateStockTransferDispatchProxy } from '../../create-stock-transfer/reducer.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
@@ -24,7 +24,7 @@ export function StockTransferProductSelector({
   dispatch: CreateStockTransferDispatchProxy;
 }) {
   const [query, setQuery] = useDebouncedState('');
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
   const productVariantsQuery = useProductVariantsQuery({

@@ -6,16 +6,16 @@ import {
   SegmentedControl,
   Stack,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { Dispatch, SetStateAction, useState } from 'react';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
 import { useRouter } from '../../routes.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import {
   usePaymentTermsTemplatesQueries,
   usePaymentTermsTemplatesQuery,
@@ -36,7 +36,7 @@ export function PaymentTermsSelector({
   onSelect: (paymentTerms: WorkOrderPaymentTerms | null) => void;
   disabled: boolean;
 }) {
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
 
   const paymentTermsTemplatesQueries = usePaymentTermsTemplatesQueries({ fetch, types: [...paymentTermTypes] });
@@ -63,8 +63,6 @@ export function PaymentTermsSelector({
   const [paymentTerms, setPaymentTerms] = useState(initialPaymentTerms);
 
   const router = useRouter();
-
-  const { Form } = useForm();
 
   const onPaymentTermsTypeTransition = (type: string) => {
     if (type === 'NONE') {
@@ -132,7 +130,7 @@ export function PaymentTermsSelector({
       />
 
       <Form disabled={disabled}>
-        <Stack direction={'vertical'} paddingVertical={'ExtraLarge'} align={'center'}>
+        <Stack direction={'vertical'} paddingVertical={'ExtraLarge'} alignment={'center'}>
           {getSegmentContents()}
         </Stack>
 
@@ -220,7 +218,7 @@ function FixedPaymentTerms({
   return (
     <DateField
       label={'Payment Due On'}
-      value={paymentTerms.date}
+      value={paymentTerms.date ?? undefined}
       onChange={(date: string) =>
         setPaymentTerms({ templateId: template.id, date: new Date(date).toISOString() as DateTime })
       }
@@ -238,7 +236,7 @@ function NetPaymentTerms({
   setPaymentTerms: Dispatch<SetStateAction<WorkOrderPaymentTerms | null>>;
   disabled: boolean;
 }) {
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
 
   const netPaymentTermsTemplatesQuery = usePaymentTermsTemplatesQuery({ fetch, type: 'NET' });

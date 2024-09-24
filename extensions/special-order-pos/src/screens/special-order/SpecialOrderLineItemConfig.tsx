@@ -1,6 +1,14 @@
 import { CreateSpecialOrder } from '@web/schemas/generated/create-special-order.js';
 import { useState } from 'react';
-import { Badge, Banner, Button, ScrollView, Stepper, Text } from '@shopify/retail-ui-extensions-react';
+import {
+  Badge,
+
+  Banner,
+  Button,
+  ScrollView,
+  Stepper,
+  Text,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -10,6 +18,7 @@ import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-or
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 import { useRouter } from '../../routes.js';
 import { getSpecialOrderLineItemBadges } from '@work-orders/common-pos/util/special-orders.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -39,7 +48,7 @@ export function SpecialOrderLineItemConfig({
 
   const title = productVariantQuery.isLoading
     ? 'Line item'
-    : getProductVariantName(productVariant) ?? 'Unknown product' ?? 'Loading...';
+    : (getProductVariantName(productVariant) ?? 'Unknown product' ?? 'Loading...');
 
   const screen = useScreen();
   screen.setTitle(title);

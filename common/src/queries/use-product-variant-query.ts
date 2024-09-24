@@ -1,4 +1,4 @@
-import { useQueries, useQuery, useQueryClient, UseQueryOptions } from 'react-query';
+import { useQueries, useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import { Fetch } from './fetch.js';
 import type { FetchProductsByIdResponse } from '@web/controllers/api/product-variant.js';
@@ -64,8 +64,8 @@ export const useProductVariantQuery = (
 export const useProductVariantQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID[] }) => {
   const batcher = useProductVariantBatcher(fetch);
   const queryClient = useQueryClient();
-  const queries = useQueries(
-    ids.map(id => ({
+  const queries = useQueries({
+    queries: ids.map(id => ({
       queryKey: ['product-variant', id],
       queryFn: async () => {
         const productVariant = await batcher.fetch(id);
@@ -80,6 +80,6 @@ export const useProductVariantQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID
         return productVariant;
       },
     })),
-  );
+  });
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));
 };

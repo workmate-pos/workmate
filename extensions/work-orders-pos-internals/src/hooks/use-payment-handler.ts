@@ -1,7 +1,7 @@
-import { useExtensionApi, useStatefulSubscribableCart } from '@shopify/retail-ui-extensions-react';
+import { useExtensionApi, useStatefulSubscribableCart } from '@shopify/ui-extensions-react/point-of-sale';
 import { useEffect, useRef, useState } from 'react';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { SetLineItemPropertiesInput } from '@shopify/retail-ui-extensions';
+import { SetLineItemPropertiesInput } from '@shopify/ui-extensions/point-of-sale';
 import { getCustomAttributeObjectFromArray } from '@work-orders/work-order-shopify-order';
 import { DraftOrderInput } from '@web/services/gql/queries/generated/schema.js';
 

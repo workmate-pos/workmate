@@ -1,4 +1,4 @@
-import { Button, ScrollView, Selectable, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Selectable, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useRouter } from '../../routes.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';

@@ -4,7 +4,7 @@ import { useRouter } from '../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
-import { Badge, Button, ScrollView, Stepper, Text } from '@shopify/retail-ui-extensions-react';
+import { Badge, Button, ScrollView, Stepper, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { getCycleCountApplicationStateBadge } from './Entry.js';

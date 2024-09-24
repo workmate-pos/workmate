@@ -4,7 +4,7 @@ import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-qu
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { workOrderToCreateWorkOrder } from '@work-orders/common/create-work-order/work-order-to-create-work-order.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { Text } from '@shopify/retail-ui-extensions-react';
+import { Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
 export function WorkOrderLoader({ name }: { name: string }) {

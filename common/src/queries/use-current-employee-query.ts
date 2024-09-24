@@ -1,6 +1,6 @@
 import { Fetch } from './fetch.js';
 import type { FetchMeResponse } from '@web/controllers/api/employee.js';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 
 export const useCurrentEmployeeQuery = ({ fetch }: { fetch: Fetch }) => {
   return useQuery({

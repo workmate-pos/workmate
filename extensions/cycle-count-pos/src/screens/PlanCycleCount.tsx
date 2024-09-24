@@ -1,7 +1,7 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
 import { usePlanCycleCountQuery } from '@work-orders/common/queries/use-plan-cycle-count-query.js';
-import { Banner, Button, List, ListRow, ScrollView, Text } from '@shopify/retail-ui-extensions-react';
+import { Banner, Button, List, ListRow, ScrollView, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../routes.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -38,7 +38,7 @@ export function PlanCycleCount({
   const router = useRouter();
 
   screen.setIsLoading(
-    planCycleCountQuery.isFetching || cycleCountQuery.isFetching || applyCycleCountMutation.isLoading,
+    planCycleCountQuery.isFetching || cycleCountQuery.isFetching || applyCycleCountMutation.isPending,
   );
 
   const [selectedUuids, setSelectedUuids] = useState<string[]>([]);
@@ -109,12 +109,12 @@ export function PlanCycleCount({
 
             const label = !item
               ? 'Unknown product'
-              : getProductVariantName(
+              : (getProductVariantName(
                   productVariant ?? {
                     title: item.productVariantTitle,
                     product: { title: item.productTitle, hasOnlyDefaultVariant: false },
                   },
-                ) ?? 'Unknown product';
+                ) ?? 'Unknown product');
 
             const delta = countQuantity - originalQuantity;
             const sign = delta === 0 ? '=' : delta > 0 ? '+' : '-';
@@ -157,7 +157,7 @@ export function PlanCycleCount({
         <Button
           title={'Apply count'}
           type={'primary'}
-          isLoading={applyCycleCountMutation.isLoading}
+          isLoading={applyCycleCountMutation.isPending}
           isDisabled={selectedUuids.length === 0}
           onPress={() =>
             applyCycleCountMutation.mutate(

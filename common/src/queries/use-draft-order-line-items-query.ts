@@ -1,6 +1,6 @@
 import type { FetchDraftOrderLineItemsResponse } from '@web/controllers/api/draft-order.js';
 import { ID } from '@web/schemas/generated/ids.js';
-import { useInfiniteQuery } from 'react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
@@ -23,6 +23,7 @@ export const useDraftOrderLineItemsQuery = (
 
       return await response.json();
     },
+    initialPageParam: undefined as undefined | string,
     select: ({ pages, pageParams }) => ({
       pages: pages.flatMap(page => page.lineItems),
       pageParams,

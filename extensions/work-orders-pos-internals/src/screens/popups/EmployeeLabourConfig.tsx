@@ -1,4 +1,4 @@
-import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useEffect, useState } from 'react';
 import { useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
 import { ID } from '@web/schemas/generated/create-work-order.js';

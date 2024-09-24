@@ -1,4 +1,4 @@
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';

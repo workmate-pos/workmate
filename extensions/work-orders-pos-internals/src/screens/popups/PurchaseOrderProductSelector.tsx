@@ -1,5 +1,5 @@
 import { CreatePurchaseOrder, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
-import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -37,7 +37,7 @@ export function PurchaseOrderProductSelector({
 }) {
   const [query, setQuery] = useDebouncedState('');
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const fetch = useAuthenticatedFetch();
 

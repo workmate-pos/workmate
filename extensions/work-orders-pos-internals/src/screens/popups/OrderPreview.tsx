@@ -8,7 +8,7 @@ import {
   TextArea,
   List,
   ListRow,
-} from '@shopify/retail-ui-extensions-react';
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import type { ID } from '@web/schemas/generated/ids.js';
 import {

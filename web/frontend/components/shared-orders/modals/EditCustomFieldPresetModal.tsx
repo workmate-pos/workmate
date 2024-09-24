@@ -91,7 +91,7 @@ export function EditCustomFieldPresetModal({
       onClose={onClose}
       primaryAction={{
         content: 'Save Preset',
-        loading: presetMutation.isLoading,
+        loading: presetMutation.isPending,
         onAction: () =>
           presetMutation.mutate(
             { name, default: isDefault, keys },
@@ -111,7 +111,7 @@ export function EditCustomFieldPresetModal({
         },
         {
           content: 'Delete',
-          loading: presetDeleteMutation.isLoading,
+          loading: presetDeleteMutation.isPending,
           destructive: true,
           onAction: () =>
             presetDeleteMutation.mutate(
@@ -133,7 +133,7 @@ export function EditCustomFieldPresetModal({
             autoComplete={'off'}
             requiredIndicator
             value={name}
-            disabled={presetMutation.isLoading}
+            disabled={presetMutation.isPending}
             onChange={(value: string) => setName(value)}
             error={presetNameInUse ? 'A preset with this name already exists. Saving will override it.' : undefined}
           />

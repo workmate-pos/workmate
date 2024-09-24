@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CreateStockTransfer } from '@web/schemas/generated/create-stock-transfer.js';
 import { CreateStockTransferResponse } from '@web/controllers/api/stock-transfers.js';
 import { Fetch } from './fetch.js';
@@ -33,12 +33,12 @@ export const useStockTransferMutation = ({ fetch }: { fetch: Fetch }) => {
       return body;
     },
     onSuccess(stockTransfer) {
-      queryClient.invalidateQueries(['stock-transfer-page']);
-      queryClient.invalidateQueries(['stock-transfer-count']);
-      queryClient.invalidateQueries(['work-order']);
-      queryClient.invalidateQueries(['work-order-info']);
-      queryClient.invalidateQueries(['purchase-order']);
-      queryClient.invalidateQueries(['purchase-order-info']);
+      queryClient.invalidateQueries({ queryKey: ['stock-transfer-page'] });
+      queryClient.invalidateQueries({ queryKey: ['stock-transfer-count'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order-info'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-order'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
 
       queryClient.setQueryData(
         ['stock-transfer', stockTransfer.name],

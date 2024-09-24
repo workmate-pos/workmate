@@ -1,6 +1,6 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { OrderState, PurchaseOrderState } from '@web/schemas/generated/special-order-pagination-options.js';
-import { Button, ScrollView, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';

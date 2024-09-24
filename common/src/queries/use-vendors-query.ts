@@ -1,5 +1,5 @@
 import type { FetchVendorsResponse } from '@web/controllers/api/vendors.js';
-import { useQuery, UseQueryOptions } from 'react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { VendorFilter } from '@web/schemas/generated/get-vendors-filters.js';
 

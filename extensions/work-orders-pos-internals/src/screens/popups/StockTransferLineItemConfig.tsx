@@ -1,6 +1,6 @@
 import { CreateStockTransferDispatchProxy } from '../../create-stock-transfer/reducer.js';
 import { useState } from 'react';
-import { Badge, ScrollView, Selectable, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
+import { Badge, ScrollView, Selectable, Stack, Stepper, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
@@ -11,8 +11,8 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { useRouter } from '../../routes.js';
 import { Int, StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { getStockTransferLineItemStatusBadgeProps } from '../../util/stock-transfer-line-item-status-badge-props.js';
@@ -55,7 +55,6 @@ export function StockTransferLineItemConfig({
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
   screen.setTitle(lineItemName);
 
-  const { Form } = useForm();
   const router = useRouter();
 
   // TODO: Clearly indicate pending changes

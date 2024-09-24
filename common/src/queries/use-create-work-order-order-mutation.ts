@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { CreateWorkOrderOrderResponse } from '@web/controllers/api/work-order.js';
 import { CreateWorkOrderOrder } from '@web/schemas/generated/create-work-order-order.js';
 

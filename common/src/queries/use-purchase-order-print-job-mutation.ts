@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation } from 'react-query';
+import { useMutation } from '@tanstack/react-query';
 import { PrintPurchaseOrderResponse } from '@web/controllers/api/purchase-orders.js';
 
 export function usePurchaseOrderPrintJobMutation({ fetch }: { fetch: Fetch }) {

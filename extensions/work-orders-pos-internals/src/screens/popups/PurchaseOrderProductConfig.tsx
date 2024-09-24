@@ -2,7 +2,7 @@ import { type CreatePurchaseOrder, Product } from '@web/schemas/generated/create
 import { useState } from 'react';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
@@ -12,13 +12,13 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useRouter } from '../../routes.js';
-import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMoneyField.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { NonNullableValues } from '@work-orders/common-pos/types/NonNullableValues.js';
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 
 export function PurchaseOrderProductConfig({
   product: initialProduct,

@@ -157,7 +157,7 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
 
           appPlanSubscriptionMutation.mutate({ appPlanId: chosenAppPlanId! });
         },
-        loading: appPlanSubscriptionMutation.isLoading,
+        loading: appPlanSubscriptionMutation.isPending,
         disabled: !canWriteAppPlan,
       }}
       sectioned

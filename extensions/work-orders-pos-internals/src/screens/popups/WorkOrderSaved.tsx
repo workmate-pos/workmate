@@ -1,4 +1,4 @@
-import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';

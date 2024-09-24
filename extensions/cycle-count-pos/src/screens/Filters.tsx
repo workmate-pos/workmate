@@ -3,11 +3,11 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
-import { Button, ScrollView, Text } from '@shopify/retail-ui-extensions-react';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { Button, ScrollView, Text } from '@shopify/ui-extensions-react/point-of-sale';
 
 const SORT_MODES = ['name', 'created-date', 'due-date'] as const;
 const SORT_ORDERS = ['descending', 'ascending'] as const;

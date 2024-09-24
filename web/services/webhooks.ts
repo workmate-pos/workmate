@@ -5,8 +5,8 @@ import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { syncLocationsIfExists } from './locations/sync.js';
 import { syncCustomersIfExists } from './customer/sync.js';
-import { syncProductsIfExists } from './products/sync.js';
-import { syncProductVariantsIfExists } from './product-variants/sync.js';
+import { syncProducts, syncProductsIfExists } from './products/sync.js';
+import { syncProductVariants, syncProductVariantsIfExists } from './product-variants/sync.js';
 import { syncShopifyOrders, syncShopifyOrdersIfExists } from './shopify-order/sync.js';
 import { syncWorkOrders } from './work-orders/sync.js';
 import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
@@ -17,6 +17,7 @@ import { getWorkOrder } from './work-orders/queries.js';
 import { unreserveLineItem } from './sourcing/reserve.js';
 import { getProduct, softDeleteProducts } from './products/queries.js';
 import { softDeleteProductVariantsByProductIds } from './product-variants/queries.js';
+import { doesProductHaveSyncableMetafields } from './metafields/sync.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -124,19 +125,23 @@ export default {
 
   PRODUCTS_UPDATE: {
     async handler(session, topic, shop, body: { admin_graphql_api_id: ID; variant_ids: { id: number }[] }) {
-      await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
+      const changed = await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
 
-      // shopify sends this webhook whenever the product is ordered, so we throttle a bit here
-      // (we cannot use shopify's product.updatedAt because it updates even if the inventory item changes...)
-      const FIVE_MINUTES = 5 * 60 * 1000;
-      const product = await getProduct(body.admin_graphql_api_id);
-      if (product && product.updatedAt.getTime() - Date.now() < FIVE_MINUTES) {
+      if (changed) {
+        // wait for the next webhook before syncing to save some query cost
         return;
       }
 
-      await syncProductsIfExists(session, [body.admin_graphql_api_id]);
-      const variantIds = body.variant_ids.map(({ id }) => createGid('ProductVariant', id));
-      await syncProductVariantsIfExists(session, variantIds);
+      const isCached = await getProduct(body.admin_graphql_api_id).then(product => product !== null);
+      const hasSyncableMetafields = await doesProductHaveSyncableMetafields(session, body.admin_graphql_api_id);
+
+      const shouldSync = isCached || hasSyncableMetafields;
+
+      if (shouldSync) {
+        await syncProducts(session, [body.admin_graphql_api_id]);
+        const variantIds = body.variant_ids.map(({ id }) => createGid('ProductVariant', id));
+        await syncProductVariants(session, variantIds);
+      }
     },
   },
 

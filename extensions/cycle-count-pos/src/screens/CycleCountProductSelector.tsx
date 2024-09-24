@@ -1,6 +1,6 @@
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
-import { Button, List, ListRow, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
@@ -15,7 +15,7 @@ import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export function CycleCountProductSelector({ onSelect }: { onSelect: (productVariants: ProductVariant[]) => void }) {
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const [query, setQuery] = useDebouncedState('');
   const [vendorName, setVendorName] = useState<string>();

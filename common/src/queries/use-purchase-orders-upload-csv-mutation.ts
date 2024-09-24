@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { PurchaseOrderImportFileName } from '@web/services/purchase-orders/csv-import.js';
 import { Fetch } from './fetch.js';
 
@@ -40,8 +40,8 @@ export const usePurchaseOrdersUploadCsvMutation = (
       }
     },
     onSuccess() {
-      queryClient.invalidateQueries(['purchase-orders']);
-      queryClient.invalidateQueries(['purchase-order-info']);
+      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
       onSuccess?.();
     },
   });

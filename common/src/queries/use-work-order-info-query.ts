@@ -5,7 +5,7 @@ import type {
 } from '@web/schemas/generated/work-order-pagination-options.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery, UseInfiniteQueryOptions, useQueryClient } from 'react-query';
+import { useInfiniteQuery, UseInfiniteQueryOptions, useQueryClient } from '@tanstack/react-query';
 import { WorkOrderInfo } from '@web/services/work-orders/types.js';
 import { ID } from '@web/schemas/generated/ids.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
@@ -69,7 +69,7 @@ export const useWorkOrderInfoQuery = (
         purchaseOrderStatus,
       },
     ],
-    queryFn: async ({ pageParam: offset = 0 }) => {
+    queryFn: async ({ pageParam: offset }) => {
       const searchParams = new URLSearchParams({
         limit: String(limit),
         offset: String(offset),
@@ -111,6 +111,7 @@ export const useWorkOrderInfoQuery = (
       const result: FetchWorkOrderInfoPageResponse = await response.json();
       return result;
     },
+    initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => {
       if (lastPage.length === 0) return undefined;
       return pages.flat(1).length;

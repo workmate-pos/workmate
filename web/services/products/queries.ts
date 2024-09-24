@@ -82,9 +82,9 @@ function mapProduct(product: {
 }
 
 export async function upsertProducts(
+  shop: string,
   products: {
     productId: ID;
-    shop: string;
     handle: string;
     title: string;
     description: string;
@@ -97,15 +97,14 @@ export async function upsertProducts(
     return;
   }
 
-  const { productId, shop, handle, title, description, productType, vendor, hasOnlyDefaultVariant } = nest(products);
+  const { productId, handle, title, description, productType, vendor, hasOnlyDefaultVariant } = nest(products);
 
   await sql`
-    INSERT INTO "Product" ("productId", shop, handle, title, description, "productType", vendor,
+    INSERT INTO "Product" (shop, "productId", handle, title, description, "productType", vendor,
                            "hasOnlyDefaultVariant")
-    SELECT *
+    SELECT ${shop}, *
     FROM UNNEST(
       ${productId as string[]} :: text[],
-      ${shop} :: text[],
       ${handle} :: text[],
       ${title} :: text[],
       ${description} :: text[],

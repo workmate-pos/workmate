@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import {
   CustomFieldsPresetType,
   DeleteCustomFieldsPresetResponse,
@@ -29,7 +29,7 @@ export const useCustomFieldsPresetsDeleteMutation = (
       return body;
     },
     onSuccess: (...args) => {
-      queryClient.invalidateQueries(['custom-fields-presets', type]);
+      queryClient.invalidateQueries({ queryKey: ['custom-fields-presets', type] });
 
       options?.onSuccess?.(...args);
     },

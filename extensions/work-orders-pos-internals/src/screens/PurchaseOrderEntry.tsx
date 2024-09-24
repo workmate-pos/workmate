@@ -1,4 +1,4 @@
-import { Button, List, ListRow, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, List, ListRow, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useState } from 'react';
 import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-purchase-order-info-page-query.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';

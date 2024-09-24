@@ -1,4 +1,4 @@
-import { useQuery, UseQueryOptions } from 'react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import type { FetchStorePropertiesResponse } from '@web/controllers/api/store-properties.js';
 import { Fetch } from './fetch.js';
 import { MINUTE_IN_MS } from '../time/constants.js';

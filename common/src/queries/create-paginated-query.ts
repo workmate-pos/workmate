@@ -1,4 +1,4 @@
-import { QueryKey, useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
+import { InfiniteData, QueryKey, useInfiniteQuery, UseInfiniteQueryOptions } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 
 export type PageInfo = {
@@ -18,7 +18,7 @@ export const createPaginatedQuery = <Params extends {}, Response extends { pageI
   extractPage: (response: Response) => PageElement[];
   cursorParamName: keyof Params & string;
   options?: Omit<
-    UseInfiniteQueryOptions<Response, unknown, PageElement[]>,
+    UseInfiniteQueryOptions<Response, unknown, InfiniteData<PageElement[]>>,
     'queryKey' | 'queryFn' | 'select' | 'getNextPageParam'
   >;
 }) => {
@@ -30,11 +30,16 @@ export const createPaginatedQuery = <Params extends {}, Response extends { pageI
     fetch: Fetch;
     params: Params;
     options?: Omit<
-      UseInfiniteQueryOptions<Response, unknown, PageElement[]>,
-      'queryKey' | 'queryFn' | 'select' | 'getNextPageParam'
-    >;
+      UseInfiniteQueryOptions<Response, unknown, InfiniteData<PageElement[]>>,
+      'queryKey' | 'queryFn' | 'select' | 'getNextPageParam' | 'initialPageParam'
+    > & {
+      /**
+       * react query removed this lol so just add it back
+       */
+      onSuccess?: (response: Response) => void | Promise<void>;
+    };
   }) => {
-    return useInfiniteQuery<Response, unknown, PageElement[]>({
+    return useInfiniteQuery({
       ...baseOptions,
       ...options,
       queryKey: queryKeyFn(params),
@@ -49,9 +54,11 @@ export const createPaginatedQuery = <Params extends {}, Response extends { pageI
         if (pageParam) searchParams.set(cursorParamName, String(pageParam));
 
         const response = await fetch(`${endpoint}?${searchParams}`);
-
-        return await response.json();
+        const data: Response = await response.json();
+        await options?.onSuccess?.(data);
+        return data;
       },
+      initialPageParam: undefined as undefined | string,
       select: ({ pages, pageParams }) => ({
         pages: pages.map(page => extractPage(page)),
         pageParams,

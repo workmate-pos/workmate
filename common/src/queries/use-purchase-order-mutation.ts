@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { CreatePurchaseOrderResponse } from '@web/controllers/api/purchase-orders.js';
 import { UseQueryData } from './react-query.js';
@@ -27,11 +27,11 @@ export const usePurchaseOrderMutation = (
     onSuccess(...args) {
       const [{ purchaseOrder }] = args;
 
-      queryClient.invalidateQueries(['purchase-order-info']);
+      queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
 
       // we don't know if any items were removed so we must invalidate all inventory items
-      queryClient.invalidateQueries(['inventory-item']);
-      queryClient.invalidateQueries(['inventory-items']);
+      queryClient.invalidateQueries({ queryKey: ['inventory-item'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
 
       queryClient.setQueryData(
         ['purchase-order', purchaseOrder.name],

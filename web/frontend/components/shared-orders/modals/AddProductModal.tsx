@@ -14,7 +14,7 @@ import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { CreatePurchaseOrder, Int } from '@web/schemas/generated/create-purchase-order.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -119,15 +119,14 @@ export function AddProductModal({
         .filter(Boolean)
         .join(' AND '),
     },
-    options: {
-      onSuccess(data) {
-        // when we load from scratch we should reset the page count
-        if (data.pages.length === 1) {
-          setPage(0);
-        }
-      },
-    },
   });
+
+  useEffect(() => {
+    if (productVariantsQuery.data && productVariantsQuery.data.pages.length === 1) {
+      // when we load from scratch we should reset the page count
+      setPage(0);
+    }
+  }, [productVariantsQuery.data?.pages]);
 
   const navigate = useNavigate();
 

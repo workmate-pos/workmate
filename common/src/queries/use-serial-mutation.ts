@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UseQueryData } from './react-query.js';
 import { useSerialQuery } from './use-serial-query.js';
 import { CreateSerial } from '@web/schemas/generated/create-serial.js';
@@ -24,8 +24,8 @@ export const useSerialMutation = ({ fetch }: { fetch: Fetch }) => {
       return serial;
     },
     onSuccess(serial) {
-      queryClient.invalidateQueries(['serials']);
-      queryClient.invalidateQueries(['serial', serial satisfies UseQueryData<typeof useSerialQuery>]);
+      queryClient.invalidateQueries({ queryKey: ['serials'] });
+      queryClient.invalidateQueries({ queryKey: ['serial', serial satisfies UseQueryData<typeof useSerialQuery>] });
     },
   });
 };
