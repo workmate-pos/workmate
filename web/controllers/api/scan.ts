@@ -23,8 +23,11 @@ export default class ScanController {
     if (scanner.variants.tags) parts.push(`tag:"${escapeQuotationMarks(thing)}"`);
     if (scanner.variants.barcode) parts.push(`barcode:"${escapeQuotationMarks(thing)}"`);
 
-    for (const metafieldVariantId of await getProductVariantIdsByMetafieldValue(session, thing)) {
-      parts.push(`id:${parseGid(metafieldVariantId).id}`);
+    for (const productVariantIdWithRelevantMetafieldValue of await getProductVariantIdsByMetafieldValue(
+      session,
+      thing,
+    )) {
+      parts.push(`id:${parseGid(productVariantIdWithRelevantMetafieldValue).id}`);
     }
 
     const query = parts.join(' OR ');
@@ -35,7 +38,7 @@ export default class ScanController {
     return res.json({ variants: productVariants.nodes });
   }
 
-  @Get('/variant-metafields')
+  @Get('/scannable-metafields')
   async getScannableMetafields(req: Request, res: Response<FetchScannableMetafieldsResponse>) {
     const session: Session = res.locals.shopify.session;
     const graphql = new Graphql(session);
@@ -52,14 +55,6 @@ export default class ScanController {
       product: product.metafieldDefinitions.nodes,
       variant: productVariant.metafieldDefinitions.nodes,
     });
-  }
-
-  @Get('/sync-variant-metafields')
-  async syncVariantMetafields(req: Request, res: Response) {
-    const session: Session = res.locals.shopify.session;
-    const settings = await getShopSettings(session.shop);
-
-    const graphql = new Graphql(session);
   }
 }
 

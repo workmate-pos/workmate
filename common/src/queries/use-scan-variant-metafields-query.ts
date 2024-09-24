@@ -6,7 +6,7 @@ export const useScanVariantMetafieldsQuery = ({ fetch }: { fetch: Fetch }) =>
   useQuery({
     queryKey: ['scan-variant-metafields'],
     queryFn: async () => {
-      const response = await fetch('/api/scan/variant-metafields');
+      const response = await fetch('/api/scan/scannable-metafields');
 
       if (!response.ok) {
         throw new Error('Failed to fetch scan variant metafields');
