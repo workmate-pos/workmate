@@ -105,7 +105,7 @@ export async function getAvailableAppPlans(session: Session) {
 
 type StoreProperties = {
   locations: number;
-  shopType: ShopPlanType;
+  shopType: ShopPlanType | null;
   usedTrialDays: number;
   activeAppPlanId: number | null;
 };
@@ -121,7 +121,8 @@ export function isAppPlanAvailable(appPlan: IGetResult, storeProperties: StorePr
     return false;
   }
 
-  if (allowedShopifyPlans !== null && !allowedShopifyPlans.includes(storeProperties.shopType)) {
+  // if a plan is unknown we give it the same access as BASIC_SHOPIFY
+  if (allowedShopifyPlans !== null && !allowedShopifyPlans.includes(storeProperties.shopType ?? 'BASIC_SHOPIFY')) {
     return false;
   }
 
@@ -138,7 +139,7 @@ export function getAppPlanPrice(appPlan: IGetResult, storeProperties: Pick<Store
   let price = appPlan.basePrice;
 
   for (let i = 0; i < storeProperties.locations - 1; i++) {
-    price += extraLocationPrices ? extraLocationPrices[Math.min(extraLocationPrices.length - 1, i)] ?? 0 : 0;
+    price += extraLocationPrices ? (extraLocationPrices[Math.min(extraLocationPrices.length - 1, i)] ?? 0) : 0;
   }
 
   return price;

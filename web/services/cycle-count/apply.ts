@@ -18,7 +18,7 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 const COMPARE_QUANTITY_MISMATCH_ERROR_MESSAGE =
   'The compareQuantity argument no longer matches the persisted quantity.';
 
-export async function applyCycleCountItems(session: Session, plan: ApplyCycleCountPlan) {
+export async function applyCycleCountItems(session: Session, staffMemberId: ID, plan: ApplyCycleCountPlan) {
   const { cycleCountName, itemApplications } = plan;
 
   if (itemApplications.length === 0) {
@@ -54,6 +54,7 @@ export async function applyCycleCountItems(session: Session, plan: ApplyCycleCou
 
     await createCycleCountItemApplications(
       cycleCount.id,
+      staffMemberId,
       itemApplications.map(({ originalQuantity, countQuantity, uuid }) => ({
         appliedQuantity: countQuantity,
         cycleCountItemUuid: uuid,

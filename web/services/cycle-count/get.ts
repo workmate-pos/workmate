@@ -17,7 +17,7 @@ import {
   DetailedCycleCountItem,
 } from './types.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { hasNestedPropertyValue, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { match } from 'ts-pattern';
 import { DateTime } from '../gql/queries/generated/schema.js';
 
@@ -40,8 +40,9 @@ async function getDetailedCycleCountForCycleCount(cycleCount: CycleCount): Promi
   applicationStatus: CycleCountApplicationStatus;
   employeeAssignments: DetailedCycleCountEmployeeAssignment[];
   dueDate: DateTime | null;
+  locked: boolean;
 }> {
-  const { status, locationId, note, dueDate } = cycleCount;
+  const { status, locationId, note, dueDate, locked } = cycleCount;
 
   const [items, employeeAssignments] = await Promise.all([
     getDetailedCycleCountItems(cycleCount.id),
@@ -56,6 +57,7 @@ async function getDetailedCycleCountForCycleCount(cycleCount: CycleCount): Promi
     status,
     locationId,
     items,
+    locked,
     applicationStatus,
     employeeAssignments,
     dueDate: dueDate ? (new Date(dueDate).toISOString() as DateTime) : null,
@@ -103,7 +105,7 @@ export async function getDetailedCycleCountItems(cycleCountId: number) {
        */
       applications: itemApplications
         .map(application => ({
-          ...pick(application, 'originalQuantity', 'appliedQuantity'),
+          ...pick(application, 'originalQuantity', 'appliedQuantity', 'staffMemberId'),
           appliedAt: application.createdAt.toISOString() as DateTime,
         }))
         .toSorted((a, b) => new Date(a.appliedAt).getTime() - new Date(b.appliedAt).getTime()),

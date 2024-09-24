@@ -4,7 +4,7 @@ import { nest } from '../../util/db.js';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { escapeLike } from '../db/like.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
-import { assertUuid } from '../../util/assertions.js';
+import { assertGidOrNull, assertUuid } from '../../util/assertions.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
@@ -23,6 +23,7 @@ export async function getCycleCount({ shop, name }: { shop: string; name: string
     createdAt: Date;
     updatedAt: Date;
     dueDate: Date | null;
+    locked: boolean;
   }>`
     SELECT *
     FROM "CycleCount"
@@ -46,6 +47,7 @@ function mapCycleCount(cycleCount: {
   createdAt: Date;
   updatedAt: Date;
   dueDate: Date | null;
+  locked: boolean;
 }) {
   const { locationId } = cycleCount;
 
@@ -75,7 +77,7 @@ export async function getCycleCountsPage(
     offset: number;
     locationId?: ID;
     employeeId?: ID;
-    sortMode?: 'due-date' | 'created-date';
+    sortMode?: 'name' | 'due-date' | 'created-date';
     sortOrder?: 'ascending' | 'descending';
   },
 ) {
@@ -93,6 +95,7 @@ export async function getCycleCountsPage(
     createdAt: Date;
     updatedAt: Date;
     dueDate: Date | null;
+    locked: boolean;
   }>`
     SELECT cc.*
     FROM "CycleCount" cc
@@ -108,18 +111,14 @@ export async function getCycleCountsPage(
                   FROM "CycleCountEmployeeAssignment" ea
                   WHERE ea."cycleCountId" = cc.id
                     AND ea."employeeId" = ${_employeeId ?? null})
-    ORDER BY CASE
-               WHEN ${sortMode} = 'due-date' THEN
-                 CASE
-                   WHEN ${sortOrder} = 'ascending' THEN ("dueDate" - NOW())
-                   WHEN ${sortOrder} = 'descending' THEN (NOW() - "dueDate")
-                   END
-               WHEN ${sortMode} = 'created-date' THEN
-                 CASE
-                   WHEN ${sortOrder} = 'ascending' THEN ("createdAt" - NOW())
-                   WHEN ${sortOrder} = 'descending' THEN (NOW() - "createdAt")
-                   END
-               END NULLS LAST, "createdAt"
+    ORDER BY CASE WHEN ${sortMode} = 'due-date' AND ${sortOrder} = 'ascending' THEN "dueDate" END ASC NULLS LAST,
+             CASE WHEN ${sortMode} = 'due-date' AND ${sortOrder} = 'descending' THEN "dueDate" END DESC NULLS LAST,
+             --
+             CASE WHEN ${sortMode} = 'created-date' AND ${sortOrder} = 'ascending' THEN "createdAt" END ASC NULLS LAST,
+             CASE WHEN ${sortMode} = 'created-date' AND ${sortOrder} = 'descending' THEN "createdAt" END DESC NULLS LAST,
+             --
+             CASE WHEN ${sortMode} = 'name' AND ${sortOrder} = 'ascending' THEN "name" END ASC NULLS LAST,
+             CASE WHEN ${sortMode} = 'name' AND ${sortOrder} = 'descending' THEN "name" END DESC NULLS LAST
     LIMIT ${limit} OFFSET ${offset};
   `;
 
@@ -133,6 +132,7 @@ export async function upsertCycleCount({
   name,
   shop,
   dueDate,
+  locked,
 }: {
   shop: string;
   name: string;
@@ -140,6 +140,7 @@ export async function upsertCycleCount({
   locationId: ID;
   note: string;
   dueDate: Date | null;
+  locked: boolean;
 }) {
   const _locationId: string = locationId;
 
@@ -153,14 +154,16 @@ export async function upsertCycleCount({
     createdAt: Date;
     updatedAt: Date;
     dueDate: Date | null;
+    locked: boolean;
   }>`
-    INSERT INTO "CycleCount" (status, "locationId", note, name, shop, "dueDate")
-    VALUES (${status}, ${_locationId}, ${note}, ${name}, ${shop}, ${dueDate!})
+    INSERT INTO "CycleCount" (status, "locationId", note, name, shop, "dueDate", locked)
+    VALUES (${status}, ${_locationId}, ${note}, ${name}, ${shop}, ${dueDate!}, ${locked})
     ON CONFLICT (shop, name)
       DO UPDATE SET status       = EXCLUDED.status,
                     "locationId" = EXCLUDED."locationId",
                     note         = EXCLUDED.note,
-                    "dueDate"    = EXCLUDED."dueDate"
+                    "dueDate"    = EXCLUDED."dueDate",
+                    locked       = EXCLUDED.locked
     RETURNING *;`;
 
   return mapCycleCount(cycleCount);
@@ -215,6 +218,7 @@ export async function upsertCycleCountItems(
 
 export async function createCycleCountItemApplications(
   cycleCountId: number,
+  staffMemberId: ID,
   applications: {
     cycleCountItemUuid: string;
     appliedQuantity: number;
@@ -226,11 +230,12 @@ export async function createCycleCountItemApplications(
   }
 
   const { originalQuantity, cycleCountItemUuid, appliedQuantity } = nest(applications);
+  const _staffMemberId: string = staffMemberId;
 
   await sql`
     INSERT INTO "CycleCountItemApplication" ("cycleCountId", "cycleCountItemUuid", "appliedQuantity",
-                                             "originalQuantity")
-    SELECT ${cycleCountId}, *
+                                             "originalQuantity", "staffMemberId")
+    SELECT ${cycleCountId}, *, ${_staffMemberId}
     FROM UNNEST(
       ${cycleCountItemUuid} :: uuid[],
       ${appliedQuantity} :: int[],
@@ -296,6 +301,7 @@ export async function getCycleCountItemApplications(cycleCountId: number) {
     originalQuantity: number;
     createdAt: Date;
     updatedAt: Date;
+    staffMemberId: string | null;
   }>`
     SELECT *
     FROM "CycleCountItemApplication"
@@ -312,15 +318,18 @@ function mapCycleCountItemApplication(application: {
   originalQuantity: number;
   createdAt: Date;
   updatedAt: Date;
+  staffMemberId: string | null;
 }) {
-  const { cycleCountItemUuid } = application;
+  const { cycleCountItemUuid, staffMemberId } = application;
 
   try {
     assertUuid(cycleCountItemUuid);
+    assertGidOrNull(staffMemberId);
 
     return {
       ...application,
       cycleCountItemUuid,
+      staffMemberId,
     };
   } catch (error) {
     sentryErr(error, { application });

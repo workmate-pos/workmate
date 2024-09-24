@@ -31,7 +31,8 @@ export function CustomerSelectorModal({
 
   const storePropertiesQuery = useStorePropertiesQuery({ fetch });
   const storeProperties = storePropertiesQuery.data?.storeProperties;
-  const canSelectCompany = !!storeProperties && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
+  const canSelectCompany =
+    !!storeProperties && !!storeProperties.plan && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
 
   const isLastAvailablePage = customersQuery.data && page === customersQuery.data.pages.length - 1;
   const hasNextPage = !isLastAvailablePage || customersQuery.hasNextPage;
