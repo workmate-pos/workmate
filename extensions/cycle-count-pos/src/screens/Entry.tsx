@@ -24,32 +24,27 @@ import { getCreateCycleCountFromDetailedCycleCount } from '../create-cycle-count
 import { getDefaultCreateCycleCount } from '../create-cycle-count/default.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { useLocationQueries, useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useEmployeeQueries, useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
+import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { SortMode, SortOrder } from './Filters.js';
 
-const SORT_MODES = ['created-date', 'due-date'] as const;
-const SORT_ORDERS = ['descending', 'ascending'] as const;
-
-type SortMode = (typeof SORT_MODES)[number];
-type SortOrder = (typeof SORT_ORDERS)[number];
+export const DEFAULT_SORT_MODE: SortMode = 'created-date';
+export const DEFAULT_SORT_ORDER: SortOrder = 'descending';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
   const [status, setStatus] = useState<string>();
   const [locationId, setLocationId] = useState<ID>();
   const [employeeId, setEmployeeId] = useState<ID>();
+
   const [sortMode, setSortMode] = useState<SortMode>('created-date');
   const [sortOrder, setSortOrder] = useState<SortOrder>('descending');
+
+  const activeFilterCount = [status, locationId, employeeId].filter(Boolean).length;
+
   const fetch = useAuthenticatedFetch();
-
-  const locationQuery = useLocationQuery({ fetch, id: locationId! }, { enabled: !!locationId });
-  const location = locationQuery.data;
-
-  const employeeQuery = useEmployeeQuery({ fetch, id: employeeId ?? null });
-  const employee = employeeQuery.data;
-
   const cycleCountPageQuery = useCycleCountPageQuery({
     fetch,
     filters: {
@@ -124,41 +119,26 @@ export function Entry() {
         </Text>
       </ResponsiveStack>
 
-      <ResponsiveGrid columns={2} grow>
+      <ResponsiveGrid columns={2} spacing={2}>
         <Button
-          title={'Filter by status' + (status ? ` (${status})` : '')}
-          onPress={() => router.push('StatusSelector', { onSelect: setStatus, onClear: () => setStatus(undefined) })}
-        />
-        <Button
-          title={'Filter by location' + (locationId ? ` (${location?.name ?? 'loading...'})` : '')}
+          title={'Filters' + (activeFilterCount > 0 ? ` (${activeFilterCount})` : '')}
           onPress={() =>
-            router.push('LocationSelector', {
-              onSelect: location => setLocationId(location.id),
-            })
-          }
-        />
-        <Button
-          title={'Filter by employee' + (employeeId ? ` (${employee?.name ?? 'loading...'})` : '')}
-          onPress={() =>
-            router.push('EmployeeSelector', {
-              onSelect: employee => setEmployeeId(employee.id),
-              onClear: () => setEmployeeId(undefined),
-            })
-          }
-        />
-      </ResponsiveGrid>
+            router.push('Filters', {
+              status,
+              locationId,
+              employeeId,
+              sortMode,
+              sortOrder,
 
-      <ResponsiveGrid columns={2} smColumns={2} grow>
-        <Button
-          title={`Sort by ${titleCase(sortMode)}`}
-          onPress={() =>
-            setSortMode(current => SORT_MODES[(SORT_MODES.indexOf(sortMode) + 1) % SORT_MODES.length] ?? current)
-          }
-        />
-        <Button
-          title={titleCase(sortOrder)}
-          onPress={() =>
-            setSortOrder(current => SORT_ORDERS[(SORT_ORDERS.indexOf(sortOrder) + 1) % SORT_ORDERS.length] ?? current)
+              defaultSortMode: DEFAULT_SORT_MODE,
+              defaultSortOrder: DEFAULT_SORT_ORDER,
+
+              onStatusChange: setStatus,
+              onLocationIdChange: setLocationId,
+              onEmployeeIdChange: setEmployeeId,
+              onSortModeChange: setSortMode,
+              onSortOrderChange: setSortOrder,
+            })
           }
         />
       </ResponsiveGrid>

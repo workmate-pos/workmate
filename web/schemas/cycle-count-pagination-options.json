@@ -25,7 +25,7 @@
     },
     "sortMode": {
       "type": "string",
-      "enum": ["due-date", "created-date"]
+      "enum": ["name", "due-date", "created-date"]
     },
     "sortOrder": {
       "type": "string",

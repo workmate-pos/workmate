@@ -33,6 +33,6 @@ export type FetchStorePropertiesResponse = {
     name: string;
     currencyCode: CurrencyCode;
     currencyFormat: string;
-    plan: ShopPlanType;
+    plan: ShopPlanType | null;
   };
 };

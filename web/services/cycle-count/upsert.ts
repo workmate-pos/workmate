@@ -3,6 +3,7 @@ import { CreateCycleCount, CreateCycleCountItem } from '../../schemas/generated/
 import { unit } from '../db/unit-of-work.js';
 import { Session } from '@shopify/shopify-api';
 import {
+  getCycleCount,
   getCycleCountEmployeeAssignments,
   getCycleCountItemApplications,
   getCycleCountItems,
@@ -14,12 +15,20 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { validateCreateCycleCount } from './validate.js';
 import { getNewCycleCountName } from '../id-formatting.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
-export async function upsertCycleCount(session: Session, createCycleCount: CreateCycleCount) {
+export async function upsertCycleCount(session: Session, user: LocalsTeifiUser, createCycleCount: CreateCycleCount) {
+  if (createCycleCount.name) {
+    const cycleCount = await getCycleCount({ shop: session.shop, name: createCycleCount.name });
+    if (cycleCount?.locked && !user.user.superuser) {
+      throw new HttpError('Cycle count is locked', 400);
+    }
+  }
+
   validateCreateCycleCount(createCycleCount);
 
   return await unit(async () => {
-    const { status, note, locationId, dueDate } = createCycleCount;
+    const { status, note, locationId, dueDate, locked } = createCycleCount;
     const name = createCycleCount.name ?? (await getNewCycleCountName(session.shop));
 
     const { id: cycleCountId } = await queries.upsertCycleCount({
@@ -29,6 +38,7 @@ export async function upsertCycleCount(session: Session, createCycleCount: Creat
       note,
       locationId,
       dueDate: dueDate ? new Date(dueDate) : null,
+      locked,
     });
 
     await upsertCreateCycleCountItems(cycleCountId, createCycleCount);

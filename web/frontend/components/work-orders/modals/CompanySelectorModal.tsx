@@ -29,7 +29,8 @@ export function CompanySelectorModal({
   const storePropertiesQuery = useStorePropertiesQuery({ fetch });
   const storeProperties = storePropertiesQuery.data?.storeProperties;
 
-  const canSelectCompany = !!storeProperties && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
+  const canSelectCompany =
+    !!storeProperties && !!storeProperties.plan && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
 
   return (
     <Modal open={open} title={'Select Company'} onClose={onClose}>

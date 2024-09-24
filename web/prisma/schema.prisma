@@ -739,6 +739,10 @@ model CycleCount {
   locationId String
   note       String
 
+  // If true, nothing can be changed except for the status and note.
+  // Applications are also not allowed.
+  locked Boolean
+
   dueDate DateTime?
 
   items CycleCountItem[]
@@ -800,6 +804,9 @@ model CycleCountItemApplication {
 
   // Quantity before this application
   originalQuantity Int
+
+  // optional GID of the staff member that applied this item
+  staffMemberId String?
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)

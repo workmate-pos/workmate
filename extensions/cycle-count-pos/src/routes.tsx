@@ -17,6 +17,7 @@ import {
   MultiEmployeeSelectorProps,
 } from '@work-orders/common-pos/screens/selector/MultiEmployeeSelector.js';
 import { EmployeeSelector, EmployeeSelectorProps } from '@work-orders/common-pos/screens/selector/EmployeeSelector.js';
+import { Filters } from './screens/Filters.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -82,5 +83,9 @@ export const { Router, useRouter } = createRouter({
     Component: (props: Omit<MultiEmployeeSelectorProps, 'useRouter'>) => (
       <MultiEmployeeSelector {...props} useRouter={useRouter} />
     ),
+  },
+  Filters: {
+    title: 'Filters',
+    Component: Filters,
   },
 });

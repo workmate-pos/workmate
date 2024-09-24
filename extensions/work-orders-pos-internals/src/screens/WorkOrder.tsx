@@ -344,7 +344,8 @@ function WorkOrderProperties({
     });
   };
 
-  const canSelectCompany = storeProperties && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
+  const canSelectCompany =
+    storeProperties && !!storeProperties.plan && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
 
   return (
     <ResponsiveGrid columns={4} grow>
