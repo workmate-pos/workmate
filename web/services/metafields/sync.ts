@@ -7,15 +7,11 @@ import { httpError } from '../../util/http-error.js';
 import { hasNestedPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { unit } from '../db/unit-of-work.js';
-import { runTask } from '../task/task.js';
+import { runLongRunningTask } from '../long-running-task/long-running-task.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 
 const METAFIELD_DEFINITION_BATCH_SIZE = 100;
 const METAFIELD_BATCH_SIZE = 100;
-
-// TODO: Automatic syncing through webhook
-// -> if already synced, make sure to update it every time
-// -> if not synced yet, check if it has a relevant metafield, adn then sync
 
 export function getSyncProductOrVariantMetafieldsTaskName(shop: string, type: 'product' | 'variant') {
   return `${shop}-${type}-metafields-sync`;
@@ -24,7 +20,7 @@ export function getSyncProductOrVariantMetafieldsTaskName(shop: string, type: 'p
 export async function syncProductOrVariantMetafields(session: Session, type: 'product' | 'variant') {
   const name = getSyncProductOrVariantMetafieldsTaskName(session.shop, type);
 
-  return await runTask(name, async ({ updateProgress }) => {
+  return await runLongRunningTask(name, async ({ updateProgress }) => {
     const { shop } = session;
     const graphql = new Graphql(session);
 
@@ -121,8 +117,6 @@ export async function syncProductOrVariantMetafields(session: Session, type: 'pr
     await ensureProductVariantsExist(session, productVariantIds);
   });
 }
-
-// TODO: Sync these in product/variant sync too
 
 export async function doesProductHaveSyncableMetafields(session: Session, productId: ID) {
   const { scanner } = await getShopSettings(session.shop);

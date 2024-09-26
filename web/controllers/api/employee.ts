@@ -31,6 +31,7 @@ export default class EmployeeController {
       employee: {
         ...user.staffMember,
         ...user.user,
+        staffMemberId: user.staffMember.id,
         rate: (user.user.rate ?? defaultRate) as Money,
         isDefaultRate: user.user.rate === null || user.user.rate === undefined,
         intercomUser: intercom.getUser(session.shop, user.staffMember.id),
@@ -159,6 +160,7 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
     return {
       ...staffMember,
       ...employee,
+      staffMemberId: staffMember.id,
       rate,
       isDefaultRate,
     };

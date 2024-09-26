@@ -1,0 +1,34 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "query": {
+      "type": "string"
+    },
+    "staffMemberId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "sortMode": {
+      "type": "string",
+      "enum": ["done", "deadline", "estimated-time-minutes", "name", "created-at", "updated-at"]
+    },
+    "sortOrder": {
+      "type": "string",
+      "enum": ["ascending", "descending"]
+    },
+    "done": {
+      "type": "boolean"
+    }
+  },
+  "required": ["limit", "offset"],
+  "additionalProperties": false
+}

@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "available": {
+      "type": "boolean"
+    },
+    "start": {
+      "$ref": "scalars.json#/definitions/DateTime"
+    },
+    "end": {
+      "$ref": "scalars.json#/definitions/DateTime"
+    },
+    "staffMemberId": {
+      "$ref": "scalars.json#/definitions/ID"
+    }
+  },
+  "required": ["available", "staffMemberId", "start", "end"],
+  "additionalProperties": false
+}
