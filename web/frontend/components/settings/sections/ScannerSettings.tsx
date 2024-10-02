@@ -103,7 +103,7 @@ export function ScannerSettings({
         </Text>
         <Text as="p" variant="bodyMd" tone="subdued">
           The WorkMate scanner allows you to scan products using more than just their barcodes. You can scan products by
-          their SKU, tags, or by product and product variant metafields.
+          their SKU, tags, or by product metafields.
         </Text>
       </BlockStack>
 
