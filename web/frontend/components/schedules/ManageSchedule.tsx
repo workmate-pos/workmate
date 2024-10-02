@@ -79,12 +79,12 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
     { placeholderData: keepPreviousData },
   );
   const scheduleQuery = useScheduleQuery({ fetch, id });
-  const ScheduleEventsQuery = useScheduleEventsQuery(
+  const scheduleEventsQuery = useScheduleEventsQuery(
     { fetch, id, filters: { from, to, staffMemberId } },
     { placeholderData: keepPreviousData },
   );
   const staffMemberQuery = useEmployeeQuery({ fetch, id: staffMemberId ?? null });
-  const ScheduleEventMutation = useScheduleEventMutation({ fetch });
+  const scheduleEventMutation = useScheduleEventMutation({ fetch });
   const deleteScheduleEventMutation = useDeleteScheduleEventMutation({ fetch });
 
   const queryClient = useQueryClient();
@@ -156,8 +156,8 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
         </InlineStack>
       }
     >
-      {([availabilitiesQuery, scheduleQuery, ScheduleEventsQuery].some(query => query.isLoading) ||
-        [ScheduleEventMutation, deleteScheduleEventMutation].some(mutation => mutation.isPending) ||
+      {([availabilitiesQuery, scheduleQuery, scheduleEventsQuery].some(query => query.isLoading) ||
+        [scheduleEventMutation, deleteScheduleEventMutation].some(mutation => mutation.isPending) ||
         isMutatingScheduleEvent) && <Loading />}
 
       <BlockStack gap={'050'}>
@@ -176,16 +176,16 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
           </Banner>
         )}
 
-        {ScheduleEventsQuery.isError && (
+        {scheduleEventsQuery.isError && (
           <Banner tone="critical" title="Error loading schedule items">
-            {extractErrorMessage(ScheduleEventsQuery.error, 'An error occurred while loading the schedule items')}
+            {extractErrorMessage(scheduleEventsQuery.error, 'An error occurred while loading the schedule items')}
           </Banner>
         )}
 
-        {ScheduleEventMutation.isError && (
+        {scheduleEventMutation.isError && (
           <Banner tone="critical" title="Error adding task to schedule">
             {extractErrorMessage(
-              ScheduleEventMutation.error,
+              scheduleEventMutation.error,
               'An error occurred while adding the task to the schedule',
             )}
           </Banner>
@@ -217,7 +217,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                 jsEvent.preventDefault();
 
                 if (element.event.id) {
-                  setItemIdToEdit(Number(element.event.id));
+                  setItemIdToEdit(current => current ?? Number(element.event.id));
                   setShouldShowDeleteScheduleEventModal(true);
                 }
               });
@@ -240,7 +240,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                   })) ?? [])
                 : []),
 
-              ...(ScheduleEventsQuery.data?.map(item => {
+              ...(scheduleEventsQuery.data?.map(item => {
                 // negative id is used for optimistic updates
                 const editable = item.id >= 0;
                 const colorOpacity = editable ? 'ff' : '77';
@@ -258,7 +258,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
             ]}
             selectable
             select={({ start, end }) => {
-              ScheduleEventMutation.mutate(
+              scheduleEventMutation.mutate(
                 {
                   itemId: null,
                   scheduleId: id,
@@ -272,7 +272,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                 },
                 {
                   onSuccess(item) {
-                    setItemIdToEdit(item.id);
+                    setItemIdToEdit(current => current ?? item.id);
                     setShouldShowEditScheduleEventModal(true);
                   },
                 },
@@ -284,11 +284,11 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
             eventStartEditable
             eventDurationEditable
             eventClick={({ event }) => {
-              setItemIdToEdit(Number(event.id));
+              setItemIdToEdit(current => current ?? Number(event.id));
               setShouldShowEditScheduleEventModal(true);
             }}
             eventChange={({ event }) => {
-              const item = ScheduleEventsQuery.data?.find(item => item.id.toString() === event.id);
+              const item = scheduleEventsQuery.data?.find(item => item.id.toString() === event.id);
 
               if (!item) {
                 return;
@@ -296,7 +296,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
               console.log('did change', item, item.taskIds);
 
-              ScheduleEventMutation.mutate({
+              scheduleEventMutation.mutate({
                 scheduleId: id,
                 itemId: item.id,
                 start: event.start ?? item.start,
@@ -446,7 +446,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                             <Button
                               variant="plain"
                               onClick={() =>
-                                ScheduleEventMutation.mutate({
+                                scheduleEventMutation.mutate({
                                   scheduleId: id,
                                   itemId: null,
                                   name: task.name,
@@ -493,14 +493,20 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
       <DeleteScheduleEventModal
         open={shouldShowDeleteScheduleEventModal}
-        onClose={() => setShouldShowDeleteScheduleEventModal(false)}
+        onClose={() => {
+          setItemIdToEdit(undefined);
+          setShouldShowDeleteScheduleEventModal(false);
+        }}
         scheduleId={id}
         itemId={itemIdToEdit}
       />
 
       <EditScheduleEventModal
         open={shouldShowEditScheduleEventModal}
-        onClose={() => setShouldShowEditScheduleEventModal(false)}
+        onClose={() => {
+          setItemIdToEdit(undefined);
+          setShouldShowEditScheduleEventModal(false);
+        }}
         scheduleId={id}
         itemId={itemIdToEdit}
       />
@@ -611,8 +617,7 @@ function EditScheduleEventModal({
   const [staffMemberIds, setStaffMemberIds] = useState<ID[]>([]);
   const [start, setStart] = useState(new Date());
   const [end, setEnd] = useState(new Date());
-  // TODO: Store hsv so hue picker works
-  const [color, setColor] = useState('#a0a0a0');
+  const [color, setColor] = useState(Color('#a0a0a0'));
   const [taskIds, setTaskIds] = useState<number[]>([]);
 
   const eventQuery = useScheduleEventQuery({ fetch, scheduleId, itemId: itemId ?? null }, { enabled: open });
@@ -627,14 +632,12 @@ function EditScheduleEventModal({
       setStaffMemberIds(eventQuery.data.assignedStaffMemberIds);
       setStart(eventQuery.data.start);
       setEnd(eventQuery.data.end);
-      setColor(eventQuery.data.color);
+      setColor(Color(eventQuery.data.color));
       setTaskIds(eventQuery.data.taskIds);
     }
   }, [eventQuery.data]);
 
   const [shouldShowStaffMemberSelector, setShouldShowStaffMemberSelector] = useState(false);
-
-  const parsedColor = Color(color);
 
   return (
     <>
@@ -658,7 +661,7 @@ function EditScheduleEventModal({
               staffMemberIds,
               start,
               end,
-              color,
+              color: color.hex(),
               taskIds,
             });
             onClose();
@@ -684,13 +687,11 @@ function EditScheduleEventModal({
 
             <ColorPicker
               color={{
-                hue: parsedColor.hue(),
-                saturation: parsedColor.saturationv() / 100,
-                brightness: parsedColor.value() / 100,
+                hue: color.hue(),
+                saturation: color.saturationv() / 100,
+                brightness: color.value() / 100,
               }}
-              onChange={color => {
-                setColor(Color.hsv(color.hue, color.saturation * 100, color.brightness * 100).hex());
-              }}
+              onChange={color => setColor(Color.hsv(color.hue, color.saturation * 100, color.brightness * 100))}
             />
 
             <DateTimeField label="Start" value={start} onChange={start => setStart(start)} requiredIndicator />

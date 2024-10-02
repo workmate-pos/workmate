@@ -237,34 +237,6 @@ export async function deleteSchedules(
   `;
 }
 
-/**
- * Publish a schedule right away if not scheduled yet.
- */
-export async function publishSchedule({ shop, id }: { shop: string; id: number }) {
-  const [schedule] = await sql<{
-    id: number;
-    shop: string;
-    name: string;
-    locationId: string | null;
-    publishedAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }>`
-    UPDATE "Schedule"
-    SET "publishedAt" = NOW()
-    WHERE shop = ${shop}
-      AND id = ${id}
-      AND "publishedAt" IS NULL
-    RETURNING *;
-  `;
-
-  if (!schedule) {
-    return null;
-  }
-
-  return mapSchedule(schedule);
-}
-
 export async function deleteSchedule({ shop, id }: { shop: string; id: number }) {
   await sql`
     DELETE
@@ -307,8 +279,8 @@ export async function getScheduleEvents({
     SELECT DISTINCT esi.*
     FROM "ScheduleEvent" esi
            INNER JOIN "Schedule" es ON es.id = esi."scheduleId"
-           LEFT JOIN "ScheduleEventAssignment" esia ON esia."ScheduleEventId" = esi.id
-           LEFT JOIN "ScheduleEventTask" esit ON esit."ScheduleEventId" = esi.id
+           LEFT JOIN "ScheduleEventAssignment" esia ON esia."scheduleEventId" = esi.id
+           LEFT JOIN "ScheduleEventTask" esit ON esit."scheduleEventId" = esi.id
     WHERE es.shop = ${shop}
       AND es.id = COALESCE(${scheduleId ?? null}, es.id)
       AND ("publishedAt" IS NOT NULL AND "publishedAt" <= NOW()) =
@@ -381,7 +353,7 @@ export async function insertScheduleEvent({
   end: Date;
   color: string;
 }) {
-  const ScheduleEvent = await sqlOne<{
+  const scheduleEvent = await sqlOne<{
     id: number;
     scheduleId: number;
     name: string;
@@ -397,7 +369,7 @@ export async function insertScheduleEvent({
     RETURNING *;
   `;
 
-  return mapScheduleEvent(ScheduleEvent);
+  return mapScheduleEvent(scheduleEvent);
 }
 
 export async function updateScheduleEvent({
@@ -417,7 +389,7 @@ export async function updateScheduleEvent({
   end: Date;
   color: string;
 }) {
-  const ScheduleEvent = await sqlOne<{
+  const scheduleEvent = await sqlOne<{
     id: number;
     scheduleId: number;
     name: string;
@@ -439,11 +411,11 @@ export async function updateScheduleEvent({
     RETURNING *;
   `;
 
-  if (!ScheduleEvent) {
+  if (!scheduleEvent) {
     throw new HttpError('Schedule item not found', 404);
   }
 
-  return mapScheduleEvent(ScheduleEvent);
+  return mapScheduleEvent(scheduleEvent);
 }
 
 export async function deleteScheduleEvent({ id, scheduleId }: { id?: number; scheduleId: number }) {
@@ -454,10 +426,10 @@ export async function deleteScheduleEvent({ id, scheduleId }: { id?: number; sch
                                AND "scheduleId" = ${scheduleId}),
          "DeleteAssignments" AS (
            DELETE FROM "ScheduleEventAssignment"
-             WHERE "ScheduleEventId" IN (SELECT id FROM "ItemsToDelete")),
+             WHERE "scheduleEventId" IN (SELECT id FROM "ItemsToDelete")),
          "DeleteTasks" AS (
            DELETE FROM "ScheduleEventTask"
-             WHERE "ScheduleEventId" IN (SELECT id FROM "ItemsToDelete"))
+             WHERE "scheduleEventId" IN (SELECT id FROM "ItemsToDelete"))
     DELETE
     FROM "ScheduleEvent"
     WHERE id IN (SELECT id FROM "ItemsToDelete")
@@ -472,25 +444,28 @@ export async function insertEmployeeAvailability({
   available,
   start,
   end,
+  description,
 }: {
   shop: string;
   staffMemberId: ID;
   available: boolean;
   start: Date;
   end: Date;
+  description: string;
 }) {
   const availability = await sqlOne<{
-    shop: string;
     id: number;
     staffMemberId: string;
     available: boolean;
+    shop: string;
     start: Date;
     end: Date;
     createdAt: Date;
     updatedAt: Date;
+    description: string;
   }>`
-    INSERT INTO "EmployeeAvailability" (shop, "staffMemberId", available, start, "end")
-    VALUES (${shop}, ${staffMemberId as string}, ${available}, ${start}, ${end})
+    INSERT INTO "EmployeeAvailability" (shop, "staffMemberId", available, start, "end", description)
+    VALUES (${shop}, ${staffMemberId as string}, ${available}, ${start}, ${end}, ${description})
     RETURNING *;
   `;
 
@@ -505,6 +480,7 @@ function mapEmployeeAvailability(availability: {
   end: Date;
   createdAt: Date;
   updatedAt: Date;
+  description: string;
 }) {
   const { staffMemberId } = availability;
 
@@ -528,28 +504,32 @@ export async function updateEmployeeAvailability({
   available,
   start,
   end,
+  description,
 }: {
   id: number;
   shop: string;
   staffMemberId: ID;
   available: boolean;
   start: Date;
+  description: string;
   end: Date;
 }) {
   const [availability] = await sql<{
-    shop: string;
     id: number;
     staffMemberId: string;
     available: boolean;
+    shop: string;
     start: Date;
     end: Date;
     createdAt: Date;
     updatedAt: Date;
+    description: string;
   }>`
     UPDATE "EmployeeAvailability"
-    SET available = ${available},
-        start     = ${start},
-        "end"     = ${end}
+    SET available   = ${available},
+        start       = ${start},
+        "end"       = ${end},
+        description = ${description}
     WHERE id = ${id}
       AND shop = ${shop}
       -- Staff member id cannot be updated
@@ -585,13 +565,14 @@ export async function deleteEmployeeAvailability({
 export async function getEmployeeAvailability({ shop, id }: { shop: string; id: number }) {
   const [availability] = await sql<{
     id: number;
-    shop: string;
     staffMemberId: string;
     available: boolean;
+    shop: string;
     start: Date;
     end: Date;
     createdAt: Date;
     updatedAt: Date;
+    description: string;
   }>`
     SELECT *
     FROM "EmployeeAvailability"
@@ -626,6 +607,7 @@ export async function getEmployeeAvailabilities({
     end: Date;
     createdAt: Date;
     updatedAt: Date;
+    description: string;
   }>`
     SELECT *
     FROM "EmployeeAvailability"
@@ -641,14 +623,14 @@ export async function getEmployeeAvailabilities({
 export async function getScheduleEventAssignments(ids: number[]) {
   const assignments = await sql<{
     id: number;
-    ScheduleEventId: number;
+    scheduleEventId: number;
     staffMemberId: string;
     createdAt: Date;
     updatedAt: Date;
   }>`
     SELECT *
     FROM "ScheduleEventAssignment" esia
-    WHERE esia."ScheduleEventId" = ANY (${ids} :: int[]);
+    WHERE esia."scheduleEventId" = ANY (${ids} :: int[]);
   `;
 
   return assignments.map(mapScheduleEventAssignment);
@@ -656,7 +638,7 @@ export async function getScheduleEventAssignments(ids: number[]) {
 
 function mapScheduleEventAssignment(assignment: {
   id: number;
-  ScheduleEventId: number;
+  scheduleEventId: number;
   staffMemberId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -676,17 +658,17 @@ function mapScheduleEventAssignment(assignment: {
   }
 }
 
-export async function deleteScheduleEventAssignments({ ScheduleEventId }: { ScheduleEventId: number }) {
+export async function deleteScheduleEventAssignments({ scheduleEventId }: { scheduleEventId: number }) {
   await sql`
     DELETE
     FROM "ScheduleEventAssignment"
-    WHERE "ScheduleEventId" = ${ScheduleEventId};
+    WHERE "scheduleEventId" = ${scheduleEventId};
   `;
 }
 
 export async function insertScheduleEventAssignments(
   assignments: {
-    ScheduleEventId: number;
+    scheduleEventId: number;
     staffMemberId: ID;
   }[],
 ) {
@@ -694,19 +676,19 @@ export async function insertScheduleEventAssignments(
     return [];
   }
 
-  const { ScheduleEventId, staffMemberId } = nest(assignments);
+  const { scheduleEventId, staffMemberId } = nest(assignments);
 
   const result = await sql<{
     id: number;
-    ScheduleEventId: number;
+    scheduleEventId: number;
     staffMemberId: string;
     createdAt: Date;
     updatedAt: Date;
   }>`
-    INSERT INTO "ScheduleEventAssignment" ("ScheduleEventId", "staffMemberId")
+    INSERT INTO "ScheduleEventAssignment" ("scheduleEventId", "staffMemberId")
     SELECT *
     FROM UNNEST(
-      ${ScheduleEventId} :: int[],
+      ${scheduleEventId} :: int[],
       ${staffMemberId as string[]} :: text[]
          )
     RETURNING *;
@@ -715,11 +697,11 @@ export async function insertScheduleEventAssignments(
   return result.map(mapScheduleEventAssignment);
 }
 
-export async function deleteScheduleEventTasks({ ScheduleEventId }: { ScheduleEventId: number }) {
+export async function deleteScheduleEventTasks({ scheduleEventId }: { scheduleEventId: number }) {
   await sql`
     DELETE
     FROM "ScheduleEventTask"
-    WHERE "ScheduleEventId" = ${ScheduleEventId};
+    WHERE "scheduleEventId" = ${scheduleEventId};
   `;
 }
 
@@ -735,8 +717,8 @@ export async function insertScheduleEventTasks(
 
   const { itemId, taskId } = nest(links);
 
-  return await sql<{ id: number; ScheduleEventId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
-    INSERT INTO "ScheduleEventTask" ("ScheduleEventId", "taskId")
+  return await sql<{ id: number; scheduleEventId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
+    INSERT INTO "ScheduleEventTask" ("scheduleEventId", "taskId")
     SELECT *
     FROM UNNEST(
       ${itemId} :: int[],
@@ -751,9 +733,9 @@ export async function getScheduleEventTasks(ids: number[]) {
     return [];
   }
 
-  return await sql<{ id: number; ScheduleEventId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
+  return await sql<{ id: number; scheduleEventId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
     SELECT DISTINCT *
     FROM "ScheduleEventTask"
-    WHERE "ScheduleEventId" = ANY (${ids} :: int[]);
+    WHERE "scheduleEventId" = ANY (${ids} :: int[]);
   `;
 }

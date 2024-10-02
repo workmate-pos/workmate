@@ -1000,15 +1000,15 @@ model ScheduleEvent {
 model ScheduleEventAssignment {
   id Int @id @default(autoincrement())
 
-  scheduleItemId Int
-  scheduleItem   ScheduleEvent @relation(fields: [scheduleItemId], references: [id])
+  scheduleEventId Int
+  scheduleEvent   ScheduleEvent @relation(fields: [scheduleEventId], references: [id])
 
   staffMemberId String
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  @@index([scheduleItemId, staffMemberId])
+  @@index([scheduleEventId, staffMemberId])
   @@index([staffMemberId])
 }
 
@@ -1017,8 +1017,8 @@ model ScheduleEventAssignment {
 model ScheduleEventTask {
   id Int @id @default(autoincrement())
 
-  scheduleItemId Int
-  scheduleItem   ScheduleEvent @relation(fields: [scheduleItemId], references: [id])
+  scheduleEventId Int
+  scheduleEvent   ScheduleEvent @relation(fields: [scheduleEventId], references: [id])
 
   taskId Int
   task   Task @relation(fields: [taskId], references: [id])
@@ -1026,7 +1026,7 @@ model ScheduleEventTask {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  @@index([scheduleItemId, taskId])
+  @@index([scheduleEventId, taskId])
   @@index([taskId])
 }
 
@@ -1057,7 +1057,7 @@ model Task {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   assignments    TaskAssignment[]
-  scheduleItems  ScheduleEventTask[]
+  scheduleEvents  ScheduleEventTask[]
   workOrders     TaskWorkOrderLink[]
   purchaseOrders TaskPurchaseOrderLink[]
   specialOrders  TaskSpecialOrderLink[]
@@ -1189,7 +1189,7 @@ model Schedule {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  scheduleItems ScheduleEvent[]
+  scheduleEvents ScheduleEvent[]
 
   @@index([shop, id])
   @@index([shop, locationId])

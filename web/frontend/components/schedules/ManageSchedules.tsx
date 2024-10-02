@@ -109,9 +109,10 @@ export function ScheduleList({ setScheduleId }: { setScheduleId: (id: number) =>
           {
             title: 'Name',
           },
-          {
-            title: 'Location',
-          },
+          // Not needed for now
+          // {
+          //   title: 'Location',
+          // },
           {
             title: 'Publication Status',
           },
@@ -158,15 +159,15 @@ export function ScheduleList({ setScheduleId }: { setScheduleId: (id: number) =>
           >
             <IndexTable.Cell>{schedule.name}</IndexTable.Cell>
 
-            <IndexTable.Cell>
-              {schedule.locationId ? (
-                locationQueries[schedule.locationId]?.data?.name
-              ) : (
-                <Text as="p" numeric>
-                  &mdash;
-                </Text>
-              )}
-            </IndexTable.Cell>
+            {/*<IndexTable.Cell>*/}
+            {/*  {schedule.locationId ? (*/}
+            {/*    locationQueries[schedule.locationId]?.data?.name*/}
+            {/*  ) : (*/}
+            {/*    <Text as="p" numeric>*/}
+            {/*      &mdash;*/}
+            {/*    </Text>*/}
+            {/*  )}*/}
+            {/*</IndexTable.Cell>*/}
 
             <IndexTable.Cell>
               {!schedule.publishedAt && <Badge tone="info">Draft</Badge>}

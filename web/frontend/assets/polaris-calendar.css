@@ -48,3 +48,8 @@
   --fc-list-event-dot-width: 8px;
   --fc-list-event-hover-bg-color: #f9fafb;
 }
+
+.fc-event-description {
+  font-size: 0.9em;
+  color: #eeeeee;
+}

@@ -55,7 +55,7 @@ export const useEmployeeAvailabilityMutation = (
       let fakeId: number | null = null;
       const id = availability.id ?? (fakeId = -fakeIdSeq++);
 
-      const { available, staffMemberId, end, start } = availability;
+      const { available, staffMemberId, end, start, description } = availability;
       const data: UseQueryData<typeof useEmployeeAvailabilityQuery> | undefined = {
         createdAt: new Date(),
         ...currentAvailability,
@@ -65,6 +65,7 @@ export const useEmployeeAvailabilityMutation = (
         staffMemberId,
         end,
         start,
+        description,
       };
 
       queryClient.cancelQueries({ queryKey: ['employee-availability', id] });

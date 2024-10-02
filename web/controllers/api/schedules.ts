@@ -132,7 +132,7 @@ export default class SchedulesController {
       items: items.map(item =>
         mapScheduleEvent(
           item,
-          assignments.filter(assignment => assignment.ScheduleEventId === item.id),
+          assignments.filter(assignment => assignment.scheduleEventId === item.id),
           tasks,
         ),
       ),
@@ -275,7 +275,7 @@ export default class SchedulesController {
     res: Response<GetAvailabilityResponse>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
-    const { staffMemberId, start, end, available } = req.body;
+    const { staffMemberId, start, end, available, description } = req.body;
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     if (
@@ -292,6 +292,7 @@ export default class SchedulesController {
       start: new Date(start),
       end: new Date(end),
       available,
+      description,
     });
 
     return res.json(mapEmployeeAvailability(availability));
@@ -305,7 +306,7 @@ export default class SchedulesController {
   ) {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
-    const { staffMemberId, start, end, available } = req.body;
+    const { staffMemberId, start, end, available, description } = req.body;
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     if (
@@ -323,6 +324,7 @@ export default class SchedulesController {
       start: new Date(start),
       end: new Date(end),
       available,
+      description,
     });
 
     return res.json(mapEmployeeAvailability(availability));
@@ -421,7 +423,7 @@ export default class SchedulesController {
 
       const [assignments, tasks] = await Promise.all([
         insertScheduleEventAssignments(
-          staffMemberIds.map(staffMemberId => ({ ScheduleEventId: item.id, staffMemberId })),
+          staffMemberIds.map(staffMemberId => ({ scheduleEventId: item.id, staffMemberId })),
         ),
         insertScheduleEventTasks(taskIds.map(taskId => ({ itemId: item.id, taskId }))),
       ]);
@@ -461,13 +463,13 @@ export default class SchedulesController {
           end: new Date(end),
           color,
         }),
-        deleteScheduleEventAssignments({ ScheduleEventId: Number(itemId) }),
-        deleteScheduleEventTasks({ ScheduleEventId: Number(itemId) }),
+        deleteScheduleEventAssignments({ scheduleEventId: Number(itemId) }),
+        deleteScheduleEventTasks({ scheduleEventId: Number(itemId) }),
       ]);
 
       const [assignments, tasks] = await Promise.all([
         insertScheduleEventAssignments(
-          staffMemberIds.map(staffMemberId => ({ ScheduleEventId: Number(itemId), staffMemberId })),
+          staffMemberIds.map(staffMemberId => ({ scheduleEventId: Number(itemId), staffMemberId })),
         ),
 
         insertScheduleEventTasks(taskIds.map(taskId => ({ itemId: Number(itemId), taskId }))),

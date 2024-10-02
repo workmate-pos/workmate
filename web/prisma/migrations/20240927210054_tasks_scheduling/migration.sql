@@ -66,11 +66,11 @@ CREATE TABLE "ScheduleEvent"
 -- CreateTable
 CREATE TABLE "ScheduleEventAssignment"
 (
-  "id"             SERIAL         NOT NULL,
-  "scheduleItemId" INTEGER        NOT NULL,
-  "staffMemberId"  TEXT           NOT NULL,
-  "createdAt"      TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt"      TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "id"              SERIAL         NOT NULL,
+  "scheduleEventId" INTEGER        NOT NULL,
+  "staffMemberId"   TEXT           NOT NULL,
+  "createdAt"       TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"       TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT "ScheduleEventAssignment_pkey" PRIMARY KEY ("id")
 );
@@ -78,11 +78,11 @@ CREATE TABLE "ScheduleEventAssignment"
 -- CreateTable
 CREATE TABLE "ScheduleEventTask"
 (
-  "id"             SERIAL         NOT NULL,
-  "scheduleItemId" INTEGER        NOT NULL,
-  "taskId"         INTEGER        NOT NULL,
-  "createdAt"      TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "updatedAt"      TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "id"              SERIAL         NOT NULL,
+  "scheduleEventId" INTEGER        NOT NULL,
+  "taskId"          INTEGER        NOT NULL,
+  "createdAt"       TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt"       TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT "ScheduleEventTask_pkey" PRIMARY KEY ("id")
 );
@@ -189,7 +189,7 @@ CREATE TABLE "Schedule"
 CREATE UNIQUE INDEX "LongRunningTask_name_key" ON "LongRunningTask" ("name");
 
 -- CreateIndex
-CREATE INDEX "ScheduleEventAssignment_scheduleItemId_staffMemberId_idx" ON "ScheduleEventAssignment" ("scheduleItemId", "staffMemberId");
+CREATE INDEX "ScheduleEventAssignment_scheduleEventId_staffMemberId_idx" ON "ScheduleEventAssignment" ("scheduleEventId", "staffMemberId");
 
 -- CreateIndex
 CREATE INDEX "ScheduleEventAssignment_staffMemberId_idx" ON "ScheduleEventAssignment" ("staffMemberId");
@@ -225,7 +225,7 @@ CREATE INDEX "TaskAssignment_staffMemberId_idx" ON "TaskAssignment" ("staffMembe
 CREATE INDEX "Task_shop_idx" ON "Task" ("shop");
 
 -- CreateIndex
-CREATE INDEX "ScheduleEventTask_scheduleItemId_taskId_idx" ON "ScheduleEventTask" ("scheduleItemId", "taskId");
+CREATE INDEX "ScheduleEventTask_scheduleEventId_taskId_idx" ON "ScheduleEventTask" ("scheduleEventId", "taskId");
 
 -- CreateIndex
 CREATE INDEX "ScheduleEventTask_taskId_idx" ON "ScheduleEventTask" ("taskId");
@@ -241,7 +241,7 @@ CREATE INDEX "Schedule_shop_publishedAt_idx" ON "Schedule" ("shop", "publishedAt
 
 -- AddForeignKey
 ALTER TABLE "ScheduleEventAssignment"
-  ADD CONSTRAINT "ScheduleEventAssignment_scheduleItemId_fkey" FOREIGN KEY ("scheduleItemId") REFERENCES "ScheduleEvent" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  ADD CONSTRAINT "ScheduleEventAssignment_scheduleEventId_fkey" FOREIGN KEY ("scheduleEventId") REFERENCES "ScheduleEvent" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ScheduleEvent"
@@ -249,7 +249,7 @@ ALTER TABLE "ScheduleEvent"
 
 -- AddForeignKey
 ALTER TABLE "ScheduleEventTask"
-  ADD CONSTRAINT "ScheduleEventTask_scheduleItemId_fkey" FOREIGN KEY ("scheduleItemId") REFERENCES "ScheduleEvent" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+  ADD CONSTRAINT "ScheduleEventTask_scheduleEventId_fkey" FOREIGN KEY ("scheduleEventId") REFERENCES "ScheduleEvent" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ScheduleEventTask"

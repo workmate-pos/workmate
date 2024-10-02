@@ -79,7 +79,7 @@ export async function getScheduleEventTasks({
     SELECT t.*
     FROM "ScheduleEvent" esi
            INNER JOIN "Schedule" es ON es.id = esi."scheduleId"
-           INNER JOIN "ScheduleEventTask" esit ON esit."ScheduleEventId" = esi.id
+           INNER JOIN "ScheduleEventTask" esit ON esit."scheduleEventId" = esi.id
            INNER JOIN "Task" t ON t.id = esit."taskId"
     WHERE esi."scheduleId" = ${scheduleId}
       AND esi.id = ${itemId}

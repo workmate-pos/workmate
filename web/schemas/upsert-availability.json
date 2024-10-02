@@ -11,10 +11,13 @@
     "end": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
+    "description": {
+      "type": "string"
+    },
     "staffMemberId": {
       "$ref": "scalars.json#/definitions/ID"
     }
   },
-  "required": ["available", "staffMemberId", "start", "end"],
+  "required": ["available", "staffMemberId", "description", "start", "end"],
   "additionalProperties": false
 }
