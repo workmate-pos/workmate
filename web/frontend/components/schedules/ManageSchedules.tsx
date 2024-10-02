@@ -14,7 +14,6 @@ import {
   IndexTable,
   InlineStack,
   Modal,
-  Select,
   Text,
   TextField,
   useIndexResourceState,
@@ -26,16 +25,25 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
 import { Schedule } from '@web/services/schedules/queries.js';
-import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
-import { useBulkScheduleMutation } from '@work-orders/common/queries/use-bulk-schedule-mutation.js';
-import { DateTime } from '@web/schemas/generated/bulk-upsert-schedules.js';
 import { useBulkDeleteScheduleMutation } from '@work-orders/common/queries/use-bulk-delete-schedule-mutation.js';
 import { ManageSchedule } from '@web/frontend/components/schedules/ManageSchedule.js';
 import { useScheduleMutation } from '@work-orders/common/queries/use-schedule-mutation.js';
 import { UpdatePublicationStatusModal } from '@web/frontend/components/schedules/modals/UpdatePublicationStatusModal.js';
+import { useSearchParams } from 'react-router-dom';
 
 export function ManageSchedules() {
-  const [id, setId] = useState<number>();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const id =
+    searchParams.has('id') && Number.isFinite(Number(searchParams.get('id')))
+      ? Number(searchParams.get('id'))
+      : undefined;
+  const setId = (id: number | undefined) =>
+    setSearchParams(current => {
+      const copy = new URLSearchParams(current);
+      if (id) copy.set('id', String(id));
+      else copy.delete('id');
+      return copy;
+    });
 
   if (id === undefined) {
     return <ScheduleList setScheduleId={setId} />;

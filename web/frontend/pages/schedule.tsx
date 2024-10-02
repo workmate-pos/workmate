@@ -11,41 +11,43 @@ import { YourSchedule } from '@web/frontend/components/schedules/YourSchedule.js
 import { ManageSchedules } from '@web/frontend/components/schedules/ManageSchedules.js';
 import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
 import { YourAvailability } from '@web/frontend/components/schedules/YourAvailability.js';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
+import { useSearchParams } from 'react-router-dom';
 
 export default function Schedule() {
   // schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
 
   const [selectedItem, setSelectedItem] = useState<SelectedItem>();
 
-  // TODO: Filter options (by employee, draft, normal, etc)
-  // TODO: Creating new events
-  // TODO: Drag and drop
-  // TODO: Editing events
-  // TODO: Timeline view by employee
-  // TODO: Creating,editing tasks
-  /// TODO: Publising schedules
-
-  // TODO: Only schedule with right permissions
+  const fetch = useAuthenticatedFetch({ setToastAction: () => {} });
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+  const canManageSchedules =
+    currentEmployeeQuery.data?.superuser || currentEmployeeQuery.data?.permissions?.includes('manage_schedules');
 
   const tabs = [
     {
       id: 'your-schedule',
       content: 'Your Schedule',
       tab: <YourSchedule />,
+      hidden: false,
     },
     {
       id: 'your-availability',
       content: 'Your Availability',
       tab: <YourAvailability />,
+      hidden: false,
     },
     {
       id: 'manage-schedules',
       content: 'Manage Schedules',
       tab: <ManageSchedules />,
+      hidden: !canManageSchedules,
     },
-  ] as const satisfies (Omit<TabProps, 'selected'> & { tab: ReactNode })[];
+  ] as const satisfies (Omit<TabProps, 'selected'> & { hidden: boolean; tab: ReactNode })[];
 
-  const [selectedTab, setSelectedTab] = useState<(typeof tabs)[number]['id']>('your-schedule');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedTab = searchParams.get('tab') ?? tabs[0].id;
+  const setSelectedTab = (tab: (typeof tabs)[number]['id']) => setSearchParams({ tab });
 
   return (
     <Frame>
@@ -53,12 +55,17 @@ export default function Schedule() {
         <Card padding={'100'}>
           <Tabs
             fitted
-            tabs={tabs.map(tab => ({
-              ...tab,
-              selected: tab.id === selectedTab,
-              onAction: () => setSelectedTab(tab.id),
-            }))}
-            selected={tabs.findIndex(tab => tab.id === selectedTab)}
+            tabs={tabs
+              .filter(tab => !tab.hidden)
+              .map(tab => ({
+                ...tab,
+                selected: tab.id === selectedTab,
+                onAction: () => setSelectedTab(tab.id),
+              }))}
+            selected={Math.max(
+              0,
+              tabs.findIndex(tab => tab.id === selectedTab),
+            )}
           />
 
           <Box paddingBlock={'800'} paddingInline={'400'}>
@@ -72,7 +79,7 @@ export default function Schedule() {
   );
 }
 
-type SelectedItem = { scheduleId: number; itemId: number };
+type SelectedItem = { scheduleId: number; eventId: number };
 
 function ScheduleEventModal({
   selectedItem,
@@ -89,7 +96,7 @@ function ScheduleEventModal({
   const eventQuery = useScheduleEventQuery({
     fetch,
     scheduleId: selectedItem?.scheduleId ?? null,
-    itemId: selectedItem?.itemId ?? null,
+    eventId: selectedItem?.eventId ?? null,
   });
 
   useEffect(() => {
@@ -131,12 +138,12 @@ function ScheduleEventModal({
           loading: eventMutation.isPending,
           onAction: () => {
             if (!selectedItem || !item) return;
-            const { scheduleId, itemId } = selectedItem;
-            if (!scheduleId || !itemId) return;
+            const { scheduleId, eventId } = selectedItem;
+            if (!scheduleId || !eventId) return;
 
             eventMutation.mutate({
               scheduleId,
-              itemId,
+              eventId,
               name: item.name,
               description: item.description,
               staffMemberIds: item.assignedStaffMemberIds,

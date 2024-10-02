@@ -29,6 +29,7 @@ export function DateModal({
   return (
     <Modal open={open} title={'Select Date'} onClose={onClose} sectioned>
       <DatePicker
+        weekStartsOn={1}
         month={datePickerMonth}
         year={datePickerYear}
         onMonthChange={(month, year) => {

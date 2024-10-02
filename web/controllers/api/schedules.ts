@@ -58,7 +58,7 @@ import * as taskQueries from '../../services/tasks/queries.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 // TODO: Add to MANAGE_SCHEDULES permission to schedlue changing shit
-// TODO: Bug when you move items where they are assigned to every task
+// TODO: Bug when you move events where they are assigned to every task
 
 @Authenticated()
 // Add permission middleware so we can access res.locals.teifi.user
@@ -87,7 +87,7 @@ export default class SchedulesController {
     });
   }
 
-  @Get('/:id/items')
+  @Get('/:id/events')
   @QuerySchema('schedule-events-options')
   async getItemsFromTo(
     req: Request<{ id: string }, unknown, unknown, ScheduleEventsOptions>,
@@ -113,7 +113,7 @@ export default class SchedulesController {
 
     const { shop }: Session = res.locals.shopify.session;
 
-    const items = await getScheduleEvents({
+    const events = await getScheduleEvents({
       shop,
       from,
       to,
@@ -123,61 +123,62 @@ export default class SchedulesController {
       scheduleId: id === 'all' ? undefined : Number(id),
     });
 
+    // TODO: Fix tasks - incorrect numbers
     const [assignments, tasks] = await Promise.all([
-      getScheduleEventAssignments(items.map(item => item.id)),
-      getScheduleEventTasks(items.map(item => item.id)),
+      getScheduleEventAssignments(events.map(event => event.id)),
+      getScheduleEventTasks(events.map(event => event.id)),
     ]);
 
-    return res.json({
-      items: items.map(item =>
+    return res.json(
+      events.map(event =>
         mapScheduleEvent(
-          item,
-          assignments.filter(assignment => assignment.scheduleEventId === item.id),
-          tasks,
+          event,
+          assignments.filter(assignment => assignment.scheduleEventId === event.id),
+          tasks.filter(task => task.scheduleEventId === event.id),
         ),
       ),
-    });
+    );
   }
 
-  @Get('/:scheduleId/items/:itemId')
+  @Get('/:scheduleId/events/:eventId')
   async getScheduleEvent(
-    req: Request<{ scheduleId: string; itemId: string }>,
+    req: Request<{ scheduleId: string; eventId: string }>,
     res: Response<GetScheduleEventResponse>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
-    const { scheduleId, itemId } = req.params;
+    const { scheduleId, eventId } = req.params;
 
-    const [schedule, item, assignments, tasks] = await Promise.all([
+    const [schedule, event, assignments, tasks] = await Promise.all([
       getSchedule({ shop, id: Number(scheduleId) }),
-      getScheduleEvent({ id: Number(itemId), scheduleId: Number(scheduleId) }),
-      getScheduleEventAssignments([Number(itemId)]),
-      getScheduleEventTasks([Number(itemId)]),
+      getScheduleEvent({ id: Number(eventId), scheduleId: Number(scheduleId) }),
+      getScheduleEventAssignments([Number(eventId)]),
+      getScheduleEventTasks([Number(eventId)]),
     ]);
 
     if (!schedule) {
       throw new HttpError('Schedule not found', 404);
     }
 
-    if (!item) {
-      throw new HttpError('Schedule item not found', 404);
+    if (!event) {
+      throw new HttpError('Schedule event not found', 404);
     }
 
-    return res.json(mapScheduleEvent(item, assignments, tasks));
+    return res.json(mapScheduleEvent(event, assignments, tasks));
   }
 
-  @Get('/:scheduleId/items/:itemId/tasks')
+  @Get('/:scheduleId/events/:eventId/tasks')
   async getScheduleEventTasks(
-    req: Request<{ scheduleId: string; itemId: string }>,
+    req: Request<{ scheduleId: string; eventId: string }>,
     res: Response<GetScheduleEventTasksResponse>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
-    const { scheduleId, itemId } = req.params;
+    const { scheduleId, eventId } = req.params;
 
     // TODO: Unify this query with schedules/queries.js
     const tasks = await taskQueries.getScheduleEventTasks({
       shop,
       scheduleId: Number(scheduleId),
-      itemId: Number(itemId),
+      eventId: Number(eventId),
     });
 
     return res.json(tasks.map(mapTask));
@@ -391,7 +392,7 @@ export default class SchedulesController {
     return res.json(mapSchedule(schedule));
   }
 
-  @Post('/:id/items')
+  @Post('/:id/events')
   @BodySchema('upsert-schedule-event')
   async createScheduleEvent(
     req: Request<{ id: string }, unknown, UpsertScheduleEvent>,
@@ -412,7 +413,7 @@ export default class SchedulesController {
     }
 
     return await unit(async () => {
-      const item = await insertScheduleEvent({
+      const event = await insertScheduleEvent({
         scheduleId: Number(id),
         name,
         description,
@@ -423,23 +424,23 @@ export default class SchedulesController {
 
       const [assignments, tasks] = await Promise.all([
         insertScheduleEventAssignments(
-          staffMemberIds.map(staffMemberId => ({ scheduleEventId: item.id, staffMemberId })),
+          staffMemberIds.map(staffMemberId => ({ scheduleEventId: event.id, staffMemberId })),
         ),
-        insertScheduleEventTasks(taskIds.map(taskId => ({ itemId: item.id, taskId }))),
+        insertScheduleEventTasks(taskIds.map(taskId => ({ eventId: event.id, taskId }))),
       ]);
 
-      return res.json(mapScheduleEvent(item, assignments, tasks));
+      return res.json(mapScheduleEvent(event, assignments, tasks));
     });
   }
 
-  @Post('/:id/items/:itemId')
+  @Post('/:id/events/:eventId')
   @BodySchema('upsert-schedule-event')
   async upsertScheduleEvents(
-    req: Request<{ id: string; itemId: string }, unknown, UpsertScheduleEvent>,
+    req: Request<{ id: string; eventId: string }, unknown, UpsertScheduleEvent>,
     res: Response<GetScheduleEventResponse>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
-    const { id, itemId } = req.params;
+    const { id, eventId } = req.params;
     const { name, description, staffMemberIds, start, end, taskIds, color } = req.body;
 
     const [schedule, tasks] = await Promise.all([getSchedule({ shop, id: Number(id) }), getTasks(shop, taskIds)]);
@@ -453,9 +454,9 @@ export default class SchedulesController {
     }
 
     return await unit(async () => {
-      const [item] = await Promise.all([
+      const [event] = await Promise.all([
         updateScheduleEvent({
-          id: Number(itemId),
+          id: Number(eventId),
           scheduleId: Number(id),
           name,
           description,
@@ -463,19 +464,19 @@ export default class SchedulesController {
           end: new Date(end),
           color,
         }),
-        deleteScheduleEventAssignments({ scheduleEventId: Number(itemId) }),
-        deleteScheduleEventTasks({ scheduleEventId: Number(itemId) }),
+        deleteScheduleEventAssignments({ scheduleEventId: Number(eventId) }),
+        deleteScheduleEventTasks({ scheduleEventId: Number(eventId) }),
       ]);
 
       const [assignments, tasks] = await Promise.all([
         insertScheduleEventAssignments(
-          staffMemberIds.map(staffMemberId => ({ scheduleEventId: Number(itemId), staffMemberId })),
+          staffMemberIds.map(staffMemberId => ({ scheduleEventId: Number(eventId), staffMemberId })),
         ),
 
-        insertScheduleEventTasks(taskIds.map(taskId => ({ itemId: Number(itemId), taskId }))),
+        insertScheduleEventTasks(taskIds.map(taskId => ({ eventId: Number(eventId), taskId }))),
       ]);
 
-      return res.json(mapScheduleEvent(item, assignments, tasks));
+      return res.json(mapScheduleEvent(event, assignments, tasks));
     });
   }
 
@@ -496,10 +497,10 @@ export default class SchedulesController {
     return res.sendStatus(200);
   }
 
-  @Delete('/:id/items/:itemId')
-  async deleteScheduleEvent(req: Request<{ id: string; itemId: string }>, res: Response) {
+  @Delete('/:id/events/:eventId')
+  async deleteScheduleEvent(req: Request<{ id: string; eventId: string }>, res: Response) {
     const { shop }: Session = res.locals.shopify.session;
-    const { id, itemId } = req.params;
+    const { id, eventId } = req.params;
 
     const schedule = await getSchedule({ shop, id: Number(id) });
 
@@ -507,7 +508,7 @@ export default class SchedulesController {
       throw new HttpError('Schedule not found', 404);
     }
 
-    await deleteScheduleEvent({ id: Number(itemId), scheduleId: Number(id) });
+    await deleteScheduleEvent({ id: Number(eventId), scheduleId: Number(id) });
 
     return res.sendStatus(200);
   }
@@ -545,16 +546,16 @@ function mapSchedule(schedule: Schedule): ScheduleResponse {
 }
 
 function mapScheduleEvent(
-  item: ScheduleEvent,
+  event: ScheduleEvent,
   assignments: ScheduleEventAssignment[],
   tasks: ScheduleEventTask[],
 ): ScheduleEventResponse {
   return {
-    ...item,
-    start: item.start.toISOString() as DateTime,
-    end: item.end.toISOString() as DateTime,
-    createdAt: item.createdAt.toISOString() as DateTime,
-    updatedAt: item.updatedAt.toISOString() as DateTime,
+    ...event,
+    start: event.start.toISOString() as DateTime,
+    end: event.end.toISOString() as DateTime,
+    createdAt: event.createdAt.toISOString() as DateTime,
+    updatedAt: event.updatedAt.toISOString() as DateTime,
     assignedStaffMemberIds: unique(assignments.map(({ staffMemberId }) => staffMemberId)),
     taskIds: unique(tasks.map(({ taskId }) => taskId)),
   };
@@ -570,9 +571,7 @@ function mapEmployeeAvailability(availability: EmployeeAvailability): EmployeeAv
   };
 }
 
-export type GetScheduleEventsResponse = {
-  items: ScheduleEventResponse[];
-};
+export type GetScheduleEventsResponse = ScheduleEventResponse[];
 
 export type GetSchedulesResponse = {
   schedules: ScheduleResponse[];

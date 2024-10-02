@@ -255,7 +255,7 @@ function DeleteEmployeeAvailabilityModal({
         }}
       >
         <Modal.Section>
-          <Text as="p" variant="bodyMd" fontWeight="bold">
+          <Text as="p" variant="bodyMd">
             Are you sure you want to delete this availability?
           </Text>
         </Modal.Section>

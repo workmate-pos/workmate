@@ -2,7 +2,6 @@ import { sql, sqlOne } from '../db/sql-tag.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { TaskPaginationOptions } from '../../schemas/generated/task-pagination-options.js';
 import { escapeLike } from '../db/like.js';
-import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 
 export type Task = NonNullable<Awaited<ReturnType<typeof getTask>>>;
 
@@ -36,7 +35,7 @@ export async function getTasks(shop: string, ids: number[]) {
     return [];
   }
 
-  const tasks = await sql<{
+  return await sql<{
     id: number;
     shop: string;
     name: string;
@@ -52,18 +51,16 @@ export async function getTasks(shop: string, ids: number[]) {
     WHERE t.shop = ${shop}
       AND t.id = ANY (${ids} :: int[]);
   `;
-
-  return tasks;
 }
 
 export async function getScheduleEventTasks({
   shop,
   scheduleId,
-  itemId,
+  eventId,
 }: {
   shop: string;
   scheduleId: number;
-  itemId: number;
+  eventId: number;
 }) {
   return await sql<{
     id: number;
@@ -82,7 +79,7 @@ export async function getScheduleEventTasks({
            INNER JOIN "ScheduleEventTask" esit ON esit."scheduleEventId" = esi.id
            INNER JOIN "Task" t ON t.id = esit."taskId"
     WHERE esi."scheduleId" = ${scheduleId}
-      AND esi.id = ${itemId}
+      AND esi.id = ${eventId}
       AND es.shop = ${shop}
       AND t.shop = ${shop};
   `;

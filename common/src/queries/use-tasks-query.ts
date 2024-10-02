@@ -59,7 +59,7 @@ export const useTasksQuery = (
         hasNextPage,
       };
     },
-    select: ({ pages }) => pages.map(page => page.tasks),
+    select: ({ pages }) => ({ pages: pages.map(page => page.tasks) }),
     initialPageParam: 0,
     getNextPageParam: ({ hasNextPage }, pages) => (!hasNextPage ? undefined : pages.flatMap(x => x.tasks).length),
   });

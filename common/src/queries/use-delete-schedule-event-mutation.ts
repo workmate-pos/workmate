@@ -9,28 +9,28 @@ export const useDeleteScheduleEventMutation = ({ fetch }: { fetch: Fetch }) => {
 
   return useMutation({
     mutationKey: ['schedule-event'],
-    mutationFn: async ({ scheduleId, itemId }: { scheduleId: number; itemId: number }) => {
+    mutationFn: async ({ scheduleId, eventId }: { scheduleId: number; eventId: number }) => {
       const response = await fetch(
-        `/api/schedules/${encodeURIComponent(scheduleId)}/items/${encodeURIComponent(itemId)}`,
+        `/api/schedules/${encodeURIComponent(scheduleId)}/events/${encodeURIComponent(eventId)}`,
         { method: 'DELETE' },
       );
 
       if (!response.ok) {
-        throw new Error('Failed to delete employee schedule item');
+        throw new Error('Failed to delete employee schedule event');
       }
 
       return null;
     },
-    async onMutate(item, ...args) {
-      const currentItem = queryClient.getQueryData<UseQueryData<typeof useScheduleEventQuery>>([
+    async onMutate(event, ...args) {
+      const currentEvent = queryClient.getQueryData<UseQueryData<typeof useScheduleEventQuery>>([
         'schedule',
-        item.scheduleId,
-        'item',
-        item.itemId,
+        event.scheduleId,
+        'event',
+        event.eventId,
       ]);
 
       for (const [queryKey, queryData] of queryClient.getQueriesData<UseQueryData<typeof useScheduleEventsQuery>>({
-        queryKey: ['schedule', item.scheduleId, 'item', 'list'],
+        queryKey: ['schedule', event.scheduleId, 'event', 'list'],
       })) {
         if (!queryData) {
           continue;
@@ -39,20 +39,20 @@ export const useDeleteScheduleEventMutation = ({ fetch }: { fetch: Fetch }) => {
         queryClient.cancelQueries({ queryKey });
         queryClient.setQueryData<UseQueryData<typeof useScheduleEventsQuery>>(
           queryKey,
-          queryData.filter(({ id }) => id !== item.itemId),
+          queryData.filter(({ id }) => id !== event.eventId),
         );
       }
 
-      if (currentItem) {
-        queryClient.removeQueries({ queryKey: ['schedule', item.scheduleId, 'item', item.itemId] });
+      if (currentEvent) {
+        queryClient.removeQueries({ queryKey: ['schedule', event.scheduleId, 'event', event.eventId] });
       }
 
-      return currentItem;
+      return currentEvent;
     },
     async onError(_1, _2, previousValue) {
       if (previousValue) {
         queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
-          ['schedule', previousValue.scheduleId, 'item', previousValue.id],
+          ['schedule', previousValue.scheduleId, 'event', previousValue.id],
           previousValue,
         );
       }

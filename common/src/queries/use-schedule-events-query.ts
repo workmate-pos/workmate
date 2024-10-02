@@ -2,7 +2,7 @@ import { Fetch } from './fetch.js';
 import { QueryClient, skipToken, useQueries, useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { GetScheduleEventsResponse } from '@web/controllers/api/schedules.js';
 import { ScheduleEventsOptions } from '@web/schemas/generated/schedule-events-options.js';
-import { DetailedScheduleEvent, mapItem, useScheduleEventQuery } from './use-schedule-event-query.js';
+import { DetailedScheduleEvent, mapEvent, useScheduleEventQuery } from './use-schedule-event-query.js';
 import { UseQueryData } from './react-query.js';
 import { DateTime } from '@web/services/gql/queries/generated/schema.js';
 
@@ -28,7 +28,7 @@ export const useScheduleEventsQuery = (
   const queryClient = useQueryClient();
   return useQuery({
     ...options,
-    queryKey: ['schedule', id, 'item', 'list', filters],
+    queryKey: ['schedule', id, 'event', 'list', filters],
     queryFn: id === null ? skipToken : () => queryFn({ fetch, queryClient, filters, id }),
   });
 };
@@ -47,7 +47,7 @@ export const useScheduleEventQueries = ({
 
   return useQueries({
     queries: options.map(({ id, filters }) => ({
-      queryKey: ['schedule', id, 'item', 'list', filters],
+      queryKey: ['schedule', id, 'event', 'list', filters],
       queryFn: () => queryFn({ fetch, queryClient, filters, id }),
     })),
   });
@@ -71,22 +71,22 @@ async function queryFn({
   if (staffMemberId) searchParams.set('staffMemberId', staffMemberId);
   if (taskId) searchParams.set('taskId', String(taskId));
 
-  const response = await fetch(`/api/schedules/${encodeURIComponent(id)}/items?${searchParams.toString()}`);
+  const response = await fetch(`/api/schedules/${encodeURIComponent(id)}/events?${searchParams.toString()}`);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch employee schedule items');
+    throw new Error('Failed to fetch employee schedule events');
   }
 
-  const items: GetScheduleEventsResponse = await response.json();
+  const events: GetScheduleEventsResponse = await response.json();
 
-  for (const item of items.items) {
+  for (const event of events) {
     queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
-      ['schedule', id, 'item', item.id],
-      mapItem(item),
+      ['schedule', id, 'event', event.id],
+      mapEvent(event),
     );
   }
 
-  return items.items.map(mapItem);
+  return events.map(mapEvent);
 }
 
 export type ScheduleEventsFilters = Omit<ScheduleEventsOptions, 'from' | 'to'> & { from: Date; to: Date };

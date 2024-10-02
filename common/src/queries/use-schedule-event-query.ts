@@ -6,44 +6,44 @@ export const useScheduleEventQuery = (
   {
     fetch,
     scheduleId,
-    itemId,
+    eventId,
   }: {
     fetch: Fetch;
     scheduleId: number | null;
-    itemId: number | null;
+    eventId: number | null;
   },
   options?: Partial<UseQueryOptions<DetailedScheduleEvent, Error, DetailedScheduleEvent, (string | number | null)[]>>,
 ) =>
   useQuery({
     ...options,
-    queryKey: ['schedule', scheduleId, 'item', itemId],
+    queryKey: ['schedule', scheduleId, 'event', eventId],
     queryFn:
-      scheduleId === null || itemId === null
+      scheduleId === null || eventId === null
         ? skipToken
         : async () => {
             const response = await fetch(
-              `/api/schedules/${encodeURIComponent(scheduleId)}/items/${encodeURIComponent(itemId)}`,
+              `/api/schedules/${encodeURIComponent(scheduleId)}/events/${encodeURIComponent(eventId)}`,
             );
 
             if (!response.ok) {
-              throw new Error('Failed to fetch employee schedule item');
+              throw new Error('Failed to fetch employee schedule event');
             }
 
-            const item: GetScheduleEventResponse = await response.json();
-            return mapItem(item);
+            const event: GetScheduleEventResponse = await response.json();
+            return mapEvent(event);
           },
   });
 
-export type DetailedScheduleEvent = ReturnType<typeof mapItem>;
+export type DetailedScheduleEvent = ReturnType<typeof mapEvent>;
 
-export function mapItem(item: GetScheduleEventResponse) {
+export function mapEvent(event: GetScheduleEventResponse) {
   return {
-    ...item,
-    start: new Date(item.start),
-    end: new Date(item.end),
-    createdAt: new Date(item.createdAt),
-    updatedAt: new Date(item.updatedAt),
-    assignedStaffMemberIds: item.assignedStaffMemberIds,
-    taskIds: item.taskIds,
+    ...event,
+    start: new Date(event.start),
+    end: new Date(event.end),
+    createdAt: new Date(event.createdAt),
+    updatedAt: new Date(event.updatedAt),
+    assignedStaffMemberIds: event.assignedStaffMemberIds,
+    taskIds: event.taskIds,
   };
 }

@@ -50,11 +50,11 @@ export function DateTimeField({
       onClose={() => setActive(false)}
       preferredPosition="below"
       preferredAlignment="left"
-      preferInputActivator={false}
     >
       <Card>
         <BlockStack gap="200">
           <DatePicker
+            weekStartsOn={1}
             month={month}
             year={year}
             selected={value}

@@ -1,10 +1,18 @@
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { InfiniteData, useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { GetSchedulesResponse } from '@web/controllers/api/schedules.js';
 import { SchedulesPaginationOptions } from '@web/schemas/generated/schedules-pagination-options.js';
 import { Schedule } from '@web/services/schedules/queries.js';
 import { mapSchedule, useScheduleQuery } from './use-schedule-query.js';
 import { UseQueryData } from './react-query.js';
+
+export type UseSchedulesQueryQueryData = InfiniteData<
+  {
+    hasNextPage: boolean;
+    schedules: Schedule[];
+  },
+  number
+>;
 
 export const useSchedulesQuery = ({
   fetch,
@@ -32,22 +40,25 @@ export const useSchedulesQuery = ({
         throw new Error('Failed to fetch employee schedules');
       }
 
-      const result: GetSchedulesResponse = await response.json();
+      const { schedules, hasNextPage }: GetSchedulesResponse = await response.json();
 
-      for (const schedule of result.schedules) {
+      for (const schedule of schedules) {
         queryClient.setQueryData<UseQueryData<typeof useScheduleQuery>>(
           ['schedule', schedule.id],
           mapSchedule(schedule),
         );
       }
 
-      return result;
+      return {
+        schedules: schedules.map(mapSchedule),
+        hasNextPage,
+      };
     },
     initialPageParam: 0,
     getNextPageParam: (page, allPages) =>
       page.hasNextPage ? allPages.flatMap(page => page.schedules).length : undefined,
     select: data => ({
-      pages: data.pages.map(page => page.schedules.map<Schedule>(schedule => mapSchedule(schedule))),
+      pages: data.pages.map(page => page.schedules),
     }),
   });
 };

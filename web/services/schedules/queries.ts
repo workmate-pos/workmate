@@ -62,13 +62,13 @@ function mapSchedule(schedule: {
   createdAt: Date;
   updatedAt: Date;
 }) {
-  const { locationId } = schedule;
+  const { locationId, shop, ...rest } = schedule;
 
   try {
     assertGidOrNull(locationId);
 
     return {
-      ...schedule,
+      ...rest,
       locationId,
     };
   } catch (error) {
@@ -265,7 +265,7 @@ export async function getScheduleEvents({
 }) {
   const _staffMemberId: string | null = staffMemberId ?? null;
 
-  const items = await sql<{
+  const events = await sql<{
     id: number;
     scheduleId: number;
     name: string;
@@ -291,11 +291,11 @@ export async function getScheduleEvents({
       AND esit."taskId" IS NOT DISTINCT FROM COALESCE(${taskId ?? null}, esit."taskId");
   `;
 
-  return items.map(mapScheduleEvent);
+  return events.map(mapScheduleEvent);
 }
 
 export async function getScheduleEvent({ id, scheduleId }: { id: number; scheduleId: number }) {
-  const [item] = await sql<{
+  const [event] = await sql<{
     id: number;
     scheduleId: number;
     name: string;
@@ -312,14 +312,14 @@ export async function getScheduleEvent({ id, scheduleId }: { id: number; schedul
       AND "scheduleId" = ${scheduleId};
   `;
 
-  if (!item) {
+  if (!event) {
     return null;
   }
 
-  return mapScheduleEvent(item);
+  return mapScheduleEvent(event);
 }
 
-export function mapScheduleEvent(item: {
+export function mapScheduleEvent(event: {
   id: number;
   scheduleId: number;
   name: string;
@@ -331,10 +331,10 @@ export function mapScheduleEvent(item: {
   color: string;
 }) {
   try {
-    return item;
+    return event;
   } catch (error) {
-    sentryErr(error, { item });
-    throw new HttpError('Unable to parse employee schedule item', 500);
+    sentryErr(error, { event });
+    throw new HttpError('Unable to parse employee schedule event', 500);
   }
 }
 
@@ -412,7 +412,7 @@ export async function updateScheduleEvent({
   `;
 
   if (!scheduleEvent) {
-    throw new HttpError('Schedule item not found', 404);
+    throw new HttpError('Schedule event not found', 404);
   }
 
   return mapScheduleEvent(scheduleEvent);
@@ -420,19 +420,19 @@ export async function updateScheduleEvent({
 
 export async function deleteScheduleEvent({ id, scheduleId }: { id?: number; scheduleId: number }) {
   await sql`
-    WITH "ItemsToDelete" AS (SELECT id
+    WITH "EventsToDelete" AS (SELECT id
                              FROM "ScheduleEvent"
                              WHERE id = COALESCE(${id ?? null}, id)
                                AND "scheduleId" = ${scheduleId}),
          "DeleteAssignments" AS (
            DELETE FROM "ScheduleEventAssignment"
-             WHERE "scheduleEventId" IN (SELECT id FROM "ItemsToDelete")),
+             WHERE "scheduleEventId" IN (SELECT id FROM "EventsToDelete")),
          "DeleteTasks" AS (
            DELETE FROM "ScheduleEventTask"
-             WHERE "scheduleEventId" IN (SELECT id FROM "ItemsToDelete"))
+             WHERE "scheduleEventId" IN (SELECT id FROM "EventsToDelete"))
     DELETE
     FROM "ScheduleEvent"
-    WHERE id IN (SELECT id FROM "ItemsToDelete")
+    WHERE id IN (SELECT id FROM "EventsToDelete")
 
 
   `;
@@ -654,7 +654,7 @@ function mapScheduleEventAssignment(assignment: {
     };
   } catch (error) {
     sentryErr(error, { assignment });
-    throw new HttpError('Unable to parse employee schedule item assignment', 500);
+    throw new HttpError('Unable to parse employee schedule event assignment', 500);
   }
 }
 
@@ -707,7 +707,7 @@ export async function deleteScheduleEventTasks({ scheduleEventId }: { scheduleEv
 
 export async function insertScheduleEventTasks(
   links: {
-    itemId: number;
+    eventId: number;
     taskId: number;
   }[],
 ) {
@@ -715,13 +715,13 @@ export async function insertScheduleEventTasks(
     return [];
   }
 
-  const { itemId, taskId } = nest(links);
+  const { eventId, taskId } = nest(links);
 
   return await sql<{ id: number; scheduleEventId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
     INSERT INTO "ScheduleEventTask" ("scheduleEventId", "taskId")
     SELECT *
     FROM UNNEST(
-      ${itemId} :: int[],
+      ${eventId} :: int[],
       ${taskId} :: int[]
          )
     RETURNING *;

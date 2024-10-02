@@ -2,7 +2,7 @@ import { Fetch } from './fetch.js';
 import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { GetScheduleEventResponse } from '@web/controllers/api/schedules.js';
 import { UseQueryData } from './react-query.js';
-import { mapItem, useScheduleEventQuery } from './use-schedule-event-query.js';
+import { mapEvent, useScheduleEventQuery } from './use-schedule-event-query.js';
 import { DateTime, UpsertScheduleEvent } from '@web/schemas/generated/upsert-schedule-event.js';
 import { useScheduleEventsQuery } from './use-schedule-events-query.js';
 
@@ -14,7 +14,7 @@ export const useScheduleEventMutation = (
   options?: UseMutationOptions<
     GetScheduleEventResponse,
     unknown,
-    Omit<UpsertScheduleEvent, 'start' | 'end'> & { scheduleId: number; itemId: number | null; start: Date; end: Date },
+    Omit<UpsertScheduleEvent, 'start' | 'end'> & { scheduleId: number; eventId: number | null; start: Date; end: Date },
     unknown
   >,
 ) => {
@@ -25,16 +25,16 @@ export const useScheduleEventMutation = (
     mutationKey: ['schedule-event'],
     mutationFn: async ({
       scheduleId,
-      itemId,
+      eventId,
       ...body
     }: Omit<UpsertScheduleEvent, 'start' | 'end'> & {
       scheduleId: number;
-      itemId: number | null;
+      eventId: number | null;
       start: Date;
       end: Date;
     }) => {
       const response = await fetch(
-        `/api/schedules/${encodeURIComponent(scheduleId)}/items/${itemId === null ? '' : encodeURIComponent(itemId)}`,
+        `/api/schedules/${encodeURIComponent(scheduleId)}/events/${eventId === null ? '' : encodeURIComponent(eventId)}`,
         {
           method: 'POST',
           body: JSON.stringify({
@@ -47,28 +47,28 @@ export const useScheduleEventMutation = (
       );
 
       if (!response.ok) {
-        throw new Error('Failed to mutate employee schedule item');
+        throw new Error('Failed to mutate employee schedule event');
       }
 
-      const items: GetScheduleEventResponse = await response.json();
-      return items;
+      const events: GetScheduleEventResponse = await response.json();
+      return events;
     },
-    async onMutate(item, ...args) {
-      const currentItem = queryClient.getQueryData<UseQueryData<typeof useScheduleEventQuery>>([
+    async onMutate(event, ...args) {
+      const currentEvent = queryClient.getQueryData<UseQueryData<typeof useScheduleEventQuery>>([
         'schedule',
-        item.scheduleId,
-        'item',
-        item.itemId,
+        event.scheduleId,
+        'event',
+        event.eventId,
       ]);
 
       let fakeId: number | null = null;
-      const id = item.itemId ?? (fakeId = -fakeIdSeq++);
+      const id = event.eventId ?? (fakeId = -fakeIdSeq++);
 
-      const { end, start, name, description, color, staffMemberIds, taskIds } = item;
+      const { end, start, name, description, color, staffMemberIds, taskIds } = event;
       const data: UseQueryData<typeof useScheduleEventQuery> = {
         createdAt: new Date(),
-        scheduleId: item.scheduleId,
-        ...currentItem,
+        scheduleId: event.scheduleId,
+        ...currentEvent,
         id,
         updatedAt: new Date(),
         end,
@@ -80,14 +80,14 @@ export const useScheduleEventMutation = (
         taskIds,
       };
 
-      queryClient.cancelQueries({ queryKey: ['schedule', item.scheduleId, 'item', item.itemId] });
+      queryClient.cancelQueries({ queryKey: ['schedule', event.scheduleId, 'event', event.eventId] });
       queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
-        ['schedule', item.scheduleId, 'item', id],
+        ['schedule', event.scheduleId, 'event', id],
         data,
       );
 
       for (const [queryKey, queryData] of queryClient.getQueriesData<UseQueryData<typeof useScheduleEventsQuery>>({
-        queryKey: ['schedule', item.scheduleId, 'item', 'list'],
+        queryKey: ['schedule', event.scheduleId, 'event', 'list'],
       })) {
         if (!queryData) {
           continue;
@@ -95,40 +95,40 @@ export const useScheduleEventMutation = (
 
         queryClient.cancelQueries({ queryKey });
         queryClient.setQueryData<UseQueryData<typeof useScheduleEventsQuery>>(queryKey, [
-          ...queryData.filter(x => x.id !== item.itemId),
+          ...queryData.filter(x => x.id !== event.eventId),
           data,
         ]);
       }
 
-      await options?.onMutate?.(item, ...args);
+      await options?.onMutate?.(event, ...args);
 
       return {
-        currentItem,
+        currentEvent,
         fakeId,
       };
     },
     async onSuccess(...args) {
-      const [item, { scheduleId }] = args;
+      const [event] = args;
 
       const isMutating = queryClient.isMutating({
         mutationKey: ['schedule-event'],
-        predicate: mutation => mutation.state.variables.itemId === item.id,
+        predicate: mutation => mutation.state.variables.eventId === event.id,
       });
 
       if (!isMutating) {
         queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
-          ['schedule', item.scheduleId, 'item', item.id],
-          mapItem(item),
+          ['schedule', event.scheduleId, 'event', event.id],
+          mapEvent(event),
         );
       }
 
       await options?.onSuccess?.(...args);
     },
     async onError(_1, _2, context) {
-      if (context?.currentItem) {
+      if (context?.currentEvent) {
         queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
-          ['schedule', context.currentItem.scheduleId, 'item', context.currentItem.id],
-          context.currentItem,
+          ['schedule', context.currentEvent.scheduleId, 'event', context.currentEvent.id],
+          context.currentEvent,
         );
       }
 
@@ -137,7 +137,7 @@ export const useScheduleEventMutation = (
     async onSettled(_1, _2, input, context) {
       if (context?.fakeId) {
         queryClient.removeQueries({
-          queryKey: ['schedule', input.scheduleId, 'item', context.fakeId],
+          queryKey: ['schedule', input.scheduleId, 'event', context.fakeId],
         });
       }
 

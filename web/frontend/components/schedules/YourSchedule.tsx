@@ -11,14 +11,11 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import FullCalendar from '@fullcalendar/react';
 import { useScheduleEventQuery } from '@work-orders/common/queries/use-schedule-event-query.js';
 import { useScheduleEventTasksQuery } from '@work-orders/common/queries/use-schedule-event-tasks-query.js';
-import { useTaskQueries } from '@work-orders/common/queries/use-task-query.js';
 import { useTaskMutation } from '@work-orders/common/queries/use-task-mutation.js';
-import { BlockStack, Card, Checkbox, InlineStack, Modal, Text } from '@shopify/polaris';
-import humanizeDuration from 'humanize-duration';
-import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
-import { DateTime } from '@web/services/gql/queries/generated/schema.js';
+import { BlockStack, Checkbox, Modal, Text } from '@shopify/polaris';
+import { TaskCard } from '@web/frontend/components/tasks/TaskCard.js';
 
-type SelectedItem = { scheduleId: number; itemId: number };
+type SelectedItem = { scheduleId: number; eventId: number };
 
 /**
  * Schedule for the current user.
@@ -76,9 +73,9 @@ export function YourSchedule() {
           setTo(end);
         }}
         eventClick={event => {
-          const [scheduleId, itemId] = event.event.id.split('-').map(Number);
-          if (scheduleId && itemId) {
-            setSelectedItem({ scheduleId, itemId });
+          const [scheduleId, eventId] = event.event.id.split('-').map(Number);
+          if (scheduleId && eventId) {
+            setSelectedItem({ scheduleId, eventId });
           }
         }}
         events={itemsQuery.data?.map(item => ({
@@ -114,17 +111,15 @@ function ScheduleEventInfo({
   const eventQuery = useScheduleEventQuery({
     fetch,
     scheduleId: selectedItem?.scheduleId ?? null,
-    itemId: selectedItem?.itemId ?? null,
+    eventId: selectedItem?.eventId ?? null,
   });
   const tasksQuery = useScheduleEventTasksQuery({
     fetch,
     scheduleId: selectedItem?.scheduleId ?? null,
-    itemId: selectedItem?.itemId ?? null,
+    eventId: selectedItem?.eventId ?? null,
   });
 
-  // we use this query because its query key is optimistically updated by task mutation
-  const taskQueries = useTaskQueries({ fetch, ids: tasksQuery.data?.map(task => task.id) ?? [] });
-
+  const tasks = tasksQuery.data ?? [];
   const taskMutation = useTaskMutation({ fetch });
 
   return (
@@ -133,7 +128,7 @@ function ScheduleEventInfo({
         open={!!selectedItem}
         title={eventQuery.data?.name}
         onClose={() => setSelectedItem(undefined)}
-        loading={eventQuery.isFetching || tasksQuery.isFetching}
+        loading={eventQuery.isLoading || tasksQuery.isLoading}
       >
         {taskMutation.isPending && <Loading />}
 
@@ -174,59 +169,41 @@ function ScheduleEventInfo({
                 {eventQuery.data ? new Date(eventQuery.data.end).toLocaleString() : ''}
               </Text>
             </BlockStack>
+          </BlockStack>
+        </Modal.Section>
+        <Modal.Section>
+          <BlockStack gap={'200'}>
+            <Text as="p" variant="bodyMd" fontWeight="bold">
+              Tasks
+            </Text>
 
-            <BlockStack gap={'200'}>
-              <Text as="p" variant="bodyMd" fontWeight="bold">
-                Tasks
+            {tasks.length === 0 && (
+              <Text as="p" variant="bodyMd" tone="subdued">
+                No tasks
               </Text>
+            )}
 
-              {Object.values(taskQueries).length === 0 && (
-                <Text as="p" variant="bodyMd" tone="subdued">
-                  No tasks
-                </Text>
-              )}
-
-              {Object.values(taskQueries).map(query => {
-                if (!query.data) return null;
-
-                return (
-                  <Card>
-                    <InlineStack gap={'200'} align="space-between">
-                      <BlockStack gap={'050'}>
-                        <Text as="p" variant="bodyMd" fontWeight="bold">
-                          {query.data.name}
-                        </Text>
-
-                        <Text as="p" variant="bodyMd" tone="subdued">
-                          {query.data.description}
-                        </Text>
-
-                        {!!query.data.estimatedTimeMinutes && (
-                          <Text as="p" variant="bodyMd" tone="subdued">
-                            Estimated to take {humanizeDuration(query.data.estimatedTimeMinutes * MINUTE_IN_MS, {})}
-                          </Text>
-                        )}
-                      </BlockStack>
-
-                      <Checkbox
-                        label={'Done'}
-                        checked={query.data.done}
-                        onChange={checked =>
-                          taskMutation.mutate({
-                            id: query.data.id,
-                            name: query.data.name,
-                            description: query.data.description,
-                            estimatedTimeMinutes: query.data.estimatedTimeMinutes,
-                            deadline: query.data.deadline,
-                            done: checked,
-                          })
-                        }
-                      />
-                    </InlineStack>
-                  </Card>
-                );
-              })}
-            </BlockStack>
+            {tasks.map(task => (
+              <TaskCard
+                taskId={task.id}
+                right={task => (
+                  <Checkbox
+                    label={'Done'}
+                    checked={task.done}
+                    onChange={checked =>
+                      taskMutation.mutate({
+                        id: task.id,
+                        name: task.name,
+                        description: task.description,
+                        estimatedTimeMinutes: task.estimatedTimeMinutes,
+                        deadline: task.deadline,
+                        done: checked,
+                      })
+                    }
+                  />
+                )}
+              />
+            ))}
           </BlockStack>
         </Modal.Section>
       </Modal>
