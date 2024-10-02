@@ -1,4 +1,4 @@
-import { Badge, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Badge, ScrollView, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { match } from 'ts-pattern';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
@@ -11,15 +11,15 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { createGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useForm } from '@teifi-digital/pos-tools/form';
 import { useCreateWorkOrderOrderMutation } from '@work-orders/common/queries/use-create-work-order-order-mutation.js';
 import { useStockTransferMutation } from '@work-orders/common/queries/use-stock-transfer-mutation.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { getWorkOrderItemSourcingBadges } from '../../util/badges.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 
 // TODO: Also show the current location inventory #, and then make it possible to config SO/PO/TO
 export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: string; workOrderName: string }) {
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
   const workOrderQuery = useWorkOrderQuery({ fetch, name: workOrderName }, { staleTime: 10 * SECOND_IN_MS });
   const workOrderItem = workOrderQuery.data?.workOrder?.items.find(item => item.uuid === uuid);
@@ -58,11 +58,10 @@ export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: strin
   const createTransferOrderMutation = useStockTransferMutation({ fetch });
   const createPurchaseOrderMutation = usePurchaseOrderMutation({ fetch });
 
-  const { Form } = useForm();
   const isLoadingForm =
-    createWorkOrderOrderMutation.isLoading ||
-    createTransferOrderMutation.isLoading ||
-    createPurchaseOrderMutation.isLoading;
+    createWorkOrderOrderMutation.isPending ||
+    createTransferOrderMutation.isPending ||
+    createPurchaseOrderMutation.isPending;
 
   if (!workOrderItem) {
     return (
@@ -143,7 +142,7 @@ export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: strin
       <Form disabled={isLoadingForm}>
         <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'} spacing={1}>
           <Text variant={'headingLarge'}>{name}</Text>
-          <Text variant={'bodyMd'} color={'TextSubdued'}>
+          <Text color={'TextSubdued'}>
             {typeof availableInventoryCount === 'number'
               ? `${availableInventoryCount} available at current location`
               : ''}

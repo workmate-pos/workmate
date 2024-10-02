@@ -1,4 +1,4 @@
-import { Badge, Button, ScrollView, Stack, Stepper, Text } from '@shopify/retail-ui-extensions-react';
+import { Badge, Button, ScrollView, Stack, Stepper, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useMemo, useState } from 'react';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
@@ -12,12 +12,13 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMoneyField.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { keepPreviousData } from '@tanstack/react-query';
 
 export function ItemConfig({
   item: { uuid: itemUuid, type: itemType },
@@ -47,7 +48,7 @@ export function ItemConfig({
         isNonNullable,
       ),
     },
-    { keepPreviousData: true },
+    { placeholderData: keepPreviousData },
   );
 
   const calculatedDraftOrder = calculatedDraftOrderQuery.data;
@@ -58,8 +59,6 @@ export function ItemConfig({
   const screen = useScreen();
   screen.setIsLoading(calculatedDraftOrderQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
-
-  const { Form } = useForm();
 
   if (!item) {
     return (

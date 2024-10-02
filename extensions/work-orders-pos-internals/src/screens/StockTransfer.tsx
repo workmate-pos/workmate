@@ -1,4 +1,3 @@
-import { useForm } from '@teifi-digital/pos-tools/form';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useStockTransferMutation } from '@work-orders/common/queries/use-stock-transfer-mutation.js';
 import {
@@ -8,11 +7,12 @@ import {
   ListRow,
   ScrollView,
   Text,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import {
   CreateStockTransferDispatchProxy,
   useCreateStockTransferReducer,
@@ -23,7 +23,7 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { stockTransferToCreateStockTransfer } from '../dto/stock-transfer-to-create-stock-transfer.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -45,7 +45,7 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   const fetch = useAuthenticatedFetch();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const stockTransferMutation = useStockTransferMutation({ fetch });
   const mutate = () => {
@@ -71,10 +71,8 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
     );
   };
 
-  const { Form } = useForm();
-
   return (
-    <Form disabled={stockTransferMutation.isLoading}>
+    <Form disabled={stockTransferMutation.isPending}>
       <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {stockTransferMutation.error && (
@@ -108,7 +106,7 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
             title={createStockTransfer.name ? 'Update Stock Transfer' : 'Create Stock Transfer'}
             type="primary"
             action={'submit'}
-            loading={stockTransferMutation.isLoading}
+            loading={stockTransferMutation.isPending}
             onPress={() => mutate()}
           />
         </ResponsiveGrid>
@@ -142,7 +140,7 @@ function StockTransferProperties({
   })();
 
   const router = useRouter();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   return (
     <ResponsiveGrid columns={1} spacing={2}>
@@ -207,7 +205,7 @@ function StockTransferItems({
   const router = useRouter();
   const rows = useStockTransferLineItemRows(createStockTransfer, dispatch);
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   return (
     <ResponsiveGrid columns={1} spacing={2}>

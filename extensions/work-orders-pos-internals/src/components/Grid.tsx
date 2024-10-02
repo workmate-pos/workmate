@@ -1,5 +1,5 @@
 import { ReactNode, Children } from 'react';
-import { Stack } from '@shopify/retail-ui-extensions-react';
+import { Stack } from '@shopify/ui-extensions-react/point-of-sale';
 
 export function Grid({ children, columns }: { children: ReactNode; columns: number }) {
   const rows = [];

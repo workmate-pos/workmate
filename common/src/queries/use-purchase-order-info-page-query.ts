@@ -1,6 +1,6 @@
 import { PurchaseOrderPaginationOptions } from '@web/schemas/generated/purchase-order-pagination-options.js';
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery, UseInfiniteQueryOptions } from 'react-query';
+import { useInfiniteQuery, UseInfiniteQueryOptions } from '@tanstack/react-query';
 import { FetchPurchaseOrderInfoPageResponse } from '@web/controllers/api/purchase-orders.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
@@ -29,7 +29,7 @@ export const usePurchaseOrderInfoPageQuery = (
   useInfiniteQuery({
     ...options,
     queryKey: ['purchase-order-info', params],
-    queryFn: async ({ pageParam: offset = 0 }) => {
+    queryFn: async ({ pageParam: offset }) => {
       const searchParams = new URLSearchParams();
 
       const { customFieldFilters, ...qs } = params;
@@ -51,6 +51,7 @@ export const usePurchaseOrderInfoPageQuery = (
       const result: FetchPurchaseOrderInfoPageResponse = await response.json();
       return result.purchaseOrders;
     },
+    initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => {
       if (lastPage.length === 0) return undefined;
       return pages.flat(1).length;

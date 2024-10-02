@@ -7,8 +7,8 @@ import {
   Stack,
   Text,
   TextArea,
-  useExtensionApi,
-} from '@shopify/retail-ui-extensions-react';
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { CreatePurchaseOrder, DateTime, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
@@ -19,29 +19,26 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useRouter } from '../routes.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
-import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMoneyField.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js';
 import { createPurchaseOrderFromPurchaseOrder } from '@work-orders/common/create-purchase-order/from-purchase-order.js';
 import {
   CreatePurchaseOrderDispatchProxy,
   useCreatePurchaseOrderReducer,
 } from '@work-orders/common/create-purchase-order/reducer.js';
 import type { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
-import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
 import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer-line-item-status-badge-props.js';
@@ -57,7 +54,6 @@ TODAY_DATE.setHours(0, 0, 0, 0);
 export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const fetch = useAuthenticatedFetch();
   const [query, setQuery] = useState('');
-  const { Form } = useForm();
 
   const [createPurchaseOrder, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreatePurchaseOrderReducer(
     initial,
@@ -67,7 +63,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: createPurchaseOrder.name });
   const purchaseOrder = purchaseOrderQuery.data;
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const router = useRouter();
 
@@ -119,7 +115,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
     purchaseOrder ?? null,
     dispatch,
     query,
-    purchaseOrderMutation.isLoading,
+    purchaseOrderMutation.isPending,
   );
 
   const subtotal = BigDecimal.sum(
@@ -156,7 +152,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const placedDateIsToday = createPurchaseOrder.placedDate === TODAY_DATE.toISOString();
 
   return (
-    <Form disabled={purchaseOrderMutation.isLoading}>
+    <Form disabled={purchaseOrderMutation.isPending}>
       <ScrollView>
         {purchaseOrderMutation.error && (
           <Banner
@@ -219,7 +215,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
                 const isoString = date ? (date.toISOString() as DateTime) : null;
                 dispatch.setPartial({ placedDate: isoString });
               }}
-              disabled={purchaseOrderMutation.isLoading}
+              disabled={purchaseOrderMutation.isPending}
               action={
                 createPurchaseOrder.placedDate
                   ? {
@@ -259,7 +255,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               label={'Ship To'}
               value={createPurchaseOrder.shipTo ?? ''}
               onChange={(shipTo: string) => dispatch.setPartial({ shipTo })}
-              disabled={purchaseOrderMutation.isLoading}
+              disabled={purchaseOrderMutation.isPending}
             />
             {!!selectedLocation?.address?.formatted &&
               createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
@@ -275,7 +271,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               label={'Note'}
               value={createPurchaseOrder.note}
               onChange={(note: string) => dispatch.setPartial({ note })}
-              disabled={purchaseOrderMutation.isLoading}
+              disabled={purchaseOrderMutation.isPending}
             />
           </ResponsiveGrid>
         </ResponsiveGrid>
@@ -453,7 +449,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
             title={createPurchaseOrder.name ? 'Update purchase order' : 'Create purchase order'}
             type={'primary'}
             onPress={() => purchaseOrderMutation.mutate(createPurchaseOrder)}
-            loading={purchaseOrderMutation.isLoading}
+            loading={purchaseOrderMutation.isPending}
             action={'submit'}
           />
         </ResponsiveGrid>
@@ -480,7 +476,7 @@ function useProductRows(
 ) {
   query = query.trim();
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
   const router = useRouter();
 
@@ -592,7 +588,7 @@ const useAddProductPrerequisitesDialog = (
   dispatch: CreatePurchaseOrderDispatchProxy,
 ) => {
   const dialog = useDialog();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const router = useRouter();
 
   const hasVendor = createPurchaseOrder.vendorName !== null;

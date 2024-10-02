@@ -1,15 +1,15 @@
-import { Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useCreateProductMutation } from '@work-orders/common/queries/use-create-product-mutation.js';
 import { useState } from 'react';
 import { CreateProduct, Int } from '@web/schemas/generated/create-product.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { FormDecimalField, roundingPostProcessor } from '@teifi-digital/pos-tools/form/components/FormDecimalField.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { Form, useFormContext } from '@teifi-digital/pos-tools/components/form/Form.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMoneyField.js';
+import { FormDecimalField, roundingPostProcessor } from '@teifi-digital/pos-tools/components/form/FormDecimalField.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useCreateProductReducer } from './reducer.js';
 import { UseRouter } from '../router.js';
@@ -19,7 +19,7 @@ import {
   getProductServiceType,
   QUANTITY_ADJUSTING_SERVICE,
 } from '@work-orders/common/metafields/product-service-type.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 
 export type CreatedProduct = {
   shopifyOrderLineItem: null;
@@ -47,7 +47,6 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
 
   const [quantity, setQuantity] = useState<Int>(1 as Int);
 
-  const { Form, isValid } = useForm();
   const router = useRouter();
 
   const fetch = useAuthenticatedFetch();
@@ -84,6 +83,20 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
   screen.setTitle(title);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
+  const SaveButton = () => {
+    const isValid = useFormContext()?.isValid ?? true;
+
+    return (
+      <Button
+        title={'Save'}
+        type={'primary'}
+        onPress={() => createProductMutation.mutate(createProduct)}
+        isDisabled={!isValid}
+        isLoading={createProductMutation.isPending}
+      />
+    );
+  };
+
   return (
     <ScrollView>
       <Stack direction={'horizontal'} alignment={'center'}>
@@ -91,7 +104,7 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
       </Stack>
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
-        <Form disabled={createProductMutation.isLoading}>
+        <Form disabled={createProductMutation.isPending}>
           <ResponsiveGrid columns={2}>
             <FormStringField
               label={'Title'}
@@ -170,13 +183,7 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
       </Stack>
 
       <Stack direction={'vertical'} alignment={'center'}>
-        <Button
-          title={'Save'}
-          type={'primary'}
-          onPress={() => createProductMutation.mutate(createProduct)}
-          isDisabled={!isValid}
-          isLoading={createProductMutation.isLoading}
-        />
+        <SaveButton />
       </Stack>
     </ScrollView>
   );

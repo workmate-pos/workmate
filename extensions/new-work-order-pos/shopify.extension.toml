@@ -1,8 +1,15 @@
-type = "pos_ui_extension"
-name = "new-work-order-pos"
-description = "new-work-order-pos"
+api_version = "2024-07"
 
-extension_points = [
-  'pos.home.tile.render',
-  'pos.home.modal.render'
-]
+[[extensions]]
+type = "ui_extension"
+name = "new-work-order-pos"
+handle = "new-work-order-pos"
+description = "New Work Order"
+
+[[extensions.targeting]]
+module = "./src/Tile.tsx"
+target = "pos.home.tile.render"
+
+[[extensions.targeting]]
+module = "./src/Modal.tsx"
+target = "pos.home.modal.render"

@@ -1,4 +1,4 @@
-import { BadgeProps, BadgeVariant } from '@shopify/retail-ui-extensions-react';
+import { BadgeProps, BadgeVariant } from '@shopify/ui-extensions-react/point-of-sale';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';

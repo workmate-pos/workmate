@@ -1,26 +1,20 @@
-import { render, Tile, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { AppProvider } from '@teifi-digital/pos-tools/providers/AppProvider.js';
+import { reactExtension, Tile, useApi } from '@shopify/ui-extensions-react/point-of-sale';
+import { WorkMateAppShell } from '@work-orders/work-orders-pos-internals';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { useStockTransferCountQuery } from '@work-orders/common/queries/use-stock-transfer-count-query.js';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
-import { SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 import { useEffect } from 'react';
-import { ReactQueryProvider } from '@work-orders/common-pos/providers/ReactQueryProvider.js';
-import { Router, WorkOrdersApp } from '@work-orders/work-orders-pos-internals';
+import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
+import { SECOND_IN_MS } from '@work-orders/common/time/constants.js';
+import { useStockTransferCountQuery } from '@work-orders/common/queries/use-stock-transfer-count-query.js';
 
-function SmartGridTile() {
-  return (
-    <AppProvider appUrl={process.env.APP_URL!}>
-      <ReactQueryProvider>
-        <TileWithNotifications />
-      </ReactQueryProvider>
-    </AppProvider>
-  );
-}
+export default reactExtension('pos.home.tile.render', () => (
+  <WorkMateAppShell>
+    <TileWithNotifications />
+  </WorkMateAppShell>
+));
 
 function TileWithNotifications() {
-  const { session, smartGrid } = useExtensionApi<'pos.home.tile.render'>();
+  const { session, action } = useApi<'pos.home.tile.render'>();
   const fetch = useAuthenticatedFetch({ showToastOnError: false });
 
   const locationId = createGid('Location', session.currentSession.locationId);
@@ -56,20 +50,9 @@ function TileWithNotifications() {
     <Tile
       title={'Stock Transfers'}
       subtitle={'WorkMate'}
-      onPress={() => smartGrid.presentModal()}
+      onPress={() => action.presentModal()}
       enabled
       badgeValue={badgeValue}
     />
   );
 }
-
-function SmartGridModal() {
-  return (
-    <WorkOrdersApp>
-      <Router mainRoute={'StockTransferEntry'} />
-    </WorkOrdersApp>
-  );
-}
-
-render('pos.home.tile.render', () => <SmartGridTile />);
-render('pos.home.modal.render', () => <SmartGridModal />);

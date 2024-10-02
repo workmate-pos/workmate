@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import type { CreateAppPlanSubscriptionResponse } from '@web/controllers/api/app-plans.js';
 import type { CreateAppPlanSubscription } from '@web/schemas/generated/create-app-plan-subscription.js';
@@ -27,7 +27,7 @@ export const useAppPlanSubscriptionMutation = (
       return result;
     },
     onSuccess: (...args) => {
-      queryClient.invalidateQueries(['app-plan-subscription']);
+      queryClient.invalidateQueries({ queryKey: ['app-plan-subscription'] });
 
       options.onSuccess?.(...args);
     },

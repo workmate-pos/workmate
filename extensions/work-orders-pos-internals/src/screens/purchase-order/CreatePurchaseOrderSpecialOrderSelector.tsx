@@ -11,10 +11,10 @@ import {
   getDetailedSpecialOrderSubtitle,
 } from '@work-orders/common-pos/util/special-orders.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { Banner, ScrollView, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
+import { Banner, ScrollView, useApi } from '@shopify/ui-extensions-react/point-of-sale';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
@@ -29,7 +29,7 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { uuid } from '@work-orders/common/util/uuid.js';
 
 export function CreatePurchaseOrderSpecialOrderSelector() {
-  const { session, toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { session, toast } = useApi<'pos.home.modal.render'>();
 
   const [locationId, setLocationId] = useState<ID>(createGid('Location', session.currentSession.locationId));
   const [vendorName, setVendorName] = useState<string>();
@@ -81,14 +81,13 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
   const errorProductVariantQueries = Object.values(productVariantQueries).filter(query => query.isError);
 
   const router = useRouter();
-  const { Form } = useForm();
 
   return (
-    <Form disabled={purchaseOrderMutation.isLoading}>
+    <Form disabled={purchaseOrderMutation.isPending}>
       <ScrollView>
         <FormStringField
           label={'Location'}
-          value={!locationId ? '' : locationQuery.isLoading ? 'Loading...' : location?.name ?? 'Unknown location'}
+          value={!locationId ? '' : locationQuery.isLoading ? 'Loading...' : (location?.name ?? 'Unknown location')}
           onFocus={() => router.push('LocationSelector', { onSelect: location => setLocationId(location.id) })}
           required
         />
@@ -139,14 +138,14 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
               variant={'error'}
               visible
               action={'Retry'}
-              onAction={() => errorProductVariantQueries.forEach(query => query.refetch())}
+              onPress={() => errorProductVariantQueries.forEach(query => query.refetch())}
             />
           )}
 
           <FormButton
             title={'Create Purchase Order'}
             type={'primary'}
-            loading={purchaseOrderMutation.isLoading || isLoadingProductVariants}
+            loading={purchaseOrderMutation.isPending || isLoadingProductVariants}
             disabled={selectedSpecialOrders.length === 0 || isLoadingProductVariants}
             onPress={() => {
               if (!locationId) {

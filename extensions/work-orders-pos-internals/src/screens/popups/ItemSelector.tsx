@@ -1,7 +1,7 @@
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useRouter } from '../../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -85,7 +85,7 @@ function useItemRows(items: Item[], onSelect: (item: Item) => void): ListRow[] {
       if (query === undefined) return null;
 
       const displayName =
-        item.type === 'custom-item' ? item.name : getProductVariantName(query?.data) ?? 'Unknown item';
+        item.type === 'custom-item' ? item.name : (getProductVariantName(query?.data) ?? 'Unknown item');
       const imageUrl = query?.data?.image?.url ?? query?.data?.product?.featuredImage?.url;
       const isMutableService =
         getProductServiceType(query?.data?.product?.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE;

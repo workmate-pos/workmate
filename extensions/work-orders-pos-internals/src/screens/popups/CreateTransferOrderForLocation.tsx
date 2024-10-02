@@ -1,6 +1,6 @@
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnbatchedInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
@@ -31,7 +31,7 @@ export function CreateTransferOrderForLocation({
   const productVariantIds = unique(products.map(product => product.productVariantId));
   const { items, locations } = useTransferOrderLocationItems(products);
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const router = useRouter();
 
   if (productVariantIds.length === 0) {
@@ -101,7 +101,7 @@ function useTransferOrderLocationItems(products: UnsourcedWorkOrderItem[]) {
     .filter(hasNonNullableProperty('data'))
     .map(query => query.data.inventoryItem.id);
 
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
   const locationIds =
     locationsQuery.data?.pages
       .flat()

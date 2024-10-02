@@ -1,4 +1,4 @@
-import { Button, Stack } from '@shopify/retail-ui-extensions-react';
+import { Button, Stack } from '@shopify/ui-extensions-react/point-of-sale';
 import { PaymentStatus } from '@web/schemas/generated/work-order-pagination-options.js';
 import { useRouter } from '../../routes.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';

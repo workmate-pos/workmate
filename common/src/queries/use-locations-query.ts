@@ -1,7 +1,7 @@
 import type { FetchLocationsResponse } from '@web/controllers/api/locations.js';
 import type { PaginationOptions } from '@web/schemas/generated/pagination-options.js';
 import { createPaginatedQuery } from './create-paginated-query.js';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { UseQueryData } from './react-query.js';
 import { useLocationQuery } from './use-location-query.js';
 
@@ -20,15 +20,13 @@ export const useLocationsQuery = (...[options, ...args]: Parameters<typeof query
       ...options,
       options: {
         ...options.options,
-        onSuccess: data => {
-          for (const location of data.pages.flat()) {
+        onSuccess: page => {
+          for (const location of page.locations) {
             queryClient.setQueryData(
               ['location', location.id],
               location satisfies UseQueryData<typeof useLocationQuery>,
             );
           }
-
-          options.options?.onSuccess?.(data);
         },
       },
     },

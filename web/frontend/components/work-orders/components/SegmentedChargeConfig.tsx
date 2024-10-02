@@ -191,7 +191,7 @@ export function SegmentedChargeConfig({
   const displayedTabs = tabs.filter(tab => types.includes(tab.id));
 
   const [selectedTab, setSelectedTab] = useState(
-    displayedTabs.findIndex(tab => tab.id === charge?.type ?? 'none') ?? 0,
+    displayedTabs.findIndex(tab => tab.id === (charge?.type ?? 'none')) ?? 0,
   );
 
   if (types.length === 0 || (types.length === 1 && types[0] === 'none')) {

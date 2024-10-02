@@ -43,3 +43,63 @@ query getDefinition($namespace: String!, $key: String, $ownerType: MetafieldOwne
     }
   }
 }
+
+query getDefinitions(
+  $first: Int!,
+  $after: String,
+  $ownerType: MetafieldOwnerType!,
+  $query: String,
+) {
+  metafieldDefinitions(first: $first, after: $after, ownerType: $ownerType, query: $query) {
+    nodes {
+      ...MetafieldDefinitionFragment
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+fragment MetafieldDefinitionFragment on MetafieldDefinition {
+  id
+  name
+  description
+  namespace
+  key
+}
+
+query getDefinitionMetafields(
+  $definitionId: ID!,
+  $first: Int!,
+  $after: String,
+) {
+  metafieldDefinition(id: $definitionId) {
+    metafields(first: $first, after: $after) {
+      nodes {
+        id
+        namespace
+        key
+        value
+        owner {
+          __typename
+          ... on ProductVariant {
+            id
+          }
+          ... on Product {
+            id
+            variants(first: 25) {
+              nodes {
+                id
+              }
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}

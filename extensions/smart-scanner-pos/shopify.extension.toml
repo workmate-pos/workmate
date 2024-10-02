@@ -1,0 +1,15 @@
+api_version = "2024-07"
+
+[[extensions]]
+type = "ui_extension"
+name = "smart-scanner-pos"
+handle = "smart-scanner-pos"
+description = "Scanner"
+
+[[extensions.targeting]]
+module = "./src/Tile.tsx"
+target = "pos.home.tile.render"
+
+[[extensions.targeting]]
+module = "./src/Modal.tsx"
+target = "pos.home.modal.render"

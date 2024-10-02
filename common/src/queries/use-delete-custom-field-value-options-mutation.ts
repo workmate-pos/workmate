@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DeleteCustomFieldValueOptionsResponse,
   FetchCustomFieldValueOptionsResponse,
@@ -43,7 +43,7 @@ export const useDeleteCustomFieldValueOptionsMutation = ({ fetch }: { fetch: Fet
             allCustomFieldValueOptions.filter(field => field.name !== input.name),
           );
         } else {
-          queryClient.invalidateQueries(['all-custom-field-value-options']);
+          queryClient.invalidateQueries({ queryKey: ['all-custom-field-value-options'] });
         }
       }
     },

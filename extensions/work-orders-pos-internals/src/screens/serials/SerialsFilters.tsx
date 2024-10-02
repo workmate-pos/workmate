@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { Button, ScrollView, Text } from '@shopify/retail-ui-extensions-react';
+import { Button, ScrollView, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../../routes.js';

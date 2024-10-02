@@ -1,5 +1,4 @@
-import { SegmentedControl, Text, TextField, Stack, Selectable } from '@shopify/retail-ui-extensions-react';
-import { Segment } from '@shopify/retail-ui-extensions/src/components/SegmentedControl/SegmentedControl.js';
+import { SegmentedControl, Text, TextField, Stack, Selectable } from '@shopify/ui-extensions-react/point-of-sale';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
@@ -7,9 +6,10 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
 import { CreateWorkOrderCharge } from '../types.js';
-import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { FormDecimalField } from '@teifi-digital/pos-tools/form/components/FormDecimalField.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMoneyField.js';
+import { FormDecimalField } from '@teifi-digital/pos-tools/components/form/FormDecimalField.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { Segment } from '@shopify/ui-extensions/point-of-sale';
 
 type SegmentId = CreateWorkOrderCharge['type'] | 'none';
 
@@ -121,7 +121,13 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
 
   return (
     <Stack direction={'vertical'} spacing={2}>
-      {segments.length > 1 && <SegmentedControl segments={segments} selected={selectedSegmentId} onSelect={onSelect} />}
+      {segments.length > 1 && (
+        <SegmentedControl
+          segments={segments}
+          selected={selectedSegmentId}
+          onSelect={selectedSegmentId => onSelect(selectedSegmentId as SegmentId)}
+        />
+      )}
       {charge && (
         <TextField
           label={'Labour Name'}

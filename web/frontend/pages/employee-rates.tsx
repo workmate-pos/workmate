@@ -43,10 +43,10 @@ function EmployeeRates() {
     fetch,
     params: { first: employeePageSize },
     options: {
-      onSuccess(data) {
+      onSuccess(page) {
         // when a new page is loaded, add those employees to the permissions state if they don't already exist
 
-        const employees = data.pages.flat(1);
+        const employees = page.employees;
         const employeePermissions = Object.fromEntries(
           employees.map(employee => [employee.id, employee.isDefaultRate ? null : employee.rate]),
         );
@@ -84,8 +84,8 @@ function EmployeeRates() {
         primaryAction={{
           content: 'Save',
           target: 'APP',
-          loading: employeeMutation.isLoading,
-          disabled: employeeMutation.isLoading || !canWriteEmployees,
+          loading: employeeMutation.isPending,
+          disabled: employeeMutation.isPending || !canWriteEmployees,
           onAction() {
             employeeMutation.mutate({
               employees:

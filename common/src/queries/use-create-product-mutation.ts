@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { CreateProduct } from '@web/schemas/generated/create-product.js';
 import { CreateProductResponse } from '@web/controllers/api/products.js';
@@ -35,7 +35,7 @@ export const useCreateProductMutation = (
         },
       ] = args;
 
-      queryClient.invalidateQueries(['products']);
+      queryClient.invalidateQueries({ queryKey: ['products'] });
 
       queryClient.setQueryData(
         ['product-variant', variant.id],

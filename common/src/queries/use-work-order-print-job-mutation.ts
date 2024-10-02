@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation } from 'react-query';
+import { useMutation } from '@tanstack/react-query';
 import { PrintWorkOrderResponse } from '@web/controllers/api/work-order.js';
 import { WorkOrderPrintJob } from '@web/schemas/generated/work-order-print-job.js';
 

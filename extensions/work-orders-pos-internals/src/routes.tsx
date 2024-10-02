@@ -53,7 +53,6 @@ import { StockTransferLineItemScanner } from './screens/popups/StockTransferLine
 import { StockTransferLineItemConfig } from './screens/popups/StockTransferLineItemConfig.js';
 import { StockTransferLineItemStatusSelector } from './screens/popups/StockTransferLineItemStatusSelector.js';
 import { ExistingStockTransfer } from './screens/popups/ExistingStockTransfer.js';
-import { ScrollView } from '@shopify/retail-ui-extensions-react';
 import { PurchaseOrderEntry } from './screens/PurchaseOrderEntry.js';
 import { PurchaseOrder } from './screens/PurchaseOrder.js';
 import { PurchaseOrderVendorSelector } from './screens/popups/PurchaseOrderVendorSelector.js';
@@ -109,6 +108,8 @@ import {
 import { WorkOrderLoader } from './screens/work-order/WorkOrderLoader.js';
 import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoader.js';
 import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
+import { Scanner } from './screens/smart-scanner/Scanner.js';
+import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -456,5 +457,10 @@ export const { Router, useRouter } = createRouter({
   SerialSelector: {
     title: 'Serial Selector',
     Component: (props: Omit<SerialSelectorProps, 'useRouter'>) => <SerialSelector {...props} useRouter={useRouter} />,
+  },
+
+  Scanner: {
+    title: 'Scanner',
+    Component: Scanner,
   },
 });

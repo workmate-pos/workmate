@@ -1,4 +1,4 @@
-import { List, ListRowLeftSide, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRowLeftSide, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { ID } from '@web/schemas/generated/create-work-order.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';

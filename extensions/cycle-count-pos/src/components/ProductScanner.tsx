@@ -1,10 +1,10 @@
 import {
   Button,
   Text,
-  useExtensionApi,
+  useApi,
   useScannerSourcesSubscription,
   useStatefulSubscribableScannerData,
-} from '@shopify/retail-ui-extensions-react';
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { useRouter } from '../routes.js';
 import { useEffect, useState } from 'react';
 import { useProductVariantByBarcodeQueries } from '@work-orders/common/queries/use-product-variant-by-barcode-query.js';
@@ -40,7 +40,7 @@ export function ProductScanner({
   ) : null;
 
   const scannerDataSubscribable = useStatefulSubscribableScannerData();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const [pendingBarcodes, setPendingBarcodes] = useState<string[]>([]);
 

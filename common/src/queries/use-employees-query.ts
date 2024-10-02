@@ -1,7 +1,7 @@
 import type { FetchEmployeesResponse } from '@web/controllers/api/employee.js';
 import type { PaginationOptions } from '@web/schemas/generated/pagination-options.js';
 import { createPaginatedQuery } from './create-paginated-query.js';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { UseQueryData } from './react-query.js';
 import { useEmployeeQuery } from './use-employee-query.js';
 
@@ -20,15 +20,15 @@ export const useEmployeesQuery = (...[options, ...args]: Parameters<typeof query
       ...options,
       options: {
         ...options.options,
-        onSuccess: data => {
-          for (const employee of data.pages.flat()) {
+        onSuccess: page => {
+          for (const employee of page.employees) {
             queryClient.setQueryData(
               ['employee', employee.id],
               employee satisfies UseQueryData<typeof useEmployeeQuery>,
             );
           }
 
-          options.options?.onSuccess?.(data);
+          options.options?.onSuccess?.(page);
         },
       },
     },

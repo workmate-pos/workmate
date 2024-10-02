@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { Banner, Image, List, ListRow, ScrollView, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Banner, Image, List, ListRow, ScrollView, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useRouter } from '../../routes.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { useSerialMutation } from '@work-orders/common/queries/use-serial-mutation.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -44,8 +44,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
   const location = locationQuery.data;
   const serial = serialQuery.data;
 
-  const { Form } = useForm();
-  const disabled = serialMutation.isLoading;
+  const disabled = serialMutation.isPending;
 
   const router = useRouter();
 
@@ -61,7 +60,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const isSerialNumberInUse = !lastSavedSerial.serial && !!serial;
 
@@ -107,7 +106,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
               createSerial.locationId
                 ? locationQuery.isLoading
                   ? 'Loading...'
-                  : location?.name ?? 'Unknown location'
+                  : (location?.name ?? 'Unknown location')
                 : ''
             }
             onFocus={() =>
@@ -182,7 +181,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
               type={'primary'}
               action={'submit'}
               disabled={serialQuery.isLoading || isSerialNumberInUse}
-              loading={serialMutation.isLoading}
+              loading={serialMutation.isPending}
               onPress={() =>
                 serialMutation.mutate(createSerial as CreateSerial, {
                   onSuccess(specialOrder) {

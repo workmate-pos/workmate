@@ -1,4 +1,4 @@
-import { ListRow } from '@shopify/retail-ui-extensions-react';
+import { ListRow } from '@shopify/ui-extensions-react/point-of-sale';
 
 export function getFormattedAddressSubtitle(formattedAddress: string[]): ListRow['leftSide']['subtitle'] {
   if (formattedAddress.length === 0) return ['No address'] as const;

@@ -1,4 +1,4 @@
-import { Button, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Button, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useEffect, useState } from 'react';
 import { DetailedSpecialOrder } from '@web/services/special-orders/types.js';
@@ -49,7 +49,7 @@ export function ImportSpecialOrderLineItemsButton({
   screen.setIsLoading(isLoading);
 
   const router = useRouter();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
   const productVariantQueryStatuses = Object.values(productVariantQueries).map(query => query.status);
 
   const getRemainingLineItemQuantity = (

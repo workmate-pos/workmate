@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { UpsertServiceResponse } from '@web/controllers/api/services.js';
 import { Fetch } from './fetch.js';
 import { match, P } from 'ts-pattern';
@@ -48,7 +48,7 @@ export const useServiceMutation = ({ fetch }: { fetch: Fetch }) => {
     },
     onSuccess(result) {
       if (result.variant) {
-        queryClient.invalidateQueries(['services']);
+        queryClient.invalidateQueries({ queryKey: ['services'] });
         queryClient.setQueryData(
           ['service', result.variant.id],
           result.variant satisfies UseQueryData<typeof useServiceQuery>,

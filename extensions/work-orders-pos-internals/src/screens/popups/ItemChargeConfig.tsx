@@ -1,15 +1,10 @@
-import { Badge, Button, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
-import { useMemo, useState } from 'react';
+import { Badge, Button, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
+import { useState } from 'react';
 import { CreateWorkOrderCharge } from '../../types.js';
 import { EmployeeLabourList } from '../../components/EmployeeLabourList.js';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
-import {
-  hasNestedPropertyValue,
-  hasNonNullableProperty,
-  hasPropertyValue,
-  isNonNullable,
-} from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { SegmentedLabourControl } from '../../components/SegmentedLabourControl.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
@@ -24,11 +19,12 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
-import { FormMoneyField } from '@teifi-digital/pos-tools/form/components/FormMoneyField.js';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMoneyField.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { keepPreviousData } from '@tanstack/react-query';
 
 export function ItemChargeConfig({
   item: { uuid: itemUuid },
@@ -68,7 +64,7 @@ export function ItemChargeConfig({
         .map(charge => ({ ...charge, workOrderItemUuid: item?.uuid ?? null }))
         .filter(hasNonNullableProperty('workOrderItemUuid')),
     },
-    { keepPreviousData: true },
+    { placeholderData: keepPreviousData },
   );
   const settingsQuery = useSettingsQuery({ fetch });
 
@@ -81,8 +77,6 @@ export function ItemChargeConfig({
   const screen = useScreen();
   screen.setIsLoading(calculatedDraftOrderQuery.isLoading || settingsQuery.isLoading);
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
-
-  const { Form } = useForm();
 
   if (!item) {
     return (

@@ -1,11 +1,11 @@
-import { useForm } from '@teifi-digital/pos-tools/form';
 import { UnsourcedItemList, UnsourcedItemListProps } from './UnsourcedItemList.js';
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
-import { DatePicker, useExtensionApi } from '@shopify/retail-ui-extensions-react';
-import { FormStringField } from '@teifi-digital/pos-tools/form/components/FormStringField.js';
+import { DatePicker, useApi } from '@shopify/ui-extensions-react/point-of-sale';
+import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { useState } from 'react';
 import { DateTime } from '@web/schemas/generated/create-special-order.js';
 import { useRouter } from '../../routes.js';
@@ -19,15 +19,14 @@ export function CreateSpecialOrderList({
   const specialOrderMutation = useSpecialOrderMutation({ fetch });
   const router = useRouter();
 
-  const { Form } = useForm();
-  const { session, toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { session, toast } = useApi<'pos.home.modal.render'>();
 
   const [note, setNote] = useState('');
   const [requiredBy, setRequiredBy] = useState<Date | null>(null);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   return (
-    <Form disabled={specialOrderMutation.isLoading}>
+    <Form disabled={specialOrderMutation.isPending}>
       <UnsourcedItemList
         title="Create Special Order"
         primaryAction={{
@@ -61,7 +60,7 @@ export function CreateSpecialOrderList({
                 },
               },
             ),
-          loading: specialOrderMutation.isLoading,
+          loading: specialOrderMutation.isPending,
         }}
         {...props}
       >

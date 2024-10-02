@@ -1,5 +1,5 @@
 import { createRouter } from '@teifi-digital/pos-tools/router';
-import { ScrollView } from '@shopify/retail-ui-extensions-react';
+import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
 import { Entry } from './screens/Entry.js';

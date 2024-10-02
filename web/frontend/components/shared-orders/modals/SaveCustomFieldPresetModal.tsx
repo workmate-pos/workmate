@@ -37,7 +37,7 @@ export function SaveCustomFieldPresetModal({
       onClose={onClose}
       primaryAction={{
         content: !presetNameInUse ? 'Save preset' : 'Override preset',
-        loading: presetMutation.isLoading,
+        loading: presetMutation.isPending,
         onAction: async () => {
           if (!selectedFieldNames.length) {
             return;
@@ -62,7 +62,7 @@ export function SaveCustomFieldPresetModal({
             autoComplete={'off'}
             requiredIndicator
             value={name}
-            disabled={presetMutation.isLoading}
+            disabled={presetMutation.isPending}
             onChange={(value: string) => setName(value)}
             error={presetNameInUse ? 'A preset with this name already exists' : undefined}
           />

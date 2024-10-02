@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery, useQueryClient } from 'react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { StockTransferPaginationOptions } from '@web/schemas/generated/stock-transfer-pagination-options.js';
 import { FetchStockTransferPageResponse } from '@web/controllers/api/stock-transfers.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -19,7 +19,7 @@ export const useStockTransferPageQuery = ({
 
   return useInfiniteQuery({
     queryKey: ['stock-transfer-page', { ...paginationOptions, fromLocationId, toLocationId }],
-    queryFn: async ({ pageParam: offset = 0 }) => {
+    queryFn: async ({ pageParam: offset }) => {
       const searchParams = new URLSearchParams({
         offset: String(offset),
       });
@@ -45,8 +45,16 @@ export const useStockTransferPageQuery = ({
 
       const body: FetchStockTransferPageResponse = await response.json();
 
+      for (const stockTransfer of body) {
+        queryClient.setQueryData(
+          ['stock-transfer', stockTransfer.name],
+          stockTransfer satisfies UseQueryData<typeof useStockTransferQuery>,
+        );
+      }
+
       return body;
     },
+    initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => {
       if (lastPage.length === 0) return undefined;
       return pages.flat(1).length;
@@ -55,13 +63,5 @@ export const useStockTransferPageQuery = ({
       pages: pages.flat(1),
       pageParams,
     }),
-    onSuccess(stockTransfers) {
-      for (const stockTransfer of stockTransfers.pages) {
-        queryClient.setQueryData(
-          ['stock-transfer', stockTransfer.name],
-          stockTransfer satisfies UseQueryData<typeof useStockTransferQuery>,
-        );
-      }
-    },
   });
 };

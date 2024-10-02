@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from 'react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import type { FetchCompaniesByIdResponse } from '@web/controllers/api/companies.js';
 import { Fetch } from './fetch.js';
@@ -47,11 +47,11 @@ export const useCompanyQuery = ({ fetch, id }: { fetch: Fetch; id: ID | null }, 
 
 export const useCompanyQueries = ({ fetch, ids }: { fetch: Fetch; ids: ID[] }) => {
   const batcher = useCompanyBatcher(fetch);
-  const queries = useQueries(
-    ids.map(id => ({
+  const queries = useQueries({
+    queries: ids.map(id => ({
       queryKey: ['company', id],
       queryFn: () => batcher.fetch(id),
     })),
-  );
+  });
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));
 };

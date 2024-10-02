@@ -6,7 +6,7 @@ import {
   CustomFieldsPreset,
   useCustomFieldsPresetsQuery,
 } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
-import { List, ListRow, ScrollView, Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { List, ListRow, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 

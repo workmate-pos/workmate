@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, useQuery, useQueryClient } from 'react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FetchCustomFieldValueOptionsResponse } from '@web/controllers/api/custom-fields.js';
 import { UseQueryData } from './react-query.js';
 import { useCustomFieldValueOptionsQuery } from './use-custom-field-value-options-query.js';
@@ -44,7 +44,7 @@ export const useSaveCustomFieldValueOptionsMutation = ({ fetch }: { fetch: Fetch
 
         queryClient.setQueryData(['all-custom-field-value-options'], queryData);
       } else {
-        queryClient.invalidateQueries(['all-custom-field-value-options']);
+        queryClient.invalidateQueries({ queryKey: ['all-custom-field-value-options'] });
       }
     },
   });

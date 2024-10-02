@@ -2,9 +2,8 @@ import type {
   OrderDisplayFinancialStatus,
   OrderDisplayFulfillmentStatus,
 } from '@web/services/gql/queries/generated/schema.js';
-import type { BadgeVariant, BadgeStatus } from '@shopify/retail-ui-extensions/src/components/Badge/Badge.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { BadgeProps } from '@shopify/retail-ui-extensions-react';
+import { BadgeProps } from '@shopify/ui-extensions-react/point-of-sale';
 import {
   DetailedWorkOrder,
   DetailedWorkOrderItem,
@@ -21,7 +20,7 @@ export function getStatusText(status: OrderDisplayFinancialStatus | OrderDisplay
   return titleCase(status.replace(/_/g, ' '));
 }
 
-export function getFinancialStatusBadgeVariant(status: OrderDisplayFinancialStatus): BadgeVariant {
+export function getFinancialStatusBadgeVariant(status: OrderDisplayFinancialStatus): BadgeProps['variant'] {
   return (
     {
       PENDING: 'neutral',
@@ -36,7 +35,7 @@ export function getFinancialStatusBadgeVariant(status: OrderDisplayFinancialStat
   )[status];
 }
 
-export function getFinancialStatusBadgeStatus(status: OrderDisplayFinancialStatus): BadgeStatus {
+export function getFinancialStatusBadgeStatus(status: OrderDisplayFinancialStatus): BadgeProps['status'] {
   return (
     {
       PENDING: 'empty',
@@ -51,7 +50,7 @@ export function getFinancialStatusBadgeStatus(status: OrderDisplayFinancialStatu
   )[status];
 }
 
-export function getFulfillmentStatusBadgeVariant(status: OrderDisplayFulfillmentStatus): BadgeVariant {
+export function getFulfillmentStatusBadgeVariant(status: OrderDisplayFulfillmentStatus): BadgeProps['variant'] {
   return (
     {
       UNFULFILLED: 'neutral',
@@ -67,7 +66,7 @@ export function getFulfillmentStatusBadgeVariant(status: OrderDisplayFulfillment
   )[status];
 }
 
-export function getFulfillmentStatusBadgeStatus(status: OrderDisplayFulfillmentStatus): BadgeStatus {
+export function getFulfillmentStatusBadgeStatus(status: OrderDisplayFulfillmentStatus): BadgeProps['status'] {
   return (
     {
       UNFULFILLED: 'empty',
@@ -119,7 +118,7 @@ export function getSpecialOrderBadge(specialOrder: WorkOrderSpecialOrder, includ
     return { text: name, variant: 'highlight' };
   }
 
-  let variant: BadgeVariant = 'success';
+  let variant: BadgeProps['variant'] = 'success';
 
   if (items.some(item => item.quantity > item.orderedQuantity)) {
     variant = 'warning';
@@ -155,7 +154,7 @@ export function getSpecialOrderBadges(specialOrders: WorkOrderSpecialOrder[], in
 export function getTransferOrderBadge(transferOrder: WorkOrderTransferOrder, includeQuantity: boolean): BadgeProps {
   const { name, items } = transferOrder;
 
-  let variant: BadgeVariant = 'success';
+  let variant: BadgeProps['variant'] = 'success';
 
   if (items.some(item => item.status === 'PENDING')) {
     variant = 'warning';

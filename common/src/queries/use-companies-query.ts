@@ -1,7 +1,7 @@
 import type { FetchCompaniesResponse } from '@web/controllers/api/companies.js';
 import type { PaginationOptions } from '@web/schemas/generated/pagination-options.js';
 import { createPaginatedQuery } from './create-paginated-query.js';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useCompanyQuery } from './use-company-query.js';
 import { UseQueryData } from './react-query.js';
 
@@ -20,12 +20,10 @@ export const useCompaniesQuery = (...[options, ...args]: Parameters<typeof query
       ...options,
       options: {
         ...options.options,
-        onSuccess: data => {
-          for (const company of data.pages.flat()) {
+        onSuccess: page => {
+          for (const company of page.companies) {
             queryClient.setQueryData(['company', company.id], company satisfies UseQueryData<typeof useCompanyQuery>);
           }
-
-          options.options?.onSuccess?.(data);
         },
       },
     },

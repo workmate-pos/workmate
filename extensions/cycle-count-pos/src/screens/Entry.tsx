@@ -1,7 +1,16 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useCycleCountPageQuery } from '@work-orders/common/queries/use-cycle-count-page-query.js';
-import { BadgeProps, Banner, Button, List, ListRow, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import {
+  BadgeProps,
+  Banner,
+  Button,
+  List,
+  ListRow,
+  SegmentedControl,
+  Text,
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -56,7 +65,7 @@ export function Entry() {
   const screen = useScreen();
   screen.setIsLoading(selectedCycleCountQuery.isFetching);
 
-  const { session } = useExtensionApi<'pos.home.modal.render'>();
+  const { session } = useApi<'pos.home.modal.render'>();
 
   useEffect(() => {
     if (selectedCycleCountQuery.data && !selectedCycleCountQuery.isFetching) {

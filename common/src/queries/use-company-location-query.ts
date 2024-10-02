@@ -1,4 +1,4 @@
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import type { ID } from '@web/services/gql/queries/generated/schema.js';
 import { FetchCompanyLocationResponse } from '@web/controllers/api/companies.js';
 import { Fetch } from './fetch.js';

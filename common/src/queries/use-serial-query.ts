@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useQuery, UseQueryOptions } from 'react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { FetchSerialResponse } from '@web/controllers/api/serials.js';
 import { DetailedSerial } from '@web/services/serials/get.js';
@@ -14,7 +14,7 @@ export const useSerialQuery = (
     productVariantId: ID | null;
     serial: string | null;
   },
-  options?: UseQueryOptions<DetailedSerial | null, unknown, DetailedSerial | null, (string | null)[]>,
+  options?: Partial<UseQueryOptions<DetailedSerial | null, unknown, DetailedSerial | null, (string | null)[]>>,
 ) =>
   useQuery({
     ...options,

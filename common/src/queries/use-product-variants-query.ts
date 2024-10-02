@@ -1,7 +1,7 @@
 import type { FetchProductsResponse } from '@web/controllers/api/product-variant.js';
 import type { PaginationOptions } from '@web/schemas/generated/pagination-options.js';
 import { createPaginatedQuery } from './create-paginated-query.js';
-import { useQueryClient } from 'react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { UseQueryData } from './react-query.js';
 import { useProductVariantQuery } from './use-product-variant-query.js';
 
@@ -21,15 +21,13 @@ export const useProductVariantsQuery = (...[options, ...args]: Parameters<typeof
       ...options,
       options: {
         ...options.options,
-        onSuccess: data => {
-          for (const productVariant of data.pages.flat()) {
+        onSuccess: page => {
+          for (const productVariant of page.productVariants) {
             queryClient.setQueryData(
               ['product-variant', productVariant.id],
               productVariant satisfies UseQueryData<typeof useProductVariantQuery>,
             );
           }
-
-          options.options?.onSuccess?.(data);
         },
       },
     },

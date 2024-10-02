@@ -1,4 +1,4 @@
-import { useMutation, UseMutationOptions, useQueryClient } from 'react-query';
+import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { WorkOrderImportFileName } from '@web/services/work-orders/csv-import.js';
 import { Fetch } from './fetch.js';
 
@@ -40,8 +40,8 @@ export const useWorkOrdersUploadCsvMutation = (
       }
     },
     onSuccess() {
-      queryClient.invalidateQueries(['work-orders']);
-      queryClient.invalidateQueries(['work-order-info']);
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order-info'] });
       onSuccess?.();
     },
   });

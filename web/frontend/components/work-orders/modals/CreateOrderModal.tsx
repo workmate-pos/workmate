@@ -97,7 +97,7 @@ export function CreateOrderModal({
   );
 
   const canChangeSelection = selectableItems.length !== 0 || selectableCharges.length !== 0;
-  const isLoading = createWorkOrderOrderMutation.isLoading || calculatedDraftOrderQuery.isLoading;
+  const isLoading = createWorkOrderOrderMutation.isPending || calculatedDraftOrderQuery.isLoading;
 
   return (
     <Modal

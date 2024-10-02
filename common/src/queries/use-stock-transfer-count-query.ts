@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useQuery } from 'react-query';
+import { useQuery } from '@tanstack/react-query';
 import { FetchStockTransferCountResponse } from '@web/controllers/api/stock-transfers.js';
 import { StockTransferCountOptions } from '@web/schemas/generated/stock-transfer-count-options.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';

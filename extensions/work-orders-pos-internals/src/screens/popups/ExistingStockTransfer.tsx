@@ -2,7 +2,7 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useStockTransferQuery } from '@work-orders/common/queries/use-stock-transfer-query.js';
 import { StockTransfer } from '../StockTransfer.js';
-import { Stack, Text } from '@shopify/retail-ui-extensions-react';
+import { Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
 export function ExistingStockTransfer({ name }: { name: string }) {

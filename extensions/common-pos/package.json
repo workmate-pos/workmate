@@ -36,14 +36,7 @@
     "watch": "tsc -w"
   },
   "author": "Tim van Dam",
-  "devDependencies": {
-    "@types/node": "^20.11.17",
-    "@types/uuid": "^10.0.0",
-    "typescript": "^5.3.3"
-  },
   "dependencies": {
-    "@teifi-digital/shopify-app-toolbox": "^0.0.56",
-    "@work-orders/common": "file:../../common",
-    "uuid": "^10.0.0"
+    "@work-orders/common": "file:../../common"
   }
 }

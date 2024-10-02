@@ -1,4 +1,4 @@
-import { Button } from '@shopify/retail-ui-extensions-react';
+import { Button } from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 
 /**

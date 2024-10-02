@@ -3,10 +3,10 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useWorkOrderPrintJobMutation } from '@work-orders/common/queries/use-work-order-print-job-mutation.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { RadioButtonList, ScrollView, Stack, Text, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { RadioButtonList, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useState } from 'react';
-import { useForm } from '@teifi-digital/pos-tools/form';
-import { FormButton } from '@teifi-digital/pos-tools/form/components/FormButton.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
+import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { useRouter } from '../../routes.js';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 
@@ -27,8 +27,7 @@ export function WorkOrderPrintOverview({ name, dueDateUtc }: { name: string; due
   screen.setTitle(`Print Overview - ${name}`);
   screen.setIsLoading(settingsQuery.isLoading);
 
-  const { Form } = useForm();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const print = async () => {
     if (!settings) {
@@ -73,7 +72,7 @@ export function WorkOrderPrintOverview({ name, dueDateUtc }: { name: string; due
 
   return (
     <ScrollView>
-      <Form disabled={printJobMutation.isLoading}>
+      <Form disabled={printJobMutation.isPending}>
         <Stack direction={'vertical'} spacing={4}>
           <Text variant={'headingLarge'}>Choose a template</Text>
           <RadioButtonList
@@ -88,7 +87,7 @@ export function WorkOrderPrintOverview({ name, dueDateUtc }: { name: string; due
             title={'Print'}
             disabled={selectedTemplate === null}
             action={'submit'}
-            loading={printJobMutation.isLoading}
+            loading={printJobMutation.isPending}
             onPress={print}
             type={'primary'}
           />

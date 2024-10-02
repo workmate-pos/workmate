@@ -2,7 +2,7 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
-import { Stack, Text, useCartSubscription, useExtensionApi } from '@shopify/retail-ui-extensions-react';
+import { Stack, Text, useCartSubscription, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { WorkOrder } from './WorkOrder.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -16,7 +16,7 @@ export function NewWorkOrder() {
   const fetch = useAuthenticatedFetch();
 
   const cart = useCartSubscription();
-  const { toast } = useExtensionApi<'pos.home.modal.render'>();
+  const { toast } = useApi<'pos.home.modal.render'>();
 
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery(

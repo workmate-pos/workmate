@@ -1,5 +1,5 @@
 import { createRouter } from '@teifi-digital/pos-tools/router';
-import { ScrollView } from '@shopify/retail-ui-extensions-react';
+import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
 import { LocationSelector, LocationSelectorProps } from '@work-orders/common-pos/screens/selector/LocationSelector.js';
 import { CycleCount } from './screens/CycleCount.js';
 import { Camera } from './screens/Camera.js';
