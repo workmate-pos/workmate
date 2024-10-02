@@ -9,13 +9,10 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { unit } from '../db/unit-of-work.js';
 import { runTask } from '../task/task.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
+import { uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 
 const METAFIELD_DEFINITION_BATCH_SIZE = 100;
 const METAFIELD_BATCH_SIZE = 100;
-
-// TODO: Automatic syncing through webhook
-// -> if already synced, make sure to update it every time
-// -> if not synced yet, check if it has a relevant metafield, adn then sync
 
 export function getSyncProductOrVariantMetafieldsTaskName(shop: string, type: 'product' | 'variant') {
   return `${shop}-${type}-metafields-sync`;
@@ -115,19 +112,20 @@ export async function syncProductOrVariantMetafields(session: Session, type: 'pr
 
     await unit(async () => {
       await removeMetafields(shop, metafieldsToRemove, `gid://shopify/${gidObjectType}/%`);
-      await upsertMetafields(shop, newMetafields);
+      await upsertMetafields(
+        shop,
+        uniqueBy(newMetafields, ({ objectId, namespace, key }) => `${objectId}-${namespace}-${key}`),
+      );
     });
 
     await ensureProductVariantsExist(session, productVariantIds);
   });
 }
 
-// TODO: Sync these in product/variant sync too
-
 export async function doesProductHaveSyncableMetafields(session: Session, productId: ID) {
   const { scanner } = await getShopSettings(session.shop);
 
-  if (scanner.variants.metafields.product.length === 0 || scanner.variants.metafields.variant.length === 0) {
+  if (scanner.variants.metafields.product.length === 0 && scanner.variants.metafields.variant.length === 0) {
     return false;
   }
 

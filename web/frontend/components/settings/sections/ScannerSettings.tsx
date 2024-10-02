@@ -144,8 +144,8 @@ export function ScannerSettings({
         </Text>
 
         <Text as="p" variant="bodyMd" tone="subdued">
-          WorkMate indexes product (variant) metafields to allow you to scan products by their metafield values. We
-          currently support single line text metafields.
+          WorkMate indexes product metafields to allow you to scan products by their metafield values. We currently
+          support single line text product metafields.
         </Text>
 
         <Text as="p" variant="bodySm" tone="subdued">
@@ -170,8 +170,10 @@ export function ScannerSettings({
               progress={syncMetafieldsTaskQuery.isSyncing ? syncMetafieldsTaskQuery.progressPercentage : 100}
             />
             <Text as="p" variant="bodyMd" tone="subdued">
-              {syncMetafieldsTaskQuery.isSyncing ? syncMetafieldsTaskQuery.progress : lastKnownProgressMax} /{' '}
-              {lastKnownProgressMax} metafields
+              {syncMetafieldsTaskQuery.isSyncing
+                ? syncMetafieldsTaskQuery.progress.toFixed(0)
+                : lastKnownProgressMax.toFixed(0)}{' '}
+              / {lastKnownProgressMax.toFixed(0)} metafields
             </Text>
           </InlineStack>
         </Collapsible>
@@ -200,28 +202,28 @@ export function ScannerSettings({
       {metafieldsSpinner}
       {metafieldsError}
 
-      <SearchableChoiceList
-        title="Product Variant Metafields"
-        choices={variantMetafieldChoices}
-        onChange={variant =>
-          setSettings({
-            ...settings,
-            scanner: {
-              ...settings.scanner,
-              variants: {
-                ...settings.scanner.variants,
-                metafields: { ...settings.scanner.variants.metafields, variant },
-              },
-            },
-          })
-        }
-        selected={settings.scanner.variants.metafields.variant}
-        resourceName={{ singular: 'metafield', plural: 'metafields' }}
-        limit={SHOW_LESS_AMOUNT}
-        searchable
-      />
-      {metafieldsSpinner}
-      {metafieldsError}
+      {/*<SearchableChoiceList*/}
+      {/*  title="Product Variant Metafields"*/}
+      {/*  choices={variantMetafieldChoices}*/}
+      {/*  onChange={variant =>*/}
+      {/*    setSettings({*/}
+      {/*      ...settings,*/}
+      {/*      scanner: {*/}
+      {/*        ...settings.scanner,*/}
+      {/*        variants: {*/}
+      {/*          ...settings.scanner.variants,*/}
+      {/*          metafields: { ...settings.scanner.variants.metafields, variant },*/}
+      {/*        },*/}
+      {/*      },*/}
+      {/*    })*/}
+      {/*  }*/}
+      {/*  selected={settings.scanner.variants.metafields.variant}*/}
+      {/*  resourceName={{ singular: 'metafield', plural: 'metafields' }}*/}
+      {/*  limit={SHOW_LESS_AMOUNT}*/}
+      {/*  searchable*/}
+      {/*/>*/}
+      {/*{metafieldsSpinner}*/}
+      {/*{metafieldsError}*/}
 
       {toast}
     </BlockStack>
