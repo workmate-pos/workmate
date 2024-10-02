@@ -7,13 +7,13 @@ import { assertGidOrNull } from '../../util/assertions.js';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
 
-export type EmployeeSchedule = ReturnType<typeof mapEmployeeSchedule>;
-export type EmployeeScheduleItem = ReturnType<typeof mapEmployeeScheduleItem>;
-export type EmployeeScheduleItemAssignment = ReturnType<typeof mapEmployeeScheduleItemAssignment>;
+export type Schedule = ReturnType<typeof mapSchedule>;
+export type ScheduleEvent = ReturnType<typeof mapScheduleEvent>;
+export type ScheduleEventAssignment = ReturnType<typeof mapScheduleEventAssignment>;
 export type EmployeeAvailability = ReturnType<typeof mapEmployeeAvailability>;
-export type EmployeeScheduleItemTask = Awaited<ReturnType<typeof getEmployeeScheduleItemTasks>>[number];
+export type ScheduleEventTask = Awaited<ReturnType<typeof getScheduleEventTasks>>[number];
 
-export async function getEmployeeSchedules({
+export async function getSchedules({
   shop,
   limit,
   offset = 0,
@@ -39,7 +39,7 @@ export async function getEmployeeSchedules({
     updatedAt: Date;
   }>`
     SELECT es.*
-    FROM "EmployeeSchedule" es
+    FROM "Schedule" es
     WHERE es.shop = ${shop}
       AND es."locationId" IS NOT DISTINCT FROM COALESCE(${_locationId}, es."locationId")
       AND es.name ILIKE COALESCE(${_query}, '%')
@@ -48,12 +48,12 @@ export async function getEmployeeSchedules({
   `;
 
   return {
-    schedules: schedules.slice(0, limit).map(mapEmployeeSchedule),
+    schedules: schedules.slice(0, limit).map(mapSchedule),
     hasNextPage: schedules.length > limit,
   };
 }
 
-function mapEmployeeSchedule(schedule: {
+function mapSchedule(schedule: {
   id: number;
   shop: string;
   name: string;
@@ -77,7 +77,7 @@ function mapEmployeeSchedule(schedule: {
   }
 }
 
-export async function getEmployeeSchedule({ id, shop }: { id: number; shop: string }) {
+export async function getSchedule({ id, shop }: { id: number; shop: string }) {
   const [schedule] = await sql<{
     id: number;
     shop: string;
@@ -88,7 +88,7 @@ export async function getEmployeeSchedule({ id, shop }: { id: number; shop: stri
     updatedAt: Date;
   }>`
     SELECT *
-    FROM "EmployeeSchedule"
+    FROM "Schedule"
     WHERE id = ${id}
       AND shop = ${shop};
   `;
@@ -97,10 +97,10 @@ export async function getEmployeeSchedule({ id, shop }: { id: number; shop: stri
     return null;
   }
 
-  return mapEmployeeSchedule(schedule);
+  return mapSchedule(schedule);
 }
 
-export async function insertEmployeeSchedule({
+export async function insertSchedule({
   shop,
   name,
   locationId,
@@ -122,15 +122,15 @@ export async function insertEmployeeSchedule({
     createdAt: Date;
     updatedAt: Date;
   }>`
-    INSERT INTO "EmployeeSchedule" (shop, name, "locationId", "publishedAt")
+    INSERT INTO "Schedule" (shop, name, "locationId", "publishedAt")
     VALUES (${shop}, ${name}, ${_locationId}, ${publishedAt!})
     RETURNING *;
   `;
 
-  return mapEmployeeSchedule(schedule);
+  return mapSchedule(schedule);
 }
 
-export async function updateEmployeeSchedule({
+export async function updateSchedule({
   id,
   shop,
   name,
@@ -154,7 +154,7 @@ export async function updateEmployeeSchedule({
     createdAt: Date;
     updatedAt: Date;
   }>`
-    UPDATE "EmployeeSchedule"
+    UPDATE "Schedule"
     SET name          = ${name},
         "locationId"  = ${_locationId},
         "publishedAt" = ${publishedAt!}
@@ -167,10 +167,10 @@ export async function updateEmployeeSchedule({
     throw new HttpError('Schedule not found', 404);
   }
 
-  return mapEmployeeSchedule(schedule);
+  return mapSchedule(schedule);
 }
 
-export async function updateEmployeeSchedules(
+export async function updateSchedules(
   schedules: {
     id: number;
     shop: string;
@@ -195,7 +195,7 @@ export async function updateEmployeeSchedules(
     createdAt: Date;
     updatedAt: Date;
   }>`
-    UPDATE "EmployeeSchedule" es
+    UPDATE "Schedule" es
     SET name          = input.name,
         "locationId"  = input."locationId",
         "publishedAt" = input."publishedAt"
@@ -211,10 +211,10 @@ export async function updateEmployeeSchedules(
     RETURNING es.*;
   `;
 
-  return updatedSchedules.map(mapEmployeeSchedule);
+  return updatedSchedules.map(mapSchedule);
 }
 
-export async function deleteEmployeeSchedules(
+export async function deleteSchedules(
   schedules: {
     id: number;
     shop: string;
@@ -228,7 +228,7 @@ export async function deleteEmployeeSchedules(
 
   await sql`
     DELETE
-    FROM "EmployeeSchedule"
+    FROM "Schedule"
     WHERE (id, shop) IN (SELECT *
                          FROM UNNEST(
                            ${id} :: int[],
@@ -240,7 +240,7 @@ export async function deleteEmployeeSchedules(
 /**
  * Publish a schedule right away if not scheduled yet.
  */
-export async function publishEmployeeSchedule({ shop, id }: { shop: string; id: number }) {
+export async function publishSchedule({ shop, id }: { shop: string; id: number }) {
   const [schedule] = await sql<{
     id: number;
     shop: string;
@@ -250,7 +250,7 @@ export async function publishEmployeeSchedule({ shop, id }: { shop: string; id: 
     createdAt: Date;
     updatedAt: Date;
   }>`
-    UPDATE "EmployeeSchedule"
+    UPDATE "Schedule"
     SET "publishedAt" = NOW()
     WHERE shop = ${shop}
       AND id = ${id}
@@ -262,19 +262,19 @@ export async function publishEmployeeSchedule({ shop, id }: { shop: string; id: 
     return null;
   }
 
-  return mapEmployeeSchedule(schedule);
+  return mapSchedule(schedule);
 }
 
-export async function deleteEmployeeSchedule({ shop, id }: { shop: string; id: number }) {
+export async function deleteSchedule({ shop, id }: { shop: string; id: number }) {
   await sql`
     DELETE
-    FROM "EmployeeSchedule"
+    FROM "Schedule"
     WHERE shop = ${shop}
       AND id = ${id};
   `;
 }
 
-export async function getEmployeeScheduleItems({
+export async function getScheduleEvents({
   from,
   to,
   shop,
@@ -305,10 +305,10 @@ export async function getEmployeeScheduleItems({
     updatedAt: Date;
   }>`
     SELECT DISTINCT esi.*
-    FROM "EmployeeScheduleItem" esi
-           INNER JOIN "EmployeeSchedule" es ON es.id = esi."scheduleId"
-           LEFT JOIN "EmployeeScheduleItemAssignment" esia ON esia."scheduleItemId" = esi.id
-           LEFT JOIN "EmployeeScheduleItemTask" esit ON esit."scheduleItemId" = esi.id
+    FROM "ScheduleEvent" esi
+           INNER JOIN "Schedule" es ON es.id = esi."scheduleId"
+           LEFT JOIN "ScheduleEventAssignment" esia ON esia."ScheduleEventId" = esi.id
+           LEFT JOIN "ScheduleEventTask" esit ON esit."ScheduleEventId" = esi.id
     WHERE es.shop = ${shop}
       AND es.id = COALESCE(${scheduleId ?? null}, es.id)
       AND ("publishedAt" IS NOT NULL AND "publishedAt" <= NOW()) =
@@ -319,10 +319,10 @@ export async function getEmployeeScheduleItems({
       AND esit."taskId" IS NOT DISTINCT FROM COALESCE(${taskId ?? null}, esit."taskId");
   `;
 
-  return items.map(mapEmployeeScheduleItem);
+  return items.map(mapScheduleEvent);
 }
 
-export async function getEmployeeScheduleItem({ id, scheduleId }: { id: number; scheduleId: number }) {
+export async function getScheduleEvent({ id, scheduleId }: { id: number; scheduleId: number }) {
   const [item] = await sql<{
     id: number;
     scheduleId: number;
@@ -335,7 +335,7 @@ export async function getEmployeeScheduleItem({ id, scheduleId }: { id: number; 
     updatedAt: Date;
   }>`
     SELECT *
-    FROM "EmployeeScheduleItem"
+    FROM "ScheduleEvent"
     WHERE id = ${id}
       AND "scheduleId" = ${scheduleId};
   `;
@@ -344,10 +344,10 @@ export async function getEmployeeScheduleItem({ id, scheduleId }: { id: number; 
     return null;
   }
 
-  return mapEmployeeScheduleItem(item);
+  return mapScheduleEvent(item);
 }
 
-export function mapEmployeeScheduleItem(item: {
+export function mapScheduleEvent(item: {
   id: number;
   scheduleId: number;
   name: string;
@@ -366,7 +366,7 @@ export function mapEmployeeScheduleItem(item: {
   }
 }
 
-export async function insertEmployeeScheduleItem({
+export async function insertScheduleEvent({
   scheduleId,
   name,
   description,
@@ -381,7 +381,7 @@ export async function insertEmployeeScheduleItem({
   end: Date;
   color: string;
 }) {
-  const scheduleItem = await sqlOne<{
+  const ScheduleEvent = await sqlOne<{
     id: number;
     scheduleId: number;
     name: string;
@@ -392,15 +392,15 @@ export async function insertEmployeeScheduleItem({
     createdAt: Date;
     updatedAt: Date;
   }>`
-    INSERT INTO "EmployeeScheduleItem" ("scheduleId", name, description, start, "end", color)
+    INSERT INTO "ScheduleEvent" ("scheduleId", name, description, start, "end", color)
     VALUES (${scheduleId}, ${name}, ${description}, ${start}, ${end}, ${color})
     RETURNING *;
   `;
 
-  return mapEmployeeScheduleItem(scheduleItem);
+  return mapScheduleEvent(ScheduleEvent);
 }
 
-export async function updateEmployeeScheduleItem({
+export async function updateScheduleEvent({
   id,
   scheduleId,
   name,
@@ -417,7 +417,7 @@ export async function updateEmployeeScheduleItem({
   end: Date;
   color: string;
 }) {
-  const scheduleItem = await sqlOne<{
+  const ScheduleEvent = await sqlOne<{
     id: number;
     scheduleId: number;
     name: string;
@@ -428,7 +428,7 @@ export async function updateEmployeeScheduleItem({
     createdAt: Date;
     updatedAt: Date;
   }>`
-    UPDATE "EmployeeScheduleItem"
+    UPDATE "ScheduleEvent"
     SET name            = ${name},
         description     = ${description},
         start           = ${start},
@@ -439,27 +439,27 @@ export async function updateEmployeeScheduleItem({
     RETURNING *;
   `;
 
-  if (!scheduleItem) {
+  if (!ScheduleEvent) {
     throw new HttpError('Schedule item not found', 404);
   }
 
-  return mapEmployeeScheduleItem(scheduleItem);
+  return mapScheduleEvent(ScheduleEvent);
 }
 
-export async function deleteEmployeeScheduleItem({ id, scheduleId }: { id?: number; scheduleId: number }) {
+export async function deleteScheduleEvent({ id, scheduleId }: { id?: number; scheduleId: number }) {
   await sql`
     WITH "ItemsToDelete" AS (SELECT id
-                             FROM "EmployeeScheduleItem"
+                             FROM "ScheduleEvent"
                              WHERE id = COALESCE(${id ?? null}, id)
                                AND "scheduleId" = ${scheduleId}),
          "DeleteAssignments" AS (
-           DELETE FROM "EmployeeScheduleItemAssignment"
-             WHERE "scheduleItemId" IN (SELECT id FROM "ItemsToDelete")),
+           DELETE FROM "ScheduleEventAssignment"
+             WHERE "ScheduleEventId" IN (SELECT id FROM "ItemsToDelete")),
          "DeleteTasks" AS (
-           DELETE FROM "EmployeeScheduleItemTask"
-             WHERE "scheduleItemId" IN (SELECT id FROM "ItemsToDelete"))
+           DELETE FROM "ScheduleEventTask"
+             WHERE "ScheduleEventId" IN (SELECT id FROM "ItemsToDelete"))
     DELETE
-    FROM "EmployeeScheduleItem"
+    FROM "ScheduleEvent"
     WHERE id IN (SELECT id FROM "ItemsToDelete")
 
 
@@ -638,25 +638,25 @@ export async function getEmployeeAvailabilities({
   return availabilities.map(mapEmployeeAvailability);
 }
 
-export async function getEmployeeScheduleItemAssignments(ids: number[]) {
+export async function getScheduleEventAssignments(ids: number[]) {
   const assignments = await sql<{
     id: number;
-    scheduleItemId: number;
+    ScheduleEventId: number;
     staffMemberId: string;
     createdAt: Date;
     updatedAt: Date;
   }>`
     SELECT *
-    FROM "EmployeeScheduleItemAssignment" esia
-    WHERE esia."scheduleItemId" = ANY (${ids} :: int[]);
+    FROM "ScheduleEventAssignment" esia
+    WHERE esia."ScheduleEventId" = ANY (${ids} :: int[]);
   `;
 
-  return assignments.map(mapEmployeeScheduleItemAssignment);
+  return assignments.map(mapScheduleEventAssignment);
 }
 
-function mapEmployeeScheduleItemAssignment(assignment: {
+function mapScheduleEventAssignment(assignment: {
   id: number;
-  scheduleItemId: number;
+  ScheduleEventId: number;
   staffMemberId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -676,17 +676,17 @@ function mapEmployeeScheduleItemAssignment(assignment: {
   }
 }
 
-export async function deleteEmployeeScheduleItemAssignments({ scheduleItemId }: { scheduleItemId: number }) {
+export async function deleteScheduleEventAssignments({ ScheduleEventId }: { ScheduleEventId: number }) {
   await sql`
     DELETE
-    FROM "EmployeeScheduleItemAssignment"
-    WHERE "scheduleItemId" = ${scheduleItemId};
+    FROM "ScheduleEventAssignment"
+    WHERE "ScheduleEventId" = ${ScheduleEventId};
   `;
 }
 
-export async function insertEmployeeScheduleItemAssignments(
+export async function insertScheduleEventAssignments(
   assignments: {
-    scheduleItemId: number;
+    ScheduleEventId: number;
     staffMemberId: ID;
   }[],
 ) {
@@ -694,36 +694,36 @@ export async function insertEmployeeScheduleItemAssignments(
     return [];
   }
 
-  const { scheduleItemId, staffMemberId } = nest(assignments);
+  const { ScheduleEventId, staffMemberId } = nest(assignments);
 
   const result = await sql<{
     id: number;
-    scheduleItemId: number;
+    ScheduleEventId: number;
     staffMemberId: string;
     createdAt: Date;
     updatedAt: Date;
   }>`
-    INSERT INTO "EmployeeScheduleItemAssignment" ("scheduleItemId", "staffMemberId")
+    INSERT INTO "ScheduleEventAssignment" ("ScheduleEventId", "staffMemberId")
     SELECT *
     FROM UNNEST(
-      ${scheduleItemId} :: int[],
+      ${ScheduleEventId} :: int[],
       ${staffMemberId as string[]} :: text[]
          )
     RETURNING *;
   `;
 
-  return result.map(mapEmployeeScheduleItemAssignment);
+  return result.map(mapScheduleEventAssignment);
 }
 
-export async function deleteEmployeeScheduleItemTasks({ scheduleItemId }: { scheduleItemId: number }) {
+export async function deleteScheduleEventTasks({ ScheduleEventId }: { ScheduleEventId: number }) {
   await sql`
     DELETE
-    FROM "EmployeeScheduleItemTask"
-    WHERE "scheduleItemId" = ${scheduleItemId};
+    FROM "ScheduleEventTask"
+    WHERE "ScheduleEventId" = ${ScheduleEventId};
   `;
 }
 
-export async function insertEmployeeScheduleItemTasks(
+export async function insertScheduleEventTasks(
   links: {
     itemId: number;
     taskId: number;
@@ -735,8 +735,8 @@ export async function insertEmployeeScheduleItemTasks(
 
   const { itemId, taskId } = nest(links);
 
-  return await sql<{ id: number; scheduleItemId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
-    INSERT INTO "EmployeeScheduleItemTask" ("scheduleItemId", "taskId")
+  return await sql<{ id: number; ScheduleEventId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
+    INSERT INTO "ScheduleEventTask" ("ScheduleEventId", "taskId")
     SELECT *
     FROM UNNEST(
       ${itemId} :: int[],
@@ -746,14 +746,14 @@ export async function insertEmployeeScheduleItemTasks(
   `;
 }
 
-export async function getEmployeeScheduleItemTasks(ids: number[]) {
+export async function getScheduleEventTasks(ids: number[]) {
   if (ids.length === 0) {
     return [];
   }
 
-  return await sql<{ id: number; scheduleItemId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
+  return await sql<{ id: number; ScheduleEventId: number; taskId: number; createdAt: Date; updatedAt: Date }>`
     SELECT DISTINCT *
-    FROM "EmployeeScheduleItemTask"
-    WHERE "scheduleItemId" = ANY (${ids} :: int[]);
+    FROM "ScheduleEventTask"
+    WHERE "ScheduleEventId" = ANY (${ids} :: int[]);
   `;
 }

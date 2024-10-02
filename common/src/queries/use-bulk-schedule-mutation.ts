@@ -3,11 +3,11 @@ import { skipToken, useMutation, UseMutationOptions, useQuery, useQueryClient } 
 import { GetScheduleResponse } from '@web/controllers/api/schedules.js';
 import { UpsertSchedule } from '@web/schemas/generated/upsert-schedule.js';
 import { UseQueryData } from './react-query.js';
-import { useEmployeeSchedulesQuery } from './use-employee-schedules-query.js';
-import { mapSchedule, useEmployeeScheduleQuery } from './use-employee-schedule-query.js';
+import { useSchedulesQuery } from './use-schedules-query.js';
+import { mapSchedule, useScheduleQuery } from './use-schedule-query.js';
 import { BulkUpsertSchedules } from '@web/schemas/generated/bulk-upsert-schedules.js';
 
-export const useBulkEmployeeScheduleMutation = (
+export const useBulkScheduleMutation = (
   { fetch }: { fetch: Fetch },
   options?: UseMutationOptions<GetScheduleResponse[], unknown, BulkUpsertSchedules, string[]>,
 ) => {
@@ -32,12 +32,12 @@ export const useBulkEmployeeScheduleMutation = (
     async onSuccess(schedules, ...args) {
       for (const schedule of schedules) {
         queryClient.setQueryData(
-          ['employee-schedule', schedule.id],
-          mapSchedule(schedule) satisfies UseQueryData<typeof useEmployeeScheduleQuery>,
+          ['schedule', schedule.id],
+          mapSchedule(schedule) satisfies UseQueryData<typeof useScheduleQuery>,
         );
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['employee-schedule', 'list'] });
+      await queryClient.invalidateQueries({ queryKey: ['schedule', 'list'] });
       await options?.onSuccess?.(schedules, ...args);
     },
   });

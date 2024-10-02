@@ -1,11 +1,11 @@
 import { Fetch } from './fetch.js';
 import { skipToken, useQuery } from '@tanstack/react-query';
-import { EmployeeScheduleResponse, GetScheduleResponse } from '@web/controllers/api/schedules.js';
-import { EmployeeSchedule } from '@web/services/schedules/queries.js';
+import { ScheduleResponse, GetScheduleResponse } from '@web/controllers/api/schedules.js';
+import { Schedule } from '@web/services/schedules/queries.js';
 
-export const useEmployeeScheduleQuery = ({ fetch, id }: { fetch: Fetch; id: number | null }) =>
+export const useScheduleQuery = ({ fetch, id }: { fetch: Fetch; id: number | null }) =>
   useQuery({
-    queryKey: ['employee-schedule', id],
+    queryKey: ['schedule', id],
     queryFn:
       id === null
         ? skipToken
@@ -21,7 +21,7 @@ export const useEmployeeScheduleQuery = ({ fetch, id }: { fetch: Fetch; id: numb
           },
   });
 
-export function mapSchedule(schedule: EmployeeScheduleResponse): EmployeeSchedule {
+export function mapSchedule(schedule: ScheduleResponse): Schedule {
   return {
     ...schedule,
     createdAt: new Date(schedule.createdAt),

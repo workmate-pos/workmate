@@ -1,20 +1,20 @@
 import { Fetch } from './fetch.js';
 import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
-import { GetScheduleItemResponse } from '@web/controllers/api/schedules.js';
+import { GetScheduleEventResponse } from '@web/controllers/api/schedules.js';
 import { UseQueryData } from './react-query.js';
-import { mapItem, useEmployeeScheduleItemQuery } from './use-employee-schedule-item-query.js';
-import { DateTime, UpsertScheduleItem } from '@web/schemas/generated/upsert-schedule-item.js';
-import { useEmployeeScheduleItemsQuery } from './use-employee-schedule-items-query.js';
+import { mapItem, useScheduleEventQuery } from './use-schedule-event-query.js';
+import { DateTime, UpsertScheduleEvent } from '@web/schemas/generated/upsert-schedule-event.js';
+import { useScheduleEventsQuery } from './use-schedule-events-query.js';
 
 // when creating new availabilities we use a fake id for optimistic updates
 let fakeIdSeq = 0;
 
-export const useEmployeeScheduleItemMutation = (
+export const useScheduleEventMutation = (
   { fetch }: { fetch: Fetch },
   options?: UseMutationOptions<
-    GetScheduleItemResponse,
+    GetScheduleEventResponse,
     unknown,
-    Omit<UpsertScheduleItem, 'start' | 'end'> & { scheduleId: number; itemId: number | null; start: Date; end: Date },
+    Omit<UpsertScheduleEvent, 'start' | 'end'> & { scheduleId: number; itemId: number | null; start: Date; end: Date },
     unknown
   >,
 ) => {
@@ -22,12 +22,12 @@ export const useEmployeeScheduleItemMutation = (
 
   return useMutation({
     ...options,
-    mutationKey: ['employee-schedule-item'],
+    mutationKey: ['schedule-event'],
     mutationFn: async ({
       scheduleId,
       itemId,
       ...body
-    }: Omit<UpsertScheduleItem, 'start' | 'end'> & {
+    }: Omit<UpsertScheduleEvent, 'start' | 'end'> & {
       scheduleId: number;
       itemId: number | null;
       start: Date;
@@ -41,7 +41,7 @@ export const useEmployeeScheduleItemMutation = (
             ...body,
             start: body.start.toISOString() as DateTime,
             end: body.end.toISOString() as DateTime,
-          } satisfies UpsertScheduleItem),
+          } satisfies UpsertScheduleEvent),
           headers: { 'Content-Type': 'application/json' },
         },
       );
@@ -50,12 +50,12 @@ export const useEmployeeScheduleItemMutation = (
         throw new Error('Failed to mutate employee schedule item');
       }
 
-      const items: GetScheduleItemResponse = await response.json();
+      const items: GetScheduleEventResponse = await response.json();
       return items;
     },
     async onMutate(item, ...args) {
-      const currentItem = queryClient.getQueryData<UseQueryData<typeof useEmployeeScheduleItemQuery>>([
-        'employee-schedule',
+      const currentItem = queryClient.getQueryData<UseQueryData<typeof useScheduleEventQuery>>([
+        'schedule',
         item.scheduleId,
         'item',
         item.itemId,
@@ -65,7 +65,7 @@ export const useEmployeeScheduleItemMutation = (
       const id = item.itemId ?? (fakeId = -fakeIdSeq++);
 
       const { end, start, name, description, color, staffMemberIds, taskIds } = item;
-      const data: UseQueryData<typeof useEmployeeScheduleItemQuery> = {
+      const data: UseQueryData<typeof useScheduleEventQuery> = {
         createdAt: new Date(),
         scheduleId: item.scheduleId,
         ...currentItem,
@@ -80,23 +80,21 @@ export const useEmployeeScheduleItemMutation = (
         taskIds,
       };
 
-      queryClient.cancelQueries({ queryKey: ['employee-schedule', item.scheduleId, 'item', item.itemId] });
-      queryClient.setQueryData<UseQueryData<typeof useEmployeeScheduleItemQuery>>(
-        ['employee-schedule', item.scheduleId, 'item', id],
+      queryClient.cancelQueries({ queryKey: ['schedule', item.scheduleId, 'item', item.itemId] });
+      queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
+        ['schedule', item.scheduleId, 'item', id],
         data,
       );
 
-      for (const [queryKey, queryData] of queryClient.getQueriesData<
-        UseQueryData<typeof useEmployeeScheduleItemsQuery>
-      >({
-        queryKey: ['employee-schedule', item.scheduleId, 'item', 'list'],
+      for (const [queryKey, queryData] of queryClient.getQueriesData<UseQueryData<typeof useScheduleEventsQuery>>({
+        queryKey: ['schedule', item.scheduleId, 'item', 'list'],
       })) {
         if (!queryData) {
           continue;
         }
 
         queryClient.cancelQueries({ queryKey });
-        queryClient.setQueryData<UseQueryData<typeof useEmployeeScheduleItemsQuery>>(queryKey, [
+        queryClient.setQueryData<UseQueryData<typeof useScheduleEventsQuery>>(queryKey, [
           ...queryData.filter(x => x.id !== item.itemId),
           data,
         ]);
@@ -113,13 +111,13 @@ export const useEmployeeScheduleItemMutation = (
       const [item, { scheduleId }] = args;
 
       const isMutating = queryClient.isMutating({
-        mutationKey: ['employee-schedule-item'],
+        mutationKey: ['schedule-event'],
         predicate: mutation => mutation.state.variables.itemId === item.id,
       });
 
       if (!isMutating) {
-        queryClient.setQueryData<UseQueryData<typeof useEmployeeScheduleItemQuery>>(
-          ['employee-schedule', item.scheduleId, 'item', item.id],
+        queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
+          ['schedule', item.scheduleId, 'item', item.id],
           mapItem(item),
         );
       }
@@ -128,8 +126,8 @@ export const useEmployeeScheduleItemMutation = (
     },
     async onError(_1, _2, context) {
       if (context?.currentItem) {
-        queryClient.setQueryData<UseQueryData<typeof useEmployeeScheduleItemQuery>>(
-          ['employee-schedule', context.currentItem.scheduleId, 'item', context.currentItem.id],
+        queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
+          ['schedule', context.currentItem.scheduleId, 'item', context.currentItem.id],
           context.currentItem,
         );
       }
@@ -139,13 +137,13 @@ export const useEmployeeScheduleItemMutation = (
     async onSettled(_1, _2, input, context) {
       if (context?.fakeId) {
         queryClient.removeQueries({
-          queryKey: ['employee-schedule', input.scheduleId, 'item', context.fakeId],
+          queryKey: ['schedule', input.scheduleId, 'item', context.fakeId],
         });
       }
 
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['employee-schedule', input.scheduleId] }),
-        queryClient.invalidateQueries({ queryKey: ['employee-schedule', 'all'] }),
+        queryClient.invalidateQueries({ queryKey: ['schedule', input.scheduleId] }),
+        queryClient.invalidateQueries({ queryKey: ['schedule', 'all'] }),
       ]);
 
       await options?.onSettled?.(_1, _2, input, context);

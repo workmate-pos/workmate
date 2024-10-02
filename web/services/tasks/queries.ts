@@ -56,7 +56,7 @@ export async function getTasks(shop: string, ids: number[]) {
   return tasks;
 }
 
-export async function getEmployeeScheduleItemTasks({
+export async function getScheduleEventTasks({
   shop,
   scheduleId,
   itemId,
@@ -77,9 +77,9 @@ export async function getEmployeeScheduleItemTasks({
     updatedAt: Date;
   }>`
     SELECT t.*
-    FROM "EmployeeScheduleItem" esi
-           INNER JOIN "EmployeeSchedule" es ON es.id = esi."scheduleId"
-           INNER JOIN "EmployeeScheduleItemTask" esit ON esit."scheduleItemId" = esi.id
+    FROM "ScheduleEvent" esi
+           INNER JOIN "Schedule" es ON es.id = esi."scheduleId"
+           INNER JOIN "ScheduleEventTask" esit ON esit."ScheduleEventId" = esi.id
            INNER JOIN "Task" t ON t.id = esit."taskId"
     WHERE esi."scheduleId" = ${scheduleId}
       AND esi.id = ${itemId}

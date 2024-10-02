@@ -48,7 +48,7 @@ CREATE TABLE "EmployeeAvailability"
 );
 
 -- CreateTable
-CREATE TABLE "EmployeeScheduleItem"
+CREATE TABLE "ScheduleEvent"
 (
   "id"          SERIAL         NOT NULL,
   "scheduleId"  INTEGER        NOT NULL,
@@ -60,11 +60,11 @@ CREATE TABLE "EmployeeScheduleItem"
   "createdAt"   TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt"   TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-  CONSTRAINT "EmployeeScheduleItem_pkey" PRIMARY KEY ("id")
+  CONSTRAINT "ScheduleEvent_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "EmployeeScheduleItemAssignment"
+CREATE TABLE "ScheduleEventAssignment"
 (
   "id"             SERIAL         NOT NULL,
   "scheduleItemId" INTEGER        NOT NULL,
@@ -72,11 +72,11 @@ CREATE TABLE "EmployeeScheduleItemAssignment"
   "createdAt"      TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt"      TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-  CONSTRAINT "EmployeeScheduleItemAssignment_pkey" PRIMARY KEY ("id")
+  CONSTRAINT "ScheduleEventAssignment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "EmployeeScheduleItemTask"
+CREATE TABLE "ScheduleEventTask"
 (
   "id"             SERIAL         NOT NULL,
   "scheduleItemId" INTEGER        NOT NULL,
@@ -84,7 +84,7 @@ CREATE TABLE "EmployeeScheduleItemTask"
   "createdAt"      TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt"      TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-  CONSTRAINT "EmployeeScheduleItemTask_pkey" PRIMARY KEY ("id")
+  CONSTRAINT "ScheduleEventTask_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -172,7 +172,7 @@ CREATE TABLE "TaskAssignment"
 );
 
 -- CreateTable
-CREATE TABLE "EmployeeSchedule"
+CREATE TABLE "Schedule"
 (
   "id"          SERIAL         NOT NULL,
   "shop"        TEXT           NOT NULL,
@@ -182,17 +182,17 @@ CREATE TABLE "EmployeeSchedule"
   "createdAt"   TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt"   TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-  CONSTRAINT "EmployeeSchedule_pkey" PRIMARY KEY ("id")
+  CONSTRAINT "Schedule_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
 CREATE UNIQUE INDEX "LongRunningTask_name_key" ON "LongRunningTask" ("name");
 
 -- CreateIndex
-CREATE INDEX "EmployeeScheduleItemAssignment_scheduleItemId_staffMemberId_idx" ON "EmployeeScheduleItemAssignment" ("scheduleItemId", "staffMemberId");
+CREATE INDEX "ScheduleEventAssignment_scheduleItemId_staffMemberId_idx" ON "ScheduleEventAssignment" ("scheduleItemId", "staffMemberId");
 
 -- CreateIndex
-CREATE INDEX "EmployeeScheduleItemAssignment_staffMemberId_idx" ON "EmployeeScheduleItemAssignment" ("staffMemberId");
+CREATE INDEX "ScheduleEventAssignment_staffMemberId_idx" ON "ScheduleEventAssignment" ("staffMemberId");
 
 -- CreateIndex
 CREATE INDEX "EmployeeAvailability_shop_staffMemberId_available_start_end_idx" ON "EmployeeAvailability" (shop, "staffMemberId", "available", "start", "end");
@@ -207,13 +207,13 @@ CREATE INDEX "EmployeeAvailability_shop_available_start_end_idx" ON "EmployeeAva
 CREATE INDEX "EmployeeAvailability_shop_available_end_idx" ON "EmployeeAvailability" (shop, "available", "end");
 
 -- CreateIndex
-CREATE INDEX "EmployeeScheduleItem_scheduleId_idx" ON "EmployeeScheduleItem" ("scheduleId");
+CREATE INDEX "ScheduleEvent_scheduleId_idx" ON "ScheduleEvent" ("scheduleId");
 
 -- CreateIndex
-CREATE INDEX "EmployeeScheduleItem_start_end_idx" ON "EmployeeScheduleItem" ("start", "end");
+CREATE INDEX "ScheduleEvent_start_end_idx" ON "ScheduleEvent" ("start", "end");
 
 -- CreateIndex
-CREATE INDEX "EmployeeScheduleItem_end_idx" ON "EmployeeScheduleItem" ("end");
+CREATE INDEX "ScheduleEvent_end_idx" ON "ScheduleEvent" ("end");
 
 -- CreateIndex
 CREATE INDEX "TaskAssignment_taskId_idx" ON "TaskAssignment" ("taskId");
@@ -225,35 +225,35 @@ CREATE INDEX "TaskAssignment_staffMemberId_idx" ON "TaskAssignment" ("staffMembe
 CREATE INDEX "Task_shop_idx" ON "Task" ("shop");
 
 -- CreateIndex
-CREATE INDEX "EmployeeScheduleItemTask_scheduleItemId_taskId_idx" ON "EmployeeScheduleItemTask" ("scheduleItemId", "taskId");
+CREATE INDEX "ScheduleEventTask_scheduleItemId_taskId_idx" ON "ScheduleEventTask" ("scheduleItemId", "taskId");
 
 -- CreateIndex
-CREATE INDEX "EmployeeScheduleItemTask_taskId_idx" ON "EmployeeScheduleItemTask" ("taskId");
+CREATE INDEX "ScheduleEventTask_taskId_idx" ON "ScheduleEventTask" ("taskId");
 
 -- CreateIndex
-CREATE INDEX "EmployeeSchedule_shop_id_idx" ON "EmployeeSchedule" ("shop", "id");
+CREATE INDEX "Schedule_shop_id_idx" ON "Schedule" ("shop", "id");
 
 -- CreateIndex
-CREATE INDEX "EmployeeSchedule_shop_locationId_idx" ON "EmployeeSchedule" ("shop", "locationId");
+CREATE INDEX "Schedule_shop_locationId_idx" ON "Schedule" ("shop", "locationId");
 
 -- CreateIndex
-CREATE INDEX "EmployeeSchedule_shop_publishedAt_idx" ON "EmployeeSchedule" ("shop", "publishedAt");
+CREATE INDEX "Schedule_shop_publishedAt_idx" ON "Schedule" ("shop", "publishedAt");
 
 -- AddForeignKey
-ALTER TABLE "EmployeeScheduleItemAssignment"
-  ADD CONSTRAINT "EmployeeScheduleItemAssignment_scheduleItemId_fkey" FOREIGN KEY ("scheduleItemId") REFERENCES "EmployeeScheduleItem" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScheduleEventAssignment"
+  ADD CONSTRAINT "ScheduleEventAssignment_scheduleItemId_fkey" FOREIGN KEY ("scheduleItemId") REFERENCES "ScheduleEvent" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EmployeeScheduleItem"
-  ADD CONSTRAINT "EmployeeScheduleItem_scheduleId_fkey" FOREIGN KEY ("scheduleId") REFERENCES "EmployeeSchedule" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScheduleEvent"
+  ADD CONSTRAINT "ScheduleEvent_scheduleId_fkey" FOREIGN KEY ("scheduleId") REFERENCES "Schedule" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EmployeeScheduleItemTask"
-  ADD CONSTRAINT "EmployeeScheduleItemTask_scheduleItemId_fkey" FOREIGN KEY ("scheduleItemId") REFERENCES "EmployeeScheduleItem" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScheduleEventTask"
+  ADD CONSTRAINT "ScheduleEventTask_scheduleItemId_fkey" FOREIGN KEY ("scheduleItemId") REFERENCES "ScheduleEvent" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "EmployeeScheduleItemTask"
-  ADD CONSTRAINT "EmployeeScheduleItemTask_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ScheduleEventTask"
+  ADD CONSTRAINT "ScheduleEventTask_taskId_fkey" FOREIGN KEY ("taskId") REFERENCES "Task" ("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TaskWorkOrderLink"
@@ -314,15 +314,15 @@ CREATE TRIGGER "EmployeeAvailability_updatedAt"
   FOR EACH ROW
 EXECUTE PROCEDURE updated_at();
 
-CREATE TRIGGER "EmployeeScheduleItem_updatedAt"
+CREATE TRIGGER "ScheduleEvent_updatedAt"
   BEFORE UPDATE
-  ON "EmployeeScheduleItem"
+  ON "ScheduleEvent"
   FOR EACH ROW
 EXECUTE PROCEDURE updated_at();
 
-CREATE TRIGGER "EmployeeScheduleItemTask_updatedAt"
+CREATE TRIGGER "ScheduleEventTask_updatedAt"
   BEFORE UPDATE
-  ON "EmployeeScheduleItemTask"
+  ON "ScheduleEventTask"
   FOR EACH ROW
 EXECUTE PROCEDURE updated_at();
 
@@ -368,14 +368,14 @@ CREATE TRIGGER "TaskAssignment_updatedAt"
   FOR EACH ROW
 EXECUTE PROCEDURE updated_at();
 
-CREATE TRIGGER "EmployeeSchedule_updatedAt"
+CREATE TRIGGER "Schedule_updatedAt"
   BEFORE UPDATE
-  ON "EmployeeSchedule"
+  ON "Schedule"
   FOR EACH ROW
 EXECUTE PROCEDURE updated_at();
 
-CREATE TRIGGER "EmployeeScheduleItemAssignment_updatedAt"
+CREATE TRIGGER "ScheduleEventAssignment_updatedAt"
   BEFORE UPDATE
-  ON "EmployeeScheduleItemAssignment"
+  ON "ScheduleEventAssignment"
   FOR EACH ROW
 EXECUTE PROCEDURE updated_at();

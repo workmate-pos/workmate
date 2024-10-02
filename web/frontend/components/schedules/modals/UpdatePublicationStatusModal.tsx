@@ -1,11 +1,11 @@
-import { EmployeeSchedule } from '@web/services/schedules/queries.js';
+import { Schedule } from '@web/services/schedules/queries.js';
 import { useEffect, useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { FormLayout, Modal, Select } from '@shopify/polaris';
 import { DateTime } from '@web/schemas/generated/bulk-upsert-schedules.js';
 import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
-import { useBulkEmployeeScheduleMutation } from '@work-orders/common/queries/use-bulk-employee-schedule-mutation.js';
+import { useBulkScheduleMutation } from '@work-orders/common/queries/use-bulk-schedule-mutation.js';
 
 export function UpdatePublicationStatusModal({
   open,
@@ -14,14 +14,14 @@ export function UpdatePublicationStatusModal({
 }: {
   open: boolean;
   onClose: () => void;
-  schedules: EmployeeSchedule[];
+  schedules: Schedule[];
 }) {
   const [publicationStatus, setPublicationStatus] = useState<string>();
   const [scheduledDate, setScheduledDate] = useState<Date>(new Date());
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const bulkMutation = useBulkEmployeeScheduleMutation(
+  const bulkMutation = useBulkScheduleMutation(
     { fetch },
     {
       onSuccess(_, { schedules }) {

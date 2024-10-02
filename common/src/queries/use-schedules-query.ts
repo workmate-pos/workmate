@@ -2,11 +2,11 @@ import { Fetch } from './fetch.js';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { GetSchedulesResponse } from '@web/controllers/api/schedules.js';
 import { SchedulesPaginationOptions } from '@web/schemas/generated/schedules-pagination-options.js';
-import { EmployeeSchedule } from '@web/services/schedules/queries.js';
-import { mapSchedule, useEmployeeScheduleQuery } from './use-employee-schedule-query.js';
+import { Schedule } from '@web/services/schedules/queries.js';
+import { mapSchedule, useScheduleQuery } from './use-schedule-query.js';
 import { UseQueryData } from './react-query.js';
 
-export const useEmployeeSchedulesQuery = ({
+export const useSchedulesQuery = ({
   fetch,
   filters,
 }: {
@@ -16,7 +16,7 @@ export const useEmployeeSchedulesQuery = ({
   const queryClient = useQueryClient();
 
   return useInfiniteQuery({
-    queryKey: ['employee-schedule', 'list', filters],
+    queryKey: ['schedule', 'list', filters],
     queryFn: async ({ pageParam: offset }) => {
       const { query, locationId, limit } = filters;
       const searchParams = new URLSearchParams();
@@ -35,8 +35,8 @@ export const useEmployeeSchedulesQuery = ({
       const result: GetSchedulesResponse = await response.json();
 
       for (const schedule of result.schedules) {
-        queryClient.setQueryData<UseQueryData<typeof useEmployeeScheduleQuery>>(
-          ['employee-schedule', schedule.id],
+        queryClient.setQueryData<UseQueryData<typeof useScheduleQuery>>(
+          ['schedule', schedule.id],
           mapSchedule(schedule),
         );
       }
@@ -47,7 +47,7 @@ export const useEmployeeSchedulesQuery = ({
     getNextPageParam: (page, allPages) =>
       page.hasNextPage ? allPages.flatMap(page => page.schedules).length : undefined,
     select: data => ({
-      pages: data.pages.map(page => page.schedules.map<EmployeeSchedule>(schedule => mapSchedule(schedule))),
+      pages: data.pages.map(page => page.schedules.map<Schedule>(schedule => mapSchedule(schedule))),
     }),
   });
 };

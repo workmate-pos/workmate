@@ -1,16 +1,12 @@
 import { Fetch } from './fetch.js';
 import { QueryClient, skipToken, useQueries, useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
-import { GetScheduleItemsResponse } from '@web/controllers/api/schedules.js';
-import { ScheduleItemsOptions } from '@web/schemas/generated/schedule-items-options.js';
-import {
-  DetailedEmployeeScheduleItem,
-  mapItem,
-  useEmployeeScheduleItemQuery,
-} from './use-employee-schedule-item-query.js';
+import { GetScheduleEventsResponse } from '@web/controllers/api/schedules.js';
+import { ScheduleEventsOptions } from '@web/schemas/generated/schedule-events-options.js';
+import { DetailedScheduleEvent, mapItem, useScheduleEventQuery } from './use-schedule-event-query.js';
 import { UseQueryData } from './react-query.js';
 import { DateTime } from '@web/services/gql/queries/generated/schema.js';
 
-export const useEmployeeScheduleItemsQuery = (
+export const useScheduleEventsQuery = (
   {
     fetch,
     id,
@@ -18,40 +14,40 @@ export const useEmployeeScheduleItemsQuery = (
   }: {
     fetch: Fetch;
     id: number | 'all' | null;
-    filters: EmployeeScheduleItemsFilters;
+    filters: ScheduleEventsFilters;
   },
   options?: Partial<
     UseQueryOptions<
-      DetailedEmployeeScheduleItem[],
+      DetailedScheduleEvent[],
       Error,
-      DetailedEmployeeScheduleItem[],
-      (string | number | EmployeeScheduleItemsFilters | null)[]
+      DetailedScheduleEvent[],
+      (string | number | ScheduleEventsFilters | null)[]
     >
   >,
 ) => {
   const queryClient = useQueryClient();
   return useQuery({
     ...options,
-    queryKey: ['employee-schedule', id, 'item', 'list', filters],
+    queryKey: ['schedule', id, 'item', 'list', filters],
     queryFn: id === null ? skipToken : () => queryFn({ fetch, queryClient, filters, id }),
   });
 };
 
-export const useEmployeeScheduleItemQueries = ({
+export const useScheduleEventQueries = ({
   fetch,
   options,
 }: {
   fetch: Fetch;
   options: {
     id: number | 'all';
-    filters: EmployeeScheduleItemsFilters;
+    filters: ScheduleEventsFilters;
   }[];
 }) => {
   const queryClient = useQueryClient();
 
   return useQueries({
     queries: options.map(({ id, filters }) => ({
-      queryKey: ['employee-schedule', id, 'item', 'list', filters],
+      queryKey: ['schedule', id, 'item', 'list', filters],
       queryFn: () => queryFn({ fetch, queryClient, filters, id }),
     })),
   });
@@ -65,7 +61,7 @@ async function queryFn({
 }: {
   fetch: Fetch;
   queryClient: QueryClient;
-  filters: EmployeeScheduleItemsFilters;
+  filters: ScheduleEventsFilters;
   id: number | 'all';
 }) {
   const { from, to, staffMemberId, published, taskId } = mapFilters(filters);
@@ -81,11 +77,11 @@ async function queryFn({
     throw new Error('Failed to fetch employee schedule items');
   }
 
-  const items: GetScheduleItemsResponse = await response.json();
+  const items: GetScheduleEventsResponse = await response.json();
 
   for (const item of items.items) {
-    queryClient.setQueryData<UseQueryData<typeof useEmployeeScheduleItemQuery>>(
-      ['employee-schedule', id, 'item', item.id],
+    queryClient.setQueryData<UseQueryData<typeof useScheduleEventQuery>>(
+      ['schedule', id, 'item', item.id],
       mapItem(item),
     );
   }
@@ -93,9 +89,9 @@ async function queryFn({
   return items.items.map(mapItem);
 }
 
-export type EmployeeScheduleItemsFilters = Omit<ScheduleItemsOptions, 'from' | 'to'> & { from: Date; to: Date };
+export type ScheduleEventsFilters = Omit<ScheduleEventsOptions, 'from' | 'to'> & { from: Date; to: Date };
 
-function mapFilters(filters: EmployeeScheduleItemsFilters): ScheduleItemsOptions {
+function mapFilters(filters: ScheduleEventsFilters): ScheduleEventsOptions {
   return {
     ...filters,
     from: filters.from.toISOString() as DateTime,

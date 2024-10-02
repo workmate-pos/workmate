@@ -1,16 +1,16 @@
 import { Fetch } from './fetch.js';
 import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  GetScheduleItemResponse,
-  GetScheduleItemsResponse,
-  GetScheduleItemTasksResponse,
+  GetScheduleEventResponse,
+  GetScheduleEventsResponse,
+  GetScheduleEventTasksResponse,
   GetScheduleResponse,
 } from '@web/controllers/api/schedules.js';
-import { ScheduleItemsOptions } from '@web/schemas/generated/schedule-items-options.js';
+import { ScheduleEventsOptions } from '@web/schemas/generated/schedule-events-options.js';
 import { UseQueryData } from './react-query.js';
 import { mapTask, useTaskQuery } from './use-task-query.js';
 
-export const useEmployeeScheduleItemTasksQuery = ({
+export const useScheduleEventTasksQuery = ({
   fetch,
   scheduleId,
   itemId,
@@ -22,7 +22,7 @@ export const useEmployeeScheduleItemTasksQuery = ({
   const queryClient = useQueryClient();
 
   return useQuery({
-    queryKey: ['employee-schedule', scheduleId, 'item', itemId, 'tasks'],
+    queryKey: ['schedule', scheduleId, 'item', itemId, 'tasks'],
     queryFn:
       scheduleId === null || itemId === null
         ? skipToken
@@ -35,7 +35,7 @@ export const useEmployeeScheduleItemTasksQuery = ({
               throw new Error('Failed to fetch employee schedule item');
             }
 
-            const tasks: GetScheduleItemTasksResponse = await response.json();
+            const tasks: GetScheduleEventTasksResponse = await response.json();
 
             for (const task of tasks) {
               queryClient.setQueryData<UseQueryData<typeof useTaskQuery>>(['task', task.id], mapTask(task));

@@ -3,10 +3,10 @@ import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/reac
 import { GetScheduleResponse } from '@web/controllers/api/schedules.js';
 import { UpsertSchedule } from '@web/schemas/generated/upsert-schedule.js';
 import { UseQueryData } from './react-query.js';
-import { useEmployeeSchedulesQuery } from './use-employee-schedules-query.js';
-import { useEmployeeScheduleQuery } from './use-employee-schedule-query.js';
+import { useSchedulesQuery } from './use-schedules-query.js';
+import { useScheduleQuery } from './use-schedule-query.js';
 
-export const useDeleteEmployeeScheduleMutation = ({ fetch }: { fetch: Fetch }) => {
+export const useDeleteScheduleMutation = ({ fetch }: { fetch: Fetch }) => {
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -21,11 +21,11 @@ export const useDeleteEmployeeScheduleMutation = ({ fetch }: { fetch: Fetch }) =
     },
     async onSuccess(_, { id }) {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['employee-schedule', 'all'] }),
-        queryClient.invalidateQueries({ queryKey: ['employee-schedule', 'list'] }),
+        queryClient.invalidateQueries({ queryKey: ['schedule', 'all'] }),
+        queryClient.invalidateQueries({ queryKey: ['schedule', 'list'] }),
       ]);
 
-      queryClient.removeQueries({ queryKey: ['employee-schedule', id] });
+      queryClient.removeQueries({ queryKey: ['schedule', id] });
     },
   });
 };

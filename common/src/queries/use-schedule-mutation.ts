@@ -3,10 +3,10 @@ import { skipToken, useMutation, UseMutationOptions, useQuery, useQueryClient } 
 import { GetScheduleResponse } from '@web/controllers/api/schedules.js';
 import { DateTime, UpsertSchedule } from '@web/schemas/generated/upsert-schedule.js';
 import { UseQueryData } from './react-query.js';
-import { useEmployeeSchedulesQuery } from './use-employee-schedules-query.js';
-import { mapSchedule, useEmployeeScheduleQuery } from './use-employee-schedule-query.js';
+import { useSchedulesQuery } from './use-schedules-query.js';
+import { mapSchedule, useScheduleQuery } from './use-schedule-query.js';
 
-export const useEmployeeScheduleMutation = (
+export const useScheduleMutation = (
   { fetch }: { fetch: Fetch },
   options?: UseMutationOptions<
     GetScheduleResponse,
@@ -39,10 +39,7 @@ export const useEmployeeScheduleMutation = (
       return schedule;
     },
     async onSuccess(schedule, ...args) {
-      queryClient.setQueryData<UseQueryData<typeof useEmployeeScheduleQuery>>(
-        ['employee-schedule', schedule.id],
-        mapSchedule(schedule),
-      );
+      queryClient.setQueryData<UseQueryData<typeof useScheduleQuery>>(['schedule', schedule.id], mapSchedule(schedule));
 
       await options?.onSuccess?.(schedule, ...args);
     },

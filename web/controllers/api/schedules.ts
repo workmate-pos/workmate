@@ -12,38 +12,38 @@ import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
 import { Session } from '@shopify/shopify-api';
 import {
   deleteEmployeeAvailability,
-  deleteEmployeeSchedule,
-  deleteEmployeeScheduleItem,
-  deleteEmployeeScheduleItemAssignments,
-  deleteEmployeeScheduleItemTasks,
-  deleteEmployeeSchedules,
+  deleteSchedule,
+  deleteScheduleEvent,
+  deleteScheduleEventAssignments,
+  deleteScheduleEventTasks,
+  deleteSchedules,
   EmployeeAvailability,
-  EmployeeSchedule,
-  EmployeeScheduleItem,
-  EmployeeScheduleItemAssignment,
-  EmployeeScheduleItemTask,
+  Schedule,
+  ScheduleEvent,
+  ScheduleEventAssignment,
+  ScheduleEventTask,
   getEmployeeAvailabilities,
   getEmployeeAvailability,
-  getEmployeeSchedule,
-  getEmployeeScheduleItem,
-  getEmployeeScheduleItemAssignments,
-  getEmployeeScheduleItems,
-  getEmployeeScheduleItemTasks,
-  getEmployeeSchedules,
+  getSchedule,
+  getScheduleEvent,
+  getScheduleEventAssignments,
+  getScheduleEvents,
+  getScheduleEventTasks,
+  getSchedules,
   insertEmployeeAvailability,
-  insertEmployeeSchedule,
-  insertEmployeeScheduleItem,
-  insertEmployeeScheduleItemAssignments,
-  insertEmployeeScheduleItemTasks,
+  insertSchedule,
+  insertScheduleEvent,
+  insertScheduleEventAssignments,
+  insertScheduleEventTasks,
   updateEmployeeAvailability,
-  updateEmployeeSchedule,
-  updateEmployeeScheduleItem,
-  updateEmployeeSchedules,
+  updateSchedule,
+  updateScheduleEvent,
+  updateSchedules,
 } from '../../services/schedules/queries.js';
 import { SchedulesPaginationOptions } from '../../schemas/generated/schedules-pagination-options.js';
-import { ScheduleItemsOptions } from '../../schemas/generated/schedule-items-options.js';
+import { ScheduleEventsOptions } from '../../schemas/generated/schedule-events-options.js';
 import { UpsertSchedule } from '../../schemas/generated/upsert-schedule.js';
-import { UpsertScheduleItem } from '../../schemas/generated/upsert-schedule-item.js';
+import { UpsertScheduleEvent } from '../../schemas/generated/upsert-schedule-event.js';
 import { DateTime } from '../../services/gql/queries/generated/schema.js';
 import { mapTask, TaskResponse } from './tasks.js';
 import { BulkUpsertSchedules } from '../../schemas/generated/bulk-upsert-schedules.js';
@@ -73,7 +73,7 @@ export default class SchedulesController {
     const { shop }: Session = res.locals.shopify.session;
     const { query, offset, locationId, limit } = req.query;
 
-    const { schedules, hasNextPage } = await getEmployeeSchedules({
+    const { schedules, hasNextPage } = await getSchedules({
       shop,
       query,
       offset,
@@ -82,16 +82,16 @@ export default class SchedulesController {
     });
 
     return res.json({
-      schedules: schedules.map(mapEmployeeSchedule),
+      schedules: schedules.map(mapSchedule),
       hasNextPage,
     });
   }
 
   @Get('/:id/items')
-  @QuerySchema('schedule-items-options')
+  @QuerySchema('schedule-events-options')
   async getItemsFromTo(
-    req: Request<{ id: string }, unknown, unknown, ScheduleItemsOptions>,
-    res: Response<GetScheduleItemsResponse>,
+    req: Request<{ id: string }, unknown, unknown, ScheduleEventsOptions>,
+    res: Response<GetScheduleEventsResponse>,
   ) {
     const id = req.params.id;
     const from = new Date(req.query.from);
@@ -113,7 +113,7 @@ export default class SchedulesController {
 
     const { shop }: Session = res.locals.shopify.session;
 
-    const items = await getEmployeeScheduleItems({
+    const items = await getScheduleEvents({
       shop,
       from,
       to,
@@ -124,15 +124,15 @@ export default class SchedulesController {
     });
 
     const [assignments, tasks] = await Promise.all([
-      getEmployeeScheduleItemAssignments(items.map(item => item.id)),
-      getEmployeeScheduleItemTasks(items.map(item => item.id)),
+      getScheduleEventAssignments(items.map(item => item.id)),
+      getScheduleEventTasks(items.map(item => item.id)),
     ]);
 
     return res.json({
       items: items.map(item =>
-        mapEmployeeScheduleItem(
+        mapScheduleEvent(
           item,
-          assignments.filter(assignment => assignment.scheduleItemId === item.id),
+          assignments.filter(assignment => assignment.ScheduleEventId === item.id),
           tasks,
         ),
       ),
@@ -140,15 +140,18 @@ export default class SchedulesController {
   }
 
   @Get('/:scheduleId/items/:itemId')
-  async getScheduleItem(req: Request<{ scheduleId: string; itemId: string }>, res: Response<GetScheduleItemResponse>) {
+  async getScheduleEvent(
+    req: Request<{ scheduleId: string; itemId: string }>,
+    res: Response<GetScheduleEventResponse>,
+  ) {
     const { shop }: Session = res.locals.shopify.session;
     const { scheduleId, itemId } = req.params;
 
     const [schedule, item, assignments, tasks] = await Promise.all([
-      getEmployeeSchedule({ shop, id: Number(scheduleId) }),
-      getEmployeeScheduleItem({ id: Number(itemId), scheduleId: Number(scheduleId) }),
-      getEmployeeScheduleItemAssignments([Number(itemId)]),
-      getEmployeeScheduleItemTasks([Number(itemId)]),
+      getSchedule({ shop, id: Number(scheduleId) }),
+      getScheduleEvent({ id: Number(itemId), scheduleId: Number(scheduleId) }),
+      getScheduleEventAssignments([Number(itemId)]),
+      getScheduleEventTasks([Number(itemId)]),
     ]);
 
     if (!schedule) {
@@ -159,19 +162,19 @@ export default class SchedulesController {
       throw new HttpError('Schedule item not found', 404);
     }
 
-    return res.json(mapEmployeeScheduleItem(item, assignments, tasks));
+    return res.json(mapScheduleEvent(item, assignments, tasks));
   }
 
   @Get('/:scheduleId/items/:itemId/tasks')
-  async getScheduleItemTasks(
+  async getScheduleEventTasks(
     req: Request<{ scheduleId: string; itemId: string }>,
-    res: Response<GetScheduleItemTasksResponse>,
+    res: Response<GetScheduleEventTasksResponse>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
     const { scheduleId, itemId } = req.params;
 
     // TODO: Unify this query with schedules/queries.js
-    const tasks = await taskQueries.getEmployeeScheduleItemTasks({
+    const tasks = await taskQueries.getScheduleEventTasks({
       shop,
       scheduleId: Number(scheduleId),
       itemId: Number(itemId),
@@ -186,14 +189,14 @@ export default class SchedulesController {
     const { shop }: Session = res.locals.shopify.session;
     const { name, locationId, publishedAt } = req.body;
 
-    const schedule = await insertEmployeeSchedule({
+    const schedule = await insertSchedule({
       shop,
       name,
       locationId,
       publishedAt: publishedAt ? new Date(publishedAt) : null,
     });
 
-    return res.json(mapEmployeeSchedule(schedule));
+    return res.json(mapSchedule(schedule));
   }
 
   @Post('/bulk')
@@ -201,7 +204,7 @@ export default class SchedulesController {
   async bulkUpsertSchedules(req: Request<unknown, unknown, BulkUpsertSchedules>, res: Response<GetScheduleResponse[]>) {
     const { shop }: Session = res.locals.shopify.session;
 
-    const schedules = await updateEmployeeSchedules(
+    const schedules = await updateSchedules(
       req.body.schedules.map(({ id, schedule }) => ({
         ...schedule,
         publishedAt: schedule.publishedAt ? new Date(schedule.publishedAt) : null,
@@ -210,7 +213,7 @@ export default class SchedulesController {
       })),
     );
 
-    return res.json(schedules.map(mapEmployeeSchedule));
+    return res.json(schedules.map(mapSchedule));
   }
 
   @Delete('/bulk')
@@ -218,7 +221,7 @@ export default class SchedulesController {
   async bulkDeleteSchedules(req: Request<unknown, unknown, BulkDeleteSchedules>, res: Response<GetScheduleResponse[]>) {
     const { shop }: Session = res.locals.shopify.session;
 
-    await deleteEmployeeSchedules(req.body.schedules.map(({ id }) => ({ id, shop })));
+    await deleteSchedules(req.body.schedules.map(({ id }) => ({ id, shop })));
 
     return res.sendStatus(200);
   }
@@ -359,13 +362,13 @@ export default class SchedulesController {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
 
-    const schedule = await getEmployeeSchedule({ shop, id: Number(id) });
+    const schedule = await getSchedule({ shop, id: Number(id) });
 
     if (!schedule) {
       throw new HttpError('Schedule not found', 404);
     }
 
-    return res.json(mapEmployeeSchedule(schedule));
+    return res.json(mapSchedule(schedule));
   }
 
   @Post('/:id')
@@ -375,7 +378,7 @@ export default class SchedulesController {
     const { id } = req.params;
     const { name, locationId, publishedAt } = req.body;
 
-    const schedule = await updateEmployeeSchedule({
+    const schedule = await updateSchedule({
       id: Number(id),
       shop,
       name,
@@ -383,23 +386,20 @@ export default class SchedulesController {
       publishedAt: publishedAt ? new Date(publishedAt) : null,
     });
 
-    return res.json(mapEmployeeSchedule(schedule));
+    return res.json(mapSchedule(schedule));
   }
 
   @Post('/:id/items')
-  @BodySchema('upsert-schedule-item')
-  async createScheduleItem(
-    req: Request<{ id: string }, unknown, UpsertScheduleItem>,
-    res: Response<GetScheduleItemResponse>,
+  @BodySchema('upsert-schedule-event')
+  async createScheduleEvent(
+    req: Request<{ id: string }, unknown, UpsertScheduleEvent>,
+    res: Response<GetScheduleEventResponse>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
     const { name, description, staffMemberIds, start, end, color, taskIds } = req.body;
 
-    const [schedule, tasks] = await Promise.all([
-      getEmployeeSchedule({ shop, id: Number(id) }),
-      getTasks(shop, taskIds),
-    ]);
+    const [schedule, tasks] = await Promise.all([getSchedule({ shop, id: Number(id) }), getTasks(shop, taskIds)]);
 
     if (!schedule) {
       throw new HttpError('Schedule not found', 404);
@@ -410,7 +410,7 @@ export default class SchedulesController {
     }
 
     return await unit(async () => {
-      const item = await insertEmployeeScheduleItem({
+      const item = await insertScheduleEvent({
         scheduleId: Number(id),
         name,
         description,
@@ -420,30 +420,27 @@ export default class SchedulesController {
       });
 
       const [assignments, tasks] = await Promise.all([
-        insertEmployeeScheduleItemAssignments(
-          staffMemberIds.map(staffMemberId => ({ scheduleItemId: item.id, staffMemberId })),
+        insertScheduleEventAssignments(
+          staffMemberIds.map(staffMemberId => ({ ScheduleEventId: item.id, staffMemberId })),
         ),
-        insertEmployeeScheduleItemTasks(taskIds.map(taskId => ({ itemId: item.id, taskId }))),
+        insertScheduleEventTasks(taskIds.map(taskId => ({ itemId: item.id, taskId }))),
       ]);
 
-      return res.json(mapEmployeeScheduleItem(item, assignments, tasks));
+      return res.json(mapScheduleEvent(item, assignments, tasks));
     });
   }
 
   @Post('/:id/items/:itemId')
-  @BodySchema('upsert-schedule-item')
-  async upsertScheduleItems(
-    req: Request<{ id: string; itemId: string }, unknown, UpsertScheduleItem>,
-    res: Response<GetScheduleItemResponse>,
+  @BodySchema('upsert-schedule-event')
+  async upsertScheduleEvents(
+    req: Request<{ id: string; itemId: string }, unknown, UpsertScheduleEvent>,
+    res: Response<GetScheduleEventResponse>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
     const { id, itemId } = req.params;
     const { name, description, staffMemberIds, start, end, taskIds, color } = req.body;
 
-    const [schedule, tasks] = await Promise.all([
-      getEmployeeSchedule({ shop, id: Number(id) }),
-      getTasks(shop, taskIds),
-    ]);
+    const [schedule, tasks] = await Promise.all([getSchedule({ shop, id: Number(id) }), getTasks(shop, taskIds)]);
 
     if (!schedule) {
       throw new HttpError('Schedule not found', 404);
@@ -455,7 +452,7 @@ export default class SchedulesController {
 
     return await unit(async () => {
       const [item] = await Promise.all([
-        updateEmployeeScheduleItem({
+        updateScheduleEvent({
           id: Number(itemId),
           scheduleId: Number(id),
           name,
@@ -464,19 +461,19 @@ export default class SchedulesController {
           end: new Date(end),
           color,
         }),
-        deleteEmployeeScheduleItemAssignments({ scheduleItemId: Number(itemId) }),
-        deleteEmployeeScheduleItemTasks({ scheduleItemId: Number(itemId) }),
+        deleteScheduleEventAssignments({ ScheduleEventId: Number(itemId) }),
+        deleteScheduleEventTasks({ ScheduleEventId: Number(itemId) }),
       ]);
 
       const [assignments, tasks] = await Promise.all([
-        insertEmployeeScheduleItemAssignments(
-          staffMemberIds.map(staffMemberId => ({ scheduleItemId: Number(itemId), staffMemberId })),
+        insertScheduleEventAssignments(
+          staffMemberIds.map(staffMemberId => ({ ScheduleEventId: Number(itemId), staffMemberId })),
         ),
 
-        insertEmployeeScheduleItemTasks(taskIds.map(taskId => ({ itemId: Number(itemId), taskId }))),
+        insertScheduleEventTasks(taskIds.map(taskId => ({ itemId: Number(itemId), taskId }))),
       ]);
 
-      return res.json(mapEmployeeScheduleItem(item, assignments, tasks));
+      return res.json(mapScheduleEvent(item, assignments, tasks));
     });
   }
 
@@ -485,42 +482,42 @@ export default class SchedulesController {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
 
-    const schedule = await getEmployeeSchedule({ shop, id: Number(id) });
+    const schedule = await getSchedule({ shop, id: Number(id) });
 
     if (!schedule) {
       throw new HttpError('Schedule not found', 404);
     }
 
-    await deleteEmployeeScheduleItem({ scheduleId: Number(id) });
-    await deleteEmployeeSchedule({ shop, id: Number(id) });
+    await deleteScheduleEvent({ scheduleId: Number(id) });
+    await deleteSchedule({ shop, id: Number(id) });
 
     return res.sendStatus(200);
   }
 
   @Delete('/:id/items/:itemId')
-  async deleteScheduleItem(req: Request<{ id: string; itemId: string }>, res: Response) {
+  async deleteScheduleEvent(req: Request<{ id: string; itemId: string }>, res: Response) {
     const { shop }: Session = res.locals.shopify.session;
     const { id, itemId } = req.params;
 
-    const schedule = await getEmployeeSchedule({ shop, id: Number(id) });
+    const schedule = await getSchedule({ shop, id: Number(id) });
 
     if (!schedule) {
       throw new HttpError('Schedule not found', 404);
     }
 
-    await deleteEmployeeScheduleItem({ id: Number(itemId), scheduleId: Number(id) });
+    await deleteScheduleEvent({ id: Number(itemId), scheduleId: Number(id) });
 
     return res.sendStatus(200);
   }
 }
 
-export type EmployeeScheduleResponse = Omit<EmployeeSchedule, 'publishedAt' | 'createdAt' | 'updatedAt'> & {
+export type ScheduleResponse = Omit<Schedule, 'publishedAt' | 'createdAt' | 'updatedAt'> & {
   publishedAt: DateTime | null;
   createdAt: DateTime;
   updatedAt: DateTime;
 };
 
-export type EmployeeScheduleItemResponse = Omit<EmployeeScheduleItem, 'createdAt' | 'updatedAt' | 'start' | 'end'> & {
+export type ScheduleEventResponse = Omit<ScheduleEvent, 'createdAt' | 'updatedAt' | 'start' | 'end'> & {
   start: DateTime;
   end: DateTime;
   createdAt: DateTime;
@@ -536,7 +533,7 @@ export type EmployeeAvailabilityResponse = Omit<EmployeeAvailability, 'start' | 
   updatedAt: DateTime;
 };
 
-function mapEmployeeSchedule(schedule: EmployeeSchedule): EmployeeScheduleResponse {
+function mapSchedule(schedule: Schedule): ScheduleResponse {
   return {
     ...schedule,
     publishedAt: schedule.publishedAt ? (schedule.publishedAt.toISOString() as DateTime) : null,
@@ -545,11 +542,11 @@ function mapEmployeeSchedule(schedule: EmployeeSchedule): EmployeeScheduleRespon
   };
 }
 
-function mapEmployeeScheduleItem(
-  item: EmployeeScheduleItem,
-  assignments: EmployeeScheduleItemAssignment[],
-  tasks: EmployeeScheduleItemTask[],
-): EmployeeScheduleItemResponse {
+function mapScheduleEvent(
+  item: ScheduleEvent,
+  assignments: ScheduleEventAssignment[],
+  tasks: ScheduleEventTask[],
+): ScheduleEventResponse {
   return {
     ...item,
     start: item.start.toISOString() as DateTime,
@@ -571,18 +568,18 @@ function mapEmployeeAvailability(availability: EmployeeAvailability): EmployeeAv
   };
 }
 
-export type GetScheduleItemsResponse = {
-  items: EmployeeScheduleItemResponse[];
+export type GetScheduleEventsResponse = {
+  items: ScheduleEventResponse[];
 };
 
 export type GetSchedulesResponse = {
-  schedules: EmployeeScheduleResponse[];
+  schedules: ScheduleResponse[];
   hasNextPage: boolean;
 };
 
-export type GetScheduleResponse = EmployeeScheduleResponse;
-export type GetScheduleItemResponse = EmployeeScheduleItemResponse;
-export type GetScheduleItemTasksResponse = TaskResponse[];
+export type GetScheduleResponse = ScheduleResponse;
+export type GetScheduleEventResponse = ScheduleEventResponse;
+export type GetScheduleEventTasksResponse = TaskResponse[];
 export type GetAvailabilityResponse = EmployeeAvailabilityResponse;
 export type GetAvailabilitiesResponse = EmployeeAvailabilityResponse[];
 

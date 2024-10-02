@@ -2,7 +2,7 @@ import { Fetch } from './fetch.js';
 import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
 import { BulkDeleteSchedules } from '@web/schemas/generated/bulk-delete-schedules.js';
 
-export const useBulkDeleteEmployeeScheduleMutation = (
+export const useBulkDeleteScheduleMutation = (
   { fetch }: { fetch: Fetch },
   options?: UseMutationOptions<void, unknown, BulkDeleteSchedules, string[]>,
 ) => {
@@ -22,11 +22,11 @@ export const useBulkDeleteEmployeeScheduleMutation = (
       }
     },
     async onSuccess(_1, input, ...args) {
-      await queryClient.invalidateQueries({ queryKey: ['employee-schedule', 'list'] });
+      await queryClient.invalidateQueries({ queryKey: ['schedule', 'list'] });
 
       for (const schedule of input.schedules) {
         queryClient.removeQueries({
-          queryKey: ['employee-schedule', schedule.id],
+          queryKey: ['schedule', schedule.id],
         });
       }
 

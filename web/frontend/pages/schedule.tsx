@@ -4,11 +4,8 @@ import { Box, Card, FormLayout, Frame, Modal, Page, Tabs, TextField } from '@sho
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { ReactNode, useEffect, useState } from 'react';
-import {
-  DetailedEmployeeScheduleItem,
-  useEmployeeScheduleItemQuery,
-} from '@work-orders/common/queries/use-employee-schedule-item-query.js';
-import { useEmployeeScheduleItemMutation } from '@work-orders/common/queries/use-employee-schedule-item-mutation.js';
+import { DetailedScheduleEvent, useScheduleEventQuery } from '@work-orders/common/queries/use-schedule-event-query.js';
+import { useScheduleEventMutation } from '@work-orders/common/queries/use-schedule-event-mutation.js';
 import type { TabProps } from '@shopify/polaris/build/ts/src/components/Tabs/types.js';
 import { YourSchedule } from '@web/frontend/components/schedules/YourSchedule.js';
 import { ManageSchedules } from '@web/frontend/components/schedules/ManageSchedules.js';
@@ -69,7 +66,7 @@ export default function Schedule() {
           </Box>
         </Card>
 
-        <ScheduleItemModal selectedItem={selectedItem} setSelectedItem={setSelectedItem} />
+        <ScheduleEventModal selectedItem={selectedItem} setSelectedItem={setSelectedItem} />
       </Page>
     </Frame>
   );
@@ -77,7 +74,7 @@ export default function Schedule() {
 
 type SelectedItem = { scheduleId: number; itemId: number };
 
-function ScheduleItemModal({
+function ScheduleEventModal({
   selectedItem,
   setSelectedItem,
 }: {
@@ -87,29 +84,29 @@ function ScheduleItemModal({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const [item, setItem] = useState<DetailedEmployeeScheduleItem>();
+  const [item, setItem] = useState<DetailedScheduleEvent>();
 
-  const itemQuery = useEmployeeScheduleItemQuery({
+  const eventQuery = useScheduleEventQuery({
     fetch,
     scheduleId: selectedItem?.scheduleId ?? null,
     itemId: selectedItem?.itemId ?? null,
   });
 
   useEffect(() => {
-    if (itemQuery.data) {
+    if (eventQuery.data) {
       setItem({
-        ...itemQuery.data,
-        start: new Date(itemQuery.data.start),
-        end: new Date(itemQuery.data.end),
-        createdAt: new Date(itemQuery.data.createdAt),
-        updatedAt: new Date(itemQuery.data.updatedAt),
+        ...eventQuery.data,
+        start: new Date(eventQuery.data.start),
+        end: new Date(eventQuery.data.end),
+        createdAt: new Date(eventQuery.data.createdAt),
+        updatedAt: new Date(eventQuery.data.updatedAt),
       });
     } else {
       setItem(undefined);
     }
-  }, [itemQuery.data]);
+  }, [eventQuery.data]);
 
-  const itemMutation = useEmployeeScheduleItemMutation(
+  const eventMutation = useScheduleEventMutation(
     { fetch },
     {
       onSuccess() {
@@ -119,7 +116,7 @@ function ScheduleItemModal({
     },
   );
 
-  const disabled = itemQuery.isFetching || !item || itemMutation.isPending;
+  const disabled = eventQuery.isFetching || !item || eventMutation.isPending;
 
   return (
     <>
@@ -127,17 +124,17 @@ function ScheduleItemModal({
         open={!!selectedItem}
         title={'Edit Schedule Item'}
         onClose={() => setSelectedItem(undefined)}
-        loading={itemQuery.isFetching}
+        loading={eventQuery.isFetching}
         primaryAction={{
           content: 'Save',
           disabled,
-          loading: itemMutation.isPending,
+          loading: eventMutation.isPending,
           onAction: () => {
             if (!selectedItem || !item) return;
             const { scheduleId, itemId } = selectedItem;
             if (!scheduleId || !itemId) return;
 
-            itemMutation.mutate({
+            eventMutation.mutate({
               scheduleId,
               itemId,
               name: item.name,

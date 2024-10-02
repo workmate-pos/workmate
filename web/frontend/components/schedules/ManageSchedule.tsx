@@ -1,6 +1,6 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { useEmployeeScheduleQuery } from '@work-orders/common/queries/use-employee-schedule-query.js';
+import { useScheduleQuery } from '@work-orders/common/queries/use-schedule-query.js';
 import {
   Badge,
   Banner,
@@ -27,9 +27,9 @@ import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ReactNode, useEffect, useState } from 'react';
 import { ChecklistMajor, ChevronLeftMinor, PlusMinor, SearchMinor } from '@shopify/polaris-icons';
 import {
-  useEmployeeScheduleItemQueries,
-  useEmployeeScheduleItemsQuery,
-} from '@work-orders/common/queries/use-employee-schedule-items-query.js';
+  useScheduleEventQueries,
+  useScheduleEventsQuery,
+} from '@work-orders/common/queries/use-schedule-events-query.js';
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { useEmployeeAvailabilitiesQuery } from '@work-orders/common/queries/use-employee-availabilities-query.js';
 import FullCalendar from '@fullcalendar/react';
@@ -41,14 +41,14 @@ import { StaffMemberSelectorModal } from '@web/frontend/components/selectors/Sta
 import { useEmployeeQueries, useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
 import { useTasksQuery } from '@work-orders/common/queries/use-tasks-query.js';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
-import { useEmployeeScheduleItemMutation } from '@work-orders/common/queries/use-employee-schedule-item-mutation.js';
+import { useScheduleEventMutation } from '@work-orders/common/queries/use-schedule-event-mutation.js';
 import humanizeDuration from 'humanize-duration';
 import { YEAR_IN_MS, MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { UpdatePublicationStatusModal } from '@web/frontend/components/schedules/modals/UpdatePublicationStatusModal.js';
-import { useDeleteEmployeeScheduleItemMutation } from '@work-orders/common/queries/use-delete-employee-schedule-item-mutation.js';
+import { useDeleteScheduleEventMutation } from '@work-orders/common/queries/use-delete-schedule-event-mutation.js';
 import { Loading } from '@shopify/app-bridge-react';
-import { useEmployeeScheduleItemQuery } from '@work-orders/common/queries/use-employee-schedule-item-query.js';
+import { useScheduleEventQuery } from '@work-orders/common/queries/use-schedule-event-query.js';
 import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
 import { SearchableChoiceList } from '@web/frontend/components/form/SearchableChoiceList.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -78,18 +78,18 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
     { fetch, filters: { from, to, staffMemberId: staffMemberId ?? createGid('StaffMember', '0') } },
     { placeholderData: keepPreviousData },
   );
-  const scheduleQuery = useEmployeeScheduleQuery({ fetch, id });
-  const scheduleItemsQuery = useEmployeeScheduleItemsQuery(
+  const scheduleQuery = useScheduleQuery({ fetch, id });
+  const ScheduleEventsQuery = useScheduleEventsQuery(
     { fetch, id, filters: { from, to, staffMemberId } },
     { placeholderData: keepPreviousData },
   );
   const staffMemberQuery = useEmployeeQuery({ fetch, id: staffMemberId ?? null });
-  const scheduleItemMutation = useEmployeeScheduleItemMutation({ fetch });
-  const deleteScheduleItemMutation = useDeleteEmployeeScheduleItemMutation({ fetch });
+  const ScheduleEventMutation = useScheduleEventMutation({ fetch });
+  const deleteScheduleEventMutation = useDeleteScheduleEventMutation({ fetch });
 
   const queryClient = useQueryClient();
   // Need this for Edit/Delete modals
-  const isMutatingScheduleItem = !!queryClient.isMutating({ mutationKey: ['employee-schedule-item'] });
+  const isMutatingScheduleEvent = !!queryClient.isMutating({ mutationKey: ['schedule-event'] });
 
   const [taskQuery, setTaskQuery, optimisticTaskQuery] = useDebouncedState('');
   const tasksQuery = useTasksQuery(
@@ -108,7 +108,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
   const tasks = tasksQuery.data?.flat(1) ?? [];
 
-  const taskItemQueries = useEmployeeScheduleItemQueries({
+  const taskItemQueries = useScheduleEventQueries({
     fetch,
     options: tasks.map(task => ({
       id: 'all',
@@ -119,8 +119,8 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
   const [shouldShowSidebar, setShouldShowSidebar] = useState(true);
   const [shouldShowStaffMemberSelector, setShouldShowStaffMemberSelector] = useState(false);
   const [shouldShowUpdatePublicationStatusModal, setShouldShowUpdatePublicationStatusModal] = useState(false);
-  const [shouldShowDeleteScheduleItemModal, setShouldShowDeleteScheduleItemModal] = useState(false);
-  const [shouldShowEditScheduleItemModal, setShouldShowEditScheduleItemModal] = useState(false);
+  const [shouldShowDeleteScheduleEventModal, setShouldShowDeleteScheduleEventModal] = useState(false);
+  const [shouldShowEditScheduleEventModal, setShouldShowEditScheduleEventModal] = useState(false);
 
   const [itemIdToEdit, setItemIdToEdit] = useState<number>();
 
@@ -156,9 +156,9 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
         </InlineStack>
       }
     >
-      {([availabilitiesQuery, scheduleQuery, scheduleItemsQuery].some(query => query.isLoading) ||
-        [scheduleItemMutation, deleteScheduleItemMutation].some(mutation => mutation.isPending) ||
-        isMutatingScheduleItem) && <Loading />}
+      {([availabilitiesQuery, scheduleQuery, ScheduleEventsQuery].some(query => query.isLoading) ||
+        [ScheduleEventMutation, deleteScheduleEventMutation].some(mutation => mutation.isPending) ||
+        isMutatingScheduleEvent) && <Loading />}
 
       <BlockStack gap={'050'}>
         {availabilitiesQuery.isError && (
@@ -176,22 +176,25 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
           </Banner>
         )}
 
-        {scheduleItemsQuery.isError && (
+        {ScheduleEventsQuery.isError && (
           <Banner tone="critical" title="Error loading schedule items">
-            {extractErrorMessage(scheduleItemsQuery.error, 'An error occurred while loading the schedule items')}
+            {extractErrorMessage(ScheduleEventsQuery.error, 'An error occurred while loading the schedule items')}
           </Banner>
         )}
 
-        {scheduleItemMutation.isError && (
+        {ScheduleEventMutation.isError && (
           <Banner tone="critical" title="Error adding task to schedule">
-            {extractErrorMessage(scheduleItemMutation.error, 'An error occurred while adding the task to the schedule')}
+            {extractErrorMessage(
+              ScheduleEventMutation.error,
+              'An error occurred while adding the task to the schedule',
+            )}
           </Banner>
         )}
 
-        {deleteScheduleItemMutation.isError && (
+        {deleteScheduleEventMutation.isError && (
           <Banner tone="critical" title="Error deleting schedule item">
             {extractErrorMessage(
-              deleteScheduleItemMutation.error,
+              deleteScheduleEventMutation.error,
               'An error occurred while deleting the schedule item',
             )}
           </Banner>
@@ -215,7 +218,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
                 if (element.event.id) {
                   setItemIdToEdit(Number(element.event.id));
-                  setShouldShowDeleteScheduleItemModal(true);
+                  setShouldShowDeleteScheduleEventModal(true);
                 }
               });
             }}
@@ -237,7 +240,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                   })) ?? [])
                 : []),
 
-              ...(scheduleItemsQuery.data?.map(item => {
+              ...(ScheduleEventsQuery.data?.map(item => {
                 // negative id is used for optimistic updates
                 const editable = item.id >= 0;
                 const colorOpacity = editable ? 'ff' : '77';
@@ -255,7 +258,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
             ]}
             selectable
             select={({ start, end }) => {
-              scheduleItemMutation.mutate(
+              ScheduleEventMutation.mutate(
                 {
                   itemId: null,
                   scheduleId: id,
@@ -270,7 +273,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                 {
                   onSuccess(item) {
                     setItemIdToEdit(item.id);
-                    setShouldShowEditScheduleItemModal(true);
+                    setShouldShowEditScheduleEventModal(true);
                   },
                 },
               );
@@ -282,10 +285,10 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
             eventDurationEditable
             eventClick={({ event }) => {
               setItemIdToEdit(Number(event.id));
-              setShouldShowEditScheduleItemModal(true);
+              setShouldShowEditScheduleEventModal(true);
             }}
             eventChange={({ event }) => {
-              const item = scheduleItemsQuery.data?.find(item => item.id.toString() === event.id);
+              const item = ScheduleEventsQuery.data?.find(item => item.id.toString() === event.id);
 
               if (!item) {
                 return;
@@ -293,7 +296,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
               console.log('did change', item, item.taskIds);
 
-              scheduleItemMutation.mutate({
+              ScheduleEventMutation.mutate({
                 scheduleId: id,
                 itemId: item.id,
                 start: event.start ?? item.start,
@@ -443,7 +446,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                             <Button
                               variant="plain"
                               onClick={() =>
-                                scheduleItemMutation.mutate({
+                                ScheduleEventMutation.mutate({
                                   scheduleId: id,
                                   itemId: null,
                                   name: task.name,
@@ -488,16 +491,16 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
         schedules={[scheduleQuery.data].filter(isNonNullable)}
       />
 
-      <DeleteScheduleItemModal
-        open={shouldShowDeleteScheduleItemModal}
-        onClose={() => setShouldShowDeleteScheduleItemModal(false)}
+      <DeleteScheduleEventModal
+        open={shouldShowDeleteScheduleEventModal}
+        onClose={() => setShouldShowDeleteScheduleEventModal(false)}
         scheduleId={id}
         itemId={itemIdToEdit}
       />
 
-      <EditScheduleItemModal
-        open={shouldShowEditScheduleItemModal}
-        onClose={() => setShouldShowEditScheduleItemModal(false)}
+      <EditScheduleEventModal
+        open={shouldShowEditScheduleEventModal}
+        onClose={() => setShouldShowEditScheduleEventModal(false)}
         scheduleId={id}
         itemId={itemIdToEdit}
       />
@@ -541,7 +544,7 @@ function Container({
   );
 }
 
-function DeleteScheduleItemModal({
+function DeleteScheduleEventModal({
   open,
   onClose,
   scheduleId,
@@ -555,7 +558,7 @@ function DeleteScheduleItemModal({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const deleteScheduleItemMutation = useDeleteEmployeeScheduleItemMutation({ fetch });
+  const deleteScheduleEventMutation = useDeleteScheduleEventMutation({ fetch });
 
   return (
     <>
@@ -572,7 +575,7 @@ function DeleteScheduleItemModal({
               return;
             }
 
-            deleteScheduleItemMutation.mutate({ scheduleId, itemId });
+            deleteScheduleEventMutation.mutate({ scheduleId, itemId });
             onClose();
           },
         }}
@@ -589,7 +592,7 @@ function DeleteScheduleItemModal({
   );
 }
 
-function EditScheduleItemModal({
+function EditScheduleEventModal({
   open,
   onClose,
   scheduleId,
@@ -612,22 +615,22 @@ function EditScheduleItemModal({
   const [color, setColor] = useState('#a0a0a0');
   const [taskIds, setTaskIds] = useState<number[]>([]);
 
-  const itemQuery = useEmployeeScheduleItemQuery({ fetch, scheduleId, itemId: itemId ?? null }, { enabled: open });
-  const editScheduleItemMutation = useEmployeeScheduleItemMutation({ fetch });
+  const eventQuery = useScheduleEventQuery({ fetch, scheduleId, itemId: itemId ?? null }, { enabled: open });
+  const editScheduleEventMutation = useScheduleEventMutation({ fetch });
 
   const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
 
   useEffect(() => {
-    if (itemQuery.data) {
-      setName(itemQuery.data.name);
-      setDescription(itemQuery.data.description);
-      setStaffMemberIds(itemQuery.data.assignedStaffMemberIds);
-      setStart(itemQuery.data.start);
-      setEnd(itemQuery.data.end);
-      setColor(itemQuery.data.color);
-      setTaskIds(itemQuery.data.taskIds);
+    if (eventQuery.data) {
+      setName(eventQuery.data.name);
+      setDescription(eventQuery.data.description);
+      setStaffMemberIds(eventQuery.data.assignedStaffMemberIds);
+      setStart(eventQuery.data.start);
+      setEnd(eventQuery.data.end);
+      setColor(eventQuery.data.color);
+      setTaskIds(eventQuery.data.taskIds);
     }
-  }, [itemQuery.data]);
+  }, [eventQuery.data]);
 
   const [shouldShowStaffMemberSelector, setShouldShowStaffMemberSelector] = useState(false);
 
@@ -647,7 +650,7 @@ function EditScheduleItemModal({
               return;
             }
 
-            editScheduleItemMutation.mutate({
+            editScheduleEventMutation.mutate({
               scheduleId,
               itemId,
               name,

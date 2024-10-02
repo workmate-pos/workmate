@@ -3,14 +3,14 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
 import { keepPreviousData } from '@tanstack/react-query';
-import { useEmployeeScheduleItemsQuery } from '@work-orders/common/queries/use-employee-schedule-items-query.js';
+import { useScheduleEventsQuery } from '@work-orders/common/queries/use-schedule-events-query.js';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Loading } from '@shopify/app-bridge-react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import FullCalendar from '@fullcalendar/react';
-import { useEmployeeScheduleItemQuery } from '@work-orders/common/queries/use-employee-schedule-item-query.js';
-import { useEmployeeScheduleItemTasksQuery } from '@work-orders/common/queries/use-employee-schedule-item-tasks-query.js';
+import { useScheduleEventQuery } from '@work-orders/common/queries/use-schedule-event-query.js';
+import { useScheduleEventTasksQuery } from '@work-orders/common/queries/use-schedule-event-tasks-query.js';
 import { useTaskQueries } from '@work-orders/common/queries/use-task-query.js';
 import { useTaskMutation } from '@work-orders/common/queries/use-task-mutation.js';
 import { BlockStack, Card, Checkbox, InlineStack, Modal, Text } from '@shopify/polaris';
@@ -37,7 +37,7 @@ export function YourSchedule() {
   const [from, setFrom] = useState(new Date(0));
   const [to, setTo] = useState(new Date(0));
 
-  const itemsQuery = useEmployeeScheduleItemsQuery(
+  const itemsQuery = useScheduleEventsQuery(
     {
       fetch,
       id: 'all',
@@ -91,7 +91,7 @@ export function YourSchedule() {
         }))}
       />
 
-      <ScheduleItemInfo selectedItem={selectedItem} setSelectedItem={setSelectedItem} />
+      <ScheduleEventInfo selectedItem={selectedItem} setSelectedItem={setSelectedItem} />
 
       {toast}
     </>
@@ -101,7 +101,7 @@ export function YourSchedule() {
 /**
  * Modal that displays information about a schedule item.
  */
-function ScheduleItemInfo({
+function ScheduleEventInfo({
   selectedItem,
   setSelectedItem,
 }: {
@@ -111,12 +111,12 @@ function ScheduleItemInfo({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const itemQuery = useEmployeeScheduleItemQuery({
+  const eventQuery = useScheduleEventQuery({
     fetch,
     scheduleId: selectedItem?.scheduleId ?? null,
     itemId: selectedItem?.itemId ?? null,
   });
-  const tasksQuery = useEmployeeScheduleItemTasksQuery({
+  const tasksQuery = useScheduleEventTasksQuery({
     fetch,
     scheduleId: selectedItem?.scheduleId ?? null,
     itemId: selectedItem?.itemId ?? null,
@@ -131,9 +131,9 @@ function ScheduleItemInfo({
     <>
       <Modal
         open={!!selectedItem}
-        title={itemQuery.data?.name}
+        title={eventQuery.data?.name}
         onClose={() => setSelectedItem(undefined)}
-        loading={itemQuery.isFetching || tasksQuery.isFetching}
+        loading={eventQuery.isFetching || tasksQuery.isFetching}
       >
         {taskMutation.isPending && <Loading />}
 
@@ -144,7 +144,7 @@ function ScheduleItemInfo({
                 Name
               </Text>
               <Text as="p" variant="bodyMd" tone="subdued">
-                {itemQuery.data?.name}
+                {eventQuery.data?.name}
               </Text>
             </BlockStack>
 
@@ -153,7 +153,7 @@ function ScheduleItemInfo({
                 Description
               </Text>
               <Text as="p" variant="bodyMd" tone="subdued">
-                {itemQuery.data?.description}
+                {eventQuery.data?.description}
               </Text>
             </BlockStack>
 
@@ -162,7 +162,7 @@ function ScheduleItemInfo({
                 Start
               </Text>
               <Text as="p" variant="bodyMd" tone="subdued">
-                {itemQuery.data ? new Date(itemQuery.data.start).toLocaleString() : ''}
+                {eventQuery.data ? new Date(eventQuery.data.start).toLocaleString() : ''}
               </Text>
             </BlockStack>
 
@@ -171,7 +171,7 @@ function ScheduleItemInfo({
                 End
               </Text>
               <Text as="p" variant="bodyMd" tone="subdued">
-                {itemQuery.data ? new Date(itemQuery.data.end).toLocaleString() : ''}
+                {eventQuery.data ? new Date(eventQuery.data.end).toLocaleString() : ''}
               </Text>
             </BlockStack>
 

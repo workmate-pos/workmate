@@ -1,6 +1,6 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { useEmployeeSchedulesQuery } from '@work-orders/common/queries/use-employee-schedules-query.js';
+import { useSchedulesQuery } from '@work-orders/common/queries/use-schedules-query.js';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useState } from 'react';
 import {
@@ -25,13 +25,13 @@ import { emptyState } from '@web/frontend/assets/index.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
-import { EmployeeSchedule } from '@web/services/schedules/queries.js';
+import { Schedule } from '@web/services/schedules/queries.js';
 import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
-import { useBulkEmployeeScheduleMutation } from '@work-orders/common/queries/use-bulk-employee-schedule-mutation.js';
+import { useBulkScheduleMutation } from '@work-orders/common/queries/use-bulk-schedule-mutation.js';
 import { DateTime } from '@web/schemas/generated/bulk-upsert-schedules.js';
-import { useBulkDeleteEmployeeScheduleMutation } from '@work-orders/common/queries/use-bulk-delete-employee-schedule-mutation.js';
+import { useBulkDeleteScheduleMutation } from '@work-orders/common/queries/use-bulk-delete-schedule-mutation.js';
 import { ManageSchedule } from '@web/frontend/components/schedules/ManageSchedule.js';
-import { useEmployeeScheduleMutation } from '@work-orders/common/queries/use-employee-schedule-mutation.js';
+import { useScheduleMutation } from '@work-orders/common/queries/use-schedule-mutation.js';
 import { UpdatePublicationStatusModal } from '@web/frontend/components/schedules/modals/UpdatePublicationStatusModal.js';
 
 export function ManageSchedules() {
@@ -52,7 +52,7 @@ export function ScheduleList({ setScheduleId }: { setScheduleId: (id: number) =>
   // TODO: Location filter
   const [locationId, setLocationId] = useState<ID>();
 
-  const schedulesQuery = useEmployeeSchedulesQuery({
+  const schedulesQuery = useSchedulesQuery({
     fetch,
     filters: { limit: 100, query, locationId },
   });
@@ -208,19 +208,11 @@ export function ScheduleList({ setScheduleId }: { setScheduleId: (id: number) =>
   );
 }
 
-function BulkDeleteModal({
-  open,
-  onClose,
-  schedules,
-}: {
-  open: boolean;
-  onClose: () => void;
-  schedules: EmployeeSchedule[];
-}) {
+function BulkDeleteModal({ open, onClose, schedules }: { open: boolean; onClose: () => void; schedules: Schedule[] }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const bulkDeleteMutation = useBulkDeleteEmployeeScheduleMutation({ fetch });
+  const bulkDeleteMutation = useBulkDeleteScheduleMutation({ fetch });
 
   return (
     <>
@@ -271,7 +263,7 @@ function CreateScheduleModal({
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const scheduleMutation = useEmployeeScheduleMutation(
+  const scheduleMutation = useScheduleMutation(
     { fetch },
     {
       onSuccess: schedule => {

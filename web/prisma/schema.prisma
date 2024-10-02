@@ -955,7 +955,10 @@ model EmployeeAvailability {
 
   staffMemberId String
   shop          String
-  available     Boolean
+
+  description String
+
+  available Boolean
 
   start DateTime @db.Timestamptz(3)
   end   DateTime @db.Timestamptz(3)
@@ -969,10 +972,10 @@ model EmployeeAvailability {
   @@index([shop, id, staffMemberId])
 }
 
-model EmployeeScheduleItem {
+model ScheduleEvent {
   id Int @id @default(autoincrement())
 
-  schedule   EmployeeSchedule @relation(fields: [scheduleId], references: [id])
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
   scheduleId Int
 
   name        String
@@ -986,19 +989,19 @@ model EmployeeScheduleItem {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  tasks       EmployeeScheduleItemTask[]
-  assignments EmployeeScheduleItemAssignment[]
+  tasks       ScheduleEventTask[]
+  assignments ScheduleEventAssignment[]
 
   @@index([scheduleId])
   @@index([start, end])
   @@index([end])
 }
 
-model EmployeeScheduleItemAssignment {
+model ScheduleEventAssignment {
   id Int @id @default(autoincrement())
 
   scheduleItemId Int
-  scheduleItem   EmployeeScheduleItem @relation(fields: [scheduleItemId], references: [id])
+  scheduleItem   ScheduleEvent @relation(fields: [scheduleItemId], references: [id])
 
   staffMemberId String
 
@@ -1009,13 +1012,13 @@ model EmployeeScheduleItemAssignment {
   @@index([staffMemberId])
 }
 
-// A link between an EmployeeScheduleItem and a Task
+// A link between an ScheduleEvent and a Task
 // A checklist item will be shown on the schedule item for each task
-model EmployeeScheduleItemTask {
+model ScheduleEventTask {
   id Int @id @default(autoincrement())
 
   scheduleItemId Int
-  scheduleItem   EmployeeScheduleItem @relation(fields: [scheduleItemId], references: [id])
+  scheduleItem   ScheduleEvent @relation(fields: [scheduleItemId], references: [id])
 
   taskId Int
   task   Task @relation(fields: [taskId], references: [id])
@@ -1032,7 +1035,7 @@ model EmployeeScheduleItemTask {
 // Essentially a checklist item.
 //
 // Tasks can be assigned to employees, which will cause the task to show up while scheduling too.
-// Tasks are scheduled through a connection to EmployeeScheduleItem.
+// Tasks are scheduled through a connection to ScheduleEvent.
 // Task deadlines are also used for timely scheduling.
 //
 // It is not required to create elaborate task lists.
@@ -1054,7 +1057,7 @@ model Task {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   assignments    TaskAssignment[]
-  scheduleItems  EmployeeScheduleItemTask[]
+  scheduleItems  ScheduleEventTask[]
   workOrders     TaskWorkOrderLink[]
   purchaseOrders TaskPurchaseOrderLink[]
   specialOrders  TaskSpecialOrderLink[]
@@ -1167,8 +1170,8 @@ model TaskAssignment {
   @@index([staffMemberId])
 }
 
-// Schedule items are grouped into EmployeeSchedule rows.
-model EmployeeSchedule {
+// Schedule items are grouped into Schedule rows.
+model Schedule {
   id Int @id @default(autoincrement())
 
   shop String
@@ -1186,7 +1189,7 @@ model EmployeeSchedule {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  scheduleItems EmployeeScheduleItem[]
+  scheduleItems ScheduleEvent[]
 
   @@index([shop, id])
   @@index([shop, locationId])

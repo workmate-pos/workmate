@@ -1,14 +1,6 @@
 import { Fetch } from './fetch.js';
-import { skipToken, useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
-import {
-  GetAvailabilitiesResponse,
-  GetAvailabilityResponse,
-  GetScheduleItemsResponse,
-} from '@web/controllers/api/schedules.js';
-import { ScheduleItemsOptions } from '@web/schemas/generated/schedule-items-options.js';
-import { useEmployeeScheduleItemQuery } from './use-employee-schedule-item-query.js';
-import { UseQueryData } from './react-query.js';
-import { AvailabilityOptions } from '@web/schemas/generated/availability-options.js';
+import { skipToken, useQuery, UseQueryOptions } from '@tanstack/react-query';
+import { GetAvailabilityResponse } from '@web/controllers/api/schedules.js';
 import { EmployeeAvailability } from '@web/services/schedules/queries.js';
 
 export const useEmployeeAvailabilityQuery = (
