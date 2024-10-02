@@ -10,7 +10,7 @@ import { createIsStaleFn } from '../../util/db.js';
 import { escapeTransaction } from '../db/client.js';
 import { getProductVariants, upsertProductVariants } from './queries.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { upsertMetafields } from '../metafields/queries.js';
+import { removeObjectMetafields, upsertMetafields } from '../metafields/queries.js';
 
 export async function ensureProductVariantsExist(session: Session, productVariantIds: ID[]) {
   if (productVariantIds.length === 0) {
@@ -83,6 +83,8 @@ export async function syncProductVariants(session: Session, productVariantIds: I
   const errors: unknown[] = [];
 
   await unit(async () => {
+    await removeObjectMetafields(session.shop, productVariantIds);
+
     await Promise.all([
       syncProducts(session, productIds)
         .then(() =>
