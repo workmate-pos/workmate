@@ -6,12 +6,10 @@ import { useState } from 'react';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useRouter } from '../routes.js';
-import { useScreen } from '@teifi-digital/pos-tools/router';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
+import { BigDecimal, Decimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 
 export function CycleCountProductSelector({ onSelect }: { onSelect: (productVariants: ProductVariant[]) => void }) {

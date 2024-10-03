@@ -1,4 +1,4 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';

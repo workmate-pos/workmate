@@ -12,7 +12,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
 import { db } from '../../services/db/db.js';
 import { PurchaseOrderPrintJob } from '../../schemas/generated/purchase-order-print-job.js';
-import { getShopSettings } from '../../services/settings.js';
+import { getShopSettings } from '../../services/settings/settings.js';
 import {
   getPurchaseOrderTemplateData,
   getRenderedPurchaseOrderTemplate,

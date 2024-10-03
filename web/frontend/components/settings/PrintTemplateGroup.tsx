@@ -1,4 +1,4 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { string } from '@teifi-digital/shopify-app-toolbox';
 import { useState } from 'react';
 import { BlockStack, Button, DescriptionList, InlineStack, Modal, Text } from '@shopify/polaris';

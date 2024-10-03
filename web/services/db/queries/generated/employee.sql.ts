@@ -1,7 +1,7 @@
 /** Types generated for queries found in "services/db/queries/employee.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
-export type PermissionNode = 'cycle_count' | 'read_app_plan' | 'read_employees' | 'read_purchase_orders' | 'read_settings' | 'read_special_orders' | 'read_stock_transfers' | 'read_work_orders' | 'write_app_plan' | 'write_employees' | 'write_purchase_orders' | 'write_settings' | 'write_special_orders' | 'write_stock_transfers' | 'write_work_orders';
+export type PermissionNode = 'cycle_count' | 'manage_schedules' | 'read_app_plan' | 'read_employees' | 'read_purchase_orders' | 'read_settings' | 'read_special_orders' | 'read_stock_transfers' | 'read_work_orders' | 'write_app_plan' | 'write_employees' | 'write_purchase_orders' | 'write_settings' | 'write_special_orders' | 'write_stock_transfers' | 'write_work_orders';
 
 export type PermissionNodeArray = (PermissionNode)[];
 

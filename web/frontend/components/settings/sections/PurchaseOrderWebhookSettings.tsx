@@ -1,4 +1,4 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { Dispatch, SetStateAction } from 'react';
 import { BlockStack, Checkbox, TextField } from '@shopify/polaris';
 

@@ -1,4 +1,4 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { BlockStack, TextField } from '@shopify/polaris';
 import { PrintTemplateGroup } from '@web/frontend/components/settings/PrintTemplateGroup.js';
 

@@ -1,4 +1,4 @@
-import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import { ShopSettings } from '@web/services/settings/schema.js';
 import { Dispatch, SetStateAction, useEffect, useId, useState } from 'react';
 import {
   Banner,

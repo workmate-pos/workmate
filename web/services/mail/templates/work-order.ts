@@ -1,17 +1,17 @@
 import { Liquid } from 'liquidjs';
 import { db } from '../../db/db.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { hasNestedPropertyValue, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { BigDecimal, RoundingMode } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { ShopSettings } from '../../../schemas/generated/shop-settings.js';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { calculateWorkOrder } from '../../work-orders/calculate.js';
 import { Session } from '@shopify/shopify-api';
 import { getDetailedWorkOrder } from '../../work-orders/get.js';
 import { DetailedWorkOrderCharge } from '../../work-orders/types.js';
 import { subtractMoney } from '../../../util/money.js';
+import { ShopSettings } from '../../settings/schema.js';
 
 export async function getRenderedWorkOrderTemplate(
   printTemplate: ShopSettings['workOrderPrintTemplates'][string],

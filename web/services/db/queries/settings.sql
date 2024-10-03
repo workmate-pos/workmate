@@ -9,6 +9,12 @@ SELECT key, value
 FROM "Settings"
 WHERE shop = :shop!;
 
+/* @name getSetting */
+SELECT value
+FROM "Settings"
+WHERE shop = :shop!
+  AND key = :key!;
+
 /* @name insertSettingIfNotExists */
 INSERT INTO "Settings" (shop, key, value)
 SELECT :shop!, :key!, :value!

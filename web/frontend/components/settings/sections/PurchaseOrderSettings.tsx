@@ -1,4 +1,4 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Autocomplete, BlockStack, Icon, InlineStack, Tag, Text, TextField } from '@shopify/polaris';
 import { CirclePlusMinor } from '@shopify/polaris-icons';

@@ -6,7 +6,7 @@ import { customerIsVendorMetafield } from '../metafields/customer-is-vendor-meta
 import { CacheMap } from '../../util/CacheMap.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { MINUTE_IN_MILLIS } from '../../util/date-utils.js';
-import { getShopSettings } from '../settings.js';
+import { getShopSettings } from '../settings/settings.js';
 import { Int } from '../gql/queries/generated/schema.js';
 import { getPurchaseOrderCountByVendor } from '../purchase-orders/queries.js';
 

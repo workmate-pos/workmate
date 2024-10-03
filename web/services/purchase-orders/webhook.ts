@@ -1,6 +1,6 @@
 import { Session } from '@shopify/shopify-api';
 import { getDetailedPurchaseOrder } from './get.js';
-import { getShopSettings } from '../settings.js';
+import { getShopSettings } from '../settings/settings.js';
 import { PurchaseOrderWebhookBody } from './types.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';

@@ -4,7 +4,7 @@ import { gql } from '../../services/gql/gql.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
-import { getShopSettings } from '../../services/settings.js';
+import { getShopSettings } from '../../services/settings/settings.js';
 import { getProductVariantIdsByMetafieldValue } from '../../services/scanner/variants.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 

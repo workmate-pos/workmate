@@ -4,7 +4,7 @@ import type { PaginationOptions } from '../../schemas/generated/pagination-optio
 import type { Request, Response } from 'express-serve-static-core';
 import { gql } from '../../services/gql/gql.js';
 import { db } from '../../services/db/db.js';
-import { getShopSettings } from '../../services/settings.js';
+import { getShopSettings } from '../../services/settings/settings.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { Permission, isPermissionNode, LocalsTeifiUser, createNewEmployees } from '../../decorators/permission.js';
 import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';

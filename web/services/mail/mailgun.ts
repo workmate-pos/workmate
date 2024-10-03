@@ -3,7 +3,7 @@ import Mailgun from 'mailgun.js';
 import { MailgunMessageData } from 'mailgun.js/Types/Messages/Messages.js';
 import { IMailgunClient } from 'mailgun.js/Interfaces/MailgunClient/IMailgunClient.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { ShopSettings } from '../../schemas/generated/shop-settings.js';
+import { ShopSettings } from '../settings/schema.js';
 
 export type MailgunProps = {
   key: string;

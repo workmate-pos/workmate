@@ -14,7 +14,7 @@ import {
   WorkOrderItem,
   WorkOrderLabourCharge,
 } from '@work-orders/work-order-shopify-order';
-import { getShopSettings } from '../settings.js';
+import { getShopSettings } from '../settings/settings.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull, isLineItemId } from '../../util/assertions.js';

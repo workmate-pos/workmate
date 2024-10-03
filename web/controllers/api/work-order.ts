@@ -5,7 +5,7 @@ import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-or
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
 import type { CreateWorkOrderRequest } from '../../schemas/generated/create-work-order-request.js';
 import { getDetailedWorkOrder, getWorkOrderInfoPage } from '../../services/work-orders/get.js';
-import { getShopSettings } from '../../services/settings.js';
+import { getShopSettings } from '../../services/settings/settings.js';
 import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { sessionStorage } from '../../index.js';

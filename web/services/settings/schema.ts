@@ -1,0 +1,180 @@
+import { z } from 'zod';
+import { zDecimal, zLiquidTemplate, zMoney } from '../../util/zod.js';
+import { quoteTemplate } from '../mail/templates/defaults/work-order/quote.js';
+import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
+import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchase-order/invoice.js';
+
+const PercentageRange = z.tuple([zDecimal, zDecimal]);
+const CurrencyRange = z.tuple([zMoney, zMoney]);
+
+// TODO: Modernize this, use this version in an app migration
+
+export const ShopSettings = z
+  .object({
+    scanner: z
+      .object({
+        variants: z
+          .object({
+            barcode: z.boolean(),
+            sku: z.boolean(),
+            tags: z.boolean(),
+            metafields: z
+              .object({
+                product: z.string().array(),
+                variant: z.string().array(),
+              })
+              .default({ product: [], variant: [] }),
+          })
+          .default({ barcode: true, sku: true, tags: true }),
+      })
+      .default({}),
+
+    purchaseOrderWebhook: z
+      .object({
+        endpointUrl: z.string().min(1).optional(),
+      })
+      .default({}),
+
+    // TODO: Verify that this is a valid format
+    // TODO: Show errors to the user when saving
+    idFormat: z.string().min(1).default('WO-#{{id}}'),
+    statuses: z
+      .string()
+      .min(1)
+      .array()
+      .refine(arr => new Set(arr).size === arr.length, 'Statuses must be unique')
+      .default(['Draft', 'In Progress', 'Done']),
+    defaultStatus: z.string().min(1).default('Draft'),
+
+    purchaseOrderIdFormat: z.string().min(1).default('PO-#{{id}}'),
+    purchaseOrderStatuses: z
+      .string()
+      .min(1)
+      .array()
+      .refine(arr => new Set(arr).size === arr.length, 'Statuses must be unique')
+      .default(['Draft', 'In Transit', 'Received']),
+    defaultPurchaseOrderStatus: z.string().min(1).default('Draft'),
+
+    stockTransferIdFormat: z.string().min(1).default('TO-#{{id}}'),
+
+    specialOrders: z
+      .object({
+        idFormat: z.string().min(1).default('SPO-#{{id}}'),
+      })
+      .default({}),
+
+    cycleCount: z
+      .object({
+        idFormat: z.string().min(1).default('CC-#{{id}}'),
+        statuses: z
+          .string()
+          .min(1)
+          .array()
+          .refine(arr => new Set(arr).size === arr.length, 'Statuses must be unique')
+          .default(['Draft', 'Completed']),
+        defaultStatus: z.string().min(1).default('Draft'),
+      })
+      .refine(
+        cycleCount => cycleCount.statuses.includes(cycleCount.defaultStatus),
+        'Default status must be one of the configured statuses',
+      )
+      .default({}),
+
+    discountShortcuts: z
+      .discriminatedUnion('unit', [
+        z.object({ unit: z.literal('currency'), money: zMoney }),
+        z.object({ unit: z.literal('percentage'), percentage: z.preprocess(String, zDecimal) }),
+      ])
+      .array()
+      .default([
+        { unit: 'percentage', percentage: '10.00' },
+        { unit: 'currency', money: '10.00' },
+      ]),
+
+    discountRules: z
+      .discriminatedUnion('onlyAllowShortcuts', [
+        z.object({ onlyAllowShortcuts: z.literal(true) }),
+        z.object({
+          onlyAllowShortcuts: z.literal(false),
+          allowedPercentageRange: PercentageRange.optional(),
+          allowedCurrencyRange: CurrencyRange.optional(),
+        }),
+      ])
+      .default({ onlyAllowShortcuts: true }),
+
+    workOrderRequests: z
+      .discriminatedUnion('enabled', [
+        z.object({ enabled: z.literal(false) }),
+        z.object({
+          enabled: z.literal(true),
+          status: z.string().min(1).default('Draft'),
+        }),
+      ])
+      .default({ enabled: false }),
+
+    defaultRate: zMoney.default('15.00'),
+    labourLineItemName: z.string().min(1).default('Labour'),
+    labourLineItemSKU: z.string().default(''),
+
+    chargeSettings: z
+      .object({
+        employeeAssignments: z.boolean().default(true),
+        hourlyLabour: z.boolean().default(true),
+        fixedPriceLabour: z.boolean().default(true),
+      })
+      .default({}),
+
+    emailFromTitle: z.string().default('WorkMate'),
+    emailReplyTo: z.string().default(''),
+    // TODO: validate
+    printEmail: z.string().default(''),
+
+    workOrderPrintTemplates: z
+      .record(
+        z.object({
+          template: zLiquidTemplate,
+          subject: zLiquidTemplate,
+        }),
+      )
+      .default({
+        Quote: {
+          subject: 'Quote for {{ name }}',
+          template: quoteTemplate,
+        },
+        'WO Invoice': {
+          subject: 'Invoice for {{ name }}',
+          template: workOrderInvoiceTemplate,
+        },
+      }),
+
+    purchaseOrderPrintTemplates: z
+      .record(
+        z.object({
+          template: zLiquidTemplate,
+          subject: zLiquidTemplate,
+        }),
+      )
+      .default({
+        'PO Invoice': {
+          subject: 'Invoice for {{ name }}',
+          template: purchaseOrderInvoiceTemplate,
+        },
+      }),
+
+    vendorCustomerMetafieldsToShow: z.string().array().default([]),
+  })
+  .default({})
+  .refine(
+    settings => settings.statuses.includes(settings.defaultStatus),
+    'Default work order status must be one of the configured statuses',
+  )
+  .refine(
+    settings => settings.purchaseOrderStatuses.includes(settings.defaultPurchaseOrderStatus),
+    'Default purchase order status must be one of the configured statuses',
+  )
+  .refine(
+    settings => !settings.workOrderRequests.enabled || settings.statuses.includes(settings.workOrderRequests.status),
+    'Work order request status must be one of the configured statuses',
+  );
+
+export type ShopSettings = z.infer<typeof ShopSettings>;
