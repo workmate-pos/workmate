@@ -9,3 +9,7 @@ description = "Work Orders"
 [[extensions.targeting]]
 module = "./src/Tile.tsx"
 target = "pos.home.tile.render"
+
+[[extensions.targeting]]
+module = "./src/Modal.tsx"
+target = "pos.home.modal.render"
