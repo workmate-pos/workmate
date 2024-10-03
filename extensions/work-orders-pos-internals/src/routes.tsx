@@ -28,7 +28,6 @@ import { PaymentStatusSelector } from './screens/popups/PaymentStatusSelector.js
 import { OverdueStatusSelector } from './screens/popups/OverdueStatusSelector.js';
 import { PurchaseOrderStatusSelector } from './screens/popups/PurchaseOrderStatusSelector.js';
 import { ItemSelector } from './screens/popups/ItemSelector.js';
-import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
 import { NewWorkOrder } from './screens/NewWorkOrder.js';
 import { EditPreset, EditPresetProps } from '@work-orders/common-pos/screens/custom-fields/EditPreset.js';
 import {
@@ -110,8 +109,9 @@ import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoade
 import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
 import { Scanner } from './screens/smart-scanner/Scanner.js';
 import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
+import { Permission } from '@web/services/permissions/permissions.js';
 
-const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
+const requiredPermissions: Permission[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
 export const { Router, useRouter } = createRouter({
   Entry: {

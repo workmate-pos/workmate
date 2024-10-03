@@ -126,15 +126,14 @@ export async function upsertStaffMembers(
       ${email} :: text[],
       ${role} :: text[]
          )
-    ON CONFLICT ("shop", "staffMemberId")
-      DO UPDATE SET shop            = EXCLUDED."shop",
-                    superuser       = EXCLUDED.superuser,
-                    rate            = EXCLUDED.rate,
-                    name            = EXCLUDED.name,
-                    "isShopOwner"   = EXCLUDED."isShopOwner",
-                    "staffMemberId" = EXCLUDED."staffMemberId",
-                    email           = EXCLUDED.email,
-                    role            = EXCLUDED.role
+    ON CONFLICT ("staffMemberId")
+      DO UPDATE SET shop          = EXCLUDED."shop",
+                    superuser     = EXCLUDED.superuser,
+                    rate          = EXCLUDED.rate,
+                    name          = EXCLUDED.name,
+                    "isShopOwner" = EXCLUDED."isShopOwner",
+                    email         = EXCLUDED.email,
+                    role          = EXCLUDED.role
     RETURNING *;
   `;
 

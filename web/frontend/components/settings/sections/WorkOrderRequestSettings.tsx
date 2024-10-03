@@ -16,7 +16,7 @@ export function WorkOrderRequestSettings({
         onChange={enabled =>
           setSettings({
             ...settings,
-            workOrderRequests: enabled ? { enabled, status: settings.statuses[0]! } : { enabled, status: null },
+            workOrderRequests: enabled ? { enabled, status: settings.statuses[0]! } : { enabled },
           })
         }
       />
@@ -26,7 +26,7 @@ export function WorkOrderRequestSettings({
         disabled={!settings.workOrderRequests.enabled}
         options={settings.statuses}
         placeholder={'Select a status'}
-        value={settings.workOrderRequests?.status ?? undefined}
+        value={settings.workOrderRequests.enabled ? settings.workOrderRequests.status : undefined}
         onChange={status =>
           setSettings({
             ...settings,

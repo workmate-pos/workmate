@@ -11,8 +11,8 @@ export function PurchaseOrderWebhookSettings({
   setSettings: Dispatch<SetStateAction<ShopSettings>>;
   onIsValid: (isValid: boolean) => void;
 }) {
-  function getErrorMessage(endpointUrl: string | null) {
-    if (endpointUrl === null) {
+  function getErrorMessage(endpointUrl: string | undefined) {
+    if (endpointUrl === undefined) {
       return undefined;
     }
 
@@ -34,7 +34,7 @@ export function PurchaseOrderWebhookSettings({
           setSettings({
             ...settings,
             purchaseOrderWebhook: {
-              endpointUrl: enabled ? '' : null,
+              endpointUrl: enabled ? '' : undefined,
             },
           });
           onIsValid(!enabled);

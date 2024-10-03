@@ -1,9 +1,9 @@
 import { ReactNode, useEffect } from 'react';
-import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
+import { Permission } from '@web/services/permissions/permissions.js';
 
 /**
  * Wrapper component that only renders children if the user has the required permissions.
@@ -14,7 +14,7 @@ export function PermissionBoundary({
   onIsLoading,
 }: {
   children: ReactNode;
-  permissions: PermissionNode[];
+  permissions: Permission[];
   onIsLoading?: (isLoading: boolean) => void;
 }) {
   const fetch = useAuthenticatedFetch();

@@ -3,7 +3,6 @@ import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
 import { ContextualSaveBar, Loading, useAppBridge } from '@shopify/app-bridge-react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 import { useSettingsMutation } from '../queries/use-settings-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
@@ -25,15 +24,15 @@ import { CustomFieldSettings } from '@web/frontend/components/settings/sections/
 import { CycleCountSettings } from '@web/frontend/components/settings/sections/CycleCountSettings.js';
 import { SpecialOrderSettings } from '@web/frontend/components/settings/sections/SpecialOrderSettings.js';
 import { ScannerSettings } from '@web/frontend/components/settings/sections/ScannerSettings.js';
+import { ShopSettings } from '@web/services/settings/schema.js';
+import { RolesSettings } from '@web/frontend/components/settings/sections/RolesSettings.js';
 
 export default function () {
   return (
     <Frame>
-      <Page>
-        <PermissionBoundary permissions={['read_settings']}>
-          <Settings />
-        </PermissionBoundary>
-      </Page>
+      <PermissionBoundary permissions={['read_settings']}>
+        <Settings />
+      </PermissionBoundary>
     </Frame>
   );
 }
@@ -135,10 +134,6 @@ function Settings() {
       ),
     },
     {
-      name: 'Line Items',
-      tab: <CustomFieldSettings type="LINE_ITEM" />,
-    },
-    {
       name: 'Stock Transfers',
       tab: <StockTransferSettings settings={settings} setSettings={setSettings} />,
     },
@@ -159,6 +154,15 @@ function Settings() {
     {
       name: 'Scanner',
       tab: <ScannerSettings settings={settings} setSettings={setSettings} />,
+    },
+    {
+      name: 'Roles',
+      tab: <RolesSettings settings={settings} setSettings={setSettings} />,
+      fullWidth: true,
+    },
+    {
+      name: 'Line Items',
+      tab: <CustomFieldSettings type="LINE_ITEM" />,
     },
     {
       name: 'Printing',
@@ -192,7 +196,7 @@ function Settings() {
   );
 
   return (
-    <>
+    <Page fullWidth={tabs[selectedTab]?.fullWidth}>
       <ContextualSaveBar
         fullWidth
         saveAction={{
@@ -226,6 +230,6 @@ function Settings() {
       </LegacyCard>
 
       {toast}
-    </>
+    </Page>
   );
 }

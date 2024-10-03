@@ -8,7 +8,7 @@
         "title": "employee-options",
         "type": "object",
         "properties": {
-          "employeeId": {
+          "staffMemberId": {
             "$ref": "scalars.json#/definitions/ID"
           },
           "role": {
@@ -26,15 +26,9 @@
           },
           "superuser": {
             "type": "boolean"
-          },
-          "permissions": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
           }
         },
-        "required": ["employeeId", "rate", "superuser", "permissions", "role"],
+        "required": ["staffMemberId", "rate", "superuser", "role"],
         "additionalProperties": false
       }
     }

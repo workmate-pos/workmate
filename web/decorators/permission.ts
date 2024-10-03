@@ -20,6 +20,9 @@ import {
 } from '../services/permissions/permissions.js';
 import { getStaffMembers, getSuperusers, StaffMember, upsertStaffMembers } from '../services/staff-members/queries.js';
 
+// TODO: Assign default role to staff members if they do not have a known role
+//  -> Do this here?
+
 export const PermissionKey = 'permission';
 export function Permission(permission: Permission | 'superuser' | 'none') {
   return decorator(PermissionKey, permission);
@@ -68,18 +71,20 @@ export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'non
     res.locals.teifi ??= {};
     res.locals.teifi.user = user;
 
-    if (permissions.includes('superuser') && !staffMember.superuser) {
-      return err(res, 'You must be a superuser to access this resource', 401);
-    }
+    if (!staffMember.superuser) {
+      if (permissions.includes('superuser')) {
+        return err(res, 'You do not have permission to access this resource', 401);
+      }
 
-    const missingPermissions = await getMissingPermissionsForRole(
-      session.shop,
-      staffMember.role,
-      permissions.filter(isPermission),
-    );
+      const missingPermissions = await getMissingPermissionsForRole(
+        session.shop,
+        staffMember.role,
+        permissions.filter(isPermission),
+      );
 
-    if (missingPermissions.length > 0) {
-      return err(res, `You do not have permission to access this resource`, 401);
+      if (missingPermissions.length > 0) {
+        return err(res, 'You do not have permission to access this resource', 401);
+      }
     }
 
     next();

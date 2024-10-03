@@ -40,12 +40,8 @@ export default function App() {
                     destination: '/services-and-labour',
                   },
                   {
-                    label: 'Employee Rates',
-                    destination: '/employee-rates',
-                  },
-                  {
-                    label: 'Employee Permissions',
-                    destination: '/employee-permissions',
+                    label: 'Employees',
+                    destination: '/employees',
                   },
                   {
                     label: 'Settings',

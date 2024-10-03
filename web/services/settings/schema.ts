@@ -196,7 +196,10 @@ export const ShopSettings = z
           isDefault: false,
           permissions: permissions.filter(
             permission =>
-              permission !== 'read_app_plan' && permission !== 'write_app_plan' && permission !== 'write_settings',
+              permission !== 'read_app_plan' &&
+              permission !== 'write_app_plan' &&
+              permission !== 'write_settings' &&
+              permission !== 'write_employees',
           ),
         },
         Administrator: {

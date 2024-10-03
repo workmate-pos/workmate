@@ -9,13 +9,12 @@ import { Permission, LocalsTeifiUser } from '../../decorators/permission.js';
 import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
-import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getStaffMembersByIds, getStaffMembersPage } from '../../services/staff-members.js';
 import { intercom, IntercomUser } from '../../services/intercom.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoneyOrNull } from '../../util/assertions.js';
-import { getDefaultRole, isPermission } from '../../services/permissions/permissions.js';
+import { getDefaultRole } from '../../services/permissions/permissions.js';
 import { getStaffMembers, upsertStaffMembers } from '../../services/staff-members/queries.js';
 
 @Authenticated()
@@ -27,13 +26,12 @@ export default class EmployeeController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     const { defaultRate } = await getShopSettings(session.shop);
+    const [employee = never()] = await attachDatabaseEmployees(session.shop, [user.staffMember]);
 
     return res.json({
       employee: {
-        ...user.staffMember,
-        ...user.user,
-        rate: (user.user.rate ?? defaultRate) as Money,
-        isDefaultRate: user.user.rate === null || user.user.rate === undefined,
+        ...employee,
+        rate: user.user.rate ?? defaultRate,
         intercomUser: intercom.getUser(session.shop, user.staffMember.id),
       },
     });
@@ -88,7 +86,7 @@ export default class EmployeeController {
       return res.json({ success: true });
     }
 
-    const employeeIds = req.body.employees.map(e => e.employeeId);
+    const employeeIds = req.body.employees.map(e => e.staffMemberId);
 
     const staffMembers = await getStaffMembersByIds(session, employeeIds);
 
@@ -96,20 +94,16 @@ export default class EmployeeController {
 
     await upsertStaffMembers(
       session.shop,
-      req.body.employees.map(({ employeeId, rate, superuser, permissions, role }) => {
-        const staffMember = staffMemberById[employeeId];
+      req.body.employees.map(({ staffMemberId, rate, superuser, role }) => {
+        const staffMember = staffMemberById[staffMemberId];
 
         if (!staffMember) {
           throw new HttpError('Not all employees were found', 400);
         }
 
         return {
-          permissions: permissions.map(p => {
-            if (isPermission(p)) return p;
-            throw new Error(`Invalid permission node: ${p}`);
-          }),
           isShopOwner: staffMember.isShopOwner,
-          staffMemberId: employeeId,
+          staffMemberId,
           name: staffMember.name,
           email: staffMember.email,
           superuser,
@@ -150,7 +144,7 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
     )),
   );
 
-  const { defaultRate } = await getShopSettings(shop);
+  const { defaultRate, roles } = await getShopSettings(shop);
   const employeeRecord = indexBy(employees, e => e.staffMemberId);
 
   return staffMembers.map(staffMember => {
@@ -160,12 +154,14 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
 
     const rate = employee.rate ?? defaultRate;
     const isDefaultRate = rate === null;
+    const permissions = roles[employee.role]?.permissions ?? [];
 
     return {
       ...staffMember,
       ...employee,
       rate,
       isDefaultRate,
+      permissions,
     };
   });
 }

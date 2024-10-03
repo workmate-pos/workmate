@@ -98,8 +98,6 @@ function useDiscountRules(
           discountRules: {
             ...settings.discountRules,
             onlyAllowShortcuts: true,
-            allowedCurrencyRange: null,
-            allowedPercentageRange: null,
           },
         });
       },
@@ -132,11 +130,13 @@ function useDiscountRules(
           ...settings,
           discountRules: {
             ...settings.discountRules,
-            allowedCurrencyRange: null,
+            onlyAllowShortcuts: false,
+            allowedCurrencyRange: undefined,
           },
         });
       },
       renderChildren() {
+        invariant(!settings.discountRules.onlyAllowShortcuts, 'Conflicting settings');
         invariant(settings.discountRules.allowedCurrencyRange, 'No currency range set');
 
         return (
@@ -189,11 +189,13 @@ function useDiscountRules(
           ...settings,
           discountRules: {
             ...settings.discountRules,
-            allowedPercentageRange: null,
+            onlyAllowShortcuts: false,
+            allowedPercentageRange: undefined,
           },
         });
       },
       renderChildren() {
+        invariant(!settings.discountRules.onlyAllowShortcuts, 'Conflicting settings');
         invariant(settings.discountRules.allowedPercentageRange, 'No percentage range set');
 
         return (
