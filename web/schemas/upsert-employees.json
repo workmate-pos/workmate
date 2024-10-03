@@ -11,6 +11,9 @@
           "employeeId": {
             "$ref": "scalars.json#/definitions/ID"
           },
+          "role": {
+            "type": "string"
+          },
           "rate": {
             "anyOf": [
               {
@@ -31,7 +34,7 @@
             }
           }
         },
-        "required": ["employeeId", "rate", "superuser", "permissions"],
+        "required": ["employeeId", "rate", "superuser", "permissions", "role"],
         "additionalProperties": false
       }
     }

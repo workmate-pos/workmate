@@ -24,6 +24,7 @@ import { getSpecialOrderLineItemsForPurchaseOrder, getSpecialOrdersByIds } from 
 import { getProductVariants } from '../product-variants/queries.js';
 import { getProducts } from '../products/queries.js';
 import { getSerialsByIds } from '../serials/queries.js';
+import { getStaffMembers } from '../staff-members/queries.js';
 
 export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
   const purchaseOrder = await getPurchaseOrder({ shop, name });
@@ -66,7 +67,7 @@ export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, 
     paid: purchaseOrder.paid,
     customFields: getPurchaseOrderCustomFieldsRecord(purchaseOrder.id),
     lineItems: getDetailedPurchaseOrderLineItems(purchaseOrder.id),
-    employeeAssignments: getDetailedPurchaseOrderEmployeeAssignments(purchaseOrder.id),
+    employeeAssignments: getDetailedPurchaseOrderEmployeeAssignments(shop, purchaseOrder.id),
     linkedOrders: linkedOrders.map(({ orderId: id, name, orderType }) => ({
       id,
       name,
@@ -253,11 +254,11 @@ async function getPurchaseOrderCustomFieldsRecord(purchaseOrderId: number) {
   return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
 }
 
-async function getDetailedPurchaseOrderEmployeeAssignments(purchaseOrderId: number) {
+async function getDetailedPurchaseOrderEmployeeAssignments(shop: string, purchaseOrderId: number) {
   const employeeAssignments = await getPurchaseOrderAssignedEmployees(purchaseOrderId);
 
   const employeeIds = employeeAssignments.map(({ employeeId }) => employeeId);
-  const employees = employeeIds.length ? await db.employee.getMany({ employeeIds }) : [];
+  const employees = await getStaffMembers(shop, employeeIds);
   const employeesById = groupByKey(employees, 'staffMemberId');
 
   return employeeAssignments.map(({ employeeId }) => {

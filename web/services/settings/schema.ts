@@ -3,11 +3,14 @@ import { zDecimal, zLiquidTemplate, zMoney } from '../../util/zod.js';
 import { quoteTemplate } from '../mail/templates/defaults/work-order/quote.js';
 import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
 import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchase-order/invoice.js';
+import { isPermission, permissions } from '../permissions/permissions.js';
 
 const PercentageRange = z.tuple([zDecimal, zDecimal]);
 const CurrencyRange = z.tuple([zMoney, zMoney]);
 
 // TODO: Modernize this, use this version in an app migration
+
+// TODO: Role endpoints and settings
 
 export const ShopSettings = z
   .object({
@@ -36,7 +39,6 @@ export const ShopSettings = z
       .default({}),
 
     // TODO: Verify that this is a valid format
-    // TODO: Show errors to the user when saving
     idFormat: z.string().min(1).default('WO-#{{id}}'),
     statuses: z
       .string()
@@ -162,6 +164,46 @@ export const ShopSettings = z
       }),
 
     vendorCustomerMetafieldsToShow: z.string().array().default([]),
+
+    roles: z
+      .record(
+        z.object({
+          isDefault: z.boolean(),
+          permissions: z.string().refine(isPermission, 'Invalid permission').array(),
+        }),
+      )
+      .refine(
+        roles => Object.values(roles).filter(role => role.isDefault).length === 1,
+        'Must have exactly one default role',
+      )
+      // TODO: Make sure default goes through refine
+      .default({
+        Associate: {
+          isDefault: true,
+          permissions: [
+            'read_employees',
+            'read_settings',
+            'read_work_orders',
+            'write_work_orders',
+            'read_purchase_orders',
+            'read_stock_transfers',
+            'read_special_orders',
+            'write_special_orders',
+            'cycle_count',
+          ],
+        },
+        Manager: {
+          isDefault: false,
+          permissions: permissions.filter(
+            permission =>
+              permission !== 'read_app_plan' && permission !== 'write_app_plan' && permission !== 'write_settings',
+          ),
+        },
+        Administrator: {
+          isDefault: false,
+          permissions: [...permissions],
+        },
+      }),
   })
   .default({})
   .refine(

@@ -14,7 +14,7 @@ import { ensureCustomersExist } from '../customer/sync.js';
 import { ensureShopifyOrdersExist } from '../shopify-order/sync.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { ensureEmployeesExist } from '../employee/sync.js';
+import { ensureStaffMembersExist } from '../staff-members/sync.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 import {
   getWorkOrder,
@@ -244,7 +244,7 @@ async function upsertCharges(
   currentCharges: Awaited<ReturnType<typeof getWorkOrderCharges>>,
 ) {
   const employeeIds = unique(createWorkOrder.charges.map(charge => charge.employeeId).filter(isNonNullable));
-  await ensureEmployeesExist(session, employeeIds);
+  await ensureStaffMembersExist(session, employeeIds);
 
   const currentChargeByUuid = Object.fromEntries(currentCharges.map(charge => [charge.uuid, charge]));
 

@@ -3,7 +3,7 @@ import { db } from '../../db.js';
 import { sql } from '../../sql-tag.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ShopSettings } from '../../../settings/schema.js';
-import { updateSettings } from '../../../settings/settings.js';
+import { updateShopSettings } from '../../../settings/settings.js';
 
 /**
  * Migrate from the current settings json schema to zod.
@@ -27,7 +27,7 @@ export default async function migrate() {
         .filter(setting => setting.shop === shop)
         .reduce((acc, current) => ({ ...acc, [current.key]: deeplyStripNulls(JSON.parse(current.value)) }), {});
 
-      await updateSettings(shop, ShopSettings.parse(obj));
+      await updateShopSettings(shop, ShopSettings.parse(obj));
     }
   });
 }

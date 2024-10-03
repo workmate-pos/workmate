@@ -3,9 +3,9 @@ import { gql } from './gql/gql.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasReadUsersScope } from './shop.js';
-import { db } from './db/db.js';
 import { PaginationOptions } from '../schemas/generated/pagination-options.js';
 import { escapeLike } from './db/like.js';
+import * as queries from './staff-members/queries.js';
 
 export async function getStaffMembersByIds(
   session: Session,
@@ -14,8 +14,7 @@ export async function getStaffMembersByIds(
   const graphql = new Graphql(session);
 
   if (!(await hasReadUsersScope(graphql))) {
-    const employees = ids.length ? await db.employee.getMany({ shop: session.shop, employeeIds: ids }) : [];
-
+    const employees = await queries.getStaffMembers(session.shop, ids);
     return employees.map(e => {
       assertGid(e.staffMemberId);
       return {
@@ -47,8 +46,7 @@ export async function getStaffMembersPage(
 
   if (!(await hasReadUsersScope(graphql))) {
     const query = paginationOptions.query ? escapeLike(`%${paginationOptions.query}%`) : undefined;
-
-    const employees = await db.employee.getPage({ shop: session.shop, query });
+    const employees = await queries.getStaffMembersPage(session.shop, { query });
 
     return {
       shop: {

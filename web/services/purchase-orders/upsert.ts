@@ -21,7 +21,7 @@ import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-ord
 import { DetailedPurchaseOrder } from './types.js';
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureLocationsExist } from '../locations/sync.js';
-import { ensureEmployeesExist } from '../employee/sync.js';
+import { ensureStaffMembersExist } from '../staff-members/sync.js';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import {
@@ -62,7 +62,7 @@ export async function upsertCreatePurchaseOrder(session: Session, createPurchase
     await Promise.all([
       ensureProductVariantsExist(session, productVariantIds),
       ensureLocationsExist(session, locationIds),
-      ensureEmployeesExist(session, employeeIds),
+      ensureStaffMembersExist(session, employeeIds),
       assertAllSameVendor(createPurchaseOrder),
       assertValidSpecialOrderLineItems(shop, createPurchaseOrder, existingPurchaseOrder),
     ]);

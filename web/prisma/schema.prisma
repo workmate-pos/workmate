@@ -218,6 +218,8 @@ model Employee {
   shop String
 
   superuser   Boolean
+  role        String
+  // TODO: Remove (cannot do it right now because app migration must run first)
   permissions PermissionNode[]
   rate        String?
   email       String
@@ -233,6 +235,7 @@ model Employee {
   @@index([shop])
 }
 
+// TODO: Remove (cannot do it right now because app migration must run first)
 enum PermissionNode {
   read_settings
   write_settings

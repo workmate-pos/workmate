@@ -1,4 +1,4 @@
-import { getShopSettings, updateSettings } from '../../services/settings/settings.js';
+import { getShopSettings, updateShopSettings } from '../../services/settings/settings.js';
 import { Authenticated, Get, Middleware, Post } from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
 import { Permission } from '../../decorators/permission.js';
@@ -37,7 +37,7 @@ export default class SettingsController {
       throw new HttpError(message, 400);
     }
 
-    await updateSettings(shop, parsed.data);
+    await updateShopSettings(shop, parsed.data);
 
     return res.json({ success: true });
   }

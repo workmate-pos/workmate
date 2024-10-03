@@ -3,10 +3,9 @@ import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digita
 import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
 import { gql } from '../../services/gql/gql.js';
-import { db } from '../../services/db/db.js';
 import { getShopSettings } from '../../services/settings/settings.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { Permission, isPermissionNode, LocalsTeifiUser, createNewEmployees } from '../../decorators/permission.js';
+import { Permission, LocalsTeifiUser } from '../../decorators/permission.js';
 import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
@@ -16,6 +15,8 @@ import { getStaffMembersByIds, getStaffMembersPage } from '../../services/staff-
 import { intercom, IntercomUser } from '../../services/intercom.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoneyOrNull } from '../../util/assertions.js';
+import { getDefaultRole, isPermission } from '../../services/permissions/permissions.js';
+import { getStaffMembers, upsertStaffMembers } from '../../services/staff-members/queries.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -93,8 +94,9 @@ export default class EmployeeController {
 
     const staffMemberById = indexBy(staffMembers.filter(isNonNullable), e => e.id);
 
-    await db.employee.upsertMany({
-      employees: req.body.employees.map(({ employeeId, rate, superuser, permissions }) => {
+    await upsertStaffMembers(
+      session.shop,
+      req.body.employees.map(({ employeeId, rate, superuser, permissions, role }) => {
         const staffMember = staffMemberById[employeeId];
 
         if (!staffMember) {
@@ -103,7 +105,7 @@ export default class EmployeeController {
 
         return {
           permissions: permissions.map(p => {
-            if (isPermissionNode(p)) return p;
+            if (isPermission(p)) return p;
             throw new Error(`Invalid permission node: ${p}`);
           }),
           isShopOwner: staffMember.isShopOwner,
@@ -113,9 +115,10 @@ export default class EmployeeController {
           superuser,
           shop,
           rate,
+          role,
         };
       }),
-    });
+    );
 
     return res.json({ success: true });
   }
@@ -127,20 +130,22 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
   }
 
   const staffMemberIds = staffMembers.map(e => e.id);
-  const employees = await db.employee.getMany({ employeeIds: staffMemberIds });
+  const [employees, defaultRole] = await Promise.all([getStaffMembers(shop, staffMemberIds), getDefaultRole(shop)]);
   const knownEmployeeIds = new Set(employees.map(e => e.staffMemberId));
 
   employees.push(
-    ...(await createNewEmployees(
+    ...(await upsertStaffMembers(
       shop,
       staffMembers
         .filter(staffMember => !knownEmployeeIds.has(staffMember.id))
         .map(staffMember => ({
-          employeeId: staffMember.id,
+          staffMemberId: staffMember.id,
           name: staffMember.name,
           isShopOwner: staffMember.isShopOwner,
           superuser: staffMember.isShopOwner,
           email: staffMember.email,
+          role: defaultRole,
+          rate: null,
         })),
     )),
   );

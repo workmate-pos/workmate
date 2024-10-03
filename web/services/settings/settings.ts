@@ -16,6 +16,6 @@ export async function getShopSettings(shop: string): Promise<ShopSettings> {
   return ShopSettings.parse(deserialize(value));
 }
 
-export async function updateSettings(shop: string, settings: ShopSettings) {
+export async function updateShopSettings(shop: string, settings: ShopSettings) {
   await db.settings.upsertSetting({ shop, key: 'settings', value: serialize(settings) });
 }

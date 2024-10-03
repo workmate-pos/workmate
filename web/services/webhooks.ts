@@ -125,6 +125,9 @@ export default {
 
   PRODUCTS_UPDATE: {
     async handler(session, topic, shop, body: { admin_graphql_api_id: ID; variant_ids: { id: number }[] }) {
+      // TODO: Remove
+      return;
+
       const changed = await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
 
       if (changed) {
