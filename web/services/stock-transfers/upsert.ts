@@ -19,18 +19,32 @@ import {
   upsertStockTransfer,
   upsertStockTransferLineItems,
 } from './queries.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
+import { httpError } from '../../util/http-error.js';
 
-export async function upsertCreateStockTransfer(session: Session, createStockTransfer: CreateStockTransfer) {
-  await validateCreateStockTransfer(session, createStockTransfer);
+export async function upsertCreateStockTransfer(
+  session: Session,
+  user: LocalsTeifiUser,
+  createStockTransfer: CreateStockTransfer,
+) {
+  await assertLocationsPermitted({
+    shop: session.shop,
+    locationIds: [createStockTransfer.fromLocationId, createStockTransfer.toLocationId],
+    staffMemberId: user.staffMember.id,
+  });
+
+  await validateCreateStockTransfer(session, createStockTransfer, user);
 
   return await unit(async () => {
     const previousStockTransfer = createStockTransfer.name
-      ? await getStockTransfer({ shop: session.shop, name: createStockTransfer.name })
+      ? ((await getStockTransfer({ shop: session.shop, name: createStockTransfer.name, locationIds: null })) ??
+        httpError('Stock transfer not found', 404))
       : null;
 
     const stockTransfer = await upsertStockTransfer({
       shop: session.shop,
-      name: createStockTransfer.name || (await getNewStockTransferName(session.shop)),
+      name: createStockTransfer.name ?? (await getNewStockTransferName(session.shop)),
       fromLocationId: createStockTransfer.fromLocationId,
       toLocationId: createStockTransfer.toLocationId,
       note: createStockTransfer.note,

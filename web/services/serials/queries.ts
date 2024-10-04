@@ -195,6 +195,7 @@ export async function upsertSerials(
   serials: {
     serial: string;
     productVariantId: ID;
+    // TODO: Don't allow null
     locationId: ID | null;
     note: string;
   }[],

@@ -18,6 +18,15 @@
       "type": "string",
       "minLength": 1
     },
+    "locationId": {
+      "description": "The location where the work order is handled. Nullable to make typing work for old work orders. Enforced for new work orders.",
+      "anyOf": [
+        { "const": null },
+        {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      ]
+    },
     "serial": {
       "anyOf": [
         { "const": null },
@@ -371,7 +380,8 @@
     "companyLocationId",
     "companyContactId",
     "paymentTerms",
-    "serial"
+    "serial",
+    "locationId"
   ],
   "additionalProperties": false
 }

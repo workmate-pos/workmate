@@ -13,7 +13,11 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type SpecialOrder = NonNullable<Awaited<ReturnType<typeof getSpecialOrder>>>;
 
-export async function getSpecialOrder(filters: MergeUnion<{ id: number } | { shop: string; name: string }>) {
+export async function getSpecialOrder(
+  filters: MergeUnion<{ id: number } | { shop: string; name: string; locationIds: ID[] | null }>,
+) {
+  const locationIds = filters.locationIds ?? null;
+
   const [specialOrder] = await sql<{
     id: number;
     shop: string;
@@ -32,7 +36,8 @@ export async function getSpecialOrder(filters: MergeUnion<{ id: number } | { sho
     FROM "SpecialOrder"
     WHERE shop = COALESCE(${filters?.shop ?? null}, shop)
       AND name = COALESCE(${filters?.name ?? null}, name)
-      AND id = COALESCE(${filters?.id ?? null}, id);`;
+      AND id = COALESCE(${filters?.id ?? null}, id)
+      AND "locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY ["locationId"]));`;
 
   if (!specialOrder) {
     return null;
@@ -325,6 +330,7 @@ export async function getSpecialOrdersPage(
     purchaseOrderState,
     limit,
   }: SpecialOrderPaginationOptions,
+  locationIds: ID[] | null,
 ) {
   const _locationId: string | null = locationId ?? null;
   const _customerId: string | null = customerId ?? null;
@@ -345,6 +351,7 @@ export async function getSpecialOrdersPage(
       AND spo."customerId" = COALESCE(${_customerId}, spo."customerId")
       AND spo.note ILIKE COALESCE(${_query}, '%')
       AND p.vendor = COALESCE(${_lineItemVendorName}, p.vendor)
+      AND spo."locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY ["locationId"]))
       AND (
       CASE ${_lineItemOrderState}
         WHEN 'FULLY_ORDERED' THEN spoli.quantity <= COALESCE((SELECT SUM(poli.quantity)

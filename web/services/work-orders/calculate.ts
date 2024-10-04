@@ -26,6 +26,8 @@ import { Int, type String } from '../gql/queries/generated/schema.js';
 import { getDraftOrderInputForWorkOrder } from './draft-order.js';
 import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { httpError } from '../../util/http-error.js';
 
 type CalculateWorkOrderResult = {
   outstanding: Money;
@@ -79,9 +81,10 @@ type CalculateWorkOrderCharge = CalculateWorkOrder['charges'][number];
 export async function calculateWorkOrder(
   session: Session,
   calculateWorkOrder: CalculateWorkOrder,
+  user: LocalsTeifiUser,
   options: { includeExistingOrders: boolean },
 ): Promise<CalculateWorkOrderResult> {
-  await validateCalculateWorkOrder(session, calculateWorkOrder, true);
+  await validateCalculateWorkOrder(session, calculateWorkOrder, user);
 
   const { name } = calculateWorkOrder;
 
@@ -102,7 +105,14 @@ export async function calculateWorkOrder(
   const itemLineItemIds: Record<string, ID> = {};
   const chargeLineItemIds: Record<string, ID> = {};
 
-  const missingProductVariantIds = await getMissingNonPaidWorkOrderProduct(session, calculateWorkOrder);
+  const workOrder = calculateWorkOrder.name
+    ? ((await getWorkOrder({
+        shop: session.shop,
+        name: calculateWorkOrder.name,
+        locationIds: user.user.allowedLocationIds,
+      })) ?? httpError('Work order not found', 404))
+    : undefined;
+  const missingProductVariantIds = await getMissingNonPaidWorkOrderProduct(session, calculateWorkOrder, workOrder);
   const warnings: string[] = [];
 
   // All orders involved in the WO, including all their line items. These will be processed to compute everything.
@@ -248,7 +258,7 @@ async function getExistingOrderInfo(session: Session, name: string) {
 
   const warnings: string[] = [];
 
-  const workOrder = await getWorkOrder({ shop: session.shop, name });
+  const workOrder = await getWorkOrder({ shop: session.shop, name, locationIds: null });
 
   if (!workOrder) {
     throw new HttpError('Work order not found', 404);

@@ -8,6 +8,7 @@ import { nest } from '../../util/db.js';
 import { assertMoneyOrNull } from '../../util/assertions.js';
 
 export type StaffMember = ReturnType<typeof mapStaffMember>;
+export type StaffMemberLocation = ReturnType<typeof mapStaffMemberLocation>;
 
 export async function getStaffMembers(shop: string, staffMemberIds: ID[]) {
   const staffMembers = await sql<{
@@ -23,10 +24,10 @@ export async function getStaffMembers(shop: string, staffMemberIds: ID[]) {
     email: string;
     role: string;
   }>`
-    SELECT *
-    FROM "Employee"
-    WHERE shop = ${shop}
-      AND "staffMemberId" = ANY (${staffMemberIds as string[]})
+      SELECT *
+      FROM "Employee"
+      WHERE shop = ${shop}
+        AND "staffMemberId" = ANY (${staffMemberIds as string[]})
   `;
 
   return staffMembers.map(mapStaffMember);
@@ -75,10 +76,10 @@ export async function getStaffMembersPage(shop: string, { query }: { query?: str
     email: string;
     role: string;
   }>`
-    SELECT *
-    FROM "Employee"
-    WHERE shop = ${shop}
-      AND name ILIKE COALESCE(${query ?? null}, '%');
+      SELECT *
+      FROM "Employee"
+      WHERE shop = ${shop}
+        AND name ILIKE COALESCE(${query ?? null}, '%');
   `;
 
   return staffMembers.map(mapStaffMember);
@@ -115,26 +116,26 @@ export async function upsertStaffMembers(
     email: string;
     role: string;
   }>`
-    INSERT INTO "Employee" (shop, superuser, rate, name, "isShopOwner", "staffMemberId", email, role, permissions)
-    SELECT ${shop}, *, NULL
-    FROM UNNEST(
-      ${superuser} :: boolean[],
-      ${rate as string[]} :: text[],
-      ${name} :: text[],
-      ${isShopOwner} :: boolean[],
-      ${staffMemberId as string[]} :: text[],
-      ${email} :: text[],
-      ${role} :: text[]
-         )
-    ON CONFLICT ("staffMemberId")
-      DO UPDATE SET shop          = EXCLUDED."shop",
-                    superuser     = EXCLUDED.superuser,
-                    rate          = EXCLUDED.rate,
-                    name          = EXCLUDED.name,
-                    "isShopOwner" = EXCLUDED."isShopOwner",
-                    email         = EXCLUDED.email,
-                    role          = EXCLUDED.role
-    RETURNING *;
+      INSERT INTO "Employee" (shop, superuser, rate, name, "isShopOwner", "staffMemberId", email, role, permissions)
+      SELECT ${shop}, *, NULL
+      FROM UNNEST(
+              ${superuser} :: boolean[],
+              ${rate as string[]} :: text[],
+              ${name} :: text[],
+              ${isShopOwner} :: boolean[],
+              ${staffMemberId as string[]} :: text[],
+              ${email} :: text[],
+              ${role} :: text[]
+           )
+      ON CONFLICT ("staffMemberId")
+          DO UPDATE SET shop          = EXCLUDED."shop",
+                        superuser     = EXCLUDED.superuser,
+                        rate          = EXCLUDED.rate,
+                        name          = EXCLUDED.name,
+                        "isShopOwner" = EXCLUDED."isShopOwner",
+                        email         = EXCLUDED.email,
+                        role          = EXCLUDED.role
+      RETURNING *;
   `;
 
   return newStaffMembers.map(mapStaffMember);
@@ -142,10 +143,10 @@ export async function upsertStaffMembers(
 
 export async function deleteStaffMembers(shop: string, staffMemberIds: ID[]) {
   await sql`
-    DELETE
-    FROM "Employee"
-    WHERE shop = ${shop}
-      AND "staffMemberId" = ANY (${staffMemberIds as string[]})
+      DELETE
+      FROM "Employee"
+      WHERE shop = ${shop}
+        AND "staffMemberId" = ANY (${staffMemberIds as string[]})
   `;
 }
 
@@ -163,10 +164,10 @@ export async function getSuperusers(shop: string) {
     email: string;
     role: string;
   }>`
-    SELECT *
-    FROM "Employee"
-    WHERE shop = ${shop}
-      AND superuser = TRUE
+      SELECT *
+      FROM "Employee"
+      WHERE shop = ${shop}
+        AND superuser = TRUE
   `;
 
   return staffMembers.map(mapStaffMember);
@@ -185,9 +186,86 @@ export async function setStaffMemberDefaultRole({
   defaultRole: string;
 }) {
   await sql`
-    UPDATE "Employee"
-    SET role = ${defaultRole}
-    WHERE shop = ${shop}
-      AND role != ALL (${roles})
+      UPDATE "Employee"
+      SET role = ${defaultRole}
+      WHERE shop = ${shop}
+        AND role != ALL (${roles})
   `;
+}
+
+export async function deleteStaffMemberLocations(staffMemberIds: ID[]) {
+  if (!staffMemberIds.length) {
+    return;
+  }
+
+  await sql`
+    DELETE
+    FROM "EmployeeLocation"
+    WHERE "staffMemberId" = ANY (${staffMemberIds as string[]});
+  `;
+}
+
+export async function insertStaffMemberLocations(staffMemberLocations: { staffMemberId: ID; locationIds: ID[] }[]) {
+  const flatStaffMemberLocations = staffMemberLocations.flatMap(({ staffMemberId, locationIds }) =>
+    locationIds.map(locationId => ({ staffMemberId, locationId })),
+  );
+
+  if (!isNonEmptyArray(flatStaffMemberLocations)) {
+    return;
+  }
+
+  const { staffMemberId, locationId } = nest(flatStaffMemberLocations);
+
+  await sql`
+    INSERT INTO "EmployeeLocation" ("staffMemberId", "locationId")
+    SELECT *
+    FROM UNNEST(
+      ${staffMemberId as string[]} :: text[],
+      ${locationId as string[]} :: text[][]
+         );
+  `;
+}
+
+export async function getStaffMemberLocations(staffMemberIds: ID[]) {
+  if (!staffMemberIds.length) {
+    return [];
+  }
+
+  const locations = await sql<{
+    id: number;
+    staffMemberId: string;
+    locationId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+      SELECT *
+      FROM "EmployeeLocation"
+      WHERE "staffMemberId" = ANY (${staffMemberIds as string[]})
+  `;
+
+  return locations.map(mapStaffMemberLocation);
+}
+
+function mapStaffMemberLocation(staffMemberLocation: {
+  id: number;
+  staffMemberId: string;
+  locationId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  const { staffMemberId, locationId } = staffMemberLocation;
+
+  try {
+    assertGid(staffMemberId);
+    assertGid(locationId);
+
+    return {
+      ...staffMemberLocation,
+      staffMemberId,
+      locationId,
+    };
+  } catch (error) {
+    sentryErr(error, { staffMemberLocation });
+    throw new HttpError('Unable to parse staff member location', 500);
+  }
 }

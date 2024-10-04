@@ -16,7 +16,7 @@ export function NewWorkOrder() {
   const fetch = useAuthenticatedFetch();
 
   const cart = useCartSubscription();
-  const { toast } = useApi<'pos.home.modal.render'>();
+  const { toast, session } = useApi<'pos.home.modal.render'>();
 
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery(
@@ -82,6 +82,7 @@ export function NewWorkOrder() {
           ...createWorkOrder.customFields,
         },
         customerId: defaultCustomerId,
+        locationId: createGid('Location', session.currentSession.locationId),
       }}
     />
   );

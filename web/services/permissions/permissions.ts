@@ -2,6 +2,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getShopSettings } from '../settings/settings.js';
 import { httpError } from '../../util/http-error.js';
 import { getStaffMembers } from '../staff-members/queries.js';
+import { ShopSettings } from '../settings/schema.js';
 
 export const permissions = [
   'read_settings',
@@ -52,7 +53,10 @@ export async function getMissingPermissionsForStaffMember(shop: string, staffMem
 }
 
 export async function getDefaultRole(shop: string) {
-  const { roles } = await getShopSettings(shop);
+  return getDefaultRoleFromSettings(await getShopSettings(shop));
+}
+
+export function getDefaultRoleFromSettings(settings: ShopSettings) {
   // All shops should have a default role. This is enforced by the settings schema so this should be impossible.
-  return Object.entries(roles).find(([, role]) => role.isDefault)?.[0] ?? httpError('No default role set');
+  return Object.entries(settings.roles).find(([, role]) => role.isDefault)?.[0] ?? httpError('No default role set');
 }

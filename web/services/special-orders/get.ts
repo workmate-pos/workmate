@@ -16,9 +16,10 @@ import {
 import { escapeLike } from '../db/like.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
-export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
-  const specialOrder = await getSpecialOrder({ shop, name });
+export async function getDetailedSpecialOrder({ shop }: Session, name: string, locationIds: ID[] | null) {
+  const specialOrder = await getSpecialOrder({ shop, name, locationIds });
 
   if (!specialOrder) {
     return null;
@@ -107,17 +108,23 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
   };
 }
 
-export async function getDetailedSpecialOrdersPage(session: Session, paginationOptions: SpecialOrderPaginationOptions) {
+export async function getDetailedSpecialOrdersPage(
+  session: Session,
+  paginationOptions: SpecialOrderPaginationOptions,
+  locationIds: ID[] | null,
+) {
   if (paginationOptions.query !== undefined) {
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
   }
 
   const { shop } = session;
-  const { specialOrders, hasNextPage } = await getSpecialOrdersPage(shop, paginationOptions);
+  const { specialOrders, hasNextPage } = await getSpecialOrdersPage(shop, paginationOptions, locationIds);
 
   return {
     specialOrders: await Promise.all(
-      specialOrders.map(specialOrder => getDetailedSpecialOrder(session, specialOrder.name).then(so => so ?? never())),
+      specialOrders.map(specialOrder =>
+        getDetailedSpecialOrder(session, specialOrder.name, locationIds).then(so => so ?? never()),
+      ),
     ),
     hasNextPage,
   };

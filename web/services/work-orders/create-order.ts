@@ -5,6 +5,7 @@ import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { gql } from '../gql/gql.js';
 import { getWorkOrder } from './queries.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 /**
  * Creates an order for the given work order items.
@@ -14,10 +15,18 @@ import { getWorkOrder } from './queries.js';
  * 2) Mark draft order as completed (creates real order)
  * 3) Webhook will removed order items from the WO's actual draft order
  */
-export async function createWorkOrderOrder(session: Session, createWorkOrderOrder: CreateWorkOrderOrder) {
+export async function createWorkOrderOrder(
+  session: Session,
+  createWorkOrderOrder: CreateWorkOrderOrder,
+  user: LocalsTeifiUser,
+) {
   const graphql = new Graphql(session);
 
-  const workOrder = await getWorkOrder({ shop: session.shop, name: createWorkOrderOrder.name });
+  const workOrder = await getWorkOrder({
+    shop: session.shop,
+    name: createWorkOrderOrder.name,
+    locationIds: user.user.allowedLocationIds,
+  });
 
   if (!workOrder) {
     throw new HttpError('Work order not found', 404);

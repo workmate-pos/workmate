@@ -41,15 +41,32 @@ import { getSpecialOrderLineItemsByNameAndUuids, getSpecialOrdersByNames } from 
 import { httpError } from '../../util/http-error.js';
 import { getProductVariants } from '../product-variants/queries.js';
 import { getSerialsByProductVariantSerials, upsertSerials } from '../serials/queries.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
 
-export async function upsertCreatePurchaseOrder(session: Session, createPurchaseOrder: CreatePurchaseOrder) {
+export async function upsertCreatePurchaseOrder(
+  session: Session,
+  user: LocalsTeifiUser,
+  createPurchaseOrder: CreatePurchaseOrder,
+) {
+  if (!createPurchaseOrder.locationId) {
+    throw new HttpError('Location is required', 400);
+  }
+
   const { shop } = session;
 
-  return await unit(async () => {
-    const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
+  await assertLocationsPermitted({
+    shop: session.shop,
+    locationIds: [createPurchaseOrder.locationId],
+    staffMemberId: user.staffMember.id,
+  });
 
-    const isNew = createPurchaseOrder.name === null;
-    const existingPurchaseOrder = isNew ? null : await getDetailedPurchaseOrder(session, name);
+  return await unit(async () => {
+    const existingPurchaseOrder = createPurchaseOrder.name
+      ? await getDetailedPurchaseOrder(session, createPurchaseOrder.name, user.user.allowedLocationIds)
+      : null;
+
+    const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
 
     assertNoIllegalPurchaseOrderChanges(createPurchaseOrder, existingPurchaseOrder);
     assertNoIllegalLineItems(createPurchaseOrder);
@@ -124,7 +141,7 @@ export async function upsertCreatePurchaseOrder(session: Session, createPurchase
       insertPurchaseOrderAssignedEmployees(purchaseOrderId, createPurchaseOrder.employeeAssignments),
     ]);
 
-    const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name)) ?? never('We just made it');
+    const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name, locationIds)) ?? never('We just made it');
 
     await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
     await adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);

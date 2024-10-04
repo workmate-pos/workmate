@@ -11,7 +11,7 @@ import { getVendors } from '../vendors/get.js';
 import { getPurchaseOrder } from './queries.js';
 
 export async function sendPurchaseOrderWebhook(session: Session, name: string) {
-  const purchaseOrder = await getDetailedPurchaseOrder(session, name);
+  const purchaseOrder = await getDetailedPurchaseOrder(session, name, null);
 
   if (!purchaseOrder) {
     throw new Error(`Purchase order with name ${name} not found`);
@@ -25,7 +25,7 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
     vendors,
   ] = await Promise.all([
     getShopSettings(session.shop),
-    getPurchaseOrder({ shop: session.shop, name }).then(po => po ?? never()),
+    getPurchaseOrder({ shop: session.shop, name, locationIds: null }).then(po => po ?? never()),
     getVendors(session),
   ]);
 

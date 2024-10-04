@@ -10,8 +10,6 @@ const CurrencyRange = z.tuple([zMoney, zMoney]);
 
 // TODO: Modernize this, use this version in an app migration
 
-// TODO: Role endpoints and settings
-
 export const ShopSettings = z
   .object({
     scanner: z
@@ -104,16 +102,6 @@ export const ShopSettings = z
       ])
       .default({ onlyAllowShortcuts: true }),
 
-    workOrderRequests: z
-      .discriminatedUnion('enabled', [
-        z.object({ enabled: z.literal(false) }),
-        z.object({
-          enabled: z.literal(true),
-          status: z.string().min(1).default('Draft'),
-        }),
-      ])
-      .default({ enabled: false }),
-
     defaultRate: zMoney.default('15.00'),
     labourLineItemName: z.string().min(1).default('Labour'),
     labourLineItemSKU: z.string().default(''),
@@ -165,6 +153,15 @@ export const ShopSettings = z
 
     vendorCustomerMetafieldsToShow: z.string().array().default([]),
 
+    franchises: z
+      .object({
+        enabled: z
+          .boolean()
+          .default(false)
+          .describe('Enabling franchise mode allows you to restrict locations on a per-employee basis.'),
+      })
+      .default({}),
+
     roles: z
       .record(
         z.object({
@@ -172,6 +169,7 @@ export const ShopSettings = z
           permissions: z.string().refine(isPermission, 'Invalid permission').array(),
         }),
       )
+      .refine(roles => Object.keys(roles).length > 0, 'Must have at least one role')
       .refine(
         roles => Object.values(roles).filter(role => role.isDefault).length === 1,
         'Must have exactly one default role',
@@ -215,10 +213,6 @@ export const ShopSettings = z
   .refine(
     settings => settings.purchaseOrderStatuses.includes(settings.defaultPurchaseOrderStatus),
     'Default purchase order status must be one of the configured statuses',
-  )
-  .refine(
-    settings => !settings.workOrderRequests.enabled || settings.statuses.includes(settings.workOrderRequests.status),
-    'Work order request status must be one of the configured statuses',
   );
 
 export type ShopSettings = z.infer<typeof ShopSettings>;

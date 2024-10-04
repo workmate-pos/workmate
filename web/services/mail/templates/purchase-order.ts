@@ -8,6 +8,7 @@ import { getVendors } from '../../vendors/get.js';
 import { Session } from '@shopify/shopify-api';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { ShopSettings } from '../../settings/schema.js';
+import { LocalsTeifiUser } from '../../../decorators/permission.js';
 
 export async function getRenderedPurchaseOrderTemplate(
   printTemplate: ShopSettings['purchaseOrderPrintTemplates'][string],
@@ -63,11 +64,12 @@ export async function getPurchaseOrderTemplateData(
   session: Session,
   purchaseOrderName: string,
   clientDate: string,
+  user: LocalsTeifiUser,
 ): Promise<PurchaseOrderTemplateData> {
   const { shop } = session;
 
   const [purchaseOrder, vendors] = await Promise.all([
-    getDetailedPurchaseOrder({ shop }, purchaseOrderName),
+    getDetailedPurchaseOrder({ shop }, purchaseOrderName, user.user.allowedLocationIds),
     getVendors(session),
   ]);
 

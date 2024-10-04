@@ -20,7 +20,7 @@ export default class CycleCountController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     const { name } = await upsertCycleCount(session, user, req.body);
-    const cycleCount = await getDetailedCycleCount(session, name);
+    const cycleCount = await getDetailedCycleCount(session, name, user.user.allowedLocationIds);
 
     return res.json(cycleCount);
   }
@@ -36,11 +36,9 @@ export default class CycleCountController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    await applyCycleCountItems(session, user.staffMember.id, {
-      cycleCountName: name,
-      itemApplications: req.body.items,
-    });
-    const cycleCount = await getDetailedCycleCount(session, name);
+    await applyCycleCountItems(session, user, { cycleCountName: name, itemApplications: req.body.items });
+
+    const cycleCount = await getDetailedCycleCount(session, name, user.user.allowedLocationIds);
 
     return res.json(cycleCount);
   }
@@ -49,9 +47,10 @@ export default class CycleCountController {
   @Permission('cycle_count')
   async planCycleCount(req: Request<{ name: string }>, res: Response<PlanCycleCountResponse>) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    const plan = await getCycleCountApplyPlan(session, name);
+    const plan = await getCycleCountApplyPlan(session, name, user.user.allowedLocationIds);
 
     return res.json(plan);
   }
@@ -64,9 +63,10 @@ export default class CycleCountController {
     res: Response<FetchCycleCountsResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const paginationOptions = req.query;
 
-    const cycleCounts = await getDetailedCycleCountsPage(session, paginationOptions);
+    const cycleCounts = await getDetailedCycleCountsPage(session, paginationOptions, user.user.allowedLocationIds);
 
     return res.json(cycleCounts);
   }
@@ -75,9 +75,10 @@ export default class CycleCountController {
   @Permission('cycle_count')
   async fetchCycleCount(req: Request<{ name: string }>, res: Response<FetchCycleCountResponse>) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    const cycleCount = await getDetailedCycleCount(session, name);
+    const cycleCount = await getDetailedCycleCount(session, name, user.user.allowedLocationIds);
 
     return res.json(cycleCount);
   }

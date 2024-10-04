@@ -49,6 +49,9 @@ model WorkOrder {
   customer   Customer? @relation(fields: [customerId], references: [customerId])
   customerId String
 
+  // Location where the work order was created
+  locationId String?
+
   companyId         String?
   companyContactId  String?
   companyLocationId String?
@@ -75,6 +78,9 @@ model WorkOrder {
   itemCustomFields WorkOrderItemCustomField[]
 
   @@unique([shop, name])
+  @@index([shop, locationId])
+  @@index([shop, customerId])
+  @@index([shop, status])
 }
 
 enum DiscountType {
@@ -232,7 +238,24 @@ model Employee {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  @@index([shop])
+  locations EmployeeLocation[]
+
+  @@index([shop, staffMemberId])
+}
+
+model EmployeeLocation {
+  id Int @id @default(autoincrement())
+
+  staffMemberId String
+  employee      Employee @relation(fields: [staffMemberId], references: [staffMemberId])
+
+  locationId String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([staffMemberId])
+  @@index([locationId])
 }
 
 // TODO: Remove (cannot do it right now because app migration must run first)

@@ -58,7 +58,7 @@ export async function getDraftOrderInputForExistingWorkOrder(
     newCharges?: WorkOrderLabourCharge[];
   },
 ) {
-  const databaseWorkOrder = await getWorkOrder({ shop: session.shop, name: workOrderName });
+  const databaseWorkOrder = await getWorkOrder({ shop: session.shop, name: workOrderName, locationIds: null });
 
   if (!databaseWorkOrder) {
     throw new HttpError('Work order not found', 404);

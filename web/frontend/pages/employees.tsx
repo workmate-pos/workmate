@@ -1,4 +1,15 @@
-import { BlockStack, Frame, IndexTable, Link, Page, Select, SkeletonBodyText, Text } from '@shopify/polaris';
+import {
+  BlockStack,
+  Button,
+  Frame,
+  IndexTable,
+  InlineStack,
+  Link,
+  Page,
+  Select,
+  SkeletonBodyText,
+  Text,
+} from '@shopify/polaris';
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
@@ -14,6 +25,8 @@ import { NumberField } from '@web/frontend/components/NumberField.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
+import { LocationMajor } from '@shopify/polaris-icons';
+import { MultiLocationSelector } from '@web/frontend/components/selectors/MultiLocationSelector.js';
 
 export default function () {
   return (
@@ -34,23 +47,28 @@ function Employees() {
   const settingsQuery = useSettingsQuery({ fetch });
 
   const roles = Object.keys(settingsQuery.data?.settings.roles ?? {});
+  const franchiseModeEnabled = settingsQuery.data?.settings.franchises.enabled ?? false;
+  const shouldShowLocations = franchiseModeEnabled;
 
   const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
   const canWriteEmployees =
-    currentEmployeeQuery.data?.superuser ?? currentEmployeeQuery.data?.permissions.includes('write_employees');
+    !!currentEmployeeQuery.data?.superuser || currentEmployeeQuery.data?.permissions.includes('write_employees');
 
   const [lastSavedEmployeeRates, setLastSavedEmployeeRates] = useState<Record<ID, Money | null>>({});
   const [lastSavedEmployeeRoles, setLastSavedEmployeeRoles] = useState<Record<ID, string>>({});
   const [lastSavedEmployeeSuperuser, setLastSavedEmployeeSuperuser] = useState<Record<ID, boolean>>({});
+  const [lastSavedEmployeeLocationIds, setLastSavedEmployeeLocationIds] = useState<Record<ID, ID[]>>({});
 
   const [employeeRates, setEmployeeRates] = useState<Record<ID, Money | null>>({});
   const [employeeRoles, setEmployeeRoles] = useState<Record<ID, string>>({});
   const [employeeSuperuser, setEmployeeSuperuser] = useState<Record<ID, boolean>>({});
+  const [employeeLocationIds, setEmployeeLocationIds] = useState<Record<ID, ID[]>>({});
 
   const hasUnsavedChanges =
     hash(employeeRates) !== hash(lastSavedEmployeeRates) ||
     hash(employeeRoles) !== hash(lastSavedEmployeeRoles) ||
-    hash(employeeSuperuser) !== hash(lastSavedEmployeeSuperuser);
+    hash(employeeSuperuser) !== hash(lastSavedEmployeeSuperuser) ||
+    hash(employeeLocationIds) !== hash(lastSavedEmployeeLocationIds);
 
   const employeePageSize = 50;
   const employeesQuery = useEmployeesQuery({ fetch, params: { first: employeePageSize } });
@@ -66,6 +84,7 @@ function Employees() {
         setLastSavedEmployeeRates(employeeRates);
         setLastSavedEmployeeRoles(employeeRoles);
         setLastSavedEmployeeSuperuser(employeeSuperuser);
+        setLastSavedEmployeeLocationIds(employeeLocationIds);
         setToastAction({ content: 'Saved employees!' });
       },
       onError() {
@@ -76,7 +95,7 @@ function Employees() {
 
   const currencyFormatter = useCurrencyFormatter({ fetch });
 
-  // TODO: Contextual save bar
+  const [locationModalEmployeeId, setLocationModalEmployeeId] = useState<ID>();
 
   return (
     <>
@@ -88,6 +107,7 @@ function Employees() {
               ...Object.keys(employeeRates),
               ...Object.keys(employeeRoles),
               ...Object.keys(employeeSuperuser),
+              ...Object.keys(employeeLocationIds),
             ]);
 
             const relevantEmployees = employeesQuery.data?.pages
@@ -109,6 +129,7 @@ function Employees() {
                       ? null
                       : employee.rate,
                 superuser: employeeSuperuser[employee.id] ?? employee.superuser,
+                locationIds: employeeLocationIds[employee.id] ?? employee.locationIds,
               })),
             });
           },
@@ -120,6 +141,7 @@ function Employees() {
             setEmployeeRates(lastSavedEmployeeRates);
             setEmployeeRoles(lastSavedEmployeeRoles);
             setEmployeeSuperuser(lastSavedEmployeeSuperuser);
+            setEmployeeLocationIds(lastSavedEmployeeLocationIds);
           },
         }}
       />
@@ -129,11 +151,16 @@ function Employees() {
       <BlockStack gap="800">
         <Text as="p" variant="bodyLg">
           Employee permissions are restricted using a role-based system. Roles and their permissions can be configured
-          through the <Link url="/settings">settings page</Link>.
+          through the <Link url="/settings?tab=Roles">settings page</Link>.
         </Text>
 
         <IndexTable
-          headings={[{ title: 'Employee' }, { title: 'Hourly Rate' }, { title: 'Role' }]}
+          headings={[
+            { title: 'Employee' },
+            { title: 'Hourly Rate' },
+            { title: 'Role' },
+            ...(shouldShowLocations ? [{ title: 'Locations' }] : []),
+          ]}
           itemCount={employeesQuery.isLoading ? employeePageSize : (page?.length ?? 0)}
           loading={employeesQuery.isLoading || settingsQuery.isLoading}
           hasMoreItems={employeesQuery.hasNextPage}
@@ -153,11 +180,18 @@ function Employees() {
                   <SkeletonBodyText lines={1} />
                 </IndexTable.Cell>
                 <IndexTable.Cell>
-                  <SkeletonBodyText lines={1} />
+                  <NumberField type="number" label="Rate" labelHidden autoComplete="off" decimals={2} disabled />
                 </IndexTable.Cell>
                 <IndexTable.Cell>
                   <Select label={'Role'} labelHidden disabled />
                 </IndexTable.Cell>
+                {shouldShowLocations && (
+                  <IndexTable.Cell>
+                    <Button icon={LocationMajor} variant="plain" disabled>
+                      0 locations
+                    </Button>
+                  </IndexTable.Cell>
+                )}
               </IndexTable.Row>
             ))}
 
@@ -166,7 +200,6 @@ function Employees() {
               <IndexTable.Cell>{employee.name}</IndexTable.Cell>
               <IndexTable.Cell>
                 <NumberField
-                  variant={'borderless'}
                   type={'number'}
                   decimals={2}
                   min={0.01}
@@ -174,7 +207,7 @@ function Employees() {
                   largeStep={1}
                   inputMode={'decimal'}
                   label={'Rate'}
-                  labelHidden={true}
+                  labelHidden
                   value={employeeRates[employee.id]?.toString()}
                   onChange={value => {
                     if (value.trim().length === 0) {
@@ -202,6 +235,8 @@ function Employees() {
                       ? 'this-is-superuser-xd'
                       : (employeeRoles[employee.id] ?? employee.role)
                   }
+                  disabled={!canWriteEmployees}
+                  requiredIndicator
                   options={[
                     ...uniqueBy(
                       [
@@ -228,8 +263,6 @@ function Employees() {
                     },
                   ]}
                   onChange={role => {
-                    console.log(role, employeeRoles, employeeSuperuser);
-
                     if (role === 'this-is-superuser-xd') {
                       setEmployeeSuperuser(current => ({ ...current, [employee.id]: true }));
                       return;
@@ -240,10 +273,46 @@ function Employees() {
                   }}
                 />
               </IndexTable.Cell>
+              {shouldShowLocations && (
+                <IndexTable.Cell>
+                  <InlineStack>
+                    <Button
+                      icon={LocationMajor}
+                      variant="plain"
+                      disabled={!canWriteEmployees}
+                      onClick={() => setLocationModalEmployeeId(employee.id)}
+                    >
+                      {String(employeeLocationIds[employee.id]?.length ?? employee.locationIds.length)} locations
+                    </Button>
+                  </InlineStack>
+                </IndexTable.Cell>
+              )}
             </IndexTable.Row>
           ))}
         </IndexTable>
       </BlockStack>
+
+      <MultiLocationSelector
+        open={!!locationModalEmployeeId}
+        onClose={() => setLocationModalEmployeeId(undefined)}
+        selected={
+          locationModalEmployeeId
+            ? (employeeLocationIds[locationModalEmployeeId] ??
+              page?.find(employee => employee.id === locationModalEmployeeId)?.locationIds ??
+              [])
+            : []
+        }
+        onChange={locationIds => {
+          if (!locationModalEmployeeId) {
+            return;
+          }
+
+          setEmployeeLocationIds(current => ({
+            ...current,
+            [locationModalEmployeeId]: locationIds,
+          }));
+        }}
+      />
 
       {toast}
     </>

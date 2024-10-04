@@ -33,7 +33,7 @@ export default class SettingsController {
         throw new HttpError('Invalid settings', 400);
       }
 
-      const message = `${error.path.join('.')} ${error.message}`;
+      const message = `${error.path.join('.')}: ${error.message}`;
       throw new HttpError(message, 400);
     }
 

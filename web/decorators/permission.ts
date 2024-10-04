@@ -3,7 +3,7 @@ import { err } from '@teifi-digital/shopify-app-express/utils';
 import { RequestHandler } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
 import { gql } from '../services/gql/gql.js';
-import { createGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import type { Request, Response } from 'express-serve-static-core';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
@@ -13,12 +13,19 @@ import { hasReadUsersScope } from '../services/shop.js';
 import { IncomingHttpHeaders } from 'node:http';
 import { getShopifyApp } from '@teifi-digital/shopify-app-express';
 import {
-  getDefaultRole,
+  getDefaultRoleFromSettings,
   getMissingPermissionsForRole,
   isPermission,
   Permission,
 } from '../services/permissions/permissions.js';
-import { getStaffMembers, getSuperusers, StaffMember, upsertStaffMembers } from '../services/staff-members/queries.js';
+import {
+  getStaffMemberLocations,
+  getStaffMembers,
+  getSuperusers,
+  StaffMember,
+  upsertStaffMembers,
+} from '../services/staff-members/queries.js';
+import { getShopSettings } from '../services/settings/settings.js';
 
 export const PermissionKey = 'permission';
 export function Permission(permission: Permission | 'superuser' | 'none') {
@@ -26,10 +33,13 @@ export function Permission(permission: Permission | 'superuser' | 'none') {
 }
 
 export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'none'> = permissions => {
-  return (async (_req, res, next) => {
+  return (async (req, res, next) => {
     const session: Session = res.locals.shopify.session;
 
-    const associatedUser = await getAssociatedUser(_req, res);
+    const [associatedUser, posLocationId] = await Promise.all([
+      getAssociatedUser(req, res),
+      getRequestPosLocationId(req.headers),
+    ]);
 
     if (!associatedUser) {
       return err(res, 'You must be a staff member to access this resource', 401);
@@ -37,11 +47,14 @@ export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'non
 
     const staffMemberId = associatedUser.id;
 
-    let [[staffMember], doesSuperuserExist, defaultRole] = await Promise.all([
+    let [[staffMember], staffMemberLocations, doesSuperuserExist, shopSettings] = await Promise.all([
       getStaffMembers(session.shop, [staffMemberId]),
+      getStaffMemberLocations([staffMemberId]),
       getSuperusers(session.shop).then(superusers => superusers.length > 0),
-      getDefaultRole(session.shop),
+      getShopSettings(session.shop),
     ]);
+
+    const defaultRole = getDefaultRoleFromSettings(shopSettings);
 
     if (!staffMember || !doesSuperuserExist) {
       const superuser = associatedUser.isShopOwner || !doesSuperuserExist || associatedUser.email.endsWith('@teifi.ca');
@@ -61,7 +74,13 @@ export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'non
     }
 
     const user: LocalsTeifiUser = {
-      user: staffMember,
+      user: {
+        ...staffMember,
+        allowedLocationIds:
+          shopSettings.franchises.enabled && !staffMember.superuser
+            ? staffMemberLocations.map(location => location.locationId)
+            : null,
+      },
       staffMember: associatedUser,
     };
 
@@ -69,6 +88,10 @@ export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'non
     res.locals.teifi.user = user;
 
     if (!staffMember.superuser) {
+      if (posLocationId && !staffMemberLocations.some(location => location.locationId === posLocationId)) {
+        return err(res, 'You do not have permission to access this location', 401);
+      }
+
       if (permissions.includes('superuser')) {
         return err(res, 'You do not have permission to access this resource', 401);
       }
@@ -140,8 +163,15 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
   };
 }
 
+// TODO: Fix ugly object
 export type LocalsTeifiUser = {
-  user: StaffMember;
+  user: StaffMember & {
+    /**
+     * The locations that the user has access to.
+     * If null, the user has access to all locations (e.g. superuser or franchise mode is disabled).
+     */
+    allowedLocationIds: ID[] | null;
+  };
   staffMember: gql.staffMember.StaffMemberFragment.Result;
 };
 
@@ -174,6 +204,20 @@ async function getRequestStaffMemberId(headers: IncomingHttpHeaders) {
   }
 
   return await getBearerStaffMemberId(headers.authorization);
+}
+
+async function getRequestPosLocationId(headers: IncomingHttpHeaders) {
+  if (headers['x-pos-location-id']) {
+    const id = headers['x-pos-location-id'];
+
+    if (!Array.isArray(id) && /^\d+$/.test(id)) {
+      return createGid('Location', id);
+    }
+
+    sentryErr('Received invalid x-pos-location-id', { id });
+  }
+
+  return null;
 }
 
 async function getBearerStaffMemberId(authorizationHeader?: string) {

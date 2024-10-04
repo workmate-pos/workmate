@@ -6,6 +6,7 @@ import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fet
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import { Filters, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 
+// TODO: MultiLocationSelector
 export function LocationSelectorModal({
   open,
   onClose,

@@ -20,9 +20,10 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { match } from 'ts-pattern';
 import { DateTime } from '../gql/queries/generated/schema.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
-export async function getDetailedCycleCount(session: Session, name: string) {
-  const cycleCount = await getCycleCount({ shop: session.shop, name });
+export async function getDetailedCycleCount(session: Session, name: string, locationIds: ID[] | null) {
+  const cycleCount = await getCycleCount({ shop: session.shop, name, locationIds });
 
   if (!cycleCount) {
     throw new HttpError('Cycle count not found', 404);
@@ -67,8 +68,9 @@ async function getDetailedCycleCountForCycleCount(cycleCount: CycleCount): Promi
 export async function getDetailedCycleCountsPage(
   session: Session,
   paginationOptions: CycleCountPaginationOptions,
+  locationIds: ID[] | null,
 ): Promise<DetailedCycleCount[]> {
-  const cycleCounts = await getCycleCountsPage(session.shop, paginationOptions);
+  const cycleCounts = await getCycleCountsPage(session.shop, paginationOptions, locationIds);
   return await Promise.all(cycleCounts.map(cycleCount => getDetailedCycleCountForCycleCount(cycleCount)));
 }
 

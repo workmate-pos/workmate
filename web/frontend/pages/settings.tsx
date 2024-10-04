@@ -17,7 +17,6 @@ import { PrintSettings } from '@web/frontend/components/settings/sections/PrintS
 import { PurchaseOrderWebhookSettings } from '@web/frontend/components/settings/sections/PurchaseOrderWebhookSettings.js';
 import { useSearchParams } from 'react-router-dom';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { WorkOrderRequestSettings } from '@web/frontend/components/settings/sections/WorkOrderRequestSettings.js';
 import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
 import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
 import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
@@ -26,6 +25,7 @@ import { SpecialOrderSettings } from '@web/frontend/components/settings/sections
 import { ScannerSettings } from '@web/frontend/components/settings/sections/ScannerSettings.js';
 import { ShopSettings } from '@web/services/settings/schema.js';
 import { RolesSettings } from '@web/frontend/components/settings/sections/RolesSettings.js';
+import { FranchiseModeSettings } from '@web/frontend/components/settings/sections/FranchiseModeSettings.js';
 
 export default function () {
   return (
@@ -111,8 +111,6 @@ function Settings() {
           <Divider />
           <RatesSettings settings={settings} setSettings={setSettings} />
           <Divider />
-          <WorkOrderRequestSettings settings={settings} setSettings={setSettings} />
-          <Divider />
           <CustomFieldSettings type="WORK_ORDER" />
         </>
       ),
@@ -177,6 +175,10 @@ function Settings() {
     {
       name: 'Custom Fields',
       tab: <CustomFieldSettings />,
+    },
+    {
+      name: 'Franchise Mode',
+      tab: <FranchiseModeSettings settings={settings} setSettings={setSettings} />,
     },
     {
       name: 'Integrations',

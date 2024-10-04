@@ -14,6 +14,7 @@ import {
 } from '@shopify/polaris';
 import type { permissions as AllPermissions } from '@web/services/permissions/permissions.js';
 import { CircleMinusMinor } from '@shopify/polaris-icons';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 const permissions: typeof AllPermissions = [
   'read_settings',
@@ -49,16 +50,13 @@ export function RolesSettings({
     setRoleNames(roleNames => {
       const newRoleNames = Object.keys(settings.roles).filter(name => !roleNames.includes(name));
 
-      if (!roleNames.includes('')) {
-        newRoleNames.push('');
-      }
-
       setRoleNameInputValues(roleNameInputValues => [
-        ...roleNameInputValues.filter((_, i) => roleNames[i]! in settings.roles || i === roleNames.length - 1),
+        ...roleNameInputValues.filter((_, i) => roleNames[i]! in settings.roles),
         ...newRoleNames,
+        '',
       ]);
 
-      return [...roleNames.filter((name, i) => name in settings.roles || i === roleNames.length - 1), ...newRoleNames];
+      return [...roleNames.filter((name, i) => name in settings.roles), ...newRoleNames, ''];
     });
   }, [settings]);
 
@@ -94,7 +92,7 @@ export function RolesSettings({
           {
             title: 'Default',
           },
-          ...permissions.map(permission => ({ title: permission, alignment: 'end' }) as const),
+          ...permissions.map(permission => ({ title: titleCase(permission), alignment: 'end' }) as const),
         ]}
         selectable={false}
         itemCount={1 + roleNames.length}
