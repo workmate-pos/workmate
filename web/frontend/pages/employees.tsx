@@ -1,21 +1,10 @@
-import {
-  BlockStack,
-  Frame,
-  IndexTable,
-  Link,
-  Page,
-  Select,
-  SkeletonBodyText,
-  SkeletonDisplayText,
-  Text,
-} from '@shopify/polaris';
+import { BlockStack, Frame, IndexTable, Link, Page, Select, SkeletonBodyText, Text } from '@shopify/polaris';
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
-import { EmployeeWithDatabaseInfo } from '@web/controllers/api/employee.js';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useEmployeeMutation } from '@work-orders/common/queries/use-employee-mutation.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
@@ -24,6 +13,7 @@ import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-for
 import { NumberField } from '@web/frontend/components/NumberField.js';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 
 export default function () {
   return (
@@ -49,9 +39,18 @@ function Employees() {
   const canWriteEmployees =
     currentEmployeeQuery.data?.superuser ?? currentEmployeeQuery.data?.permissions.includes('write_employees');
 
+  const [lastSavedEmployeeRates, setLastSavedEmployeeRates] = useState<Record<ID, Money | null>>({});
+  const [lastSavedEmployeeRoles, setLastSavedEmployeeRoles] = useState<Record<ID, string>>({});
+  const [lastSavedEmployeeSuperuser, setLastSavedEmployeeSuperuser] = useState<Record<ID, boolean>>({});
+
   const [employeeRates, setEmployeeRates] = useState<Record<ID, Money | null>>({});
   const [employeeRoles, setEmployeeRoles] = useState<Record<ID, string>>({});
   const [employeeSuperuser, setEmployeeSuperuser] = useState<Record<ID, boolean>>({});
+
+  const hasUnsavedChanges =
+    hash(employeeRates) !== hash(lastSavedEmployeeRates) ||
+    hash(employeeRoles) !== hash(lastSavedEmployeeRoles) ||
+    hash(employeeSuperuser) !== hash(lastSavedEmployeeSuperuser);
 
   const employeePageSize = 50;
   const employeesQuery = useEmployeesQuery({ fetch, params: { first: employeePageSize } });
@@ -64,6 +63,9 @@ function Employees() {
     { fetch },
     {
       onSuccess() {
+        setLastSavedEmployeeRates(employeeRates);
+        setLastSavedEmployeeRoles(employeeRoles);
+        setLastSavedEmployeeSuperuser(employeeSuperuser);
         setToastAction({ content: 'Saved employees!' });
       },
       onError() {
@@ -79,11 +81,7 @@ function Employees() {
   return (
     <>
       <ContextualSaveBar
-        visible={
-          Object.keys(employeeRates).length > 0 ||
-          Object.keys(employeeRoles).length > 0 ||
-          Object.keys(employeeSuperuser).length > 0
-        }
+        visible={hasUnsavedChanges}
         saveAction={{
           onAction: () => {
             const relevantEmployeeIds = new Set([
@@ -119,9 +117,9 @@ function Employees() {
         }}
         discardAction={{
           onAction: () => {
-            setEmployeeRates({});
-            setEmployeeRoles({});
-            setEmployeeSuperuser({});
+            setEmployeeRates(lastSavedEmployeeRates);
+            setEmployeeRoles(lastSavedEmployeeRoles);
+            setEmployeeSuperuser(lastSavedEmployeeSuperuser);
           },
         }}
       />
@@ -141,10 +139,10 @@ function Employees() {
           hasMoreItems={employeesQuery.hasNextPage}
           selectable={false}
           pagination={{
-            hasNext: employeesQuery.hasNextPage,
-            onNext: employeesQuery.fetchNextPage,
-            hasPrevious: employeesQuery.hasPreviousPage,
-            onPrevious: employeesQuery.fetchPreviousPage,
+            hasNext: pagination.hasNextPage,
+            onNext: pagination.next,
+            hasPrevious: pagination.hasPreviousPage,
+            onPrevious: pagination.previous,
           }}
           resourceName={{ singular: 'employee', plural: 'employees' }}
         >
@@ -205,10 +203,20 @@ function Employees() {
                       : (employeeRoles[employee.id] ?? employee.role)
                   }
                   options={[
-                    ...roles.map(role => ({
-                      label: role,
-                      value: role,
-                    })),
+                    ...uniqueBy(
+                      [
+                        {
+                          label: employee.role,
+                          value: employee.role,
+                          disabled: !roles.includes(employee.role),
+                        },
+                        ...roles.map(role => ({
+                          label: role,
+                          value: role,
+                        })),
+                      ],
+                      role => role.value,
+                    ),
                     {
                       title: 'Danger Zone',
                       options: [
@@ -240,4 +248,8 @@ function Employees() {
       {toast}
     </>
   );
+}
+
+function hash(obj: object): string {
+  return JSON.stringify(obj, Object.keys(obj).sort());
 }

@@ -1,5 +1,6 @@
 import { db } from '../db/db.js';
 import { ShopSettings } from './schema.js';
+import { setStaffMemberDefaultRole } from '../staff-members/queries.js';
 
 function serialize(value: unknown): string {
   return JSON.stringify(value);
@@ -18,4 +19,14 @@ export async function getShopSettings(shop: string): Promise<ShopSettings> {
 
 export async function updateShopSettings(shop: string, settings: ShopSettings) {
   await db.settings.upsertSetting({ shop, key: 'settings', value: serialize(settings) });
+
+  const defaultRole = Object.entries(settings.roles).find(([, role]) => role.isDefault)?.[0];
+
+  if (defaultRole) {
+    await setStaffMemberDefaultRole({
+      shop,
+      roles: Object.keys(settings.roles),
+      defaultRole,
+    });
+  }
 }

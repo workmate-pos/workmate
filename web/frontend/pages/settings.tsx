@@ -198,7 +198,6 @@ function Settings() {
   return (
     <Page fullWidth={tabs[selectedTab]?.fullWidth}>
       <ContextualSaveBar
-        fullWidth
         saveAction={{
           disabled: !canWriteSettings || !isValid,
           loading: saveSettingsMutation.isPending,

@@ -171,3 +171,23 @@ export async function getSuperusers(shop: string) {
 
   return staffMembers.map(mapStaffMember);
 }
+
+/**
+ * Set a default role for staff members that do not have a known role.
+ */
+export async function setStaffMemberDefaultRole({
+  shop,
+  roles,
+  defaultRole,
+}: {
+  shop: string;
+  roles: string[];
+  defaultRole: string;
+}) {
+  await sql`
+    UPDATE "Employee"
+    SET role = ${defaultRole}
+    WHERE shop = ${shop}
+      AND role != ALL (${roles})
+  `;
+}

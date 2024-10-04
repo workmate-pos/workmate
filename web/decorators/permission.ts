@@ -20,9 +20,6 @@ import {
 } from '../services/permissions/permissions.js';
 import { getStaffMembers, getSuperusers, StaffMember, upsertStaffMembers } from '../services/staff-members/queries.js';
 
-// TODO: Assign default role to staff members if they do not have a known role
-//  -> Do this here?
-
 export const PermissionKey = 'permission';
 export function Permission(permission: Permission | 'superuser' | 'none') {
   return decorator(PermissionKey, permission);

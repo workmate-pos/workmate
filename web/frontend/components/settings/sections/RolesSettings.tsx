@@ -40,8 +40,6 @@ export function RolesSettings({
   settings: ShopSettings;
   setSettings: Dispatch<SetStateAction<ShopSettings>>;
 }) {
-  const [newRoleName, setNewRoleName] = useState('');
-
   // we need a stable order to prevent roles from jumping around when typing
   const [roleNames, setRoleNames] = useState(Object.keys(settings.roles));
   const [roleNameInputValues, setRoleNameInputValues] = useState(Object.keys(settings.roles));
@@ -51,12 +49,16 @@ export function RolesSettings({
     setRoleNames(roleNames => {
       const newRoleNames = Object.keys(settings.roles).filter(name => !roleNames.includes(name));
 
+      if (!roleNames.includes('')) {
+        newRoleNames.push('');
+      }
+
       setRoleNameInputValues(roleNameInputValues => [
-        ...roleNameInputValues.filter((_, i) => roleNames[i]! in settings.roles),
+        ...roleNameInputValues.filter((_, i) => roleNames[i]! in settings.roles || i === roleNames.length - 1),
         ...newRoleNames,
       ]);
 
-      return [...roleNames.filter(name => name in settings.roles), ...newRoleNames];
+      return [...roleNames.filter((name, i) => name in settings.roles || i === roleNames.length - 1), ...newRoleNames];
     });
   }, [settings]);
 
@@ -72,9 +74,9 @@ export function RolesSettings({
           permissions.
         </Text>
 
-        <Box paddingBlockStart={'100'}>
-          <Text as="p" variant="bodySm" tone="subdued">
-            Note that WorkMate previously used permissions on a per-employee basis. Your configured permissions have
+        <Box paddingBlockStart={'200'}>
+          <Text as="p" variant="bodyXs" tone="subdued">
+            WorkMate previously configured permissions on a per-employee basis. Your configured permissions have
             automatically been migrated to roles.
           </Text>
         </Box>
@@ -98,28 +100,29 @@ export function RolesSettings({
         itemCount={1 + roleNames.length}
       >
         {roleNames.map((name, i) => {
-          const role = settings.roles[name];
-
-          if (!role) {
-            // impossible
-            return null;
-          }
+          const role = settings.roles[name] ?? { isDefault: false, permissions: [] };
 
           return (
             <IndexTable.Row key={i} position={i} selected={false} id={i.toString()}>
               <IndexTable.Cell>
                 <InlineStack align="end">
-                  <Button
-                    variant="plain"
-                    icon={CircleMinusMinor}
-                    tone="critical"
-                    onClick={() => {
-                      setSettings(current => ({
-                        ...current,
-                        roles: Object.fromEntries(Object.entries(current.roles).filter(([x]) => x !== name)),
-                      }));
-                    }}
-                  ></Button>
+                  {!!name && (
+                    <Button
+                      variant="plain"
+                      icon={CircleMinusMinor}
+                      tone="critical"
+                      onClick={() => {
+                        setSettings(current => ({
+                          ...current,
+                          roles: Object.fromEntries(
+                            Object.entries(current.roles)
+                              .filter(([x]) => x !== name)
+                              .map(([name, role], i) => [name, { ...role, isDefault: i === 0 }]),
+                          ),
+                        }));
+                      }}
+                    ></Button>
+                  )}
                 </InlineStack>
               </IndexTable.Cell>
 
@@ -144,8 +147,9 @@ export function RolesSettings({
                         }));
                       }
                     }}
+                    placeholder={i === roleNames.length - 1 ? 'New Role' : undefined}
                     error={
-                      !roleNameInputValues[i]
+                      i !== roleNames.length - 1 && !roleNameInputValues[i]
                         ? 'Role name is required'
                         : roleNameInputValues[i] !== name
                           ? 'Role name already exists'
@@ -160,6 +164,7 @@ export function RolesSettings({
                   label={'Default'}
                   labelHidden
                   checked={role.isDefault}
+                  disabled={!name}
                   onChange={checked => {
                     // if unchecking just move the check to the first role
                     let indexToCheck = checked ? i : 0;
@@ -187,6 +192,7 @@ export function RolesSettings({
                 <IndexTable.Cell key={permission}>
                   <Checkbox
                     label={permission}
+                    disabled={!name}
                     labelHidden
                     checked={role.permissions.includes(permission)}
                     onChange={checked => {
@@ -210,40 +216,6 @@ export function RolesSettings({
             </IndexTable.Row>
           );
         })}
-
-        <IndexTable.Row position={Object.entries(settings.roles).length} selected={false} id={'new-role'}>
-          <IndexTable.Cell />
-          <IndexTable.Cell>
-            <FormLayout>
-              <TextField
-                label={'Role Name'}
-                labelHidden
-                placeholder="New Role"
-                autoComplete="off"
-                value={newRoleName}
-                onChange={value => setNewRoleName(value)}
-                onBlur={() => {
-                  if (!newRoleName || roleNameInputValues.includes(newRoleName)) {
-                    return;
-                  }
-
-                  setNewRoleName('');
-                  setRoleNameInputValues(current => [...current, newRoleName]);
-                  setSettings(current => {
-                    current.roles[newRoleName] = { isDefault: false, permissions: [] };
-                    return { ...current };
-                  });
-                }}
-                error={roleNameInputValues.includes(newRoleName) ? 'Role name already exists' : undefined}
-              />
-            </FormLayout>
-          </IndexTable.Cell>
-          {permissions.map(permission => (
-            <IndexTable.Cell key={permission}>
-              <Checkbox label={permission} labelHidden checked={false} disabled />
-            </IndexTable.Cell>
-          ))}
-        </IndexTable.Row>
       </IndexTable>
     </BlockStack>
   );

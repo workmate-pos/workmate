@@ -56,7 +56,7 @@ export default async function migrate() {
         ...Object.fromEntries(
           [...rolePermissions.values()]
             .map(permissions => permissions.split(',').filter(Boolean) as Permission[])
-            .map((permissions, i) => [`Auto-generated role ${i + 1}`, { isDefault: false, permissions }]),
+            .map((permissions, i) => [`Auto-migrated role ${i + 1}`, { isDefault: false, permissions }]),
         ),
       };
 

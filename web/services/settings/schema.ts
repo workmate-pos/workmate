@@ -176,7 +176,6 @@ export const ShopSettings = z
         roles => Object.values(roles).filter(role => role.isDefault).length === 1,
         'Must have exactly one default role',
       )
-      // TODO: Make sure default goes through refine
       .default({
         Associate: {
           isDefault: true,
