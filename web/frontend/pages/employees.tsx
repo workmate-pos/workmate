@@ -32,6 +32,10 @@ import { uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { LocationMajor } from '@shopify/polaris-icons';
 import { MultiLocationSelector } from '@web/frontend/components/selectors/MultiLocationSelector.js';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
+import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function () {
   return (
@@ -52,6 +56,7 @@ function Employees() {
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
   const [role, setRole] = useState<string>();
   const [superuser, setSuperuser] = useState<boolean>();
+  const [locationId, setLocationId] = useState<ID>();
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
 
   const settingsQuery = useSettingsQuery({ fetch });
@@ -81,7 +86,15 @@ function Employees() {
     hash(employeeLocationIds) !== hash(lastSavedEmployeeLocationIds);
 
   const employeePageSize = 50;
-  const employeesQuery = useEmployeesQuery({ fetch, params: { first: employeePageSize, query, role, superuser } });
+  const employeesQuery = useEmployeesQuery({
+    fetch,
+    params: { first: employeePageSize, query, role, superuser, locationId },
+  });
+
+  const locationsQuery = useLocationsQuery({ fetch, params: { first: 20 } });
+
+  const [shouldShowLocationSelector, setShouldShowLocationSelector] = useState(false);
+  const locationQuery = useLocationQuery({ fetch, id: locationId ?? null });
 
   const [pageIndex, setPageIndex] = useState(0);
   const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, employeesQuery);
@@ -170,7 +183,55 @@ function Employees() {
           <IndexFilters
             mode={mode}
             setMode={setMode}
-            filters={[]}
+            filters={
+              !franchiseModeEnabled
+                ? []
+                : [
+                    {
+                      key: 'location',
+                      label: 'Location',
+                      pinned: true,
+                      filter: (
+                        <Box paddingBlock={'100'}>
+                          <BlockStack align="start" inlineAlign="start" gap="100">
+                            <ChoiceList
+                              title={'Location'}
+                              choices={
+                                locationsQuery.data?.pages.flat().map(location => ({
+                                  id: location.id,
+                                  label: location.name,
+                                  value: location.id,
+                                })) ?? []
+                              }
+                              selected={[locationId].filter(isNonNullable)}
+                              onChange={([selected]) => setLocationId(selected as ID | undefined)}
+                            />
+                            {locationsQuery.hasNextPage && (
+                              <Button
+                                onClick={() => locationsQuery.fetchNextPage()}
+                                variant={'plain'}
+                                disabled={locationsQuery.isFetching}
+                              >
+                                Load more
+                              </Button>
+                            )}
+                          </BlockStack>
+                        </Box>
+                      ),
+                    },
+                  ]
+            }
+            appliedFilters={[
+              ...(locationId
+                ? [
+                    {
+                      key: 'location',
+                      label: locationQuery.data?.name ?? 'Unknown Location',
+                      onRemove: () => setLocationId(undefined),
+                    },
+                  ]
+                : []),
+            ]}
             selected={
               typeof role !== 'string'
                 ? superuser
@@ -215,6 +276,8 @@ function Employees() {
             onClearAll={() => {
               setQuery('', true);
               setRole(undefined);
+              setSuperuser(undefined);
+              setLocationId(undefined);
             }}
             queryValue={optimisticQuery}
             queryPlaceholder={'Search employees'}
@@ -264,7 +327,14 @@ function Employees() {
 
             {page?.map((employee, i) => (
               <IndexTable.Row key={employee.id} id="employee-id" position={i}>
-                <IndexTable.Cell>{employee.name}</IndexTable.Cell>
+                <IndexTable.Cell>
+                  <BlockStack>
+                    <Text as={'p'}>{employee.name || 'Unnamed Staff Member'}</Text>
+                    <Text as={'p'} tone={'subdued'}>
+                      {employee.email}
+                    </Text>
+                  </BlockStack>
+                </IndexTable.Cell>
                 <IndexTable.Cell>
                   <NumberField
                     type={'number'}
@@ -380,6 +450,12 @@ function Employees() {
             [locationModalEmployeeId]: locationIds,
           }));
         }}
+      />
+
+      <LocationSelectorModal
+        open={shouldShowLocationSelector}
+        onClose={() => setShouldShowLocationSelector(false)}
+        onSelect={locationId => setLocationId(locationId)}
       />
 
       {toast}

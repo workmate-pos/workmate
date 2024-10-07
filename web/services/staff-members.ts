@@ -6,6 +6,7 @@ import { hasReadUsersScope } from './shop.js';
 import { escapeLike } from './db/like.js';
 import * as queries from './staff-members/queries.js';
 import { StaffMemberPaginationOptions } from '../schemas/generated/staff-member-pagination-options.js';
+import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
 
 export async function getStaffMembersByIds(
   session: Session,
@@ -44,14 +45,18 @@ export async function getStaffMembersPage(
 ): Promise<gql.staffMember.getPage.Result> {
   const graphql = new Graphql(session);
 
-  // Role filtering forces us to search our own db
   if (
     !!paginationOptions.role ||
+    !!paginationOptions.locationId ||
     typeof paginationOptions.superuser === 'boolean' ||
     !(await hasReadUsersScope(graphql))
   ) {
     const query = paginationOptions.query ? escapeLike(`%${paginationOptions.query}%`) : undefined;
     const employees = await queries.getStaffMembersPage(session.shop, { query });
+    const employeeLocations = groupBy(
+      await queries.getStaffMemberLocations(employees.map(employee => employee.staffMemberId)),
+      location => location.staffMemberId,
+    );
 
     // TODO: Once roles use uuids, fetch the uuid here before filtering
 
@@ -63,6 +68,13 @@ export async function getStaffMembersPage(
             .filter(
               employee =>
                 paginationOptions.superuser === undefined || paginationOptions.superuser === employee.superuser,
+            )
+            .filter(
+              employee =>
+                !paginationOptions.locationId ||
+                employeeLocations[employee.staffMemberId]?.some(
+                  location => paginationOptions.locationId === location.locationId,
+                ),
             )
             .map(e => {
               assertGid(e.staffMemberId);

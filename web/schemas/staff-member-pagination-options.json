@@ -16,6 +16,9 @@
     },
     "superuser": {
       "type": "boolean"
+    },
+    "locationId": {
+      "$ref": "scalars.json#/definitions/ID"
     }
   },
   "additionalProperties": false
