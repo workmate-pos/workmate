@@ -51,7 +51,7 @@ export async function getStaffMembersPage(
     typeof paginationOptions.superuser === 'boolean' ||
     !(await hasReadUsersScope(graphql))
   ) {
-    const query = paginationOptions.query ? escapeLike(`%${paginationOptions.query}%`) : undefined;
+    const query = paginationOptions.query ? `%${escapeLike(paginationOptions.query)}%` : undefined;
     const employees = await queries.getStaffMembersPage(session.shop, { query });
     const employeeLocations = groupBy(
       await queries.getStaffMemberLocations(employees.map(employee => employee.staffMemberId)),
@@ -74,10 +74,7 @@ export async function getStaffMembersPage(
                   location => paginationOptions.locationId === location.locationId,
                 ),
             )
-            .map(e => {
-              assertGid(e.staffMemberId);
-              return { isShopOwner: e.isShopOwner, name: e.name, id: e.staffMemberId, email: e.email };
-            }),
+            .map(e => ({ isShopOwner: e.isShopOwner, name: e.name, id: e.staffMemberId, email: e.email })),
           pageInfo: {
             hasNextPage: false,
             endCursor: null,

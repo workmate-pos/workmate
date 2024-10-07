@@ -76,10 +76,13 @@ export async function getStaffMembersPage(shop: string, { query }: { query?: str
     email: string;
     role: string;
   }>`
-      SELECT *
-      FROM "Employee"
-      WHERE shop = ${shop}
-        AND name ILIKE COALESCE(${query ?? null}, '%');
+    SELECT *
+    FROM "Employee"
+    WHERE shop = ${shop}
+      AND (
+      name ILIKE COALESCE(${query ?? null}, '%')
+        OR email ILIKE COALESCE(${query ?? null}, '%')
+      );
   `;
 
   return staffMembers.map(mapStaffMember);
