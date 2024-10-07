@@ -13,6 +13,11 @@ const CurrencyRange = z.tuple([zMoney, zMoney]);
 
 export const ShopSettings = z
   .object({
+    version: z
+      .literal(1)
+      .default(1)
+      .describe('Version of the shop settings schema. Can be used to lazily migrate settings.'),
+
     scanner: z
       .object({
         variants: z
