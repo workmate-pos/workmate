@@ -6,7 +6,7 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { BlockStack, Checkbox, InlineGrid, Label, SkeletonBodyText, Text } from '@shopify/polaris';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 
-export function CustomerMetafieldSettings({
+export function VendorMetafieldSettings({
   settings,
   setSettings,
 }: {
@@ -41,19 +41,28 @@ export function CustomerMetafieldSettings({
               key={metafieldNamespaceKey}
               label={metafield.name}
               value={metafieldNamespaceKey}
-              checked={settings.vendorCustomerMetafieldsToShow.includes(metafieldNamespaceKey)}
+              checked={settings.purchaseOrders.vendorCustomerMetafieldsToShow.includes(metafieldNamespaceKey)}
               onChange={checked => {
                 if (checked) {
                   setSettings(settings => ({
                     ...settings,
-                    vendorCustomerMetafieldsToShow: [...settings.vendorCustomerMetafieldsToShow, metafieldNamespaceKey],
+                    purchaseOrders: {
+                      ...settings.purchaseOrders,
+                      vendorCustomerMetafieldsToShow: [
+                        ...settings.purchaseOrders.vendorCustomerMetafieldsToShow,
+                        metafieldNamespaceKey,
+                      ],
+                    },
                   }));
                 } else {
                   setSettings(settings => ({
                     ...settings,
-                    vendorCustomerMetafieldsToShow: settings.vendorCustomerMetafieldsToShow.filter(
-                      v => v !== metafieldNamespaceKey,
-                    ),
+                    purchaseOrders: {
+                      ...settings.purchaseOrders,
+                      vendorCustomerMetafieldsToShow: settings.purchaseOrders.vendorCustomerMetafieldsToShow.filter(
+                        v => v !== metafieldNamespaceKey,
+                      ),
+                    },
                   }));
                 }
               }}

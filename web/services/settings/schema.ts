@@ -61,7 +61,7 @@ function migrateShopSettings(shopSettings: AnyShopSettingsVersion): ShopSettings
         idFormat: shopSettings.purchaseOrderIdFormat,
         statuses: shopSettings.purchaseOrderStatuses,
         defaultStatus: shopSettings.defaultPurchaseOrderStatus,
-        printTemplates: shopSettings.purchaseOrderPrintTemplates,
+        printTemplates: shopSettings.purchaseOrders,
         vendorCustomerMetafieldsToShow: shopSettings.vendorCustomerMetafieldsToShow,
       },
 
@@ -69,7 +69,7 @@ function migrateShopSettings(shopSettings: AnyShopSettingsVersion): ShopSettings
         idFormat: shopSettings.idFormat,
         statuses: shopSettings.statuses,
         defaultStatus: shopSettings.defaultStatus,
-        printTemplates: shopSettings.workOrderPrintTemplates,
+        printTemplates: shopSettings.workOrders,
         discountShortcuts: shopSettings.discountShortcuts,
         discountRules: shopSettings.discountRules,
         charges: {

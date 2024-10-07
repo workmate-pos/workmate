@@ -127,7 +127,7 @@ export default class PurchaseOrdersController {
       },
       () =>
         mg.send(
-          { emailReplyTo: replyTo, emailFromTitle: from },
+          { replyTo, from },
           {
             to: email,
             attachment: [file],

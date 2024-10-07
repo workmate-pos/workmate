@@ -193,7 +193,7 @@ export default class WorkOrderController {
       },
       () =>
         mg.send(
-          { emailReplyTo: replyTo, emailFromTitle: from },
+          { replyTo, from },
           {
             to: email,
             attachment: [file],

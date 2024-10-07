@@ -125,7 +125,7 @@ export const ShopSettings01 = z.object({
   // TODO: validate
   printEmail: z.string().default(''),
 
-  workOrderPrintTemplates: z
+  workOrders: z
     .record(
       z.object({
         template: zLiquidTemplate,
@@ -143,7 +143,7 @@ export const ShopSettings01 = z.object({
       },
     }),
 
-  purchaseOrderPrintTemplates: z
+  purchaseOrders: z
     .record(
       z.object({
         template: zLiquidTemplate,

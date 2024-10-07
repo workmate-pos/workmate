@@ -116,8 +116,8 @@ function PurchaseOrderLoader() {
   if (purchaseOrderQuery.data) {
     createPurchaseOrder = createPurchaseOrderFromPurchaseOrder(purchaseOrderQuery.data);
   } else {
-    const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
-    createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
+    const { purchaseOrders } = settingsQuery.data.settings;
+    createPurchaseOrder = defaultCreatePurchaseOrder({ status: purchaseOrders.defaultStatus });
 
     createPurchaseOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,
@@ -234,7 +234,7 @@ function PurchaseOrder({
           <Select
             label={'Status'}
             requiredIndicator
-            options={settings.purchaseOrderStatuses}
+            options={settings.purchaseOrders.statuses}
             onChange={status => dispatch.setPartial({ status })}
             value={createPurchaseOrder.status}
             disabled={purchaseOrderMutation.isPending}

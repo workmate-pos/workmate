@@ -37,25 +37,31 @@ export function DiscountSettings({
           onSelect={unit => {
             setSettings({
               ...settings,
-              discountShortcuts: [
-                ...settings.discountShortcuts,
-                {
-                  currency: { unit: 'currency', money: discountShortcutValue as Money } as const,
-                  percentage: { unit: 'percentage', percentage: discountShortcutValue as Decimal } as const,
-                }[unit],
-              ],
+              workOrders: {
+                ...settings.workOrders,
+                discountShortcuts: [
+                  ...settings.workOrders.discountShortcuts,
+                  {
+                    currency: { unit: 'currency', money: discountShortcutValue as Money } as const,
+                    percentage: { unit: 'percentage', percentage: discountShortcutValue as Decimal } as const,
+                  }[unit],
+                ],
+              },
             });
             setDiscountShortcutValue('');
           }}
         />
         <InlineStack gap="200">
-          {settings.discountShortcuts.map((shortcut, i) => (
+          {settings.workOrders.discountShortcuts.map((shortcut, i) => (
             <Tag
               key={i}
               onRemove={() =>
                 setSettings({
                   ...settings,
-                  discountShortcuts: settings.discountShortcuts.filter((_, j) => i !== j),
+                  workOrders: {
+                    ...settings.workOrders,
+                    discountShortcuts: settings.workOrders.discountShortcuts.filter((_, j) => i !== j),
+                  },
                 })
               }
             >
@@ -95,18 +101,24 @@ function useDiscountRules(
       onSelect() {
         setSettings({
           ...settings,
-          discountRules: {
-            ...settings.discountRules,
-            onlyAllowShortcuts: true,
+          workOrders: {
+            ...settings.workOrders,
+            discountRules: {
+              ...settings.workOrders.discountRules,
+              onlyAllowShortcuts: true,
+            },
           },
         });
       },
       onDeselect() {
         setSettings({
           ...settings,
-          discountRules: {
-            ...settings.discountRules,
-            onlyAllowShortcuts: false,
+          workOrders: {
+            ...settings.workOrders,
+            discountRules: {
+              ...settings.workOrders.discountRules,
+              onlyAllowShortcuts: false,
+            },
           },
         });
       },
@@ -118,26 +130,32 @@ function useDiscountRules(
       onSelect() {
         setSettings({
           ...settings,
-          discountRules: {
-            ...settings.discountRules,
-            onlyAllowShortcuts: false,
-            allowedCurrencyRange: [...initialCurrencyRangeBounds],
+          workOrders: {
+            ...settings.workOrders,
+            discountRules: {
+              ...settings.workOrders.discountRules,
+              onlyAllowShortcuts: false,
+              allowedCurrencyRange: [...initialCurrencyRangeBounds],
+            },
           },
         });
       },
       onDeselect() {
         setSettings({
           ...settings,
-          discountRules: {
-            ...settings.discountRules,
-            onlyAllowShortcuts: false,
-            allowedCurrencyRange: undefined,
+          workOrders: {
+            ...settings.workOrders,
+            discountRules: {
+              ...settings.workOrders.discountRules,
+              onlyAllowShortcuts: false,
+              allowedCurrencyRange: undefined,
+            },
           },
         });
       },
       renderChildren() {
-        invariant(!settings.discountRules.onlyAllowShortcuts, 'Conflicting settings');
-        invariant(settings.discountRules.allowedCurrencyRange, 'No currency range set');
+        invariant(!settings.workOrders.discountRules.onlyAllowShortcuts, 'Conflicting settings');
+        invariant(settings.workOrders.discountRules.allowedCurrencyRange, 'No currency range set');
 
         return (
           <AnnotatedRangeSlider
@@ -148,8 +166,8 @@ function useDiscountRules(
             step={1}
             formatter={currencyFormatter}
             value={[
-              Number(settings.discountRules.allowedCurrencyRange[0]),
-              Number(settings.discountRules.allowedCurrencyRange[1]),
+              Number(settings.workOrders.discountRules.allowedCurrencyRange[0]),
+              Number(settings.workOrders.discountRules.allowedCurrencyRange[1]),
             ]}
             onChange={(allowedCurrencyRange: [number, number]) => {
               const min = BigDecimal.fromString(allowedCurrencyRange[0].toFixed(2)).toMoney();
@@ -157,10 +175,13 @@ function useDiscountRules(
 
               setSettings({
                 ...settings,
-                discountRules: {
-                  ...settings.discountRules,
-                  onlyAllowShortcuts: false,
-                  allowedCurrencyRange: [min, max],
+                workOrders: {
+                  ...settings.workOrders,
+                  discountRules: {
+                    ...settings.workOrders.discountRules,
+                    onlyAllowShortcuts: false,
+                    allowedCurrencyRange: [min, max],
+                  },
                 },
               });
 
@@ -177,26 +198,32 @@ function useDiscountRules(
       onSelect() {
         setSettings({
           ...settings,
-          discountRules: {
-            ...settings.discountRules,
-            onlyAllowShortcuts: false,
-            allowedPercentageRange: [BigDecimal.ZERO.toDecimal(), BigDecimal.fromString('100').toDecimal()],
+          workOrders: {
+            ...settings.workOrders,
+            discountRules: {
+              ...settings.workOrders.discountRules,
+              onlyAllowShortcuts: false,
+              allowedPercentageRange: [BigDecimal.ZERO.toDecimal(), BigDecimal.fromString('100').toDecimal()],
+            },
           },
         });
       },
       onDeselect() {
         setSettings({
           ...settings,
-          discountRules: {
-            ...settings.discountRules,
-            onlyAllowShortcuts: false,
-            allowedPercentageRange: undefined,
+          workOrders: {
+            ...settings.workOrders,
+            discountRules: {
+              ...settings.workOrders.discountRules,
+              onlyAllowShortcuts: false,
+              allowedPercentageRange: undefined,
+            },
           },
         });
       },
       renderChildren() {
-        invariant(!settings.discountRules.onlyAllowShortcuts, 'Conflicting settings');
-        invariant(settings.discountRules.allowedPercentageRange, 'No percentage range set');
+        invariant(!settings.workOrders.discountRules.onlyAllowShortcuts, 'Conflicting settings');
+        invariant(settings.workOrders.discountRules.allowedPercentageRange, 'No percentage range set');
 
         return (
           <AnnotatedRangeSlider
@@ -207,19 +234,22 @@ function useDiscountRules(
             step={1}
             formatter={num => `${num}%`}
             value={[
-              Number(settings.discountRules.allowedPercentageRange[0]),
-              Number(settings.discountRules.allowedPercentageRange[1]),
+              Number(settings.workOrders.discountRules.allowedPercentageRange[0]),
+              Number(settings.workOrders.discountRules.allowedPercentageRange[1]),
             ]}
             onChange={(allowedPercentageRange: [number, number]) =>
               setSettings({
                 ...settings,
-                discountRules: {
-                  ...settings.discountRules,
-                  onlyAllowShortcuts: false,
-                  allowedPercentageRange: [
-                    BigDecimal.fromString(String(allowedPercentageRange[0])).toDecimal(),
-                    BigDecimal.fromString(String(allowedPercentageRange[1])).toDecimal(),
-                  ],
+                workOrders: {
+                  ...settings.workOrders,
+                  discountRules: {
+                    ...settings.workOrders.discountRules,
+                    onlyAllowShortcuts: false,
+                    allowedPercentageRange: [
+                      BigDecimal.fromString(String(allowedPercentageRange[0])).toDecimal(),
+                      BigDecimal.fromString(String(allowedPercentageRange[1])).toDecimal(),
+                    ],
+                  },
                 },
               })
             }
@@ -233,13 +263,13 @@ function useDiscountRules(
 function getActiveDiscountRules(settings: ShopSettings) {
   const activeRules: string[] = [];
 
-  if (settings.discountRules.onlyAllowShortcuts) {
+  if (settings.workOrders.discountRules.onlyAllowShortcuts) {
     activeRules.push(ONLY_SHORTCUTS);
   } else {
-    if (settings.discountRules.allowedCurrencyRange) {
+    if (settings.workOrders.discountRules.allowedCurrencyRange) {
       activeRules.push(CURRENCY_RANGE);
     }
-    if (settings.discountRules.allowedPercentageRange) {
+    if (settings.workOrders.discountRules.allowedPercentageRange) {
       activeRules.push(PERCENTAGE_RANGE);
     }
   }

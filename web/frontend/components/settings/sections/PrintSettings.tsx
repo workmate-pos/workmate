@@ -1,5 +1,5 @@
 import type { ShopSettings } from '@web/services/settings/schema.js';
-import { BlockStack, TextField } from '@shopify/polaris';
+import { BlockStack, Checkbox, TextField } from '@shopify/polaris';
 import { PrintTemplateGroup } from '@web/frontend/components/settings/PrintTemplateGroup.js';
 
 export function PrintSettings({
@@ -13,14 +13,43 @@ export function PrintSettings({
 
   return (
     <BlockStack gap="400">
-      <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'workOrderPrintTemplates'} />
-      <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'purchaseOrderPrintTemplates'} />
+      <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'workOrders'} />
+      <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'purchaseOrders'} />
+
       <TextField
-        label={'Print Email'}
+        label={'Default Print Email'}
         autoComplete={'off'}
-        value={settings.printEmail}
-        onChange={value => setSettings({ ...settings, printEmail: value })}
-        helpText={'The email address that WorkMate will send print jobs to'}
+        value={settings.printing.global.defaultEmail}
+        onChange={defaultEmail =>
+          setSettings({
+            ...settings,
+            printing: {
+              ...settings.printing,
+              global: {
+                ...settings.printing.global,
+                defaultEmail,
+              },
+            },
+          })
+        }
+        helpText={'The email address that WorkMate will send print jobs to by default. Can be overridden.'}
+      />
+
+      <Checkbox
+        label={'Allow custom print email'}
+        checked={settings.printing.global.allowCustomEmail}
+        onChange={allowCustomEmail =>
+          setSettings({
+            ...settings,
+            printing: {
+              ...settings.printing,
+              global: { ...settings.printing.global, allowCustomEmail },
+            },
+          })
+        }
+        helpText={
+          'Allow users to override the default print email address. Can be used to send printable documents to customers, etc.'
+        }
       />
     </BlockStack>
   );

@@ -361,7 +361,7 @@ function Employees() {
                     suffix={currencyFormatter.suffix}
                     autoComplete={'off'}
                     disabled={!canWriteEmployees}
-                    placeholder={settingsQuery.data?.settings.defaultRate}
+                    placeholder={settingsQuery.data?.settings.workOrders.charges.defaultHourlyRate}
                   />
                 </IndexTable.Cell>
                 <IndexTable.Cell>

@@ -265,7 +265,7 @@ export function WorkOrderItemModal({
                     ({
                       type: 'fixed-price-labour',
                       uuid: uuid(),
-                      name: settingsQuery.data?.settings?.labourLineItemName || 'Labour',
+                      name: settingsQuery.data?.settings.workOrders.charges.defaultLabourLineItemName || 'Labour',
                       amount: BigDecimal.ZERO.toMoney(),
                       employeeId,
                       workOrderItemUuid: itemUuid,
@@ -412,7 +412,7 @@ function Charges({
       </Text>
 
       <SegmentedChargeConfig
-        defaultHourlyRate={settingsQuery.data?.settings.defaultRate}
+        defaultHourlyRate={settingsQuery.data?.settings.workOrders.charges.defaultHourlyRate}
         types={['none', 'hourly-labour', 'fixed-price-labour']}
         charge={generalCharge}
         setCharge={charge =>

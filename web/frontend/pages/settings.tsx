@@ -17,7 +17,7 @@ import { PrintSettings } from '@web/frontend/components/settings/sections/PrintS
 import { PurchaseOrderWebhookSettings } from '@web/frontend/components/settings/sections/PurchaseOrderWebhookSettings.js';
 import { useSearchParams } from 'react-router-dom';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
+import { VendorMetafieldSettings } from '@web/frontend/components/settings/sections/VendorMetafieldSettings.js';
 import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
 import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
 import { CycleCountSettings } from '@web/frontend/components/settings/sections/CycleCountSettings.js';
@@ -102,7 +102,7 @@ function Settings() {
           <WorkOrderSettings
             settings={settings}
             setSettings={setSettings}
-            defaultWorkOrderStatusValue={settings.defaultStatus}
+            defaultWorkOrderStatusValue={settings.workOrders.defaultStatus}
           />
           <Divider />
           <DiscountSettings settings={settings} setSettings={setSettings} />
@@ -122,10 +122,10 @@ function Settings() {
           <PurchaseOrderSettings
             settings={settings}
             setSettings={setSettings}
-            defaultPurchaseOrderStatusValue={settings.defaultPurchaseOrderStatus}
+            defaultPurchaseOrderStatusValue={settings.purchaseOrders.defaultStatus}
           />
           <Divider />
-          <CustomerMetafieldSettings settings={settings} setSettings={setSettings} />
+          <VendorMetafieldSettings settings={settings} setSettings={setSettings} />
           <Divider />
           <CustomFieldSettings type="PURCHASE_ORDER" />
         </>

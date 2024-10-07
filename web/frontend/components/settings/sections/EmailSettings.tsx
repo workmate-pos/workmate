@@ -13,15 +13,37 @@ export function EmailSettings({
       <TextField
         label={'From Title'}
         autoComplete={'off'}
-        value={settings.emailFromTitle}
-        onChange={value => setSettings({ ...settings, emailFromTitle: value })}
+        value={settings.printing.global.defaultFrom}
+        onChange={defaultFrom =>
+          setSettings({
+            ...settings,
+            printing: {
+              ...settings.printing,
+              global: {
+                ...settings.printing.global,
+                defaultFrom,
+              },
+            },
+          })
+        }
         helpText={'The name that will appear in the From field of emails sent from WorkMate'}
       />
       <TextField
         label={'Reply To'}
         autoComplete={'off'}
-        value={settings.emailReplyTo}
-        onChange={value => setSettings({ ...settings, emailReplyTo: value })}
+        value={settings.printing.global.defaultReplyTo}
+        onChange={defaultReplyTo =>
+          setSettings({
+            ...settings,
+            printing: {
+              ...settings.printing,
+              global: {
+                ...settings.printing.global,
+                defaultReplyTo,
+              },
+            },
+          })
+        }
         helpText={'The email address that will appear in the Reply-To field of emails sent from WorkMate'}
       />
     </BlockStack>
