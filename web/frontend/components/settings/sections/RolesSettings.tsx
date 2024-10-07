@@ -133,13 +133,7 @@ export function RolesSettings({
                       setRoleUuidInputValues(current => ({ ...current, [roleUuid]: value }));
 
                       if (!!value && !Object.values(settings.roles).some(role => role.name === value)) {
-                        // valid name, so change the role name
-
-                        // ensure that the uuid is in the list of uuids
-                        // if it already exists, nothing changes
-                        // otherwise it is added to the end
                         setRoleUuids(current => [...current.slice(0, i), roleUuid, ...current.slice(i + 1)]);
-
                         setSettings(current => ({
                           ...current,
                           roles: {
@@ -170,14 +164,18 @@ export function RolesSettings({
                   onChange={checked => {
                     const checkRoleUuid = checked ? roleUuid : roleUuids.find(uuid => uuid !== roleUuid);
 
+                    setRoleUuids(current => [...current.slice(0, i), roleUuid, ...current.slice(i + 1)]);
                     setSettings(current => ({
                       ...current,
-                      roles: Object.fromEntries(
-                        Object.entries(current.roles).map(([uuid, role]) => [
-                          uuid,
-                          { ...role, isDefault: uuid === checkRoleUuid },
-                        ]),
-                      ),
+                      roles: {
+                        ...Object.fromEntries(
+                          Object.entries(current.roles).map(([uuid, role]) => [
+                            uuid,
+                            { ...role, isDefault: uuid === checkRoleUuid },
+                          ]),
+                        ),
+                        [roleUuid]: { ...role, isDefault: roleUuid === checkRoleUuid },
+                      },
                     }));
                   }}
                 />

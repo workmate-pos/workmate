@@ -579,15 +579,18 @@ export async function getPurchaseOrdersForSerial({
   serial,
   id,
   productVariantId,
+  locationIds,
 }: MergeUnion<
   | { id: number }
   | {
       shop: string;
       serial: string;
       productVariantId: ID;
+      locationIds: ID[] | null;
     }
 >) {
   const _productVariantId: string | null = productVariantId ?? null;
+  const _locationIds: string[] | null = locationIds ?? null;
 
   const purchaseOrders = await sql<{
     id: number;
@@ -615,7 +618,11 @@ export async function getPurchaseOrdersForSerial({
     WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
       AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
       AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
-      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop)
+      AND (
+      po."locationId" = ANY (COALESCE(${_locationIds as string[]}, ARRAY [po."locationId"]))
+        OR (po."locationId" IS NULL AND ${_locationIds as string[]} :: text[] IS NULL)
+      );
   `;
 
   return purchaseOrders.map(mapPurchaseOrder);

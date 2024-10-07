@@ -98,7 +98,7 @@ export async function upsertCreatePurchaseOrder(
       .map(lineItem => ({
         productVariantId: lineItem.productVariantId,
         serial: lineItem.serialNumber,
-        locationId: createPurchaseOrder.locationId,
+        locationId: createPurchaseOrder.locationId ?? never('checked this above'),
         customerId: null,
         note: '',
       }))
@@ -477,6 +477,7 @@ async function assertNoIllegalSerials(
         shop,
         serial: lineItem.serialNumber,
         productVariantId: lineItem.productVariantId,
+        locationIds: null,
       }),
     })),
   ).then(result => result.filter(({ purchaseOrders }) => purchaseOrders.length > 0));

@@ -39,35 +39,7 @@ import { Redirect } from '@shopify/app-bridge/actions';
 export default function Serial() {
   const routes = useParams<'productVariantId' | 'serial'>();
 
-  if (!routes.productVariantId?.length || !/^\d+$/.test(routes.productVariantId)) {
-    return (
-      <Frame>
-        <Page>
-          <BlockStack>
-            <Text variant="headingMd" tone="critical" as="h1">
-              Invalid Product Variant ID
-            </Text>
-          </BlockStack>
-        </Page>
-      </Frame>
-    );
-  }
-
-  if (!routes.serial?.length) {
-    return (
-      <Frame>
-        <Page>
-          <BlockStack>
-            <Text variant="headingMd" tone="critical" as="h1">
-              Invalid Serial
-            </Text>
-          </BlockStack>
-        </Page>
-      </Frame>
-    );
-  }
-
-  const productVariantId = createGid('ProductVariant', routes.productVariantId);
+  const productVariantId = createGid('ProductVariant', routes.productVariantId ?? '0');
 
   const [lastSavedSerial, setLastSavedSerial] = useState(() => ({
     ...getDefaultCreateSerial(productVariantId),
@@ -95,7 +67,7 @@ export default function Serial() {
       setLastSavedSerial(createSerial);
       setCreateSerial(createSerial);
     }
-  }, [serialQuery, routes.serial]);
+  }, [serialQuery.isSuccess, serialQuery.data, routes.serial]);
 
   const productVariant = productVariantQuery.data;
   const location = locationQuery.data;
@@ -128,6 +100,52 @@ export default function Serial() {
         );
       },
     });
+
+  if (!routes.productVariantId?.length || !/^\d+$/.test(routes.productVariantId)) {
+    return (
+      <Frame>
+        <Page>
+          <BlockStack>
+            <Text variant="headingMd" tone="critical" as="h1">
+              Invalid Product Variant ID
+            </Text>
+          </BlockStack>
+        </Page>
+      </Frame>
+    );
+  }
+
+  if (!routes.serial?.length) {
+    return (
+      <Frame>
+        <Page>
+          <BlockStack>
+            <Text variant="headingMd" tone="critical" as="h1">
+              Invalid Serial
+            </Text>
+          </BlockStack>
+        </Page>
+      </Frame>
+    );
+  }
+
+  if (serialQuery.isSuccess && !serialQuery.data) {
+    return (
+      <Frame>
+        <Page>
+          <Card>
+            <Box paddingBlock={'1600'}>
+              <BlockStack align="center" inlineAlign="center">
+                <Text variant="headingLg" tone="critical" as="h1">
+                  Serial not found
+                </Text>
+              </BlockStack>
+            </Box>
+          </Card>
+        </Page>
+      </Frame>
+    );
+  }
 
   return (
     <Frame>
@@ -188,7 +206,6 @@ export default function Serial() {
                 open={isLocationSelectorOpen}
                 onClose={() => setIsLocationSelectorOpen(false)}
                 onSelect={locationId => setLocationId(locationId)}
-                setToastAction={setToastAction}
               />
 
               <TextField
@@ -243,7 +260,7 @@ export default function Serial() {
                   items={serial.history}
                   emptyState={
                     <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                      This serial has not been used in any orders yet.
+                      This serial does not have any associated orders.
                     </Text>
                   }
                   renderItem={item => {

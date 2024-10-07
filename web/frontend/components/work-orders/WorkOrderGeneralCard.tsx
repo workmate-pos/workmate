@@ -298,7 +298,6 @@ export function WorkOrderGeneralCard({
         open={isLocationSelectorOpen}
         onClose={() => setIsLocationSelectorOpen(false)}
         onSelect={locationId => dispatch.setPartial({ locationId })}
-        setToastAction={setToastAction}
       />
 
       {toast}

@@ -54,25 +54,37 @@ export async function upsertWorkOrder(session: Session, user: LocalsTeifiUser, c
   await validateCreateWorkOrder(session, createWorkOrder, user);
 
   if (createWorkOrder.name === null) {
-    return await createNewWorkOrder(session, {
+    return await createNewWorkOrder(
+      session,
+      {
+        ...createWorkOrder,
+        name: createWorkOrder.name,
+        locationId: createWorkOrder.locationId,
+      },
+      user.user.allowedLocationIds,
+    );
+  }
+
+  return await updateWorkOrder(
+    session,
+    {
       ...createWorkOrder,
       name: createWorkOrder.name,
       locationId: createWorkOrder.locationId,
-    });
-  }
-
-  return await updateWorkOrder(session, {
-    ...createWorkOrder,
-    name: createWorkOrder.name,
-    locationId: createWorkOrder.locationId,
-  });
+    },
+    user.user.allowedLocationIds,
+  );
 }
 
-async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: null; locationId: ID }) {
+async function createNewWorkOrder(
+  session: Session,
+  createWorkOrder: CreateWorkOrder & { name: null; locationId: ID },
+  locationIds: ID[] | null,
+) {
   return await unit(async () => {
     await ensureRequiredDatabaseDataExists(session, createWorkOrder);
     const serial = createWorkOrder.serial
-      ? await getSerial({ ...createWorkOrder.serial, shop: session.shop }).then(
+      ? await getSerial({ ...createWorkOrder.serial, shop: session.shop, locationIds }).then(
           serial => serial ?? httpError('Serial not found', 400),
         )
       : null;
@@ -111,7 +123,11 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
   });
 }
 
-async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: string; locationId: ID }) {
+async function updateWorkOrder(
+  session: Session,
+  createWorkOrder: CreateWorkOrder & { name: string; locationId: ID },
+  locationIds: ID[] | null,
+) {
   const workOrder = await getWorkOrder({ shop: session.shop, name: createWorkOrder.name, locationIds: null });
 
   if (!workOrder) {
@@ -146,7 +162,7 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
 
       await ensureRequiredDatabaseDataExists(session, createWorkOrder);
       const serial = createWorkOrder.serial
-        ? await getSerial({ ...createWorkOrder.serial, shop: session.shop }).then(
+        ? await getSerial({ ...createWorkOrder.serial, shop: session.shop, locationIds }).then(
             serial => serial ?? httpError('Serial not found', 400),
           )
         : null;

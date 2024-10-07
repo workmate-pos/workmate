@@ -421,7 +421,6 @@ function PurchaseOrder({
           open={isLocationSelectorModalOpen}
           onClose={() => setIsLocationSelectorModalOpen(false)}
           onSelect={locationId => dispatch.setLocation({ locationId })}
-          setToastAction={setToastAction}
         />
       )}
 

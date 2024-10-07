@@ -128,11 +128,6 @@ export default class EmployeeController {
         }),
       );
 
-      console.log(
-        'delete',
-        req.body.employees.map(employee => employee.staffMemberId),
-      );
-      console.log('insert', req.body.employees);
       await deleteStaffMemberLocations(req.body.employees.map(employee => employee.staffMemberId));
       await insertStaffMemberLocations(req.body.employees);
 

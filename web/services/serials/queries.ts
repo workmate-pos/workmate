@@ -14,15 +14,18 @@ export async function getSerial({
   id,
   productVariantId,
   shop,
+  locationIds,
 }: MergeUnion<
   | { id: number }
   | {
       shop: string;
       productVariantId: ID;
       serial: string;
+      locationIds: ID[] | null;
     }
 >) {
   const _productVariantId: string | null = productVariantId ?? null;
+  const _locationIds: string[] | null = locationIds ?? null;
 
   const [pvs] = await sql<{
     id: number;
@@ -39,7 +42,11 @@ export async function getSerial({
     WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
       AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
       AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
-      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop)
+      AND (
+      "locationId" = ANY (COALESCE(${_locationIds as string[]}, ARRAY ["locationId"]))
+        OR ("locationId" IS NULL AND ${_locationIds as string[]} :: text[] IS NULL)
+      );
   `;
 
   if (!pvs) {
@@ -140,6 +147,7 @@ export async function getSerialsPage(
     order = 'ascending',
     offset,
   }: SerialPaginationOptions,
+  locationIds: ID[] | null,
 ) {
   const _customerId: string | null = customerId ?? null;
   const _locationId: string | null = locationId ?? null;
@@ -157,6 +165,10 @@ export async function getSerialsPage(
     WHERE pvs.shop = ${shop}
       AND wo."customerId" IS NOT DISTINCT FROM COALESCE(${_customerId}, wo."customerId")
       AND pvs."locationId" IS NOT DISTINCT FROM COALESCE(${_locationId}, pvs."locationId")
+      AND (
+      pvs."locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY [pvs."locationId"]))
+        OR pvs."locationId" IS NULL and ${locationIds as string[]} :: text[] IS NULL
+      )
       AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
       AND (
       p.title || ' - ' || pv.title ILIKE COALESCE(${_query}, p.title) OR
@@ -195,8 +207,7 @@ export async function upsertSerials(
   serials: {
     serial: string;
     productVariantId: ID;
-    // TODO: Don't allow null
-    locationId: ID | null;
+    locationId: ID;
     note: string;
   }[],
 ) {
