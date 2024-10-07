@@ -121,6 +121,7 @@ function Employees() {
   const [locationModalEmployeeId, setLocationModalEmployeeId] = useState<ID>();
   const allTabId = useId();
   const superuserTabId = useId();
+  const superuserSelectValue = useId();
 
   return (
     <>
@@ -259,13 +260,13 @@ function Employees() {
                 },
               },
               ...(settingsQuery.isSuccess
-                ? Object.keys(settingsQuery.data.settings.roles).map(name => ({
-                    id: name,
+                ? Object.entries(settingsQuery.data.settings.roles).map(([uuid, { name }]) => ({
+                    id: uuid,
                     content: name,
-                    selected: role === name,
+                    selected: role === uuid,
                     onAction: () => {
                       // this is not called if the tab is in the "More views" dropdown. polaris bug ?
-                      setRole(name);
+                      setRole(uuid);
                       setSuperuser(false);
                     },
                   }))
@@ -369,7 +370,7 @@ function Employees() {
                     labelHidden
                     value={
                       (employeeSuperuser[employee.id] ?? employee.superuser)
-                        ? 'this-is-superuser-xd'
+                        ? superuserSelectValue
                         : (employeeRoles[employee.id] ?? employee.role)
                     }
                     disabled={!canWriteEmployees}
@@ -378,12 +379,12 @@ function Employees() {
                       ...uniqueBy(
                         [
                           {
-                            label: employee.role,
+                            label: settingsQuery.data?.settings.roles[employee.role]?.name ?? 'Unknown role',
                             value: employee.role,
                             disabled: !roles.includes(employee.role),
                           },
                           ...roles.map(role => ({
-                            label: role,
+                            label: settingsQuery.data?.settings.roles[role]?.name ?? 'Unknown role',
                             value: role,
                           })),
                         ],
@@ -394,13 +395,13 @@ function Employees() {
                         options: [
                           {
                             label: 'Superuser',
-                            value: 'this-is-superuser-xd',
+                            value: superuserSelectValue,
                           },
                         ],
                       },
                     ]}
                     onChange={role => {
-                      if (role === 'this-is-superuser-xd') {
+                      if (role === superuserSelectValue) {
                         setEmployeeSuperuser(current => ({ ...current, [employee.id]: true }));
                         return;
                       }

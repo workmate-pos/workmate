@@ -58,8 +58,6 @@ export async function getStaffMembersPage(
       location => location.staffMemberId,
     );
 
-    // TODO: Once roles use uuids, fetch the uuid here before filtering
-
     return {
       shop: {
         staffMembers: {

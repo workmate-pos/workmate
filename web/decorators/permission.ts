@@ -13,8 +13,8 @@ import { hasReadUsersScope } from '../services/shop.js';
 import { IncomingHttpHeaders } from 'node:http';
 import { getShopifyApp } from '@teifi-digital/shopify-app-express';
 import {
-  getDefaultRoleFromSettings,
-  getMissingPermissionsForRole,
+  getDefaultRoleUuidFromSettings,
+  getMissingPermissionsForRoleUuid,
   isPermission,
   Permission,
 } from '../services/permissions/permissions.js';
@@ -54,7 +54,7 @@ export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'non
       getShopSettings(session.shop),
     ]);
 
-    const defaultRole = getDefaultRoleFromSettings(shopSettings);
+    const defaultRoleUuid = getDefaultRoleUuidFromSettings(shopSettings);
 
     if (!staffMember || !doesSuperuserExist) {
       const superuser = associatedUser.isShopOwner || !doesSuperuserExist || associatedUser.email.endsWith('@teifi.ca');
@@ -67,7 +67,7 @@ export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'non
           name,
           isShopOwner,
           email,
-          role: staffMember?.role ?? defaultRole,
+          role: staffMember?.role ?? defaultRoleUuid,
           rate: staffMember?.rate ?? null,
         },
       ]);
@@ -96,7 +96,7 @@ export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'non
         return err(res, 'You do not have permission to access this resource', 401);
       }
 
-      const missingPermissions = await getMissingPermissionsForRole(
+      const missingPermissions = await getMissingPermissionsForRoleUuid(
         session.shop,
         staffMember.role,
         permissions.filter(isPermission),

@@ -4,6 +4,7 @@ import { quoteTemplate } from '../mail/templates/defaults/work-order/quote.js';
 import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
 import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchase-order/invoice.js';
 import { isPermission, permissions } from '../permissions/permissions.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 const PercentageRange = z.tuple([zDecimal, zDecimal]);
 const CurrencyRange = z.tuple([zMoney, zMoney]);
@@ -165,17 +166,23 @@ export const ShopSettings = z
     roles: z
       .record(
         z.object({
+          name: z.string().min(1),
           isDefault: z.boolean(),
           permissions: z.string().refine(isPermission, 'Invalid permission').array(),
         }),
+      )
+      .refine(
+        roles => new Set(Object.values(roles).map(role => role.name)).size === Object.keys(roles).length,
+        'Roles must have unique names',
       )
       .refine(roles => Object.keys(roles).length > 0, 'Must have at least one role')
       .refine(
         roles => Object.values(roles).filter(role => role.isDefault).length === 1,
         'Must have exactly one default role',
       )
-      .default({
-        Associate: {
+      .default(() => ({
+        [uuid()]: {
+          name: 'Associate',
           isDefault: true,
           permissions: [
             'read_employees',
@@ -189,7 +196,8 @@ export const ShopSettings = z
             'cycle_count',
           ],
         },
-        Manager: {
+        [uuid()]: {
+          name: 'Manager',
           isDefault: false,
           permissions: permissions.filter(
             permission =>
@@ -199,11 +207,12 @@ export const ShopSettings = z
               permission !== 'write_employees',
           ),
         },
-        Administrator: {
+        [uuid()]: {
+          name: 'Administrator',
           isDefault: false,
           permissions: [...permissions],
         },
-      }),
+      })),
   })
   .default({})
   .refine(

@@ -13,7 +13,7 @@ import { getStaffMembersByIds, getStaffMembersPage } from '../../services/staff-
 import { intercom, IntercomUser } from '../../services/intercom.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoneyOrNull } from '../../util/assertions.js';
-import { getDefaultRole } from '../../services/permissions/permissions.js';
+import { getDefaultRoleUuid } from '../../services/permissions/permissions.js';
 import {
   deleteStaffMemberLocations,
   getStaffMemberLocations,
@@ -149,7 +149,7 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
   const staffMemberIds = staffMembers.map(e => e.id);
   const [employees, defaultRole, employeeLocations] = await Promise.all([
     getStaffMembers(shop, staffMemberIds),
-    getDefaultRole(shop),
+    getDefaultRoleUuid(shop),
     getStaffMemberLocations(staffMemberIds),
   ]);
   const knownEmployeeIds = new Set(employees.map(e => e.staffMemberId));
