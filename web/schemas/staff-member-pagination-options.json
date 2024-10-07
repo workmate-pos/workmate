@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "first": {
+      "$ref": "scalars.json#/definitions/Int"
+    },
+    "after": {
+      "type": "string"
+    },
+    "query": {
+      "type": "string"
+    },
+    "role": {
+      "type": "string"
+    },
+    "superuser": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

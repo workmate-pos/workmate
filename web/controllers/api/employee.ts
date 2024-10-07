@@ -1,6 +1,5 @@
 import { Session } from '@shopify/shopify-api';
 import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
-import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
 import { gql } from '../../services/gql/gql.js';
 import { getShopSettings } from '../../services/settings/settings.js';
@@ -24,6 +23,7 @@ import {
 } from '../../services/staff-members/queries.js';
 import { unit } from '../../services/db/unit-of-work.js';
 import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
+import { StaffMemberPaginationOptions } from '../../schemas/generated/staff-member-pagination-options.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -46,10 +46,10 @@ export default class EmployeeController {
   }
 
   @Get('/')
-  @QuerySchema('pagination-options')
+  @QuerySchema('staff-member-pagination-options')
   @Permission('read_employees')
   async fetchEmployees(
-    req: Request<unknown, unknown, unknown, PaginationOptions>,
+    req: Request<unknown, unknown, unknown, StaffMemberPaginationOptions>,
     res: Response<FetchEmployeesResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
