@@ -1,7 +1,7 @@
 import { Session } from '@shopify/shopify-api';
 import { CreateStockTransfer } from '../../schemas/generated/create-stock-transfer.js';
 import { validateCreateStockTransfer } from './validate.js';
-import { getNewStockTransferName } from '../id-formatting.js';
+import { getNewTransferOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -44,7 +44,7 @@ export async function upsertCreateStockTransfer(
 
     const stockTransfer = await upsertStockTransfer({
       shop: session.shop,
-      name: createStockTransfer.name ?? (await getNewStockTransferName(session.shop)),
+      name: createStockTransfer.name ?? (await getNewTransferOrderName(session.shop)),
       fromLocationId: createStockTransfer.fromLocationId,
       toLocationId: createStockTransfer.toLocationId,
       note: createStockTransfer.note,

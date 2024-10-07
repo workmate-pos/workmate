@@ -19,9 +19,9 @@ const segmentLabels: Record<SegmentId, string> = {
   'hourly-labour': 'Hourly',
 };
 
-const segmentToggleName: Partial<Record<SegmentId, keyof ShopSettings['chargeSettings']>> = {
-  'fixed-price-labour': 'fixedPriceLabour',
-  'hourly-labour': 'hourlyLabour',
+const segmentToggleName: Partial<Record<SegmentId, keyof ShopSettings['workOrders']['charges']>> = {
+  'fixed-price-labour': 'allowFixedPriceLabour',
+  'hourly-labour': 'allowHourlyLabour',
 };
 
 type ChargeType<SegmentTypes extends SegmentId> = SegmentTypes extends 'none'
@@ -57,7 +57,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
     if (charge?.removeLocked) return false;
     const toggleName = segmentToggleName[type];
     if (!toggleName) return true;
-    return settings.chargeSettings[toggleName];
+    return settings.workOrders.charges[toggleName];
   };
 
   const segments = types.map<Segment>(type => ({
@@ -84,7 +84,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       case 'fixed-price-labour': {
         const fixedPriceLabour: ChargeType<'fixed-price-labour'> = {
           type: 'fixed-price-labour',
-          name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
+          name: charge?.name ?? (settings.workOrders.charges.defaultLabourLineItemName || 'Labour'),
           amount: getTotalPriceForCharges(charge ? [charge] : []),
           amountLocked: false,
           removeLocked: false,
@@ -97,7 +97,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       case 'hourly-labour': {
         const hourlyLabour: ChargeType<'hourly-labour'> = {
           type: 'hourly-labour',
-          name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
+          name: charge?.name ?? (settings.workOrders.charges.defaultLabourLineItemName || 'Labour'),
           rate: getTotalPriceForCharges(charge ? [charge] : []),
           hours: BigDecimal.ONE.toDecimal(),
           rateLocked: false,

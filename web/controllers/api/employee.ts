@@ -33,13 +33,13 @@ export default class EmployeeController {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
-    const { defaultRate } = await getShopSettings(session.shop);
+    const settings = await getShopSettings(session.shop);
     const [employee = never()] = await attachDatabaseEmployees(session.shop, [user.staffMember]);
 
     return res.json({
       employee: {
         ...employee,
-        rate: user.user.rate ?? defaultRate,
+        rate: user.user.rate ?? settings.workOrders.charges.defaultHourlyRate,
         intercomUser: intercom.getUser(session.shop, user.staffMember.id),
       },
     });
@@ -167,7 +167,7 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
     )),
   );
 
-  const { defaultRate, roles } = await getShopSettings(shop);
+  const { workOrders, roles } = await getShopSettings(shop);
   const employeeRecord = indexBy(employees, e => e.staffMemberId);
   const employeeLocationsRecord = groupBy(employeeLocations, e => e.staffMemberId);
 
@@ -176,7 +176,7 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
 
     assertMoneyOrNull(employee.rate);
 
-    const rate = employee.rate ?? defaultRate;
+    const rate = employee.rate ?? workOrders.charges.defaultHourlyRate;
     const isDefaultRate = rate === null;
     const permissions = roles[employee.role]?.permissions ?? [];
 

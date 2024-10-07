@@ -27,6 +27,7 @@ import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
 import { getWorkOrderCsvTemplatesZip, readWorkOrderCsvImport } from '../../services/work-orders/csv-import.js';
 import { transaction } from '../../services/db/transaction.js';
 import * as Sentry from '@sentry/node';
+import { z } from 'zod';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -159,19 +160,23 @@ export default class WorkOrderController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     const { name, template } = req.params;
-    const { date, dueDate } = req.query;
+    const { date, dueDate, replyTo, from, email } = req.query;
 
-    const { emailReplyTo, emailFromTitle, workOrderPrintTemplates, printEmail } = await getShopSettings(session.shop);
+    const { workOrders, printing } = await getShopSettings(session.shop);
 
-    if (!Object.keys(workOrderPrintTemplates).includes(template)) {
+    if (!Object.keys(workOrders.printTemplates).includes(template)) {
       throw new HttpError('Unknown print template', 400);
     }
 
-    if (!printEmail) {
-      throw new HttpError('No print email address set', 400);
+    if (!z.string().email().safeParse(replyTo).success) {
+      throw new HttpError('Invalid reply to email', 400);
     }
 
-    const printTemplate = workOrderPrintTemplates[template] ?? never();
+    if (!z.string().email().safeParse(from).success) {
+      throw new HttpError('Invalid from email', 400);
+    }
+
+    const printTemplate = workOrders.printTemplates[template] ?? never();
     const context = await getWorkOrderTemplateData(session, name, date, dueDate, user);
     const { subject, html } = await getRenderedWorkOrderTemplate(printTemplate, context);
     const file = await renderHtmlToPdfCustomFile(subject, html);
@@ -180,17 +185,17 @@ export default class WorkOrderController {
       {
         name: 'Sending work order print email',
         attributes: {
-          emailFromTitle,
-          emailReplyTo,
-          printEmail,
+          replyTo,
+          from,
+          email,
           subject,
         },
       },
       () =>
         mg.send(
-          { emailReplyTo, emailFromTitle },
+          { emailReplyTo: replyTo, emailFromTitle: from },
           {
-            to: printEmail,
+            to: email,
             attachment: [file],
             subject,
             text: 'WorkMate Work Order',

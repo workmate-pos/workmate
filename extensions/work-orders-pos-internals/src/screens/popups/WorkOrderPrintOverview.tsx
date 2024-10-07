@@ -40,12 +40,23 @@ export function WorkOrderPrintOverview({ name, dueDateUtc }: { name: string; due
       return;
     }
 
+    if (!settings.printing.global.defaultEmail) {
+      toast.show('No printing email set');
+      return;
+    }
+
+    // TODO: Ability to change these details as per monday tickets
+    //  -> only show diff location options if franchise mode is enabled
+
     printJobMutation.mutate(
       {
         workOrderName: name,
         date: new Date().toLocaleDateString(),
         dueDate: dueDateLocal.toLocaleDateString(),
         templateName: selectedTemplate,
+        from: settings.printing.global.defaultFrom,
+        replyTo: settings.printing.global.defaultReplyTo,
+        email: settings.printing.global.defaultEmail,
       },
       {
         onSuccess() {
@@ -76,11 +87,11 @@ export function WorkOrderPrintOverview({ name, dueDateUtc }: { name: string; due
         <Stack direction={'vertical'} spacing={4}>
           <Text variant={'headingLarge'}>Choose a template</Text>
           <RadioButtonList
-            items={Object.keys(settings.workOrderPrintTemplates)}
+            items={Object.keys(settings.workOrders.printTemplates)}
             onItemSelected={setSelectedTemplate}
             initialSelectedItem={selectedTemplate ?? undefined}
           />
-          {Object.keys(settings.purchaseOrderPrintTemplates).length === 0 && (
+          {Object.keys(settings.workOrders.printTemplates).length === 0 && (
             <Text color={'TextSubdued'}>No templates available</Text>
           )}
           <FormButton

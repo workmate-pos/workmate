@@ -1,5 +1,5 @@
 import { db } from '../db/db.js';
-import { ShopSettings } from './schema.js';
+import { parseShopSettings, ShopSettings } from './schema.js';
 import { setStaffMemberDefaultRole } from '../staff-members/queries.js';
 
 function serialize(value: unknown): string {
@@ -14,7 +14,7 @@ export async function getShopSettings(shop: string): Promise<ShopSettings> {
   // TODO: Schema migration to store json blobs
   //  (this cannot be done now because we must first do an app migration to move to zod)
   const [{ value } = { value: '{}' }] = await db.settings.getSetting({ shop, key: 'settings' });
-  return ShopSettings.parse(deserialize(value));
+  return parseShopSettings(deserialize(value));
 }
 
 export async function updateShopSettings(shop: string, settings: ShopSettings) {

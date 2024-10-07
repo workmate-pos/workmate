@@ -5,8 +5,20 @@
     "date": {
       "description": "A date to display in the purchase order printout",
       "type": "string"
+    },
+    "replyTo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "email": {
+      "type": "string",
+      "minLength": 1
+    },
+    "from": {
+      "type": "string",
+      "minLength": 1
     }
   },
-  "required": ["date"],
+  "required": ["date", "replyTo", "email", "from"],
   "additionalProperties": false
 }

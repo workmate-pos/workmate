@@ -15,7 +15,7 @@ import { ShopSettings } from '../../settings/schema.js';
 import { LocalsTeifiUser } from '../../../decorators/permission.js';
 
 export async function getRenderedWorkOrderTemplate(
-  printTemplate: ShopSettings['workOrderPrintTemplates'][string],
+  printTemplate: ShopSettings['workOrders']['printTemplates'][string],
   context: WorkOrderTemplateData,
 ) {
   const { template, subject } = printTemplate;

@@ -12,8 +12,8 @@ export function DiscountSelector({ onSelect }: { onSelect: (discount: CreateWork
   const fetch = useAuthenticatedFetch();
   const settings = useSettingsQuery({ fetch })?.data?.settings;
 
-  const shortcuts = settings?.discountShortcuts;
-  const rules = settings?.discountRules;
+  const shortcuts = settings?.workOrders.discountShortcuts;
+  const rules = settings?.workOrders.discountRules;
 
   const shortcutButtons: NonNullable<CreateWorkOrder['discount']>[] =
     shortcuts?.map(shortcut =>

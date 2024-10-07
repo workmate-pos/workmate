@@ -17,23 +17,17 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
     throw new Error(`Purchase order with name ${name} not found`);
   }
 
-  const [
-    {
-      purchaseOrderWebhook: { endpointUrl },
-    },
-    { id, createdAt, updatedAt },
-    vendors,
-  ] = await Promise.all([
+  const [{ purchaseOrders }, { id, createdAt, updatedAt }, vendors] = await Promise.all([
     getShopSettings(session.shop),
     getPurchaseOrder({ shop: session.shop, name, locationIds: null }).then(po => po ?? never()),
     getVendors(session),
   ]);
 
-  if (!endpointUrl) {
+  if (!purchaseOrders.webhook.enabled) {
     return;
   }
 
-  const url = new URL(endpointUrl);
+  const url = new URL(purchaseOrders.webhook.endpointUrl);
 
   const subtotal = BigDecimal.sum(
     ...purchaseOrder.lineItems.map(lineItem =>

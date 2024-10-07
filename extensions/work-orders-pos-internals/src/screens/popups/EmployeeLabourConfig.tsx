@@ -33,7 +33,6 @@ export function EmployeeLabourConfig({
     if (!settings) return;
 
     const { rate } = employeeQuery.data;
-    const { labourLineItemName } = settings;
 
     setLabour(
       hourlyLabour =>
@@ -41,7 +40,7 @@ export function EmployeeLabourConfig({
         ({
           type: 'hourly-labour',
           hours: BigDecimal.ZERO.toDecimal(),
-          name: labourLineItemName || 'Labour',
+          name: settings.workOrders.charges.defaultLabourLineItemName || 'Labour',
           rate,
         } as const),
     );

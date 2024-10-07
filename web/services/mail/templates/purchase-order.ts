@@ -11,7 +11,7 @@ import { ShopSettings } from '../../settings/schema.js';
 import { LocalsTeifiUser } from '../../../decorators/permission.js';
 
 export async function getRenderedPurchaseOrderTemplate(
-  printTemplate: ShopSettings['purchaseOrderPrintTemplates'][string],
+  printTemplate: ShopSettings['purchaseOrders']['printTemplates'][string],
   context: PurchaseOrderTemplateData,
 ) {
   const { template, subject } = printTemplate;

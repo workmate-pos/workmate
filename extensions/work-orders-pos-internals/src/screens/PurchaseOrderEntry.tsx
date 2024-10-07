@@ -89,8 +89,8 @@ export function PurchaseOrderEntry() {
             title={'New Purchase Order'}
             type={'primary'}
             onPress={() => {
-              const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
-              const createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
+              const { purchaseOrders } = settingsQuery.data.settings;
+              const createPurchaseOrder = defaultCreatePurchaseOrder({ status: purchaseOrders.defaultStatus });
 
               router.push('PurchaseOrder', {
                 initial: {
