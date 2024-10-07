@@ -20,7 +20,7 @@ export type ShopSettings = z.infer<typeof ShopSettings>;
 const AnyShopSettingsVersion = z.discriminatedUnion('version', [ShopSettings01, ShopSettings02]);
 type AnyShopSettingsVersion = z.infer<typeof AnyShopSettingsVersion>;
 
-export async function parseShopSettings(shopSettings: unknown) {
+export function parseShopSettings(shopSettings: unknown) {
   const parsed = AnyShopSettingsVersion.safeParse(shopSettings);
 
   if (!parsed.success) {
@@ -90,7 +90,9 @@ function migrateShopSettings(shopSettings: AnyShopSettingsVersion): ShopSettings
         global: {
           defaultFrom: shopSettings.emailFromTitle,
           defaultReplyTo: shopSettings.emailReplyTo,
-          defaultEmail: z.string().email().safeParse(shopSettings.printEmail).success ? shopSettings.printEmail : '',
+          defaultEmail: z.string().email().safeParse(shopSettings.printEmail).success
+            ? shopSettings.printEmail
+            : undefined,
 
           allowCustomTitle: true,
           allowCustomReplyTo: true,

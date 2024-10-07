@@ -51,7 +51,10 @@ export function RolesSettings({
   const newRoleUuid = useMemo(uuid, [roleUuids.length]);
 
   useEffect(() => {
-    setRoleUuids(Object.keys(settings.roles));
+    setRoleUuids(current => [
+      ...current.filter(uuid => uuid in settings.roles),
+      ...Object.keys(settings.roles).filter(uuid => !current.includes(uuid)),
+    ]);
   }, [settings]);
 
   return (
@@ -85,8 +88,9 @@ export function RolesSettings({
           },
           {
             title: 'Default',
+            alignment: 'center',
           },
-          ...permissions.map(permission => ({ title: titleCase(permission), alignment: 'end' }) as const),
+          ...permissions.map(permission => ({ title: titleCase(permission), alignment: 'center' }) as const),
         ]}
         selectable={false}
         itemCount={1 + roleUuids.length}
@@ -156,54 +160,58 @@ export function RolesSettings({
               </IndexTable.Cell>
 
               <IndexTable.Cell>
-                <Checkbox
-                  label={'Default'}
-                  labelHidden
-                  checked={role.isDefault}
-                  disabled={!roleUuid}
-                  onChange={checked => {
-                    const checkRoleUuid = checked ? roleUuid : roleUuids.find(uuid => uuid !== roleUuid);
-
-                    setRoleUuids(current => [...current.slice(0, i), roleUuid, ...current.slice(i + 1)]);
-                    setSettings(current => ({
-                      ...current,
-                      roles: {
-                        ...Object.fromEntries(
-                          Object.entries(current.roles).map(([uuid, role]) => [
-                            uuid,
-                            { ...role, isDefault: uuid === checkRoleUuid },
-                          ]),
-                        ),
-                        [roleUuid]: { ...role, isDefault: roleUuid === checkRoleUuid },
-                      },
-                    }));
-                  }}
-                />
-              </IndexTable.Cell>
-
-              {permissions.map(permission => (
-                <IndexTable.Cell key={permission}>
+                <InlineStack align="center">
                   <Checkbox
-                    label={permission}
-                    disabled={!roleUuid}
+                    label={'Default'}
                     labelHidden
-                    checked={role.permissions.includes(permission)}
+                    checked={role.isDefault}
+                    disabled={!roleUuid}
                     onChange={checked => {
+                      const checkRoleUuid = checked ? roleUuid : roleUuids.find(uuid => uuid !== roleUuid);
+
+                      setRoleUuids(current => [...current.slice(0, i), roleUuid, ...current.slice(i + 1)]);
                       setSettings(current => ({
                         ...current,
                         roles: {
-                          ...Object.fromEntries(Object.entries(current.roles).filter(([x]) => x !== roleUuid)),
-                          [roleUuid]: {
-                            ...role,
-                            permissions: [
-                              ...role.permissions.filter(p => p !== permission),
-                              ...(checked ? [permission] : []),
-                            ],
-                          },
+                          ...Object.fromEntries(
+                            Object.entries(current.roles).map(([uuid, role]) => [
+                              uuid,
+                              { ...role, isDefault: uuid === checkRoleUuid },
+                            ]),
+                          ),
+                          [roleUuid]: { ...role, isDefault: roleUuid === checkRoleUuid },
                         },
                       }));
                     }}
                   />
+                </InlineStack>
+              </IndexTable.Cell>
+
+              {permissions.map(permission => (
+                <IndexTable.Cell key={permission}>
+                  <InlineStack align="center">
+                    <Checkbox
+                      label={permission}
+                      disabled={!roleUuid}
+                      labelHidden
+                      checked={role.permissions.includes(permission)}
+                      onChange={checked => {
+                        setSettings(current => ({
+                          ...current,
+                          roles: {
+                            ...Object.fromEntries(Object.entries(current.roles).filter(([x]) => x !== roleUuid)),
+                            [roleUuid]: {
+                              ...role,
+                              permissions: [
+                                ...role.permissions.filter(p => p !== permission),
+                                ...(checked ? [permission] : []),
+                              ],
+                            },
+                          },
+                        }));
+                      }}
+                    />
+                  </InlineStack>
                 </IndexTable.Cell>
               ))}
             </IndexTable.Row>
