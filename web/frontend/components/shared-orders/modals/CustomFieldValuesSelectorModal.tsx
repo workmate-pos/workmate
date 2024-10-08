@@ -24,7 +24,7 @@ export function CustomFieldValuesSelectorModal({
 
   return (
     <>
-      <Modal open={open && !name} title={'Custom Field Values'} onClose={onClose} loading={isLoading}>
+      <Modal open={open && !name} title={'Custom field values'} onClose={onClose} loading={isLoading}>
         {names.length === 0 && (
           <Modal.Section>
             <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
@@ -46,7 +46,7 @@ export function CustomFieldValuesSelectorModal({
         {allowCreateNew && (
           <Modal.Section>
             <TextField
-              label={'New Custom Field'}
+              label={'New custom field'}
               autoComplete="off"
               onChange={setNewName}
               value={newName}

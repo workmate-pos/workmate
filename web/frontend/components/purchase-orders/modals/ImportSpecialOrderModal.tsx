@@ -57,7 +57,7 @@ export function ImportSpecialOrderModal({
     params: {
       query,
       locationId,
-      lineItemOrderState: 'NOT_FULLY_ORDERED',
+      lineItemOrderState: 'not-fully-ordered',
       lineItemVendorName: vendorName,
       limit: 25,
     },
@@ -170,7 +170,7 @@ export function ImportSpecialOrderModal({
   const page = specialOrdersQuery.data?.pages[pageIndex] ?? [];
 
   return (
-    <Modal open={open} title={'Select Special Order'} onClose={onClose}>
+    <Modal open={open} title={'Select special order'} onClose={onClose}>
       <ResourceList
         filterControl={
           <Filters

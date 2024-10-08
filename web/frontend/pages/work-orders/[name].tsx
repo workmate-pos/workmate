@@ -44,7 +44,7 @@ import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-ca
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/CreateOrderModal.js';
 import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';
@@ -116,8 +116,8 @@ function WorkOrderLoader() {
   if (workOrderQuery.data?.workOrder) {
     createWorkOrder = workOrderToCreateWorkOrder(workOrderQuery.data.workOrder);
   } else {
-    const { defaultStatus } = settingsQuery.data.settings;
-    createWorkOrder = defaultCreateWorkOrder({ status: defaultStatus });
+    const { workOrders } = settingsQuery.data.settings;
+    createWorkOrder = defaultCreateWorkOrder({ status: workOrders.defaultStatus });
 
     createWorkOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,
@@ -211,7 +211,7 @@ function WorkOrder({
 
   return (
     <Box paddingBlockEnd={'1600'}>
-      <TitleBar title={'Work Orders'} />
+      <TitleBar title={'Work orders'} />
 
       <ContextualSaveBar
         fullWidth
@@ -234,7 +234,7 @@ function WorkOrder({
             <List>
               {Object.entries(workOrderMutation.error.errors).map(([key, value]) => (
                 <List.Item key={key}>
-                  {titleCase(key)}: {value}
+                  {sentenceCase(key)}: {value}
                 </List.Item>
               ))}
             </List>
@@ -250,7 +250,7 @@ function WorkOrder({
           <Select
             label={'Status'}
             requiredIndicator
-            options={settings.statuses}
+            options={settings.workOrders.statuses}
             onChange={status => dispatch.setPartial({ status })}
             value={createWorkOrder.status}
             disabled={workOrderMutation.isPending}

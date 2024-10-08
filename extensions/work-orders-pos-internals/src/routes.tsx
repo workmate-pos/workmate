@@ -28,7 +28,6 @@ import { PaymentStatusSelector } from './screens/popups/PaymentStatusSelector.js
 import { OverdueStatusSelector } from './screens/popups/OverdueStatusSelector.js';
 import { PurchaseOrderStatusSelector } from './screens/popups/PurchaseOrderStatusSelector.js';
 import { ItemSelector } from './screens/popups/ItemSelector.js';
-import { PermissionNode } from '@web/services/db/queries/generated/employee.sql.js';
 import { NewWorkOrder } from './screens/NewWorkOrder.js';
 import { EditPreset, EditPresetProps } from '@work-orders/common-pos/screens/custom-fields/EditPreset.js';
 import {
@@ -110,12 +109,13 @@ import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoade
 import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
 import { Scanner } from './screens/smart-scanner/Scanner.js';
 import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
+import { Permission } from '@web/services/permissions/permissions.js';
 
-const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
+const requiredPermissions: Permission[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
 export const { Router, useRouter } = createRouter({
   Entry: {
-    title: 'Work Orders',
+    title: 'Work orders',
     Component: () => (
       <ScreenPermissionBoundary permissions={requiredPermissions}>
         <Entry />
@@ -127,15 +127,15 @@ export const { Router, useRouter } = createRouter({
     Component: WorkOrderFilters,
   },
   WorkOrder: {
-    title: 'Work Order',
+    title: 'Work order',
     Component: WorkOrder,
   },
   WorkOrderLoader: {
-    title: 'Work Order',
+    title: 'Work order',
     Component: WorkOrderLoader,
   },
   NewWorkOrder: {
-    title: 'New Work Order',
+    title: 'New work order',
     Component: () => (
       <ScreenPermissionBoundary permissions={requiredPermissions}>
         <NewWorkOrder />
@@ -143,75 +143,75 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   EmployeeSelector: {
-    title: 'Select Employee',
+    title: 'Select employee',
     Component: (props: Omit<EmployeeSelectorProps, 'useRouter'>) => (
       <EmployeeSelector {...props} useRouter={useRouter} />
     ),
   },
   ProductSelector: {
-    title: 'Select Product',
+    title: 'Select product',
     Component: ProductSelector,
   },
   OrderPreview: {
-    title: 'Select Product',
+    title: 'Select product',
     Component: OrderPreview,
   },
   StatusSelector: {
-    title: 'Select Status',
+    title: 'Select status',
     Component: StatusSelector,
   },
   PaymentStatusSelector: {
-    title: 'Select Payment Status',
+    title: 'Select payment status',
     Component: PaymentStatusSelector,
   },
   OverdueStatusSelector: {
-    title: 'Select Overdue Status',
+    title: 'Select overdue status',
     Component: OverdueStatusSelector,
   },
   PurchaseOrderStatusSelector: {
-    title: 'Select Purchase Order Status',
+    title: 'Select purchase order status',
     Component: PurchaseOrderStatusSelector,
   },
   CustomerSelector: {
-    title: 'Select Customer',
+    title: 'Select customer',
     Component: (props: Omit<CustomerSelectorProps, 'useRouter'>) => (
       <CustomerSelector {...props} useRouter={useRouter} />
     ),
   },
   CompanySelector: {
-    title: 'Select Company',
+    title: 'Select company',
     Component: (props: Omit<CompanySelectorProps, 'useRouter'>) => <CompanySelector {...props} useRouter={useRouter} />,
   },
   CompanyLocationSelector: {
-    title: 'Select Company Location',
+    title: 'Select company location',
     Component: (props: Omit<CompanyLocationSelectorProps, 'useRouter'>) => (
       <CompanyLocationSelector {...props} useRouter={useRouter} />
     ),
   },
   LocationSelector: {
-    title: 'Select Location',
+    title: 'Select location',
     Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
       <LocationSelector {...props} useRouter={useRouter} />
     ),
   },
   MultiLocationSelector: {
-    title: 'Select Locations',
+    title: 'Select locations',
     Component: (props: Omit<MultiLocationSelectorProps, 'useRouter'>) => (
       <MultiLocationSelector {...props} useRouter={useRouter} />
     ),
   },
   VendorSelector: {
-    title: 'Select Vendor',
+    title: 'Select vendor',
     Component: (props: Omit<VendorSelectorProps, 'useRouter'>) => <VendorSelector {...props} useRouter={useRouter} />,
   },
   NotFullyOrderedSpecialOrderVendorSelector: {
-    title: 'Select Vendor',
+    title: 'Select vendor',
     Component: (props: Omit<NotFullyOrderedSpecialOrderVendorSelectorProps, 'useRouter'>) => (
       <NotFullyOrderedSpecialOrderVendorSelector {...props} useRouter={useRouter} />
     ),
   },
   DiscountSelector: {
-    title: 'Select Discount',
+    title: 'Select discount',
     Component: DiscountSelector,
   },
   WorkOrderSaved: {
@@ -219,7 +219,7 @@ export const { Router, useRouter } = createRouter({
     Component: WorkOrderSaved,
   },
   ServiceSelector: {
-    title: 'Select Service',
+    title: 'Select service',
     Component: ServiceSelector,
   },
   ItemConfig: {
@@ -235,7 +235,7 @@ export const { Router, useRouter } = createRouter({
     Component: ItemChargeConfig,
   },
   ImportOrderSelector: {
-    title: 'Import Order',
+    title: 'Import order',
     Component: ImportOrderSelector,
   },
   PaymentOverview: {
@@ -243,7 +243,7 @@ export const { Router, useRouter } = createRouter({
     Component: PaymentOverview,
   },
   CustomFieldValuesConfig: {
-    title: 'Custom Field Values',
+    title: 'Custom field values',
     Component: (props: Omit<CustomFieldValuesConfigProps, 'useRouter'>) => (
       <PermissionBoundary permissions={['read_settings', 'write_settings']}>
         <CustomFieldValuesConfig {...props} useRouter={useRouter} />
@@ -251,35 +251,35 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   CustomFieldConfig: {
-    title: 'Custom Fields',
+    title: 'Custom fields',
     Component: (props: Omit<CustomFieldConfigProps, 'useRouter'>) => (
       <CustomFieldConfig {...props} useRouter={useRouter} />
     ),
   },
   EditPreset: {
-    title: 'Edit Preset',
+    title: 'Edit preset',
     Component: (props: Omit<EditPresetProps, 'useRouter'>) => <EditPreset {...props} useRouter={useRouter} />,
   },
   SelectPresetToEdit: {
-    title: 'Edit Preset',
+    title: 'Edit preset',
     Component: (props: Omit<SelectPresetToEditProps, 'useRouter'>) => (
       <SelectPresetToEdit {...props} useRouter={useRouter} />
     ),
   },
   SavePreset: {
-    title: 'Save Preset',
+    title: 'Save preset',
     Component: (props: Omit<SavePresetProps, 'useRouter'>) => <SavePreset {...props} useRouter={useRouter} />,
   },
   SelectPreset: {
-    title: 'Select Preset',
+    title: 'Select preset',
     Component: (props: Omit<SelectPresetProps, 'useRouter'>) => <SelectPreset {...props} useRouter={useRouter} />,
   },
   ProductCreator: {
-    title: 'Create Product',
+    title: 'Create product',
     Component: (props: Omit<ProductCreatorProps, 'useRouter'>) => <ProductCreator {...props} useRouter={useRouter} />,
   },
   CustomFieldFilterConfig: {
-    title: 'Custom Field Filters',
+    title: 'Custom field filters',
     Component: (props: Omit<CustomFieldFilterConfigProps, 'useRouter'>) => (
       <CustomFieldFilterConfig {...props} useRouter={useRouter} />
     ),
@@ -293,23 +293,23 @@ export const { Router, useRouter } = createRouter({
     Component: ItemSelector,
   },
   PaymentTermsSelector: {
-    title: 'Select Payment Terms',
+    title: 'Select payment terms',
     Component: PaymentTermsSelector,
   },
   WorkOrderItemSourcing: {
-    title: 'Work Order Sourcing',
+    title: 'Work order sourcing',
     Component: WorkOrderItemSourcing,
   },
   WorkOrderItemSourcingHelp: {
-    title: 'Work Order Sourcing Help',
+    title: 'Work order sourcing help',
     Component: WorkOrderItemSourcingHelp,
   },
   WorkOrderItemSourcingItem: {
-    title: 'Work Order Sourcing Item',
+    title: 'Work order sourcing item',
     Component: WorkOrderItemSourcingItem,
   },
   StockTransferEntry: {
-    title: 'Stock Transfer',
+    title: 'Stock transfer',
     Component: () => (
       <ScreenPermissionBoundary permissions={requiredPermissions}>
         <StockTransferEntry />
@@ -317,27 +317,27 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   StockTransfer: {
-    title: 'Stock Transfer',
+    title: 'Stock transfer',
     Component: StockTransfer,
   },
   StockTransferProductSelector: {
-    title: 'Select Product',
+    title: 'Select product',
     Component: StockTransferProductSelector,
   },
   StockTransferLineItemScanner: {
-    title: 'Scan Items',
+    title: 'Scan items',
     Component: StockTransferLineItemScanner,
   },
   StockTransferLineItemConfig: {
-    title: 'Line Item Config',
+    title: 'Line item config',
     Component: StockTransferLineItemConfig,
   },
   StockTransferLineItemStatusSelector: {
-    title: 'Select Status',
+    title: 'Select status',
     Component: StockTransferLineItemStatusSelector,
   },
   ExistingStockTransfer: {
-    title: 'Stock Transfer',
+    title: 'Stock transfer',
     Component: ExistingStockTransfer,
   },
   ListPopup: {
@@ -347,7 +347,7 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   PurchaseOrderEntry: {
-    title: 'Purchase Orders',
+    title: 'Purchase orders',
     Component: () => (
       <ScrollView>
         <ScreenPermissionBoundary permissions={['read_settings', 'read_purchase_orders', 'read_employees']}>
@@ -357,80 +357,80 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   PurchaseOrder: {
-    title: 'Purchase Order',
+    title: 'Purchase order',
     Component: PurchaseOrder,
   },
   PurchaseOrderLoader: {
-    title: 'Purchase Order',
+    title: 'Purchase order',
     Component: PurchaseOrderLoader,
   },
   PurchaseOrderVendorSelector: {
-    title: 'Select Vendor',
+    title: 'Select vendor',
     Component: PurchaseOrderVendorSelector,
   },
   PurchaseOrderEmployeeSelector: {
-    title: 'Select Employee',
+    title: 'Select employee',
     // TODO: permission boundary here?
     Component: PurchaseOrderEmployeeSelector,
   },
   PurchaseOrderProductSelector: {
-    title: 'Select Product',
+    title: 'Select product',
     Component: PurchaseOrderProductSelector,
   },
   PurchaseOrderProductConfig: {
-    title: 'Product Config',
+    title: 'Product config',
     Component: PurchaseOrderProductConfig,
   },
   PurchaseOrderPrintOverview: {
-    title: 'Print Overview',
+    title: 'Print overview',
     Component: PurchaseOrderPrintOverview,
   },
   PurchaseOrderOrderSelector: {
-    title: 'Select Order',
+    title: 'Select order',
     Component: PurchaseOrderOrderSelector,
   },
   PurchaseOrderFilterStatusSelector: {
-    title: 'Select Purchase Order Status',
+    title: 'Select purchase order status',
     Component: PurchaseOrderFilterStatusSelector,
   },
   CreateTransferOrderForLocation: {
-    title: 'Select Transfer Order Location',
+    title: 'Select transfer order location',
     Component: CreateTransferOrderForLocation,
   },
   QuantityAdjustmentList: {
-    title: 'Quantity Adjustment List',
+    title: 'Quantity adjustment list',
     Component: QuantityAdjustmentList,
   },
   UnsourcedItemList: {
-    title: 'Unsourced Items',
+    title: 'Unsourced items',
     Component: UnsourcedItemList,
   },
   SelectPurchaseOrderProductsToTransfer: {
-    title: 'Select Products to Transfer',
+    title: 'Select products to transfer',
     Component: SelectPurchaseOrderProductsToTransfer,
   },
   CreateSpecialOrderList: {
-    title: 'Create Special Order',
+    title: 'Create special order',
     Component: CreateSpecialOrderList,
   },
   CreatePurchaseOrderSpecialOrderSelector: {
-    title: 'Select Special Orders',
+    title: 'Select special orders',
     Component: CreatePurchaseOrderSpecialOrderSelector,
   },
   MultiEmployeeSelector: {
-    title: 'Select Employees',
+    title: 'Select employees',
     Component: (props: Omit<MultiEmployeeSelectorProps, 'useRouter'>) => (
       <MultiEmployeeSelector {...props} useRouter={useRouter} />
     ),
   },
   SpecialOrderSelector: {
-    title: 'Select Special Order',
+    title: 'Select special order',
     Component: (props: Omit<SpecialOrderSelectorProps, 'useRouter'>) => (
       <SpecialOrderSelector {...props} useRouter={useRouter} />
     ),
   },
   MultiSpecialOrderLineItemSelector: {
-    title: 'Select Special Order Line Item',
+    title: 'Select special order line item',
     Component: (props: Omit<MultiSpecialOrderLineItemSelectorProps, 'useRouter'>) => (
       <MultiSpecialOrderLineItemSelector {...props} useRouter={useRouter} />
     ),
@@ -441,7 +441,7 @@ export const { Router, useRouter } = createRouter({
     Component: SerialsList,
   },
   SerialsFilters: {
-    title: 'Filter Serials',
+    title: 'Filter serials',
     Component: SerialsFilters,
   },
   Serial: {
@@ -449,13 +449,13 @@ export const { Router, useRouter } = createRouter({
     Component: Serial,
   },
   ProductVariantSelector: {
-    title: 'Product Selector',
+    title: 'Product selector',
     Component: (props: Omit<ProductVariantSelectorProps, 'useRouter'>) => (
       <ProductVariantSelector {...props} useRouter={useRouter} />
     ),
   },
   SerialSelector: {
-    title: 'Serial Selector',
+    title: 'Serial selector',
     Component: (props: Omit<SerialSelectorProps, 'useRouter'>) => <SerialSelector {...props} useRouter={useRouter} />,
   },
 

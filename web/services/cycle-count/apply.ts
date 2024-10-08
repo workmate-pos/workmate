@@ -14,11 +14,12 @@ import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 const COMPARE_QUANTITY_MISMATCH_ERROR_MESSAGE =
   'The compareQuantity argument no longer matches the persisted quantity.';
 
-export async function applyCycleCountItems(session: Session, staffMemberId: ID, plan: ApplyCycleCountPlan) {
+export async function applyCycleCountItems(session: Session, user: LocalsTeifiUser, plan: ApplyCycleCountPlan) {
   const { cycleCountName, itemApplications } = plan;
 
   if (itemApplications.length === 0) {
@@ -27,7 +28,11 @@ export async function applyCycleCountItems(session: Session, staffMemberId: ID, 
   }
 
   return await unit(async () => {
-    const cycleCount = await getCycleCount({ shop: session.shop, name: cycleCountName });
+    const cycleCount = await getCycleCount({
+      shop: session.shop,
+      name: cycleCountName,
+      locationIds: user.user.allowedLocationIds,
+    });
 
     if (!cycleCount) {
       throw new HttpError('Cycle count not found', 404);
@@ -54,7 +59,7 @@ export async function applyCycleCountItems(session: Session, staffMemberId: ID, 
 
     await createCycleCountItemApplications(
       cycleCount.id,
-      staffMemberId,
+      user.staffMember.id,
       itemApplications.map(({ originalQuantity, countQuantity, uuid }) => ({
         appliedQuantity: countQuantity,
         cycleCountItemUuid: uuid,
@@ -108,8 +113,12 @@ export type ApplyCycleCountPlan = {
 // TODO: Allow the user to set `on_hand` instead of `available`?
 const QUANTITY_NAME: 'available' | 'on_hand' = 'available';
 
-export async function getCycleCountApplyPlan(session: Session, name: string): Promise<ApplyCycleCountPlan> {
-  const cycleCount = await getCycleCount({ shop: session.shop, name });
+export async function getCycleCountApplyPlan(
+  session: Session,
+  name: string,
+  locationIds: ID[] | null,
+): Promise<ApplyCycleCountPlan> {
+  const cycleCount = await getCycleCount({ shop: session.shop, name, locationIds });
 
   if (!cycleCount) {
     throw new HttpError('Cycle count not found', 404);

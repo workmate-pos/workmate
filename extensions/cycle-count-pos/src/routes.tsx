@@ -21,7 +21,7 @@ import { Filters } from './screens/Filters.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
-    title: 'Cycle Count',
+    title: 'Cycle count',
     Component: () => (
       <ScrollView>
         <ScreenPermissionBoundary permissions={['cycle_count']}>
@@ -31,11 +31,11 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   CycleCount: {
-    title: 'Cycle Count',
+    title: 'Cycle count',
     Component: CycleCount,
   },
   LocationSelector: {
-    title: 'Select Location',
+    title: 'Select location',
     Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
       <LocationSelector {...props} useRouter={useRouter} />
     ),
@@ -45,15 +45,15 @@ export const { Router, useRouter } = createRouter({
     Component: Camera,
   },
   VendorSelector: {
-    title: 'Select Vendor',
+    title: 'Select vendor',
     Component: VendorSelector,
   },
   ItemConfig: {
-    title: 'Item Config',
+    title: 'Item config',
     Component: ItemConfig,
   },
   CycleCountApplications: {
-    title: 'Cycle Count Applications',
+    title: 'Cycle count applications',
     Component: CycleCountApplications,
   },
   ListPopup: {
@@ -61,25 +61,25 @@ export const { Router, useRouter } = createRouter({
     Component: (props: Omit<ListPopupProps, 'useRouter'>) => <ListPopup {...props} useRouter={useRouter} />,
   },
   CycleCountProductSelector: {
-    title: 'Import Product',
+    title: 'Import product',
     Component: CycleCountProductSelector,
   },
   PlanCycleCount: {
-    title: 'Apply Cycle Count',
+    title: 'Apply cycle count',
     Component: PlanCycleCount,
   },
   StatusSelector: {
-    title: 'Select Status',
+    title: 'Select status',
     Component: StatusSelector,
   },
   EmployeeSelector: {
-    title: 'Select Employees',
+    title: 'Select employees',
     Component: (props: Omit<EmployeeSelectorProps, 'useRouter'>) => (
       <EmployeeSelector {...props} useRouter={useRouter} />
     ),
   },
   MultiEmployeeSelector: {
-    title: 'Select Employees',
+    title: 'Select employees',
     Component: (props: Omit<MultiEmployeeSelectorProps, 'useRouter'>) => (
       <MultiEmployeeSelector {...props} useRouter={useRouter} />
     ),

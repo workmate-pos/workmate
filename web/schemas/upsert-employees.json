@@ -8,8 +8,11 @@
         "title": "employee-options",
         "type": "object",
         "properties": {
-          "employeeId": {
+          "staffMemberId": {
             "$ref": "scalars.json#/definitions/ID"
+          },
+          "role": {
+            "type": "string"
           },
           "rate": {
             "anyOf": [
@@ -24,14 +27,14 @@
           "superuser": {
             "type": "boolean"
           },
-          "permissions": {
+          "locationIds": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "scalars.json#/definitions/ID"
             }
           }
         },
-        "required": ["employeeId", "rate", "superuser", "permissions"],
+        "required": ["staffMemberId", "rate", "superuser", "role", "locationIds"],
         "additionalProperties": false
       }
     }

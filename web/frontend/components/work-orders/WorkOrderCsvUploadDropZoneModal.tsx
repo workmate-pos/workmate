@@ -41,7 +41,7 @@ export function WorkOrderCsvUploadDropZoneModal({ open, onClose }: { open: boole
     <>
       <Modal
         open={open}
-        title={'Import Work Orders'}
+        title={'Import work orders'}
         onClose={onClose}
         primaryAction={{
           content: 'Import',

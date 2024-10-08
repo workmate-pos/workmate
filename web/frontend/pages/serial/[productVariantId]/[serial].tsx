@@ -39,6 +39,68 @@ import { Redirect } from '@shopify/app-bridge/actions';
 export default function Serial() {
   const routes = useParams<'productVariantId' | 'serial'>();
 
+  const productVariantId = createGid('ProductVariant', routes.productVariantId ?? '0');
+
+  const [lastSavedSerial, setLastSavedSerial] = useState(() => ({
+    ...getDefaultCreateSerial(productVariantId),
+    serial: routes.serial === 'new' ? null : routes.serial!,
+  }));
+  const [createSerial, setCreateSerial] = useState(() => ({
+    ...getDefaultCreateSerial(productVariantId),
+    serial: routes.serial === 'new' ? null : routes.serial!,
+  }));
+
+  const setSerialNumber = getCreateSerialSetter(setCreateSerial, 'serial');
+  const setLocationId = getCreateSerialSetter(setCreateSerial, 'locationId');
+  const setNote = getCreateSerialSetter(setCreateSerial, 'note');
+
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const productVariantQuery = useProductVariantQuery({ fetch, id: productVariantId });
+  const locationQuery = useLocationQuery({ fetch, id: createSerial.locationId });
+  const serialQuery = useSerialQuery({ fetch, productVariantId, serial: createSerial.serial });
+  const serialMutation = useSerialMutation({ fetch });
+
+  useEffect(() => {
+    if (serialQuery.isSuccess && routes.serial !== 'new' && serialQuery.data) {
+      const createSerial = getCreateSerialFromDetailedSerial(serialQuery.data);
+      setLastSavedSerial(createSerial);
+      setCreateSerial(createSerial);
+    }
+  }, [serialQuery.isSuccess, serialQuery.data, routes.serial]);
+
+  const productVariant = productVariantQuery.data;
+  const location = locationQuery.data;
+  const serial = serialQuery.data;
+
+  const hasUnsavedChanges =
+    JSON.stringify(createSerial, Object.keys(createSerial).sort()) !==
+    JSON.stringify(lastSavedSerial, Object.keys(lastSavedSerial).sort());
+  const isSerialNumberInUse = !lastSavedSerial.serial && !!serial;
+
+  const disabled = serialMutation.isPending;
+  const app = useAppBridge();
+
+  const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
+  const label = getProductVariantName(productVariant ?? serial?.productVariant) ?? 'Unknown product';
+
+  const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
+
+  const save = () =>
+    serialMutation.mutate(createSerial as CreateSerial, {
+      onSuccess(serial) {
+        if (!serial) return;
+        setToastAction({ content: 'Saved serial' });
+        const createSerial = getCreateSerialFromDetailedSerial(serial);
+        setLastSavedSerial(createSerial);
+        setCreateSerial(createSerial);
+        Redirect.create(app).dispatch(
+          Redirect.Action.APP,
+          `/serial/${parseGid(serial.productVariant.id).id}/${encodeURIComponent(serial.serial)}`,
+        );
+      },
+    });
+
   if (!routes.productVariantId?.length || !/^\d+$/.test(routes.productVariantId)) {
     return (
       <Frame>
@@ -67,67 +129,23 @@ export default function Serial() {
     );
   }
 
-  const productVariantId = createGid('ProductVariant', routes.productVariantId);
-
-  const [lastSavedSerial, setLastSavedSerial] = useState(() => ({
-    ...getDefaultCreateSerial(productVariantId),
-    serial: routes.serial === 'new' ? null : routes.serial!,
-  }));
-  const [createSerial, setCreateSerial] = useState(() => ({
-    ...getDefaultCreateSerial(productVariantId),
-    serial: routes.serial === 'new' ? null : routes.serial!,
-  }));
-
-  const setSerialNumber = getCreateSerialSetter(setCreateSerial, 'serial');
-  const setLocationId = getCreateSerialSetter(setCreateSerial, 'locationId');
-  const setNote = getCreateSerialSetter(setCreateSerial, 'note');
-
-  const [toast, setToastAction] = useToast();
-  const fetch = useAuthenticatedFetch({ setToastAction });
-  const productVariantQuery = useProductVariantQuery({ fetch, id: productVariantId });
-  const locationQuery = useLocationQuery({ fetch, id: createSerial.locationId });
-  const serialQuery = useSerialQuery({ fetch, productVariantId, serial: createSerial.serial });
-  const serialMutation = useSerialMutation({ fetch });
-
-  useEffect(() => {
-    if (serialQuery.isSuccess && routes.serial !== 'new' && serialQuery.data) {
-      const createSerial = getCreateSerialFromDetailedSerial(serialQuery.data);
-      setLastSavedSerial(createSerial);
-      setCreateSerial(createSerial);
-    }
-  }, [serialQuery, routes.serial]);
-
-  const productVariant = productVariantQuery.data;
-  const location = locationQuery.data;
-  const serial = serialQuery.data;
-
-  const hasUnsavedChanges =
-    JSON.stringify(createSerial, Object.keys(createSerial).sort()) !==
-    JSON.stringify(lastSavedSerial, Object.keys(lastSavedSerial).sort());
-  const isSerialNumberInUse = !lastSavedSerial.serial && !!serial;
-
-  const disabled = serialMutation.isPending;
-  const app = useAppBridge();
-
-  const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
-  const label = getProductVariantName(productVariant ?? serial?.productVariant) ?? 'Unknown Product';
-
-  const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
-
-  const save = () =>
-    serialMutation.mutate(createSerial as CreateSerial, {
-      onSuccess(serial) {
-        if (!serial) return;
-        setToastAction({ content: 'Saved serial' });
-        const createSerial = getCreateSerialFromDetailedSerial(serial);
-        setLastSavedSerial(createSerial);
-        setCreateSerial(createSerial);
-        Redirect.create(app).dispatch(
-          Redirect.Action.APP,
-          `/serial/${parseGid(serial.productVariant.id).id}/${encodeURIComponent(serial.serial)}`,
-        );
-      },
-    });
+  if (routes.serial !== 'new' && serialQuery.isSuccess && !serialQuery.data) {
+    return (
+      <Frame>
+        <Page>
+          <Card>
+            <Box paddingBlock={'1600'}>
+              <BlockStack align="center" inlineAlign="center">
+                <Text variant="headingLg" tone="critical" as="h1">
+                  Serial not found
+                </Text>
+              </BlockStack>
+            </Box>
+          </Card>
+        </Page>
+      </Frame>
+    );
+  }
 
   return (
     <Frame>
@@ -175,7 +193,7 @@ export default function Serial() {
 
             <FormLayout>
               <TextField
-                label={'Serial Number'}
+                label={'Serial number'}
                 value={createSerial.serial ?? ''}
                 requiredIndicator
                 onChange={serialNumber => setSerialNumber(serialNumber.toUpperCase() || null)}
@@ -188,12 +206,12 @@ export default function Serial() {
                 open={isLocationSelectorOpen}
                 onClose={() => setIsLocationSelectorOpen(false)}
                 onSelect={locationId => setLocationId(locationId)}
-                setToastAction={setToastAction}
               />
 
               <TextField
                 disabled={disabled}
                 label={'Location'}
+                requiredIndicator
                 labelAction={
                   createSerial.locationId !== null
                     ? {
@@ -243,7 +261,7 @@ export default function Serial() {
                   items={serial.history}
                   emptyState={
                     <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                      This serial has not been used in any orders yet.
+                      This serial does not have any associated orders.
                     </Text>
                   }
                   renderItem={item => {

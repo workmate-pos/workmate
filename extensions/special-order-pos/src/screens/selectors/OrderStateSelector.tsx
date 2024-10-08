@@ -1,10 +1,10 @@
 import { ListPopup } from '@work-orders/common-pos/screens/ListPopup.js';
 import { OrderState } from '@web/schemas/generated/special-order-pagination-options.js';
 import { useRouter } from '../../routes.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
-const ORDER_STATES: OrderState[] = ['FULLY_ORDERED', 'NOT_FULLY_ORDERED'];
+const ORDER_STATES: OrderState[] = ['fully-ordered', 'not-fully-ordered'];
 
 export function OrderStateSelector({
   onSelect,
@@ -27,7 +27,7 @@ export function OrderStateSelector({
             : null,
           ...ORDER_STATES.map(state => ({
             id: state,
-            leftSide: { label: titleCase(state) },
+            leftSide: { label: sentenceCase(state) },
           })),
         ].filter(isNonNullable),
         onSelect: state => (state === '' ? onClear?.() : onSelect(state)),

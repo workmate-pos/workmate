@@ -26,7 +26,7 @@ export function CompanyLocationSelectorModal({
   const locations = locationsQuery.data?.pages.flat() ?? [];
 
   return (
-    <Modal open={open} title={'Select Company Location'} onClose={onClose}>
+    <Modal open={open} title={'Select company location'} onClose={onClose}>
       <Modal.Section>
         <ResourceList
           items={locations}

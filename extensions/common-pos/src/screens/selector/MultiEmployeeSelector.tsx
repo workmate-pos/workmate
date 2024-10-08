@@ -23,7 +23,7 @@ export function MultiEmployeeSelector({ onSelect, initialSelection, disabled, us
 
   return (
     <ListPopup
-      title={'Select Employee'}
+      title={'Select employee'}
       query={{ query, setQuery }}
       resourceName={{ singular: 'employee', plural: 'employees' }}
       isLoadingMore={employeesQuery.isFetching}

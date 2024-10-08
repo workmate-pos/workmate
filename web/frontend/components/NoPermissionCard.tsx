@@ -4,7 +4,7 @@ import { emptyState } from '../assets/index.js';
 export function NoPermissionCard({ missingPermissions }: { missingPermissions?: string[] }) {
   return (
     <Card>
-      <EmptyState heading="No Permission" image={emptyState}>
+      <EmptyState heading="No permission" image={emptyState}>
         <BlockStack gap={'200'}>
           <Text as={'p'} variant={'bodyLg'}>
             You do not have permission to view this page.

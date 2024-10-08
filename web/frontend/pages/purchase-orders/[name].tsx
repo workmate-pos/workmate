@@ -116,8 +116,8 @@ function PurchaseOrderLoader() {
   if (purchaseOrderQuery.data) {
     createPurchaseOrder = createPurchaseOrderFromPurchaseOrder(purchaseOrderQuery.data);
   } else {
-    const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
-    createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
+    const { purchaseOrders } = settingsQuery.data.settings;
+    createPurchaseOrder = defaultCreatePurchaseOrder({ status: purchaseOrders.defaultStatus });
 
     createPurchaseOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,
@@ -173,7 +173,7 @@ function PurchaseOrder({
   const selectedLocationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
   const selectedLocation = selectedLocationQuery.data;
 
-  // Default "Ship To" to selected location's address
+  // Default "Ship to" to selected location's address
   useEffect(() => {
     if (!selectedLocation) return;
     if (createPurchaseOrder.shipTo) return;
@@ -183,7 +183,7 @@ function PurchaseOrder({
   const vendorsQuery = useVendorsQuery({ fetch });
   const vendorCustomer = vendorsQuery?.data?.find(vendor => vendor.name === createPurchaseOrder.vendorName)?.customer;
 
-  // Default "Ship From" to vendor's default address
+  // Default "Ship from" to vendor's default address
   useEffect(() => {
     if (!vendorCustomer) return;
     if (createPurchaseOrder.shipFrom) return;
@@ -209,7 +209,7 @@ function PurchaseOrder({
 
   return (
     <Box paddingBlockEnd={'1600'}>
-      <TitleBar title={'Purchase Orders'} />
+      <TitleBar title={'Purchase orders'} />
 
       <ContextualSaveBar
         fullWidth
@@ -234,7 +234,7 @@ function PurchaseOrder({
           <Select
             label={'Status'}
             requiredIndicator
-            options={settings.purchaseOrderStatuses}
+            options={settings.purchaseOrders.statuses}
             onChange={status => dispatch.setPartial({ status })}
             value={createPurchaseOrder.status}
             disabled={purchaseOrderMutation.isPending}
@@ -421,7 +421,6 @@ function PurchaseOrder({
           open={isLocationSelectorModalOpen}
           onClose={() => setIsLocationSelectorModalOpen(false)}
           onSelect={locationId => dispatch.setLocation({ locationId })}
-          setToastAction={setToastAction}
         />
       )}
 

@@ -6,7 +6,7 @@ INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId
                          "discountAmount",
                          "discountType",
                          "paymentTermsTemplateId",
-                         "paymentFixedDueDate", "productVariantSerialId")
+                         "paymentFixedDueDate", "productVariantSerialId", "locationId")
 VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId,
         :derivedFromOrderId, :note!,
         :internalNote!,
@@ -14,7 +14,7 @@ VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyL
         :discountType,
         :paymentTermsTemplateId,
         :paymentFixedDueDate,
-        :productVariantSerialId)
+        :productVariantSerialId, :locationId!)
 ON CONFLICT ("shop", "name") DO UPDATE SET status                   = EXCLUDED.status,
                                            "dueDate"                = EXCLUDED."dueDate",
                                            "customerId"             = EXCLUDED."customerId",
@@ -28,7 +28,8 @@ ON CONFLICT ("shop", "name") DO UPDATE SET status                   = EXCLUDED.s
                                            "discountType"           = EXCLUDED."discountType",
                                            "paymentTermsTemplateId" = EXCLUDED."paymentTermsTemplateId",
                                            "paymentFixedDueDate"    = EXCLUDED."paymentFixedDueDate",
-                                           "productVariantSerialId" = EXCLUDED."productVariantSerialId"
+                                           "productVariantSerialId" = EXCLUDED."productVariantSerialId",
+                                           "locationId"             = EXCLUDED."locationId"
 RETURNING *;
 
 /* @name updateDiscount */
@@ -61,6 +62,10 @@ WHERE wo.shop = :shop!
   AND wo.status = COALESCE(:status, wo.status)
   AND wo."dueDate" >= COALESCE(:afterDueDate, wo."dueDate")
   AND wo."dueDate" <= COALESCE(:beforeDueDate, wo."dueDate")
+  AND (
+  wo."locationId" = ANY (COALESCE(:locationIds, ARRAY [wo."locationId"]))
+    OR (wo."locationId" IS NULL AND :locationIds :: text[] IS NULL)
+  )
   AND (
   wo.status ILIKE COALESCE(:query, '%')
     OR wo.name ILIKE COALESCE(:query, '%')

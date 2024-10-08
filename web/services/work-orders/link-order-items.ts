@@ -29,7 +29,7 @@ export async function linkWorkOrderItemsAndChargesAndDeposits(session: Session, 
     return;
   }
 
-  const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName });
+  const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName, locationIds: null });
 
   if (!workOrder) {
     throw new Error(`Work order with name ${workOrderName} not found`);

@@ -1,8 +1,7 @@
 import { Button, Stepper, Stack, Text, ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
 import { useState } from 'react';
-import { Decimal, Money } from '@web/schemas/generated/shop-settings.js';
 import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, Decimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
@@ -13,8 +12,8 @@ export function DiscountSelector({ onSelect }: { onSelect: (discount: CreateWork
   const fetch = useAuthenticatedFetch();
   const settings = useSettingsQuery({ fetch })?.data?.settings;
 
-  const shortcuts = settings?.discountShortcuts;
-  const rules = settings?.discountRules;
+  const shortcuts = settings?.workOrders.discountShortcuts;
+  const rules = settings?.workOrders.discountRules;
 
   const shortcutButtons: NonNullable<CreateWorkOrder['discount']>[] =
     shortcuts?.map(shortcut =>
@@ -30,10 +29,12 @@ export function DiscountSelector({ onSelect }: { onSelect: (discount: CreateWork
     ) ?? [];
 
   const customInputAllowed = !rules?.onlyAllowShortcuts;
-  const allowedCurrencyRange = rules?.allowedCurrencyRange
-    ? ([rules.allowedCurrencyRange[0], rules.allowedCurrencyRange[1]] as const)
-    : null;
-  const allowedPercentageRange = rules?.allowedPercentageRange;
+  const allowedCurrencyRange = rules?.onlyAllowShortcuts
+    ? null
+    : rules?.allowedCurrencyRange
+      ? ([rules.allowedCurrencyRange[0], rules.allowedCurrencyRange[1]] as const)
+      : null;
+  const allowedPercentageRange = rules?.onlyAllowShortcuts ? null : rules?.allowedPercentageRange;
 
   const [currencyValue, setCurrencyValue] = useState<Money>(allowedCurrencyRange?.[0] ?? BigDecimal.ZERO.toMoney());
   const [percentageValue, setPercentageValue] = useState<Decimal>(

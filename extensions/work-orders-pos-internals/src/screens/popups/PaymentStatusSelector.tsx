@@ -1,10 +1,10 @@
 import { Button, Stack } from '@shopify/ui-extensions-react/point-of-sale';
 import { PaymentStatus } from '@web/schemas/generated/work-order-pagination-options.js';
 import { useRouter } from '../../routes.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function PaymentStatusSelector({ onSelect }: { onSelect: (status: PaymentStatus) => void }) {
-  const statuses: PaymentStatus[] = ['UNPAID', 'PARTIALLY_PAID', 'FULLY_PAID'];
+  const statuses: PaymentStatus[] = ['unpaid', 'partially-paid', 'fully-paid'];
 
   const router = useRouter();
 
@@ -13,7 +13,7 @@ export function PaymentStatusSelector({ onSelect }: { onSelect: (status: Payment
       {statuses.map(status => (
         <Button
           key={status}
-          title={titleCase(status)}
+          title={sentenceCase(status)}
           onPress={() => {
             onSelect(status);
             router.popCurrent();

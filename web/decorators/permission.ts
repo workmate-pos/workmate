@@ -2,119 +2,108 @@ import { decorator, DecoratorHandler } from '@teifi-digital/shopify-app-express/
 import { err } from '@teifi-digital/shopify-app-express/utils';
 import { RequestHandler } from 'express-serve-static-core';
 import { Session } from '@shopify/shopify-api';
-import { IGetManyResult, PermissionNode } from '../services/db/queries/generated/employee.sql.js';
-import { db } from '../services/db/db.js';
 import { gql } from '../services/gql/gql.js';
-import { assertGid, createGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import jwt from 'jsonwebtoken';
 import type { Request, Response } from 'express-serve-static-core';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { hasReadUsersScope } from '../services/shop.js';
-import { assertMoneyOrNull } from '../util/assertions.js';
 import { IncomingHttpHeaders } from 'node:http';
 import { getShopifyApp } from '@teifi-digital/shopify-app-express';
-import { httpError } from '../util/http-error.js';
-
-export const permissionNodes = [
-  'cycle_count',
-  'read_app_plan',
-  'read_employees',
-  'read_purchase_orders',
-  'read_settings',
-  'read_special_orders',
-  'read_stock_transfers',
-  'read_work_orders',
-  'write_app_plan',
-  'write_employees',
-  'write_purchase_orders',
-  'write_settings',
-  'write_special_orders',
-  'write_stock_transfers',
-  'write_work_orders',
-] as const satisfies readonly PermissionNode[];
-
-// TODO: Configurable per store !!!
-export const defaultPermissionNodes: PermissionNode[] = [
-  'read_employees',
-  'read_settings',
-  'read_work_orders',
-  'write_work_orders',
-  'read_purchase_orders',
-  'read_stock_transfers',
-  'read_special_orders',
-  'write_special_orders',
-];
-
-export function isPermissionNode(node: string): node is PermissionNode {
-  for (const n of permissionNodes) {
-    if (n === node) return true;
-  }
-  return false;
-}
+import {
+  getDefaultRoleUuidFromSettings,
+  getMissingPermissionsForRoleUuid,
+  isPermission,
+  Permission,
+} from '../services/permissions/permissions.js';
+import {
+  getStaffMemberLocations,
+  getStaffMembers,
+  getSuperusers,
+  StaffMember,
+  upsertStaffMembers,
+} from '../services/staff-members/queries.js';
+import { getShopSettings } from '../services/settings/settings.js';
 
 export const PermissionKey = 'permission';
-export function Permission(node: PermissionNode | 'superuser' | 'none') {
-  return decorator(PermissionKey, node);
+export function Permission(permission: Permission | 'superuser' | 'none') {
+  return decorator(PermissionKey, permission);
 }
 
-export const permissionHandler: DecoratorHandler<PermissionNode> = nodes => {
-  return (async (_req, res, next) => {
+export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'none'> = permissions => {
+  return (async (req, res, next) => {
     const session: Session = res.locals.shopify.session;
 
-    const associatedUser = await getAssociatedUser(_req, res);
+    const [associatedUser, posLocationId] = await Promise.all([
+      getAssociatedUser(req, res),
+      getRequestPosLocationId(req.headers),
+    ]);
 
     if (!associatedUser) {
       return err(res, 'You must be a staff member to access this resource', 401);
     }
 
-    const employeeId = associatedUser.id;
-    let [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [employeeId] });
+    const staffMemberId = associatedUser.id;
 
-    let [{ exists: doesSuperuserExist } = never('cannot be empty')] = await db.employee.doesSuperuserExist({
-      shop: session.shop,
-    });
+    let [[staffMember], staffMemberLocations, doesSuperuserExist, shopSettings] = await Promise.all([
+      getStaffMembers(session.shop, [staffMemberId]),
+      getStaffMemberLocations([staffMemberId]),
+      getSuperusers(session.shop).then(superusers => superusers.length > 0),
+      getShopSettings(session.shop),
+    ]);
 
-    if (!employee) {
+    const defaultRoleUuid = getDefaultRoleUuidFromSettings(shopSettings);
+
+    if (!staffMember || !doesSuperuserExist) {
       const superuser = associatedUser.isShopOwner || !doesSuperuserExist || associatedUser.email.endsWith('@teifi.ca');
       const { name, email, isShopOwner } = associatedUser;
 
-      [employee = never('just made it')] = await createNewEmployees(session.shop, [
-        { superuser, employeeId, name, email, isShopOwner },
+      [staffMember = never()] = await upsertStaffMembers(session.shop, [
+        {
+          superuser,
+          staffMemberId,
+          name,
+          isShopOwner,
+          email,
+          role: staffMember?.role ?? defaultRoleUuid,
+          rate: staffMember?.rate ?? null,
+        },
       ]);
-
-      doesSuperuserExist ||= superuser;
-    }
-
-    assertGid(employee.staffMemberId);
-    assertMoneyOrNull(employee.rate);
-
-    if (!doesSuperuserExist) {
-      [employee = never('just made it')] = await db.employee.upsert({
-        shop: session.shop,
-        staffMemberId: employee.staffMemberId,
-        permissions: employee.permissions ?? [],
-        isShopOwner: employee.isShopOwner,
-        name: employee.name,
-        rate: employee.rate,
-        superuser: true,
-        email: employee.email,
-      });
     }
 
     const user: LocalsTeifiUser = {
-      user: employee,
+      user: {
+        ...staffMember,
+        allowedLocationIds:
+          shopSettings.franchises.enabled && !staffMember.superuser
+            ? staffMemberLocations.map(location => location.locationId)
+            : null,
+      },
       staffMember: associatedUser,
     };
 
     res.locals.teifi ??= {};
     res.locals.teifi.user = user;
 
-    for (const node of nodes) {
-      if (!hasPermission(user, node)) {
-        return err(res, `You do not have permission to access this resource`, 401);
+    if (!staffMember.superuser) {
+      if (posLocationId && !staffMemberLocations.some(location => location.locationId === posLocationId)) {
+        return err(res, 'You do not have permission to access this location', 401);
+      }
+
+      if (permissions.includes('superuser')) {
+        return err(res, 'You do not have permission to access this resource', 401);
+      }
+
+      const missingPermissions = await getMissingPermissionsForRoleUuid(
+        session.shop,
+        staffMember.role,
+        permissions.filter(isPermission),
+      );
+
+      if (missingPermissions.length > 0) {
+        return err(res, 'You do not have permission to access this resource', 401);
       }
     }
 
@@ -139,14 +128,14 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
     return associatedUserToStaffInfo(session.onlineAccessInfo.associated_user);
   }
 
-  const [employee] = await db.employee.getMany({ shop: session.shop, employeeIds: [staffMemberId] });
+  const [staffMember] = await getStaffMembers(session.shop, [staffMemberId]);
 
-  if (employee) {
+  if (staffMember) {
     return {
       id: staffMemberId,
-      name: employee.name,
-      isShopOwner: employee.isShopOwner,
-      email: employee.email,
+      name: staffMember.name,
+      isShopOwner: staffMember.isShopOwner,
+      email: staffMember.email,
     };
   }
 
@@ -157,33 +146,34 @@ async function getAssociatedUser(req: Request, res: Response): Promise<gql.staff
     );
   }
 
-  const [staffMember] = await gql.staffMember.getMany
+  const [gqlStaffMember] = await gql.staffMember.getMany
     .run(graphql, { ids: [staffMemberId] })
     .then(response => response.nodes.filter(isNonNullable).filter(hasPropertyValue('__typename', 'StaffMember')));
 
-  if (!staffMember) {
+  if (!gqlStaffMember) {
     console.log(`Could not find staff member ${staffMemberId}`);
     throw new HttpError('Staff member not found. Try using a different account.');
   }
 
   return {
-    id: staffMemberId,
-    name: staffMember.name,
-    isShopOwner: staffMember.isShopOwner,
-    email: staffMember.email,
+    id: gqlStaffMember.id,
+    name: gqlStaffMember.name,
+    isShopOwner: gqlStaffMember.isShopOwner,
+    email: gqlStaffMember.email,
   };
 }
 
+// TODO: Fix ugly object
 export type LocalsTeifiUser = {
-  user: IGetManyResult;
+  user: StaffMember & {
+    /**
+     * The locations that the user has access to.
+     * If null, the user has access to all locations (e.g. superuser or franchise mode is disabled).
+     */
+    allowedLocationIds: ID[] | null;
+  };
   staffMember: gql.staffMember.StaffMemberFragment.Result;
 };
-
-export function hasPermission(user: LocalsTeifiUser, node: PermissionNode | 'none'): boolean {
-  if (node === 'none') return true;
-  if (user.user.superuser) return true;
-  return user.user.permissions?.includes(node) ?? false;
-}
 
 function associatedUserToStaffInfo(
   associatedUser: NonNullable<Session['onlineAccessInfo']>['associated_user'],
@@ -194,32 +184,6 @@ function associatedUserToStaffInfo(
     isShopOwner: associatedUser.account_owner,
     email: associatedUser.email_verified ? associatedUser.email : '',
   };
-}
-
-export async function createNewEmployees(
-  shop: string,
-  employees: {
-    employeeId: ID;
-    name: string;
-    isShopOwner: boolean;
-    superuser: boolean;
-    email: string;
-  }[],
-) {
-  if (!employees.length) return [];
-
-  return await db.employee.upsertMany({
-    employees: employees.map(({ employeeId: staffMemberId, name, isShopOwner, superuser, email }) => ({
-      shop,
-      staffMemberId,
-      name,
-      isShopOwner,
-      superuser,
-      email,
-      permissions: defaultPermissionNodes,
-      rate: null,
-    })),
-  });
 }
 
 /**
@@ -240,6 +204,20 @@ async function getRequestStaffMemberId(headers: IncomingHttpHeaders) {
   }
 
   return await getBearerStaffMemberId(headers.authorization);
+}
+
+async function getRequestPosLocationId(headers: IncomingHttpHeaders) {
+  if (headers['x-pos-location-id']) {
+    const id = headers['x-pos-location-id'];
+
+    if (!Array.isArray(id) && /^\d+$/.test(id)) {
+      return createGid('Location', id);
+    }
+
+    sentryErr('Received invalid x-pos-location-id', { id });
+  }
+
+  return null;
 }
 
 async function getBearerStaffMemberId(authorizationHeader?: string) {

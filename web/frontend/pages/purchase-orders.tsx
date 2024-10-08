@@ -81,20 +81,19 @@ function PurchaseOrders() {
   return (
     <>
       <TitleBar
-        title="Purchase Orders"
+        title="Purchase orders"
         secondaryActions={[
-          // TODO : test
           {
             content: 'Import CSV',
             onAction: () => setIsCsvUploadDropZoneModalOpen(true),
           },
           {
-            content: 'Merge Special Orders',
+            content: 'Merge special orders',
             onAction: () => redirectToPurchaseOrder('merge'),
           },
         ]}
         primaryAction={{
-          content: 'New Purchase Order',
+          content: 'New purchase order',
           onAction: () => redirectToPurchaseOrder('new'),
         }}
       />
@@ -114,7 +113,7 @@ function PurchaseOrders() {
       />
       <IndexTable
         headings={[
-          { title: 'Purchase Order' },
+          { title: 'Purchase order' },
           { title: 'Status' },
           { title: 'Location' },
           { title: 'Customer' },
@@ -127,7 +126,7 @@ function PurchaseOrders() {
         emptyState={
           <Card>
             <EmptyState
-              heading={'Purchase Orders'}
+              heading={'Purchase orders'}
               image={emptyState}
               action={{
                 content: 'Create purchase order',
@@ -164,7 +163,7 @@ function PurchaseOrders() {
               </Text>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Badge tone={'info'}>{titleCase(purchaseOrder.status)}</Badge>
+              <Badge tone={'info'}>{purchaseOrder.status}</Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>
               <Text as={'p'} variant="bodyMd">

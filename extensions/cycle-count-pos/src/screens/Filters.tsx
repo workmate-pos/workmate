@@ -6,7 +6,7 @@ import { useEmployeeQuery } from '@work-orders/common/queries/use-employee-query
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { Button, ScrollView, Text } from '@shopify/ui-extensions-react/point-of-sale';
 
 const SORT_MODES = ['name', 'created-date', 'due-date'] as const;
@@ -108,13 +108,13 @@ export function Filters({
 
           <ResponsiveGrid columns={2} smColumns={2} grow>
             <Button
-              title={`Sort by ${titleCase(sortMode)}`}
+              title={`Sort by ${sentenceCase(sortMode).toLowerCase()}`}
               onPress={() =>
                 setSortMode(current => SORT_MODES[(SORT_MODES.indexOf(sortMode) + 1) % SORT_MODES.length] ?? current)
               }
             />
             <Button
-              title={titleCase(sortOrder)}
+              title={sentenceCase(sortOrder)}
               onPress={() =>
                 setSortOrder(
                   current => SORT_ORDERS[(SORT_ORDERS.indexOf(sortOrder) + 1) % SORT_ORDERS.length] ?? current,

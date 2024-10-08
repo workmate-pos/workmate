@@ -109,7 +109,7 @@ export function PurchaseOrderSummary({
           }
         />
         <MoneyField
-          label={'Balance Due'}
+          label={'Balance due'}
           autoComplete={'off'}
           readOnly
           value={balanceDue.toMoney()}

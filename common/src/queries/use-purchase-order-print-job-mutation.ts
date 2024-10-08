@@ -1,19 +1,19 @@
 import { Fetch } from './fetch.js';
 import { useMutation } from '@tanstack/react-query';
 import { PrintPurchaseOrderResponse } from '@web/controllers/api/purchase-orders.js';
+import { PurchaseOrderPrintJob } from '@web/schemas/generated/purchase-order-print-job.js';
 
 export function usePurchaseOrderPrintJobMutation({ fetch }: { fetch: Fetch }) {
   return useMutation({
     mutationFn: async ({
       purchaseOrderName,
       templateName,
-      date,
+      ...qs
     }: {
       purchaseOrderName: string;
       templateName: string;
-      date: string;
-    }) => {
-      const searchParams = new URLSearchParams({ date });
+    } & PurchaseOrderPrintJob) => {
+      const searchParams = new URLSearchParams(qs);
 
       const response = await fetch(
         `/api/purchase-orders/${encodeURIComponent(purchaseOrderName)}/print/${encodeURIComponent(templateName)}?${searchParams}`,

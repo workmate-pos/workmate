@@ -9,10 +9,10 @@ import {
   TextArea,
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { CreatePurchaseOrder, DateTime, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEffect, useState, useReducer, useRef } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
@@ -90,7 +90,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const selectedLocationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
   const selectedLocation = selectedLocationQuery.data;
 
-  // Default "Ship To" to selected location's address
+  // Default "Ship to" to selected location's address
   useEffect(() => {
     if (!selectedLocation) return;
     if (createPurchaseOrder.shipTo) return;
@@ -100,7 +100,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const vendorsQuery = useVendorsQuery({ fetch });
   const vendorCustomer = vendorsQuery?.data?.find(vendor => vendor.name === createPurchaseOrder.vendorName)?.customer;
 
-  // Default "Ship From" to vendor's default address
+  // Default "Ship from" to vendor's default address
   useEffect(() => {
     if (!vendorCustomer) return;
     if (createPurchaseOrder.shipFrom) return;
@@ -165,7 +165,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={4} grow>
             {createPurchaseOrder.name && (
-              <FormStringField label={'Purchase Order ID'} disabled value={createPurchaseOrder.name} />
+              <FormStringField label={'Purchase order ID'} disabled value={createPurchaseOrder.name} />
             )}
             <FormStringField
               label={'Vendor'}
@@ -194,6 +194,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
                   onSelect: location => dispatch.setLocation({ locationId: location.id }),
                 });
               }}
+              required
               disabled={!!createPurchaseOrder.name && createPurchaseOrder.locationId !== null}
               value={selectedLocation?.name ?? ''}
             />
@@ -204,11 +205,11 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
                   onSelect: status => dispatch.setPartial({ status }),
                 });
               }}
-              value={titleCase(createPurchaseOrder.status)}
+              value={createPurchaseOrder.status}
             />
 
             <DateField
-              label={'Placed Date'}
+              label={'Placed date'}
               value={createPurchaseOrder.placedDate ?? undefined}
               onChange={(placedDate: string) => {
                 const date = placedDate ? new Date(placedDate) : null;
@@ -235,14 +236,14 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
         <ResponsiveGrid columns={3}>
           <ResponsiveGrid columns={1}>
             <FormStringField
-              label={'Ship From'}
+              label={'Ship from'}
               value={createPurchaseOrder.shipFrom ?? ''}
               onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom })}
             />
             {!!vendorCustomer?.defaultAddress?.formatted &&
               createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
                 <FormButton
-                  title={'Use Vendor Address'}
+                  title={'Use vendor address'}
                   onPress={() => {
                     if (!vendorCustomer.defaultAddress) return;
                     dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress.formatted.join('\n') });
@@ -252,7 +253,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
           </ResponsiveGrid>
           <ResponsiveGrid columns={1}>
             <TextArea
-              label={'Ship To'}
+              label={'Ship to'}
               value={createPurchaseOrder.shipTo ?? ''}
               onChange={(shipTo: string) => dispatch.setPartial({ shipTo })}
               disabled={purchaseOrderMutation.isPending}
@@ -260,7 +261,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
             {!!selectedLocation?.address?.formatted &&
               createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
                 <FormButton
-                  title={'Use Location Address'}
+                  title={'Use location address'}
                   onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
                 />
               )}
@@ -279,12 +280,12 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={3}>
             <FormStringField
-              label={'Assigned Employees'}
+              label={'Assigned employees'}
               value={
                 Object.values(employeeQueries).some(query => query.isLoading)
                   ? 'Loading...'
                   : createPurchaseOrder.employeeAssignments
-                      .map(({ employeeId }) => employeeQueries[employeeId]?.data?.name ?? 'Unknown Employee')
+                      .map(({ employeeId }) => employeeQueries[employeeId]?.data?.name ?? 'Unknown employee')
                       .join(', ')
               }
               onFocus={() => {
@@ -312,7 +313,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
             ))}
 
             <FormButton
-              title={'Custom Fields'}
+              title={'Custom fields'}
               onPress={() => {
                 router.push('CustomFieldConfig', {
                   initialCustomFields: createPurchaseOrder.customFields,
@@ -327,7 +328,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
         <Stack direction={'vertical'} paddingVertical={'Small'}>
           <ResponsiveGrid columns={2}>
             <ResponsiveGrid columns={1}>
-              <FormButton title={'Add Product'} type={'primary'} onPress={addProductPrerequisitesDialog.show} />
+              <FormButton title={'Add product'} type={'primary'} onPress={addProductPrerequisitesDialog.show} />
 
               {noLineItems || allAreReceived ? (
                 <FormButton
@@ -400,7 +401,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
                   field={'paid'}
                 />
               </ResponsiveGrid>
-              <FormMoneyField label={'Balance Due'} value={balanceDue.toMoney()} disabled />
+              <FormMoneyField label={'Balance due'} value={balanceDue.toMoney()} disabled />
             </ResponsiveGrid>
           </ResponsiveGrid>
         </Stack>
@@ -488,7 +489,7 @@ function useProductRows(
 
   const getDisplayName = (product: Product) => {
     const variant = productVariantQueries[product.productVariantId]?.data ?? null;
-    return getProductVariantName(variant) ?? 'Unknown Product';
+    return getProductVariantName(variant) ?? 'Unknown product';
   };
 
   const queryFilter = (product: Product) => {
@@ -571,10 +572,10 @@ const useVendorChangeWarningDialog = (
           });
         },
         props: {
-          title: 'Vendor Already Set',
+          title: 'Vendor already set',
           type: 'alert',
           content: 'Are you certain you want to change the vendor? This will clear the products.',
-          actionText: 'Change Vendor',
+          actionText: 'Change vendor',
           showSecondaryAction: true,
           secondaryActionText: 'Cancel',
         },
@@ -624,7 +625,7 @@ const useAddProductPrerequisitesDialog = (
   };
 
   const subject = !hasVendor ? 'vendor' : 'location';
-  const title = titleCase(`Select ${subject}`);
+  const title = sentenceCase(`Select ${subject}`);
   const content = `You must select a ${subject} before adding products to the purchase order.`;
 
   return {
@@ -660,7 +661,7 @@ function CreatePurchaseOrderMoneyField<const Field extends CreatePurchaseOrderMo
   return (
     <FormMoneyField
       key={field}
-      label={titleCase(field)}
+      label={sentenceCase(field)}
       value={createPurchaseOrder[field]}
       onChange={value => dispatch.setPartial({ [field]: value })}
     />

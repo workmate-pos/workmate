@@ -1,5 +1,5 @@
 import { Button, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useRouter } from '../../routes.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -27,10 +27,10 @@ export function PurchaseOrderStatusSelector({ onSelect }: { onSelect: (status: s
   return (
     <ScrollView>
       <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
-        {settingsQuery.data.settings.purchaseOrderStatuses.map(status => (
+        {settingsQuery.data.settings.purchaseOrders.statuses.map(status => (
           <Button
             key={status}
-            title={titleCase(status)}
+            title={status}
             onPress={() => {
               onSelect(status);
               router.popCurrent();

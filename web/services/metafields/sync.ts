@@ -1,7 +1,7 @@
 import { getShopMetafields, removeMetafields, upsertMetafields } from './queries.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
-import { getShopSettings } from '../settings.js';
+import { getShopSettings } from '../settings/settings.js';
 import { fetchAllPages, gql } from '../gql/gql.js';
 import { httpError } from '../../util/http-error.js';
 import { hasNestedPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';

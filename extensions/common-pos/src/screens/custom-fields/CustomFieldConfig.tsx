@@ -83,15 +83,15 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
             const keys = Object.keys(customFields);
 
             router.push('ListPopup', {
-              title: 'Configure Custom Fields',
+              title: 'Configure custom fields',
               selection: {
                 type: 'select',
                 items: [
                   keys.length > 0 ? { id: 'save-as-preset', leftSide: { label: 'Save as Preset' } } : null,
-                  { id: 'import-preset', leftSide: { label: 'Import Preset' } },
-                  { id: 'edit-preset', leftSide: { label: 'Edit Preset' } },
+                  { id: 'import-preset', leftSide: { label: 'Import preset' } },
+                  { id: 'edit-preset', leftSide: { label: 'Edit preset' } },
                   keys.length > 0
-                    ? { id: 'change-values', leftSide: { label: 'Change Allowed Custom Field Values' } }
+                    ? { id: 'change-values', leftSide: { label: 'Change allowed custom field values' } }
                     : null,
                 ].filter(isNonNullable),
                 onSelect: action => {
@@ -123,7 +123,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
 
                   if (action === 'change-values') {
                     router.push('ListPopup', {
-                      title: 'Select Custom Field',
+                      title: 'Select custom field',
                       selection: {
                         type: 'select',
                         items: keys.map(key => ({ id: key, leftSide: { label: key } })),
@@ -191,7 +191,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
         <ResponsiveGrid columns={2}>
           <TextField
-            label={'New Field Name'}
+            label={'New field name'}
             value={newCustomFieldName}
             onChange={setNewCustomFieldName}
             error={newCustomFieldNameError}
@@ -238,7 +238,7 @@ const useOverrideOrMergeDialog = ({
         onAction: merge,
         onSecondaryAction: override,
         props: {
-          title: 'Import Preset',
+          title: 'Import preset',
           type: 'alert',
           showSecondaryAction: true,
           actionText: 'Merge',

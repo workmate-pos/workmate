@@ -19,14 +19,19 @@ import {
   getPurchaseOrderLineItems,
 } from './queries.js';
 import { getStockTransferLineItemsForPurchaseOrder } from '../stock-transfers/queries.js';
-import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getSpecialOrderLineItemsForPurchaseOrder, getSpecialOrdersByIds } from '../special-orders/queries.js';
 import { getProductVariants } from '../product-variants/queries.js';
 import { getProducts } from '../products/queries.js';
 import { getSerialsByIds } from '../serials/queries.js';
+import { getStaffMembers } from '../staff-members/queries.js';
 
-export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, name: string) {
-  const purchaseOrder = await getPurchaseOrder({ shop, name });
+export async function getDetailedPurchaseOrder(
+  { shop }: Pick<Session, 'shop'>,
+  name: string,
+  locationIds: ID[] | null,
+) {
+  const purchaseOrder = await getPurchaseOrder({ shop, name, locationIds });
 
   if (!purchaseOrder) {
     return null;
@@ -66,7 +71,7 @@ export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, 
     paid: purchaseOrder.paid,
     customFields: getPurchaseOrderCustomFieldsRecord(purchaseOrder.id),
     lineItems: getDetailedPurchaseOrderLineItems(purchaseOrder.id),
-    employeeAssignments: getDetailedPurchaseOrderEmployeeAssignments(purchaseOrder.id),
+    employeeAssignments: getDetailedPurchaseOrderEmployeeAssignments(shop, purchaseOrder.id),
     linkedOrders: linkedOrders.map(({ orderId: id, name, orderType }) => ({
       id,
       name,
@@ -83,6 +88,7 @@ export async function getDetailedPurchaseOrder({ shop }: Pick<Session, 'shop'>, 
 export async function getPurchaseOrderInfoPage(
   session: Session,
   paginationOptions: PurchaseOrderPaginationOptions,
+  locationIds: ID[] | null,
 ): Promise<PurchaseOrderInfo[]> {
   if (paginationOptions.query !== undefined) {
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
@@ -111,10 +117,13 @@ export async function getPurchaseOrderInfoPage(
     // the first filter is always skipped by the sql to ensure we can run this query without running into the empty record error
     requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
     shop,
+    locationIds,
   });
 
   return await Promise.all(
-    names.map(({ name }) => getDetailedPurchaseOrder(session, name).then(purchaseOrder => purchaseOrder ?? never())),
+    names.map(({ name }) =>
+      getDetailedPurchaseOrder(session, name, locationIds).then(purchaseOrder => purchaseOrder ?? never()),
+    ),
   );
 }
 
@@ -253,11 +262,11 @@ async function getPurchaseOrderCustomFieldsRecord(purchaseOrderId: number) {
   return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
 }
 
-async function getDetailedPurchaseOrderEmployeeAssignments(purchaseOrderId: number) {
+async function getDetailedPurchaseOrderEmployeeAssignments(shop: string, purchaseOrderId: number) {
   const employeeAssignments = await getPurchaseOrderAssignedEmployees(purchaseOrderId);
 
   const employeeIds = employeeAssignments.map(({ employeeId }) => employeeId);
-  const employees = employeeIds.length ? await db.employee.getMany({ employeeIds }) : [];
+  const employees = await getStaffMembers(shop, employeeIds);
   const employeesById = groupByKey(employees, 'staffMemberId');
 
   return employeeAssignments.map(({ employeeId }) => {

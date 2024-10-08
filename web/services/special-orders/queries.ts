@@ -13,7 +13,11 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type SpecialOrder = NonNullable<Awaited<ReturnType<typeof getSpecialOrder>>>;
 
-export async function getSpecialOrder(filters: MergeUnion<{ id: number } | { shop: string; name: string }>) {
+export async function getSpecialOrder(
+  filters: MergeUnion<{ id: number } | { shop: string; name: string; locationIds: ID[] | null }>,
+) {
+  const locationIds = filters.locationIds ?? null;
+
   const [specialOrder] = await sql<{
     id: number;
     shop: string;
@@ -32,7 +36,8 @@ export async function getSpecialOrder(filters: MergeUnion<{ id: number } | { sho
     FROM "SpecialOrder"
     WHERE shop = COALESCE(${filters?.shop ?? null}, shop)
       AND name = COALESCE(${filters?.name ?? null}, name)
-      AND id = COALESCE(${filters?.id ?? null}, id);`;
+      AND id = COALESCE(${filters?.id ?? null}, id)
+      AND "locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY ["locationId"]));`;
 
   if (!specialOrder) {
     return null;
@@ -325,6 +330,7 @@ export async function getSpecialOrdersPage(
     purchaseOrderState,
     limit,
   }: SpecialOrderPaginationOptions,
+  locationIds: ID[] | null,
 ) {
   const _locationId: string | null = locationId ?? null;
   const _customerId: string | null = customerId ?? null;
@@ -345,12 +351,13 @@ export async function getSpecialOrdersPage(
       AND spo."customerId" = COALESCE(${_customerId}, spo."customerId")
       AND spo.note ILIKE COALESCE(${_query}, '%')
       AND p.vendor = COALESCE(${_lineItemVendorName}, p.vendor)
+      AND spo."locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY ["locationId"]))
       AND (
       CASE ${_lineItemOrderState}
-        WHEN 'FULLY_ORDERED' THEN spoli.quantity <= COALESCE((SELECT SUM(poli.quantity)
+        WHEN 'fully-ordered' THEN spoli.quantity <= COALESCE((SELECT SUM(poli.quantity)
                                                               FROM "PurchaseOrderLineItem" poli
                                                               WHERE poli."specialOrderLineItemId" = spoli.id), 0)
-        WHEN 'NOT_FULLY_ORDERED' THEN spoli.quantity > COALESCE((SELECT SUM(poli.quantity)
+        WHEN 'not-fully-ordered' THEN spoli.quantity > COALESCE((SELECT SUM(poli.quantity)
                                                                  FROM "PurchaseOrderLineItem" poli
                                                                  WHERE poli."specialOrderLineItemId" = spoli.id), 0)
         ELSE TRUE
@@ -362,8 +369,8 @@ export async function getSpecialOrdersPage(
                                                            GROUP BY spoli.id
                                                            HAVING spoli.quantity < COALESCE(SUM(poli.quantity), 0))
            SELECT CASE ${_orderState}
-                    WHEN 'FULLY_ORDERED' THEN NOT EXISTS (SELECT * FROM "NotFullyOrderedSpecialOrderLineItems")
-                    WHEN 'NOT_FULLY_ORDERED' THEN EXISTS (SELECT * FROM "NotFullyOrderedSpecialOrderLineItems")
+                    WHEN 'fully-ordered' THEN NOT EXISTS (SELECT * FROM "NotFullyOrderedSpecialOrderLineItems")
+                    WHEN 'not-fully-ordered' THEN EXISTS (SELECT * FROM "NotFullyOrderedSpecialOrderLineItems")
                     ELSE TRUE
                     END) IS DISTINCT FROM FALSE
       AND (WITH "NotFullyReceivedPurchaseOrderLineItems" AS (SELECT poli."purchaseOrderId", poli.uuid
@@ -371,8 +378,8 @@ export async function getSpecialOrdersPage(
                                                                     INNER JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
                                                              WHERE poli."availableQuantity" < poli.quantity)
            SELECT CASE ${_purchaseOrderState}
-                    WHEN 'ALL_RECEIVED' THEN NOT EXISTS (SELECT * FROM "NotFullyReceivedPurchaseOrderLineItems")
-                    WHEN 'NOT_ALL_RECEIVED' THEN EXISTS (SELECT * FROM "NotFullyReceivedPurchaseOrderLineItems")
+                    WHEN 'all-received' THEN NOT EXISTS (SELECT * FROM "NotFullyReceivedPurchaseOrderLineItems")
+                    WHEN 'not-all-received' THEN EXISTS (SELECT * FROM "NotFullyReceivedPurchaseOrderLineItems")
                     ELSE TRUE
                     END) IS DISTINCT FROM FALSE
     ORDER BY spo.id DESC

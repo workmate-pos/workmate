@@ -21,7 +21,7 @@ export function NewCustomFieldModal({
   return (
     <Modal
       open={open}
-      title={'New Custom Field'}
+      title={'New custom field'}
       onClose={onClose}
       primaryAction={{
         content: 'Add',
@@ -36,7 +36,7 @@ export function NewCustomFieldModal({
       <Modal.Section>
         <BlockStack gap={'400'}>
           <TextField
-            label={'Field Name'}
+            label={'Field name'}
             autoComplete={'off'}
             requiredIndicator
             value={fieldName}
@@ -44,7 +44,7 @@ export function NewCustomFieldModal({
             error={existingFields.includes(fieldName) ? 'Field already exists' : undefined}
           />
           <CustomField
-            name={fieldName || 'New Field'}
+            name={fieldName || 'New field'}
             value={fieldValue}
             onChange={setFieldValue}
             disabled={!fieldName}

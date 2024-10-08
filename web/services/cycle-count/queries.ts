@@ -12,7 +12,15 @@ export type CycleCount = NonNullable<Awaited<ReturnType<typeof getCycleCount>>>;
 export type CycleCountItem = Awaited<ReturnType<typeof getCycleCountItems>>[number];
 export type CycleCountEmployeeAssignment = Awaited<ReturnType<typeof getCycleCountEmployeeAssignments>>[number];
 
-export async function getCycleCount({ shop, name }: { shop: string; name: string }) {
+export async function getCycleCount({
+  shop,
+  name,
+  locationIds,
+}: {
+  shop: string;
+  name: string;
+  locationIds: ID[] | null;
+}) {
   const [cycleCount] = await sql<{
     id: number;
     shop: string;
@@ -28,7 +36,9 @@ export async function getCycleCount({ shop, name }: { shop: string; name: string
     SELECT *
     FROM "CycleCount"
     WHERE shop = ${shop}
-      AND name = ${name};`;
+      AND name = ${name}
+      AND "locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY ["locationId"]));
+  `;
 
   if (!cycleCount) {
     return null;
@@ -80,6 +90,7 @@ export async function getCycleCountsPage(
     sortMode?: 'name' | 'due-date' | 'created-date';
     sortOrder?: 'ascending' | 'descending';
   },
+  locationIds: ID[] | null,
 ) {
   const escapedQuery = query ? `%${escapeLike(query)}%` : undefined;
   const _locationId: string | undefined = locationId;
@@ -111,6 +122,7 @@ export async function getCycleCountsPage(
                   FROM "CycleCountEmployeeAssignment" ea
                   WHERE ea."cycleCountId" = cc.id
                     AND ea."employeeId" = ${_employeeId ?? null})
+    AND "locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY ["locationId"]))
     ORDER BY CASE WHEN ${sortMode} = 'due-date' AND ${sortOrder} = 'ascending' THEN "dueDate" END ASC NULLS LAST,
              CASE WHEN ${sortMode} = 'due-date' AND ${sortOrder} = 'descending' THEN "dueDate" END DESC NULLS LAST,
              --

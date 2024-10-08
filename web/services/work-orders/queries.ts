@@ -12,7 +12,11 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type WorkOrder = NonNullable<Awaited<ReturnType<typeof getWorkOrder>>>;
 
-export async function getWorkOrder(filters: MergeUnion<{ id: number } | { shop: string; name: string }>) {
+export async function getWorkOrder(
+  filters: MergeUnion<{ id: number } | { shop: string; name: string; locationIds: ID[] | null }>,
+) {
+  const _locationIds: string[] | null = filters?.locationIds ?? null;
+
   const [workOrder] = await sql<{
     id: number;
     shop: string;
@@ -33,12 +37,18 @@ export async function getWorkOrder(filters: MergeUnion<{ id: number } | { shop: 
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
     productVariantSerialId: number | null;
+    locationId: string | null;
   }>`
     SELECT *
     FROM "WorkOrder"
     WHERE shop = COALESCE(${filters?.shop ?? null}, shop)
       AND name = COALESCE(${filters?.name ?? null}, name)
-      AND id = COALESCE(${filters?.id ?? null}, id);`;
+      AND id = COALESCE(${filters?.id ?? null}, id)
+      AND (
+      "locationId" = ANY (COALESCE(${_locationIds as string[]}, ARRAY ["locationId"]))
+        OR ("locationId" IS NULL AND ${_locationIds as string[]} :: text[] IS NULL)
+      )
+  `;
 
   if (!workOrder) {
     return null;
@@ -68,10 +78,18 @@ function mapWorkOrder<
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
     productVariantSerialId: number | null;
+    locationId: string | null;
   },
 >(workOrder: T) {
-  const { customerId, derivedFromOrderId, companyId, companyLocationId, companyContactId, paymentTermsTemplateId } =
-    workOrder;
+  const {
+    customerId,
+    derivedFromOrderId,
+    companyId,
+    companyLocationId,
+    companyContactId,
+    paymentTermsTemplateId,
+    locationId,
+  } = workOrder;
 
   try {
     assertGid(customerId);
@@ -80,6 +98,7 @@ function mapWorkOrder<
     assertGidOrNull(companyLocationId);
     assertGidOrNull(companyContactId);
     assertGidOrNull(paymentTermsTemplateId);
+    assertGidOrNull(locationId);
 
     return {
       ...workOrder,
@@ -89,6 +108,7 @@ function mapWorkOrder<
       companyLocationId,
       companyContactId,
       paymentTermsTemplateId,
+      locationId,
     };
   } catch (error) {
     sentryErr(error, { workOrder });
@@ -447,6 +467,7 @@ export async function getWorkOrdersForSpecialOrder(specialOrderId: number) {
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
     productVariantSerialId: number | null;
+    locationId: string | null;
     orderIds: string[] | null;
   }>`
     SELECT DISTINCT wo.*, array_agg(DISTINCT soli."orderId") AS "orderIds"
@@ -471,8 +492,18 @@ export async function getWorkOrdersForSerial({
   serial,
   id,
   productVariantId,
-}: MergeUnion<{ id: number } | { shop: string; serial: string; productVariantId: ID }>) {
+  locationIds,
+}: MergeUnion<
+  | { id: number }
+  | {
+      shop: string;
+      serial: string;
+      productVariantId: ID;
+      locationIds: ID[] | null;
+    }
+>) {
   const _productVariantId: string | null = productVariantId ?? null;
+  const _locationIds: string[] | null = locationIds ?? null;
 
   const workOrders = await sql<{
     id: number;
@@ -494,6 +525,7 @@ export async function getWorkOrdersForSerial({
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
     productVariantSerialId: number | null;
+    locationId: string | null;
   }>`
     SELECT wo.*
     FROM "ProductVariantSerial" pvs
@@ -501,7 +533,11 @@ export async function getWorkOrdersForSerial({
     WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
       AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
       AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
-      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop)
+      AND (
+      wo."locationId" = ANY (COALESCE(${_locationIds as string[]}, ARRAY [wo."locationId"]))
+        OR (wo."locationId" IS NULL AND ${_locationIds as string[]} :: text[] IS NULL)
+      );
   `;
 
   return workOrders.map(mapWorkOrder);

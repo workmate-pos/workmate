@@ -22,7 +22,7 @@ export function EmployeeSelector({ onSelect, onClear, useRouter }: EmployeeSelec
 
   return (
     <ListPopup
-      title={'Select Employee'}
+      title={'Select employee'}
       query={{ query, setQuery }}
       resourceName={{ singular: 'employee', plural: 'employees' }}
       isLoadingMore={employeesQuery.isFetching}
