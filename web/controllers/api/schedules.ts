@@ -58,14 +58,13 @@ import * as taskQueries from '../../services/tasks/queries.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 // TODO: Add to MANAGE_SCHEDULES permission to schedlue changing shit
-// TODO: Bug when you move events where they are assigned to every task
 
 @Authenticated()
-// Add permission middleware so we can access res.locals.teifi.user
 @Permission('none')
 export default class SchedulesController {
   @Get('/')
   @QuerySchema('schedules-pagination-options')
+  @Permission('manage_schedules')
   async getSchedules(
     req: Request<unknown, unknown, unknown, SchedulesPaginationOptions>,
     res: Response<GetSchedulesResponse>,
@@ -123,7 +122,6 @@ export default class SchedulesController {
       scheduleId: id === 'all' ? undefined : Number(id),
     });
 
-    // TODO: Fix tasks - incorrect numbers
     const [assignments, tasks] = await Promise.all([
       getScheduleEventAssignments(events.map(event => event.id)),
       getScheduleEventTasks(events.map(event => event.id)),
@@ -186,6 +184,7 @@ export default class SchedulesController {
 
   @Post('/')
   @BodySchema('upsert-schedule')
+  @Permission('manage_schedules')
   async createSchedule(req: Request<unknown, unknown, UpsertSchedule>, res: Response<GetScheduleResponse>) {
     const { shop }: Session = res.locals.shopify.session;
     const { name, locationId, publishedAt } = req.body;
@@ -202,6 +201,7 @@ export default class SchedulesController {
 
   @Post('/bulk')
   @BodySchema('bulk-upsert-schedules')
+  @Permission('manage_schedules')
   async bulkUpsertSchedules(req: Request<unknown, unknown, BulkUpsertSchedules>, res: Response<GetScheduleResponse[]>) {
     const { shop }: Session = res.locals.shopify.session;
 
@@ -219,6 +219,7 @@ export default class SchedulesController {
 
   @Delete('/bulk')
   @BodySchema('bulk-delete-schedules')
+  @Permission('manage_schedules')
   async bulkDeleteSchedules(req: Request<unknown, unknown, BulkDeleteSchedules>, res: Response<GetScheduleResponse[]>) {
     const { shop }: Session = res.locals.shopify.session;
 
@@ -358,6 +359,7 @@ export default class SchedulesController {
   }
 
   @Get('/:id')
+  @Permission('manage_schedules')
   async getSchedule(
     req: Request<{ id: string }, unknown, unknown, SchedulesPaginationOptions>,
     res: Response<GetScheduleResponse>,
@@ -376,6 +378,7 @@ export default class SchedulesController {
 
   @Post('/:id')
   @BodySchema('upsert-schedule')
+  @Permission('manage_schedules')
   async updateSchedule(req: Request<{ id: string }, unknown, UpsertSchedule>, res: Response<GetScheduleResponse>) {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
@@ -394,6 +397,7 @@ export default class SchedulesController {
 
   @Post('/:id/events')
   @BodySchema('upsert-schedule-event')
+  @Permission('manage_schedules')
   async createScheduleEvent(
     req: Request<{ id: string }, unknown, UpsertScheduleEvent>,
     res: Response<GetScheduleEventResponse>,
@@ -435,6 +439,7 @@ export default class SchedulesController {
 
   @Post('/:id/events/:eventId')
   @BodySchema('upsert-schedule-event')
+  @Permission('manage_schedules')
   async upsertScheduleEvents(
     req: Request<{ id: string; eventId: string }, unknown, UpsertScheduleEvent>,
     res: Response<GetScheduleEventResponse>,
@@ -481,6 +486,7 @@ export default class SchedulesController {
   }
 
   @Delete('/:id')
+  @Permission('manage_schedules')
   async deleteSchedule(req: Request<{ id: string }>, res: Response) {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
@@ -498,6 +504,7 @@ export default class SchedulesController {
   }
 
   @Delete('/:id/events/:eventId')
+  @Permission('manage_schedules')
   async deleteScheduleEvent(req: Request<{ id: string; eventId: string }>, res: Response) {
     const { shop }: Session = res.locals.shopify.session;
     const { id, eventId } = req.params;
