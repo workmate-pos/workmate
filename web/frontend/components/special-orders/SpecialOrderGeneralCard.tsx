@@ -103,7 +103,7 @@ export function SpecialOrderGeneralCard({
 
         {createSpecialOrder.companyId && (
           <TextField
-            label={'Company Location'}
+            label={'Company location'}
             requiredIndicator
             autoComplete={'off'}
             value={
@@ -185,7 +185,7 @@ export function SpecialOrderGeneralCard({
         />
 
         <TextField
-          label={'Required By'}
+          label={'Required by'}
           autoComplete={'off'}
           value={
             createSpecialOrder.requiredBy === null ? '' : new Date(createSpecialOrder.requiredBy).toLocaleDateString()

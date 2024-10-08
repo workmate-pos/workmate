@@ -32,7 +32,7 @@ export function SaveCustomFieldPresetModal({
 
   return (
     <Modal
-      title={'Save Custom Field Preset'}
+      title={'Save custom field preset'}
       open={open}
       onClose={onClose}
       primaryAction={{
@@ -58,7 +58,7 @@ export function SaveCustomFieldPresetModal({
       <Modal.Section>
         <BlockStack gap={'400'}>
           <TextField
-            label={'Preset Name'}
+            label={'Preset name'}
             autoComplete={'off'}
             requiredIndicator
             value={name}
@@ -67,7 +67,7 @@ export function SaveCustomFieldPresetModal({
             error={presetNameInUse ? 'A preset with this name already exists' : undefined}
           />
           <BlockStack gap={'150'}>
-            <Label id={'selected-fields'}>Selected Fields</Label>
+            <Label id={'selected-fields'}>Selected fields</Label>
             {selectedFieldNames.length === 0 && (
               <InlineError message={'You must select at least one field'} fieldID={'selected-fields'} />
             )}

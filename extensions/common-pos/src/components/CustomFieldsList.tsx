@@ -50,7 +50,7 @@ export function CustomFieldsList({
       ))}
 
       <FormButton
-        title={'Configure Custom Fields'}
+        title={'Configure custom fields'}
         onPress={() =>
           router.push('CustomFieldConfig', {
             initialCustomFields: customFields,

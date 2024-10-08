@@ -127,7 +127,7 @@ export function ProductSelector({
     <ScrollView>
       <ResponsiveGrid columns={3}>
         <Button
-          title={'New Product'}
+          title={'New product'}
           type={'primary'}
           onPress={() =>
             router.push('ProductCreator', {
@@ -150,7 +150,7 @@ export function ProductSelector({
           }
         />
         <Button
-          title={'Custom Product'}
+          title={'Custom product'}
           type={'primary'}
           onPress={async () => {
             await router.popCurrent();
@@ -172,7 +172,7 @@ export function ProductSelector({
         />
         <ResponsiveGrid columns={1} spacing={2}>
           <Button
-            title={'Select Locations'}
+            title={'Select locations'}
             onPress={() =>
               router.push('MultiLocationSelector', {
                 initialSelection: inventoryLocationIds,

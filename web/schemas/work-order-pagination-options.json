@@ -34,7 +34,7 @@
     },
     "paymentStatus": {
       "title": "payment-status",
-      "enum": ["UNPAID", "PARTIALLY_PAID", "FULLY_PAID"]
+      "enum": ["unpaid", "partially-paid", "fully-paid"]
     },
     "excludePaymentStatus": {
       "description": "If true, excludes the payment status rather than including it",
@@ -48,7 +48,7 @@
     },
     "purchaseOrderStatus": {
       "title": "purchase-order-status",
-      "enum": ["FULFILLED", "PENDING"]
+      "enum": ["fulfilled", "pending"]
     }
   },
   "required": ["limit", "offset"],

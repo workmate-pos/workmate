@@ -83,7 +83,7 @@ export function CycleCountSettings({
         }}
         textField={
           <Autocomplete.TextField
-            label="Default Status"
+            label="Default status"
             autoComplete="off"
             requiredIndicator
             value={defaultStatusValue}
@@ -94,7 +94,7 @@ export function CycleCountSettings({
       />
 
       <TextField
-        label="ID Format"
+        label="ID format"
         autoComplete="off"
         requiredIndicator
         helpText={

@@ -78,7 +78,7 @@ export function ProductVariantSelectorModal({ onSelect, filters, open, onClose }
   const page = productVariantsQuery.data?.pages[pageIndex] ?? [];
 
   return (
-    <Modal open={open} title={'Product Variants'} onClose={onClose}>
+    <Modal open={open} title={'Product variants'} onClose={onClose}>
       <ResourceList
         items={page}
         resourceName={{ singular: 'product variant', plural: 'product variants' }}
@@ -91,7 +91,7 @@ export function ProductVariantSelectorModal({ onSelect, filters, open, onClose }
         }}
         emptyState={
           <Card>
-            <EmptyState image={emptyState} heading={'Product Variants'}>
+            <EmptyState image={emptyState} heading={'Product variants'}>
               <Text as={'p'} variant={'bodyMd'}>
                 No product variants found
               </Text>

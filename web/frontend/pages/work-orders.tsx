@@ -32,7 +32,7 @@ export default function () {
   return (
     <Frame>
       <Page>
-        <PermissionBoundary permissions={['read_work_orders']}>
+        <PermissionBoundary permissions={['read_work_orders', 'read_settings']}>
           <WorkOrders />
         </PermissionBoundary>
       </Page>
@@ -83,9 +83,9 @@ function WorkOrders() {
   return (
     <>
       <TitleBar
-        title="Work Orders"
+        title="Work orders"
         primaryAction={{
-          content: 'New Work Order',
+          content: 'New work order',
           onAction: () => redirectToWorkOrder('new'),
         }}
         secondaryActions={[
@@ -111,7 +111,7 @@ function WorkOrders() {
       />
       <IndexTable
         headings={[
-          { title: 'Work Order' },
+          { title: 'Work order' },
           { title: 'Status' },
           { title: 'Customer' },
           { title: 'SO #' },
@@ -124,7 +124,7 @@ function WorkOrders() {
           !workOrderInfoQuery.isFetchingNextPage && (
             <Card>
               <EmptyState
-                heading={'Work Order'}
+                heading={'Work order'}
                 image={emptyState}
                 action={{
                   content: 'Create work order',
@@ -162,7 +162,7 @@ function WorkOrders() {
               </Text>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Badge tone={'info'}>{titleCase(workOrder.status)}</Badge>
+              <Badge tone={'info'}>{workOrder.status}</Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>
               {(() => {

@@ -43,7 +43,7 @@ export function PurchaseOrderWebhookSettings({
       />
       {settings.purchaseOrders.webhook.enabled && (
         <TextField
-          label={'Webhook Endpoint URL'}
+          label={'Webhook endpoint URL'}
           autoComplete="off"
           value={settings.purchaseOrders.webhook.endpointUrl ?? ''}
           disabled={settings.purchaseOrders.webhook.endpointUrl === null}

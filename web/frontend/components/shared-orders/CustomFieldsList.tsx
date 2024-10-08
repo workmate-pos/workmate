@@ -24,11 +24,11 @@ export function CustomFieldsList({
     <BlockStack gap={'400'}>
       <InlineStack align={'space-between'}>
         <Text as={'h2'} variant={'headingMd'} fontWeight={'bold'}>
-          Custom Fields
+          Custom fields
         </Text>
         <ButtonGroup>
           <Button variant={'plain'} onClick={() => onFieldValuesClick()} disabled={disabled}>
-            Field Values
+            Field values
           </Button>
           <Button variant={'plain'} onClick={() => onPresetsClick()} disabled={disabled}>
             Presets
@@ -55,7 +55,7 @@ export function CustomFieldsList({
       ))}
 
       <Button onClick={() => onAddCustomFieldClick()} disabled={disabled}>
-        Add Custom Field
+        Add custom field
       </Button>
     </BlockStack>
   );

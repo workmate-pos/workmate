@@ -11,7 +11,7 @@ export function LabourSettings({
   return (
     <BlockStack gap="400">
       <TextField
-        label={'Default Labour Line Item Name'}
+        label={'Default labour line item name'}
         autoComplete={'off'}
         value={settings.workOrders.charges.defaultLabourLineItemName}
         onChange={defaultLabourLineItemName =>
@@ -28,7 +28,7 @@ export function LabourSettings({
         }
       />
       <TextField
-        label={'Labour Line Item SKU'}
+        label={'Labour line item SKU'}
         autoComplete={'off'}
         value={settings.workOrders.charges.defaultLabourLineItemSKU}
         onChange={defaultLabourLineItemSKU =>
@@ -47,7 +47,7 @@ export function LabourSettings({
       <BlockStack>
         <Text as={'p'}>Enabled Labour Options</Text>
         <Checkbox
-          label={'Employee Assignments'}
+          label={'Employee assignments'}
           checked={settings.workOrders.charges.allowEmployeeAssignments}
           onChange={allowEmployeeAssignments =>
             setSettings({
@@ -63,7 +63,7 @@ export function LabourSettings({
           }
         />
         <Checkbox
-          label={'Hourly Labour'}
+          label={'Hourly labour'}
           checked={settings.workOrders.charges.allowHourlyLabour}
           onChange={allowHourlyLabour =>
             setSettings({

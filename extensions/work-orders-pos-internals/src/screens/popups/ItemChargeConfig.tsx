@@ -141,7 +141,7 @@ export function ItemChargeConfig({
 
   const itemCharges = [...employeeLabourCharges, ...(generalLabourCharge ? [generalLabourCharge] : [])].map(charge => ({
     ...charge,
-    name: charge.name || 'Unnamed Labour',
+    name: charge.name || 'Unnamed labour',
   }));
 
   const employeeAssignmentsEnabled = settings.workOrders.charges.allowEmployeeAssignments;
@@ -185,7 +185,7 @@ export function ItemChargeConfig({
             </Text>
 
             <FormMoneyField
-              label={'Unit Price'}
+              label={'Unit price'}
               min={0}
               value={item.unitPrice}
               onChange={value => {
@@ -308,7 +308,7 @@ export function ItemChargeConfig({
             >
               {BigDecimal.fromMoney(basePrice).compare(BigDecimal.ZERO) > 0 && (
                 <Text variant={'headingSmall'} color={'TextSubdued'}>
-                  {item.type === 'product' && item.absorbCharges ? 'Quantity-Adjusting Labour Rounding' : 'Base Price'}:{' '}
+                  {item.type === 'product' && item.absorbCharges ? 'Quantity-Adjusting Labour Rounding' : 'Base price'}:{' '}
                   {currencyFormatter(basePrice)}
                 </Text>
               )}

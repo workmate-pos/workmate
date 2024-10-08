@@ -22,7 +22,7 @@ export function CustomerSelector({ onSelect, onClear, useRouter }: CustomerSelec
 
   return (
     <ListPopup
-      title={'Select Customer'}
+      title={'Select customer'}
       query={{ query, setQuery }}
       resourceName={{ singular: 'customer', plural: 'customers' }}
       isLoadingMore={customersQuery.isFetching}

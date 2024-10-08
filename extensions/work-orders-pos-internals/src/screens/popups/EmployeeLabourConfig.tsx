@@ -54,7 +54,7 @@ export function EmployeeLabourConfig({
   return (
     <ScrollView>
       <Stack direction={'vertical'} spacing={5}>
-        <Text variant={'headingLarge'}>{employeeQuery?.data?.name ?? 'Unknown Employee'}</Text>
+        <Text variant={'headingLarge'}>{employeeQuery?.data?.name ?? 'Unknown employee'}</Text>
 
         <SegmentedLabourControl
           types={['hourly-labour', 'fixed-price-labour']}

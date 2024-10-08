@@ -142,7 +142,7 @@ export function ItemConfig({
                 </Text>
 
                 <FormMoneyField
-                  label={'Unit Price'}
+                  label={'Unit price'}
                   min={0}
                   value={item.unitPrice}
                   onChange={value => {
@@ -204,7 +204,7 @@ export function ItemConfig({
                 />
                 {canAddLabour && (
                   <FormButton
-                    title="Add Labour"
+                    title="Add labour"
                     action={'submit'}
                     onPress={async () => {
                       dispatch.updateItem({ item });

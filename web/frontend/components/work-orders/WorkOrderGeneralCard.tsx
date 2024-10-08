@@ -123,12 +123,12 @@ export function WorkOrderGeneralCard({
 
           {createWorkOrder.derivedFromOrderId && (
             <TextField
-              label={'Previous Order'}
+              label={'Previous order'}
               autoComplete={'off'}
               requiredIndicator
               value={
                 createWorkOrder.derivedFromOrderId && !derivedFromOrderQuery.isLoading
-                  ? (derivedFromOrder?.name ?? 'Unknown Order')
+                  ? (derivedFromOrder?.name ?? 'Unknown order')
                   : ''
               }
               loading={!!createWorkOrder.derivedFromOrderId && derivedFromOrderQuery.isLoading}
@@ -139,7 +139,7 @@ export function WorkOrderGeneralCard({
 
           {createWorkOrder.derivedFromOrderId && (derivedFromOrder?.workOrders?.length ?? 0) > 0 && (
             <TextField
-              label={'Previous Work Order'}
+              label={'Previous work order'}
               autoComplete={'off'}
               requiredIndicator
               value={derivedFromOrder?.workOrders.map(workOrder => workOrder.name).join(' • ') ?? ''}
@@ -200,7 +200,7 @@ export function WorkOrderGeneralCard({
 
           {createWorkOrder.companyId && (
             <TextField
-              label={'Payment Terms'}
+              label={'Payment terms'}
               autoComplete="off"
               requiredIndicator
               disabled={disabled || hasOrder}
@@ -216,7 +216,7 @@ export function WorkOrderGeneralCard({
             requiredIndicator
             value={
               createWorkOrder.customerId && !customerQuery.isLoading
-                ? (customer?.displayName ?? 'Unknown Customer')
+                ? (customer?.displayName ?? 'Unknown customer')
                 : ''
             }
             loading={!!createWorkOrder.customerId && customerQuery.isLoading}
@@ -267,7 +267,7 @@ export function WorkOrderGeneralCard({
           />
 
           <TextField
-            label={'Hidden Note'}
+            label={'Hidden note'}
             autoComplete={'off'}
             value={createWorkOrder.internalNote ?? ''}
             multiline={2}
@@ -276,7 +276,7 @@ export function WorkOrderGeneralCard({
           />
 
           <TextField
-            label={'Due Date'}
+            label={'Due date'}
             autoComplete={'off'}
             value={dueDateLocal.toLocaleDateString()}
             disabled={disabled}

@@ -21,7 +21,7 @@ import { CircleAlertMajor } from '@shopify/polaris-icons';
 import { useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useLaboursQuery } from '@work-orders/common/queries/use-labours-query.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { match } from 'ts-pattern';
@@ -180,7 +180,7 @@ export default function ServicesAndLabour() {
                         <Card>
                           {!labour.isError && (
                             <EmptyState
-                              heading={`${titleCase(labourType)} Labour`}
+                              heading={`${sentenceCase(labourType)} labour`}
                               image={emptyState}
                               action={{
                                 content: 'Create',
@@ -249,8 +249,8 @@ function useServiceRows(setToastAction: ToastActionCallable) {
       .otherwise(service => currencyFormatter(service.price));
 
     const type = match(getProductServiceType(service.product.serviceType?.value))
-      .with(QUANTITY_ADJUSTING_SERVICE, () => 'Dynamically Priced Service')
-      .with(FIXED_PRICE_SERVICE, () => 'Fixed-Price Service')
+      .with(QUANTITY_ADJUSTING_SERVICE, () => 'Dynamically priced service')
+      .with(FIXED_PRICE_SERVICE, () => 'Fixed-price service')
       .otherwise(() => 'Unknown');
 
     return (

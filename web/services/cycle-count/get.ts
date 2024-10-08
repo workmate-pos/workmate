@@ -20,7 +20,6 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { match } from 'ts-pattern';
 import { DateTime } from '../gql/queries/generated/schema.js';
-import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 export async function getDetailedCycleCount(session: Session, name: string, locationIds: ID[] | null) {
   const cycleCount = await getCycleCount({ shop: session.shop, name, locationIds });
@@ -87,9 +86,9 @@ export async function getDetailedCycleCountItems(cycleCountId: number) {
 
     const applicationStatus = match(lastItemApplication)
       .returnType<CycleCountApplicationStatus>()
-      .with(undefined, () => 'NOT_APPLIED')
-      .with({ appliedQuantity: item.countQuantity }, () => 'APPLIED')
-      .otherwise(() => 'PARTIALLY_APPLIED');
+      .with(undefined, () => 'not-applied')
+      .with({ appliedQuantity: item.countQuantity }, () => 'applied')
+      .otherwise(() => 'partially-applied');
 
     return {
       ...pick(
@@ -121,12 +120,12 @@ export async function getDetailedCycleCountEmployeeAssignments(cycleCountId: num
 }
 
 function deriveCycleCountApplicationStatus(items: DetailedCycleCountItem[]) {
-  const hasOnlyAppliedItems = items.every(hasPropertyValue('applicationStatus', 'APPLIED'));
-  const hasOnlyNotAppliedItems = items.every(hasPropertyValue('applicationStatus', 'NOT_APPLIED'));
+  const hasOnlyAppliedItems = items.every(hasPropertyValue('applicationStatus', 'applied'));
+  const hasOnlyNotAppliedItems = items.every(hasPropertyValue('applicationStatus', 'not-applied'));
 
   return match({ hasOnlyAppliedItems, hasOnlyNotAppliedItems })
     .returnType<CycleCountApplicationStatus>()
-    .with({ hasOnlyNotAppliedItems: true }, () => 'NOT_APPLIED')
-    .with({ hasOnlyAppliedItems: true }, () => 'APPLIED')
-    .otherwise(() => 'PARTIALLY_APPLIED');
+    .with({ hasOnlyNotAppliedItems: true }, () => 'not-applied')
+    .with({ hasOnlyAppliedItems: true }, () => 'applied')
+    .otherwise(() => 'partially-applied');
 }

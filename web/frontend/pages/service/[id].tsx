@@ -199,15 +199,15 @@ export default function Service() {
                       error={fields.description.errors?.join(', ')}
                     />
                     <Select
-                      label={'Service Type'}
+                      label={'Service type'}
                       options={[
                         {
                           value: 'dynamic' satisfies UpsertService['type'],
-                          label: 'Dynamically-Priced Service',
+                          label: 'Dynamically-priced service',
                         },
                         {
                           value: 'fixed' satisfies UpsertService['type'],
-                          label: 'Fixed-Price Service',
+                          label: 'Fixed-price service',
                         },
                       ]}
                       value={type}
@@ -241,7 +241,7 @@ export default function Service() {
                     {type === 'dynamic' && (
                       <>
                         <TextField
-                          label={'Default Labour'}
+                          label={'Default labour'}
                           helpText={
                             'These labour charges will automatically be added to this service when it is added to a work order.' +
                             ' You can add more labour charges during work order creation in Point of Sale or Shopify Admin.'
@@ -338,10 +338,10 @@ function LabourSelectorModal({
   return (
     <Modal
       open={open}
-      title={'Select Labour'}
+      title={'Select labour'}
       onClose={onClose}
       primaryAction={{
-        content: 'New Labour',
+        content: 'New labour',
         onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/labour/new'),
       }}
       secondaryActions={[

@@ -37,7 +37,7 @@ export function CustomFieldPresetsModal({
   });
 
   return (
-    <Modal open={open} title={'Custom Field Presets'} onClose={onClose}>
+    <Modal open={open} title={'Custom field presets'} onClose={onClose}>
       <ResourceList
         items={filteredPresets}
         resourceName={{ plural: 'presets', singular: 'preset' }}

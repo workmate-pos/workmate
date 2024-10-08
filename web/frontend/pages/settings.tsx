@@ -96,7 +96,7 @@ function Settings() {
 
   const tabs = [
     {
-      name: 'Work Orders',
+      name: 'Work orders',
       tab: (
         <>
           <WorkOrderSettings
@@ -116,7 +116,7 @@ function Settings() {
       ),
     },
     {
-      name: 'Purchase Orders',
+      name: 'Purchase orders',
       tab: (
         <>
           <PurchaseOrderSettings
@@ -132,11 +132,11 @@ function Settings() {
       ),
     },
     {
-      name: 'Stock Transfers',
+      name: 'Stock transfers',
       tab: <StockTransferSettings settings={settings} setSettings={setSettings} />,
     },
     {
-      name: 'Cycle Counts',
+      name: 'Cycle counts',
       tab: (
         <CycleCountSettings
           settings={settings}
@@ -146,7 +146,7 @@ function Settings() {
       ),
     },
     {
-      name: 'Special Orders',
+      name: 'Special orders',
       tab: <SpecialOrderSettings settings={settings} setSettings={setSettings} />,
     },
     {
@@ -159,7 +159,7 @@ function Settings() {
       fullWidth: true,
     },
     {
-      name: 'Line Items',
+      name: 'Line items',
       tab: <CustomFieldSettings type="LINE_ITEM" />,
     },
     {
@@ -173,11 +173,11 @@ function Settings() {
       ),
     },
     {
-      name: 'Custom Fields',
+      name: 'Custom fields',
       tab: <CustomFieldSettings />,
     },
     {
-      name: 'Franchise Mode',
+      name: 'Franchise mode',
       tab: <FranchiseModeSettings settings={settings} setSettings={setSettings} />,
     },
     {

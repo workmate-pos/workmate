@@ -81,7 +81,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
   const emailTabs = [
     {
       id: 'default',
-      label: 'Default Email',
+      label: 'Default email',
       content: <TextField autoComplete="off" label={'Email'} value={email} disabled requiredIndicator />,
       onClick: () => {
         setEmail(printSettings?.defaultEmail ?? '');
@@ -89,7 +89,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
     },
     {
       id: 'employee',
-      label: 'Your Email',
+      label: 'Your email',
       content: <TextField autoComplete="off" label={'Email'} value={email} disabled requiredIndicator />,
       disabled: !currentEmployee?.email,
       onClick: () => {
@@ -103,7 +103,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
     },
     {
       id: 'customer',
-      label: 'Customer Email',
+      label: 'Customer email',
       content: <TextField autoComplete="off" label={'Email'} value={email} disabled requiredIndicator />,
       disabled: !customer?.email,
       hidden: props.type === 'purchase-order',
@@ -118,7 +118,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
     },
     {
       id: 'custom',
-      label: 'Custom Email',
+      label: 'Custom email',
       disabled: !printSettings?.allowCustomEmail,
       content: <TextField autoComplete="off" label={'Email'} value={email} onChange={setEmail} requiredIndicator />,
       onClick: () => {
@@ -132,7 +132,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
   const fromTabs = [
     {
       id: 'default',
-      label: 'Default From',
+      label: 'Default from',
       content: <TextField autoComplete="off" label={'From'} value={from} disabled requiredIndicator />,
       onClick: () => {
         setFrom(printSettings?.defaultFrom ?? '');
@@ -140,7 +140,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
     },
     {
       id: 'employee',
-      label: 'From You',
+      label: 'From you',
       content: <TextField autoComplete="off" label={'From'} value={from} disabled requiredIndicator />,
       disabled: !currentEmployee?.name,
       onClick: () => {
@@ -154,7 +154,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
     },
     {
       id: 'custom',
-      label: 'Custom From',
+      label: 'Custom from',
       disabled: !printSettings?.allowCustomFrom,
       content: <TextField autoComplete="off" label={'From'} value={from} onChange={setFrom} requiredIndicator />,
       onClick: () => {
@@ -168,16 +168,16 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
   const replyToTabs = [
     {
       id: 'default',
-      label: 'Default Reply To',
-      content: <TextField autoComplete="off" label={'Reply To'} value={replyTo} disabled />,
+      label: 'Default reply-to',
+      content: <TextField autoComplete="off" label={'Reply-to'} value={replyTo} disabled />,
       onClick: () => {
         setReplyTo(printSettings?.defaultReplyTo ?? '');
       },
     },
     {
       id: 'employee',
-      label: 'Reply To You',
-      content: <TextField autoComplete="off" label={'Reply To'} value={replyTo} disabled />,
+      label: 'Reply to you',
+      content: <TextField autoComplete="off" label={'Reply-to'} value={replyTo} disabled />,
       disabled: !currentEmployee?.email,
       onClick: () => {
         if (!currentEmployee?.email) {
@@ -190,9 +190,9 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
     },
     {
       id: 'custom',
-      label: 'Custom Reply To',
+      label: 'Custom reply-to',
       disabled: !printSettings?.allowCustomReplyTo,
-      content: <TextField autoComplete="off" label={'Reply To'} value={replyTo} onChange={setReplyTo} />,
+      content: <TextField autoComplete="off" label={'Reply-to'} value={replyTo} onChange={setReplyTo} />,
       onClick: () => {
         if (!printSettings?.allowCustomReplyTo) {
           setToastAction({ content: 'Custom reply to is not allowed' });
@@ -329,12 +329,12 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
       <Modal.Section>
         <FormLayout>
           <Select
-            label={'Print Template'}
+            label={'Print template'}
             disabled={isLoading}
             requiredIndicator
             options={[
               {
-                label: 'Select Template',
+                label: 'Select template',
                 value: '',
                 disabled: true,
               },

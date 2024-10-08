@@ -6,7 +6,7 @@ import { useSaveCustomFieldValueOptionsMutation } from '@work-orders/common/quer
 import { useDeleteCustomFieldValueOptionsMutation } from '@work-orders/common/queries/use-delete-custom-field-value-options-mutation.js';
 import { FormLayout, Modal, Tabs, Text, TextField } from '@shopify/polaris';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 const tabIds = ['allow-any-value', 'choose-from-options'] as const;
 type TabId = (typeof tabIds)[number];
@@ -39,7 +39,7 @@ export function CustomFieldValuesModal({ open, onClose, name }: { open: boolean;
       <Modal
         open={open}
         onClose={onClose}
-        title={'Custom Field Values'}
+        title={'Custom field values'}
         primaryAction={{
           content: 'Save',
           loading: saveCustomFieldValueOptionsMutation.isPending || deleteCustomFieldValueOptionsMutation.isPending,
@@ -93,7 +93,7 @@ export function CustomFieldValuesModal({ open, onClose, name }: { open: boolean;
             <Tabs
               tabs={tabIds.map(id => ({
                 id,
-                content: titleCase(id),
+                content: sentenceCase(id),
               }))}
               selected={tabIds.indexOf(tab)}
               onSelect={index => setTab(tabIds[index] ?? tab)}

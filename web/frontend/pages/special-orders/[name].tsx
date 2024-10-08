@@ -154,7 +154,7 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
 
   return (
     <Box paddingBlockEnd={'1600'}>
-      <TitleBar title={'Special Orders'} />
+      <TitleBar title={'Special orders'} />
 
       <ContextualSaveBar
         fullWidth

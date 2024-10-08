@@ -34,7 +34,7 @@ export function LocationSelectorModal({
 
   return (
     <>
-      <Modal open={open} title={'Select Location'} onClose={onClose}>
+      <Modal open={open} title={'Select location'} onClose={onClose}>
         <ResourceList
           items={locations}
           resourceName={{ singular: 'location', plural: 'locations' }}

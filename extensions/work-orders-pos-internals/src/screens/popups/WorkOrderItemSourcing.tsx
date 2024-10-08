@@ -152,7 +152,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             }}
           />
           <Button
-            title={'Create Transfer Order'}
+            title={'Create transfer order'}
             isDisabled={isSubmitting}
             onPress={() =>
               router.push('CreateTransferOrderForLocation', {
@@ -162,7 +162,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             }
           />
           <Button
-            title={'Create Special Order'}
+            title={'Create special order'}
             isDisabled={isSubmitting}
             onPress={() =>
               router.push('CreateSpecialOrderList', {

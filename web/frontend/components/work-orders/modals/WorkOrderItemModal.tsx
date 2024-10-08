@@ -106,7 +106,7 @@ export function WorkOrderItemModal({
 
   const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
-  const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
+  const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown product';
 
   const readonly = !!itemLineItem?.order;
   const isServiceItem = getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== null;
@@ -135,7 +135,7 @@ export function WorkOrderItemModal({
         secondaryActions={[
           canRemoveLabour && shouldShowCharges
             ? {
-                content: 'Remove Labour',
+                content: 'Remove labour',
                 onAction: () => {
                   setGeneralCharge(null);
                   setEmployeeCharges([]);
@@ -145,7 +145,7 @@ export function WorkOrderItemModal({
             : null,
           canAddLabour && !shouldShowCharges
             ? {
-                content: 'Add Labour',
+                content: 'Add labour',
                 onAction: () => {
                   setForceShowCharges(true);
                 },
@@ -188,7 +188,7 @@ export function WorkOrderItemModal({
               />
 
               <MoneyField
-                label={'Unit Price'}
+                label={'Unit price'}
                 autoComplete="off"
                 min={0}
                 value={item.unitPrice}

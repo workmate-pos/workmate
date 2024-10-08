@@ -42,7 +42,7 @@ export function MultiLocationSelector({
 
   return (
     <>
-      <Modal open={open} title={'Select Locations'} onClose={onClose}>
+      <Modal open={open} title={'Select locations'} onClose={onClose}>
         <ResourceList
           items={page}
           resourceName={{ singular: 'location', plural: 'locations' }}

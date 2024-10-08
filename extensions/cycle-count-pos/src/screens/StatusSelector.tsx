@@ -11,7 +11,7 @@ export function StatusSelector({ onSelect, onClear }: { onSelect: (status: strin
   const settingsQuery = useSettingsQuery({ fetch });
 
   const screen = useScreen();
-  screen.setTitle('Select Status');
+  screen.setTitle('Select status');
   screen.setIsLoading(settingsQuery.isLoading);
 
   const router = useRouter();
@@ -43,7 +43,7 @@ export function StatusSelector({ onSelect, onClear }: { onSelect: (status: strin
 
   return (
     <ListPopup
-      title={'Select Status'}
+      title={'Select status'}
       selection={{
         type: 'select',
         items: statuses.map(status => ({ id: status, leftSide: { label: status } })),

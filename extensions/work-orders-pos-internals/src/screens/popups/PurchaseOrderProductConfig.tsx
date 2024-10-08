@@ -5,7 +5,7 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { Button, ScrollView, Stack, Stepper, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { Int } from '@web/schemas/generated/create-work-order.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
@@ -55,7 +55,7 @@ export function PurchaseOrderProductConfig({
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
-  screen.setTitle(getProductVariantName(productVariant) ?? 'Product Config');
+  screen.setTitle(getProductVariantName(productVariant) ?? 'Product config');
   screen.setIsLoading(
     !product || productVariantQuery.isLoading || inventoryItemQuery.isLoading || locationQuery.isLoading,
   );
@@ -69,7 +69,7 @@ export function PurchaseOrderProductConfig({
       {product && (
         <Stack direction="vertical" spacing={5} flexChildren flex={1}>
           <Stack direction="vertical">
-            <Text variant="headingLarge">{getProductVariantName(productVariant) ?? 'Unknown Product'}</Text>
+            <Text variant="headingLarge">{getProductVariantName(productVariant) ?? 'Unknown product'}</Text>
             <Text variant="body" color="TextSubdued">
               {productVariant?.sku}
             </Text>
@@ -86,7 +86,7 @@ export function PurchaseOrderProductConfig({
           <Stack direction={'vertical'} paddingVertical={'Medium'}>
             <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="headingSmall" color="TextSubdued">
-                Stock at {locationQuery.data?.name ?? 'Unknown Location'}
+                Stock at {locationQuery.data?.name ?? 'Unknown location'}
               </Text>
             </Stack>
 
@@ -127,7 +127,7 @@ export function PurchaseOrderProductConfig({
                 {inventoryLevel?.quantities?.flatMap(({ name, quantity }) => [
                   <Stack key={`${name}-title`} direction={'horizontal'} alignment={'center'}>
                     <Text variant="body" color="TextSubdued">
-                      {titleCase(name)}
+                      {sentenceCase(name)}
                     </Text>
                   </Stack>,
                   <Stack key={`${name}-quantity`} direction={'horizontal'} alignment={'center'}>
@@ -147,7 +147,7 @@ export function PurchaseOrderProductConfig({
               </Text>
             </Stack>
             <FormStringField
-              label={'Serial Number'}
+              label={'Serial number'}
               value={product.serialNumber ?? ''}
               onChange={serialNumber => {
                 setHasUnsavedChanges(true);
@@ -208,7 +208,7 @@ export function PurchaseOrderProductConfig({
               </Text>
             </Stack>
             <FormMoneyField
-              label={'Unit Cost'}
+              label={'Unit cost'}
               value={product.unitCost}
               min={0}
               disabled={isImmutable}
