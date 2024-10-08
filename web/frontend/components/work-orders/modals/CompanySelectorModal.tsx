@@ -33,7 +33,7 @@ export function CompanySelectorModal({
     !!storeProperties && !!storeProperties.plan && SHOPIFY_B2B_PLANS.includes(storeProperties.plan);
 
   return (
-    <Modal open={open} title={'Select Company'} onClose={onClose}>
+    <Modal open={open} title={'Select company'} onClose={onClose}>
       {!canSelectCompany && (
         <Modal.Section>
           <Text as={'p'} variant={'bodyMd'} tone={'critical'}>

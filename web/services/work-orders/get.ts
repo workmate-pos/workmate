@@ -336,10 +336,10 @@ export async function getWorkOrderInfoPage(
   const inverseOrderConditions = paginationOptions.excludePaymentStatus ?? false;
 
   const purchaseOrdersFulfilled = {
-    FULFILLED: true,
-    PENDING: false,
-    UNDEFINED: undefined,
-  }[paginationOptions.purchaseOrderStatus ?? 'UNDEFINED'];
+    fulfilled: true,
+    pending: false,
+    undefined: undefined,
+  }[paginationOptions.purchaseOrderStatus ?? 'undefined'];
 
   const page = await db.workOrder.getPage({
     shop: session.shop,
@@ -355,9 +355,9 @@ export async function getWorkOrderInfoPage(
     beforeDueDate: paginationOptions.beforeDueDate,
     purchaseOrdersFulfilled,
     inverseOrderConditions,
-    unpaid: paginationOptions.paymentStatus === 'UNPAID',
-    partiallyPaid: paginationOptions.paymentStatus === 'PARTIALLY_PAID',
-    fullyPaid: paginationOptions.paymentStatus === 'FULLY_PAID',
+    unpaid: paginationOptions.paymentStatus === 'unpaid',
+    partiallyPaid: paginationOptions.paymentStatus === 'partially-paid',
+    fullyPaid: paginationOptions.paymentStatus === 'fully-paid',
     locationIds,
   });
 

@@ -165,7 +165,7 @@ export function PaymentOverview({ name }: { name: string }) {
   const totalBigDecimal = BigDecimal.fromMoney(total);
 
   if (outstandingBigDecimal.compare(BigDecimal.ZERO) <= 0) {
-    financialStatus = 'Fully Paid';
+    financialStatus = 'Fully paid';
   } else if (outstandingBigDecimal.compare(totalBigDecimal) < 0) {
     financialStatus = 'Partially paid';
   } else {
@@ -210,7 +210,7 @@ export function PaymentOverview({ name }: { name: string }) {
         <ResponsiveGrid columns={2}>
           {!!workOrder.companyId && (
             <Button
-              title={'Create Order'}
+              title={'Create order'}
               isLoading={createWorkOrderOrderMutation.isPending}
               isDisabled={isLoading || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length}
               onPress={() => createOrder()}
@@ -220,7 +220,7 @@ export function PaymentOverview({ name }: { name: string }) {
 
           {!workOrder.companyId && (
             <Button
-              title={'Create Payment'}
+              title={'Create payment'}
               isLoading={planOrderQuery.isFetching || paymentHandler.isLoading}
               isDisabled={
                 isLoading || !!workOrder.companyId || !planOrderQuery.data || !planOrderQuery.data.lineItems?.length

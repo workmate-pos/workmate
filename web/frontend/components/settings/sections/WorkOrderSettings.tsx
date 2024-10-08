@@ -88,7 +88,7 @@ export function WorkOrderSettings({
         }}
         textField={
           <Autocomplete.TextField
-            label="Default Status"
+            label="Default status"
             autoComplete="off"
             requiredIndicator
             value={defaultWorkOrderStatusValue}
@@ -98,7 +98,7 @@ export function WorkOrderSettings({
         }
       />
       <TextField
-        label="ID Format"
+        label="ID format"
         autoComplete="off"
         requiredIndicator
         helpText={

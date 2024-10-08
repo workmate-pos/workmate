@@ -21,7 +21,7 @@ export function VendorSelector({ onSelect, onClear, useRouter }: VendorSelectorP
 
   return (
     <ListPopup
-      title={'Select Vendor'}
+      title={'Select vendor'}
       query={{ query, setQuery }}
       isLoadingMore={vendorsQuery.isFetching}
       resourceName={{ singular: 'vendor', plural: 'vendors' }}

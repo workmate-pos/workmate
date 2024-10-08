@@ -89,7 +89,7 @@ export function PurchaseOrderSettings({
         }}
         textField={
           <Autocomplete.TextField
-            label="Default Status"
+            label="Default status"
             autoComplete="off"
             requiredIndicator
             value={defaultPurchaseOrderStatusValue}
@@ -100,7 +100,7 @@ export function PurchaseOrderSettings({
       />
 
       <TextField
-        label="ID Format"
+        label="ID format"
         autoComplete="off"
         requiredIndicator
         helpText={

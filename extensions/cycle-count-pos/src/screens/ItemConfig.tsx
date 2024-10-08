@@ -38,7 +38,7 @@ export function ItemConfig({
         title: item.productVariantTitle,
         product: { title: item.productTitle, hasOnlyDefaultVariant: false },
       },
-    ) ?? 'Unknown Product';
+    ) ?? 'Unknown product';
 
   const cycleCountItem = cycleCountQuery.data?.items.find(hasPropertyValue('uuid', item.uuid));
 
@@ -54,7 +54,7 @@ export function ItemConfig({
           flexWrap={'wrap'}
         >
           <Text variant={'headingLarge'}>{label}</Text>
-          <Badge {...getCycleCountApplicationStateBadge(cycleCountItem?.applicationStatus ?? 'NOT_APPLIED')} />
+          <Badge {...getCycleCountApplicationStateBadge(cycleCountItem?.applicationStatus ?? 'not-applied')} />
         </ResponsiveStack>
 
         <ResponsiveStack direction={'vertical'} alignment={'center'} spacing={0.5}>

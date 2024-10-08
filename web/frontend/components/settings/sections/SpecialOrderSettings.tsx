@@ -12,7 +12,7 @@ export function SpecialOrderSettings({
   return (
     <BlockStack gap={'400'}>
       <TextField
-        label="ID Format"
+        label="ID format"
         autoComplete="off"
         requiredIndicator
         helpText={

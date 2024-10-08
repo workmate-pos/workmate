@@ -22,7 +22,7 @@ export function MultiLocationSelector({ onSelect, initialSelection, useRouter }:
 
   return (
     <ListPopup
-      title={'Select Locations'}
+      title={'Select locations'}
       query={{ query, setQuery }}
       resourceName={{ singular: 'location', plural: 'locations' }}
       isLoadingMore={locationsQuery.isFetching}

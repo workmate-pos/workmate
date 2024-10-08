@@ -96,7 +96,7 @@ export default class PurchaseOrdersController {
     const { name, template } = req.params;
     const { date, replyTo, from, email } = req.query;
 
-    const { printing, purchaseOrders } = await getShopSettings(session.shop);
+    const { purchaseOrders } = await getShopSettings(session.shop);
 
     if (!Object.keys(purchaseOrders.printTemplates).includes(template)) {
       throw new HttpError('Unknown print template', 400);

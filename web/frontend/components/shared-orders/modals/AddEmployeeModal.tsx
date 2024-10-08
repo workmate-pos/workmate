@@ -36,7 +36,7 @@ export function AddEmployeeModal({
   const hasNextPage = !isLastAvailablePage || employeesQuery.hasNextPage;
 
   return (
-    <Modal open={open} title={'Assign Employees'} onClose={onClose}>
+    <Modal open={open} title={'Assign employees'} onClose={onClose}>
       <ResourceList
         items={items}
         resourceName={{ plural: 'employees', singular: 'employee' }}

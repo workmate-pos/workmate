@@ -101,7 +101,7 @@ export function PurchaseOrderGeneralCard({
               isLoadingLocation
                 ? ''
                 : createPurchaseOrder.locationId
-                  ? selectedLocation?.name ?? 'Unknown location'
+                  ? (selectedLocation?.name ?? 'Unknown location')
                   : ''
             }
             onFocus={() => onLocationSelectorClick()}
@@ -119,7 +119,7 @@ export function PurchaseOrderGeneralCard({
           />
 
           <TextField
-            label={'Placed Date'}
+            label={'Placed date'}
             autoComplete={'off'}
             value={placedDate?.toLocaleDateString()}
             disabled={disabled}

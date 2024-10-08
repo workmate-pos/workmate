@@ -180,7 +180,7 @@ export function ScannerSettings({
       </BlockStack>
 
       <SearchableChoiceList
-        title="Product Metafields"
+        title="Product metafields"
         choices={productMetafieldChoices}
         onChange={product =>
           setSettings({

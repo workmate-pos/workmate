@@ -111,7 +111,7 @@ export function StockTransferEntry() {
       >
         {selectedSegment === 'INCOMING_TRANSFERS' && (
           <Button
-            title={'New Incoming Transfer'}
+            title={'New incoming transfer'}
             onPress={() =>
               router.push('StockTransfer', { initial: { ...defaultCreateStockTransfer, toLocationId: locationId } })
             }
@@ -119,7 +119,7 @@ export function StockTransferEntry() {
         )}
         {selectedSegment === 'OUTGOING_TRANSFERS' && (
           <Button
-            title={'New Outgoing Transfer'}
+            title={'New outgoing transfer'}
             onPress={() =>
               router.push('StockTransfer', { initial: { ...defaultCreateStockTransfer, fromLocationId: locationId } })
             }

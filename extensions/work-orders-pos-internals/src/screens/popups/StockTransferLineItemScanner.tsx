@@ -19,7 +19,7 @@ import { Dispatch, ReactNode, SetStateAction, useCallback, useEffect, useMemo, u
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
 import { getStockTransferLineItemStatusBadgeProps } from '../../util/stock-transfer-line-item-status-badge-props.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useProductVariantByBarcodeQuery } from '@work-orders/common/queries/use-product-variant-by-barcode-query.js';
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
@@ -99,7 +99,7 @@ export type Action = {
  * Has three modes: "Add new line items"/"Send line items"/"Receive line items"
  * In "Add new line items" mode, you scan a barcode after which you click "Add" or "Send" to add/send a pending line item.
  * In the "Send line items" mode, you scan a barcode and select "Send" to change the status of this product. If there are no corresponding "Pending" line items, the "Send" button will be grayed out with a help text.
- * In "Receive line items" mode, you scan a barcode and select "Receive"/"Reject"/"Restock". This will update products with status "In Transit", or will create a new product if none of these are present.
+ * In "Receive line items" mode, you scan a barcode and select "Receive"/"Reject"/"Restock". This will update products with status "In transit", or will create a new product if none of these are present.
  *
  * If a non-camera scanner is available is also possible to enable Auto-Scan. In this mode you select a status which all scanned products will be updated to.
  * This is useful if you have a "scan" e.g. on your POS Go or external scanner.
@@ -182,7 +182,7 @@ export function StockTransferLineItemScanner({
         const quantity = ((actionToMerge?.quantity ?? 0) + 1) as Int;
 
         if (mode.fromStatus && quantity > currentModeScannedProductQuantity) {
-          toast.show(`Not enough ${titleCase(mode.fromStatus)} items available`);
+          toast.show(`Not enough ${sentenceCase(mode.fromStatus).toLowerCase()} items available`);
           return actions;
         }
 
@@ -322,7 +322,7 @@ export function StockTransferLineItemScanner({
           <Banner
             title={
               mode.fromStatus
-                ? `Not enough ${titleCase(mode.fromStatus)} items available`
+                ? `Not enough ${sentenceCase(mode.fromStatus).toLowerCase()} items available`
                 : 'Not enough items available'
             }
             variant={'information'}
@@ -335,7 +335,7 @@ export function StockTransferLineItemScanner({
           {mode.toStatuses.map(status => (
             <Button
               key={status}
-              title={(autoScanStatus === status ? 'Auto-Scan: ' : '') + titleCase(status)}
+              title={(autoScanStatus === status ? 'Auto-Scan: ' : '') + sentenceCase(status).toLowerCase()}
               isDisabled={disableActionButtons}
               onPress={() => {
                 if (autoScanStatus) {

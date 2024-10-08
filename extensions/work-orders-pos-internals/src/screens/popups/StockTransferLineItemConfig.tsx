@@ -10,7 +10,7 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { useRouter } from '../../routes.js';
@@ -47,7 +47,7 @@ export function StockTransferLineItemConfig({
     getProductVariantName({
       title: lineItem.productVariantTitle,
       product: { title: lineItem.productTitle, hasOnlyDefaultVariant: true },
-    }) ?? 'Unknown Product';
+    }) ?? 'Unknown product';
 
   const screen = useScreen();
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
@@ -82,7 +82,7 @@ export function StockTransferLineItemConfig({
                 {inventoryItemQuery?.data?.inventoryLevel?.quantities?.flatMap(({ name, quantity }) => [
                   <Stack key={`${name}-title`} direction={'horizontal'} alignment={'center'}>
                     <Text variant="body" color="TextSubdued">
-                      {titleCase(name)}
+                      {sentenceCase(name)}
                     </Text>
                   </Stack>,
                   <Stack key={`${name}-quantity`} direction={'horizontal'} alignment={'center'}>

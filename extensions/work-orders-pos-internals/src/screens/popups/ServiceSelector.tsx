@@ -102,7 +102,7 @@ export function ServiceSelector({
     <ScrollView>
       <ResponsiveGrid columns={2}>
         <Button
-          title={'New Service'}
+          title={'New service'}
           type={'primary'}
           onPress={() =>
             router.push('ProductCreator', {

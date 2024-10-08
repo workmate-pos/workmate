@@ -17,8 +17,8 @@ export async function getSpecialOrderVendors({ specialOrderLocationId, specialOr
                                  WHERE spo."locationId" = COALESCE(${_locationId}, spo."locationId")
                                  GROUP BY spoli.id
                                  HAVING CASE ${_lineItemOrderState}
-                                          WHEN 'FULLY_ORDERED' THEN spoli.quantity <= COALESCE(SUM(poli.quantity), 0)
-                                          WHEN 'NOT_FULLY_ORDERED' THEN spoli.quantity > COALESCE(SUM(poli.quantity), 0)
+                                          WHEN 'fully-ordered' THEN spoli.quantity <= COALESCE(SUM(poli.quantity), 0)
+                                          WHEN 'not-fully-ordered' THEN spoli.quantity > COALESCE(SUM(poli.quantity), 0)
                                           ELSE TRUE
                                           END)
   `;

@@ -227,7 +227,7 @@ function Employees() {
                 ? [
                     {
                       key: 'location',
-                      label: locationQuery.data?.name ?? 'Unknown Location',
+                      label: locationQuery.data?.name ?? 'Unknown location',
                       onRemove: () => setLocationId(undefined),
                     },
                   ]
@@ -288,7 +288,7 @@ function Employees() {
           <IndexTable
             headings={[
               { title: 'Employee' },
-              { title: 'Hourly Rate' },
+              { title: 'Hourly rate' },
               { title: 'Role' },
               ...(shouldShowLocations ? [{ title: 'Locations' }] : []),
             ]}
@@ -330,7 +330,7 @@ function Employees() {
               <IndexTable.Row key={employee.id} id="employee-id" position={i}>
                 <IndexTable.Cell>
                   <BlockStack>
-                    <Text as={'p'}>{employee.name || 'Unnamed Staff Member'}</Text>
+                    <Text as={'p'}>{employee.name || 'Unnamed staff member'}</Text>
                     <Text as={'p'} tone={'subdued'}>
                       {employee.email}
                     </Text>
@@ -391,7 +391,7 @@ function Employees() {
                         role => role.value,
                       ),
                       {
-                        title: 'Danger Zone',
+                        title: 'Danger zone',
                         options: [
                           {
                             label: 'Superuser',

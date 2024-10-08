@@ -93,7 +93,7 @@ export function SegmentedChargeConfig({
           {charge?.type === 'hourly-labour' && (
             <>
               <MoneyField
-                label={'Hourly Rate'}
+                label={'Hourly rate'}
                 autoComplete="off"
                 disabled={disabled}
                 readOnly={charge.rateLocked}
@@ -153,7 +153,7 @@ export function SegmentedChargeConfig({
     },
     {
       id: 'fixed-price-labour',
-      name: 'Fixed Price',
+      name: 'Fixed price',
       tab: (
         <>
           {charge?.type === 'fixed-price-labour' && (
@@ -218,7 +218,7 @@ export function SegmentedChargeConfig({
           <BlockStack gap={'400'}>
             {charge && (
               <TextField
-                label={'Labour Name'}
+                label={'Labour name'}
                 autoComplete="off"
                 requiredIndicator
                 value={charge.name}

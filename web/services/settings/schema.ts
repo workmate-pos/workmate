@@ -94,9 +94,9 @@ function migrateShopSettings(shopSettings: AnyShopSettingsVersion): ShopSettings
             ? shopSettings.printEmail
             : undefined,
 
-          allowCustomTitle: true,
           allowCustomReplyTo: true,
           allowCustomEmail: true,
+          allowCustomFrom: true,
         },
         locationOverrides: {},
       },

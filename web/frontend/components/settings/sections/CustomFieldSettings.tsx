@@ -7,7 +7,7 @@ import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-
 import { useAllCustomFieldValueOptionsQuery } from '@work-orders/common/queries/use-all-custom-field-value-options-query.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CustomFieldsPresetType } from '@web/controllers/api/custom-fields-presets.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 /**
  * Custom field settings section.
@@ -33,7 +33,7 @@ export function CustomFieldSettings({ type }: { type?: CustomFieldsPresetType })
     <BlockStack gap="400">
       {types.map(type => (
         <Button key={type} onClick={() => setPresetsModalType(type)}>
-          Custom Field Presets ({titleCase(type)})
+          Custom field presets ({sentenceCase(type)})
         </Button>
       ))}
 
@@ -42,7 +42,7 @@ export function CustomFieldSettings({ type }: { type?: CustomFieldsPresetType })
         loading={customFieldValueOptionsQuery.isLoading}
         disabled={!customFieldValueOptionsQuery.data}
       >
-        Custom Field Values
+        Custom field values
       </Button>
 
       {!!presetsModalType && (

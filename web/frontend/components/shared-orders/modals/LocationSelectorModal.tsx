@@ -1,5 +1,5 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { ToastActionCallable, useToast } from '@teifi-digital/shopify-app-react';
+import { useToast } from '@teifi-digital/shopify-app-react';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { useEffect, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -10,10 +10,12 @@ export function LocationSelectorModal({
   open,
   onClose,
   onSelect,
+  disabledLocationIds,
 }: {
   open: boolean;
   onClose: () => void;
   onSelect: (locationId: ID) => void;
+  disabledLocationIds?: ID[];
 }) {
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
   const [page, setPage] = useState(0);
@@ -32,7 +34,7 @@ export function LocationSelectorModal({
 
   return (
     <>
-      <Modal open={open} title={'Select Location'} onClose={onClose}>
+      <Modal open={open} title={'Select location'} onClose={onClose}>
         <ResourceList
           items={locations}
           resourceName={{ singular: 'location', plural: 'locations' }}
@@ -50,6 +52,7 @@ export function LocationSelectorModal({
           renderItem={location => (
             <ResourceItem
               id={location.id}
+              disabled={!!disabledLocationIds?.includes(location.id)}
               onClick={() => {
                 onSelect(location.id);
                 onClose();

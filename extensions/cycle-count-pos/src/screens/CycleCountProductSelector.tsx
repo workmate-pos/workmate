@@ -60,7 +60,7 @@ export function CycleCountProductSelector({ onSelect }: { onSelect: (productVari
     <ScrollView>
       <ResponsiveGrid columns={2}>
         <Button
-          title={'Import Vendor Products'}
+          title={'Import vendor products'}
           onPress={() =>
             router.push('VendorSelector', {
               onSelect: (vendorName, productVariants) => selectProductVariants(productVariants),
@@ -123,7 +123,7 @@ function useProductVariantRows(
   selectProducts: (productVariants: ProductVariant[]) => void,
 ) {
   return productVariants.map<ListRow>(variant => {
-    const displayName = getProductVariantName(variant) ?? 'Unknown Product';
+    const displayName = getProductVariantName(variant) ?? 'Unknown product';
     const imageUrl = variant.image?.url ?? variant.product?.featuredImage?.url;
 
     return {

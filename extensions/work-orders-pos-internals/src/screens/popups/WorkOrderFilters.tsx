@@ -11,7 +11,7 @@ import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export type WorkOrderFiltersObj = {
   status?: string;
@@ -183,16 +183,16 @@ export function WorkOrderFiltersDisplay({ filters }: { filters: WorkOrderFilters
   const customerQuery = useCustomerQuery({ fetch, id: customerId ?? null });
 
   const data: ([string, string] | null)[] = [
-    status ? ['Status', titleCase(status)] : null,
-    paymentStatus ? ['Payment Status', titleCase(paymentStatus)] : null,
-    overdueStatus ? ['Overdue Status', titleCase(overdueStatus)] : null,
-    purchaseOrderStatus ? ['Purchase Order Status', titleCase(purchaseOrderStatus)] : null,
+    status ? ['Status', sentenceCase(status)] : null,
+    paymentStatus ? ['Payment status', sentenceCase(paymentStatus)] : null,
+    overdueStatus ? ['Overdue status', sentenceCase(overdueStatus)] : null,
+    purchaseOrderStatus ? ['Purchase order status', sentenceCase(purchaseOrderStatus)] : null,
     customerId ? ['Customer', customerQuery.data?.displayName ?? 'Unknown customer'] : null,
     employeeIds.length
       ? ['Employees', employeeIds.map(id => employeeQueries[id]?.data?.name ?? 'Unknown employee').join(', ')]
       : null,
     customFieldFilters.length
-      ? ['Custom Fields', customFieldFilters.map(f => getCustomFieldFilterText(f)).join(', ')]
+      ? ['Custom fields', customFieldFilters.map(f => getCustomFieldFilterText(f)).join(', ')]
       : null,
   ];
 

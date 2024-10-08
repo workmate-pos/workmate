@@ -28,7 +28,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { useAppBridge } from '@shopify/app-bridge-react';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { getCreatePurchaseOrderForSpecialOrders } from '@work-orders/common/create-purchase-order/from-special-orders.js';
 
@@ -57,7 +57,7 @@ function Merge() {
     fetch,
     filters: {
       specialOrderLocationId: locationId,
-      specialOrderLineItemOrderState: 'NOT_FULLY_ORDERED',
+      specialOrderLineItemOrderState: 'not-fully-ordered',
     },
   });
   const locationsQuery = useLocationsQuery({ fetch, params: {} });
@@ -67,7 +67,7 @@ function Merge() {
       query,
       locationId,
       lineItemVendorName: vendorName,
-      lineItemOrderState: 'NOT_FULLY_ORDERED',
+      lineItemOrderState: 'not-fully-ordered',
       limit: 25,
     },
   });
@@ -119,7 +119,7 @@ function Merge() {
         tabs={[
           {
             id: 'All',
-            content: 'All Locations',
+            content: 'All locations',
             onAction: () => {
               setLocationId(undefined);
               clearSelection();
@@ -153,7 +153,7 @@ function Merge() {
         tabs={[
           {
             id: 'All',
-            content: 'All Vendors',
+            content: 'All vendors',
             onAction: () => {
               setVendorName(undefined);
               clearSelection();
@@ -190,12 +190,12 @@ function Merge() {
 
       <IndexTable
         headings={[
-          { title: 'Special Order' },
-          { title: 'Order State' },
-          { title: 'PO State' },
+          { title: 'Special order' },
+          { title: 'Order state' },
+          { title: 'PO state' },
           { title: 'Location' },
           { title: 'Customer' },
-          { title: 'Required By' },
+          { title: 'Required by' },
           { title: 'PO #' },
           { title: 'SO #' },
           { title: 'WO #' },
@@ -212,7 +212,7 @@ function Merge() {
           lineItemCustomFieldsPresetsQuery.isLoading
         }
         emptyState={
-          <EmptyState heading={'Special Orders'} image={emptyState}>
+          <EmptyState heading={'Special orders'} image={emptyState}>
             {page.length === 0 && 'No special orders found'}
           </EmptyState>
         }
@@ -305,11 +305,11 @@ function Merge() {
               </Text>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Badge tone={'info'}>{titleCase(specialOrder.orderState)}</Badge>
+              <Badge tone={'info'}>{sentenceCase(specialOrder.orderState)}</Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>
               {specialOrder.purchaseOrders.length > 0 && (
-                <Badge tone={'info'}>{titleCase(specialOrder.purchaseOrderState)}</Badge>
+                <Badge tone={'info'}>{sentenceCase(specialOrder.purchaseOrderState)}</Badge>
               )}
             </IndexTable.Cell>
             <IndexTable.Cell>

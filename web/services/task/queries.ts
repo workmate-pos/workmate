@@ -48,7 +48,7 @@ export async function updateTask({
   await sql`
     UPDATE "Task"
     SET "progress"    = ${progress},
-        "progressMax" = ${progressMax}
+        "progressMax" = ${progressMax!}
     WHERE name = ${name};
   `;
 }

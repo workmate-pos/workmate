@@ -90,7 +90,7 @@ export function Entry() {
 
         <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           <Button
-            title={'New Cycle Count'}
+            title={'New cycle count'}
             type={'primary'}
             onPress={() =>
               router.push('CycleCount', {
@@ -218,9 +218,9 @@ function useListRows(cycleCounts: DetailedCycleCount[], setSelectedCycleCountNam
             return {
               text: `Due ${date.toLocaleDateString()}`,
               variant:
-                new Date().getTime() > date.getTime() && cycleCount.applicationStatus !== 'APPLIED'
+                new Date().getTime() > date.getTime() && cycleCount.applicationStatus !== 'applied'
                   ? 'critical'
-                  : cycleCount.applicationStatus === 'APPLIED'
+                  : cycleCount.applicationStatus === 'applied'
                     ? 'success'
                     : 'warning',
             };
@@ -257,12 +257,12 @@ export function getCycleCountApplicationStateBadge(
 ): BadgeProps {
   const changed = quantities?.appliedQuantity !== quantities?.countQuantity;
 
-  if (applicationStatus === 'NOT_APPLIED') {
-    return { text: 'Not Applied', variant: 'highlight', status: 'empty' };
+  if (applicationStatus === 'not-applied') {
+    return { text: 'Not applied', variant: 'highlight', status: 'empty' };
   }
 
-  if (applicationStatus === 'PARTIALLY_APPLIED' || (applicationStatus === 'APPLIED' && changed)) {
-    let text = 'Partially Applied';
+  if (applicationStatus === 'partially-applied' || (applicationStatus === 'applied' && changed)) {
+    let text = 'Partially applied';
 
     if (quantities) {
       text += ` (${quantities.appliedQuantity})`;
@@ -271,7 +271,7 @@ export function getCycleCountApplicationStateBadge(
     return { text, variant: 'highlight', status: 'partial' };
   }
 
-  if (applicationStatus === 'APPLIED') {
+  if (applicationStatus === 'applied') {
     return { text: 'Applied', variant: 'success', status: 'complete' };
   }
 

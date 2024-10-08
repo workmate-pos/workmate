@@ -1,7 +1,7 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
-import { ContextualSaveBar, Loading, useAppBridge } from '@shopify/app-bridge-react';
+import { ContextualSaveBar, Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useSettingsMutation } from '../queries/use-settings-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
@@ -96,7 +96,7 @@ function Settings() {
 
   const tabs = [
     {
-      name: 'Work Orders',
+      name: 'Work orders',
       tab: (
         <>
           <WorkOrderSettings
@@ -116,7 +116,7 @@ function Settings() {
       ),
     },
     {
-      name: 'Purchase Orders',
+      name: 'Purchase orders',
       tab: (
         <>
           <PurchaseOrderSettings
@@ -132,11 +132,11 @@ function Settings() {
       ),
     },
     {
-      name: 'Stock Transfers',
+      name: 'Stock transfers',
       tab: <StockTransferSettings settings={settings} setSettings={setSettings} />,
     },
     {
-      name: 'Cycle Counts',
+      name: 'Cycle counts',
       tab: (
         <CycleCountSettings
           settings={settings}
@@ -146,7 +146,7 @@ function Settings() {
       ),
     },
     {
-      name: 'Special Orders',
+      name: 'Special orders',
       tab: <SpecialOrderSettings settings={settings} setSettings={setSettings} />,
     },
     {
@@ -159,25 +159,25 @@ function Settings() {
       fullWidth: true,
     },
     {
-      name: 'Line Items',
+      name: 'Line items',
       tab: <CustomFieldSettings type="LINE_ITEM" />,
     },
     {
       name: 'Printing',
       tab: (
         <>
-          <PrintSettings settings={settings} setSettings={setSettings} />
-          <Divider />
           <EmailSettings settings={settings} setSettings={setSettings} />
+          <Divider />
+          <PrintSettings settings={settings} setSettings={setSettings} />
         </>
       ),
     },
     {
-      name: 'Custom Fields',
+      name: 'Custom fields',
       tab: <CustomFieldSettings />,
     },
     {
-      name: 'Franchise Mode',
+      name: 'Franchise mode',
       tab: <FranchiseModeSettings settings={settings} setSettings={setSettings} />,
     },
     {
@@ -199,6 +199,8 @@ function Settings() {
 
   return (
     <Page fullWidth={tabs[selectedTab]?.fullWidth}>
+      <TitleBar title="Settings" />
+
       <ContextualSaveBar
         saveAction={{
           disabled: !canWriteSettings || !isValid,

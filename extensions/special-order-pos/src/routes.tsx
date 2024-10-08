@@ -19,7 +19,7 @@ import { SpecialOrderFilters } from './screens/special-order/SpecialOrderFilters
 
 export const { Router, useRouter } = createRouter({
   Entry: {
-    title: 'Special Orders',
+    title: 'Special orders',
     Component: () => (
       <ScreenPermissionBoundary permissions={['read_special_orders']}>
         <Entry />
@@ -27,7 +27,7 @@ export const { Router, useRouter } = createRouter({
     ),
   },
   SpecialOrder: {
-    title: 'Special Order',
+    title: 'Special order',
     Component: SpecialOrder,
   },
   SpecialOrderLineItemConfig: {
@@ -42,41 +42,41 @@ export const { Router, useRouter } = createRouter({
   },
   // TODO: have ListPopup-based standard components like this all in common pos
   CustomerSelector: {
-    title: 'Select Customer',
+    title: 'Select customer',
     Component: (props: Omit<CustomerSelectorProps, 'useRouter'>) => (
       <CustomerSelector {...props} useRouter={useRouter} />
     ),
   },
   LocationSelector: {
-    title: 'Select Location',
+    title: 'Select location',
     Component: (props: Omit<LocationSelectorProps, 'useRouter'>) => (
       <LocationSelector {...props} useRouter={useRouter} />
     ),
   },
   VendorSelector: {
-    title: 'Select Vendor',
+    title: 'Select vendor',
     Component: (props: Omit<VendorSelectorProps, 'useRouter'>) => <VendorSelector {...props} useRouter={useRouter} />,
   },
   OrderStateSelector: {
-    title: 'Select Order State',
+    title: 'Select order state',
     Component: OrderStateSelector,
   },
   PurchaseOrderStateSelector: {
-    title: 'Select Purchase Order State',
+    title: 'Select purchase order state',
     Component: PurchaseOrderStateSelector,
   },
   CompanySelector: {
-    title: 'Select Company',
+    title: 'Select company',
     Component: (props: Omit<CompanySelectorProps, 'useRouter'>) => <CompanySelector {...props} useRouter={useRouter} />,
   },
   CompanyLocationSelector: {
-    title: 'Select Company Location',
+    title: 'Select company location',
     Component: (props: Omit<CompanyLocationSelectorProps, 'useRouter'>) => (
       <CompanyLocationSelector {...props} useRouter={useRouter} />
     ),
   },
   SpecialOrderFilters: {
-    title: 'Special Order Filters',
+    title: 'Special order filters',
     Component: SpecialOrderFilters,
   },
 });

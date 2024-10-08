@@ -15,7 +15,7 @@ type SegmentId = CreateWorkOrderCharge['type'] | 'none';
 
 const segmentLabels: Record<SegmentId, string> = {
   none: 'None',
-  'fixed-price-labour': 'Fixed Price',
+  'fixed-price-labour': 'Fixed price',
   'hourly-labour': 'Hourly',
 };
 
@@ -130,7 +130,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       )}
       {charge && (
         <TextField
-          label={'Labour Name'}
+          label={'Labour name'}
           value={charge.name}
           onChange={(name: string) => onChange({ ...charge, name })}
           isValid={charge.name.length > 0}
@@ -152,7 +152,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
           </Stack>
 
           <FormMoneyField
-            label={'Hourly Rate'}
+            label={'Hourly rate'}
             disabled={disabled || charge.rateLocked}
             value={charge.rate}
             min={0}

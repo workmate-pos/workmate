@@ -92,7 +92,7 @@ export function Entry() {
           {false && (
             <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
               <Button
-                title={'New Special Order'}
+                title={'New special order'}
                 type={'primary'}
                 onPress={() =>
                   router.push('SpecialOrder', {
