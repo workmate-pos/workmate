@@ -17,8 +17,7 @@ import { PrintSettings } from '@web/frontend/components/settings/sections/PrintS
 import { PurchaseOrderWebhookSettings } from '@web/frontend/components/settings/sections/PurchaseOrderWebhookSettings.js';
 import { useSearchParams } from 'react-router-dom';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { WorkOrderRequestSettings } from '@web/frontend/components/settings/sections/WorkOrderRequestSettings.js';
-import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
+import { VendorMetafieldSettings } from '@web/frontend/components/settings/sections/VendorMetafieldSettings.js';
 import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
 import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
 import { CycleCountSettings } from '@web/frontend/components/settings/sections/CycleCountSettings.js';
@@ -26,6 +25,7 @@ import { SpecialOrderSettings } from '@web/frontend/components/settings/sections
 import { ScannerSettings } from '@web/frontend/components/settings/sections/ScannerSettings.js';
 import { ShopSettings } from '@web/services/settings/schema.js';
 import { RolesSettings } from '@web/frontend/components/settings/sections/RolesSettings.js';
+import { FranchiseModeSettings } from '@web/frontend/components/settings/sections/FranchiseModeSettings.js';
 
 export default function () {
   return (
@@ -102,7 +102,7 @@ function Settings() {
           <WorkOrderSettings
             settings={settings}
             setSettings={setSettings}
-            defaultWorkOrderStatusValue={settings.defaultStatus}
+            defaultWorkOrderStatusValue={settings.workOrders.defaultStatus}
           />
           <Divider />
           <DiscountSettings settings={settings} setSettings={setSettings} />
@@ -110,8 +110,6 @@ function Settings() {
           <LabourSettings settings={settings} setSettings={setSettings} />
           <Divider />
           <RatesSettings settings={settings} setSettings={setSettings} />
-          <Divider />
-          <WorkOrderRequestSettings settings={settings} setSettings={setSettings} />
           <Divider />
           <CustomFieldSettings type="WORK_ORDER" />
         </>
@@ -124,10 +122,10 @@ function Settings() {
           <PurchaseOrderSettings
             settings={settings}
             setSettings={setSettings}
-            defaultPurchaseOrderStatusValue={settings.defaultPurchaseOrderStatus}
+            defaultPurchaseOrderStatusValue={settings.purchaseOrders.defaultStatus}
           />
           <Divider />
-          <CustomerMetafieldSettings settings={settings} setSettings={setSettings} />
+          <VendorMetafieldSettings settings={settings} setSettings={setSettings} />
           <Divider />
           <CustomFieldSettings type="PURCHASE_ORDER" />
         </>
@@ -177,6 +175,10 @@ function Settings() {
     {
       name: 'Custom Fields',
       tab: <CustomFieldSettings />,
+    },
+    {
+      name: 'Franchise Mode',
+      tab: <FranchiseModeSettings settings={settings} setSettings={setSettings} />,
     },
     {
       name: 'Integrations',

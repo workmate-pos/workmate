@@ -144,7 +144,7 @@ export function ItemChargeConfig({
     name: charge.name || 'Unnamed Labour',
   }));
 
-  const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
+  const employeeAssignmentsEnabled = settings.workOrders.charges.allowEmployeeAssignments;
   const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabourCharges.length > 0;
 
   const basePrice = calculatedDraftOrderQuery.getItemPrice(item) ?? BigDecimal.ZERO.toMoney();
@@ -254,7 +254,7 @@ export function ItemChargeConfig({
                                   employeeId,
                                   type: 'fixed-price-labour',
                                   uuid: uuid() as UUID,
-                                  name: settings?.labourLineItemName || 'Labour',
+                                  name: settings?.workOrders.charges.defaultLabourLineItemName || 'Labour',
                                   amount: BigDecimal.ZERO.toMoney(),
                                   workOrderItemUuid: item.uuid,
                                   amountLocked: false,

@@ -3,15 +3,13 @@ import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digita
 import { Request, Response } from 'express-serve-static-core';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
-import type { CreateWorkOrderRequest } from '../../schemas/generated/create-work-order-request.js';
 import { getDetailedWorkOrder, getWorkOrderInfoPage } from '../../services/work-orders/get.js';
 import { getShopSettings } from '../../services/settings/settings.js';
 import { upsertWorkOrder } from '../../services/work-orders/upsert.js';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
-import { sessionStorage } from '../../index.js';
 import { calculateWorkOrder } from '../../services/work-orders/calculate.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { mg } from '../../services/mail/mailgun.js';
@@ -29,6 +27,7 @@ import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
 import { getWorkOrderCsvTemplatesZip, readWorkOrderCsvImport } from '../../services/work-orders/csv-import.js';
 import { transaction } from '../../services/db/transaction.js';
 import * as Sentry from '@sentry/node';
+import { z } from 'zod';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -40,8 +39,9 @@ export default class WorkOrderController {
     res: Response<CalculateDraftOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
 
-    const calculatedDraft = await calculateWorkOrder(session, req.body, { includeExistingOrders: true });
+    const calculatedDraft = await calculateWorkOrder(session, req.body, user, { includeExistingOrders: true });
 
     return res.json(calculatedDraft);
   }
@@ -57,7 +57,7 @@ export default class WorkOrderController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     const { name } = await upsertWorkOrder(session, user, createWorkOrder);
-    const workOrder = await getDetailedWorkOrder(session, name);
+    const workOrder = await getDetailedWorkOrder(session, name, user.user.allowedLocationIds);
 
     return res.json(workOrder ?? never());
   }
@@ -71,8 +71,9 @@ export default class WorkOrderController {
     res: Response<CreateWorkOrderOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
 
-    const { order, workOrder } = await createWorkOrderOrder(session, req.body);
+    const { order, workOrder } = await createWorkOrderOrder(session, req.body, user);
     await cleanOrphanedDraftOrders(session, workOrder.id, () => syncShopifyOrders(session, [order.id]));
 
     return res.json(order);
@@ -113,60 +114,6 @@ export default class WorkOrderController {
     return res.json(draftOrderInput);
   }
 
-  @Post('/request')
-  @BodySchema('create-work-order-request')
-  async createWorkOrderRequest(
-    req: Request<unknown, unknown, CreateWorkOrderRequest>,
-    res: Response<CreateWorkOrderRequestResponse>,
-  ) {
-    const createWorkOrderRequest = req.body;
-
-    // provided by app proxy (https://shopify.dev/docs/apps/online-store/app-proxies)
-    // TODO: decorator in shopify-app-express
-    const { logged_in_customer_id: customerId, shop } = req.query;
-
-    if (typeof customerId !== 'string') {
-      throw new HttpError('Customer ID is required', 400);
-    }
-
-    if (typeof shop !== 'string') {
-      throw new HttpError('Shop is required', 400);
-    }
-
-    const settings = await getShopSettings(shop);
-
-    if (!settings.workOrderRequests.enabled) {
-      throw new HttpError('Work order requests are disabled', 403);
-    }
-
-    const session = await sessionStorage.fetchOfflineSessionByShop(shop);
-
-    if (!session) {
-      throw new HttpError('Shop is not installed', 400);
-    }
-
-    const { name } = await upsertWorkOrder(session, null, {
-      status: settings.workOrderRequests.status,
-      dueDate: createWorkOrderRequest.dueDate,
-      customerId: createGid('Customer', customerId),
-      note: createWorkOrderRequest.description,
-      charges: [],
-      items: [],
-      derivedFromOrderId: null,
-      name: null,
-      customFields: {},
-      discount: null,
-      internalNote: '',
-      companyContactId: null,
-      companyLocationId: null,
-      companyId: null,
-      paymentTerms: null,
-      serial: null,
-    });
-
-    return res.json({ name });
-  }
-
   @Get('/')
   @QuerySchema('work-order-pagination-options')
   @Authenticated()
@@ -176,9 +123,10 @@ export default class WorkOrderController {
     res: Response<FetchWorkOrderInfoPageResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const paginationOptions = req.query;
 
-    const workOrders = await getWorkOrderInfoPage(session, paginationOptions);
+    const workOrders = await getWorkOrderInfoPage(session, paginationOptions, user.user.allowedLocationIds);
 
     return res.json(workOrders);
   }
@@ -188,9 +136,10 @@ export default class WorkOrderController {
   @Permission('read_work_orders')
   async fetchWorkOrder(req: Request<{ name: string }>, res: Response<FetchWorkOrderResponse>) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    const workOrder = await getDetailedWorkOrder(session, name);
+    const workOrder = await getDetailedWorkOrder(session, name, user.user.allowedLocationIds);
 
     if (!workOrder) {
       throw new HttpError(`Work order ${name} not found`, 404);
@@ -208,21 +157,27 @@ export default class WorkOrderController {
     res: Response<PrintWorkOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+
     const { name, template } = req.params;
-    const { date, dueDate } = req.query;
+    const { date, dueDate, replyTo, from, email } = req.query;
 
-    const { emailReplyTo, emailFromTitle, workOrderPrintTemplates, printEmail } = await getShopSettings(session.shop);
+    const { workOrders, printing } = await getShopSettings(session.shop);
 
-    if (!Object.keys(workOrderPrintTemplates).includes(template)) {
+    if (!Object.keys(workOrders.printTemplates).includes(template)) {
       throw new HttpError('Unknown print template', 400);
     }
 
-    if (!printEmail) {
-      throw new HttpError('No print email address set', 400);
+    if (!z.string().email().safeParse(replyTo).success) {
+      throw new HttpError('Invalid reply to email', 400);
     }
 
-    const printTemplate = workOrderPrintTemplates[template] ?? never();
-    const context = await getWorkOrderTemplateData(session, name, date, dueDate);
+    if (!z.string().email().safeParse(from).success) {
+      throw new HttpError('Invalid from email', 400);
+    }
+
+    const printTemplate = workOrders.printTemplates[template] ?? never();
+    const context = await getWorkOrderTemplateData(session, name, date, dueDate, user);
     const { subject, html } = await getRenderedWorkOrderTemplate(printTemplate, context);
     const file = await renderHtmlToPdfCustomFile(subject, html);
 
@@ -230,17 +185,17 @@ export default class WorkOrderController {
       {
         name: 'Sending work order print email',
         attributes: {
-          emailFromTitle,
-          emailReplyTo,
-          printEmail,
+          replyTo,
+          from,
+          email,
           subject,
         },
       },
       () =>
         mg.send(
-          { emailReplyTo, emailFromTitle },
+          { replyTo, from },
           {
-            to: printEmail,
+            to: email,
             attachment: [file],
             subject,
             text: 'WorkMate Work Order',

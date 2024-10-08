@@ -12,9 +12,10 @@ import { getDetailedWorkOrder } from '../../work-orders/get.js';
 import { DetailedWorkOrderCharge } from '../../work-orders/types.js';
 import { subtractMoney } from '../../../util/money.js';
 import { ShopSettings } from '../../settings/schema.js';
+import { LocalsTeifiUser } from '../../../decorators/permission.js';
 
 export async function getRenderedWorkOrderTemplate(
-  printTemplate: ShopSettings['workOrderPrintTemplates'][string],
+  printTemplate: ShopSettings['workOrders']['printTemplates'][string],
   context: WorkOrderTemplateData,
 ) {
   const { template, subject } = printTemplate;
@@ -32,8 +33,9 @@ export async function getWorkOrderTemplateData(
   workOrderName: string,
   clientDate: string,
   clientDueDate: string,
+  user: LocalsTeifiUser,
 ): Promise<WorkOrderTemplateData> {
-  const workOrder = await getDetailedWorkOrder(session, workOrderName);
+  const workOrder = await getDetailedWorkOrder(session, workOrderName, user.user.allowedLocationIds);
 
   if (!workOrder) {
     throw new HttpError(`Work order ${workOrderName} not found`, 404);
@@ -56,7 +58,7 @@ export async function getWorkOrderTemplateData(
     },
   ] = await Promise.all([
     db.customers.get({ customerId: workOrder.customerId }),
-    calculateWorkOrder(session, workOrder, { includeExistingOrders: true }),
+    calculateWorkOrder(session, workOrder, user, { includeExistingOrders: true }),
   ]);
 
   const paid = subtractMoney(total, outstanding);

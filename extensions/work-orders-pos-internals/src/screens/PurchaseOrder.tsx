@@ -12,7 +12,7 @@ import {
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { CreatePurchaseOrder, DateTime, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useEffect, useState, useReducer, useRef } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
@@ -194,6 +194,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
                   onSelect: location => dispatch.setLocation({ locationId: location.id }),
                 });
               }}
+              required
               disabled={!!createPurchaseOrder.name && createPurchaseOrder.locationId !== null}
               value={selectedLocation?.name ?? ''}
             />

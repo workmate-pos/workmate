@@ -6,7 +6,7 @@ import { isGidWithNamespace } from '@work-orders/common/util/gid.js';
 import { Liquid } from 'liquidjs';
 
 export const zID = z.string().refine(isGid);
-export const zNamespacedID = (type: string) => z.string().refine(isGidWithNamespace(type));
+export const zNamespacedID = (type: string) => zID.refine(id => isGidWithNamespace(type)(id));
 export const zDateTime = z
   .string()
   .refine((value): value is DateTime => !isNaN(new Date(value).getTime()), { message: 'Not a valid date' });

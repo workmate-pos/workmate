@@ -116,8 +116,8 @@ function WorkOrderLoader() {
   if (workOrderQuery.data?.workOrder) {
     createWorkOrder = workOrderToCreateWorkOrder(workOrderQuery.data.workOrder);
   } else {
-    const { defaultStatus } = settingsQuery.data.settings;
-    createWorkOrder = defaultCreateWorkOrder({ status: defaultStatus });
+    const { workOrders } = settingsQuery.data.settings;
+    createWorkOrder = defaultCreateWorkOrder({ status: workOrders.defaultStatus });
 
     createWorkOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,
@@ -250,7 +250,7 @@ function WorkOrder({
           <Select
             label={'Status'}
             requiredIndicator
-            options={settings.statuses}
+            options={settings.workOrders.statuses}
             onChange={status => dispatch.setPartial({ status })}
             value={createWorkOrder.status}
             disabled={workOrderMutation.isPending}

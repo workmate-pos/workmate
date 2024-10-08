@@ -9,8 +9,20 @@
     "dueDate": {
       "description": "A due date to display in the work order printout",
       "type": "string"
+    },
+    "replyTo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "email": {
+      "type": "string",
+      "minLength": 1
+    },
+    "from": {
+      "type": "string",
+      "minLength": 1
     }
   },
-  "required": ["date", "dueDate"],
+  "required": ["date", "dueDate", "replyTo", "email", "from"],
   "additionalProperties": false
 }

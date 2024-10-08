@@ -6,7 +6,7 @@ import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-tool
 import { hasReadUsersScope } from '../shop.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { getDefaultRole } from '../permissions/permissions.js';
+import { getDefaultRoleUuid } from '../permissions/permissions.js';
 import { getStaffMembers, upsertStaffMembers } from './queries.js';
 
 export async function ensureStaffMembersExist(session: Session, staffMemberIds: ID[]) {
@@ -75,7 +75,7 @@ async function upsertGraphqlStaffMembers(
 
   const [knownStaffMembers, defaultRole] = await Promise.all([
     getStaffMembers(shop, staffMemberIds),
-    getDefaultRole(shop),
+    getDefaultRoleUuid(shop),
   ]);
 
   await Promise.all([

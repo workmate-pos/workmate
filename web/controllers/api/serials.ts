@@ -8,8 +8,10 @@ import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CreateSerial } from '../../schemas/generated/create-serial.js';
 import { upsertSerial } from '../../services/serials/upsert.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 
 @Authenticated()
+@Permission('none')
 export default class SerialsController {
   @Get('/')
   @QuerySchema('serial-pagination-options')
@@ -18,9 +20,14 @@ export default class SerialsController {
     res: Response<FetchSerialsResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const paginationOptions = req.query;
 
-    const { serials, hasNextPage } = await getDetailedSerialsPage(session.shop, paginationOptions);
+    const { serials, hasNextPage } = await getDetailedSerialsPage(
+      session.shop,
+      paginationOptions,
+      user.user.allowedLocationIds,
+    );
 
     return res.json({ serials, hasNextPage });
   }
@@ -28,13 +35,15 @@ export default class SerialsController {
   @Get('/:productVariantId/:serial')
   async fetchSerial(req: Request<{ productVariantId: string; serial: string }>, res: Response<FetchSerialResponse>) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { serial, productVariantId } = req.params;
 
     return res.json(
-      await getDetailedSerial(session.shop, {
-        serial,
-        productVariantId: createGid('ProductVariant', productVariantId),
-      }),
+      await getDetailedSerial(
+        session.shop,
+        { serial, productVariantId: createGid('ProductVariant', productVariantId) },
+        user.user.allowedLocationIds,
+      ),
     );
   }
 
@@ -42,15 +51,17 @@ export default class SerialsController {
   @BodySchema('create-serial')
   async createSerial(req: Request<unknown, unknown, CreateSerial>, res: Response<CreateSerialResponse>) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const createSerial = req.body;
 
-    await upsertSerial(session, createSerial);
+    await upsertSerial(session, user, createSerial);
 
     return res.json(
-      await getDetailedSerial(session.shop, {
-        serial: createSerial.serial,
-        productVariantId: createSerial.productVariantId,
-      }).then(serial => serial ?? never()),
+      await getDetailedSerial(
+        session.shop,
+        { serial: createSerial.serial, productVariantId: createSerial.productVariantId },
+        user.user.allowedLocationIds,
+      ).then(serial => serial ?? never()),
     );
   }
 }

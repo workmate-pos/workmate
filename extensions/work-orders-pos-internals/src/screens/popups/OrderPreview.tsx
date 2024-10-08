@@ -65,7 +65,7 @@ export function OrderPreview({
       router.push('WorkOrder', {
         initial: {
           ...defaultCreateWorkOrder({
-            status: settingsQuery.data.settings.defaultStatus,
+            status: settingsQuery.data.settings.workOrders.defaultStatus,
           }),
           customerId: order.customer?.id ?? null,
         },

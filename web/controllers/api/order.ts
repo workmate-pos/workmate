@@ -70,7 +70,7 @@ export default class OrderController {
       throw new HttpError('Order is not associated with a work order', 400);
     }
 
-    const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName });
+    const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName, locationIds: null });
 
     if (!workOrder) {
       throw new HttpError('Order is associated with an unknown work order', 400);

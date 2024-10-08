@@ -27,7 +27,7 @@ export function PurchaseOrderStatusSelector({ onSelect }: { onSelect: (status: s
   return (
     <ScrollView>
       <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
-        {settingsQuery.data.settings.purchaseOrderStatuses.map(status => (
+        {settingsQuery.data.settings.purchaseOrders.statuses.map(status => (
           <Button
             key={status}
             title={titleCase(status)}

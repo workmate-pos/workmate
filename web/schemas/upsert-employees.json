@@ -26,9 +26,15 @@
           },
           "superuser": {
             "type": "boolean"
+          },
+          "locationIds": {
+            "type": "array",
+            "items": {
+              "$ref": "scalars.json#/definitions/ID"
+            }
           }
         },
-        "required": ["staffMemberId", "rate", "superuser", "role"],
+        "required": ["staffMemberId", "rate", "superuser", "role", "locationIds"],
         "additionalProperties": false
       }
     }

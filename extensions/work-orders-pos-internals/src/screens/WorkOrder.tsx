@@ -1,7 +1,6 @@
 import {
   BadgeProps,
   Banner,
-  Button,
   DateField,
   List,
   ListRow,
@@ -62,6 +61,7 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -286,6 +286,9 @@ function WorkOrderProperties({
   const storePropertiesQuery = useStorePropertiesQuery({ fetch });
   const storeProperties = storePropertiesQuery.data?.storeProperties;
 
+  const locationQuery = useLocationQuery({ fetch, id: createWorkOrder.locationId });
+  const location = locationQuery.data;
+
   const serialProductVariantQuery = useProductVariantQuery({
     fetch,
     id: createWorkOrder.serial?.productVariantId ?? null,
@@ -369,6 +372,20 @@ function WorkOrderProperties({
         required
         onFocus={() => router.push('StatusSelector', { onSelect: status => dispatch.setPartial({ status }) })}
         value={createWorkOrder.status}
+      />
+      <FormStringField
+        label={'Location'}
+        required
+        onFocus={() =>
+          router.push('LocationSelector', { onSelect: location => dispatch.setPartial({ locationId: location.id }) })
+        }
+        value={
+          createWorkOrder.locationId
+            ? locationQuery.isLoading
+              ? 'Loading...'
+              : (location?.name ?? 'Unknown location')
+            : ''
+        }
       />
       {canSelectCompany && (
         <FormStringField

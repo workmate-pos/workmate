@@ -5,6 +5,8 @@ WHERE "shop" = :shop!
   AND "fromLocationId" = COALESCE(:fromLocationId, "fromLocationId")
   AND "toLocationId" = COALESCE(:toLocationId, "toLocationId")
   AND name ILIKE COALESCE(:query, '%')
+  AND "fromLocationId" = ANY (COALESCE(:locationIds, ARRAY ["fromLocationId"]))
+  AND "toLocationId" = ANY (COALESCE(:locationIds, ARRAY ["toLocationId"]))
   AND EXISTS (SELECT 1
               FROM "StockTransferLineItem"
               WHERE "stockTransferId" = "StockTransfer".id
@@ -19,8 +21,10 @@ WHERE "shop" = :shop!
   AND "fromLocationId" = COALESCE(:fromLocationId, "fromLocationId")
   AND "toLocationId" = COALESCE(:toLocationId, "toLocationId")
   AND name ILIKE COALESCE(:query, '%')
-  AND EXISTS (SELECT 1
-              FROM "StockTransferLineItem"
-              WHERE "stockTransferId" = "StockTransfer".id
-                AND "status" = COALESCE(:status, "status"));
+  AND "fromLocationId" = ANY (COALESCE(:locationIds, ARRAY ["fromLocationId"]))
+  AND "toLocationId" = ANY (COALESCE(:locationIds, ARRAY ["toLocationId"]))
+    AND EXISTS (SELECT 1
+                FROM "StockTransferLineItem"
+                WHERE "stockTransferId" = "StockTransfer".id
+                  AND "status" = COALESCE(:status, "status"));
 

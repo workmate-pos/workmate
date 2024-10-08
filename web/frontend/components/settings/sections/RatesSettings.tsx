@@ -24,7 +24,7 @@ export function RatesSettings({
           decimals={2}
           type={'number'}
           label={'Default hourly rate'}
-          value={String(settings.defaultRate)}
+          value={settings.workOrders.charges.defaultHourlyRate}
           prefix={currencyFormatter.prefix}
           suffix={currencyFormatter.suffix}
           step={0.01}
@@ -32,7 +32,18 @@ export function RatesSettings({
           min={0}
           inputMode={'decimal'}
           requiredIndicator
-          onChange={(value: Money) => setSettings({ ...settings, defaultRate: value })}
+          onChange={(defaultHourlyRate: Money) =>
+            setSettings({
+              ...settings,
+              workOrders: {
+                ...settings.workOrders,
+                charges: {
+                  ...settings.workOrders.charges,
+                  defaultHourlyRate,
+                },
+              },
+            })
+          }
           autoComplete={'off'}
           helpText={'Used for employees without a set hourly rate'}
         />

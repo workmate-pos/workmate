@@ -39,10 +39,13 @@ export function WorkOrderSettings({
                 content: `Create status "${workOrderStatusValue}"`,
                 prefix: <Icon source={CirclePlusMinor} />,
                 onAction: () => {
-                  if (!settings.statuses.includes(workOrderStatusValue)) {
+                  if (!settings.workOrders.statuses.includes(workOrderStatusValue)) {
                     setSettings({
                       ...settings,
-                      statuses: [...settings.statuses, workOrderStatusValue],
+                      workOrders: {
+                        ...settings.workOrders,
+                        statuses: [...settings.workOrders.statuses, workOrderStatusValue],
+                      },
                     });
                   }
                   setWorkOrderStatusValue('');
@@ -53,13 +56,16 @@ export function WorkOrderSettings({
       />
 
       <InlineStack gap="200">
-        {settings.statuses.map((status, i) => (
+        {settings.workOrders.statuses.map((status, i) => (
           <Tag
             key={i}
             onRemove={() =>
               setSettings({
                 ...settings,
-                statuses: settings.statuses.filter((_, j) => i !== j),
+                workOrders: {
+                  ...settings.workOrders,
+                  statuses: settings.workOrders.statuses.filter((_, j) => i !== j),
+                },
               })
             }
           >
@@ -68,14 +74,17 @@ export function WorkOrderSettings({
         ))}
       </InlineStack>
       <Autocomplete
-        options={settings.statuses.map(status => ({ id: status, label: status, value: status }))}
-        selected={[settings.defaultStatus]}
+        options={settings.workOrders.statuses.map(status => ({ id: status, label: status, value: status }))}
+        selected={[settings.workOrders.defaultStatus]}
         onSelect={([defaultStatus]) => {
           setSettings(current => ({
             ...current,
-            defaultStatus: defaultStatus ?? current.defaultStatus,
+            workOrders: {
+              ...current.workOrders,
+              defaultStatus: defaultStatus ?? current.workOrders.defaultStatus,
+            },
           }));
-          setDefaultWorkOrderStatusValue(defaultStatus ?? settings.defaultStatus);
+          setDefaultWorkOrderStatusValue(defaultStatus ?? settings.workOrders.defaultStatus);
         }}
         textField={
           <Autocomplete.TextField
@@ -84,7 +93,7 @@ export function WorkOrderSettings({
             requiredIndicator
             value={defaultWorkOrderStatusValue}
             onChange={setDefaultWorkOrderStatusValue}
-            onBlur={() => setDefaultWorkOrderStatusValue(settings.defaultStatus)}
+            onBlur={() => setDefaultWorkOrderStatusValue(settings.workOrders.defaultStatus)}
           />
         }
       />
@@ -102,11 +111,14 @@ export function WorkOrderSettings({
             </Text>
           </>
         }
-        value={settings.idFormat}
-        onChange={value =>
+        value={settings.workOrders.idFormat}
+        onChange={idFormat =>
           setSettings({
             ...settings,
-            idFormat: value,
+            workOrders: {
+              ...settings.workOrders,
+              idFormat,
+            },
           })
         }
       />

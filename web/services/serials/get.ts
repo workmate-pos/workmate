@@ -22,15 +22,17 @@ export async function getDetailedSerial(
     productVariantId: ID;
     serial: string;
   }>,
+  locationIds: ID[] | null,
 ) {
   const [serial, [productVariant, product], location, workOrders, purchaseOrders] = await Promise.all([
-    getSerial({ ...filter, shop }),
+    // TODO: Maybe just check location id afterwards? (for all except page)
+    getSerial({ ...filter, shop, locationIds }),
     getProductVariant(filter.productVariantId).then(
       async pv => [pv, pv ? await getProduct(pv.productId) : null] as const,
     ),
     getLocationForSerial({ ...filter, shop }),
-    getWorkOrdersForSerial({ ...filter, shop }),
-    getPurchaseOrdersForSerial({ ...filter, shop }),
+    getWorkOrdersForSerial({ ...filter, shop, locationIds }),
+    getPurchaseOrdersForSerial({ ...filter, shop, locationIds }),
   ]);
 
   if (!serial) {
@@ -132,13 +134,17 @@ type SerialHistory =
       date: DateTime;
     };
 
-export async function getDetailedSerialsPage(shop: string, paginationOptions: SerialPaginationOptions) {
-  const { serials, hasNextPage } = await getSerialsPage(shop, paginationOptions);
+export async function getDetailedSerialsPage(
+  shop: string,
+  paginationOptions: SerialPaginationOptions,
+  locationIds: ID[] | null,
+) {
+  const { serials, hasNextPage } = await getSerialsPage(shop, paginationOptions, locationIds);
 
   return {
     serials: await Promise.all(
       serials.map(serial =>
-        getDetailedSerial(shop, serial).then(
+        getDetailedSerial(shop, serial, locationIds).then(
           detailedSerial => detailedSerial ?? httpError(`Serial ${serial.serial} not found`),
         ),
       ),

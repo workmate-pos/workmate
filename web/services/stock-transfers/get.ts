@@ -1,6 +1,6 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { escapeLike } from '../db/like.js';
 import { StockTransferPaginationOptions } from '../../schemas/generated/stock-transfer-pagination-options.js';
 import { StockTransferCountOptions } from '../../schemas/generated/stock-transfer-count-options.js';
@@ -13,8 +13,8 @@ import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-
 import { getPurchaseOrderLineItemsByIdAndUuid } from '../purchase-orders/queries.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 
-export async function getDetailedStockTransfer(session: Session, name: string) {
-  const stockTransfer = await getStockTransfer({ shop: session.shop, name });
+export async function getDetailedStockTransfer(session: Session, name: string, locationIds: ID[] | null) {
+  const stockTransfer = await getStockTransfer({ shop: session.shop, name, locationIds });
 
   if (!stockTransfer) {
     throw new Error(`Stock transfer with name ${name} not found`);
@@ -77,7 +77,11 @@ export async function getDetailedStockTransfer(session: Session, name: string) {
     ),
   };
 }
-export async function getStockTransferPage(session: Session, paginationOptions: StockTransferPaginationOptions) {
+export async function getStockTransferPage(
+  session: Session,
+  paginationOptions: StockTransferPaginationOptions,
+  locationIds: ID[] | null,
+) {
   if (paginationOptions.query !== undefined) {
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
   }
@@ -92,12 +96,17 @@ export async function getStockTransferPage(session: Session, paginationOptions: 
       ? createGid('Location', paginationOptions.fromLocationId)
       : undefined,
     toLocationId: paginationOptions.toLocationId ? createGid('Location', paginationOptions.toLocationId) : undefined,
+    locationIds,
   });
 
-  return Promise.all(stockTransfers.map(({ name }) => getDetailedStockTransfer(session, name)));
+  return Promise.all(stockTransfers.map(({ name }) => getDetailedStockTransfer(session, name, locationIds)));
 }
 
-export async function getStockTransferCount(session: Session, countOptions: StockTransferCountOptions) {
+export async function getStockTransferCount(
+  session: Session,
+  countOptions: StockTransferCountOptions,
+  locationIds: ID[] | null,
+) {
   if (countOptions.query !== undefined) {
     countOptions.query = `%${escapeLike(countOptions.query)}%`;
   }
@@ -108,6 +117,7 @@ export async function getStockTransferCount(session: Session, countOptions: Stoc
     query: countOptions.query,
     fromLocationId: countOptions.fromLocationId ? createGid('Location', countOptions.fromLocationId) : undefined,
     toLocationId: countOptions.toLocationId ? createGid('Location', countOptions.toLocationId) : undefined,
+    locationIds,
   });
 
   return count ?? 0;

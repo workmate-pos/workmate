@@ -32,6 +32,7 @@ const CsvWorkOrderInfo = z.object({
   CompanyLocationID: zCsvNullable(zNamespacedID('CompanyLocation')),
   CompanyContactID: zCsvNullable(zNamespacedID('CompanyContact')),
   DerivedFromOrderID: zCsvNullable(zNamespacedID('Order')),
+  LocationId: zNamespacedID('Location'),
 
   PaymentTermsTemplateID: zCsvNullable(zNamespacedID('PaymentTermsTemplate')),
   PaymentTermsDate: zCsvNullable(zDateTime).describe(
@@ -234,6 +235,7 @@ export async function readWorkOrderCsvImport({
 
       createWorkOrders[data.ID] = {
         name: null,
+        locationId: data.LocationId,
         status: data.Status,
         dueDate: data.DueDate,
         note: data.Note,

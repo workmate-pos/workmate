@@ -2,6 +2,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getShopSettings } from '../settings/settings.js';
 import { httpError } from '../../util/http-error.js';
 import { getStaffMembers } from '../staff-members/queries.js';
+import { ShopSettings } from '../settings/schema.js';
 
 export const permissions = [
   'read_settings',
@@ -27,13 +28,13 @@ export function isPermission(permission: string): permission is Permission {
   return (permissions as readonly string[]).includes(permission);
 }
 
-export async function getMissingPermissionsForRole(shop: string, role: string, permissions: Permission[]) {
+export async function getMissingPermissionsForRoleUuid(shop: string, roleUuid: string, permissions: Permission[]) {
   if (permissions.length === 0) {
     return [];
   }
 
   const { roles } = await getShopSettings(shop);
-  const rolePermissions = roles[role]?.permissions ?? [];
+  const rolePermissions = roles[roleUuid]?.permissions ?? [];
   return permissions.filter(permission => !rolePermissions.includes(permission));
 }
 
@@ -48,11 +49,14 @@ export async function getMissingPermissionsForStaffMember(shop: string, staffMem
     return permissions;
   }
 
-  return getMissingPermissionsForRole(shop, staffMember.role, permissions);
+  return getMissingPermissionsForRoleUuid(shop, staffMember.role, permissions);
 }
 
-export async function getDefaultRole(shop: string) {
-  const { roles } = await getShopSettings(shop);
+export async function getDefaultRoleUuid(shop: string) {
+  return getDefaultRoleUuidFromSettings(await getShopSettings(shop));
+}
+
+export function getDefaultRoleUuidFromSettings(settings: ShopSettings) {
   // All shops should have a default role. This is enforced by the settings schema so this should be impossible.
-  return Object.entries(roles).find(([, role]) => role.isDefault)?.[0] ?? httpError('No default role set');
+  return Object.entries(settings.roles).find(([, role]) => role.isDefault)?.[0] ?? httpError('No default role set');
 }

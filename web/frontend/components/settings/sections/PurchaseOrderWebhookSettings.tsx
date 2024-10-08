@@ -29,33 +29,40 @@ export function PurchaseOrderWebhookSettings({
     <BlockStack gap="400">
       <Checkbox
         label={'Enable purchase order webhook order requests'}
-        checked={settings.purchaseOrderWebhook.endpointUrl !== null}
+        checked={settings.purchaseOrders.webhook.enabled}
         onChange={enabled => {
           setSettings({
             ...settings,
-            purchaseOrderWebhook: {
-              endpointUrl: enabled ? '' : undefined,
+            purchaseOrders: {
+              ...settings.purchaseOrders,
+              webhook: enabled ? { enabled, endpointUrl: '' } : { enabled },
             },
           });
           onIsValid(!enabled);
         }}
       />
-      <TextField
-        label={'Webhook Endpoint URL'}
-        autoComplete="off"
-        value={settings.purchaseOrderWebhook.endpointUrl ?? ''}
-        disabled={settings.purchaseOrderWebhook.endpointUrl === null}
-        onChange={value => {
-          setSettings({
-            ...settings,
-            purchaseOrderWebhook: {
-              endpointUrl: value,
-            },
-          });
-          onIsValid(getErrorMessage(value) === undefined);
-        }}
-        error={getErrorMessage(settings.purchaseOrderWebhook.endpointUrl)}
-      />
+      {settings.purchaseOrders.webhook.enabled && (
+        <TextField
+          label={'Webhook Endpoint URL'}
+          autoComplete="off"
+          value={settings.purchaseOrders.webhook.endpointUrl ?? ''}
+          disabled={settings.purchaseOrders.webhook.endpointUrl === null}
+          onChange={value => {
+            setSettings({
+              ...settings,
+              purchaseOrders: {
+                ...settings.purchaseOrders,
+                webhook: {
+                  enabled: true,
+                  endpointUrl: value,
+                },
+              },
+            });
+            onIsValid(getErrorMessage(value) === undefined);
+          }}
+          error={getErrorMessage(settings.purchaseOrders.webhook.endpointUrl)}
+        />
+      )}
     </BlockStack>
   );
 }

@@ -27,7 +27,7 @@ async function getVendorCustomers(session: Session) {
   if (vendorCustomersCache.has(session.shop)) {
     const cacheValue = vendorCustomersCache.get(session.shop) ?? never();
 
-    const newSettingsMetafields = Array.from(settings.vendorCustomerMetafieldsToShow).filter(
+    const newSettingsMetafields = Array.from(settings.purchaseOrders.vendorCustomerMetafieldsToShow).filter(
       metafield => !cacheValue.metafields.includes(metafield),
     );
 
@@ -47,8 +47,8 @@ async function getVendorCustomers(session: Session) {
       gql.segments.getCustomerSegmentByQuery.run(graphql, {
         ...variables,
         query,
-        metafieldCount: settings.vendorCustomerMetafieldsToShow.length as Int,
-        metafields: settings.vendorCustomerMetafieldsToShow,
+        metafieldCount: settings.purchaseOrders.vendorCustomerMetafieldsToShow.length as Int,
+        metafields: settings.purchaseOrders.vendorCustomerMetafieldsToShow,
       }),
     result => ({
       pageInfo: result.customerSegmentMembers.pageInfo,
@@ -56,7 +56,10 @@ async function getVendorCustomers(session: Session) {
     }),
   );
 
-  vendorCustomersCache.set(session.shop, { customers: customers, metafields: settings.vendorCustomerMetafieldsToShow });
+  vendorCustomersCache.set(session.shop, {
+    customers: customers,
+    metafields: settings.purchaseOrders.vendorCustomerMetafieldsToShow,
+  });
 
   return customers;
 }

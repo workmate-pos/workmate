@@ -58,7 +58,7 @@ export async function getDraftOrderInputForExistingWorkOrder(
     newCharges?: WorkOrderLabourCharge[];
   },
 ) {
-  const databaseWorkOrder = await getWorkOrder({ shop: session.shop, name: workOrderName });
+  const databaseWorkOrder = await getWorkOrder({ shop: session.shop, name: workOrderName, locationIds: null });
 
   if (!databaseWorkOrder) {
     throw new HttpError('Work order not found', 404);
@@ -235,7 +235,7 @@ export async function getDraftOrderInputForWorkOrder(
   );
 
   const graphql = new Graphql(session);
-  const [{ labourLineItemSKU }, { billingAddress, shippingAddress }, response] = await Promise.all([
+  const [{ workOrders }, { billingAddress, shippingAddress }, response] = await Promise.all([
     getShopSettings(session.shop),
     getMailingAddressInputsForCompanyLocation(session, companyLocationId),
     gql.products.getMany.run(graphql, { ids: absorbingProductVariantIds }),
@@ -265,7 +265,7 @@ export async function getDraftOrderInputForWorkOrder(
     charges.filter(hasPropertyValue('type', 'hourly-labour')),
     charges.filter(hasPropertyValue('type', 'fixed-price-labour')),
     {
-      labourSku: labourLineItemSKU,
+      labourSku: workOrders.charges.defaultLabourLineItemSKU,
       workOrderName,
     },
   );

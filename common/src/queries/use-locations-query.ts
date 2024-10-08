@@ -7,7 +7,7 @@ import { useLocationQuery } from './use-location-query.js';
 
 const query = createPaginatedQuery({
   endpoint: '/api/locations',
-  queryKeyFn: ({ query }: PaginationOptions) => ['locations', query],
+  queryKeyFn: (options: PaginationOptions) => ['locations', options],
   extractPage: (response: FetchLocationsResponse) => response.locations,
   cursorParamName: 'after',
 });

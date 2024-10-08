@@ -1,5 +1,5 @@
 import { ShopSettings } from '@web/services/settings/schema.js';
-import { Dispatch, SetStateAction, useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from 'react';
 import {
   BlockStack,
   Box,
@@ -14,6 +14,8 @@ import {
 } from '@shopify/polaris';
 import type { permissions as AllPermissions } from '@web/services/permissions/permissions.js';
 import { CircleMinusMinor } from '@shopify/polaris-icons';
+import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 const permissions: typeof AllPermissions = [
   'read_settings',
@@ -41,25 +43,18 @@ export function RolesSettings({
   setSettings: Dispatch<SetStateAction<ShopSettings>>;
 }) {
   // we need a stable order to prevent roles from jumping around when typing
-  const [roleNames, setRoleNames] = useState(Object.keys(settings.roles));
-  const [roleNameInputValues, setRoleNameInputValues] = useState(Object.keys(settings.roles));
+  const [roleUuids, setRoleUuids] = useState(Object.keys(settings.roles));
+  const [roleUuidInputValues, setRoleUuidInputValues] = useState<Record<string, string>>(
+    Object.fromEntries(Object.entries(settings.roles).map(([uuid, role]) => [uuid, role.name])),
+  );
+
+  const newRoleUuid = useMemo(uuid, [roleUuids.length]);
 
   useEffect(() => {
-    // react is great i swear
-    setRoleNames(roleNames => {
-      const newRoleNames = Object.keys(settings.roles).filter(name => !roleNames.includes(name));
-
-      if (!roleNames.includes('')) {
-        newRoleNames.push('');
-      }
-
-      setRoleNameInputValues(roleNameInputValues => [
-        ...roleNameInputValues.filter((_, i) => roleNames[i]! in settings.roles || i === roleNames.length - 1),
-        ...newRoleNames,
-      ]);
-
-      return [...roleNames.filter((name, i) => name in settings.roles || i === roleNames.length - 1), ...newRoleNames];
-    });
+    setRoleUuids(current => [
+      ...current.filter(uuid => uuid in settings.roles),
+      ...Object.keys(settings.roles).filter(uuid => !current.includes(uuid)),
+    ]);
   }, [settings]);
 
   return (
@@ -93,30 +88,35 @@ export function RolesSettings({
           },
           {
             title: 'Default',
+            alignment: 'center',
           },
-          ...permissions.map(permission => ({ title: permission, alignment: 'end' }) as const),
+          ...permissions.map(permission => ({ title: titleCase(permission), alignment: 'center' }) as const),
         ]}
         selectable={false}
-        itemCount={1 + roleNames.length}
+        itemCount={1 + roleUuids.length}
       >
-        {roleNames.map((name, i) => {
-          const role = settings.roles[name] ?? { isDefault: false, permissions: [] };
+        {[...roleUuids, newRoleUuid].map((roleUuid, i) => {
+          const role = settings.roles[roleUuid] ?? { name: '', isDefault: i === 0, permissions: [] };
 
           return (
             <IndexTable.Row key={i} position={i} selected={false} id={i.toString()}>
               <IndexTable.Cell>
                 <InlineStack align="end">
-                  {!!name && (
+                  {roleUuid in settings.roles && (
                     <Button
                       variant="plain"
                       icon={CircleMinusMinor}
                       tone="critical"
                       onClick={() => {
+                        // without this there will be 1 render where the role is removed from settings but is still in roleUuids
+                        // this would cause the "Role name is already taken" error to be shown for 1 render cycle
+                        setRoleUuids(current => current.filter(uuid => uuid !== roleUuid));
+
                         setSettings(current => ({
                           ...current,
                           roles: Object.fromEntries(
                             Object.entries(current.roles)
-                              .filter(([x]) => x !== name)
+                              .filter(([x]) => x !== roleUuid)
                               .map(([name, role], i) => [name, { ...role, isDefault: i === 0 }]),
                           ),
                         }));
@@ -132,26 +132,26 @@ export function RolesSettings({
                     label={'Role Name'}
                     labelHidden
                     autoComplete="off"
-                    value={roleNameInputValues[i]}
+                    value={roleUuidInputValues[roleUuid]}
                     onChange={value => {
-                      setRoleNameInputValues(current => [...current.slice(0, i), value, ...current.slice(i + 1)]);
+                      setRoleUuidInputValues(current => ({ ...current, [roleUuid]: value }));
 
-                      if (!!value && !roleNameInputValues.includes(value)) {
-                        setRoleNames(current => [...current.slice(0, i), value, ...current.slice(i + 1)]);
+                      if (!!value && !Object.values(settings.roles).some(role => role.name === value)) {
+                        setRoleUuids(current => [...current.slice(0, i), roleUuid, ...current.slice(i + 1)]);
                         setSettings(current => ({
                           ...current,
                           roles: {
-                            ...Object.fromEntries(Object.entries(current.roles).filter(([x]) => x !== name)),
-                            [value]: role,
+                            ...current.roles,
+                            [roleUuid]: { ...role, name: value },
                           },
                         }));
                       }
                     }}
-                    placeholder={i === roleNames.length - 1 ? 'New Role' : undefined}
+                    placeholder={roleUuid === newRoleUuid ? 'New Role' : undefined}
                     error={
-                      i !== roleNames.length - 1 && !roleNameInputValues[i]
+                      roleUuid !== newRoleUuid && !roleUuidInputValues[roleUuid]
                         ? 'Role name is required'
-                        : roleNameInputValues[i] !== name
+                        : (roleUuidInputValues[roleUuid] ?? '') !== role.name
                           ? 'Role name already exists'
                           : undefined
                     }
@@ -160,57 +160,58 @@ export function RolesSettings({
               </IndexTable.Cell>
 
               <IndexTable.Cell>
-                <Checkbox
-                  label={'Default'}
-                  labelHidden
-                  checked={role.isDefault}
-                  disabled={!name}
-                  onChange={checked => {
-                    // if unchecking just move the check to the first role
-                    let indexToCheck = checked ? i : 0;
-
-                    // without this unchecking the first role would be impossible
-                    // it will just move to the second role now if it exists
-                    if (!checked && i === 0 && roleNames.length > 1) {
-                      indexToCheck = 1;
-                    }
-
-                    setSettings(current => ({
-                      ...current,
-                      roles: Object.fromEntries(
-                        Object.entries(current.roles).map(([name, role]) => [
-                          name,
-                          { ...role, isDefault: name === roleNames[indexToCheck] },
-                        ]),
-                      ),
-                    }));
-                  }}
-                />
-              </IndexTable.Cell>
-
-              {permissions.map(permission => (
-                <IndexTable.Cell key={permission}>
+                <InlineStack align="center">
                   <Checkbox
-                    label={permission}
-                    disabled={!name}
+                    label={'Default'}
                     labelHidden
-                    checked={role.permissions.includes(permission)}
+                    checked={role.isDefault}
+                    disabled={!roleUuid}
                     onChange={checked => {
+                      const checkRoleUuid = checked ? roleUuid : roleUuids.find(uuid => uuid !== roleUuid);
+
+                      setRoleUuids(current => [...current.slice(0, i), roleUuid, ...current.slice(i + 1)]);
                       setSettings(current => ({
                         ...current,
                         roles: {
-                          ...Object.fromEntries(Object.entries(current.roles).filter(([x]) => x !== name)),
-                          [name]: {
-                            ...role,
-                            permissions: [
-                              ...role.permissions.filter(p => p !== permission),
-                              ...(checked ? [permission] : []),
-                            ],
-                          },
+                          ...Object.fromEntries(
+                            Object.entries(current.roles).map(([uuid, role]) => [
+                              uuid,
+                              { ...role, isDefault: uuid === checkRoleUuid },
+                            ]),
+                          ),
+                          [roleUuid]: { ...role, isDefault: roleUuid === checkRoleUuid },
                         },
                       }));
                     }}
                   />
+                </InlineStack>
+              </IndexTable.Cell>
+
+              {permissions.map(permission => (
+                <IndexTable.Cell key={permission}>
+                  <InlineStack align="center">
+                    <Checkbox
+                      label={permission}
+                      disabled={!roleUuid}
+                      labelHidden
+                      checked={role.permissions.includes(permission)}
+                      onChange={checked => {
+                        setSettings(current => ({
+                          ...current,
+                          roles: {
+                            ...Object.fromEntries(Object.entries(current.roles).filter(([x]) => x !== roleUuid)),
+                            [roleUuid]: {
+                              ...role,
+                              permissions: [
+                                ...role.permissions.filter(p => p !== permission),
+                                ...(checked ? [permission] : []),
+                              ],
+                            },
+                          },
+                        }));
+                      }}
+                    />
+                  </InlineStack>
                 </IndexTable.Cell>
               ))}
             </IndexTable.Row>

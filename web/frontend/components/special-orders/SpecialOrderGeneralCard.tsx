@@ -158,7 +158,6 @@ export function SpecialOrderGeneralCard({
           open={isLocationSelectorOpen}
           onClose={() => setIsLocationSelectorOpen(false)}
           onSelect={setLocationId}
-          setToastAction={setToastAction}
         />
 
         <TextField

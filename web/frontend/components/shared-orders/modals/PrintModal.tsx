@@ -31,8 +31,8 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
   const purchaseOrderPrintJobMutation = usePurchaseOrderPrintJobMutation({ fetch });
   const workOrderPrintJobMutation = useWorkOrderPrintJobMutation({ fetch });
 
-  const printTemplatesKey = props.type === 'work-order' ? 'workOrderPrintTemplates' : 'purchaseOrderPrintTemplates';
-  const printTemplates = settingsQuery.data?.settings[printTemplatesKey] ?? {};
+  const printTemplatesKey = props.type === 'work-order' ? 'workOrders' : 'purchaseOrders';
+  const printTemplates = settingsQuery.data?.settings[printTemplatesKey].printTemplates ?? {};
 
   const isLoading = [
     settingsQuery.isLoading,
@@ -49,9 +49,24 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
         renderItem={([templateName]) => (
           <ResourceItem
             id={templateName}
+            disabled={isLoading}
             onClick={() => {
               if (!name) {
                 setToastAction({ content: `You must save this ${props.type.replace('-', ' ')} before printing!` });
+                return;
+              }
+
+              if (isLoading) {
+                return;
+              }
+
+              if (!settingsQuery.data?.settings) {
+                setToastAction({ content: 'Settings not loaded' });
+                return;
+              }
+
+              if (!settingsQuery.data.settings.printing.global.defaultEmail) {
+                setToastAction({ content: 'Print email is not configured' });
                 return;
               }
 
@@ -65,6 +80,10 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
                     date: new Date().toLocaleDateString(),
                     dueDate: dueDateLocal.toLocaleDateString(),
                     templateName,
+                    // TODO: Customization
+                    replyTo: settingsQuery.data.settings.printing.global.defaultReplyTo,
+                    email: settingsQuery.data.settings.printing.global.defaultEmail,
+                    from: settingsQuery.data.settings.printing.global.defaultFrom,
                   },
                   {
                     onSuccess() {
@@ -79,6 +98,10 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
                     purchaseOrderName: name,
                     date: new Date().toLocaleDateString(),
                     templateName,
+                    // TODO: Customization
+                    replyTo: settingsQuery.data.settings.printing.global.defaultReplyTo,
+                    email: settingsQuery.data.settings.printing.global.defaultEmail,
+                    from: settingsQuery.data.settings.printing.global.defaultFrom,
                   },
                   {
                     onSuccess() {

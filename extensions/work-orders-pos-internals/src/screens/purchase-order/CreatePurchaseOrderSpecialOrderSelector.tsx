@@ -163,7 +163,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
                 return;
               }
 
-              const status = settingsQuery.data?.settings.defaultPurchaseOrderStatus;
+              const status = settingsQuery.data?.settings.purchaseOrders.defaultStatus;
 
               if (!status) {
                 toast.show('Please wait for the default purchase order status to load');

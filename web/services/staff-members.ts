@@ -3,9 +3,10 @@ import { gql } from './gql/gql.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasReadUsersScope } from './shop.js';
-import { PaginationOptions } from '../schemas/generated/pagination-options.js';
 import { escapeLike } from './db/like.js';
 import * as queries from './staff-members/queries.js';
+import { StaffMemberPaginationOptions } from '../schemas/generated/staff-member-pagination-options.js';
+import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
 
 export async function getStaffMembersByIds(
   session: Session,
@@ -40,21 +41,40 @@ export async function getStaffMembersByIds(
 
 export async function getStaffMembersPage(
   session: Session,
-  paginationOptions: PaginationOptions,
+  paginationOptions: StaffMemberPaginationOptions,
 ): Promise<gql.staffMember.getPage.Result> {
   const graphql = new Graphql(session);
 
-  if (!(await hasReadUsersScope(graphql))) {
-    const query = paginationOptions.query ? escapeLike(`%${paginationOptions.query}%`) : undefined;
+  if (
+    !!paginationOptions.role ||
+    !!paginationOptions.locationId ||
+    typeof paginationOptions.superuser === 'boolean' ||
+    !(await hasReadUsersScope(graphql))
+  ) {
+    const query = paginationOptions.query ? `%${escapeLike(paginationOptions.query)}%` : undefined;
     const employees = await queries.getStaffMembersPage(session.shop, { query });
+    const employeeLocations = groupBy(
+      await queries.getStaffMemberLocations(employees.map(employee => employee.staffMemberId)),
+      location => location.staffMemberId,
+    );
 
     return {
       shop: {
         staffMembers: {
-          nodes: employees.map(e => {
-            assertGid(e.staffMemberId);
-            return { isShopOwner: e.isShopOwner, name: e.name, id: e.staffMemberId, email: e.email };
-          }),
+          nodes: employees
+            .filter(employee => !paginationOptions.role || paginationOptions.role === employee.role)
+            .filter(
+              employee =>
+                paginationOptions.superuser === undefined || paginationOptions.superuser === employee.superuser,
+            )
+            .filter(
+              employee =>
+                !paginationOptions.locationId ||
+                employeeLocations[employee.staffMemberId]?.some(
+                  location => paginationOptions.locationId === location.locationId,
+                ),
+            )
+            .map(e => ({ isShopOwner: e.isShopOwner, name: e.name, id: e.staffMemberId, email: e.email })),
           pageInfo: {
             hasNextPage: false,
             endCursor: null,

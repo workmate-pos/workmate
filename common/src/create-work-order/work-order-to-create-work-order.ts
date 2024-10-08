@@ -18,6 +18,7 @@ export function workOrderToCreateWorkOrder(workOrder: DetailedWorkOrder): Create
     companyLocationId: workOrder.companyLocationId,
     companyContactId: workOrder.companyContactId,
     paymentTerms: workOrder.paymentTerms,
+    locationId: workOrder.locationId,
     serial: workOrder.serial
       ? {
           productVariantId: workOrder.serial.productVariantId,

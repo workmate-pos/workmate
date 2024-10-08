@@ -34,29 +34,57 @@ import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { getSerial } from '../serials/queries.js';
 import { httpError } from '../../util/http-error.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
 
 // TODO: Support deleted customer/company
 // TODO: Handle case where special order/ purchase order items are deleted
 
-export async function upsertWorkOrder(
-  session: Session,
-  user: LocalsTeifiUser | null,
-  createWorkOrder: CreateWorkOrder,
-) {
-  await validateCreateWorkOrder(session, createWorkOrder, user?.user.superuser ?? false);
-
-  if (createWorkOrder.name === null) {
-    return await createNewWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
+export async function upsertWorkOrder(session: Session, user: LocalsTeifiUser, createWorkOrder: CreateWorkOrder) {
+  if (!createWorkOrder.locationId) {
+    throw new HttpError('Location is required', 400);
   }
 
-  return await updateWorkOrder(session, { ...createWorkOrder, name: createWorkOrder.name });
+  await assertLocationsPermitted({
+    shop: session.shop,
+    locationIds: [createWorkOrder.locationId],
+    staffMemberId: user.staffMember.id,
+  });
+
+  await validateCreateWorkOrder(session, createWorkOrder, user);
+
+  if (createWorkOrder.name === null) {
+    return await createNewWorkOrder(
+      session,
+      {
+        ...createWorkOrder,
+        name: createWorkOrder.name,
+        locationId: createWorkOrder.locationId,
+      },
+      user.user.allowedLocationIds,
+    );
+  }
+
+  return await updateWorkOrder(
+    session,
+    {
+      ...createWorkOrder,
+      name: createWorkOrder.name,
+      locationId: createWorkOrder.locationId,
+    },
+    user.user.allowedLocationIds,
+  );
 }
 
-async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: null }) {
+async function createNewWorkOrder(
+  session: Session,
+  createWorkOrder: CreateWorkOrder & { name: null; locationId: ID },
+  locationIds: ID[] | null,
+) {
   return await unit(async () => {
     await ensureRequiredDatabaseDataExists(session, createWorkOrder);
     const serial = createWorkOrder.serial
-      ? await getSerial({ ...createWorkOrder.serial, shop: session.shop }).then(
+      ? await getSerial({ ...createWorkOrder.serial, shop: session.shop, locationIds }).then(
           serial => serial ?? httpError('Serial not found', 400),
         )
       : null;
@@ -78,6 +106,7 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
       paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
       paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
       productVariantSerialId: serial?.id,
+      locationId: createWorkOrder.locationId,
     });
 
     await upsertItems(session, createWorkOrder, workOrder.id, []);
@@ -94,8 +123,17 @@ async function createNewWorkOrder(session: Session, createWorkOrder: CreateWorkO
   });
 }
 
-async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder & { name: string }) {
-  const workOrder = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+async function updateWorkOrder(
+  session: Session,
+  createWorkOrder: CreateWorkOrder & { name: string; locationId: ID },
+  locationIds: ID[] | null,
+) {
+  const workOrder = await getWorkOrder({ shop: session.shop, name: createWorkOrder.name, locationIds: null });
+
+  if (!workOrder) {
+    throw new HttpError('Work order not found', 404);
+  }
+
   const { id: workOrderId } = workOrder;
 
   return await cleanOrphanedDraftOrders(session, workOrderId, () =>
@@ -124,7 +162,7 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
 
       await ensureRequiredDatabaseDataExists(session, createWorkOrder);
       const serial = createWorkOrder.serial
-        ? await getSerial({ ...createWorkOrder.serial, shop: session.shop }).then(
+        ? await getSerial({ ...createWorkOrder.serial, shop: session.shop, locationIds }).then(
             serial => serial ?? httpError('Serial not found', 400),
           )
         : null;
@@ -147,6 +185,7 @@ async function updateWorkOrder(session: Session, createWorkOrder: CreateWorkOrde
         paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
         paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
         productVariantSerialId: serial?.id,
+        locationId: createWorkOrder.locationId,
       });
 
       const [currentItems, currentCharges] = await Promise.all([

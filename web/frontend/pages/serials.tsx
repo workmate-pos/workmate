@@ -72,7 +72,6 @@ export default function Serials() {
           open={isLocationSelectorOpen}
           onClose={() => setIsLocationSelectorOpen(false)}
           onSelect={locationId => setLocationId(locationId)}
-          setToastAction={setToastAction}
         />
 
         <TitleBar

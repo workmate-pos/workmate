@@ -109,6 +109,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
                   : (location?.name ?? 'Unknown location')
                 : ''
             }
+            required
             onFocus={() =>
               router.push('LocationSelector', {
                 onSelect: location => setLocationId(location.id),

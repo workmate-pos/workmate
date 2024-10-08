@@ -37,11 +37,19 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
       return;
     }
 
+    if (!settings.printing.global.defaultEmail) {
+      toast.show('No printing email set');
+      return;
+    }
+
     printJobMutation.mutate(
       {
         purchaseOrderName: name,
         date: new Date().toLocaleDateString(),
         templateName: selectedTemplate,
+        from: settings.printing.global.defaultFrom,
+        replyTo: settings.printing.global.defaultReplyTo,
+        email: settings.printing.global.defaultEmail,
       },
       {
         onSuccess() {
@@ -72,11 +80,11 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
         <Stack direction={'vertical'} spacing={4}>
           <Text variant={'headingLarge'}>Choose a template</Text>
           <RadioButtonList
-            items={Object.keys(settings.purchaseOrderPrintTemplates)}
+            items={Object.keys(settings.purchaseOrders.printTemplates)}
             onItemSelected={setSelectedTemplate}
             initialSelectedItem={selectedTemplate ?? undefined}
           />
-          {Object.keys(settings.purchaseOrderPrintTemplates).length === 0 && (
+          {Object.keys(settings.purchaseOrders.printTemplates).length === 0 && (
             <Text color={'TextSubdued'}>No templates available</Text>
           )}
           <FormButton

@@ -423,7 +423,7 @@ function useMergeSpecialOrdersBulkAction(
     };
   }
 
-  const status = settingsQuery.data?.settings.defaultPurchaseOrderStatus;
+  const status = settingsQuery.data?.settings.purchaseOrders.defaultStatus;
   const purchaseOrderCustomFields = purchaseOrderCustomFieldsPresetsQuery.data?.defaultCustomFields;
   const lineItemCustomFields = lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields;
 

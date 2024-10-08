@@ -1,6 +1,6 @@
 import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
-import { Permission } from '../../decorators/permission.js';
+import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
 import { Session } from '@shopify/shopify-api';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
@@ -25,6 +25,7 @@ import {
   readPurchaseOrderCsvImport,
 } from '../../services/purchase-orders/csv-import.js';
 import * as Sentry from '@sentry/node';
+import { z } from 'zod';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -36,10 +37,13 @@ export default class PurchaseOrdersController {
     res: Response<CreatePurchaseOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const createPurchaseOrder = req.body;
 
-    const { name } = await upsertCreatePurchaseOrder(session, createPurchaseOrder);
-    const purchaseOrder = await getDetailedPurchaseOrder(session, name).then(po => po ?? never('We just made it XD'));
+    const { name } = await upsertCreatePurchaseOrder(session, user, createPurchaseOrder);
+    const purchaseOrder = await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds).then(
+      po => po ?? never('We just made it XD'),
+    );
 
     return res.json({ purchaseOrder });
   }
@@ -49,9 +53,10 @@ export default class PurchaseOrdersController {
   @Authenticated()
   async fetchPurchaseOrder(req: Request<{ name: string }>, res: Response<FetchPurchaseOrderResponse>) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    const purchaseOrder = await getDetailedPurchaseOrder(session, name);
+    const purchaseOrder = await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds);
 
     if (!purchaseOrder) {
       throw new HttpError(`Purchase order ${name} not found`, 404);
@@ -69,32 +74,12 @@ export default class PurchaseOrdersController {
     res: Response<FetchPurchaseOrderInfoPageResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const paginationOptions = req.query;
 
-    const purchaseOrders = await getPurchaseOrderInfoPage(session, paginationOptions);
+    const purchaseOrders = await getPurchaseOrderInfoPage(session, paginationOptions, user.user.allowedLocationIds);
 
     return res.json({ purchaseOrders });
-  }
-
-  @Get('/common-custom-fields')
-  @QuerySchema('offset-pagination-options')
-  @Permission('read_purchase_orders')
-  @Authenticated()
-  async fetchPurchaseOrderCustomFields(
-    req: Request<unknown, unknown, unknown, OffsetPaginationOptions>,
-    res: Response<FetchPurchaseOrderCustomFieldsResponse>,
-  ) {
-    const session: Session = res.locals.shopify.session;
-    const paginationOptions = req.query;
-
-    const customFields = await db.purchaseOrder.getCommonCustomFieldsForShop({
-      shop: session.shop,
-      offset: paginationOptions.offset ?? 0,
-      limit: Math.min(paginationOptions.first ?? 10, 100),
-      query: paginationOptions.query,
-    });
-
-    return res.json({ customFields: customFields.map(field => field.key) });
   }
 
   @Post('/:name/print/:template')
@@ -107,23 +92,26 @@ export default class PurchaseOrdersController {
     res: Response<PrintPurchaseOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name, template } = req.params;
-    const { date } = req.query;
+    const { date, replyTo, from, email } = req.query;
 
-    const { emailReplyTo, emailFromTitle, purchaseOrderPrintTemplates, printEmail } = await getShopSettings(
-      session.shop,
-    );
+    const { printing, purchaseOrders } = await getShopSettings(session.shop);
 
-    if (!Object.keys(purchaseOrderPrintTemplates).includes(template)) {
+    if (!Object.keys(purchaseOrders.printTemplates).includes(template)) {
       throw new HttpError('Unknown print template', 400);
     }
 
-    if (!printEmail) {
-      throw new HttpError('No print email address set', 400);
+    if (!z.string().email().safeParse(email).success) {
+      throw new HttpError('Invalid destination email address', 400);
     }
 
-    const printTemplate = purchaseOrderPrintTemplates[template] ?? never();
-    const context = await getPurchaseOrderTemplateData(session, name, date);
+    if (!z.string().email().safeParse(replyTo).success) {
+      throw new HttpError('Invalid reply-to email address', 400);
+    }
+
+    const printTemplate = purchaseOrders.printTemplates[template] ?? never();
+    const context = await getPurchaseOrderTemplateData(session, name, date, user);
     const { subject, html } = await getRenderedPurchaseOrderTemplate(printTemplate, context);
     const file = await renderHtmlToPdfCustomFile(subject, html);
 
@@ -131,17 +119,17 @@ export default class PurchaseOrdersController {
       {
         name: 'Sending purchase order print email',
         attributes: {
-          emailFromTitle,
-          emailReplyTo,
-          printEmail,
+          replyTo,
+          from,
+          email,
           subject,
         },
       },
       () =>
         mg.send(
-          { emailReplyTo, emailFromTitle },
+          { replyTo, from },
           {
-            to: printEmail,
+            to: email,
             attachment: [file],
             subject,
             text: 'WorkMate Purchase Order',
@@ -157,6 +145,7 @@ export default class PurchaseOrdersController {
   @Permission('write_purchase_orders')
   async uploadPurchaseOrdersCsv(req: Request, res: Response) {
     const session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
 
     const createPurchaseOrders = await readPurchaseOrderCsvImport({
       formData: req,
@@ -165,7 +154,7 @@ export default class PurchaseOrdersController {
 
     await transaction(async () => {
       for (const createPurchaseOrder of createPurchaseOrders) {
-        await upsertCreatePurchaseOrder(session, createPurchaseOrder);
+        await upsertCreatePurchaseOrder(session, user, createPurchaseOrder);
       }
     });
 
@@ -192,10 +181,6 @@ export type CreatePurchaseOrderResponse = {
 
 export type FetchPurchaseOrderResponse = {
   purchaseOrder: DetailedPurchaseOrder;
-};
-
-export type FetchPurchaseOrderCustomFieldsResponse = {
-  customFields: string[];
 };
 
 export type PrintPurchaseOrderResponse = { success: true };

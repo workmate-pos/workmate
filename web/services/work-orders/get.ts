@@ -42,10 +42,15 @@ import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
 import { getSerial } from '../serials/queries.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
-export async function getDetailedWorkOrder(session: Session, name: string): Promise<DetailedWorkOrder | null> {
+export async function getDetailedWorkOrder(
+  session: Session,
+  name: string,
+  locationIds: ID[] | null,
+): Promise<DetailedWorkOrder | null> {
   const { shop } = session;
-  const workOrder = await getWorkOrder({ shop, name });
+  const workOrder = await getWorkOrder({ shop, name, locationIds });
 
   if (!workOrder) {
     return null;
@@ -69,6 +74,7 @@ export async function getDetailedWorkOrder(session: Session, name: string): Prom
     discount: getWorkOrderDiscount(workOrder),
     paymentTerms: getWorkOrderPaymentTerms(workOrder),
     serial: getWorkOrderSerial(workOrder),
+    locationId: workOrder.locationId,
   });
 }
 
@@ -309,6 +315,7 @@ export function getWorkOrderPaymentTerms(
 export async function getWorkOrderInfoPage(
   session: Session,
   paginationOptions: WorkOrderPaginationOptions,
+  locationIds: ID[] | null,
 ): Promise<WorkOrderInfo[]> {
   if (paginationOptions.query !== undefined) {
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
@@ -351,10 +358,11 @@ export async function getWorkOrderInfoPage(
     unpaid: paginationOptions.paymentStatus === 'UNPAID',
     partiallyPaid: paginationOptions.paymentStatus === 'PARTIALLY_PAID',
     fullyPaid: paginationOptions.paymentStatus === 'FULLY_PAID',
+    locationIds,
   });
 
   return await Promise.all(
-    page.map(workOrder => getDetailedWorkOrder(session, workOrder.name).then(wo => wo ?? never())),
+    page.map(workOrder => getDetailedWorkOrder(session, workOrder.name, locationIds).then(wo => wo ?? never())),
   );
 }
 

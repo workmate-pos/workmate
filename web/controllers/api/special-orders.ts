@@ -1,5 +1,5 @@
 import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
-import { Permission } from '../../decorators/permission.js';
+import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { Request, Response } from 'express-serve-static-core';
 import { CreateSpecialOrder } from '../../schemas/generated/create-special-order.js';
 import { Session } from '@shopify/shopify-api';
@@ -20,10 +20,11 @@ export default class SpecialOrdersController {
     res: Response<CreateSpecialOrderResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const createSpecialOrder = req.body;
 
-    const { name } = await upsertCreateSpecialOrder(session, createSpecialOrder);
-    const specialOrder = (await getDetailedSpecialOrder(session, name)) ?? never();
+    const { name } = await upsertCreateSpecialOrder(session, user, createSpecialOrder);
+    const specialOrder = (await getDetailedSpecialOrder(session, name, user.user.allowedLocationIds)) ?? never();
 
     return res.json({ specialOrder });
   }
@@ -32,9 +33,10 @@ export default class SpecialOrdersController {
   @Permission('read_special_orders')
   async fetchSpecialOrder(req: Request<{ name: string }>, res: Response<FetchSpecialOrderResponse>) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    const specialOrder = await getDetailedSpecialOrder(session, name);
+    const specialOrder = await getDetailedSpecialOrder(session, name, user.user.allowedLocationIds);
 
     if (!specialOrder) {
       throw new HttpError(`Special order ${name} not found`, 404);
@@ -51,9 +53,14 @@ export default class SpecialOrdersController {
     res: Response<FetchSpecialOrdersResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const paginationOptions = req.query;
 
-    const { specialOrders, hasNextPage } = await getDetailedSpecialOrdersPage(session, paginationOptions);
+    const { specialOrders, hasNextPage } = await getDetailedSpecialOrdersPage(
+      session,
+      paginationOptions,
+      user.user.allowedLocationIds,
+    );
 
     return res.json({ specialOrders, hasNextPage });
   }

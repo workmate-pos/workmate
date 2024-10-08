@@ -7,6 +7,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { upsertStaffMembers } from '../../../staff-members/queries.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 /**
  * Moving away from the old permission to a role-based system, we must create roles for every permnission combination and assign employees these roles.
@@ -56,7 +57,7 @@ export default async function migrate() {
         ...Object.fromEntries(
           [...rolePermissions.values()]
             .map(permissions => permissions.split(',').filter(Boolean) as Permission[])
-            .map((permissions, i) => [`Auto-migrated role ${i + 1}`, { isDefault: false, permissions }]),
+            .map((permissions, i) => [uuid(), { name: `Auto-migrated role ${i + 1}`, isDefault: false, permissions }]),
         ),
       };
 

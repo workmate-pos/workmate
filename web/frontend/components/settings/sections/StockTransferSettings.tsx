@@ -25,11 +25,14 @@ export function StockTransferSettings({
             </Text>
           </>
         }
-        value={settings.stockTransferIdFormat}
-        onChange={value =>
+        value={settings.transferOrders.idFormat}
+        onChange={idFormat =>
           setSettings({
             ...settings,
-            stockTransferIdFormat: value,
+            transferOrders: {
+              ...settings.transferOrders,
+              idFormat: idFormat,
+            },
           })
         }
       />
