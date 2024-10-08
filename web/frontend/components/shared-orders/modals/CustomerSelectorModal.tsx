@@ -38,7 +38,7 @@ export function CustomerSelectorModal({
   const hasNextPage = !isLastAvailablePage || customersQuery.hasNextPage;
 
   return (
-    <Modal open={open} title={'Select Customer'} onClose={onClose}>
+    <Modal open={open} title={'Select customer'} onClose={onClose}>
       {onSelectCompany && canSelectCompany && (
         <Modal.Section>
           <Button

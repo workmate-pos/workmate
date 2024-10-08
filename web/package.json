@@ -36,7 +36,7 @@
     "@shopify/shopify-app-express": "^5.0.4",
     "@sinclair/typebox": "^0.32.15",
     "@teifi-digital/shopify-app-express": "^0.11.3",
-    "@teifi-digital/shopify-app-toolbox": "^0.0.70",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.72",
     "@ts-safeql/sql-tag": "^0.2.1",
     "@work-orders/common": "file:../common",
     "@work-orders/work-order-shopify-order": "file:../work-order-shopify-order",

@@ -19,7 +19,7 @@ export function PrintTemplateGroup({
   const templates = settings[templateType].printTemplates;
   const [templateNames, setTemplateNames] = useState(Object.keys(templates));
 
-  const title = string.titleCase(templateType);
+  const title = string.sentenceCase(templateType);
 
   const [modalOpened, setModalOpened] = useState(false);
 
@@ -179,7 +179,7 @@ export function PrintTemplateGroup({
         ))}
       <Button
         onClick={() => {
-          let name = 'New Template';
+          let name = 'New template';
           if (name in settings[templateType]) {
             let i = 2;
             while (`${name} (${i})` in settings[templateType]) {

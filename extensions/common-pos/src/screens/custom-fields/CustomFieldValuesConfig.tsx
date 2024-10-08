@@ -11,7 +11,7 @@ import {
   TextField,
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useSaveCustomFieldValueOptionsMutation } from '@work-orders/common/queries/use-save-custom-field-value-options-mutation.js';
@@ -92,7 +92,7 @@ export function CustomFieldValuesConfig({ name, useRouter }: CustomFieldValuesCo
       <SegmentedControl
         segments={tabIds.map(id => ({
           id,
-          label: titleCase(id),
+          label: sentenceCase(id),
           disabled: false,
         }))}
         selected={tab}

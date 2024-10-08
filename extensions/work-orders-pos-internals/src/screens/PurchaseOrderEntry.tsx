@@ -81,12 +81,12 @@ export function PurchaseOrderEntry() {
         </ResponsiveStack>
         <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           <Button
-            title={'Merge Special Orders'}
+            title={'Merge special orders'}
             type={'plain'}
             onPress={() => router.push('CreatePurchaseOrderSpecialOrderSelector', {})}
           />
           <Button
-            title={'New Purchase Order'}
+            title={'New purchase order'}
             type={'primary'}
             onPress={() => {
               const { purchaseOrders } = settingsQuery.data.settings;
@@ -120,7 +120,7 @@ export function PurchaseOrderEntry() {
         sm={{ direction: 'vertical', alignment: 'center' }}
       >
         <Button
-          title={'Filter Custom Fields'}
+          title={'Filter custom fields'}
           onPress={() =>
             router.push('CustomFieldFilterConfig', {
               onSave: setCustomFieldFilters,
@@ -194,7 +194,7 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
       subtitle: getPurchaseOrderSubtitle(purchaseOrder),
       badges: [
         {
-          text: titleCase(purchaseOrder.status),
+          text: purchaseOrder.status,
           variant: 'highlight',
         },
       ],

@@ -27,7 +27,7 @@ export function DateModal({
   const [datePickerYear, setDatePickerYear] = useState(initialDate.getFullYear());
 
   return (
-    <Modal open={open} title={'Select Date'} onClose={onClose} sectioned>
+    <Modal open={open} title={'Select date'} onClose={onClose} sectioned>
       <DatePicker
         month={datePickerMonth}
         year={datePickerYear}

@@ -31,7 +31,7 @@ export function DiscountSettings({
     <>
       <BlockStack gap="400">
         <CurrencyOrPercentageInput
-          label={'Discount Shortcuts'}
+          label={'Discount shortcuts'}
           value={discountShortcutValue}
           setValue={setDiscountShortcutValue}
           onSelect={unit => {
@@ -70,7 +70,7 @@ export function DiscountSettings({
             </Tag>
           ))}
         </InlineStack>
-        <RuleSet title="Discount Rules" rules={discountRules} activeRules={activeDiscountRules} />
+        <RuleSet title="Discount rules" rules={discountRules} activeRules={activeDiscountRules} />
       </BlockStack>
       {toast}
     </>

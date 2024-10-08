@@ -79,7 +79,7 @@ export function CreateOrderModal({
 
   if (!workOrder) {
     return (
-      <Modal open={open} title={'Create Unpaid Order'} onClose={onClose}>
+      <Modal open={open} title={'Create unpaid order'} onClose={onClose}>
         <Modal.Section>
           <InlineStack align="center">
             <Spinner />
@@ -102,10 +102,10 @@ export function CreateOrderModal({
   return (
     <Modal
       open={open}
-      title={'Create Unpaid Order'}
+      title={'Create unpaid order'}
       onClose={onClose}
       primaryAction={{
-        content: 'Create Order',
+        content: 'Create order',
         onAction() {
           createWorkOrderOrderMutation.mutate(
             {

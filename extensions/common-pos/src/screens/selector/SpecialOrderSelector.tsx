@@ -41,7 +41,7 @@ export function SpecialOrderSelector({
 
   return (
     <ListPopup
-      title={'Select Special Order'}
+      title={'Select special order'}
       query={filters?.query ? undefined : { query, setQuery }}
       isLoadingMore={specialOrdersQuery.isFetching}
       resourceName={{ singular: 'special order', plural: 'special orders' }}

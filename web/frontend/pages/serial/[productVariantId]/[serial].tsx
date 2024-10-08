@@ -82,7 +82,7 @@ export default function Serial() {
   const app = useAppBridge();
 
   const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
-  const label = getProductVariantName(productVariant ?? serial?.productVariant) ?? 'Unknown Product';
+  const label = getProductVariantName(productVariant ?? serial?.productVariant) ?? 'Unknown product';
 
   const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
 
@@ -193,7 +193,7 @@ export default function Serial() {
 
             <FormLayout>
               <TextField
-                label={'Serial Number'}
+                label={'Serial number'}
                 value={createSerial.serial ?? ''}
                 requiredIndicator
                 onChange={serialNumber => setSerialNumber(serialNumber.toUpperCase() || null)}

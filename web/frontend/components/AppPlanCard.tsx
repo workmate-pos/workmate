@@ -141,7 +141,7 @@ export function AppPlanCard({ setToastAction }: AppPlanCardProps) {
         )
       }
       primaryFooterAction={{
-        content: planActive ? 'Change Plan' : 'Subscribe',
+        content: planActive ? 'Change plan' : 'Subscribe',
         onAction: () => {
           if (planActive && !isChangingPlan) {
             setIsChangingPlan(true);

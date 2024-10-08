@@ -65,7 +65,7 @@ export function ProductVariantSelector({ useRouter, onSelect, onClear, filters }
 
   return (
     <ListPopup
-      title="Select Products"
+      title="Select products"
       query={{ query, setQuery }}
       resourceName={{ singular: 'product', plural: 'products' }}
       pagination={{

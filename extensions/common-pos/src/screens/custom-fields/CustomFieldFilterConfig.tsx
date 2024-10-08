@@ -30,7 +30,7 @@ export function CustomFieldFilterConfig({ initialFilters, onSave, useRouter }: C
         ))}
 
         <FormButton
-          title={'Add Filter'}
+          title={'Add filter'}
           onPress={() =>
             setFilters(filters => [...filters, { type: 'require-field', key: null, value: null, inverse: false }])
           }
@@ -39,7 +39,7 @@ export function CustomFieldFilterConfig({ initialFilters, onSave, useRouter }: C
 
       <Stack direction={'vertical'} spacing={1}>
         <Button
-          title={'Save Filter'}
+          title={'Save filter'}
           type={'primary'}
           onPress={() => {
             onSave(filters);

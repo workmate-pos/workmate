@@ -137,13 +137,13 @@ export function ImportSpecialOrderLineItemsButton({
 
   return (
     <Button
-      title={'Import Special Order'}
+      title={'Import special order'}
       onPress={() =>
         router.push('SpecialOrderSelector', {
           onSelect: specialOrder => setSpecialOrderName(specialOrder.name),
           filters: {
             locationId,
-            lineItemOrderState: 'NOT_FULLY_ORDERED',
+            lineItemOrderState: 'not-fully-ordered',
             lineItemVendorName: vendorName,
             // We exclude any special orders that have no items with remaining quantity.
             // This cannot be fully computed on the server because the current purchase order can have unsaved line items linked to the special order.

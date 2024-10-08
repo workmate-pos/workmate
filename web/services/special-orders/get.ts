@@ -37,14 +37,14 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string, l
   const purchaseOrderState: PurchaseOrderState = !lineItems
     .flatMap(lineItem => lineItem.purchaseOrderLineItems)
     .some(lineItem => lineItem.availableQuantity < lineItem.quantity)
-    ? 'ALL_RECEIVED'
-    : 'NOT_ALL_RECEIVED';
+    ? 'all-received'
+    : 'not-all-received';
 
   const orderState: OrderState = lineItems.every(
     lineItem => lineItem.quantity <= sum(lineItem.purchaseOrderLineItems.map(lineItem => lineItem.quantity)),
   )
-    ? 'FULLY_ORDERED'
-    : 'NOT_FULLY_ORDERED';
+    ? 'fully-ordered'
+    : 'not-fully-ordered';
 
   return {
     name: specialOrder.name,

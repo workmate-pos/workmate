@@ -14,8 +14,8 @@ import {
 } from '@shopify/polaris';
 import type { permissions as AllPermissions } from '@web/services/permissions/permissions.js';
 import { CircleMinusMinor } from '@shopify/polaris-icons';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { uuid } from '@work-orders/common/util/uuid.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 const permissions: typeof AllPermissions = [
   'read_settings',
@@ -90,7 +90,7 @@ export function RolesSettings({
             title: 'Default',
             alignment: 'center',
           },
-          ...permissions.map(permission => ({ title: titleCase(permission), alignment: 'center' }) as const),
+          ...permissions.map(permission => ({ title: sentenceCase(permission), alignment: 'center' }) as const),
         ]}
         selectable={false}
         itemCount={1 + roleUuids.length}
@@ -129,7 +129,7 @@ export function RolesSettings({
               <IndexTable.Cell>
                 <FormLayout>
                   <TextField
-                    label={'Role Name'}
+                    label={'Role name'}
                     labelHidden
                     autoComplete="off"
                     value={roleUuidInputValues[roleUuid]}
@@ -147,7 +147,7 @@ export function RolesSettings({
                         }));
                       }
                     }}
-                    placeholder={roleUuid === newRoleUuid ? 'New Role' : undefined}
+                    placeholder={roleUuid === newRoleUuid ? 'New role' : undefined}
                     error={
                       roleUuid !== newRoleUuid && !roleUuidInputValues[roleUuid]
                         ? 'Role name is required'

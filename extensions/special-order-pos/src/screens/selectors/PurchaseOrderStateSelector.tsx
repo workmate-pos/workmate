@@ -1,10 +1,10 @@
 import { ListPopup } from '@work-orders/common-pos/screens/ListPopup.js';
 import { PurchaseOrderState } from '@web/schemas/generated/special-order-pagination-options.js';
 import { useRouter } from '../../routes.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
-const PURCHASE_ORDER_STATES: PurchaseOrderState[] = ['ALL_RECEIVED', 'NOT_ALL_RECEIVED'];
+const PURCHASE_ORDER_STATES: PurchaseOrderState[] = ['all-received', 'not-all-received'];
 
 export function PurchaseOrderStateSelector({
   onSelect,
@@ -27,7 +27,7 @@ export function PurchaseOrderStateSelector({
             : null,
           ...PURCHASE_ORDER_STATES.map(state => ({
             id: state,
-            leftSide: { label: titleCase(state) },
+            leftSide: { label: sentenceCase(state) },
           })),
         ].filter(isNonNullable),
         onSelect: state => (state === '' ? onClear?.() : onSelect(state)),

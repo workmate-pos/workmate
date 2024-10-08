@@ -1,5 +1,5 @@
 import { TabsProps, Tabs } from '@shopify/polaris';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export type LabourType = 'fixed' | 'hourly';
 export const LabourTabIndex: Record<LabourType, number> = {
@@ -22,7 +22,7 @@ export function LabourTabs({
 }) {
   return (
     <Tabs
-      tabs={labourTypes.map(tab => ({ id: tab, content: titleCase(tab) }))}
+      tabs={labourTypes.map(tab => ({ id: tab, content: sentenceCase(tab) }))}
       selected={LabourTabIndex[labourType]}
       onSelect={idx => {
         const labourType = ReverseLabourTabIndex[idx];

@@ -285,7 +285,7 @@ function PrintSettingsForm({
       {top}
 
       <TextField
-        label={'Email Address'}
+        label={'Email address'}
         autoComplete="off"
         value={printSettings.defaultEmail}
         onChange={defaultEmail => onChange({ ...printSettings, defaultEmail })}
@@ -294,7 +294,7 @@ function PrintSettingsForm({
       />
 
       <Checkbox
-        label={'Allow Custom Email Address'}
+        label={'Allow custom email address'}
         checked={printSettings.allowCustomEmail}
         onChange={allowCustomEmail => onChange({ ...printSettings, allowCustomEmail })}
         helpText={
@@ -313,7 +313,7 @@ function PrintSettingsForm({
       />
 
       <Checkbox
-        label={'Allow Custom From'}
+        label={'Allow custom from'}
         checked={printSettings.allowCustomFrom}
         onChange={allowCustomFrom => onChange({ ...printSettings, allowCustomFrom })}
         helpText={'Allow staff members to override the default from name, e.g. by setting it to their name.'}
@@ -330,7 +330,7 @@ function PrintSettingsForm({
       />
 
       <Checkbox
-        label={'Allow Custom Reply-to'}
+        label={'Allow custom reply-to'}
         checked={printSettings.allowCustomReplyTo}
         onChange={allowCustomReplyTo => onChange({ ...printSettings, allowCustomReplyTo })}
         helpText={

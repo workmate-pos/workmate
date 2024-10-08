@@ -21,6 +21,7 @@ export function PurchaseOrderCustomFieldsCard({
 }) {
   return (
     <CustomFieldsCard
+      kind="purchase-order"
       customFields={createPurchaseOrder.customFields}
       onUpdate={(customFields: Record<string, string>) => dispatch.setPartial({ customFields })}
       disabled={disabled}

@@ -27,7 +27,7 @@ export function VendorSelectorModal({
   );
 
   return (
-    <Modal open={open} title={'Select Vendor'} onClose={onClose}>
+    <Modal open={open} title={'Select vendor'} onClose={onClose}>
       <ResourceList
         items={filteredVendors}
         resourceName={{ singular: 'vendor', plural: 'vendors' }}

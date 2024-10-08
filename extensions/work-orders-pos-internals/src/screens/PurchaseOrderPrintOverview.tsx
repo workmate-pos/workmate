@@ -49,7 +49,7 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
   const emailTabs = [
     {
       id: 'default',
-      label: 'Default Email',
+      label: 'Default email',
       content: <FormStringField label={'Email'} value={email} disabled required />,
       onClick: () => {
         setEmail(printSettings?.defaultEmail ?? '');
@@ -57,7 +57,7 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
     },
     {
       id: 'employee',
-      label: 'Your Email',
+      label: 'Your email',
       content: <FormStringField label={'Email'} value={email} disabled required />,
       disabled: !currentEmployee?.email,
       onClick: () => {
@@ -71,7 +71,7 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
     },
     {
       id: 'custom',
-      label: 'Custom Email',
+      label: 'Custom email',
       disabled: !printSettings?.allowCustomEmail,
       content: <FormStringField label={'Email'} value={email} onChange={setEmail} required />,
       onClick: () => {
@@ -85,7 +85,7 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
   const fromTabs = [
     {
       id: 'default',
-      label: 'Default From',
+      label: 'Default from',
       content: <FormStringField label={'From'} value={from} disabled required />,
       onClick: () => {
         setFrom(printSettings?.defaultFrom ?? '');
@@ -93,7 +93,7 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
     },
     {
       id: 'employee',
-      label: 'From You',
+      label: 'From you',
       content: <FormStringField label={'From'} value={from} disabled required />,
       disabled: !currentEmployee?.name,
       onClick: () => {
@@ -107,7 +107,7 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
     },
     {
       id: 'custom',
-      label: 'Custom From',
+      label: 'Custom from',
       disabled: !printSettings?.allowCustomFrom,
       content: <FormStringField label={'From'} value={from} onChange={setFrom} required />,
       onClick: () => {
@@ -121,16 +121,16 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
   const replyToTabs = [
     {
       id: 'default',
-      label: 'Default Reply To',
-      content: <FormStringField label={'Reply To'} value={replyTo} disabled />,
+      label: 'Default reply-to',
+      content: <FormStringField label={'Reply-to'} value={replyTo} disabled />,
       onClick: () => {
         setReplyTo(printSettings?.defaultReplyTo ?? '');
       },
     },
     {
       id: 'employee',
-      label: 'Reply To You',
-      content: <FormStringField label={'Reply To'} value={replyTo} disabled />,
+      label: 'Reply to you',
+      content: <FormStringField label={'Reply-to'} value={replyTo} disabled />,
       disabled: !currentEmployee?.email,
       onClick: () => {
         if (!currentEmployee?.email) {
@@ -143,9 +143,9 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
     },
     {
       id: 'custom',
-      label: 'Custom Reply To',
+      label: 'Custom reply-to',
       disabled: !printSettings?.allowCustomReplyTo,
-      content: <FormStringField label={'Reply To'} value={replyTo} onChange={setReplyTo} />,
+      content: <FormStringField label={'Reply-to'} value={replyTo} onChange={setReplyTo} />,
       onClick: () => {
         if (!printSettings?.allowCustomReplyTo) {
           toast.show('Custom reply to is not allowed');

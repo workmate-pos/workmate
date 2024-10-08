@@ -41,7 +41,7 @@ export function PurchaseOrderEmployeesCard({
 
                   return (
                     <InlineStack gap={'200'} align={'space-between'}>
-                      <Text as={'p'}>{query?.data?.name ?? 'Unknown Employee'}</Text>
+                      <Text as={'p'}>{query?.data?.name ?? 'Unknown employee'}</Text>
                       <Button
                         variant={'plain'}
                         tone={'critical'}

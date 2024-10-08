@@ -14,7 +14,7 @@ export function PrintSettings({
   return (
     <BlockStack gap="400">
       <Text as="h2" variant="headingLg" fontWeight="bold">
-        Print Templates
+        Print templates
       </Text>
 
       <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'workOrders'} />

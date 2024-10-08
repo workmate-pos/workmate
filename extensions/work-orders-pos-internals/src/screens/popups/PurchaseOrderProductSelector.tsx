@@ -117,7 +117,7 @@ export function PurchaseOrderProductSelector({
           createPurchaseOrder={createPurchaseOrder}
         />
         <Button
-          title={'New Product'}
+          title={'New product'}
           onPress={() => {
             if (!locationId) {
               toast.show('Location id not set');
@@ -208,7 +208,7 @@ function useProductVariantRows(
   }
 
   return productVariants.map<ListRow>(variant => {
-    const displayName = getProductVariantName(variant) ?? 'Unknown Product';
+    const displayName = getProductVariantName(variant) ?? 'Unknown product';
     const imageUrl = variant.image?.url ?? variant.product?.featuredImage?.url;
 
     const inventoryItemId = variant.inventoryItem.id;
@@ -278,7 +278,7 @@ function useProductVariantRows(
               productVariantId: productVariant.id,
               availableQuantity: 0 as Int,
               quantity: 1 as Int,
-              name: getProductVariantName(productVariant) ?? 'Unknown Product',
+              name: getProductVariantName(productVariant) ?? 'Unknown product',
               sku: productVariant.sku,
               unitCost: decimalToMoneyOrDefault(inventoryItem?.unitCost?.amount, BigDecimal.ZERO.toMoney()),
               customFields: customFieldsPresetsQuery.data.defaultCustomFields,
