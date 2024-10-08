@@ -223,7 +223,7 @@ export function PurchaseOrderProductConfig({
           <Stack direction="vertical" spacing={2}>
             <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="headingSmall" color="TextSubdued">
-                Custom Fields
+                Line item custom fields
               </Text>
             </Stack>
             <CustomFieldsList

@@ -20,6 +20,7 @@ export function WorkOrderCustomFieldsCard({
 }) {
   return (
     <CustomFieldsCard
+      kind="work-order"
       customFields={createWorkOrder.customFields}
       onUpdate={(customFields: Record<string, string>) => dispatch.setPartial({ customFields })}
       disabled={disabled}

@@ -170,7 +170,7 @@ export function ItemConfig({
           </Stack>
           <Stack direction="vertical" spacing={2}>
             <Text variant="body" color="TextSubdued">
-              Custom Fields
+              Line item custom fields
             </Text>
             <CustomFieldsList
               customFields={item.customFields}

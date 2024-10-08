@@ -322,7 +322,7 @@ export function ItemChargeConfig({
           </Stack>
 
           <Stack direction={'vertical'} spacing={2}>
-            <Text variant={'headingLarge'}>Custom Fields</Text>
+            <Text variant={'headingLarge'}>Line item custom fields</Text>
 
             <CustomFieldsList
               customFields={item.customFields}

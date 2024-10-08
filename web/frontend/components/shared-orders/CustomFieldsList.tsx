@@ -1,7 +1,9 @@
 import { BlockStack, Button, ButtonGroup, InlineStack, Text, TextField } from '@shopify/polaris';
 import { CustomField } from '@web/frontend/components/shared-orders/CustomField.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export type CustomFieldsListProps = {
+  kind: 'line-item' | 'work-order' | 'purchase-order';
   customFields: Record<string, string>;
   onUpdate: (customFields: Record<string, string>) => void;
   disabled?: boolean;
@@ -12,6 +14,7 @@ export type CustomFieldsListProps = {
 };
 
 export function CustomFieldsList({
+  kind,
   customFields,
   onUpdate,
   disabled,
@@ -24,7 +27,7 @@ export function CustomFieldsList({
     <BlockStack gap={'400'}>
       <InlineStack align={'space-between'}>
         <Text as={'h2'} variant={'headingMd'} fontWeight={'bold'}>
-          Custom fields
+          {sentenceCase(kind === 'line-item' ? `${kind} custom fields` : 'custom fields')}
         </Text>
         <ButtonGroup>
           <Button variant={'plain'} onClick={() => onFieldValuesClick()} disabled={disabled}>

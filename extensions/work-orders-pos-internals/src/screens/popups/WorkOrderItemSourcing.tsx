@@ -101,12 +101,12 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
 
         <ResponsiveGrid columns={3}>
           <Button
-            title={'Layaway'}
+            title={'Reserve'}
             isDisabled={isSubmitting}
             isLoading={reserveLineItemInventoryMutation.isPending}
             onPress={() => {
               router.push('UnsourcedItemList', {
-                title: 'Select items to layaway',
+                title: 'Select items to reserve',
                 items: getUnsourcedWorkOrderItems(workOrder)
                   // if already in an order we cannot even reserve it smh
                   .filter(item => !isOrderId(item.shopifyOrderLineItem?.orderId))

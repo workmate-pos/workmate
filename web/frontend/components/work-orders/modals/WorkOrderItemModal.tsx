@@ -237,6 +237,7 @@ export function WorkOrderItemModal({
 
         <Modal.Section>
           <CustomFieldsList
+            kind="line-item"
             customFields={item.customFields}
             onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
