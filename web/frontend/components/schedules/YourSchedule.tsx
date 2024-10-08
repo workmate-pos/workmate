@@ -48,6 +48,7 @@ export function YourSchedule() {
     {
       // Keep previous data to prevent events from disappearing when switching from month->week/day or week->day
       placeholderData: keepPreviousData,
+      enabled: !!currentEmployee?.staffMemberId,
     },
   );
 

@@ -39,6 +39,7 @@ export function YourAvailability() {
     {
       // handy when moving from day to week/vice versa. would flash otherwise
       placeholderData: keepPreviousData,
+      enabled: !!currentEmployee?.staffMemberId,
     },
   );
   const employeeAvailabilities = employeeAvailabilitiesQuery.data;

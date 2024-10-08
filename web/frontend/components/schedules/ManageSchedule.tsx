@@ -76,7 +76,10 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
   const availabilitiesQuery = useEmployeeAvailabilitiesQuery(
     { fetch, filters: { from, to, staffMemberId: staffMemberId ?? createGid('StaffMember', '0') } },
-    { placeholderData: keepPreviousData },
+    {
+      placeholderData: keepPreviousData,
+      enabled: !!staffMemberId,
+    },
   );
   const scheduleQuery = useScheduleQuery({ fetch, id });
   const scheduleEventsQuery = useScheduleEventsQuery(

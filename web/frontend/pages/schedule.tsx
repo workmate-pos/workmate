@@ -13,6 +13,7 @@ import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
 import { YourAvailability } from '@web/frontend/components/schedules/YourAvailability.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 import { useSearchParams } from 'react-router-dom';
+import { TitleBar } from '@shopify/app-bridge-react';
 
 export default function Schedule() {
   // schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
@@ -52,6 +53,8 @@ export default function Schedule() {
   return (
     <Frame>
       <Page fullWidth={selectedTab === 'manage-schedules'}>
+        <TitleBar title="Schedule" />
+
         <Card padding={'100'}>
           <Tabs
             fitted
