@@ -75,7 +75,7 @@ export default function Serials() {
         />
 
         <TitleBar
-          title="Serial"
+          title="Serials"
           primaryAction={{
             content: 'New Serial',
             onAction: () => setIsProductSelectorOpen(true),

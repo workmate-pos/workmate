@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { uuid } from '@work-orders/common/util/uuid.js';
-import { zDecimal, zLiquidTemplate, zMoney, zNamespacedID } from '../../../util/zod.js';
+import { zDecimal, zID, zLiquidTemplate, zMoney, zNamespacedID } from '../../../util/zod.js';
 import { quoteTemplate } from '../../mail/templates/defaults/work-order/quote.js';
 import { workOrderInvoiceTemplate } from '../../mail/templates/defaults/work-order/invoice.js';
 import { purchaseOrderInvoiceTemplate } from '../../mail/templates/defaults/purchase-order/invoice.js';
@@ -14,9 +14,9 @@ const PrintSettings = z
     defaultReplyTo: z.string().default(''),
     defaultEmail: z.string().email().optional(),
 
-    allowCustomTitle: z.boolean().default(true),
     allowCustomReplyTo: z.boolean().default(true),
     allowCustomEmail: z.boolean().default(true),
+    allowCustomFrom: z.boolean().default(true),
   })
   .default({});
 
@@ -195,7 +195,7 @@ export const ShopSettings02 = z.object({
   printing: z
     .object({
       global: PrintSettings,
-      locationOverrides: z.record(zNamespacedID('Location'), PrintSettings).default({}),
+      locationOverrides: z.record(PrintSettings).default({}), // Record<ID, PrintSettings>, ID as key makes this partial for some reason
     })
     .default({}),
 

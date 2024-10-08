@@ -162,18 +162,18 @@ export default class WorkOrderController {
     const { name, template } = req.params;
     const { date, dueDate, replyTo, from, email } = req.query;
 
-    const { workOrders, printing } = await getShopSettings(session.shop);
+    const { workOrders } = await getShopSettings(session.shop);
 
     if (!Object.keys(workOrders.printTemplates).includes(template)) {
       throw new HttpError('Unknown print template', 400);
     }
 
-    if (!z.string().email().safeParse(replyTo).success) {
-      throw new HttpError('Invalid reply to email', 400);
+    if (!z.string().email().safeParse(email).success) {
+      throw new HttpError('Invalid destination email address', 400);
     }
 
-    if (!z.string().email().safeParse(from).success) {
-      throw new HttpError('Invalid from email', 400);
+    if (!z.string().email().safeParse(replyTo).success) {
+      throw new HttpError('Invalid reply-to email address', 400);
     }
 
     const printTemplate = workOrders.printTemplates[template] ?? never();

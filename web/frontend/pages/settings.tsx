@@ -1,7 +1,7 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
-import { ContextualSaveBar, Loading, useAppBridge } from '@shopify/app-bridge-react';
+import { ContextualSaveBar, Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useSettingsMutation } from '../queries/use-settings-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
@@ -166,9 +166,9 @@ function Settings() {
       name: 'Printing',
       tab: (
         <>
-          <PrintSettings settings={settings} setSettings={setSettings} />
-          <Divider />
           <EmailSettings settings={settings} setSettings={setSettings} />
+          <Divider />
+          <PrintSettings settings={settings} setSettings={setSettings} />
         </>
       ),
     },
@@ -199,6 +199,8 @@ function Settings() {
 
   return (
     <Page fullWidth={tabs[selectedTab]?.fullWidth}>
+      <TitleBar title="Settings" />
+
       <ContextualSaveBar
         saveAction={{
           disabled: !canWriteSettings || !isValid,

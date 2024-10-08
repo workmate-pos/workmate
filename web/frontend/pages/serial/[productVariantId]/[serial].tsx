@@ -129,7 +129,7 @@ export default function Serial() {
     );
   }
 
-  if (serialQuery.isSuccess && !serialQuery.data) {
+  if (routes.serial !== 'new' && serialQuery.isSuccess && !serialQuery.data) {
     return (
       <Frame>
         <Page>
@@ -211,6 +211,7 @@ export default function Serial() {
               <TextField
                 disabled={disabled}
                 label={'Location'}
+                requiredIndicator
                 labelAction={
                   createSerial.locationId !== null
                     ? {

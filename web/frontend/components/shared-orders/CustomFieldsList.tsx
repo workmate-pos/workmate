@@ -45,6 +45,7 @@ export function CustomFieldsList({
 
       {Object.entries(customFields).map(([key, value]) => (
         <CustomField
+          key={key}
           name={key}
           value={value}
           disabled={disabled}

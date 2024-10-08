@@ -40,7 +40,7 @@ import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { formatHourlyLabourPrice, LabourPriceText, LabourTypeBadge } from '@web/frontend/pages/service/[id].js';
 import { LabourType, LabourTabs } from '@web/frontend/components/LabourTabs.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useAppBridge } from '@shopify/app-bridge-react';
+import { TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 
 /**
  * Services and labour page.
@@ -59,6 +59,8 @@ export default function ServicesAndLabour() {
   return (
     <Frame>
       <Page>
+        <TitleBar title="Services and Labour" />
+
         <Layout>
           <Layout.Section>
             <Text as="h1" variant="heading2xl">

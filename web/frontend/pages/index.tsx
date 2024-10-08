@@ -4,6 +4,7 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { AppPlanCard } from '../components/AppPlanCard.js';
 import { WelcomeSection } from '@web/frontend/components/WelcomeSection.js';
 import { FreeConsultationSection } from '@web/frontend/components/FreeConsultationSection.js';
+import { TitleBar } from '@shopify/app-bridge-react';
 
 export default function HomePage() {
   const [toast, setToastAction] = useToast();
@@ -11,6 +12,8 @@ export default function HomePage() {
   return (
     <Frame>
       <Page narrowWidth>
+        <TitleBar title="" />
+
         <Layout>
           <Layout.Section>
             <WelcomeSection />
