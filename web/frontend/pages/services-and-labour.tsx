@@ -120,7 +120,7 @@ export default function ServicesAndLabour() {
                             image={emptyState}
                             action={{
                               content: 'Create',
-                              onAction: () => setToastAction({ content: 'Not implemented yet!' }),
+                              onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/service/new'),
                             }}
                           >
                             No services yet
@@ -182,7 +182,7 @@ export default function ServicesAndLabour() {
                               image={emptyState}
                               action={{
                                 content: 'Create',
-                                onAction: () => setToastAction({ content: 'Not implemented yet!' }),
+                                onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/labour/new'),
                               }}
                             >
                               No {labourType.toLowerCase()} labour yet
