@@ -295,19 +295,6 @@ function PurchaseOrder({
 
             setIsAddProductModalOpen(true);
           }}
-          onAddSpecialOrderProductClick={() => {
-            if (!createPurchaseOrder.locationId) {
-              setToastAction({ content: 'You must select a location to add products' });
-              return;
-            }
-
-            if (!createPurchaseOrder.vendorName) {
-              setToastAction({ content: 'You must select a vendor to add products' });
-              return;
-            }
-
-            setToastAction({ content: 'Not implemented yet' });
-          }}
           onMarkAllAsNotReceivedClick={() => {
             for (const product of createPurchaseOrder.lineItems) {
               const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
