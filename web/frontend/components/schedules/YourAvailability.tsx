@@ -17,9 +17,10 @@ import { EventApi } from '@fullcalendar/core';
 import { Checkbox, FormLayout, Modal, Text, TextField } from '@shopify/polaris';
 import { useEmployeeAvailabilityQuery } from '@work-orders/common/queries/use-employee-availability-query.js';
 import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
-export const AVAILABLE_COLOR = '#20c020';
-export const UNAVAILABLE_COLOR = '#f04040';
+export const AVAILABLE_COLOR = '#26d726';
+export const UNAVAILABLE_COLOR = '#d91e1e';
 
 export function YourAvailability() {
   const [toast, setToastAction] = useToast();
@@ -34,12 +35,12 @@ export function YourAvailability() {
   const employeeAvailabilitiesQuery = useEmployeeAvailabilitiesQuery(
     {
       fetch,
-      filters: { from, to, staffMemberId: currentEmployee?.staffMemberId ?? createGid('StaffMember', '0') },
+      filters: { from, to, staffMemberIds: [currentEmployee?.staffMemberId].filter(isNonNullable) },
     },
     {
       // handy when moving from day to week/vice versa. would flash otherwise
       placeholderData: keepPreviousData,
-      enabled: !!currentEmployee?.staffMemberId,
+      enabled: !!currentEmployee,
     },
   );
   const employeeAvailabilities = employeeAvailabilitiesQuery.data;

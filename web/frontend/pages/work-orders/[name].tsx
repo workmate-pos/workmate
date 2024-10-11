@@ -13,10 +13,12 @@ import {
   Frame,
   InlineGrid,
   InlineStack,
+  Layout,
   List,
   Page,
   Select,
   Text,
+  Tooltip,
 } from '@shopify/polaris';
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
@@ -41,7 +43,6 @@ import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orde
 import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { WorkOrderPrintModal } from '@web/frontend/components/work-orders/modals/WorkOrderPrintModal.js';
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
 import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
@@ -53,6 +54,8 @@ import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { PaymentTermsSelectorModal } from '@web/frontend/components/work-orders/modals/PaymentTermsSelectorModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
+import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function () {
   return (
@@ -279,13 +282,35 @@ function WorkOrder({
           />
         </InlineGrid>
 
-        <WorkOrderItemsCard
-          createWorkOrder={createWorkOrder}
-          dispatch={dispatch}
-          workOrder={workOrder ?? null}
-          disabled={workOrderMutation.isPending}
-          isLoading={calculatedDraftOrderQuery.isLoading}
-        />
+        <Layout>
+          <Layout.Section>
+            <WorkOrderItemsCard
+              createWorkOrder={createWorkOrder}
+              dispatch={dispatch}
+              workOrder={workOrder ?? null}
+              disabled={workOrderMutation.isPending}
+              isLoading={calculatedDraftOrderQuery.isLoading}
+            />
+          </Layout.Section>
+
+          <Layout.Section variant="oneThird">
+            <Card>
+              <LinkedTasks
+                links={{ workOrders: [createWorkOrder.name].filter(isNonNullable) }}
+                disabled={workOrderMutation.isPending}
+                action={
+                  !!createWorkOrder.name ? (
+                    <NewLinkedTaskButton links={{ workOrders: [createWorkOrder.name] }} />
+                  ) : (
+                    <Tooltip content={'You must save your work order before you can create tasks'}>
+                      <NewTaskButton disabled />
+                    </Tooltip>
+                  )
+                }
+              />
+            </Card>
+          </Layout.Section>
+        </Layout>
 
         <WorkOrderSummary
           createWorkOrder={createWorkOrder}

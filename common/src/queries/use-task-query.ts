@@ -30,7 +30,7 @@ export const useTaskQueries = ({ fetch, ids }: { fetch: Fetch; ids: number[] }) 
   return Object.fromEntries(ids.map((id, i) => [id, queries[i]!]));
 };
 
-export function mapTask(task: GetTaskResponse): Task {
+export function mapTask(task: GetTaskResponse) {
   return {
     ...task,
     createdAt: new Date(task.createdAt),
@@ -38,3 +38,5 @@ export function mapTask(task: GetTaskResponse): Task {
     deadline: task.deadline ? new Date(task.deadline) : null,
   };
 }
+
+export type DetailedTask = ReturnType<typeof mapTask>;

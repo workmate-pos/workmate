@@ -8,10 +8,13 @@
     "to": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
-    "staffMemberId": {
-      "$ref": "scalars.json#/definitions/ID"
+    "staffMemberIds": {
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/ID"
+      }
     }
   },
   "additionalProperties": false,
-  "required": ["from", "to"]
+  "required": ["from", "to", "staffMemberIds"]
 }

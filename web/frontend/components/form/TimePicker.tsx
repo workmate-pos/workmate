@@ -2,12 +2,14 @@ import { InlineStack, Select, TextField } from '@shopify/polaris';
 import { useEffect } from 'react';
 
 export function TimePicker({
+  readOnly,
   hours,
   minutes,
   onChange,
   min,
   max,
 }: {
+  readOnly?: boolean;
   hours: number;
   minutes: number;
   onChange: (hours: number, minutes: number) => void;
@@ -31,6 +33,7 @@ export function TimePicker({
   return (
     <InlineStack gap="050">
       <TextField
+        readOnly={readOnly}
         label={'Hours'}
         autoComplete="off"
         type="number"
@@ -41,6 +44,7 @@ export function TimePicker({
         requiredIndicator
       />
       <TextField
+        readOnly={readOnly}
         label={'Minutes'}
         autoComplete="off"
         type="number"
@@ -63,6 +67,7 @@ export function TimePicker({
               onChange(hours + 12, minutes);
             }
           }}
+          disabled={readOnly}
         />
       )}
     </InlineStack>

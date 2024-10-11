@@ -17,8 +17,45 @@
     },
     "done": {
       "type": "boolean"
+    },
+    "staffMemberIds": {
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/ID"
+      }
+    },
+    "links": {
+      "type": "object",
+      "properties": {
+        "workOrders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "purchaseOrders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "specialOrders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "transferOrders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "cycleCounts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "serials": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["workOrders", "purchaseOrders", "specialOrders", "transferOrders", "cycleCounts", "serials"]
     }
   },
-  "required": ["name", "description", "estimatedTimeMinutes", "deadline", "done"],
+  "required": ["name", "description", "estimatedTimeMinutes", "deadline", "done", "staffMemberIds", "links"],
   "additionalProperties": false
 }

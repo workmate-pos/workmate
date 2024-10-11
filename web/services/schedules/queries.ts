@@ -251,7 +251,7 @@ export async function getScheduleEvents({
   to,
   shop,
   scheduleId,
-  staffMemberId,
+  staffMemberIds,
   published,
   taskId,
 }: {
@@ -259,11 +259,11 @@ export async function getScheduleEvents({
   to: Date;
   shop: string;
   scheduleId?: number;
-  staffMemberId?: ID;
+  staffMemberIds?: ID[];
   published?: boolean;
   taskId?: number;
 }) {
-  const _staffMemberId: string | null = staffMemberId ?? null;
+  const _staffMemberIds: string[] | null = staffMemberIds ?? null;
 
   const events = await sql<{
     id: number;
@@ -285,7 +285,10 @@ export async function getScheduleEvents({
       AND es.id = COALESCE(${scheduleId ?? null}, es.id)
       AND ("publishedAt" IS NOT NULL AND "publishedAt" <= NOW()) =
           COALESCE(${published ?? null}, ("publishedAt" IS NOT NULL AND "publishedAt" <= NOW()))
-      AND esia."staffMemberId" IS NOT DISTINCT FROM COALESCE(${_staffMemberId}, esia."staffMemberId")
+      AND (
+      esia."staffMemberId" = ANY (${_staffMemberIds!} :: text[])
+        OR ${_staffMemberIds!} :: text[] IS NULL
+      )
       AND ((start >= ${from} AND start < ${to}) OR
            ("end" >= ${from} AND "end" < ${to}))
       AND esit."taskId" IS NOT DISTINCT FROM COALESCE(${taskId ?? null}, esit."taskId");
@@ -591,12 +594,12 @@ export async function getEmployeeAvailabilities({
   from,
   to,
   shop,
-  staffMemberId,
+  staffMemberIds,
 }: {
   from: Date;
   to: Date;
   shop: string;
-  staffMemberId?: ID;
+  staffMemberIds: ID[];
 }) {
   const availabilities = await sql<{
     id: number;
@@ -614,7 +617,7 @@ export async function getEmployeeAvailabilities({
     WHERE shop = ${shop}
       AND ("start" >= ${from} OR "start" < ${to})
       AND ("end" >= ${from} OR "end" < ${to})
-      AND "staffMemberId" IS NOT DISTINCT FROM COALESCE(${(staffMemberId as string | undefined) ?? null}, "staffMemberId");
+      AND "staffMemberId" = ANY (${staffMemberIds as string[]} :: text[]);
   `;
 
   return availabilities.map(mapEmployeeAvailability);

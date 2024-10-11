@@ -3,10 +3,13 @@ import { useInfiniteQuery, UseInfiniteQueryOptions, useQueryClient } from '@tans
 import { Fetch } from './fetch.js';
 import { GetTasksResponse, TaskResponse } from '@web/controllers/api/tasks.js';
 import { UseQueryData } from './react-query.js';
-import { mapTask, useTaskQuery } from './use-task-query.js';
-import { Task } from '@web/services/tasks/queries.js';
+import { DetailedTask, mapTask, useTaskQuery } from './use-task-query.js';
 
 const PAGE_SIZE = 100;
+
+type Filters = Omit<TaskPaginationOptions, 'limit' | 'offset' | `links${string}`> & {
+  links?: Partial<DetailedTask['links']>;
+};
 
 export const useTasksQuery = (
   {
@@ -14,15 +17,15 @@ export const useTasksQuery = (
     filters,
   }: {
     fetch: Fetch;
-    filters: Omit<TaskPaginationOptions, 'limit' | 'offset'>;
+    filters: Filters;
   },
   options?: Partial<
     UseInfiniteQueryOptions<
-      { hasNextPage: boolean; tasks: Task[] },
+      { hasNextPage: boolean; tasks: DetailedTask[] },
       Error,
       TaskResponse[][],
-      { hasNextPage: boolean; tasks: Task[] },
-      (string | Omit<TaskPaginationOptions, 'limit' | 'offset'>)[],
+      { hasNextPage: boolean; tasks: DetailedTask[] },
+      (string | Filters)[],
       number
     >
   >,
@@ -35,12 +38,21 @@ export const useTasksQuery = (
     queryFn: async ({ pageParam: offset, signal }) => {
       const searchParams = new URLSearchParams({ offset: String(offset), limit: String(PAGE_SIZE) });
 
-      const { query, sortMode, sortOrder, staffMemberId, done } = filters;
+      const { query, sortMode, sortOrder, staffMemberIds, done } = filters;
       if (query) searchParams.set('query', query);
       if (sortMode) searchParams.set('sortMode', sortMode);
       if (sortOrder) searchParams.set('sortOrder', sortOrder);
-      if (staffMemberId) searchParams.set('staffMemberId', staffMemberId);
       if (done !== undefined) searchParams.set('done', String(done));
+
+      for (const [key, values] of Object.entries(filters.links ?? {})) {
+        for (const value of values) {
+          searchParams.append(`links.${key}`, value);
+        }
+      }
+
+      for (const staffMemberId of staffMemberIds ?? []) {
+        searchParams.append('staffMemberIds', staffMemberId);
+      }
 
       const response = await fetch(`/api/tasks?${searchParams.toString()}`, { signal });
 

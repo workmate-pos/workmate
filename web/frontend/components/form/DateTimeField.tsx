@@ -3,23 +3,28 @@ import { BlockStack, Card, DatePicker, Icon, InlineStack, Popover, TextField } f
 import { CalendarMajor } from '@shopify/polaris-icons';
 import { TimePicker } from '@web/frontend/components/form/TimePicker.js';
 import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
+import type { LabelledProps } from '@shopify/polaris/build/ts/src/components/Labelled/index.js';
 
 export function DateTimeField({
   label,
+  labelAction,
   value,
   onChange,
   disabled,
   requiredIndicator,
   min,
   max,
+  readOnly,
 }: {
   label: string;
+  labelAction?: LabelledProps['action'];
   value: Date | undefined;
   onChange: (value: Date) => void;
   disabled?: boolean;
   requiredIndicator?: boolean;
   min?: Date;
   max?: Date;
+  readOnly?: boolean;
 }) {
   const [active, setActive] = useState(false);
 
@@ -39,12 +44,14 @@ export function DateTimeField({
       activator={
         <TextField
           label={label}
+          labelAction={labelAction}
           autoComplete="off"
           value={value?.toLocaleString?.()}
           disabled={disabled}
           prefix={<Icon source={CalendarMajor} />}
           onFocus={() => setActive(true)}
           requiredIndicator={requiredIndicator}
+          readOnly={readOnly}
         />
       }
       onClose={() => setActive(false)}
@@ -62,7 +69,7 @@ export function DateTimeField({
               setMonth(month);
               setYear(year);
             }}
-            disableDatesAfter={max ? new Date(max.getTime() + DAY_IN_MS) : undefined}
+            disableDatesAfter={readOnly ? new Date(0) : max ? new Date(max.getTime() + DAY_IN_MS) : undefined}
             disableDatesBefore={min ? new Date(min.getTime() - DAY_IN_MS) : undefined}
             onChange={({ start }) => {
               onChange(
@@ -70,8 +77,8 @@ export function DateTimeField({
                   start.getFullYear(),
                   start.getMonth(),
                   start.getDate(),
-                  value?.getHours(),
-                  value?.getMinutes(),
+                  // the type is wrong ... undefined is not supported, as arguments.length is used.... smh
+                  ...[value?.getHours(), value?.getMinutes()].filter(Boolean),
                 ),
               );
             }}
@@ -79,6 +86,7 @@ export function DateTimeField({
 
           <InlineStack align="center">
             <TimePicker
+              readOnly={readOnly}
               min={
                 min &&
                 min.getFullYear() === value?.getFullYear() &&

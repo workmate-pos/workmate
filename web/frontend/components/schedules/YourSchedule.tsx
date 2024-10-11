@@ -14,6 +14,7 @@ import { useScheduleEventTasksQuery } from '@work-orders/common/queries/use-sche
 import { useTaskMutation } from '@work-orders/common/queries/use-task-mutation.js';
 import { BlockStack, Checkbox, Modal, Text } from '@shopify/polaris';
 import { TaskCard } from '@web/frontend/components/tasks/TaskCard.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 type SelectedItem = { scheduleId: number; eventId: number };
 
@@ -42,13 +43,13 @@ export function YourSchedule() {
         from,
         to,
         published: true,
-        staffMemberId: currentEmployee?.id ?? createGid('StaffMember', '0'),
+        staffMemberIds: [currentEmployee?.id].filter(isNonNullable),
       },
     },
     {
       // Keep previous data to prevent events from disappearing when switching from month->week/day or week->day
       placeholderData: keepPreviousData,
-      enabled: !!currentEmployee?.staffMemberId,
+      enabled: !!currentEmployee,
     },
   );
 
@@ -199,6 +200,8 @@ function ScheduleEventInfo({
                         estimatedTimeMinutes: task.estimatedTimeMinutes,
                         deadline: task.deadline,
                         done: checked,
+                        staffMemberIds: task.staffMemberIds,
+                        links: task.links,
                       })
                     }
                   />

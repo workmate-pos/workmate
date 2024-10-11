@@ -1,33 +1,30 @@
-import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { Employee, useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
-import {
-  BlockStack,
-  Card,
-  EmptyState,
-  Filters,
-  InlineStack,
-  Modal,
-  ResourceItem,
-  ResourceList,
-  Text,
-} from '@shopify/polaris';
-import { useState } from 'react';
+import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
+import { useEmployeesQuery } from '@work-orders/common/queries/use-employees-query.js';
+import { useEffect, useState } from 'react';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
-import { emptyState } from '@web/frontend/assets/index.js';
+import { BlockStack, Filters, InlineStack, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
-export type StaffMemberSelectorModalProps = {
+export type MultiStaffMemberSelectorModalProps = {
   open: boolean;
   onClose: () => void;
-  onSelect: (staffMemberId: Employee) => void;
+  selected: ID[];
+  onChange: (staffMemberIds: ID[]) => void;
 };
 
-export function StaffMemberSelectorModal({ open, onClose, onSelect }: StaffMemberSelectorModalProps) {
-  const [query, setQuery, optimisticQuery] = useDebouncedState('');
-
+export function MultiStaffMemberSelectorModal({
+  open,
+  onClose,
+  selected,
+  onChange,
+}: MultiStaffMemberSelectorModalProps) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
+
+  const [query, setQuery, optimisticQuery] = useDebouncedState('');
 
   const staffMembersQuery = useEmployeesQuery({
     fetch,
@@ -38,13 +35,19 @@ export function StaffMemberSelectorModal({ open, onClose, onSelect }: StaffMembe
   const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, staffMembersQuery);
   const page = staffMembersQuery.data?.pages[pageIndex] ?? [];
 
+  useEffect(() => {
+    setPageIndex(0);
+  }, [query]);
+
   return (
     <>
-      <Modal open={open} title={'Select Staff Member'} onClose={onClose}>
+      <Modal open={open} title={'Select staff members'} onClose={onClose}>
         <ResourceList
           items={page}
           resourceName={{ singular: 'staff member', plural: 'staff members' }}
+          resolveItemId={staffMember => staffMember.id}
           loading={staffMembersQuery.isFetching}
+          selectable
           pagination={{
             hasNext: pagination.hasNextPage,
             hasPrevious: pagination.hasPreviousPage,
@@ -53,27 +56,38 @@ export function StaffMemberSelectorModal({ open, onClose, onSelect }: StaffMembe
           }}
           filterControl={
             <Filters
-              queryValue={optimisticQuery}
-              queryPlaceholder={'Search staff members'}
               filters={[]}
-              onQueryChange={setQuery}
+              onQueryChange={query => setQuery(query, !query)}
               onQueryClear={() => setQuery('', true)}
               onClearAll={() => setQuery('', true)}
+              queryValue={optimisticQuery}
+              queryPlaceholder={'Search staff members'}
             />
           }
-          emptyState={
-            <Card>
-              <EmptyState heading={'Staff Members'} image={emptyState}>
-                No staff members found
-              </EmptyState>
-            </Card>
-          }
+          onSelectionChange={staffMemberIds => {
+            if (staffMemberIds === 'All') {
+              onChange(
+                unique([
+                  ...selected,
+                  ...(staffMembersQuery.data?.pages.flat().map(staffMember => staffMember.id) ?? []),
+                ]),
+              );
+              return;
+            } else {
+              onChange(staffMemberIds.map(id => id as ID));
+            }
+          }}
+          selectedItems={selected}
           renderItem={staffMember => (
             <ResourceItem
               id={staffMember.id}
               onClick={() => {
-                onSelect(staffMember);
-                onClose();
+                const isSelected = selected.includes(staffMember.id);
+                if (isSelected) {
+                  onChange(selected.filter(id => id !== staffMember.id));
+                } else {
+                  onChange([...selected, staffMember.id]);
+                }
               }}
             >
               <InlineStack gap="400">

@@ -52,52 +52,50 @@ export function CustomerSelectorModal({
           </Button>
         </Modal.Section>
       )}
-      <Modal.Section>
-        <ResourceList
-          items={customers}
-          resourceName={{ singular: 'customer', plural: 'customers' }}
-          resolveItemId={customer => customer.id}
-          loading={customersQuery.isLoading || customersQuery.isFetchingNextPage}
-          pagination={{
-            hasNext: hasNextPage,
-            hasPrevious: page > 0,
-            onPrevious: () => setPage(page => page - 1),
-            onNext: () => {
-              if (isLastAvailablePage) {
-                customersQuery.fetchNextPage();
-              }
+      <ResourceList
+        items={customers}
+        resourceName={{ singular: 'customer', plural: 'customers' }}
+        resolveItemId={customer => customer.id}
+        loading={customersQuery.isLoading || customersQuery.isFetchingNextPage}
+        pagination={{
+          hasNext: hasNextPage,
+          hasPrevious: page > 0,
+          onPrevious: () => setPage(page => page - 1),
+          onNext: () => {
+            if (isLastAvailablePage) {
+              customersQuery.fetchNextPage();
+            }
 
-              setPage(page => page + 1);
-            },
-          }}
-          filterControl={
-            <Filters
-              filters={[]}
-              queryPlaceholder={'Search customers'}
-              queryValue={optimisticQuery}
-              onQueryChange={setQuery}
-              onQueryClear={() => setQuery('', true)}
-              onClearAll={() => setQuery('', true)}
-            />
-          }
-          renderItem={customer => (
-            <ResourceItem
-              id={customer.id}
-              onClick={() => {
-                onSelect(customer.id);
-                onClose();
-              }}
-            >
-              <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
-                {customer.displayName}
-              </Text>
-              <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                {customer?.defaultAddress?.formatted?.join(', ')}
-              </Text>
-            </ResourceItem>
-          )}
-        />
-      </Modal.Section>
+            setPage(page => page + 1);
+          },
+        }}
+        filterControl={
+          <Filters
+            filters={[]}
+            queryPlaceholder={'Search customers'}
+            queryValue={optimisticQuery}
+            onQueryChange={setQuery}
+            onQueryClear={() => setQuery('', true)}
+            onClearAll={() => setQuery('', true)}
+          />
+        }
+        renderItem={customer => (
+          <ResourceItem
+            id={customer.id}
+            onClick={() => {
+              onSelect(customer.id);
+              onClose();
+            }}
+          >
+            <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
+              {customer.displayName}
+            </Text>
+            <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+              {customer?.defaultAddress?.formatted?.join(', ')}
+            </Text>
+          </ResourceItem>
+        )}
+      />
     </Modal>
   );
 }

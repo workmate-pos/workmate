@@ -1,11 +1,28 @@
 import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
-import { getTask, getTasksPage, insertTask, Task, updateTask } from '../../services/tasks/queries.js';
+import {
+  deleteTaskAssignments,
+  deleteTaskLinks,
+  getTask,
+  getTaskAssignments,
+  getTaskLinks,
+  getTasksPage,
+  insertTask,
+  insertTaskAssignments,
+  insertTaskLinks,
+  Task,
+  TaskAssignment,
+  TaskLinks,
+  updateTask,
+} from '../../services/tasks/queries.js';
 import { DateTime } from '../../services/gql/queries/generated/schema.js';
 import { Session } from '@shopify/shopify-api';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { Request, Response } from 'express-serve-static-core';
 import { UpsertTask } from '../../schemas/generated/upsert-task.js';
 import { TaskPaginationOptions } from '../../schemas/generated/task-pagination-options.js';
+import { unit } from '../../services/db/unit-of-work.js';
+
+// TODO: Restrict task permissions -> only mark as done if assigned etc
 
 @Authenticated()
 export default class TasksController {
@@ -17,8 +34,11 @@ export default class TasksController {
 
     const { tasks, hasNextPage } = await getTasksPage(shop, paginationOptions);
 
+    const taskIds = tasks.map(task => task.id);
+    const [assignments, links] = await Promise.all([getTaskAssignments(taskIds), getTaskLinks(taskIds)]);
+
     return res.json({
-      tasks: tasks.map(mapTask),
+      tasks: tasks.map(task => mapTask(task, assignments, links)),
       hasNextPage,
     });
   }
@@ -28,31 +48,48 @@ export default class TasksController {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
 
-    const task = await getTask({ shop, id: Number(id) });
+    const [task, assignments, links] = await Promise.all([
+      getTask({ shop, id: Number(id) }),
+      getTaskAssignments([Number(id)]),
+      getTaskLinks([Number(id)]),
+    ]);
 
     if (!task) {
       throw new HttpError('Task not found', 404);
     }
 
-    return res.json(mapTask(task));
+    return res.json(mapTask(task, assignments, links));
   }
 
   @Post('/')
   @BodySchema('upsert-task')
   async createTask(req: Request<unknown, unknown, UpsertTask>, res: Response<GetTaskResponse>) {
     const { shop }: Session = res.locals.shopify.session;
-    const { name, description, estimatedTimeMinutes, deadline, done } = req.body;
+    const { name, description, estimatedTimeMinutes, deadline, done, staffMemberIds, links } = req.body;
 
-    const task = await insertTask({
-      shop,
-      name,
-      description,
-      estimatedTimeMinutes,
-      deadline: deadline ? new Date(deadline) : null,
-      done,
+    return await unit(async () => {
+      const task = await insertTask({
+        shop,
+        name,
+        description,
+        estimatedTimeMinutes,
+        deadline: deadline ? new Date(deadline) : null,
+        done,
+      });
+
+      await Promise.all([
+        await insertTaskAssignments(task.id, staffMemberIds),
+        await insertTaskLinks(task.id, shop, links),
+      ]);
+
+      return res.json(
+        mapTask(
+          task,
+          staffMemberIds.map(staffMemberId => ({ taskId: task.id, staffMemberId })),
+          [{ id: task.id, links }],
+        ),
+      );
     });
-
-    return res.json(mapTask(task));
   }
 
   @Post('/:id')
@@ -60,28 +97,53 @@ export default class TasksController {
   async postTask(req: Request<{ id: string }, unknown, UpsertTask>, res: Response<GetTaskResponse>) {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
-    const { name, description, estimatedTimeMinutes, deadline, done } = req.body;
+    const { name, description, estimatedTimeMinutes, deadline, done, staffMemberIds, links } = req.body;
 
-    const task = await updateTask({
-      id: Number(id),
-      shop,
-      name,
-      description,
-      estimatedTimeMinutes,
-      deadline: deadline ? new Date(deadline) : null,
-      done,
+    return await unit(async () => {
+      const [task] = await Promise.all([
+        updateTask({
+          id: Number(id),
+          shop,
+          name,
+          description,
+          estimatedTimeMinutes,
+          deadline: deadline ? new Date(deadline) : null,
+          done,
+        }),
+        deleteTaskAssignments({ taskId: Number(id) }).then(() => insertTaskAssignments(Number(id), staffMemberIds)),
+        deleteTaskLinks(Number(id)).then(() => insertTaskLinks(Number(id), shop, links)),
+      ]);
+
+      return res.json(
+        mapTask(
+          task,
+          staffMemberIds.map(staffMemberId => ({ taskId: task.id, staffMemberId })),
+          [{ id: task.id, links }],
+        ),
+      );
     });
-
-    return res.json(mapTask(task));
   }
 }
 
-export function mapTask(task: Task) {
+export function mapTask(task: Task, assignments: Pick<TaskAssignment, 'taskId' | 'staffMemberId'>[], links: TaskLinks) {
   return {
     ...task,
     deadline: task.deadline ? (task.deadline.toISOString() as DateTime) : null,
     createdAt: task.createdAt.toISOString() as DateTime,
     updatedAt: task.updatedAt.toISOString() as DateTime,
+    staffMemberIds: assignments
+      .filter(assignment => assignment.taskId === task.id)
+      .map(assignment => assignment.staffMemberId),
+    links:
+      links.find(links => links.id === task.id)?.links ??
+      ({
+        workOrders: [],
+        purchaseOrders: [],
+        specialOrders: [],
+        transferOrders: [],
+        cycleCounts: [],
+        serials: [],
+      } satisfies TaskLinks[number]['links']),
   };
 }
 

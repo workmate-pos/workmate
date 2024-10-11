@@ -13,9 +13,11 @@ import {
   Frame,
   InlineGrid,
   InlineStack,
+  Layout,
   Page,
   Select,
   Text,
+  Tooltip,
 } from '@shopify/polaris';
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
@@ -47,6 +49,8 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
+import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function () {
   return (
@@ -277,50 +281,74 @@ function PurchaseOrder({
           />
         </InlineGrid>
 
-        <PurchaseOrderProductsCard
-          createPurchaseOrder={createPurchaseOrder}
-          purchaseOrder={purchaseOrder}
-          dispatch={dispatch}
-          disabled={purchaseOrderMutation.isPending}
-          onAddProductClick={() => {
-            if (!createPurchaseOrder.locationId) {
-              setToastAction({ content: 'You must select a location to add products' });
-              return;
-            }
+        <Layout>
+          <Layout.Section>
+            <PurchaseOrderProductsCard
+              createPurchaseOrder={createPurchaseOrder}
+              purchaseOrder={purchaseOrder}
+              dispatch={dispatch}
+              disabled={purchaseOrderMutation.isPending}
+              onAddProductClick={() => {
+                if (!createPurchaseOrder.locationId) {
+                  setToastAction({ content: 'You must select a location to add products' });
+                  return;
+                }
 
-            if (!createPurchaseOrder.vendorName) {
-              setToastAction({ content: 'You must select a vendor to add products' });
-              return;
-            }
+                if (!createPurchaseOrder.vendorName) {
+                  setToastAction({ content: 'You must select a vendor to add products' });
+                  return;
+                }
 
-            setIsAddProductModalOpen(true);
-          }}
-          onAddSpecialOrderProductClick={() => {
-            if (!createPurchaseOrder.locationId) {
-              setToastAction({ content: 'You must select a location to add products' });
-              return;
-            }
+                setIsAddProductModalOpen(true);
+              }}
+              onAddSpecialOrderProductClick={() => {
+                if (!createPurchaseOrder.locationId) {
+                  setToastAction({ content: 'You must select a location to add products' });
+                  return;
+                }
 
-            if (!createPurchaseOrder.vendorName) {
-              setToastAction({ content: 'You must select a vendor to add products' });
-              return;
-            }
+                if (!createPurchaseOrder.vendorName) {
+                  setToastAction({ content: 'You must select a vendor to add products' });
+                  return;
+                }
 
-            setToastAction({ content: 'Not implemented yet' });
-          }}
-          onMarkAllAsNotReceivedClick={() => {
-            for (const product of createPurchaseOrder.lineItems) {
-              const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
-              const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-              dispatch.updateProduct({ product: { ...product, availableQuantity: minimumAvailableQuantity as Int } });
-            }
-          }}
-          onMarkAllAsReceivedClick={() => {
-            for (const product of createPurchaseOrder.lineItems) {
-              dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
-            }
-          }}
-        />
+                setToastAction({ content: 'Not implemented yet' });
+              }}
+              onMarkAllAsNotReceivedClick={() => {
+                for (const product of createPurchaseOrder.lineItems) {
+                  const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
+                  const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
+                  dispatch.updateProduct({
+                    product: { ...product, availableQuantity: minimumAvailableQuantity as Int },
+                  });
+                }
+              }}
+              onMarkAllAsReceivedClick={() => {
+                for (const product of createPurchaseOrder.lineItems) {
+                  dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
+                }
+              }}
+            />
+          </Layout.Section>
+
+          <Layout.Section variant="oneThird">
+            <Card>
+              <LinkedTasks
+                links={{ purchaseOrders: [createPurchaseOrder.name].filter(isNonNullable) }}
+                disabled={purchaseOrderMutation.isPending}
+                action={
+                  !!createPurchaseOrder.name ? (
+                    <NewLinkedTaskButton links={{ purchaseOrders: [createPurchaseOrder.name] }} />
+                  ) : (
+                    <Tooltip content={'You must save your purchase order before you can create tasks'}>
+                      <NewTaskButton disabled />
+                    </Tooltip>
+                  )
+                }
+              />
+            </Card>
+          </Layout.Section>
+        </Layout>
 
         <PurchaseOrderSummary
           createPurchaseOrder={createPurchaseOrder}

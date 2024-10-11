@@ -64,12 +64,15 @@ async function queryFn({
   filters: ScheduleEventsFilters;
   id: number | 'all';
 }) {
-  const { from, to, staffMemberId, published, taskId } = mapFilters(filters);
+  const { from, to, staffMemberIds, published, taskId } = mapFilters(filters);
   const searchParams = new URLSearchParams({ from, to });
 
   if (published !== undefined) searchParams.set('published', String(published));
-  if (staffMemberId) searchParams.set('staffMemberId', staffMemberId);
-  if (taskId) searchParams.set('taskId', String(taskId));
+  if (taskId !== undefined) searchParams.set('taskId', String(taskId));
+
+  for (const staffMemberId of staffMemberIds ?? []) {
+    searchParams.append('staffMemberIds', staffMemberId);
+  }
 
   const response = await fetch(`/api/schedules/${encodeURIComponent(id)}/events?${searchParams.toString()}`);
 

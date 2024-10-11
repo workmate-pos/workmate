@@ -20,6 +20,7 @@ export function SearchableChoiceList({
   selected,
   onChange,
   resourceName = { singular: 'choice', plural: 'choices' },
+  disabled,
 }: {
   title: string;
   limit?: number;
@@ -28,6 +29,7 @@ export function SearchableChoiceList({
   selected: string[];
   onChange: (selected: string[]) => void;
   resourceName?: { singular: string; plural: string };
+  disabled?: boolean;
 }) {
   const [query, setQuery] = useState('');
   const [displayHiddenChoices, setDisplayHiddenChoices] = useState(false);
@@ -57,6 +59,7 @@ export function SearchableChoiceList({
           onChange(selected.filter(v => v !== choice.value));
         }
       }}
+      disabled={disabled}
     />
   );
 

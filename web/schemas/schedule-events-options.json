@@ -8,8 +8,11 @@
     "to": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
-    "staffMemberId": {
-      "$ref": "scalars.json#/definitions/ID"
+    "staffMemberIds": {
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/ID"
+      }
     },
     "published": {
       "type": "boolean"

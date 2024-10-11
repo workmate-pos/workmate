@@ -29,13 +29,15 @@ export const useEmployeeAvailabilitiesQuery = (
     ...options,
     queryKey: ['employee-availability', 'list', filters],
     queryFn: async () => {
-      const { from, to, staffMemberId } = filters;
+      const { from, to, staffMemberIds } = filters;
       const searchParams = new URLSearchParams({
         from: from.toISOString(),
         to: to.toISOString(),
       });
 
-      if (staffMemberId) searchParams.set('staffMemberId', staffMemberId);
+      for (const staffMemberId of staffMemberIds) {
+        searchParams.append('staffMemberIds', staffMemberId);
+      }
 
       const response = await fetch(`/api/schedules/availability?${searchParams.toString()}`);
 

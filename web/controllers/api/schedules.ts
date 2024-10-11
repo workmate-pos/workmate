@@ -95,15 +95,17 @@ export default class SchedulesController {
     const id = req.params.id;
     const from = new Date(req.query.from);
     const to = new Date(req.query.to);
-    const { staffMemberId, published, taskId } = req.query;
+    const { staffMemberIds, published, taskId } = req.query;
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
-    if (
-      !user.user.permissions?.includes('manage_schedules') &&
-      !user.user.superuser &&
-      staffMemberId !== user.staffMember.id
-    ) {
-      throw new HttpError('You are not authorized to view schedules of other staff members', 401);
+    if (!user.user.permissions?.includes('manage_schedules') && !user.user.superuser) {
+      if (!staffMemberIds || staffMemberIds.some(staffMemberId => staffMemberId !== user.staffMember.id)) {
+        throw new HttpError('You are not authorized to view schedules of other staff members', 401);
+      }
+
+      if (published !== true) {
+        throw new HttpError('You are only authorized to view published schedules', 401);
+      }
     }
 
     if (id === 'all' && taskId === undefined) {
@@ -118,7 +120,7 @@ export default class SchedulesController {
       to,
       taskId,
       published,
-      staffMemberId,
+      staffMemberIds,
       scheduleId: id === 'all' ? undefined : Number(id),
     });
 
@@ -179,7 +181,13 @@ export default class SchedulesController {
       eventId: Number(eventId),
     });
 
-    return res.json(tasks.map(mapTask));
+    const taskIds = tasks.map(task => task.id);
+    const [assignments, links] = await Promise.all([
+      taskQueries.getTaskAssignments(taskIds),
+      taskQueries.getTaskLinks(taskIds),
+    ]);
+
+    return res.json(tasks.map(task => mapTask(task, assignments, links)));
   }
 
   @Post('/')
@@ -235,13 +243,13 @@ export default class SchedulesController {
     res: Response<GetAvailabilityResponse[]>,
   ) {
     const { shop }: Session = res.locals.shopify.session;
-    const { from, to, staffMemberId } = req.query;
+    const { from, to, staffMemberIds } = req.query;
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     if (
       !user.user.permissions?.includes('manage_schedules') &&
       !user.user.superuser &&
-      staffMemberId !== user.staffMember.id
+      staffMemberIds.some(staffMemberId => staffMemberId !== user.staffMember.id)
     ) {
       throw new HttpError('You are not authorized to view availabilities of other staff members', 401);
     }
@@ -250,7 +258,7 @@ export default class SchedulesController {
       shop,
       from: new Date(from),
       to: new Date(to),
-      staffMemberId,
+      staffMemberIds,
     });
 
     return res.json(availabilities.map(mapEmployeeAvailability));

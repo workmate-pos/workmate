@@ -1,13 +1,12 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { useScheduleQuery } from '@work-orders/common/queries/use-schedule-query.js';
+import { useScheduleQueries, useScheduleQuery } from '@work-orders/common/queries/use-schedule-query.js';
 import {
   Badge,
   Banner,
   BlockStack,
   Box,
   Button,
-  ButtonGroup,
   Card,
   Checkbox,
   Divider,
@@ -23,8 +22,8 @@ import {
   TextField,
 } from '@shopify/polaris';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronLeftMinor, EditMajor, PlusMinor, SearchMinor } from '@shopify/polaris-icons';
 import { useScheduleEventsQuery } from '@work-orders/common/queries/use-schedule-events-query.js';
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query';
@@ -33,28 +32,38 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin, { Draggable } from '@fullcalendar/interaction';
+import resourceTimeGridPlugin from '@fullcalendar/resource-timegrid';
 import { AVAILABLE_COLOR, UNAVAILABLE_COLOR } from '@web/frontend/components/schedules/YourAvailability.js';
-import { StaffMemberSelectorModal } from '@web/frontend/components/selectors/StaffMemberSelectorModal.js';
 import { useEmployeeQueries, useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
 import { useTasksQuery } from '@work-orders/common/queries/use-tasks-query.js';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { useScheduleEventMutation } from '@work-orders/common/queries/use-schedule-event-mutation.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useDeleteScheduleEventMutation } from '@work-orders/common/queries/use-delete-schedule-event-mutation.js';
 import { Loading } from '@shopify/app-bridge-react';
-import { useScheduleEventQuery } from '@work-orders/common/queries/use-schedule-event-query.js';
+import { DetailedScheduleEvent, useScheduleEventQuery } from '@work-orders/common/queries/use-schedule-event-query.js';
 import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
 import { SearchableChoiceList } from '@web/frontend/components/form/SearchableChoiceList.js';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { groupBy, unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 import Color from 'color';
-import { Schedule } from '@web/services/schedules/queries.js';
+import { EmployeeAvailability, Schedule } from '@web/services/schedules/queries.js';
 import { useScheduleMutation } from '@work-orders/common/queries/use-schedule-mutation.js';
 import { ColorField } from '@web/frontend/components/form/ColorField.js';
 import { TaskSelectorModal } from '@web/frontend/components/selectors/TaskSelectorModal.js';
-import { TaskCard, TaskCardScheduledTimeContent } from '@web/frontend/components/tasks/TaskCard.js';
+import {
+  ConfigurableTaskCard,
+  TaskCard,
+  TaskCardScheduledTimeContent,
+} from '@web/frontend/components/tasks/TaskCard.js';
 import { useTaskQuery } from '@work-orders/common/queries/use-task-query.js';
 import { UseQueryData } from '@work-orders/common/queries/react-query.js';
-import { HOUR_IN_MS, MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
+import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
+import { MultiStaffMemberSelectorModal } from '@web/frontend/components/selectors/MultiStaffMemberSelectorModal.js';
+import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { TaskModal } from '@web/frontend/components/tasks/TaskModal.js';
+
+// TODO: Include events from other schedules in the shown availability, with options whether to consider only published or also scheduled and draft
+// TODO: Show staff member names in events
 
 const DEFAULT_COLOR_HEX = '#a0a0a0';
 
@@ -68,25 +77,47 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
   // The schedule can be filled for the selected staff member.
   // Their availability is shown, and tasks are shown on the right allowing you to schedule them in.
   // Tasks are shown based on deadline.
-  const [staffMemberId, setStaffMemberId] = useState<ID>();
+  const [staffMemberIds, setStaffMemberIds] = useState<ID[]>([]);
 
-  // If enabled, employee availability is shown
-  const [shouldShowAvailability, setShouldShowAvailability] = useState(true);
+  const [hideStaffMemberAvailability, setHideStaffMemberAvailability] = useState<Record<ID, boolean>>({});
   const [shouldHideFinishedTasks, setShouldHideFinishedTasks] = useState(true);
 
+  const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
+
+  const [availabilityOptions, setAvailabilityOptions] = useState<
+    Record<
+      | 'includeEmployeeAvailability'
+      | 'includeDraftSchedules'
+      | 'includeScheduledSchedules'
+      | 'includePublishedSchedules',
+      boolean
+    >
+  >({
+    includeEmployeeAvailability: true,
+    includeDraftSchedules: false,
+    includeScheduledSchedules: true,
+    includePublishedSchedules: true,
+  });
+
   const availabilitiesQuery = useEmployeeAvailabilitiesQuery(
-    { fetch, filters: { from, to, staffMemberId: staffMemberId ?? createGid('StaffMember', '0') } },
-    {
-      placeholderData: keepPreviousData,
-      enabled: !!staffMemberId,
-    },
+    { fetch, filters: { from, to, staffMemberIds } },
+    { enabled: !!staffMemberIds.length, placeholderData: !!staffMemberIds.length ? keepPreviousData : [] },
   );
   const scheduleQuery = useScheduleQuery({ fetch, id });
   const scheduleEventsQuery = useScheduleEventsQuery(
-    { fetch, id, filters: { from, to, staffMemberId } },
+    {
+      fetch,
+      // we need all to include events from other schedules in availability
+      id: 'all',
+      filters: { from, to, staffMemberIds: staffMemberIds.length ? staffMemberIds : undefined },
+    },
     { placeholderData: keepPreviousData },
   );
-  const staffMemberQuery = useEmployeeQuery({ fetch, id: staffMemberId ?? null });
+  const scheduleQueries = useScheduleQueries({
+    fetch,
+    ids: unique(scheduleEventsQuery.data?.map(event => event.scheduleId) ?? []),
+  });
+
   const scheduleEventMutation = useScheduleEventMutation({ fetch });
   const deleteScheduleEventMutation = useDeleteScheduleEventMutation({ fetch });
 
@@ -101,7 +132,10 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
       fetch,
       filters: {
         query: taskQuery,
-        staffMemberId,
+        // TODO: Make this match ANY staff member
+        // TODO: Maybe an option that will make it exact match?
+        // TODO: When adding a task make sure to add the right staff members (assigned AND selected?)
+        staffMemberIds,
         done: shouldHideFinishedTasks ? false : undefined,
         sortMode: 'deadline',
         sortOrder: 'ascending',
@@ -119,8 +153,39 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
   const [shouldShowEditScheduleEventModal, setShouldShowEditScheduleEventModal] = useState(false);
 
   const [eventIdToEdit, setEventIdToEdit] = useState<number>();
-
   const [hoveringHeader, setHoveringHeader] = useState(false);
+
+  const staffMemberAvailabilities = useMemo(
+    (): StaffMemberAvailability[] =>
+      Object.entries(groupBy(availabilitiesQuery.data ?? [], availability => availability.staffMemberId))
+        .filter(([staffMemberId]) => !hideStaffMemberAvailability[staffMemberId as ID])
+        .flatMap(([staffMemberId, availabilities]) =>
+          getStaffMemberAvailability({
+            staffMemberId: staffMemberId as ID,
+            availabilities: availabilityOptions.includeEmployeeAvailability ? availabilities : [],
+            scheduleTypes: (
+              [
+                availabilityOptions.includeDraftSchedules ? 'draft' : null,
+                availabilityOptions.includeScheduledSchedules ? 'scheduled' : null,
+                availabilityOptions.includePublishedSchedules ? 'published' : null,
+              ] as const
+            ).filter(isNonNullable),
+            schedules: Object.values(scheduleQueries.data ?? {})
+              .filter(isNonNullable)
+              .filter(schedule => schedule.id !== id),
+            events: scheduleEventsQuery.data ?? [],
+          }),
+        ),
+    [
+      availabilitiesQuery.data,
+      scheduleQueries.data,
+      scheduleEventsQuery.data,
+      hideStaffMemberAvailability,
+      availabilityOptions,
+    ],
+  );
+
+  const calendarRef = useRef<FullCalendar>(null);
 
   return (
     <Container
@@ -152,13 +217,6 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
             </InlineStack>
           </div>
         )
-      }
-      actions={
-        <InlineStack gap={'200'}>
-          <ButtonGroup>
-            <Button onClick={() => setShouldShowStaffMemberSelector(true)}>Select Staff Member</Button>
-          </ButtonGroup>
-        </InlineStack>
       }
     >
       {([availabilitiesQuery, scheduleQuery, scheduleEventsQuery].some(query => query.isLoading) ||
@@ -210,20 +268,32 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
       <Layout>
         <Layout.Section>
           <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            ref={calendarRef}
+            schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, resourceTimeGridPlugin]}
             initialView="timeGridWeek"
             headerToolbar={{
-              right: 'dayGridMonth,timeGridWeek,timeGridDay',
+              right: 'dayGridMonth,timeGridWeek,resourceTimeGridDay',
             }}
             footerToolbar={{
               right: 'today prev,next',
             }}
-            eventDidMount={element => {
-              element.el.addEventListener('contextmenu', jsEvent => {
+            eventDidMount={info => {
+              // Hide availability depending on the view.
+              // Individual staff member availability events are only shown in the resourceTimeGridDay, because there staff members have their own column
+              if (
+                info.event.display === 'background' &&
+                info.event.getResources().some(resource => resource && isGid(resource.id)) &&
+                !info.view.type.startsWith('resourceTimeGridDay')
+              ) {
+                info.el.style.display = 'none';
+              }
+
+              info.el.addEventListener('contextmenu', jsEvent => {
                 jsEvent.preventDefault();
 
-                if (element.event.id) {
-                  setEventIdToEdit(current => current ?? Number(element.event.id));
+                if (info.event.id) {
+                  setEventIdToEdit(current => current ?? Number(info.event.id));
                   setShouldShowDeleteScheduleEventModal(true);
                 }
               });
@@ -233,52 +303,75 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
               setFrom(start);
               setTo(end);
             }}
+            resourceAreaHeaderContent={'Staff members'}
+            resourceOrder={undefined}
+            resources={[
+              ...(calendarRef.current?.getApi().view.type === 'resourceTimeGridDay' && staffMemberIds.length === 1
+                ? []
+                : [{ id: 'all', title: 'Selected staff members' }]),
+              ...staffMemberIds.map(id => ({
+                id,
+                title: staffMemberQueries[id]?.data?.name ?? 'Unknown staff member',
+              })),
+            ]}
             events={[
-              ...(shouldShowAvailability
-                ? (availabilitiesQuery.data?.map(availability => ({
-                    id: availability.id.toString(),
-                    title: availability.available ? 'Available' : 'Unavailable',
-                    start: availability.start,
-                    end: availability.end,
-                    color: availability.available ? AVAILABLE_COLOR : UNAVAILABLE_COLOR,
-                    editable: false,
-                    display: 'background',
-                  })) ?? [])
-                : []),
+              ...mergeStaffMemberAvailabilities(staffMemberAvailabilities).map(availability => ({
+                start: availability.start,
+                end: availability.end,
+                color: availability.color,
+                editable: false,
+                display: 'background',
+                resourceId: 'all',
+              })),
 
-              ...(scheduleEventsQuery.data?.map(event => {
-                // negative id is used for optimistic updates
-                const editable = event.id >= 0;
-                const colorOpacity = editable ? 'ff' : '77';
+              ...(staffMemberAvailabilities.map(availability => ({
+                start: availability.start,
+                end: availability.end,
+                color: availability.available ? AVAILABLE_COLOR : UNAVAILABLE_COLOR,
+                editable: false,
+                display: 'background',
+                resourceId: availability.staffMemberId,
+              })) ?? []),
 
-                return {
-                  id: event.id.toString(),
-                  title: event.name,
-                  start: event.start,
-                  end: event.end,
-                  editable,
-                  colorOpacity: editable ? 'ff' : '77',
-                  color: `${event.color.slice(0, 7)}${colorOpacity}`,
-                  extendedProps: {
-                    description: [
-                      tasks
-                        .filter(task => event.taskIds.includes(task.id))
-                        .map(task => task.name)
-                        .join(', '),
-                    ].join(' • '),
-                  },
-                };
-              }) ?? []),
+              ...(scheduleEventsQuery.data
+                ?.filter(event => event.scheduleId === id)
+                .map(event => {
+                  // negative id is used for optimistic updates
+                  const editable = event.id >= 0;
+                  const colorOpacity = editable ? 'ff' : '77';
+
+                  return {
+                    id: event.id.toString(),
+                    title: event.name,
+                    start: event.start,
+                    end: event.end,
+                    editable,
+                    color: `${event.color.slice(0, 7)}${colorOpacity}`,
+                    resourceIds: [
+                      ...event.assignedStaffMemberIds,
+                      ...(staffMemberIds.every(id => event.assignedStaffMemberIds.includes(id)) ? ['all'] : []),
+                    ],
+                    extendedProps: {
+                      // TODO: Support this
+                      description: [
+                        tasks
+                          .filter(task => event.taskIds.includes(task.id))
+                          .map(task => task.name)
+                          .join(', '),
+                      ].join(' • '),
+                    },
+                  };
+                }) ?? []),
             ]}
             selectable
-            select={({ start, end }) => {
+            select={({ start, end, resource }) => {
               scheduleEventMutation.mutate(
                 {
                   eventId: null,
                   scheduleId: id,
                   start,
                   end,
-                  staffMemberIds: [staffMemberId].filter(isNonNullable),
+                  staffMemberIds: !resource || resource.id === 'all' ? staffMemberIds : [resource.id].filter(isGid),
                   color: DEFAULT_COLOR_HEX,
                   name: 'New event',
                   description: '',
@@ -301,19 +394,24 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
               setEventIdToEdit(current => current ?? Number(event.id));
               setShouldShowEditScheduleEventModal(true);
             }}
-            eventChange={arg => {
-              const event = scheduleEventsQuery.data?.find(event => event.id.toString() === arg.event.id);
+            eventChange={info => {
+              const event = scheduleEventsQuery.data?.find(event => event.id.toString() === info.event.id);
 
               if (!event) {
                 return;
               }
 
+              const resources = info.event.getResources();
+              const assignedStaffMemberIds = resources.some(resource => resource.id === 'all')
+                ? staffMemberIds
+                : resources.map(resource => resource.id).filter(isGid);
+
               scheduleEventMutation.mutate({
                 scheduleId: id,
                 eventId: event.id,
-                start: arg.event.start ?? event.start,
-                end: arg.event.end ?? event.end,
-                staffMemberIds: event.assignedStaffMemberIds,
+                start: info.event.start ?? event.start,
+                end: info.event.end ?? event.end,
+                staffMemberIds: assignedStaffMemberIds,
                 color: event.color,
                 name: event.name,
                 description: event.description,
@@ -321,8 +419,6 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
               });
             }}
             eventReceive={({ event }) => {
-              console.log('eventReceive', event);
-
               if (!event.start) {
                 return;
               }
@@ -330,28 +426,21 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
               const { taskId, durationMinutes } = event.extendedProps;
 
               if (typeof taskId !== 'number' || typeof durationMinutes !== 'number') {
-                console.log('taskId or durationMinutes not a number', taskId, durationMinutes);
                 return;
               }
 
               const task = queryClient.getQueryData<UseQueryData<typeof useTaskQuery>>(['task', taskId]);
 
               if (!task) {
-                console.log('task not found');
                 return;
               }
-
-              console.log('creating task', task);
-
-              // TODO: Remove event from schedule if not created
-              // TODO: Also fix the dragging thing
 
               scheduleEventMutation.mutate({
                 scheduleId: id,
                 eventId: null,
                 name: task.name,
                 description: task.description,
-                staffMemberIds: [staffMemberId].filter(isNonNullable),
+                staffMemberIds: staffMemberIds.filter(staffMemberId => task.staffMemberIds.includes(staffMemberId)),
                 start: event.start,
                 end: new Date(event.start.getTime() + durationMinutes * MINUTE_IN_MS),
                 color: DEFAULT_COLOR_HEX,
@@ -363,51 +452,90 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
         {shouldShowSidebar && (
           <Layout.Section variant="oneThird">
             <BlockStack gap="200">
-              {staffMemberQuery.isError && (
-                <Banner tone="critical" title="Error loading staff member">
-                  {extractErrorMessage(staffMemberQuery.error, 'An error occurred while loading the staff member')}
-                </Banner>
-              )}
+              <Card>
+                <BlockStack gap="200">
+                  <Box paddingBlockEnd="200">
+                    <InlineStack gap="200" align="space-between" blockAlign="start">
+                      <Text as="h2" variant="headingMd" fontWeight="bold">
+                        Staff members
+                      </Text>
+                      <Button variant="plain" onClick={() => setShouldShowStaffMemberSelector(true)}>
+                        Select staff members
+                      </Button>
+                    </InlineStack>
+                  </Box>
 
-              {!!staffMemberId && (
-                <Card>
-                  {staffMemberQuery.isLoading && <Spinner />}
+                  <Text as="p" variant="bodyMd" tone="subdued">
+                    Select staff members to schedule assigned tasks and view combined availability.
+                  </Text>
 
-                  {staffMemberQuery.isSuccess && !staffMemberQuery.data && (
-                    <Text as="p" tone="critical" fontWeight="bold">
-                      Staff member not found
-                    </Text>
-                  )}
+                  {!!staffMemberIds.length && (
+                    <>
+                      <Box paddingBlock="200">
+                        <Divider />
+                      </Box>
 
-                  {staffMemberQuery.isSuccess && staffMemberQuery.data && (
-                    <BlockStack gap="200">
-                      <InlineStack align="space-between" gap="200" blockAlign="center">
-                        <Text as="h2" variant="headingMd" fontWeight="bold">
-                          {staffMemberQuery.data.name}
-                        </Text>
-
-                        <InlineStack gap="200" blockAlign="center">
-                          <Button variant="plain" onClick={() => setStaffMemberId(undefined)}>
-                            Deselect
-                          </Button>
-                        </InlineStack>
-                      </InlineStack>
-
-                      <InlineStack align="space-between" gap="200" blockAlign="end">
-                        <Text as="p" variant="bodyMd" tone="subdued">
-                          {staffMemberQuery.data.email}
-                        </Text>
-
-                        <Checkbox
-                          label={'Show Availability'}
-                          checked={shouldShowAvailability}
-                          onChange={shouldShowAvailability => setShouldShowAvailability(shouldShowAvailability)}
+                      {staffMemberIds.map(id => (
+                        <StaffMemberCard
+                          id={id}
+                          key={id}
+                          labelAction={
+                            <InlineStack gap="200" blockAlign="center">
+                              <Button
+                                variant="plain"
+                                tone="critical"
+                                onClick={() => setStaffMemberIds(current => current.filter(x => x !== id))}
+                              >
+                                Remove
+                              </Button>
+                            </InlineStack>
+                          }
+                          right={
+                            <Checkbox
+                              label={'Show Availability'}
+                              checked={!hideStaffMemberAvailability[id]}
+                              onChange={checked =>
+                                setHideStaffMemberAvailability(current => ({ ...current, [id]: !checked }))
+                              }
+                            />
+                          }
                         />
-                      </InlineStack>
-                    </BlockStack>
+                      ))}
+
+                      <Box paddingBlock="200">
+                        <Divider />
+                      </Box>
+
+                      <Text as="h3" variant="headingMd" fontWeight="bold">
+                        Availability
+                      </Text>
+
+                      <Text as="p" variant="bodyMd" tone="subdued">
+                        Configure which data to include when determining combined availability.
+                      </Text>
+
+                      <InlineGrid columns={3} gap={'100'} alignItems="center">
+                        {(
+                          [
+                            ['Employee availability', 'includeEmployeeAvailability'],
+                            ['Draft schedules', 'includeDraftSchedules'],
+                            ['Scheduled schedules', 'includeScheduledSchedules'],
+                            ['Published schedules', 'includePublishedSchedules'],
+                          ] as const
+                        ).map(([label, key]) => (
+                          <InlineStack align="center">
+                            <Checkbox
+                              label={label}
+                              checked={availabilityOptions[key]}
+                              onChange={value => setAvailabilityOptions(current => ({ ...current, [key]: value }))}
+                            />
+                          </InlineStack>
+                        ))}
+                      </InlineGrid>
+                    </>
                   )}
-                </Card>
-              )}
+                </BlockStack>
+              </Card>
 
               <Card>
                 <BlockStack gap="200">
@@ -425,8 +553,8 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                   </Box>
 
                   <Text as="p" variant="bodyMd" tone="subdued">
-                    Tasks can be dragged and dropped to schedule them. They will automatically be associated with their
-                    assigned employee.
+                    Tasks can be dragged and dropped to schedule them. They will automatically be associated with the
+                    selected assigned staff members.
                   </Text>
 
                   <Box paddingBlock="200">
@@ -471,10 +599,11 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
         )}
       </Layout>
 
-      <StaffMemberSelectorModal
+      <MultiStaffMemberSelectorModal
         onClose={() => setShouldShowStaffMemberSelector(false)}
         open={shouldShowStaffMemberSelector}
-        onSelect={staffMember => setStaffMemberId(staffMember.id)}
+        selected={staffMemberIds}
+        onChange={setStaffMemberIds}
       />
 
       <EditScheduleModal
@@ -614,7 +743,7 @@ function EditScheduleEventModal({
 
   const eventQuery = useScheduleEventQuery({ fetch, scheduleId, eventId: eventId ?? null }, { enabled: open });
   const editScheduleEventMutation = useScheduleEventMutation({ fetch });
-
+  const deleteScheduleEventMutation = useDeleteScheduleEventMutation({ fetch });
   const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
 
   useEffect(() => {
@@ -631,14 +760,34 @@ function EditScheduleEventModal({
 
   const [shouldShowStaffMemberSelector, setShouldShowStaffMemberSelector] = useState(false);
   const [shouldShowTaskSelector, setShouldShowTaskSelector] = useState(false);
+  const [shouldShowDeleteScheduleEventModal, setShouldShowDeleteScheduleEventModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number>();
 
   return (
     <>
       <Modal
-        open={open && !shouldShowStaffMemberSelector && !shouldShowTaskSelector}
+        open={
+          open &&
+          !shouldShowStaffMemberSelector &&
+          !shouldShowTaskSelector &&
+          !shouldShowDeleteScheduleEventModal &&
+          selectedTaskId === undefined
+        }
         title={'Edit Schedule Event'}
         onClose={onClose}
         loading={eventQuery.isLoading}
+        secondaryActions={[
+          {
+            content: 'Cancel',
+            onAction: onClose,
+          },
+          {
+            content: 'Delete',
+            destructive: true,
+            disabled: !eventId,
+            onAction: () => setShouldShowDeleteScheduleEventModal(true),
+          },
+        ]}
         primaryAction={{
           content: 'Save',
           disabled: !eventId || !name,
@@ -649,7 +798,7 @@ function EditScheduleEventModal({
 
             editScheduleEventMutation.mutate({
               scheduleId,
-              eventId: eventId,
+              eventId,
               name,
               description,
               staffMemberIds,
@@ -734,6 +883,7 @@ function EditScheduleEventModal({
                     Remove
                   </Button>
                 }
+                onClick={() => setSelectedTaskId(taskId)}
               />
             ))}
 
@@ -746,16 +896,31 @@ function EditScheduleEventModal({
         </Modal.Section>
       </Modal>
 
-      <StaffMemberSelectorModal
+      <DeleteScheduleEventModal
+        scheduleId={scheduleId}
+        eventId={eventId}
+        open={shouldShowDeleteScheduleEventModal}
+        onClose={() => setShouldShowDeleteScheduleEventModal(false)}
+      />
+
+      <MultiStaffMemberSelectorModal
         open={shouldShowStaffMemberSelector}
         onClose={() => setShouldShowStaffMemberSelector(false)}
-        onSelect={staffMember => setStaffMemberIds(current => unique([staffMember.id, ...current]))}
+        selected={staffMemberIds}
+        onChange={setStaffMemberIds}
       />
 
       <TaskSelectorModal
         open={shouldShowTaskSelector}
         onClose={() => setShouldShowTaskSelector(false)}
         onSelect={task => setTaskIds(current => [...current.filter(id => id !== task.id), task.id])}
+      />
+
+      <TaskModal
+        open={selectedTaskId !== undefined}
+        onClose={() => setSelectedTaskId(undefined)}
+        onSave={() => {}}
+        id={selectedTaskId ?? null}
       />
 
       {toast}
@@ -911,8 +1076,213 @@ function DraggableTaskCard({ taskId }: { taskId: number }) {
 
   return (
     <>
-      <TaskCard ref={ref} taskId={taskId} content={<TaskCardScheduledTimeContent taskId={taskId} />} />
+      <ConfigurableTaskCard ref={ref} taskId={taskId} content={<TaskCardScheduledTimeContent taskId={taskId} />} />
       {toast}
     </>
   );
+}
+
+function StaffMemberCard({ id, labelAction, right }: { id: ID; labelAction?: ReactNode; right?: ReactNode }) {
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+  const staffMemberQuery = useEmployeeQuery({ fetch, id });
+
+  if (staffMemberQuery.isError) {
+    return (
+      <Banner tone="critical" title="Error loading staff member">
+        {extractErrorMessage(staffMemberQuery.error, 'An error occurred while loading the staff member')}
+      </Banner>
+    );
+  }
+
+  return (
+    <Card>
+      {staffMemberQuery.isLoading && <Spinner />}
+
+      {staffMemberQuery.isSuccess && !staffMemberQuery.data && (
+        <Text as="p" tone="critical" fontWeight="bold">
+          Staff member not found
+        </Text>
+      )}
+
+      {staffMemberQuery.isSuccess && staffMemberQuery.data && (
+        <BlockStack gap="200">
+          <InlineStack align="space-between" gap="200" blockAlign="center">
+            <Text as="h2" variant="headingMd" fontWeight="bold">
+              {staffMemberQuery.data.name}
+            </Text>
+
+            {labelAction}
+          </InlineStack>
+
+          <InlineStack align="space-between" gap="200" blockAlign="end">
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {staffMemberQuery.data.email}
+            </Text>
+
+            {right}
+          </InlineStack>
+        </BlockStack>
+      )}
+
+      {toast}
+    </Card>
+  );
+}
+
+type MergedAvailability = {
+  availableStaffMemberIds: ID[];
+  unavailableStaffMemberIds: ID[];
+  color: string;
+  start: Date;
+  end: Date;
+};
+
+type StaffMemberAvailability = {
+  staffMemberId: ID;
+  start: Date;
+  end: Date;
+  available: boolean;
+};
+
+/**
+ * Get a staff member's availability based on their given availability and scheduled events.
+ */
+export function getStaffMemberAvailability({
+  staffMemberId,
+  availabilities,
+  schedules,
+  events,
+
+  scheduleTypes,
+}: {
+  staffMemberId: ID;
+  availabilities: EmployeeAvailability[];
+  events: DetailedScheduleEvent[];
+  schedules: Schedule[];
+
+  scheduleTypes: ('draft' | 'scheduled' | 'published')[];
+}) {
+  schedules = schedules.filter(schedule => scheduleTypes.includes(getScheduleType(schedule)));
+  events = events.filter(
+    event =>
+      event.assignedStaffMemberIds.includes(staffMemberId) &&
+      schedules.some(schedule => schedule.id === event.scheduleId),
+  );
+  availabilities = availabilities.filter(availability => availability.staffMemberId === staffMemberId);
+
+  const sortedDates = sortDates(
+    uniqueBy(
+      [availabilities, events].flat(1).flatMap(({ start, end }) => [start, end]),
+      date => date.getTime(),
+    ),
+    'ascending',
+  );
+
+  const result: StaffMemberAvailability[] = [];
+
+  for (const [start, end] of zip(sortedDates, sortedDates.slice(1))) {
+    let available: boolean | null = null;
+
+    // We only need to check for overlap, and not for partial overlap (i.e. one side) or inclusion because we are considering the smallest time ranges.
+    // This may introduce subsequent blocks with the same availability, but that is fine as we simply fix that later.
+    const timestampOverlaps = (range: { start: Date; end: Date }) =>
+      range.start.getTime() <= start.getTime() && range.end.getTime() >= end.getTime();
+
+    for (const availability of availabilities.filter(timestampOverlaps)) {
+      available = (available ?? true) && availability.available;
+    }
+
+    if (!!events.find(timestampOverlaps)) {
+      available = false;
+    }
+
+    if (available === null) {
+      continue;
+    }
+
+    // Merge with the previous time block if it has the same availability.
+    // Only has an effect when both availability and events are considered.
+    const previousAvailability = result.at(-1);
+
+    if (
+      previousAvailability &&
+      previousAvailability.available === available &&
+      previousAvailability.end.getTime() >= start.getTime()
+    ) {
+      previousAvailability.end = end;
+      continue;
+    }
+
+    result.push({
+      staffMemberId,
+      start,
+      end,
+      available,
+    });
+  }
+
+  return result;
+}
+
+function getScheduleType(schedule: Schedule) {
+  if (!schedule.publishedAt) {
+    return 'draft';
+  }
+
+  if (schedule.publishedAt.getTime() > new Date().getTime()) {
+    return 'scheduled';
+  }
+
+  return 'published';
+}
+
+/**
+ * Merge availabilities of different staff members, allowing you to display combined availability and who is unavailable.
+ * The color is automatically computed as a weighted average of `AVAILABLE_COLOR` and `UNAVAILABLE_COLOR`, depending on what % of employees is available.
+ */
+function mergeStaffMemberAvailabilities(availabilities: StaffMemberAvailability[]) {
+  const sortedDates = sortDates(
+    uniqueBy(
+      availabilities.flatMap(availability => [availability.start, availability.end]),
+      date => date.getTime(),
+    ),
+    'ascending',
+  );
+
+  return [...zip(sortedDates, sortedDates.slice(1))].flatMap<MergedAvailability>(([start, end]) => {
+    const relevantAvailabilities = availabilities.filter(
+      availability => availability.start.getTime() <= start.getTime() && availability.end.getTime() >= end.getTime(),
+    );
+
+    if (relevantAvailabilities.length === 0) {
+      return [];
+    }
+
+    const availableStaffMemberIds = relevantAvailabilities
+      .filter(availability => availability.available)
+      .map(availability => availability.staffMemberId);
+
+    const unavailableStaffMemberIds = relevantAvailabilities
+      .filter(availability => !availability.available)
+      .map(availability => availability.staffMemberId);
+
+    const color = Color(AVAILABLE_COLOR)
+      .mix(Color(UNAVAILABLE_COLOR), unavailableStaffMemberIds.length / relevantAvailabilities.length)
+      .hex();
+
+    return {
+      availableStaffMemberIds,
+      unavailableStaffMemberIds,
+      color,
+      start,
+      end,
+    };
+  });
+}
+
+function sortDates(dates: Date[], direction: 'ascending' | 'descending') {
+  const ascending = (a: Date, b: Date) => a.getTime() - b.getTime();
+  const descending = (a: Date, b: Date) => b.getTime() - a.getTime();
+  return [...dates].sort(direction === 'ascending' ? ascending : descending);
 }
