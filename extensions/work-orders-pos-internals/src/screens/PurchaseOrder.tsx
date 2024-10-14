@@ -44,6 +44,7 @@ import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-
 import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer-line-item-status-badge-props.js';
 import { getSpecialOrderBadge } from '../util/badges.js';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
+import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -403,6 +404,12 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               <FormMoneyField label={'Balance Due'} value={balanceDue.toMoney()} disabled />
             </ResponsiveGrid>
           </ResponsiveGrid>
+
+          <LinkedTasks
+            links={{ purchaseOrders: [createPurchaseOrder.name].filter(isNonNullable) }}
+            disabled={purchaseOrderMutation.isPending}
+            useRouter={useRouter}
+          />
         </Stack>
       </ScrollView>
 

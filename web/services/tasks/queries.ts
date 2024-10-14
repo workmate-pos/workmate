@@ -7,8 +7,6 @@ import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unit } from '../db/unit-of-work.js';
 
-// TODO: Dont include staff members through jsonb agg because many joins fuck this up
-
 export type Task = ReturnType<typeof mapTask>;
 export type TaskAssignment = ReturnType<typeof mapTaskAssignment>;
 export type TaskLinks = Awaited<ReturnType<typeof getTaskLinks>>;
@@ -357,8 +355,6 @@ export function mapTaskAssignment(assignment: {
   }
 }
 
-// TODO: Unit that combines these
-
 export async function insertTaskWorkOrderLinks(taskId: number, shop: string, workOrderNames: string[]) {
   await sql`
     INSERT INTO "TaskWorkOrderLink" ("taskId", "workOrderId")
@@ -468,7 +464,7 @@ export async function deleteTaskSerialLinks(taskId: number) {
 }
 
 export async function deleteTaskLinks(taskId: number) {
-  return await unit(async () => {
+  await unit(async () => {
     await Promise.all([
       deleteTaskWorkOrderLinks(taskId),
       deleteTaskPurchaseOrderLinks(taskId),

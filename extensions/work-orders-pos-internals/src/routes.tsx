@@ -110,6 +110,8 @@ import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoade
 import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
 import { Scanner } from './screens/smart-scanner/Scanner.js';
 import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
+import { TaskModal, TaskModalProps } from '@work-orders/common-pos/screens/tasks/TaskModal.js';
+import { TaskInfo, TaskInfoProps } from '@work-orders/common-pos/screens/tasks/TaskInfo.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -462,5 +464,14 @@ export const { Router, useRouter } = createRouter({
   Scanner: {
     title: 'Scanner',
     Component: Scanner,
+  },
+
+  TaskModal: {
+    title: 'Task',
+    Component: (props: Omit<TaskModalProps, 'useRouter'>) => <TaskModal {...props} useRouter={useRouter} />,
+  },
+  TaskInfo: {
+    title: 'Task',
+    Component: (props: Omit<TaskInfoProps, 'useRouter'>) => <TaskInfo {...props} useRouter={useRouter} />,
   },
 });

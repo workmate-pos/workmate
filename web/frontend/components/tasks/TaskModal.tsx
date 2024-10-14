@@ -226,9 +226,7 @@ export function TaskModal({
               value={estimatedTimeMinutes?.toString()}
               step={1}
               onChange={value =>
-                setEstimatedTimeMinutes(current =>
-                  !!value && Number.isFinite(Number(value)) ? Number(value) : current,
-                )
+                setEstimatedTimeMinutes(!!value && Number.isFinite(Number(value)) ? Number(value) : undefined)
               }
             />
 

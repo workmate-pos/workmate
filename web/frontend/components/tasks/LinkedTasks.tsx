@@ -1,4 +1,4 @@
-import { Banner, BlockStack, Button, ButtonProps, InlineStack, Text, Tooltip } from '@shopify/polaris';
+import { Banner, BlockStack, Button, ButtonProps, InlineStack, Spinner, Text } from '@shopify/polaris';
 import { useTasksQuery } from '@work-orders/common/queries/use-tasks-query.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
@@ -78,6 +78,8 @@ export function LinkedTasks({
             content={<TaskCardScheduledTimeContent taskId={task.id} />}
           />
         ))}
+
+      {tasksQuery.isFetchingNextPage && <Spinner />}
 
       {toast}
     </BlockStack>

@@ -70,7 +70,7 @@ export function DateTimeField({
               setYear(year);
             }}
             disableDatesAfter={readOnly ? new Date(0) : max ? new Date(max.getTime() + DAY_IN_MS) : undefined}
-            disableDatesBefore={min ? new Date(min.getTime() - DAY_IN_MS) : undefined}
+            disableDatesBefore={readOnly ? new Date(0) : min ? new Date(min.getTime() - DAY_IN_MS) : undefined}
             onChange={({ start }) => {
               onChange(
                 new Date(

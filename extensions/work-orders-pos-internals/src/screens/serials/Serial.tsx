@@ -21,6 +21,7 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { WIPCreateSerial } from '@work-orders/common/create-serial/default.js';
 import { getCreateSerialSetter } from '@work-orders/common/create-serial/get-create-serial-setter.js';
 import { getCreateSerialFromDetailedSerial } from '@work-orders/common/create-serial/get-create-serial-from-detailed-serial.js';
+import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
 
 export function Serial({ initial }: { initial: WIPCreateSerial }) {
   const [lastSavedSerial, setLastSavedSerial] = useState(initial);
@@ -166,6 +167,12 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
                 }))
               : []
           }
+        />
+
+        <LinkedTasks
+          links={{ serials: [createSerial.serial].filter(isNonNullable) }}
+          disabled={serialMutation.isPending}
+          useRouter={useRouter}
         />
 
         <ResponsiveStack
