@@ -78,8 +78,9 @@
   "dependencies": {
     "@shopify/app": "^3.58.2",
     "@shopify/cli": "^3.66.1",
-    "@shopify/ui-extensions": "2024.7.0",
-    "@shopify/ui-extensions-react": "2024.7",
+    "@shopify/polaris": "^12.27.0",
+    "@shopify/ui-extensions": "2024.07",
+    "@shopify/ui-extensions-react": "2024.07",
     "@tanstack/react-query": "^5.56.2",
     "react": "^18.3.1"
   },
