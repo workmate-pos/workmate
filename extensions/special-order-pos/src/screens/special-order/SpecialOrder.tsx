@@ -135,7 +135,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const rows = useListRows(createSpecialOrder, setCreateSpecialOrder, disabled);
 
   return (
-    <Form disabled={disabled}>
+    <Form disabled={disabled || !router.isCurrent}>
       <ScrollView>
         <ResponsiveGrid columns={1} spacing={2}>
           {Object.entries(bannerQueries).map(([key, query]) => {

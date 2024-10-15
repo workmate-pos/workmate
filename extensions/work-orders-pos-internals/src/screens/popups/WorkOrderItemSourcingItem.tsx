@@ -139,7 +139,7 @@ export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: strin
 
   return (
     <ScrollView>
-      <Form disabled={isLoadingForm}>
+      <Form disabled={isLoadingForm || !router.isCurrent}>
         <ResponsiveStack direction={'vertical'} paddingVertical={'Medium'} spacing={1}>
           <Text variant={'headingLarge'}>{name}</Text>
           <Text color={'TextSubdued'}>

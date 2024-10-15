@@ -232,7 +232,7 @@ function useItemListRows(name: string): ListRow[] {
       onPress: () => {
         // TODO : ability to open PO/TO from this menu
         // TODO : ability to open PO/TO from the entire page too (just a response grid of them below a header)
-        router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
+        // router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
       },
       leftSide: {
         image: {
@@ -263,7 +263,7 @@ function useItemListRows(name: string): ListRow[] {
         badges: getWorkOrderItemSourcingBadges(workOrder, item, { includeOrderBadge: true, includeStatusBadge: true }),
         subtitle,
       },
-      rightSide: { showChevron: true },
+      // rightSide: { showChevron: true },
     };
   });
 }
