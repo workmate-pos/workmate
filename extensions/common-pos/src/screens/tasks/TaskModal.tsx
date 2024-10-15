@@ -7,12 +7,13 @@ import {
   Banner,
   DatePicker,
   ScrollView,
+  Section,
   Selectable,
   Stack,
   Text,
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
-import { useEffect, useState } from 'react';
+import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { YEAR_IN_MS } from '@work-orders/common/time/constants.js';
 import { useScheduleEventsQuery } from '@work-orders/common/queries/use-schedule-events-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -148,9 +149,6 @@ export function TaskModal({ onSave, editable, id, initial, useRouter }: TaskModa
 
   return (
     <ScrollView>
-      <Text>{JSON.stringify(links, null, 2)}</Text>
-      <Text>{JSON.stringify(initial, null, 2)}</Text>
-
       <DatePicker
         inputMode="inline"
         selected={deadline?.toISOString()}
@@ -208,47 +206,12 @@ export function TaskModal({ onSave, editable, id, initial, useRouter }: TaskModa
             disabled={!editable}
           />
 
-          <Stack direction="vertical" spacing={2} paddingVertical={'Small'}>
-            <Text variant="headingSmall">Assigned staff members</Text>
-
-            {staffMemberIds.length === 0 && (
-              <Text variant="body" color="TextSubdued">
-                No staff members assigned
-              </Text>
-            )}
-
-            {staffMemberIds.map(staffMemberId => {
-              const staffMember = staffMemberQueries[staffMemberId]?.data;
-              return (
-                <Stack direction="horizontal" spacing={2} key={staffMemberId} alignment="space-between">
-                  <Stack direction="vertical" spacing={0.5} alignment={'center'}>
-                    <Text variant="body">{staffMember?.name ?? 'Unknown staff member'}</Text>
-                    {!!staffMember?.email && (
-                      <Text variant="body" color="TextSubdued">
-                        {staffMember.email}
-                      </Text>
-                    )}
-                  </Stack>
-                  <Selectable onPress={() => setStaffMemberIds(current => current.filter(x => x !== staffMemberId))}>
-                    <Text color="TextCritical">Remove</Text>
-                  </Selectable>
-                </Stack>
-              );
-            })}
-
-            <FormButton
-              action="button"
-              title="➕ Add staff member"
-              disabled={!editable}
-              onPress={() => {
-                router.push('MultiEmployeeSelector', {
-                  initialSelection: staffMemberIds,
-                  onSelect: staffMembers => setStaffMemberIds(staffMembers.map(staffMember => staffMember.id)),
-                  useRouter,
-                });
-              }}
-            />
-          </Stack>
+          <AssignedStaffMemberList
+            staffMemberIds={staffMemberIds}
+            setStaffMemberIds={setStaffMemberIds}
+            editable={editable}
+            useRouter={useRouter}
+          />
 
           {editable && (
             <FormButton
@@ -281,5 +244,80 @@ export function TaskModal({ onSave, editable, id, initial, useRouter }: TaskModa
         </Stack>
       </Form>
     </ScrollView>
+  );
+}
+
+// TODO: Get rid of this once shared-ui works
+export function AssignedStaffMemberList({
+  staffMemberIds,
+  setStaffMemberIds,
+  editable,
+  useRouter,
+}: {
+  staffMemberIds: ID[];
+  setStaffMemberIds: Dispatch<SetStateAction<ID[]>>;
+  editable?: boolean;
+  useRouter: UseRouter<{
+    MultiEmployeeSelector: Route<MultiEmployeeSelectorProps>;
+  }>;
+}) {
+  const fetch = useAuthenticatedFetch();
+  const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
+  const router = useRouter();
+
+  return (
+    <Stack direction="vertical" spacing={2} paddingVertical={'Small'}>
+      <Text variant="headingSmall">Assigned staff members</Text>
+
+      {staffMemberIds.length === 0 && (
+        <Text variant="body" color="TextSubdued">
+          No staff members assigned
+        </Text>
+      )}
+
+      <Section>
+        {staffMemberIds.map(staffMemberId => {
+          const staffMember = staffMemberQueries[staffMemberId]?.data;
+          return (
+            <Stack
+              direction="horizontal"
+              spacing={2}
+              key={staffMemberId}
+              alignment="space-between"
+              paddingVertical={'Small'}
+              paddingHorizontal={'Small'}
+            >
+              <Stack direction="vertical" spacing={0.5} alignment={'center'}>
+                <Text variant="body">{staffMember?.name ?? 'Unknown staff member'}</Text>
+                {!!staffMember?.email && (
+                  <Text variant="body" color="TextSubdued">
+                    {staffMember.email}
+                  </Text>
+                )}
+              </Stack>
+              <Selectable
+                onPress={() => setStaffMemberIds(current => current.filter(x => x !== staffMemberId))}
+                disabled={!editable}
+              >
+                <Text color={editable ? 'TextCritical' : 'TextSubdued'}>Remove</Text>
+              </Selectable>
+            </Stack>
+          );
+        })}
+      </Section>
+
+      <FormButton
+        action="button"
+        title="➕ Add staff member"
+        disabled={!editable}
+        onPress={() => {
+          router.push('MultiEmployeeSelector', {
+            initialSelection: staffMemberIds,
+            onSelect: staffMembers => setStaffMemberIds(staffMembers.map(staffMember => staffMember.id)),
+            useRouter,
+          });
+        }}
+      />
+    </Stack>
   );
 }

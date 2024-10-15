@@ -8,6 +8,7 @@ import {
   Icon,
   List,
   ScrollView,
+  Section,
   Selectable,
   Stack,
   Text,
@@ -114,8 +115,36 @@ export function LinkedTasks({
         </Banner>
       )}
 
-      <Stack direction="vertical" spacing={0.5}>
-        {tasksQuery.data?.pages.flat(1).map(task => (
+      <TaskList tasks={tasksQuery.data?.pages.flat(1) ?? []} useRouter={useRouter} />
+
+      {!tasksQuery.data?.pages.flat(1).length && (
+        <Text color="TextSubdued" variant="body">
+          No task found
+        </Text>
+      )}
+
+      {tasksQuery.isFetchingNextPage && <Text color="TextSubdued">Loading...</Text>}
+    </ScrollView>
+  );
+}
+
+// TODO: Get rid of this and just use a <Task id={...}> once shared-ui works
+export function TaskList({
+  tasks,
+  useRouter,
+}: {
+  tasks: DetailedTask[];
+  useRouter: UseRouter<{
+    TaskModal: Route<TaskModalProps>;
+    MultiEmployeeSelector: Route<MultiEmployeeSelectorProps>;
+  }>;
+}) {
+  const router = useRouter();
+
+  return (
+    <Stack direction="vertical" spacing={0.5}>
+      <Section>
+        {tasks.map(task => (
           <Selectable
             key={task.id}
             onPress={() => router.push('TaskModal', { id: task.id, onSave: () => {}, useRouter, editable: true })}
@@ -147,7 +176,7 @@ export function LinkedTasks({
                   </Text>
                 )}
 
-                <Text color={'TextSubdued'}>{task.description}</Text>
+                {!!task.description.trim() && <Text color={'TextSubdued'}>{task.description}</Text>}
 
                 {!!task.estimatedTimeMinutes && (
                   <Text variant="body" color={'TextSubdued'}>
@@ -160,15 +189,7 @@ export function LinkedTasks({
             </Stack>
           </Selectable>
         ))}
-      </Stack>
-
-      {!tasksQuery.data?.pages.flat(1).length && (
-        <Text color="TextSubdued" variant="body">
-          No task found
-        </Text>
-      )}
-
-      {tasksQuery.isFetchingNextPage && <Text color="TextSubdued">Loading...</Text>}
-    </ScrollView>
+      </Section>
+    </Stack>
   );
 }

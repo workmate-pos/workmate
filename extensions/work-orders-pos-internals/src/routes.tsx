@@ -112,6 +112,8 @@ import { Scanner } from './screens/smart-scanner/Scanner.js';
 import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
 import { TaskModal, TaskModalProps } from '@work-orders/common-pos/screens/tasks/TaskModal.js';
 import { TaskInfo, TaskInfoProps } from '@work-orders/common-pos/screens/tasks/TaskInfo.js';
+import { YourSchedule } from './screens/schedule/YourSchedule.js';
+import { EventInfo, EventInfoProps } from '@work-orders/common-pos/screens/events/EventInfo.js';
 
 const requiredPermissions: PermissionNode[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -473,5 +475,15 @@ export const { Router, useRouter } = createRouter({
   TaskInfo: {
     title: 'Task',
     Component: (props: Omit<TaskInfoProps, 'useRouter'>) => <TaskInfo {...props} useRouter={useRouter} />,
+  },
+
+  EventInfo: {
+    title: 'Event',
+    Component: (props: Omit<EventInfoProps, 'useRouter'>) => <EventInfo {...props} useRouter={useRouter} />,
+  },
+
+  YourSchedule: {
+    title: 'Your Schedule',
+    Component: YourSchedule,
   },
 });
