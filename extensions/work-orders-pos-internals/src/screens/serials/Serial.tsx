@@ -65,7 +65,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
   const isSerialNumberInUse = !lastSavedSerial.serial && !!serial;
 
   return (
-    <Form disabled={disabled}>
+    <Form disabled={disabled || !router.isCurrent}>
       <ScrollView>
         {productVariantQuery.isError && (
           <Banner

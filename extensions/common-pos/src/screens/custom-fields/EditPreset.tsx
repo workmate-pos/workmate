@@ -125,7 +125,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
         </ResponsiveStack>
       )}
 
-      <Form disabled={presetMutation.isPending}>
+      <Form disabled={presetMutation.isPending || !router.isCurrent}>
         <ResponsiveStack direction={'vertical'} paddingHorizontal={'ExtraExtraLarge'}>
           <FormStringField
             label={'Preset Name'}

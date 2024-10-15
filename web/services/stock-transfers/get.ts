@@ -82,6 +82,8 @@ export async function getStockTransferPage(session: Session, paginationOptions: 
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
   }
 
+  console.log(paginationOptions);
+
   const stockTransfers = await db.stockTransfers.getPage({
     shop: session.shop,
     limit: paginationOptions.limit,

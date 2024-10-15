@@ -68,7 +68,7 @@ export function PurchaseOrderPrintOverview({ name }: { name: string }) {
 
   return (
     <ScrollView>
-      <Form disabled={printJobMutation.isPending}>
+      <Form disabled={printJobMutation.isPending || !router.isCurrent}>
         <Stack direction={'vertical'} spacing={4}>
           <Text variant={'headingLarge'}>Choose a template</Text>
           <RadioButtonList
