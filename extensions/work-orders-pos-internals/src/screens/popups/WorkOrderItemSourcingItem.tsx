@@ -16,6 +16,7 @@ import { useStockTransferMutation } from '@work-orders/common/queries/use-stock-
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { getWorkOrderItemSourcingBadges } from '../../util/badges.js';
 import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
+import { useRouter } from '../../routes.js';
 
 // TODO: Also show the current location inventory #, and then make it possible to config SO/PO/TO
 export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: string; workOrderName: string }) {
@@ -33,6 +34,8 @@ export function WorkOrderItemSourcingItem({ workOrderName, uuid }: { uuid: strin
     { fetch, id: inventoryItemId!, locationId: createGid('Location', session.currentSession.locationId) },
     { enabled: !!inventoryItemId },
   );
+
+  const router = useRouter();
 
   const name = match(workOrderItem)
     .with({ type: 'product' }, item => {
