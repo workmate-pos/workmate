@@ -22,7 +22,7 @@ export function CompanySelector({ onSelect, onClear, useRouter }: CompanySelecto
 
   return (
     <ListPopup
-      title={'Select Company'}
+      title={'Select company'}
       query={{ query, setQuery }}
       resourceName={{ singular: 'company', plural: 'companies' }}
       isLoadingMore={companiesQuery.isFetching}

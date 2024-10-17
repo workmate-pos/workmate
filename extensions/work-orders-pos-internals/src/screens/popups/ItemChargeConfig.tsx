@@ -141,10 +141,10 @@ export function ItemChargeConfig({
 
   const itemCharges = [...employeeLabourCharges, ...(generalLabourCharge ? [generalLabourCharge] : [])].map(charge => ({
     ...charge,
-    name: charge.name || 'Unnamed Labour',
+    name: charge.name || 'Unnamed labour',
   }));
 
-  const employeeAssignmentsEnabled = settings.chargeSettings.employeeAssignments;
+  const employeeAssignmentsEnabled = settings.workOrders.charges.allowEmployeeAssignments;
   const shouldShowEmployeeLabour = employeeAssignmentsEnabled || employeeLabourCharges.length > 0;
 
   const basePrice = calculatedDraftOrderQuery.getItemPrice(item) ?? BigDecimal.ZERO.toMoney();
@@ -185,7 +185,7 @@ export function ItemChargeConfig({
             </Text>
 
             <FormMoneyField
-              label={'Unit Price'}
+              label={'Unit price'}
               min={0}
               value={item.unitPrice}
               onChange={value => {
@@ -254,7 +254,7 @@ export function ItemChargeConfig({
                                   employeeId,
                                   type: 'fixed-price-labour',
                                   uuid: uuid() as UUID,
-                                  name: settings?.labourLineItemName || 'Labour',
+                                  name: settings?.workOrders.charges.defaultLabourLineItemName || 'Labour',
                                   amount: BigDecimal.ZERO.toMoney(),
                                   workOrderItemUuid: item.uuid,
                                   amountLocked: false,
@@ -308,7 +308,7 @@ export function ItemChargeConfig({
             >
               {BigDecimal.fromMoney(basePrice).compare(BigDecimal.ZERO) > 0 && (
                 <Text variant={'headingSmall'} color={'TextSubdued'}>
-                  {item.type === 'product' && item.absorbCharges ? 'Quantity-Adjusting Labour Rounding' : 'Base Price'}:{' '}
+                  {item.type === 'product' && item.absorbCharges ? 'Quantity-Adjusting Labour Rounding' : 'Base price'}:{' '}
                   {currencyFormatter(basePrice)}
                 </Text>
               )}
@@ -322,7 +322,7 @@ export function ItemChargeConfig({
           </Stack>
 
           <Stack direction={'vertical'} spacing={2}>
-            <Text variant={'headingLarge'}>Custom Fields</Text>
+            <Text variant={'headingLarge'}>Line item custom fields</Text>
 
             <CustomFieldsList
               customFields={item.customFields}

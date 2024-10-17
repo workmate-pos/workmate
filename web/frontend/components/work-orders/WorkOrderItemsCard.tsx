@@ -67,10 +67,10 @@ export function WorkOrderItemsCard({
         />
         <ButtonGroup fullWidth>
           <Button onClick={() => setIsAddProductModalOpen(true)} disabled={disabled}>
-            Add Product
+            Add product
           </Button>
           <Button onClick={() => setIsAddServiceModalOpen(true)} disabled={disabled}>
-            Add Service
+            Add service
           </Button>
         </ButtonGroup>
       </BlockStack>

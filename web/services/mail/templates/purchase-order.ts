@@ -2,15 +2,16 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getDetailedPurchaseOrder } from '../../purchase-orders/get.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { ShopSettings } from '../../../schemas/generated/shop-settings.js';
 import { Liquid } from 'liquidjs';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { getVendors } from '../../vendors/get.js';
 import { Session } from '@shopify/shopify-api';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { ShopSettings } from '../../settings/schema.js';
+import { LocalsTeifiUser } from '../../../decorators/permission.js';
 
 export async function getRenderedPurchaseOrderTemplate(
-  printTemplate: ShopSettings['purchaseOrderPrintTemplates'][string],
+  printTemplate: ShopSettings['purchaseOrders']['printTemplates'][string],
   context: PurchaseOrderTemplateData,
 ) {
   const { template, subject } = printTemplate;
@@ -63,11 +64,12 @@ export async function getPurchaseOrderTemplateData(
   session: Session,
   purchaseOrderName: string,
   clientDate: string,
+  user: LocalsTeifiUser,
 ): Promise<PurchaseOrderTemplateData> {
   const { shop } = session;
 
   const [purchaseOrder, vendors] = await Promise.all([
-    getDetailedPurchaseOrder({ shop }, purchaseOrderName),
+    getDetailedPurchaseOrder({ shop }, purchaseOrderName, user.user.allowedLocationIds),
     getVendors(session),
   ]);
 

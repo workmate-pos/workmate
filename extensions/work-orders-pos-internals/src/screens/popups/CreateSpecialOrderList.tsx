@@ -30,7 +30,7 @@ export function CreateSpecialOrderList({
       <UnsourcedItemList
         title="Create Special Order"
         primaryAction={{
-          title: 'Create Special Order',
+          title: 'Create special order',
           allowEmptySelection: false,
           onAction: selectedItems =>
             specialOrderMutation.mutate(
@@ -67,7 +67,7 @@ export function CreateSpecialOrderList({
         <FormStringField label={'Note'} value={note} type={'area'} onChange={setNote} />
 
         <FormStringField
-          label={'Required By'}
+          label={'Required by'}
           value={requiredBy?.toLocaleDateString() ?? ''}
           onFocus={() => setIsDatePickerOpen(true)}
           disabled={isDatePickerOpen}

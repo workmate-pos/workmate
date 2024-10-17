@@ -152,7 +152,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
               disabled={
                 !!createCycleCount.name &&
                 createCycleCount.items.length > 0 &&
-                cycleCountQuery.data?.applicationStatus !== 'NOT_APPLIED'
+                cycleCountQuery.data?.applicationStatus !== 'not-applied'
               }
               onFocus={() =>
                 router.push('LocationSelector', {
@@ -162,7 +162,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
             />
 
             <FormStringField
-              label={'Due Date'}
+              label={'Due date'}
               value={createCycleCount.dueDate ? new Date(createCycleCount.dueDate).toLocaleDateString() : undefined}
               onFocus={() => setDatePickerOpen(true)}
               action={
@@ -177,7 +177,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
             />
             <FormStringField label={'Note'} type={'area'} value={createCycleCount.note} onChange={setNote} />
             <FormStringField
-              label={'Assigned Employees'}
+              label={'Assigned employees'}
               type={'area'}
               onFocus={() =>
                 router.push('MultiEmployeeSelector', {
@@ -196,7 +196,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
             />
 
             <FormButton
-              title={'Import Products'}
+              title={'Import products'}
               type={'primary'}
               onPress={() => {
                 router.push('CycleCountProductSelector', {
@@ -294,7 +294,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
                           !createCycleCount.name || hasUnsavedChanges
                             ? 'You must save your changes before applying'
                             : undefined,
-                          cycleCountQuery.data?.applicationStatus === 'APPLIED' ? 'Nothing to apply' : undefined,
+                          cycleCountQuery.data?.applicationStatus === 'applied' ? 'Nothing to apply' : undefined,
                           createCycleCount.locked ? 'Locked cycle counts cannot be applied' : undefined,
                         ]),
                       },
@@ -302,7 +302,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
                         createCycleCount.locked ||
                         !createCycleCount.name ||
                         hasUnsavedChanges ||
-                        cycleCountQuery.data?.applicationStatus === 'APPLIED',
+                        cycleCountQuery.data?.applicationStatus === 'applied',
                     },
                     {
                       id: 'lock',
@@ -395,7 +395,7 @@ function useItemRows({
           title: item.productVariantTitle,
           product: { title: item.productTitle, hasOnlyDefaultVariant: false },
         },
-      ) ?? 'Unknown Product';
+      ) ?? 'Unknown product';
 
     return {
       id: item.uuid,
@@ -415,7 +415,7 @@ function useItemRows({
           badge: item.countQuantity,
         },
         badges: [
-          getCycleCountApplicationStateBadge(cycleCountItem?.applicationStatus ?? 'NOT_APPLIED', {
+          getCycleCountApplicationStateBadge(cycleCountItem?.applicationStatus ?? 'not-applied', {
             appliedQuantity: cycleCountItem?.applications.at(-1)?.appliedQuantity ?? 0,
             countQuantity: item.countQuantity,
           }),

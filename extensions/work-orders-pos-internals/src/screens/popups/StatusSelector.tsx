@@ -11,7 +11,7 @@ export function StatusSelector({ onSelect }: { onSelect: (status: string) => voi
 
   return (
     <Stack alignment="center" direction="vertical" flex={1} paddingHorizontal="ExtraExtraLarge">
-      {settings?.statuses.map(status => (
+      {settings?.workOrders.statuses.map(status => (
         <Button
           key={status}
           title={status}

@@ -67,6 +67,37 @@ const getIR: any = {"usedParamSet":{"shop":true},"params":[{"name":"shop","requi
 export const get = new PreparedQuery<IGetParams,IGetResult>(getIR);
 
 
+/** 'GetSetting' parameters type */
+export interface IGetSettingParams {
+  key: string;
+  shop: string;
+}
+
+/** 'GetSetting' return type */
+export interface IGetSettingResult {
+  value: string;
+}
+
+/** 'GetSetting' query type */
+export interface IGetSettingQuery {
+  params: IGetSettingParams;
+  result: IGetSettingResult;
+}
+
+const getSettingIR: any = {"usedParamSet":{"shop":true,"key":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":42,"b":47}]},{"name":"key","required":true,"transform":{"type":"scalar"},"locs":[{"a":61,"b":65}]}],"statement":"SELECT value\nFROM \"Settings\"\nWHERE shop = :shop!\n  AND key = :key!"};
+
+/**
+ * Query generated from SQL:
+ * ```
+ * SELECT value
+ * FROM "Settings"
+ * WHERE shop = :shop!
+ *   AND key = :key!
+ * ```
+ */
+export const getSetting = new PreparedQuery<IGetSettingParams,IGetSettingResult>(getSettingIR);
+
+
 /** 'InsertSettingIfNotExists' parameters type */
 export interface IInsertSettingIfNotExistsParams {
   key: string;

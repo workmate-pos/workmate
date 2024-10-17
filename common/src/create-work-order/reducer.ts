@@ -5,8 +5,9 @@ import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { uuid, UUID } from '../util/uuid.js';
 
-export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId'> & {
+export type WIPCreateWorkOrder = Omit<CreateWorkOrder, 'customerId' | 'locationId'> & {
   customerId: CreateWorkOrder['customerId'] | null;
+  locationId: CreateWorkOrder['locationId'] | null;
 };
 
 type ItemDescriptor = { uuid: UUID };

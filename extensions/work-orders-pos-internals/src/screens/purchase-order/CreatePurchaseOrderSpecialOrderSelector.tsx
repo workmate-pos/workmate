@@ -56,7 +56,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
       query,
       locationId,
       lineItemVendorName: vendorName,
-      lineItemOrderState: 'NOT_FULLY_ORDERED',
+      lineItemOrderState: 'not-fully-ordered',
       limit: 25,
     },
     options: {
@@ -106,7 +106,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
 
         {!!locationId && !!vendorName && (
           <ListPopup
-            title={'Select Special Orders'}
+            title={'Select special orders'}
             useRouter={useRouter}
             query={{ query, setQuery }}
             isLoadingMore={specialOrdersQuery.isFetching}
@@ -143,7 +143,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
           )}
 
           <FormButton
-            title={'Create Purchase Order'}
+            title={'Create purchase order'}
             type={'primary'}
             loading={purchaseOrderMutation.isPending || isLoadingProductVariants}
             disabled={selectedSpecialOrders.length === 0 || isLoadingProductVariants}
@@ -163,7 +163,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
                 return;
               }
 
-              const status = settingsQuery.data?.settings.defaultPurchaseOrderStatus;
+              const status = settingsQuery.data?.settings.purchaseOrders.defaultStatus;
 
               if (!status) {
                 toast.show('Please wait for the default purchase order status to load');

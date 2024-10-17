@@ -1,5 +1,5 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
-import { BlockStack, TextField } from '@shopify/polaris';
+import type { ShopSettings } from '@web/services/settings/schema.js';
+import { BlockStack, Checkbox, Text, TextField } from '@shopify/polaris';
 import { PrintTemplateGroup } from '@web/frontend/components/settings/PrintTemplateGroup.js';
 
 export function PrintSettings({
@@ -13,15 +13,12 @@ export function PrintSettings({
 
   return (
     <BlockStack gap="400">
-      <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'workOrderPrintTemplates'} />
-      <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'purchaseOrderPrintTemplates'} />
-      <TextField
-        label={'Print Email'}
-        autoComplete={'off'}
-        value={settings.printEmail}
-        onChange={value => setSettings({ ...settings, printEmail: value })}
-        helpText={'The email address that WorkMate will send print jobs to'}
-      />
+      <Text as="h2" variant="headingLg" fontWeight="bold">
+        Print templates
+      </Text>
+
+      <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'workOrders'} />
+      <PrintTemplateGroup settings={settings} setSettings={setSettings} templateType={'purchaseOrders'} />
     </BlockStack>
   );
 }

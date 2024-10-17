@@ -19,7 +19,7 @@ import {
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 import { useRouter } from '../../routes.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -69,7 +69,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
   const specialOrderMutation = useSpecialOrderMutation({ fetch });
 
   const screen = useScreen();
-  screen.setTitle(createSpecialOrder.name ?? 'New Special Order');
+  screen.setTitle(createSpecialOrder.name ?? 'New special order');
   screen.setIsLoading(specialOrderQuery.isFetching || storePropertiesQuery.isLoading);
 
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
@@ -143,7 +143,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
               return null;
             }
 
-            const resource = titleCase(key.replace('Query', ''));
+            const resource = sentenceCase(key.replace('Query', ''));
             return (
               <Banner
                 key={key}
@@ -177,7 +177,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
             {createSpecialOrder.companyId && (
               <FormStringField
                 disabled
-                label={'Company Location'}
+                label={'Company location'}
                 onFocus={() => {
                   if (!createSpecialOrder.companyId) {
                     toast.show('You must select a company to select a company location');
@@ -226,7 +226,7 @@ export function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
             />
 
             <FormStringField
-              label={'Required By'}
+              label={'Required by'}
               value={
                 createSpecialOrder.requiredBy ? new Date(createSpecialOrder.requiredBy).toLocaleDateString() : undefined
               }

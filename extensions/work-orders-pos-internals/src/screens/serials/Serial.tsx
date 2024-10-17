@@ -52,7 +52,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
   const title = [createSerial.serial, getProductVariantName(productVariant) ?? 'loading...']
     .filter(Boolean)
     .join(' - ');
-  screen.setTitle(title || 'New Serial');
+  screen.setTitle(title || 'New serial');
 
   const hasUnsavedChanges =
     JSON.stringify(createSerial, Object.keys(createSerial).sort()) !==
@@ -87,7 +87,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
         <ResponsiveGrid columns={4}>
           <ResponsiveStack direction={'vertical'} spacing={0.5}>
             <FormStringField
-              label={'Serial Number'}
+              label={'Serial number'}
               value={createSerial.serial || undefined}
               required
               onChange={serial => setSerialNumber(serial.toUpperCase())}
@@ -109,6 +109,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
                   : (location?.name ?? 'Unknown location')
                 : ''
             }
+            required
             onFocus={() =>
               router.push('LocationSelector', {
                 onSelect: location => setLocationId(location.id),

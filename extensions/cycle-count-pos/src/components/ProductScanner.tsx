@@ -36,7 +36,7 @@ export function ProductScanner({
 
   // TODO: Banner in camera somehow?
   const openCameraButton = sources.includes('camera') ? (
-    <Button title={'Open Camera'} isDisabled={disabled} onPress={() => router.push('Camera', {})} />
+    <Button title={'Open camera'} isDisabled={disabled} onPress={() => router.push('Camera', {})} />
   ) : null;
 
   const scannerDataSubscribable = useStatefulSubscribableScannerData();
@@ -74,7 +74,7 @@ export function ProductScanner({
         }
 
         onProductScanned(query.data);
-        const name = getProductVariantName(query.data) ?? 'Unknown Product';
+        const name = getProductVariantName(query.data) ?? 'Unknown product';
         toast.show(`Scanned ${name}`);
         return false;
       });

@@ -1,4 +1,4 @@
-import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import { ShopSettings } from '@web/services/settings/schema.js';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Autocomplete, BlockStack, Icon, InlineStack, Tag, Text, TextField } from '@shopify/polaris';
 import { CirclePlusMinor } from '@shopify/polaris-icons';
@@ -83,7 +83,7 @@ export function CycleCountSettings({
         }}
         textField={
           <Autocomplete.TextField
-            label="Default Status"
+            label="Default status"
             autoComplete="off"
             requiredIndicator
             value={defaultStatusValue}
@@ -94,7 +94,7 @@ export function CycleCountSettings({
       />
 
       <TextField
-        label="ID Format"
+        label="ID format"
         autoComplete="off"
         requiredIndicator
         helpText={

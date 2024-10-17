@@ -128,7 +128,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
       <Form disabled={presetMutation.isPending || !router.isCurrent}>
         <ResponsiveStack direction={'vertical'} paddingHorizontal={'ExtraExtraLarge'}>
           <FormStringField
-            label={'Preset Name'}
+            label={'Preset name'}
             value={name}
             onChange={name => {
               setName(name);
@@ -138,7 +138,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
             helpText={presetNameInUse ? 'A preset with this name already exists. Saving will overwrite it.' : undefined}
           />
           <FormButton
-            title={isDefault ? 'Is Default' : 'Is Not Default'}
+            title={isDefault ? 'Is default' : 'Is not default'}
             type={'basic'}
             onPress={() => {
               setIsDefault(isDefault => !isDefault);
@@ -174,7 +174,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
           <ResponsiveStack direction={'vertical'} paddingVertical={'ExtraLarge'}>
             <ResponsiveGrid columns={2}>
               <TextField
-                label={'New Field Name'}
+                label={'New field name'}
                 value={newCustomFieldName}
                 onChange={setNewCustomFieldName}
                 error={newCustomFieldNameError}
@@ -192,7 +192,7 @@ export function EditPreset({ name: initialName, type, useRouter }: EditPresetPro
           </ResponsiveStack>
 
           <FormButton
-            title={'Save Preset'}
+            title={'Save preset'}
             type={'primary'}
             action={'submit'}
             loading={presetMutation.isPending}
@@ -216,7 +216,7 @@ const useAreYouSureYouWantToDeleteDialog = ({ onDelete }: { onDelete: () => void
       dialog.show({
         onAction: onDelete,
         props: {
-          title: 'Delete Preset',
+          title: 'Delete preset',
           type: 'destructive',
           content: 'You are about to permanently delete a preset. Are you sure you want to proceed?',
           actionText: 'Delete',
@@ -243,7 +243,7 @@ const useAreYouSureYouWantToOverwriteDialog = ({
         showDialog: isOverwrite,
         onAction: onOverwrite,
         props: {
-          title: 'Overwrite Preset',
+          title: 'Overwrite preset',
           type: 'destructive',
           content: 'You are about to overwrite a preset. Are you sure you want to proceed?',
           actionText: 'Overwrite',

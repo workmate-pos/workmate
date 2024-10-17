@@ -12,14 +12,30 @@ import { ensureShopifyOrdersExist } from '../shopify-order/sync.js';
 import { DetailedSpecialOrder } from './types.js';
 import { getDetailedSpecialOrder } from './get.js';
 import { removeSpecialOrderLineItemsExceptUuids, upsertSpecialOrder, upsertSpecialOrderLineItems } from './queries.js';
+import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { httpError } from '../../util/http-error.js';
 
-export async function upsertCreateSpecialOrder(session: Session, createSpecialOrder: CreateSpecialOrder) {
+export async function upsertCreateSpecialOrder(
+  session: Session,
+  user: LocalsTeifiUser,
+  createSpecialOrder: CreateSpecialOrder,
+) {
+  await assertLocationsPermitted({
+    shop: session.shop,
+    locationIds: [createSpecialOrder.locationId],
+    staffMemberId: user.staffMember.id,
+  });
+
   assertNoDuplicateLineItemUuids(createSpecialOrder);
 
   return await unit(async () => {
+    const existingSpecialOrder = createSpecialOrder.name
+      ? ((await getDetailedSpecialOrder(session, createSpecialOrder.name, user.user.allowedLocationIds)) ??
+        httpError('Special order not found', 404))
+      : null;
+
     const name = createSpecialOrder.name ?? (await getNewSpecialOrderName(session.shop));
-    const isNew = createSpecialOrder.name === null;
-    const existingSpecialOrder = isNew ? null : await getDetailedSpecialOrder(session, name);
 
     assertNoIllegalSpecialOrderChanges(createSpecialOrder, existingSpecialOrder);
     assertNoIllegalLineItemChanges(createSpecialOrder, existingSpecialOrder);

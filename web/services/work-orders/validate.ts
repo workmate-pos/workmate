@@ -11,36 +11,58 @@ import { db } from '../db/db.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
-import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.js';
+import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems, WorkOrder } from './queries.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { httpError } from '../../util/http-error.js';
 
-export async function validateCreateWorkOrder(session: Session, createWorkOrder: CreateWorkOrder, superuser: boolean) {
+export async function validateCreateWorkOrder(
+  session: Session,
+  createWorkOrder: CreateWorkOrder,
+  user: LocalsTeifiUser,
+) {
   assertValidUuids(createWorkOrder);
   assertUniqueUuids(createWorkOrder);
   assertPositiveItemQuantities(createWorkOrder);
   assertValidChargeItemUuids(createWorkOrder);
   assertValidCompanyDetails(createWorkOrder);
 
-  await assertValidWorkOrderName(session, createWorkOrder);
-  await assertNonPaidWorkOrderItemProductsExist(session, createWorkOrder);
-  await assertNoIllegalItemChanges(session, createWorkOrder);
-  await assertNoIllegalHourlyChargeChanges(session, createWorkOrder, superuser);
-  await assertNoIllegalFixedPriceChargeChanges(session, createWorkOrder, superuser);
+  const workOrder = createWorkOrder.name
+    ? ((await getWorkOrder({
+        shop: session.shop,
+        name: createWorkOrder.name,
+        locationIds: user.user.allowedLocationIds,
+      })) ?? httpError('Work order not found', 404))
+    : undefined;
+
+  await assertNonPaidWorkOrderItemProductsExist(session, createWorkOrder, workOrder);
+  await assertNoIllegalItemChanges(session, createWorkOrder, workOrder);
+  await assertNoIllegalHourlyChargeChanges(createWorkOrder, workOrder, user);
+  await assertNoIllegalFixedPriceChargeChanges(session, createWorkOrder, workOrder, user);
 }
 
 export async function validateCalculateWorkOrder(
   session: Session,
   calculateWorkOrder: CalculateWorkOrder,
-  superuser: boolean,
+  user: LocalsTeifiUser,
 ) {
   assertValidUuids(calculateWorkOrder);
   assertUniqueUuids(calculateWorkOrder);
   assertPositiveItemQuantities(calculateWorkOrder);
   assertValidChargeItemUuids(calculateWorkOrder);
 
-  await assertValidWorkOrderName(session, calculateWorkOrder);
-  await assertNoIllegalItemChanges(session, calculateWorkOrder);
-  await assertNoIllegalHourlyChargeChanges(session, calculateWorkOrder, superuser);
-  await assertNoIllegalFixedPriceChargeChanges(session, calculateWorkOrder, superuser);
+  const workOrder = calculateWorkOrder.name
+    ? ((await getWorkOrder({
+        shop: session.shop,
+        name: calculateWorkOrder.name,
+        locationIds: user.user.allowedLocationIds,
+      })) ?? httpError('Work order not found', 404))
+    : undefined;
+
+  await Promise.all([
+    await assertNoIllegalItemChanges(session, calculateWorkOrder, workOrder),
+    await assertNoIllegalHourlyChargeChanges(calculateWorkOrder, workOrder, user),
+    await assertNoIllegalFixedPriceChargeChanges(session, calculateWorkOrder, workOrder, user),
+  ]);
 }
 
 function assertValidUuids(createWorkOrder: Pick<CreateWorkOrder, 'items' | 'charges'>) {
@@ -117,18 +139,6 @@ function assertPositiveItemQuantities(createWorkOrder: Pick<CreateWorkOrder, 'it
   }
 }
 
-async function assertValidWorkOrderName(session: Session, createWorkOrder: Pick<CreateWorkOrder, 'name'>) {
-  if (createWorkOrder.name) {
-    // if a name is provided it must already exist (deciding the name in the request is not allowed)
-
-    const workOrder = await getWorkOrder({ shop: session.shop, name: createWorkOrder.name });
-
-    if (!workOrder) {
-      throw new HttpError('Work order not found', 404);
-    }
-  }
-}
-
 /**
  * Asserts that all product variants in some work order actually exist.
  * This check is not performed for items that are already linked to a real order, as these have been paid already.
@@ -136,8 +146,9 @@ async function assertValidWorkOrderName(session: Session, createWorkOrder: Pick<
 export async function assertNonPaidWorkOrderItemProductsExist(
   session: Session,
   createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items'>,
+  workOrder: WorkOrder | undefined,
 ) {
-  const missingProductVariantIds = await getMissingNonPaidWorkOrderProduct(session, createWorkOrder);
+  const missingProductVariantIds = await getMissingNonPaidWorkOrderProduct(session, createWorkOrder, workOrder);
 
   if (missingProductVariantIds.length > 0) {
     throw new HttpError('You must remove any invalid products from the work order', 400, {
@@ -152,6 +163,7 @@ export async function assertNonPaidWorkOrderItemProductsExist(
 export async function getMissingNonPaidWorkOrderProduct(
   session: Session,
   createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items'>,
+  workOrder: WorkOrder | undefined,
 ) {
   const graphql = new Graphql(session);
 
@@ -159,10 +171,9 @@ export async function getMissingNonPaidWorkOrderProduct(
 
   const workOrderItems = createWorkOrder.items.filter(hasPropertyValue('type', 'product'));
 
-  if (createWorkOrder.name) {
+  if (workOrder) {
     // if this work order already exists we should only check product variant ids that have not been paid for yet
-
-    const { id: workOrderId } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+    const workOrderId = workOrder.id;
 
     const uuids = createWorkOrder.items.map(li => li.uuid);
     const items = uuids.length ? await db.workOrder.getItemsByUuids({ workOrderId, uuids }) : [];
@@ -195,12 +206,16 @@ export async function getMissingNonPaidWorkOrderProduct(
   return missingProductVariantIds;
 }
 
-async function assertNoIllegalItemChanges(session: Session, createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items'>) {
-  if (!createWorkOrder.name) {
+async function assertNoIllegalItemChanges(
+  session: Session,
+  createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items'>,
+  workOrder: WorkOrder | undefined,
+) {
+  if (!workOrder) {
     return;
   }
 
-  const { id: workOrderId } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+  const workOrderId = workOrder.id;
   const currentItems = await getWorkOrderItems(workOrderId);
 
   const newItemsByUuid = Object.fromEntries(createWorkOrder.items.map(item => [item.uuid, item]));
@@ -234,15 +249,15 @@ async function assertNoIllegalItemChanges(session: Session, createWorkOrder: Pic
 
 // TODO: Merge with fixed price labour
 async function assertNoIllegalHourlyChargeChanges(
-  session: Session,
   createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items' | 'charges'>,
-  superuser: boolean,
+  workOrder: WorkOrder | undefined,
+  user: LocalsTeifiUser,
 ) {
-  if (!createWorkOrder.name) {
+  if (!workOrder) {
     return;
   }
 
-  const { id: workOrderId } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+  const workOrderId = workOrder.id;
   const currentHourlyCharges = await getWorkOrderCharges(workOrderId).then(charges =>
     charges.filter(hasNestedPropertyValue('data.type', 'hourly-labour')),
   );
@@ -252,7 +267,7 @@ async function assertNoIllegalHourlyChargeChanges(
   );
 
   // TODO: New permission for this?
-  const canUnlock = superuser;
+  const canUnlock = user.user.superuser;
 
   for (const oldCharge of currentHourlyCharges) {
     const isLineItem = isLineItemId(oldCharge.shopifyOrderLineItemId);
@@ -275,13 +290,13 @@ async function assertNoIllegalHourlyChargeChanges(
       throw new HttpError(`Cannot change name of hourly charge ${newCharge.uuid}`, 400);
     }
 
-    const rateIsLocked = oldCharge.data.rateLocked && !superuser;
+    const rateIsLocked = oldCharge.data.rateLocked && !canUnlock;
 
     if ((isLineItem || rateIsLocked) && newCharge.rate !== oldCharge.data.rate) {
       throw new HttpError(`Cannot change rate of hourly charge ${newCharge.uuid}`, 400);
     }
 
-    const hoursIsLocked = oldCharge.data.hoursLocked && !superuser;
+    const hoursIsLocked = oldCharge.data.hoursLocked && !canUnlock;
 
     if ((isLineItem || hoursIsLocked) && newCharge.hours !== oldCharge.data.hours) {
       throw new HttpError(`Cannot change hours of hourly charge ${newCharge.uuid}`, 400);
@@ -310,13 +325,14 @@ async function assertNoIllegalHourlyChargeChanges(
 async function assertNoIllegalFixedPriceChargeChanges(
   session: Session,
   createWorkOrder: Pick<CreateWorkOrder, 'name' | 'items' | 'charges'>,
-  superuser: boolean,
+  workOrder: WorkOrder | undefined,
+  user: LocalsTeifiUser,
 ) {
-  if (!createWorkOrder.name) {
+  if (!workOrder) {
     return;
   }
 
-  const { id: workOrderId } = (await getWorkOrder({ shop: session.shop, name: createWorkOrder.name })) ?? never();
+  const workOrderId = workOrder.id;
   const currentFixedPriceCharges = await getWorkOrderCharges(workOrderId).then(charges =>
     charges.filter(hasNestedPropertyValue('data.type', 'fixed-price-labour')),
   );
@@ -325,7 +341,7 @@ async function assertNoIllegalFixedPriceChargeChanges(
     createWorkOrder.charges.filter(hasPropertyValue('type', 'fixed-price-labour')).map(charge => [charge.uuid, charge]),
   );
 
-  const canUnlock = superuser;
+  const canUnlock = user.user.superuser;
 
   for (const oldCharge of currentFixedPriceCharges) {
     const isLineItem = isLineItemId(oldCharge.shopifyOrderLineItemId);
@@ -348,7 +364,7 @@ async function assertNoIllegalFixedPriceChargeChanges(
       throw new HttpError(`Cannot change name of fixed price charge ${newCharge.uuid}`, 400);
     }
 
-    const amountIsLocked = oldCharge.data.amountLocked && !superuser;
+    const amountIsLocked = oldCharge.data.amountLocked && !canUnlock;
 
     if ((isLineItem || amountIsLocked) && newCharge.amount !== oldCharge.data.amount) {
       throw new HttpError(`Cannot change amount of fixed price charge ${newCharge.uuid}`, 400);

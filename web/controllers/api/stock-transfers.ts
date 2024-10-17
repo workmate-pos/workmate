@@ -1,5 +1,5 @@
 import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
-import { Permission } from '../../decorators/permission.js';
+import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { CreateStockTransfer } from '../../schemas/generated/create-stock-transfer.js';
 import { DetailedStockTransfer } from '../../services/stock-transfers/types.js';
 import { Session } from '@shopify/shopify-api';
@@ -25,10 +25,11 @@ export default class StockTransfersController {
     res: Response<CreateStockTransferResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const createStockTransfer = req.body;
 
-    const { name } = await upsertCreateStockTransfer(session, createStockTransfer);
-    const stockTransfer = await getDetailedStockTransfer(session, name);
+    const { name } = await upsertCreateStockTransfer(session, user, createStockTransfer);
+    const stockTransfer = await getDetailedStockTransfer(session, name, user.user.allowedLocationIds);
 
     return res.json(stockTransfer);
   }
@@ -41,9 +42,10 @@ export default class StockTransfersController {
     res: Response<FetchStockTransferCountResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const countOptions = req.query;
 
-    const stockTransferCount = await getStockTransferCount(session, countOptions);
+    const stockTransferCount = await getStockTransferCount(session, countOptions, user.user.allowedLocationIds);
 
     return res.json({ count: stockTransferCount });
   }
@@ -56,11 +58,10 @@ export default class StockTransfersController {
     res: Response<FetchStockTransferPageResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const paginationOptions = req.query;
 
-    console.log('controller', paginationOptions);
-
-    const stockTransfers = await getStockTransferPage(session, paginationOptions);
+    const stockTransfers = await getStockTransferPage(session, paginationOptions, user.user.allowedLocationIds);
 
     return res.json(stockTransfers);
   }
@@ -69,9 +70,10 @@ export default class StockTransfersController {
   @Permission('read_stock_transfers')
   async fetchStockTransfer(req: Request<{ name: string }>, res: Response<FetchStockTransferResponse>) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    const stockTransfer = await getDetailedStockTransfer(session, name);
+    const stockTransfer = await getDetailedStockTransfer(session, name, user.user.allowedLocationIds);
 
     if (!stockTransfer) {
       throw new HttpError(`Stock transfer ${name} not found`, 404);

@@ -23,15 +23,15 @@
     },
     "orderState": {
       "title": "order-state",
-      "enum": ["FULLY_ORDERED", "NOT_FULLY_ORDERED"]
+      "enum": ["fully-ordered", "not-fully-ordered"]
     },
     "purchaseOrderState": {
       "title": "purchase-order-state",
-      "description": "The purchase order state of linked purchase orders. Fully finished special orders also require orderState = FULLY_ORDERED",
-      "enum": ["ALL_RECEIVED", "NOT_ALL_RECEIVED"]
+      "description": "The purchase order state of linked purchase orders. Fully finished special orders also require orderState = fully-ordered",
+      "enum": ["all-received", "not-all-received"]
     },
     "lineItemOrderState": {
-      "enum": ["FULLY_ORDERED", "NOT_FULLY_ORDERED"]
+      "enum": ["fully-ordered", "not-fully-ordered"]
     },
     "lineItemVendorName": {
       "type": "string"

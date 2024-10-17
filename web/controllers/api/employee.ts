@@ -1,21 +1,29 @@
 import { Session } from '@shopify/shopify-api';
 import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
-import type { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import type { Request, Response } from 'express-serve-static-core';
 import { gql } from '../../services/gql/gql.js';
-import { db } from '../../services/db/db.js';
-import { getShopSettings } from '../../services/settings.js';
+import { getShopSettings } from '../../services/settings/settings.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { Permission, isPermissionNode, LocalsTeifiUser, createNewEmployees } from '../../decorators/permission.js';
-import { indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { Permission, LocalsTeifiUser } from '../../decorators/permission.js';
+import { groupBy, indexBy, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { UpsertEmployees } from '../../schemas/generated/upsert-employees.js';
 import { Ids } from '../../schemas/generated/ids.js';
-import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getStaffMembersByIds, getStaffMembersPage } from '../../services/staff-members.js';
 import { intercom, IntercomUser } from '../../services/intercom.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { assertMoneyOrNull } from '../../util/assertions.js';
+import { getDefaultRoleUuid } from '../../services/permissions/permissions.js';
+import {
+  deleteStaffMemberLocations,
+  getStaffMemberLocations,
+  getStaffMembers,
+  insertStaffMemberLocations,
+  upsertStaffMembers,
+} from '../../services/staff-members/queries.js';
+import { unit } from '../../services/db/unit-of-work.js';
+import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
+import { StaffMemberPaginationOptions } from '../../schemas/generated/staff-member-pagination-options.js';
 
 @Authenticated()
 export default class EmployeeController {
@@ -25,24 +33,23 @@ export default class EmployeeController {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
-    const { defaultRate } = await getShopSettings(session.shop);
+    const settings = await getShopSettings(session.shop);
+    const [employee = never()] = await attachDatabaseEmployees(session.shop, [user.staffMember]);
 
     return res.json({
       employee: {
-        ...user.staffMember,
-        ...user.user,
-        rate: (user.user.rate ?? defaultRate) as Money,
-        isDefaultRate: user.user.rate === null || user.user.rate === undefined,
+        ...employee,
+        rate: user.user.rate ?? settings.workOrders.charges.defaultHourlyRate,
         intercomUser: intercom.getUser(session.shop, user.staffMember.id),
       },
     });
   }
 
   @Get('/')
-  @QuerySchema('pagination-options')
+  @QuerySchema('staff-member-pagination-options')
   @Permission('read_employees')
   async fetchEmployees(
-    req: Request<unknown, unknown, unknown, PaginationOptions>,
+    req: Request<unknown, unknown, unknown, StaffMemberPaginationOptions>,
     res: Response<FetchEmployeesResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
@@ -82,42 +89,50 @@ export default class EmployeeController {
   async upsertEmployees(req: Request<unknown, unknown, UpsertEmployees>, res: Response<UpsertEmployeesResponse>) {
     const session: Session = res.locals.shopify.session;
     const { shop } = session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
 
     if (req.body.employees.length === 0) {
       return res.json({ success: true });
     }
 
-    const employeeIds = req.body.employees.map(e => e.employeeId);
-
-    const staffMembers = await getStaffMembersByIds(session, employeeIds);
-
-    const staffMemberById = indexBy(staffMembers.filter(isNonNullable), e => e.id);
-
-    await db.employee.upsertMany({
-      employees: req.body.employees.map(({ employeeId, rate, superuser, permissions }) => {
-        const staffMember = staffMemberById[employeeId];
-
-        if (!staffMember) {
-          throw new HttpError('Not all employees were found', 400);
-        }
-
-        return {
-          permissions: permissions.map(p => {
-            if (isPermissionNode(p)) return p;
-            throw new Error(`Invalid permission node: ${p}`);
-          }),
-          isShopOwner: staffMember.isShopOwner,
-          staffMemberId: employeeId,
-          name: staffMember.name,
-          email: staffMember.email,
-          superuser,
-          shop,
-          rate,
-        };
-      }),
+    await assertLocationsPermitted({
+      shop,
+      locationIds: unique(req.body.employees.map(employee => employee.locationIds).flat()),
+      staffMemberId: user.staffMember.id,
     });
 
-    return res.json({ success: true });
+    const employeeIds = req.body.employees.map(e => e.staffMemberId);
+    const staffMembers = await getStaffMembersByIds(session, employeeIds);
+    const staffMemberById = indexBy(staffMembers.filter(isNonNullable), e => e.id);
+
+    return await unit(async () => {
+      await upsertStaffMembers(
+        session.shop,
+        req.body.employees.map(({ staffMemberId, rate, superuser, role }) => {
+          const staffMember = staffMemberById[staffMemberId];
+
+          if (!staffMember) {
+            throw new HttpError('Not all employees were found', 400);
+          }
+
+          return {
+            isShopOwner: staffMember.isShopOwner,
+            staffMemberId,
+            name: staffMember.name,
+            email: staffMember.email,
+            superuser,
+            shop,
+            rate,
+            role,
+          };
+        }),
+      );
+
+      await deleteStaffMemberLocations(req.body.employees.map(employee => employee.staffMemberId));
+      await insertStaffMemberLocations(req.body.employees);
+
+      return res.json({ success: true });
+    });
   }
 }
 
@@ -127,40 +142,51 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
   }
 
   const staffMemberIds = staffMembers.map(e => e.id);
-  const employees = await db.employee.getMany({ employeeIds: staffMemberIds });
+  const [employees, defaultRole, employeeLocations] = await Promise.all([
+    getStaffMembers(shop, staffMemberIds),
+    getDefaultRoleUuid(shop),
+    getStaffMemberLocations(staffMemberIds),
+  ]);
   const knownEmployeeIds = new Set(employees.map(e => e.staffMemberId));
 
   employees.push(
-    ...(await createNewEmployees(
+    ...(await upsertStaffMembers(
       shop,
       staffMembers
         .filter(staffMember => !knownEmployeeIds.has(staffMember.id))
         .map(staffMember => ({
-          employeeId: staffMember.id,
+          staffMemberId: staffMember.id,
           name: staffMember.name,
           isShopOwner: staffMember.isShopOwner,
           superuser: staffMember.isShopOwner,
           email: staffMember.email,
+          role: defaultRole,
+          rate: null,
+          locationIds: [],
         })),
     )),
   );
 
-  const { defaultRate } = await getShopSettings(shop);
+  const { workOrders, roles } = await getShopSettings(shop);
   const employeeRecord = indexBy(employees, e => e.staffMemberId);
+  const employeeLocationsRecord = groupBy(employeeLocations, e => e.staffMemberId);
 
   return staffMembers.map(staffMember => {
     const employee = employeeRecord[staffMember.id] ?? never('just made it');
 
     assertMoneyOrNull(employee.rate);
 
-    const rate = employee.rate ?? defaultRate;
+    const rate = employee.rate ?? workOrders.charges.defaultHourlyRate;
     const isDefaultRate = rate === null;
+    const permissions = roles[employee.role]?.permissions ?? [];
 
     return {
       ...staffMember,
       ...employee,
       rate,
       isDefaultRate,
+      permissions,
+      locationIds: employeeLocationsRecord[staffMember.id]?.map(location => location.locationId) ?? [],
     };
   });
 }

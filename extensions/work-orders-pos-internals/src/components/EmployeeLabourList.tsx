@@ -51,11 +51,11 @@ export function EmployeeLabourList({
         const leftSide: ListRowLeftSide =
           charge.type === 'hourly-labour'
             ? {
-                label: query?.data?.name ?? 'Unknown Employee',
+                label: query?.data?.name ?? 'Unknown employee',
                 subtitle: [charge.name, `${charge.hours} hours × ${currencyFormatter(charge.rate)}/hour`],
               }
             : {
-                label: query?.data?.name ?? 'Unknown Employee',
+                label: query?.data?.name ?? 'Unknown employee',
                 subtitle: [charge.name, currencyFormatter(charge.amount)],
               };
 

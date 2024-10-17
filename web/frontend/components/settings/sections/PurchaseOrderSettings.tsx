@@ -1,4 +1,4 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Autocomplete, BlockStack, Icon, InlineStack, Tag, Text, TextField } from '@shopify/polaris';
 import { CirclePlusMinor } from '@shopify/polaris-icons';
@@ -39,10 +39,13 @@ export function PurchaseOrderSettings({
                 content: `Create status "${purchaseOrderStatusValue}"`,
                 prefix: <Icon source={CirclePlusMinor} />,
                 onAction: () => {
-                  if (!settings.purchaseOrderStatuses.includes(purchaseOrderStatusValue)) {
+                  if (!settings.purchaseOrders.statuses.includes(purchaseOrderStatusValue)) {
                     setSettings({
                       ...settings,
-                      purchaseOrderStatuses: [...settings.purchaseOrderStatuses, purchaseOrderStatusValue],
+                      purchaseOrders: {
+                        ...settings.purchaseOrders,
+                        statuses: [...settings.purchaseOrders.statuses, purchaseOrderStatusValue],
+                      },
                     });
                   }
                   setPurchaseOrderStatusValue('');
@@ -53,13 +56,16 @@ export function PurchaseOrderSettings({
       />
 
       <InlineStack gap="200">
-        {settings.purchaseOrderStatuses.map((status, i) => (
+        {settings.purchaseOrders.statuses.map((status, i) => (
           <Tag
             key={i}
             onRemove={() =>
               setSettings({
                 ...settings,
-                purchaseOrderStatuses: settings.purchaseOrderStatuses.filter((_, j) => i !== j),
+                purchaseOrders: {
+                  ...settings.purchaseOrders,
+                  statuses: settings.purchaseOrders.statuses.filter((_, j) => i !== j),
+                },
               })
             }
           >
@@ -69,29 +75,32 @@ export function PurchaseOrderSettings({
       </InlineStack>
 
       <Autocomplete
-        options={settings.purchaseOrderStatuses.map(status => ({ id: status, label: status, value: status }))}
-        selected={[settings.defaultPurchaseOrderStatus]}
+        options={settings.purchaseOrders.statuses.map(status => ({ id: status, label: status, value: status }))}
+        selected={[settings.purchaseOrders.defaultStatus]}
         onSelect={([defaultPurchaseOrderStatus]) => {
           setSettings(current => ({
             ...current,
-            defaultPurchaseOrderStatus: defaultPurchaseOrderStatus ?? current.defaultPurchaseOrderStatus,
+            purchaseOrders: {
+              ...current.purchaseOrders,
+              defaultStatus: defaultPurchaseOrderStatus ?? current.purchaseOrders.defaultStatus,
+            },
           }));
-          setDefaultPurchaseOrderStatusValue(defaultPurchaseOrderStatus ?? settings.defaultPurchaseOrderStatus);
+          setDefaultPurchaseOrderStatusValue(defaultPurchaseOrderStatus ?? settings.purchaseOrders.defaultStatus);
         }}
         textField={
           <Autocomplete.TextField
-            label="Default Status"
+            label="Default status"
             autoComplete="off"
             requiredIndicator
             value={defaultPurchaseOrderStatusValue}
             onChange={setDefaultPurchaseOrderStatusValue}
-            onBlur={() => setDefaultPurchaseOrderStatusValue(settings.defaultPurchaseOrderStatus)}
+            onBlur={() => setDefaultPurchaseOrderStatusValue(settings.purchaseOrders.defaultStatus)}
           />
         }
       />
 
       <TextField
-        label="ID Format"
+        label="ID format"
         autoComplete="off"
         requiredIndicator
         helpText={
@@ -104,11 +113,14 @@ export function PurchaseOrderSettings({
             </Text>
           </>
         }
-        value={settings.purchaseOrderIdFormat}
+        value={settings.purchaseOrders.idFormat}
         onChange={value =>
           setSettings({
             ...settings,
-            purchaseOrderIdFormat: value,
+            purchaseOrders: {
+              ...settings.purchaseOrders,
+              idFormat: value,
+            },
           })
         }
       />

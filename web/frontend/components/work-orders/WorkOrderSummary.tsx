@@ -105,7 +105,7 @@ export function WorkOrderSummary({
 
           {appliedDiscount.compare(BigDecimal.ZERO) > 0 && (
             <MoneyField
-              label={'Applied Discount'}
+              label={'Applied discount'}
               autoComplete={'off'}
               readOnly
               value={appliedDiscount.round(2).toMoney()}
@@ -151,7 +151,7 @@ export function WorkOrderSummary({
           />
 
           <MoneyField
-            label={'Balance Due'}
+            label={'Balance due'}
             autoComplete={'off'}
             readOnly
             value={calculatedDraftOrder?.outstanding}

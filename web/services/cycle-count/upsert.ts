@@ -16,14 +16,30 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { validateCreateCycleCount } from './validate.js';
 import { getNewCycleCountName } from '../id-formatting.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
 
 export async function upsertCycleCount(session: Session, user: LocalsTeifiUser, createCycleCount: CreateCycleCount) {
   if (createCycleCount.name) {
-    const cycleCount = await getCycleCount({ shop: session.shop, name: createCycleCount.name });
-    if (cycleCount?.locked && !user.user.superuser) {
+    const cycleCount = await getCycleCount({
+      shop: session.shop,
+      name: createCycleCount.name,
+      locationIds: user.user.allowedLocationIds,
+    });
+
+    if (!cycleCount) {
+      throw new HttpError('Cycle count not found', 404);
+    }
+
+    if (cycleCount.locked && !user.user.superuser) {
       throw new HttpError('Cycle count is locked', 400);
     }
   }
+
+  await assertLocationsPermitted({
+    shop: session.shop,
+    locationIds: [createCycleCount.locationId],
+    staffMemberId: user.staffMember.id,
+  });
 
   validateCreateCycleCount(createCycleCount);
 

@@ -1,4 +1,4 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { BlockStack, Checkbox, Text, TextField } from '@shopify/polaris';
 
 export function LabourSettings({
@@ -11,46 +11,86 @@ export function LabourSettings({
   return (
     <BlockStack gap="400">
       <TextField
-        label={'Default Labour Line Item Name'}
+        label={'Default labour line item name'}
         autoComplete={'off'}
-        value={settings.labourLineItemName}
-        onChange={value => setSettings({ ...settings, labourLineItemName: value })}
+        value={settings.workOrders.charges.defaultLabourLineItemName}
+        onChange={defaultLabourLineItemName =>
+          setSettings({
+            ...settings,
+            workOrders: {
+              ...settings.workOrders,
+              charges: {
+                ...settings.workOrders.charges,
+                defaultLabourLineItemName,
+              },
+            },
+          })
+        }
       />
       <TextField
-        label={'Labour Line Item SKU'}
+        label={'Labour line item SKU'}
         autoComplete={'off'}
-        value={settings.labourLineItemSKU}
-        onChange={value => setSettings({ ...settings, labourLineItemSKU: value })}
+        value={settings.workOrders.charges.defaultLabourLineItemSKU}
+        onChange={defaultLabourLineItemSKU =>
+          setSettings({
+            ...settings,
+            workOrders: {
+              ...settings.workOrders,
+              charges: {
+                ...settings.workOrders.charges,
+                defaultLabourLineItemSKU,
+              },
+            },
+          })
+        }
       />
       <BlockStack>
         <Text as={'p'}>Enabled Labour Options</Text>
         <Checkbox
-          label={'Employee Assignments'}
-          checked={settings.chargeSettings.employeeAssignments}
-          onChange={enabled =>
+          label={'Employee assignments'}
+          checked={settings.workOrders.charges.allowEmployeeAssignments}
+          onChange={allowEmployeeAssignments =>
             setSettings({
               ...settings,
-              chargeSettings: { ...settings.chargeSettings, employeeAssignments: enabled },
+              workOrders: {
+                ...settings.workOrders,
+                charges: {
+                  ...settings.workOrders.charges,
+                  allowEmployeeAssignments,
+                },
+              },
             })
           }
         />
         <Checkbox
-          label={'Hourly Labour'}
-          checked={settings.chargeSettings.hourlyLabour}
-          onChange={enabled =>
+          label={'Hourly labour'}
+          checked={settings.workOrders.charges.allowHourlyLabour}
+          onChange={allowHourlyLabour =>
             setSettings({
               ...settings,
-              chargeSettings: { ...settings.chargeSettings, hourlyLabour: enabled },
+              workOrders: {
+                ...settings.workOrders,
+                charges: {
+                  ...settings.workOrders.charges,
+                  allowHourlyLabour,
+                },
+              },
             })
           }
         />
         <Checkbox
           label={'Fixed-Price Labour'}
-          checked={settings.chargeSettings.fixedPriceLabour}
-          onChange={enabled =>
+          checked={settings.workOrders.charges.allowFixedPriceLabour}
+          onChange={allowFixedPriceLabour =>
             setSettings({
               ...settings,
-              chargeSettings: { ...settings.chargeSettings, fixedPriceLabour: enabled },
+              workOrders: {
+                ...settings.workOrders,
+                charges: {
+                  ...settings.workOrders.charges,
+                  allowFixedPriceLabour,
+                },
+              },
             })
           }
         />

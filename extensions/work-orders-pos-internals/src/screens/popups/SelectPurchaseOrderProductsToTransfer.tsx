@@ -184,7 +184,7 @@ export function SelectPurchaseOrderProductsToTransfer({ name }: { name: string }
             },
           },
           {
-            title: 'Create Stock Transfer',
+            title: 'Create stock transfer',
             type: 'primary',
             disabled: selectedItems.length === 0,
             onAction: async () => {

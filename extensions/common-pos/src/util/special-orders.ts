@@ -39,8 +39,8 @@ export function getDetailedSpecialOrderBadges(specialOrder: DetailedSpecialOrder
 export function getSpecialOrderOrderStateBadge({ orderState, purchaseOrders }: DetailedSpecialOrder): BadgeProps {
   return {
     text: titleCase(orderState),
-    variant: orderState === 'FULLY_ORDERED' ? 'success' : 'warning',
-    status: orderState === 'FULLY_ORDERED' ? 'complete' : purchaseOrders.length > 0 ? 'partial' : 'empty',
+    variant: orderState === 'fully-ordered' ? 'success' : 'warning',
+    status: orderState === 'fully-ordered' ? 'complete' : purchaseOrders.length > 0 ? 'partial' : 'empty',
   };
 }
 
@@ -50,9 +50,9 @@ export function getSpecialOrderPurchaseOrderStateBadge({
 }: DetailedSpecialOrder): BadgeProps {
   return {
     text: titleCase(purchaseOrderState),
-    variant: purchaseOrderState === 'ALL_RECEIVED' ? 'success' : 'warning',
+    variant: purchaseOrderState === 'all-received' ? 'success' : 'warning',
     status:
-      purchaseOrderState === 'ALL_RECEIVED'
+      purchaseOrderState === 'all-received'
         ? 'complete'
         : purchaseOrders.some(po => po.availableQuantity > 0)
           ? 'partial'

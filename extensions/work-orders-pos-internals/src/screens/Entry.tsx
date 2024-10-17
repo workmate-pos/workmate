@@ -63,7 +63,7 @@ export function Entry() {
         </ResponsiveStack>
         <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           <Button title="Import Work Order" type={'plain'} onPress={() => router.push('ImportOrderSelector', {})} />
-          <Button title={'New Work Order'} type={'primary'} onPress={() => router.push('NewWorkOrder', {})} />
+          <Button title={'New work order'} type={'primary'} onPress={() => router.push('NewWorkOrder', {})} />
         </ResponsiveStack>
       </ResponsiveStack>
 
@@ -185,7 +185,7 @@ function useWorkOrderRows(workOrders: FetchWorkOrderInfoPageResponse[number][]):
       const totalBigDecimal = BigDecimal.fromMoney(total);
 
       if (outstandingBigDecimal.compare(BigDecimal.ZERO) <= 0) {
-        financialStatus = 'Fully Paid';
+        financialStatus = 'Fully paid';
       } else if (outstandingBigDecimal.compare(totalBigDecimal) < 0) {
         financialStatus = 'Partially paid';
       } else {

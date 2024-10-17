@@ -16,9 +16,10 @@ import {
 import { escapeLike } from '../db/like.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
 import { sum } from '@teifi-digital/shopify-app-toolbox/array';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
-export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
-  const specialOrder = await getSpecialOrder({ shop, name });
+export async function getDetailedSpecialOrder({ shop }: Session, name: string, locationIds: ID[] | null) {
+  const specialOrder = await getSpecialOrder({ shop, name, locationIds });
 
   if (!specialOrder) {
     return null;
@@ -36,14 +37,14 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
   const purchaseOrderState: PurchaseOrderState = !lineItems
     .flatMap(lineItem => lineItem.purchaseOrderLineItems)
     .some(lineItem => lineItem.availableQuantity < lineItem.quantity)
-    ? 'ALL_RECEIVED'
-    : 'NOT_ALL_RECEIVED';
+    ? 'all-received'
+    : 'not-all-received';
 
   const orderState: OrderState = lineItems.every(
     lineItem => lineItem.quantity <= sum(lineItem.purchaseOrderLineItems.map(lineItem => lineItem.quantity)),
   )
-    ? 'FULLY_ORDERED'
-    : 'NOT_FULLY_ORDERED';
+    ? 'fully-ordered'
+    : 'not-fully-ordered';
 
   return {
     name: specialOrder.name,
@@ -107,17 +108,23 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string) {
   };
 }
 
-export async function getDetailedSpecialOrdersPage(session: Session, paginationOptions: SpecialOrderPaginationOptions) {
+export async function getDetailedSpecialOrdersPage(
+  session: Session,
+  paginationOptions: SpecialOrderPaginationOptions,
+  locationIds: ID[] | null,
+) {
   if (paginationOptions.query !== undefined) {
     paginationOptions.query = `%${escapeLike(paginationOptions.query)}%`;
   }
 
   const { shop } = session;
-  const { specialOrders, hasNextPage } = await getSpecialOrdersPage(shop, paginationOptions);
+  const { specialOrders, hasNextPage } = await getSpecialOrdersPage(shop, paginationOptions, locationIds);
 
   return {
     specialOrders: await Promise.all(
-      specialOrders.map(specialOrder => getDetailedSpecialOrder(session, specialOrder.name).then(so => so ?? never())),
+      specialOrders.map(specialOrder =>
+        getDetailedSpecialOrder(session, specialOrder.name, locationIds).then(so => so ?? never()),
+      ),
     ),
     hasNextPage,
   };

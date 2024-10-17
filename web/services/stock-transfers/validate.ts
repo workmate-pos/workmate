@@ -3,13 +3,18 @@ import { CreateStockTransfer } from '../../schemas/generated/create-stock-transf
 import { assertValidUuid } from '../../util/uuid.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getStockTransfer } from './queries.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
-export async function validateCreateStockTransfer(session: Session, createStockTransfer: CreateStockTransfer) {
+export async function validateCreateStockTransfer(
+  session: Session,
+  createStockTransfer: CreateStockTransfer,
+  user: LocalsTeifiUser,
+) {
   assertValidUuids(createStockTransfer);
   assertUniqueUuids(createStockTransfer);
   assertPositiveQuantities(createStockTransfer);
 
-  await assertValidStockTransferName(session, createStockTransfer);
+  await assertValidStockTransferName(session, createStockTransfer, user);
 }
 
 function assertValidUuids(createStockTransfer: CreateStockTransfer) {
@@ -35,9 +40,17 @@ function assertPositiveQuantities(createStockTransfer: CreateStockTransfer) {
   }
 }
 
-async function assertValidStockTransferName(session: Session, createStockTransfer: CreateStockTransfer) {
+async function assertValidStockTransferName(
+  session: Session,
+  createStockTransfer: CreateStockTransfer,
+  user: LocalsTeifiUser,
+) {
   if (createStockTransfer.name) {
-    const stockTransfer = await getStockTransfer({ shop: session.shop, name: createStockTransfer.name });
+    const stockTransfer = await getStockTransfer({
+      shop: session.shop,
+      name: createStockTransfer.name,
+      locationIds: user.user.allowedLocationIds,
+    });
 
     if (!stockTransfer) {
       throw new HttpError(`Stock transfer ${createStockTransfer.name} does not exist`, 404);

@@ -51,20 +51,20 @@ export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
   return (
     <ScrollView>
       <Stack direction={'horizontal'} alignment={'center'} paddingVertical={'ExtraLarge'}>
-        <Text variant={'headingLarge'}>Save Custom Field Preset</Text>
+        <Text variant={'headingLarge'}>Save custom field Preset</Text>
       </Stack>
 
       <Form disabled={presetMutation.isPending || !router.isCurrent}>
         <Stack direction={'vertical'} paddingHorizontal={'ExtraExtraLarge'}>
-          <FormStringField label={'Preset Name'} value={name} onChange={setName} required />
+          <FormStringField label={'Preset name'} value={name} onChange={setName} required />
           <FormButton
-            title={isDefault ? 'Is Default' : 'Is Not Default'}
+            title={isDefault ? 'Is default' : 'Is not default'}
             type={'basic'}
             onPress={() => setIsDefault(isDefault => !isDefault)}
           />
 
           <FormButton
-            title={'Save Preset'}
+            title={'Save preset'}
             type={'primary'}
             action={'submit'}
             loading={presetMutation.isPending}
@@ -109,7 +109,7 @@ const usePresetNameInUseDialog = ({
         onAction: mutate,
         showDialog: presetNameInUse,
         props: {
-          title: 'Preset Name In Use',
+          title: 'Preset name already in use',
           content: `'${name}' preset already exists. Do you want to override it?`,
           type: 'alert',
           actionText: 'Override',

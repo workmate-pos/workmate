@@ -1,9 +1,8 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { Dispatch, SetStateAction, useEffect, useState } from 'react';
 import { Frame, BlockStack, Page, Tabs, Box, Divider, LegacyCard } from '@shopify/polaris';
-import { ContextualSaveBar, Loading, useAppBridge } from '@shopify/app-bridge-react';
+import { ContextualSaveBar, Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import type { ShopSettings } from '../../schemas/generated/shop-settings.js';
 import { useSettingsMutation } from '../queries/use-settings-mutation.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
@@ -18,22 +17,22 @@ import { PrintSettings } from '@web/frontend/components/settings/sections/PrintS
 import { PurchaseOrderWebhookSettings } from '@web/frontend/components/settings/sections/PurchaseOrderWebhookSettings.js';
 import { useSearchParams } from 'react-router-dom';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { WorkOrderRequestSettings } from '@web/frontend/components/settings/sections/WorkOrderRequestSettings.js';
-import { CustomerMetafieldSettings } from '@web/frontend/components/settings/sections/CustomerMetafieldSettings.js';
+import { VendorMetafieldSettings } from '@web/frontend/components/settings/sections/VendorMetafieldSettings.js';
 import { StockTransferSettings } from '@web/frontend/components/settings/sections/StockTransferSettings.js';
 import { CustomFieldSettings } from '@web/frontend/components/settings/sections/CustomFieldSettings.js';
 import { CycleCountSettings } from '@web/frontend/components/settings/sections/CycleCountSettings.js';
 import { SpecialOrderSettings } from '@web/frontend/components/settings/sections/SpecialOrderSettings.js';
 import { ScannerSettings } from '@web/frontend/components/settings/sections/ScannerSettings.js';
+import { ShopSettings } from '@web/services/settings/schema.js';
+import { RolesSettings } from '@web/frontend/components/settings/sections/RolesSettings.js';
+import { FranchiseModeSettings } from '@web/frontend/components/settings/sections/FranchiseModeSettings.js';
 
 export default function () {
   return (
     <Frame>
-      <Page>
-        <PermissionBoundary permissions={['read_settings']}>
-          <Settings />
-        </PermissionBoundary>
-      </Page>
+      <PermissionBoundary permissions={['read_settings']}>
+        <Settings />
+      </PermissionBoundary>
     </Frame>
   );
 }
@@ -97,13 +96,13 @@ function Settings() {
 
   const tabs = [
     {
-      name: 'Work Orders',
+      name: 'Work orders',
       tab: (
         <>
           <WorkOrderSettings
             settings={settings}
             setSettings={setSettings}
-            defaultWorkOrderStatusValue={settings.defaultStatus}
+            defaultWorkOrderStatusValue={settings.workOrders.defaultStatus}
           />
           <Divider />
           <DiscountSettings settings={settings} setSettings={setSettings} />
@@ -112,38 +111,32 @@ function Settings() {
           <Divider />
           <RatesSettings settings={settings} setSettings={setSettings} />
           <Divider />
-          <WorkOrderRequestSettings settings={settings} setSettings={setSettings} />
-          <Divider />
           <CustomFieldSettings type="WORK_ORDER" />
         </>
       ),
     },
     {
-      name: 'Purchase Orders',
+      name: 'Purchase orders',
       tab: (
         <>
           <PurchaseOrderSettings
             settings={settings}
             setSettings={setSettings}
-            defaultPurchaseOrderStatusValue={settings.defaultPurchaseOrderStatus}
+            defaultPurchaseOrderStatusValue={settings.purchaseOrders.defaultStatus}
           />
           <Divider />
-          <CustomerMetafieldSettings settings={settings} setSettings={setSettings} />
+          <VendorMetafieldSettings settings={settings} setSettings={setSettings} />
           <Divider />
           <CustomFieldSettings type="PURCHASE_ORDER" />
         </>
       ),
     },
     {
-      name: 'Line Items',
-      tab: <CustomFieldSettings type="LINE_ITEM" />,
-    },
-    {
-      name: 'Stock Transfers',
+      name: 'Stock transfers',
       tab: <StockTransferSettings settings={settings} setSettings={setSettings} />,
     },
     {
-      name: 'Cycle Counts',
+      name: 'Cycle counts',
       tab: (
         <CycleCountSettings
           settings={settings}
@@ -153,7 +146,7 @@ function Settings() {
       ),
     },
     {
-      name: 'Special Orders',
+      name: 'Special orders',
       tab: <SpecialOrderSettings settings={settings} setSettings={setSettings} />,
     },
     {
@@ -161,18 +154,31 @@ function Settings() {
       tab: <ScannerSettings settings={settings} setSettings={setSettings} />,
     },
     {
+      name: 'Roles',
+      tab: <RolesSettings settings={settings} setSettings={setSettings} />,
+      fullWidth: true,
+    },
+    {
+      name: 'Line items',
+      tab: <CustomFieldSettings type="LINE_ITEM" />,
+    },
+    {
       name: 'Printing',
       tab: (
         <>
-          <PrintSettings settings={settings} setSettings={setSettings} />
-          <Divider />
           <EmailSettings settings={settings} setSettings={setSettings} />
+          <Divider />
+          <PrintSettings settings={settings} setSettings={setSettings} />
         </>
       ),
     },
     {
-      name: 'Custom Fields',
+      name: 'Custom fields',
       tab: <CustomFieldSettings />,
+    },
+    {
+      name: 'Franchise mode',
+      tab: <FranchiseModeSettings settings={settings} setSettings={setSettings} />,
     },
     {
       name: 'Integrations',
@@ -192,9 +198,10 @@ function Settings() {
   );
 
   return (
-    <>
+    <Page fullWidth={tabs[selectedTab]?.fullWidth}>
+      <TitleBar title="Settings" />
+
       <ContextualSaveBar
-        fullWidth
         saveAction={{
           disabled: !canWriteSettings || !isValid,
           loading: saveSettingsMutation.isPending,
@@ -226,6 +233,6 @@ function Settings() {
       </LegacyCard>
 
       {toast}
-    </>
+    </Page>
   );
 }

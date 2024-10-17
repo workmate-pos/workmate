@@ -24,7 +24,7 @@ export function CompanyLocationSelector({ companyId, onSelect, onClear, useRoute
 
   return (
     <ListPopup
-      title={'Select Company Location'}
+      title={'Select company location'}
       query={{ query, setQuery }}
       resourceName={{ singular: 'company location', plural: 'company locations' }}
       isLoadingMore={companyLocationsQuery.isFetching}

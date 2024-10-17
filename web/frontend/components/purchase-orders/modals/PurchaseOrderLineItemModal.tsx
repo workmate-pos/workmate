@@ -9,7 +9,7 @@ import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory
 import { Badge, BlockStack, Box, DataTable, InlineStack, Modal, Text, TextField } from '@shopify/polaris';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useState } from 'react';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { Int } from '@web/schemas/generated/create-product.js';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
@@ -128,7 +128,7 @@ export function PurchaseOrderLineItemModal({
             <DataTable
               columnContentTypes={['text', 'numeric']}
               headings={['Status', 'Quantity']}
-              rows={inventoryItem.inventoryLevel.quantities.map(({ name, quantity }) => [titleCase(name), quantity])}
+              rows={inventoryItem.inventoryLevel.quantities.map(({ name, quantity }) => [sentenceCase(name), quantity])}
             />
           </Modal.Section>
         )}
@@ -136,7 +136,7 @@ export function PurchaseOrderLineItemModal({
         <Modal.Section>
           <BlockStack gap={'400'}>
             <MoneyField
-              label={'Unit Cost'}
+              label={'Unit cost'}
               autoComplete={'off'}
               value={product.unitCost.toString()}
               onChange={value => setProduct(product => ({ ...product, unitCost: value as Money }))}
@@ -145,7 +145,7 @@ export function PurchaseOrderLineItemModal({
               readOnly={isImmutable}
             />
             <TextField
-              label={'Serial Number'}
+              label={'Serial number'}
               autoComplete="off"
               value={product.serialNumber ?? ''}
               onChange={value => setProduct(product => ({ ...product, serialNumber: value.toUpperCase() || null }))}
@@ -160,7 +160,7 @@ export function PurchaseOrderLineItemModal({
               requiredIndicator
             />
             <IntegerField
-              label={'Available Quantity'}
+              label={'Available quantity'}
               autoComplete={'off'}
               value={product.availableQuantity.toString()}
               onChange={value => setProduct(product => ({ ...product, availableQuantity: Number(value) as Int }))}
@@ -174,6 +174,7 @@ export function PurchaseOrderLineItemModal({
 
         <Modal.Section>
           <CustomFieldsList
+            kind="line-item"
             customFields={product.customFields}
             onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}

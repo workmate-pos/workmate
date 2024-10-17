@@ -13,7 +13,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
 import { useRouter } from '../../routes.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import {
@@ -124,7 +124,7 @@ export function PaymentTermsSelector({
         selected={currentTemplate?.paymentTermsType ?? 'N/A'}
         segments={['NONE', ...paymentTermTypes].map(type => ({
           id: type,
-          label: titleCase(type),
+          label: sentenceCase(type),
           disabled: disabled,
         }))}
       />
@@ -151,7 +151,7 @@ export function PaymentTermsSelector({
 function EmptyPaymentTerms({ type }: { type: string }) {
   return (
     <Text variant={'body'} color={'TextSubdued'}>
-      Selected {titleCase(type)}
+      Selected {sentenceCase(type)}
     </Text>
   );
 }
@@ -217,7 +217,7 @@ function FixedPaymentTerms({
 
   return (
     <DateField
-      label={'Payment Due On'}
+      label={'Payment due on'}
       value={paymentTerms.date ?? undefined}
       onChange={(date: string) =>
         setPaymentTerms({ templateId: template.id, date: new Date(date).toISOString() as DateTime })

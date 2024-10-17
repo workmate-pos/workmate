@@ -48,7 +48,7 @@ function TileWithNotifications() {
 
   return (
     <Tile
-      title={'Stock Transfers'}
+      title={'Stock transfers'}
       subtitle={'WorkMate'}
       onPress={() => action.presentModal()}
       enabled

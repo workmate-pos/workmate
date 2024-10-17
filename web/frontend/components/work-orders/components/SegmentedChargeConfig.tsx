@@ -13,8 +13,8 @@ import { DecimalField } from '@web/frontend/components/DecimalField.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
 
 const segmentToggleName = {
-  'fixed-price-labour': 'fixedPriceLabour',
-  'hourly-labour': 'hourlyLabour',
+  'fixed-price-labour': 'allowFixedPriceLabour',
+  'hourly-labour': 'allowHourlyLabour',
 } as const;
 
 type TabId = 'none' | 'hourly-labour' | 'fixed-price-labour';
@@ -69,7 +69,7 @@ export function SegmentedChargeConfig({
     // TODO: Account for other locks
     const toggleName = tabId === 'none' ? null : segmentToggleName[tabId];
     if (!toggleName) return null;
-    if (!settings.chargeSettings[toggleName]) return 'This charge type has been disabled';
+    if (!settings.workOrders.charges[toggleName]) return 'This charge type has been disabled';
     return null;
   };
 
@@ -93,7 +93,7 @@ export function SegmentedChargeConfig({
           {charge?.type === 'hourly-labour' && (
             <>
               <MoneyField
-                label={'Hourly Rate'}
+                label={'Hourly rate'}
                 autoComplete="off"
                 disabled={disabled}
                 readOnly={charge.rateLocked}
@@ -143,7 +143,7 @@ export function SegmentedChargeConfig({
       onEnter: () =>
         setCharge({
           type: 'hourly-labour',
-          name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
+          name: charge?.name ?? (settings.workOrders.charges.defaultLabourLineItemName || 'Labour'),
           rate: getTotalPriceForCharges(charge ? [charge] : []),
           hours: BigDecimal.ONE.toDecimal(),
           rateLocked: false,
@@ -153,7 +153,7 @@ export function SegmentedChargeConfig({
     },
     {
       id: 'fixed-price-labour',
-      name: 'Fixed Price',
+      name: 'Fixed price',
       tab: (
         <>
           {charge?.type === 'fixed-price-labour' && (
@@ -180,7 +180,7 @@ export function SegmentedChargeConfig({
       onEnter: () =>
         setCharge({
           type: 'fixed-price-labour',
-          name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
+          name: charge?.name ?? (settings.workOrders.charges.defaultLabourLineItemName || 'Labour'),
           amount: getTotalPriceForCharges(charge ? [charge] : []),
           amountLocked: false,
           removeLocked: false,
@@ -218,7 +218,7 @@ export function SegmentedChargeConfig({
           <BlockStack gap={'400'}>
             {charge && (
               <TextField
-                label={'Labour Name'}
+                label={'Labour name'}
                 autoComplete="off"
                 requiredIndicator
                 value={charge.name}

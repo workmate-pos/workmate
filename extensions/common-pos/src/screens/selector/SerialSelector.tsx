@@ -73,7 +73,7 @@ export function SerialSelector({
 
   return (
     <ListPopup
-      title={'Select Serial'}
+      title={'Select serial'}
       imageDisplayStrategy="always"
       query={{ query, setQuery }}
       resourceName={{ singular: 'serial', plural: 'serials' }}

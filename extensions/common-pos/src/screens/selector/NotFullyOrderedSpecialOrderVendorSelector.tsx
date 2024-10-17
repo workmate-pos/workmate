@@ -27,7 +27,7 @@ export function NotFullyOrderedSpecialOrderVendorSelector({
     fetch,
     filters: {
       specialOrderLocationId: locationId,
-      specialOrderLineItemOrderState: 'NOT_FULLY_ORDERED',
+      specialOrderLineItemOrderState: 'not-fully-ordered',
     },
   });
   const [query, setQuery] = useState('');
@@ -36,7 +36,7 @@ export function NotFullyOrderedSpecialOrderVendorSelector({
 
   return (
     <ListPopup
-      title={'Select Vendor'}
+      title={'Select vendor'}
       query={{ query, setQuery }}
       resourceName={{ singular: 'vendor', plural: 'vendors' }}
       isLoadingMore={vendorsQuery.isFetching}

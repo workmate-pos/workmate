@@ -106,7 +106,7 @@ export function WorkOrderItemModal({
 
   const itemLineItem = calculatedDraftOrderQuery.getItemLineItem(item);
 
-  const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown Product';
+  const name = getProductVariantName(itemLineItem?.variant) ?? 'Unknown product';
 
   const readonly = !!itemLineItem?.order;
   const isServiceItem = getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== null;
@@ -135,7 +135,7 @@ export function WorkOrderItemModal({
         secondaryActions={[
           canRemoveLabour && shouldShowCharges
             ? {
-                content: 'Remove Labour',
+                content: 'Remove labour',
                 onAction: () => {
                   setGeneralCharge(null);
                   setEmployeeCharges([]);
@@ -145,7 +145,7 @@ export function WorkOrderItemModal({
             : null,
           canAddLabour && !shouldShowCharges
             ? {
-                content: 'Add Labour',
+                content: 'Add labour',
                 onAction: () => {
                   setForceShowCharges(true);
                 },
@@ -188,7 +188,7 @@ export function WorkOrderItemModal({
               />
 
               <MoneyField
-                label={'Unit Price'}
+                label={'Unit price'}
                 autoComplete="off"
                 min={0}
                 value={item.unitPrice}
@@ -237,6 +237,7 @@ export function WorkOrderItemModal({
 
         <Modal.Section>
           <CustomFieldsList
+            kind="line-item"
             customFields={item.customFields}
             onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}
@@ -265,7 +266,7 @@ export function WorkOrderItemModal({
                     ({
                       type: 'fixed-price-labour',
                       uuid: uuid(),
-                      name: settingsQuery.data?.settings?.labourLineItemName || 'Labour',
+                      name: settingsQuery.data?.settings.workOrders.charges.defaultLabourLineItemName || 'Labour',
                       amount: BigDecimal.ZERO.toMoney(),
                       employeeId,
                       workOrderItemUuid: itemUuid,
@@ -412,7 +413,7 @@ function Charges({
       </Text>
 
       <SegmentedChargeConfig
-        defaultHourlyRate={settingsQuery.data?.settings.defaultRate}
+        defaultHourlyRate={settingsQuery.data?.settings.workOrders.charges.defaultHourlyRate}
         types={['none', 'hourly-labour', 'fixed-price-labour']}
         charge={generalCharge}
         setCharge={charge =>
