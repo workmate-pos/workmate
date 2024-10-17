@@ -1,12 +1,12 @@
-import { Graphql, sentryErr, WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
+import { sentryErr, WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
 import { db } from './db/db.js';
 import { AppPlanName } from './db/queries/generated/app-plan.sql.js';
 import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { syncLocationsIfExists } from './locations/sync.js';
 import { syncCustomersIfExists } from './customer/sync.js';
-import { syncProducts, syncProductsIfExists } from './products/sync.js';
-import { syncProductVariants, syncProductVariantsIfExists } from './product-variants/sync.js';
+import { syncProducts } from './products/sync.js';
+import { syncProductVariants } from './product-variants/sync.js';
 import { syncShopifyOrders, syncShopifyOrdersIfExists } from './shopify-order/sync.js';
 import { syncWorkOrders } from './work-orders/sync.js';
 import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
@@ -80,7 +80,7 @@ export default {
       const workOrderName = body.note_attributes.find(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
 
       if (workOrderName) {
-        const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName.value });
+        const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName.value, locationIds: null });
 
         if (!workOrder) {
           // can happen if a merchant manually adds the attribute. if this happens often something is wrong
@@ -266,7 +266,7 @@ export default {
         const workOrderName = body.note_attributes.find(({ name }) => name === WORK_ORDER_CUSTOM_ATTRIBUTE_NAME);
 
         if (workOrderName) {
-          const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName.value });
+          const workOrder = await getWorkOrder({ shop: session.shop, name: workOrderName.value, locationIds: null });
 
           if (!workOrder) {
             // can happen if a merchant manually adds the attribute. if this happens often something is wrong

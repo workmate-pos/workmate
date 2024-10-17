@@ -25,4 +25,5 @@ export const defaultCreateWorkOrder = (base: CreateWorkOrderBase): WIPCreateWork
   companyLocationId: null,
   paymentTerms: null,
   serial: null,
+  locationId: null,
 });

@@ -42,7 +42,7 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
   const screen = useScreen();
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
-  screen.setTitle(createStockTransfer.name ?? 'New Stock Transfer');
+  screen.setTitle(createStockTransfer.name ?? 'New stock transfer');
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   const fetch = useAuthenticatedFetch();
@@ -72,8 +72,10 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
     );
   };
 
+  const router = useRouter();
+
   return (
-    <Form disabled={stockTransferMutation.isPending}>
+    <Form disabled={stockTransferMutation.isPending || !router.isCurrent}>
       <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {stockTransferMutation.error && (
@@ -110,7 +112,7 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
       >
         <ResponsiveGrid columns={4} smColumns={2} grow flex={0}>
           <FormButton
-            title={createStockTransfer.name ? 'Update Stock Transfer' : 'Create Stock Transfer'}
+            title={createStockTransfer.name ? 'Update stock transfer' : 'Create stock transfer'}
             type="primary"
             action={'submit'}
             loading={stockTransferMutation.isPending}
@@ -163,7 +165,7 @@ function StockTransferProperties({
         )}
 
         <FormStringField
-          label={'From Location'}
+          label={'From location'}
           value={fromLocationName}
           onFocus={() =>
             router.push('LocationSelector', {
@@ -181,7 +183,7 @@ function StockTransferProperties({
         />
 
         <FormStringField
-          label={'To Location'}
+          label={'To location'}
           value={toLocationName}
           onFocus={() =>
             router.push('LocationSelector', {
@@ -218,7 +220,7 @@ function StockTransferItems({
     <ResponsiveGrid columns={1} spacing={2}>
       <ResponsiveGrid columns={2} smColumns={1} grow>
         <FormButton
-          title={'Add Product'}
+          title={'Add product'}
           type={'primary'}
           action={'button'}
           onPress={() => {
@@ -233,7 +235,7 @@ function StockTransferItems({
           }}
         />
         <FormButton
-          title={'Scan Items'}
+          title={'Scan items'}
           action={'button'}
           onPress={() => router.push('StockTransferLineItemScanner', { createStockTransfer, dispatch })}
         />

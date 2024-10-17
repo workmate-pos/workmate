@@ -15,7 +15,11 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 export type StockTransfer = NonNullable<Awaited<ReturnType<typeof getStockTransfer>>>;
 export type StockTransferLineItem = Awaited<ReturnType<typeof getStockTransferLineItems>>[number];
 
-export async function getStockTransfer(filters: MergeUnion<{ id: number } | { shop: string; name: string }>) {
+export async function getStockTransfer(
+  filters: MergeUnion<{ id: number } | { shop: string; name: string; locationIds: ID[] | null }>,
+) {
+  const _locationIds: string[] | null = filters?.locationIds ?? null;
+
   const [stockTransfer] = await sql<{
     id: number;
     shop: string;
@@ -30,7 +34,10 @@ export async function getStockTransfer(filters: MergeUnion<{ id: number } | { sh
     FROM "StockTransfer"
     WHERE shop = COALESCE(${filters?.shop ?? null}, shop)
       AND name = COALESCE(${filters?.name ?? null}, name)
-      AND id = COALESCE(${filters?.id ?? null}, id);`;
+      AND id = COALESCE(${filters?.id ?? null}, id)
+      AND "fromLocationId" = ANY (COALESCE(${_locationIds as string[]}, ARRAY ["fromLocationId"]))
+      AND "toLocationId" = ANY (COALESCE(${_locationIds as string[]}, ARRAY ["toLocationId"]));
+  `;
 
   if (!stockTransfer) {
     return null;

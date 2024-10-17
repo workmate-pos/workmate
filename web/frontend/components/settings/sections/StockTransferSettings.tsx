@@ -1,4 +1,4 @@
-import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import { ShopSettings } from '@web/services/settings/schema.js';
 import { Dispatch, SetStateAction } from 'react';
 import { BlockStack, Text, TextField } from '@shopify/polaris';
 
@@ -12,7 +12,7 @@ export function StockTransferSettings({
   return (
     <BlockStack gap={'400'}>
       <TextField
-        label="ID Format"
+        label="ID format"
         autoComplete="off"
         requiredIndicator
         helpText={
@@ -25,11 +25,14 @@ export function StockTransferSettings({
             </Text>
           </>
         }
-        value={settings.stockTransferIdFormat}
-        onChange={value =>
+        value={settings.transferOrders.idFormat}
+        onChange={idFormat =>
           setSettings({
             ...settings,
-            stockTransferIdFormat: value,
+            transferOrders: {
+              ...settings.transferOrders,
+              idFormat: idFormat,
+            },
           })
         }
       />

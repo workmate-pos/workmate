@@ -37,7 +37,7 @@ export function OrderPreview({
 }: {
   orderId: ID;
   /**
-   * Shows "Import Order" button.
+   * Shows "Import order" button.
    * Only used when importing from an existing order, and should be false when simply viewing the derived from order of a work order.
    */
   showImportButton: boolean;
@@ -65,7 +65,7 @@ export function OrderPreview({
       router.push('WorkOrder', {
         initial: {
           ...defaultCreateWorkOrder({
-            status: settingsQuery.data.settings.defaultStatus,
+            status: settingsQuery.data.settings.workOrders.defaultStatus,
           }),
           customerId: order.customer?.id ?? null,
         },

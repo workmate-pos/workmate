@@ -101,14 +101,16 @@ export async function upsertMetafields(
   `;
 }
 
-export async function removeObjectMetafields({ shop, objectId }: { shop: string; objectId: ID }) {
-  const _objectId: string = objectId;
+export async function removeObjectMetafields(shop: string, objectIds: ID[]) {
+  if (objectIds.length === 0) {
+    return;
+  }
 
   await sql`
     DELETE
     FROM "Metafield"
     WHERE shop = ${shop}
-      AND "objectId" = ${_objectId};
+      AND "objectId" = ANY (${objectIds as string[]} :: text[]);
   `;
 }
 

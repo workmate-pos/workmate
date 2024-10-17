@@ -1,25 +1,26 @@
+import { useState } from 'react';
 import { reactExtension, useApi, AdminAction, BlockStack, Button, Text } from '@shopify/ui-extensions-react/admin';
 import { useOrderQuery } from '@work-orders/common/queries/use-order-query.js';
 import { isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useOrderSyncMutation } from '@work-orders/common/queries/use-order-sync-mutation.js';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
 
 // The target used here must match the target used in the extension's toml file (./shopify.extension.toml)
 const TARGET = 'admin.order-details.action.render';
 
-export default reactExtension(TARGET, () => {
-  const [queryClient] = useState(() => new QueryClient());
-
-  return (
-    <QueryClientProvider client={queryClient}>
-      <App />
-    </QueryClientProvider>
-  );
-});
+export default reactExtension(TARGET, () => <App />);
 
 function App() {
+  const [queryClient] = useState(() => new QueryClient());
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Content />
+    </QueryClientProvider>
+  );
+}
+
+function Content() {
   const { close, data, intents } = useApi(TARGET);
 
   const id = data.selected.map(order => order.id).filter(isGid)[0] ?? null;

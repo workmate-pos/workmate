@@ -1,4 +1,4 @@
-import { Button, List, ListRow, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
+import { Button, List, ListRow, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useState } from 'react';
 import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-purchase-order-info-page-query.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
@@ -17,6 +17,7 @@ import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export function PurchaseOrderEntry() {
   const [query, setQuery] = useDebouncedState('');
@@ -41,6 +42,7 @@ export function PurchaseOrderEntry() {
   screen.setIsLoading(isLoading);
 
   const router = useRouter();
+  const { session } = useApi<'pos.home.modal.render'>();
 
   if (isLoading) {
     return null;
@@ -79,20 +81,21 @@ export function PurchaseOrderEntry() {
         </ResponsiveStack>
         <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
           <Button
-            title={'Merge Special Orders'}
+            title={'Merge special orders'}
             type={'plain'}
             onPress={() => router.push('CreatePurchaseOrderSpecialOrderSelector', {})}
           />
           <Button
-            title={'New Purchase Order'}
+            title={'New purchase order'}
             type={'primary'}
             onPress={() => {
-              const { defaultPurchaseOrderStatus } = settingsQuery.data.settings;
-              const createPurchaseOrder = defaultCreatePurchaseOrder({ status: defaultPurchaseOrderStatus });
+              const { purchaseOrders } = settingsQuery.data.settings;
+              const createPurchaseOrder = defaultCreatePurchaseOrder({ status: purchaseOrders.defaultStatus });
 
               router.push('PurchaseOrder', {
                 initial: {
                   ...createPurchaseOrder,
+                  locationId: createGid('Location', session.currentSession.locationId),
                   customFields: {
                     ...customFieldsPresetsQuery.data.defaultCustomFields,
                     ...createPurchaseOrder.customFields,
@@ -117,7 +120,7 @@ export function PurchaseOrderEntry() {
         sm={{ direction: 'vertical', alignment: 'center' }}
       >
         <Button
-          title={'Filter Custom Fields'}
+          title={'Filter custom fields'}
           onPress={() =>
             router.push('CustomFieldFilterConfig', {
               onSave: setCustomFieldFilters,
@@ -191,7 +194,7 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
       subtitle: getPurchaseOrderSubtitle(purchaseOrder),
       badges: [
         {
-          text: titleCase(purchaseOrder.status),
+          text: purchaseOrder.status,
           variant: 'highlight',
         },
       ],

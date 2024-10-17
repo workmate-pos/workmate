@@ -35,7 +35,7 @@ export function SelectCustomFieldPresetModal({
   });
 
   return (
-    <Modal open={open} title={'Import Custom Field Preset'} onClose={onClose}>
+    <Modal open={open} title={'Import custom field preset'} onClose={onClose}>
       <ResourceList
         items={filteredPresets}
         resourceName={{ plural: 'presets', singular: 'preset' }}

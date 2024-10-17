@@ -8,13 +8,12 @@ export function useWorkOrderPrintJobMutation({ fetch }: { fetch: Fetch }) {
     mutationFn: async ({
       workOrderName,
       templateName,
-      date,
-      dueDate,
+      ...qs
     }: {
       workOrderName: string;
       templateName: string;
     } & WorkOrderPrintJob) => {
-      const searchParams = new URLSearchParams({ date, dueDate });
+      const searchParams = new URLSearchParams(qs);
 
       const response = await fetch(
         `/api/work-order/${encodeURIComponent(workOrderName)}/print/${encodeURIComponent(templateName)}?${searchParams}`,

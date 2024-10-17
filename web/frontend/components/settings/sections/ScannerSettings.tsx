@@ -1,4 +1,4 @@
-import { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import { ShopSettings } from '@web/services/settings/schema.js';
 import { Dispatch, SetStateAction, useEffect, useId, useState } from 'react';
 import {
   Banner,
@@ -103,7 +103,7 @@ export function ScannerSettings({
         </Text>
         <Text as="p" variant="bodyMd" tone="subdued">
           The WorkMate scanner allows you to scan products using more than just their barcodes. You can scan products by
-          their SKU, tags, or by product and product variant metafields.
+          their SKU, tags, or by product metafields.
         </Text>
       </BlockStack>
 
@@ -144,8 +144,8 @@ export function ScannerSettings({
         </Text>
 
         <Text as="p" variant="bodyMd" tone="subdued">
-          WorkMate indexes product (variant) metafields to allow you to scan products by their metafield values. We
-          currently support single line text metafields.
+          WorkMate indexes product metafields to allow you to scan products by their metafield values. We currently
+          support single line text product metafields.
         </Text>
 
         <Text as="p" variant="bodySm" tone="subdued">
@@ -170,15 +170,17 @@ export function ScannerSettings({
               progress={syncMetafieldsTaskQuery.isSyncing ? syncMetafieldsTaskQuery.progressPercentage : 100}
             />
             <Text as="p" variant="bodyMd" tone="subdued">
-              {syncMetafieldsTaskQuery.isSyncing ? syncMetafieldsTaskQuery.progress : lastKnownProgressMax} /{' '}
-              {lastKnownProgressMax} metafields
+              {syncMetafieldsTaskQuery.isSyncing
+                ? syncMetafieldsTaskQuery.progress.toFixed(0)
+                : lastKnownProgressMax.toFixed(0)}{' '}
+              / {lastKnownProgressMax.toFixed(0)} metafields
             </Text>
           </InlineStack>
         </Collapsible>
       </BlockStack>
 
       <SearchableChoiceList
-        title="Product Metafields"
+        title="Product metafields"
         choices={productMetafieldChoices}
         onChange={product =>
           setSettings({
@@ -200,28 +202,28 @@ export function ScannerSettings({
       {metafieldsSpinner}
       {metafieldsError}
 
-      <SearchableChoiceList
-        title="Product Variant Metafields"
-        choices={variantMetafieldChoices}
-        onChange={variant =>
-          setSettings({
-            ...settings,
-            scanner: {
-              ...settings.scanner,
-              variants: {
-                ...settings.scanner.variants,
-                metafields: { ...settings.scanner.variants.metafields, variant },
-              },
-            },
-          })
-        }
-        selected={settings.scanner.variants.metafields.variant}
-        resourceName={{ singular: 'metafield', plural: 'metafields' }}
-        limit={SHOW_LESS_AMOUNT}
-        searchable
-      />
-      {metafieldsSpinner}
-      {metafieldsError}
+      {/*<SearchableChoiceList*/}
+      {/*  title="Product Variant Metafields"*/}
+      {/*  choices={variantMetafieldChoices}*/}
+      {/*  onChange={variant =>*/}
+      {/*    setSettings({*/}
+      {/*      ...settings,*/}
+      {/*      scanner: {*/}
+      {/*        ...settings.scanner,*/}
+      {/*        variants: {*/}
+      {/*          ...settings.scanner.variants,*/}
+      {/*          metafields: { ...settings.scanner.variants.metafields, variant },*/}
+      {/*        },*/}
+      {/*      },*/}
+      {/*    })*/}
+      {/*  }*/}
+      {/*  selected={settings.scanner.variants.metafields.variant}*/}
+      {/*  resourceName={{ singular: 'metafield', plural: 'metafields' }}*/}
+      {/*  limit={SHOW_LESS_AMOUNT}*/}
+      {/*  searchable*/}
+      {/*/>*/}
+      {/*{metafieldsSpinner}*/}
+      {/*{metafieldsError}*/}
 
       {toast}
     </BlockStack>

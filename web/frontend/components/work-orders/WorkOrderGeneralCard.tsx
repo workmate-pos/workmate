@@ -17,6 +17,8 @@ import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.j
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { SerialSelectorModal } from '@web/frontend/components/selectors/SerialSelectorModal.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 
 export function WorkOrderGeneralCard({
   createWorkOrder,
@@ -36,6 +38,7 @@ export function WorkOrderGeneralCard({
   onPaymentTermsSelectorClick: () => void;
 }) {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -45,6 +48,9 @@ export function WorkOrderGeneralCard({
 
   const derivedFromOrderQuery = useOrderQuery({ fetch, id: createWorkOrder.derivedFromOrderId });
   const derivedFromOrder = derivedFromOrderQuery.data?.order;
+
+  const locationQuery = useLocationQuery({ fetch, id: createWorkOrder.locationId });
+  const location = locationQuery.data;
 
   const companyQuery = useCompanyQuery(
     { fetch, id: createWorkOrder.companyId! },
@@ -117,12 +123,12 @@ export function WorkOrderGeneralCard({
 
           {createWorkOrder.derivedFromOrderId && (
             <TextField
-              label={'Previous Order'}
+              label={'Previous order'}
               autoComplete={'off'}
               requiredIndicator
               value={
                 createWorkOrder.derivedFromOrderId && !derivedFromOrderQuery.isLoading
-                  ? derivedFromOrder?.name ?? 'Unknown Order'
+                  ? (derivedFromOrder?.name ?? 'Unknown order')
                   : ''
               }
               loading={!!createWorkOrder.derivedFromOrderId && derivedFromOrderQuery.isLoading}
@@ -133,7 +139,7 @@ export function WorkOrderGeneralCard({
 
           {createWorkOrder.derivedFromOrderId && (derivedFromOrder?.workOrders?.length ?? 0) > 0 && (
             <TextField
-              label={'Previous Work Order'}
+              label={'Previous work order'}
               autoComplete={'off'}
               requiredIndicator
               value={derivedFromOrder?.workOrders.map(workOrder => workOrder.name).join(' • ') ?? ''}
@@ -143,6 +149,23 @@ export function WorkOrderGeneralCard({
             />
           )}
 
+          <TextField
+            label={'Location'}
+            autoComplete={'off'}
+            requiredIndicator
+            loading={!!createWorkOrder.locationId && locationQuery.isLoading}
+            disabled={disabled || hasOrder}
+            readOnly
+            value={
+              createWorkOrder.locationId === null
+                ? ''
+                : locationQuery.isLoading
+                  ? 'Loading...'
+                  : (location?.name ?? 'Unknown location')
+            }
+            onFocus={() => setIsLocationSelectorOpen(true)}
+          />
+
           {createWorkOrder.companyId && (
             <TextField
               label={'Company'}
@@ -151,13 +174,7 @@ export function WorkOrderGeneralCard({
               loading={!!createWorkOrder.companyId && companyQuery.isLoading}
               disabled={disabled || hasOrder}
               readOnly
-              value={
-                createWorkOrder.companyId === null
-                  ? ''
-                  : companyQuery.isLoading
-                    ? 'Loading...'
-                    : company?.name ?? 'Unknown company'
-              }
+              value={companyQuery.isLoading ? 'Loading...' : (company?.name ?? 'Unknown company')}
               onFocus={() => onCompanySelectorClick()}
             />
           )}
@@ -175,7 +192,7 @@ export function WorkOrderGeneralCard({
                   ? ''
                   : companyLocationQuery.isLoading
                     ? 'Loading...'
-                    : companyLocation?.name ?? 'Unknown location'
+                    : (companyLocation?.name ?? 'Unknown location')
               }
               onFocus={() => onCompanyLocationSelectorClick()}
             />
@@ -183,7 +200,7 @@ export function WorkOrderGeneralCard({
 
           {createWorkOrder.companyId && (
             <TextField
-              label={'Payment Terms'}
+              label={'Payment terms'}
               autoComplete="off"
               requiredIndicator
               disabled={disabled || hasOrder}
@@ -198,7 +215,9 @@ export function WorkOrderGeneralCard({
             autoComplete={'off'}
             requiredIndicator
             value={
-              createWorkOrder.customerId && !customerQuery.isLoading ? customer?.displayName ?? 'Unknown Customer' : ''
+              createWorkOrder.customerId && !customerQuery.isLoading
+                ? (customer?.displayName ?? 'Unknown customer')
+                : ''
             }
             loading={!!createWorkOrder.customerId && customerQuery.isLoading}
             onFocus={() => onCustomerSelectorClick()}
@@ -248,7 +267,7 @@ export function WorkOrderGeneralCard({
           />
 
           <TextField
-            label={'Hidden Note'}
+            label={'Hidden note'}
             autoComplete={'off'}
             value={createWorkOrder.internalNote ?? ''}
             multiline={2}
@@ -257,7 +276,7 @@ export function WorkOrderGeneralCard({
           />
 
           <TextField
-            label={'Due Date'}
+            label={'Due date'}
             autoComplete={'off'}
             value={dueDateLocal.toLocaleDateString()}
             disabled={disabled}
@@ -267,15 +286,19 @@ export function WorkOrderGeneralCard({
         </BlockStack>
       </Card>
 
-      {isDateModalOpen && (
-        <DateModal
-          open={isDateModalOpen}
-          onClose={() => setIsDateModalOpen(false)}
-          onUpdate={dueDate => dispatch.setPartial({ dueDate: dueDate.toISOString() as DateTime })}
-          initialDate={dueDateUtc}
-          timezone={false}
-        />
-      )}
+      <DateModal
+        open={isDateModalOpen}
+        onClose={() => setIsDateModalOpen(false)}
+        onUpdate={dueDate => dispatch.setPartial({ dueDate: dueDate.toISOString() as DateTime })}
+        initialDate={dueDateUtc}
+        timezone={false}
+      />
+
+      <LocationSelectorModal
+        open={isLocationSelectorOpen}
+        onClose={() => setIsLocationSelectorOpen(false)}
+        onSelect={locationId => dispatch.setPartial({ locationId })}
+      />
 
       {toast}
     </>

@@ -1,7 +1,7 @@
 import { getShopMetafields, removeMetafields, upsertMetafields } from './queries.js';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
-import { getShopSettings } from '../settings.js';
+import { getShopSettings } from '../settings/settings.js';
 import { fetchAllPages, gql } from '../gql/gql.js';
 import { httpError } from '../../util/http-error.js';
 import { hasNestedPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -9,6 +9,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { unit } from '../db/unit-of-work.js';
 import { runLongRunningTask } from '../long-running-task/long-running-task.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
+import { uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 
 const METAFIELD_DEFINITION_BATCH_SIZE = 100;
 const METAFIELD_BATCH_SIZE = 100;
@@ -111,7 +112,10 @@ export async function syncProductOrVariantMetafields(session: Session, type: 'pr
 
     await unit(async () => {
       await removeMetafields(shop, metafieldsToRemove, `gid://shopify/${gidObjectType}/%`);
-      await upsertMetafields(shop, newMetafields);
+      await upsertMetafields(
+        shop,
+        uniqueBy(newMetafields, ({ objectId, namespace, key }) => `${objectId}-${namespace}-${key}`),
+      );
     });
 
     await ensureProductVariantsExist(session, productVariantIds);
@@ -121,7 +125,7 @@ export async function syncProductOrVariantMetafields(session: Session, type: 'pr
 export async function doesProductHaveSyncableMetafields(session: Session, productId: ID) {
   const { scanner } = await getShopSettings(session.shop);
 
-  if (scanner.variants.metafields.product.length === 0 || scanner.variants.metafields.variant.length === 0) {
+  if (scanner.variants.metafields.product.length === 0 && scanner.variants.metafields.variant.length === 0) {
     return false;
   }
 

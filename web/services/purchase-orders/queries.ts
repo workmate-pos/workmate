@@ -12,7 +12,12 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type PurchaseOrder = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>;
 
-export async function getPurchaseOrder(filters: MergeUnion<{ id: number } | { shop: string; name: string }>) {
+// TODO: Require location id from now on
+export async function getPurchaseOrder(
+  filters: MergeUnion<{ id: number } | { shop: string; name: string; locationIds: ID[] | null }>,
+) {
+  const _locationIds: string[] | null = filters?.locationIds ?? null;
+
   const [purchaseOrder] = await sql<{
     id: number;
     shop: string;
@@ -36,7 +41,12 @@ export async function getPurchaseOrder(filters: MergeUnion<{ id: number } | { sh
     FROM "PurchaseOrder"
     WHERE shop = COALESCE(${filters?.shop ?? null}, shop)
       AND name = COALESCE(${filters?.name ?? null}, name)
-      AND id = COALESCE(${filters?.id ?? null}, id);`;
+      AND id = COALESCE(${filters?.id ?? null}, id)
+      AND (
+      "locationId" = ANY (COALESCE(${_locationIds as string[]}, ARRAY ["locationId"]))
+        OR ("locationId" IS NULL AND ${_locationIds as string[]} :: text[] IS NULL)
+      )
+  `;
 
   if (!purchaseOrder) {
     return null;
@@ -569,15 +579,18 @@ export async function getPurchaseOrdersForSerial({
   serial,
   id,
   productVariantId,
+  locationIds,
 }: MergeUnion<
   | { id: number }
   | {
       shop: string;
       serial: string;
       productVariantId: ID;
+      locationIds: ID[] | null;
     }
 >) {
   const _productVariantId: string | null = productVariantId ?? null;
+  const _locationIds: string[] | null = locationIds ?? null;
 
   const purchaseOrders = await sql<{
     id: number;
@@ -605,7 +618,11 @@ export async function getPurchaseOrdersForSerial({
     WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
       AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
       AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
-      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop)
+      AND (
+      po."locationId" = ANY (COALESCE(${_locationIds as string[]}, ARRAY [po."locationId"]))
+        OR (po."locationId" IS NULL AND ${_locationIds as string[]} :: text[] IS NULL)
+      );
   `;
 
   return purchaseOrders.map(mapPurchaseOrder);

@@ -1,7 +1,6 @@
 import {
   BadgeProps,
   Banner,
-  Button,
   DateField,
   List,
   ListRow,
@@ -63,6 +62,7 @@ import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-p
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -93,7 +93,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   const screen = useScreen();
   const unsavedChangesDialog = useUnsavedChangesDialog({ hasUnsavedChanges });
 
-  screen.setTitle(createWorkOrder.name ?? 'New Work Order');
+  screen.setTitle(createWorkOrder.name ?? 'New work order');
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
   const { toast } = useApi<'pos.home.modal.render'>();
@@ -116,7 +116,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   );
 
   return (
-    <Form disabled={saveWorkOrderMutation.isPending}>
+    <Form disabled={saveWorkOrderMutation.isPending || !router.isCurrent}>
       <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {saveWorkOrderMutation.error && (
@@ -141,13 +141,13 @@ export function WorkOrder({ initial }: WorkOrderProps) {
                 onChange={(value: string) => dispatch.setPartial({ note: value })}
               />
               <FormStringField
-                label={'Hidden Note'}
+                label={'Hidden note'}
                 type={'area'}
                 value={createWorkOrder.internalNote}
                 onChange={(value: string) => dispatch.setPartial({ internalNote: value })}
               />
               <DateField
-                label={'Due Date'}
+                label={'Due date'}
                 value={(() => {
                   const dueDateUtc = new Date(createWorkOrder.dueDate);
                   const dueDateLocal = new Date(dueDateUtc.getTime() + dueDateUtc.getTimezoneOffset() * MINUTE_IN_MS);
@@ -230,7 +230,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
           />
 
           <FormButton
-            title={createWorkOrder.name ? 'Update Work Order' : 'Create Work Order'}
+            title={createWorkOrder.name ? 'Update work order' : 'Create work order'}
             type="primary"
             action={'submit'}
             disabled={!hasUnsavedChanges}
@@ -292,6 +292,9 @@ function WorkOrderProperties({
 
   const storePropertiesQuery = useStorePropertiesQuery({ fetch });
   const storeProperties = storePropertiesQuery.data?.storeProperties;
+
+  const locationQuery = useLocationQuery({ fetch, id: createWorkOrder.locationId });
+  const location = locationQuery.data;
 
   const serialProductVariantQuery = useProductVariantQuery({
     fetch,
@@ -359,7 +362,7 @@ function WorkOrderProperties({
       {createWorkOrder.name && <FormStringField label="Work Order ID" disabled value={createWorkOrder.name} />}
       {createWorkOrder.derivedFromOrderId && (
         <FormStringField
-          label="Previous Order"
+          label="Previous order"
           disabled
           value={derivedFromOrder ? derivedFromOrder.name : 'Loading...'}
         />
@@ -376,6 +379,20 @@ function WorkOrderProperties({
         required
         onFocus={() => router.push('StatusSelector', { onSelect: status => dispatch.setPartial({ status }) })}
         value={createWorkOrder.status}
+      />
+      <FormStringField
+        label={'Location'}
+        required
+        onFocus={() =>
+          router.push('LocationSelector', { onSelect: location => dispatch.setPartial({ locationId: location.id }) })
+        }
+        value={
+          createWorkOrder.locationId
+            ? locationQuery.isLoading
+              ? 'Loading...'
+              : (location?.name ?? 'Unknown location')
+            : ''
+        }
       />
       {canSelectCompany && (
         <FormStringField
@@ -408,7 +425,7 @@ function WorkOrderProperties({
       )}
       {!!createWorkOrder.companyId && (
         <FormStringField
-          label={'Payment Terms'}
+          label={'Payment terms'}
           required
           onFocus={() => {
             router.push('PaymentTermsSelector', {
@@ -547,7 +564,7 @@ function WorkOrderItems({
     <ResponsiveGrid columns={1}>
       <ResponsiveGrid columns={2}>
         <FormButton
-          title="Add Product"
+          title="Add product"
           type="primary"
           action={'button'}
           onPress={() =>
@@ -579,7 +596,7 @@ function WorkOrderItems({
         />
 
         <FormButton
-          title="Add Service"
+          title="Add service"
           type="primary"
           action={'button'}
           onPress={() =>
@@ -658,7 +675,7 @@ function WorkOrderCustomFields({
       ))}
 
       <FormButton
-        title={'Custom Fields'}
+        title={'Custom fields'}
         onPress={() =>
           router.push('CustomFieldConfig', {
             initialCustomFields: createWorkOrder.customFields,
@@ -679,7 +696,7 @@ function WorkOrderEmployees({ createWorkOrder }: { createWorkOrder: WIPCreateWor
 
   const isLoading = Object.values(employeeQueries).some(query => query.isLoading);
   const employeeNames = employeeIds.map(id => {
-    let label = employeeQueries[id]?.data?.name ?? 'Unknown Employee';
+    let label = employeeQueries[id]?.data?.name ?? 'Unknown employee';
 
     const employeeHours = BigDecimal.sum(
       ...createWorkOrder.charges
@@ -708,7 +725,7 @@ function WorkOrderEmployees({ createWorkOrder }: { createWorkOrder: WIPCreateWor
       .map(charge => BigDecimal.fromDecimal(charge.hours)),
   );
 
-  let totalHoursLabel = 'Total Hours';
+  let totalHoursLabel = 'Total hours';
 
   if (nonEmployeeHours.compare(BigDecimal.ZERO) > 0) {
     totalHoursLabel = `${totalHoursLabel} (${nonEmployeeHours.round(2).trim().toDecimal()} hours unassigned)`;
@@ -717,7 +734,7 @@ function WorkOrderEmployees({ createWorkOrder }: { createWorkOrder: WIPCreateWor
   return (
     <ResponsiveGrid columns={2}>
       <FormStringField
-        label={'Assigned Employees'}
+        label={'Assigned employees'}
         type={'area'}
         disabled
         value={isLoading ? 'Loading...' : employeeNames.join(', ')}
@@ -814,7 +831,7 @@ function WorkOrderMoneySummary({
         />
         {appliedDiscount.compare(BigDecimal.ZERO) > 0 && (
           <FormMoneyField
-            label={'Applied Discount'}
+            label={'Applied discount'}
             disabled
             value={appliedDiscount.round(2).toMoney()}
             formatter={formatter}
@@ -836,7 +853,7 @@ function WorkOrderMoneySummary({
           formatter={formatter}
         />
         <FormMoneyField
-          label={'Balance Due'}
+          label={'Balance due'}
           disabled
           value={calculatedDraftOrder?.outstanding}
           formatter={formatter}

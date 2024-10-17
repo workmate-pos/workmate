@@ -22,6 +22,10 @@ WHERE po.shop = :shop!
   AND po.status ILIKE COALESCE(:status, po.status)
   AND c."customerId" IS NOT DISTINCT FROM COALESCE(:customerId, c."customerId")
   AND (
+  po."locationId" = ANY (COALESCE(:locationIds, ARRAY [po."locationId"]))
+    OR (wo."locationId" IS NULL AND :locationIds :: text[] IS NULL)
+  )
+  AND (
   po.name ILIKE COALESCE(:query, '%')
     OR po.note ILIKE COALESCE(:query, '%')
     OR po."vendorName" ILIKE COALESCE(:query, '%')
@@ -49,16 +53,6 @@ WHERE po.shop = :shop!
              GROUP BY row) b(row, match))
 ORDER BY po.id DESC
 LIMIT :limit! OFFSET :offset;
-
-/* @name getCommonCustomFieldsForShop */
-SELECT DISTINCT key, COUNT(*)
-FROM "PurchaseOrderCustomField"
-       INNER JOIN "PurchaseOrder" po ON "purchaseOrderId" = po.id
-WHERE po.shop = :shop!
-  AND key ILIKE COALESCE(:query, '%')
-GROUP BY key
-ORDER BY COUNT(*)
-LIMIT :limit! OFFSET :offset!;
 
 /* @name getProductVariantCostsForShop */
 SELECT "unitCost", "quantity"

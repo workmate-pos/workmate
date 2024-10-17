@@ -1,9 +1,10 @@
-import { getShopSettings } from './settings.js';
+import { getShopSettings } from './settings/settings.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getCount } from './counter/queries.js';
 
 type Formatters = Record<string, ({ shop }: { shop: string }) => Promise<string> | string>;
 
+// TODO: Use liquid for this
 const baseFormatters: Formatters = {
   // TODO: adjust to local timezone (timezone setting? take from shopify?)
   year: () => new Date().getFullYear().toString(),
@@ -58,17 +59,17 @@ async function applyFormatters<Arg>(
 
 export async function getNewWorkOrderName(shop: string) {
   const settings = await getShopSettings(shop);
-  return await applyFormatters(settings.idFormat, workOrderFormatters, { shop });
+  return await applyFormatters(settings.workOrders.idFormat, workOrderFormatters, { shop });
 }
 
 export async function getNewPurchaseOrderName(shop: string) {
   const settings = await getShopSettings(shop);
-  return await applyFormatters(settings.purchaseOrderIdFormat, purchaseOrderFormatters, { shop });
+  return await applyFormatters(settings.purchaseOrders.idFormat, purchaseOrderFormatters, { shop });
 }
 
-export async function getNewStockTransferName(shop: string) {
+export async function getNewTransferOrderName(shop: string) {
   const settings = await getShopSettings(shop);
-  return await applyFormatters(settings.stockTransferIdFormat, stockTransferFormatters, { shop });
+  return await applyFormatters(settings.transferOrders.idFormat, stockTransferFormatters, { shop });
 }
 
 export async function getNewSpecialOrderName(shop: string): Promise<string> {

@@ -86,7 +86,7 @@ export function MultiSpecialOrderLineItemSelector({
 
           const label = productVariantQuery?.isLoading
             ? 'Loading...'
-            : getProductVariantName(productVariant) ?? 'Unknown item';
+            : (getProductVariantName(productVariant) ?? 'Unknown item');
 
           const purchaseOrderQuantity = sum(lineItem.purchaseOrderLineItems.map(lineItem => lineItem.quantity));
 
@@ -96,7 +96,7 @@ export function MultiSpecialOrderLineItemSelector({
           }[quantityBadge];
 
           const orderState: OrderState =
-            purchaseOrderQuantity >= lineItem.quantity ? 'FULLY_ORDERED' : 'NOT_FULLY_ORDERED';
+            purchaseOrderQuantity >= lineItem.quantity ? 'fully-ordered' : 'not-fully-ordered';
 
           const disabled = [
             options?.filters?.vendorName !== undefined && productVariant?.product.vendor !== options.filters.vendorName,

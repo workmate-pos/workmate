@@ -3,10 +3,13 @@ import { PreparedQuery } from '@pgtyped/runtime';
 
 export type NumberOrString = number | string;
 
+export type stringArray = (string)[];
+
 /** 'GetPage' parameters type */
 export interface IGetPageParams {
   customerId?: string | null | void;
   limit: NumberOrString;
+  locationIds?: stringArray | null | void;
   offset?: NumberOrString | null | void;
   query?: string | null | void;
   requiredCustomFieldFilters: readonly ({
@@ -30,7 +33,7 @@ export interface IGetPageQuery {
   result: IGetPageResult;
 }
 
-const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"customerId":true,"query":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":1230,"b":1235}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":1268,"b":1274}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":1339,"b":1349}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":1401,"b":1406},{"a":1444,"b":1449},{"a":1495,"b":1500},{"a":1546,"b":1551},{"a":1588,"b":1593},{"a":1631,"b":1636},{"a":1678,"b":1683},{"a":1727,"b":1732},{"a":1770,"b":1775},{"a":1812,"b":1817},{"a":1858,"b":1863},{"a":1903,"b":1908},{"a":1945,"b":1950}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":2698,"b":2704}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":2713,"b":2719}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT DISTINCT po.id, po.name\nFROM \"PurchaseOrder\" po\n       LEFT JOIN \"PurchaseOrderLineItem\" poli ON po.id = poli.\"purchaseOrderId\"\n       LEFT JOIN \"SpecialOrderLineItem\" spoli ON poli.\"specialOrderLineItemId\" = spoli.id\n       LEFT JOIN \"ProductVariant\" pv ON poli.\"productVariantId\" = pv.\"productVariantId\"\n       LEFT JOIN \"Product\" p ON pv.\"productId\" = p.\"productId\"\n       LEFT JOIN \"PurchaseOrderEmployeeAssignment\" poea ON po.id = poea.\"purchaseOrderId\"\n       LEFT JOIN \"Employee\" e ON poea.\"employeeId\" = e.\"staffMemberId\"\n       LEFT JOIN \"Location\" l ON po.\"locationId\" = l.\"locationId\"\n       LEFT JOIN \"ShopifyOrderLineItem\" soli ON spoli.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n       LEFT JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\n       LEFT JOIN \"Customer\" c ON so.\"customerId\" = c.\"customerId\"\n       LEFT JOIN \"WorkOrderItem\" woi ON soli.\"lineItemId\" = woi.\"shopifyOrderLineItemId\"\n       LEFT JOIN \"WorkOrder\" wo ON woi.\"workOrderId\" = wo.\"id\"\nWHERE po.shop = :shop!\n  AND po.status ILIKE COALESCE(:status, po.status)\n  AND c.\"customerId\" IS NOT DISTINCT FROM COALESCE(:customerId, c.\"customerId\")\n  AND (\n  po.name ILIKE COALESCE(:query, '%')\n    OR po.note ILIKE COALESCE(:query, '%')\n    OR po.\"vendorName\" ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR l.name ILIKE COALESCE(:query, '%')\n    OR so.name ILIKE COALESCE(:query, '%')\n    OR po.\"shipTo\" ILIKE COALESCE(:query, '%')\n    OR po.\"shipFrom\" ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR pv.sku ILIKE COALESCE(:query, '%')\n    OR pv.\"title\" ILIKE COALESCE(:query, '%')\n    OR p.\"title\" ILIKE COALESCE(:query, '%')\n    OR e.name ILIKE COALESCE(:query, '%')\n  )\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row,\n                          (filter.key IS NOT NULL) AND\n                          (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) !=\n                          filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"PurchaseOrderCustomField\" pocf\n                                    ON (pocf.\"purchaseOrderId\" = po.id AND\n                                        pocf.key ILIKE COALESCE(filter.key, pocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nORDER BY po.id DESC\nLIMIT :limit! OFFSET :offset"};
+const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop":true,"status":true,"customerId":true,"locationIds":true,"query":true,"limit":true,"offset":true},"params":[{"name":"requiredCustomFieldFilters","required":false,"transform":{"type":"pick_array_spread","keys":[{"name":"key","required":false},{"name":"value","required":false},{"name":"inverse","required":true}]},"locs":[{"a":144,"b":170}]},{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":1230,"b":1235}]},{"name":"status","required":false,"transform":{"type":"scalar"},"locs":[{"a":1268,"b":1274}]},{"name":"customerId","required":false,"transform":{"type":"scalar"},"locs":[{"a":1339,"b":1349}]},{"name":"locationIds","required":false,"transform":{"type":"scalar"},"locs":[{"a":1410,"b":1421},{"a":1486,"b":1497}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":1555,"b":1560},{"a":1598,"b":1603},{"a":1649,"b":1654},{"a":1700,"b":1705},{"a":1742,"b":1747},{"a":1785,"b":1790},{"a":1832,"b":1837},{"a":1881,"b":1886},{"a":1924,"b":1929},{"a":1966,"b":1971},{"a":2012,"b":2017},{"a":2057,"b":2062},{"a":2099,"b":2104}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":2852,"b":2858}]},{"name":"offset","required":false,"transform":{"type":"scalar"},"locs":[{"a":2867,"b":2873}]}],"statement":"WITH \"CustomFieldFilters\" AS (SELECT row_number() over () as row, key, val, inverse\n                              FROM (VALUES ('', '', FALSE), :requiredCustomFieldFilters OFFSET 2) AS \"CustomFieldFilters\"(key, val, inverse))\nSELECT DISTINCT po.id, po.name\nFROM \"PurchaseOrder\" po\n       LEFT JOIN \"PurchaseOrderLineItem\" poli ON po.id = poli.\"purchaseOrderId\"\n       LEFT JOIN \"SpecialOrderLineItem\" spoli ON poli.\"specialOrderLineItemId\" = spoli.id\n       LEFT JOIN \"ProductVariant\" pv ON poli.\"productVariantId\" = pv.\"productVariantId\"\n       LEFT JOIN \"Product\" p ON pv.\"productId\" = p.\"productId\"\n       LEFT JOIN \"PurchaseOrderEmployeeAssignment\" poea ON po.id = poea.\"purchaseOrderId\"\n       LEFT JOIN \"Employee\" e ON poea.\"employeeId\" = e.\"staffMemberId\"\n       LEFT JOIN \"Location\" l ON po.\"locationId\" = l.\"locationId\"\n       LEFT JOIN \"ShopifyOrderLineItem\" soli ON spoli.\"shopifyOrderLineItemId\" = soli.\"lineItemId\"\n       LEFT JOIN \"ShopifyOrder\" so ON soli.\"orderId\" = so.\"orderId\"\n       LEFT JOIN \"Customer\" c ON so.\"customerId\" = c.\"customerId\"\n       LEFT JOIN \"WorkOrderItem\" woi ON soli.\"lineItemId\" = woi.\"shopifyOrderLineItemId\"\n       LEFT JOIN \"WorkOrder\" wo ON woi.\"workOrderId\" = wo.\"id\"\nWHERE po.shop = :shop!\n  AND po.status ILIKE COALESCE(:status, po.status)\n  AND c.\"customerId\" IS NOT DISTINCT FROM COALESCE(:customerId, c.\"customerId\")\n  AND (\n  po.\"locationId\" = ANY (COALESCE(:locationIds, ARRAY [po.\"locationId\"]))\n    OR (wo.\"locationId\" IS NULL AND :locationIds :: text[] IS NULL)\n  )\n  AND (\n  po.name ILIKE COALESCE(:query, '%')\n    OR po.note ILIKE COALESCE(:query, '%')\n    OR po.\"vendorName\" ILIKE COALESCE(:query, '%')\n    OR c.\"displayName\" ILIKE COALESCE(:query, '%')\n    OR l.name ILIKE COALESCE(:query, '%')\n    OR so.name ILIKE COALESCE(:query, '%')\n    OR po.\"shipTo\" ILIKE COALESCE(:query, '%')\n    OR po.\"shipFrom\" ILIKE COALESCE(:query, '%')\n    OR wo.name ILIKE COALESCE(:query, '%')\n    OR pv.sku ILIKE COALESCE(:query, '%')\n    OR pv.\"title\" ILIKE COALESCE(:query, '%')\n    OR p.\"title\" ILIKE COALESCE(:query, '%')\n    OR e.name ILIKE COALESCE(:query, '%')\n  )\n  AND (SELECT COUNT(row) = COUNT(NULLIF(match, FALSE))\n       FROM (SELECT row, COALESCE(BOOL_OR(match), FALSE) AS match\n             FROM (SELECT filter.row,\n                          (filter.key IS NOT NULL) AND\n                          (COALESCE(filter.val ILIKE pocf.value, pocf.value IS NOT DISTINCT FROM filter.val)) !=\n                          filter.inverse\n                   FROM \"CustomFieldFilters\" filter\n                          LEFT JOIN \"PurchaseOrderCustomField\" pocf\n                                    ON (pocf.\"purchaseOrderId\" = po.id AND\n                                        pocf.key ILIKE COALESCE(filter.key, pocf.key))) AS a(row, match)\n             GROUP BY row) b(row, match))\nORDER BY po.id DESC\nLIMIT :limit! OFFSET :offset"};
 
 /**
  * Query generated from SQL:
@@ -54,6 +57,10 @@ const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop"
  * WHERE po.shop = :shop!
  *   AND po.status ILIKE COALESCE(:status, po.status)
  *   AND c."customerId" IS NOT DISTINCT FROM COALESCE(:customerId, c."customerId")
+ *   AND (
+ *   po."locationId" = ANY (COALESCE(:locationIds, ARRAY [po."locationId"]))
+ *     OR (wo."locationId" IS NULL AND :locationIds :: text[] IS NULL)
+ *   )
  *   AND (
  *   po.name ILIKE COALESCE(:query, '%')
  *     OR po.note ILIKE COALESCE(:query, '%')
@@ -85,44 +92,6 @@ const getPageIR: any = {"usedParamSet":{"requiredCustomFieldFilters":true,"shop"
  * ```
  */
 export const getPage = new PreparedQuery<IGetPageParams,IGetPageResult>(getPageIR);
-
-
-/** 'GetCommonCustomFieldsForShop' parameters type */
-export interface IGetCommonCustomFieldsForShopParams {
-  limit: NumberOrString;
-  offset: NumberOrString;
-  query?: string | null | void;
-  shop: string;
-}
-
-/** 'GetCommonCustomFieldsForShop' return type */
-export interface IGetCommonCustomFieldsForShopResult {
-  count: string | null;
-  key: string;
-}
-
-/** 'GetCommonCustomFieldsForShop' query type */
-export interface IGetCommonCustomFieldsForShopQuery {
-  params: IGetCommonCustomFieldsForShopParams;
-  result: IGetCommonCustomFieldsForShopResult;
-}
-
-const getCommonCustomFieldsForShopIR: any = {"usedParamSet":{"shop":true,"query":true,"limit":true,"offset":true},"params":[{"name":"shop","required":true,"transform":{"type":"scalar"},"locs":[{"a":144,"b":149}]},{"name":"query","required":false,"transform":{"type":"scalar"},"locs":[{"a":176,"b":181}]},{"name":"limit","required":true,"transform":{"type":"scalar"},"locs":[{"a":226,"b":232}]},{"name":"offset","required":true,"transform":{"type":"scalar"},"locs":[{"a":241,"b":248}]}],"statement":"SELECT DISTINCT key, COUNT(*)\nFROM \"PurchaseOrderCustomField\"\n       INNER JOIN \"PurchaseOrder\" po ON \"purchaseOrderId\" = po.id\nWHERE po.shop = :shop!\n  AND key ILIKE COALESCE(:query, '%')\nGROUP BY key\nORDER BY COUNT(*)\nLIMIT :limit! OFFSET :offset!"};
-
-/**
- * Query generated from SQL:
- * ```
- * SELECT DISTINCT key, COUNT(*)
- * FROM "PurchaseOrderCustomField"
- *        INNER JOIN "PurchaseOrder" po ON "purchaseOrderId" = po.id
- * WHERE po.shop = :shop!
- *   AND key ILIKE COALESCE(:query, '%')
- * GROUP BY key
- * ORDER BY COUNT(*)
- * LIMIT :limit! OFFSET :offset!
- * ```
- */
-export const getCommonCustomFieldsForShop = new PreparedQuery<IGetCommonCustomFieldsForShopParams,IGetCommonCustomFieldsForShopResult>(getCommonCustomFieldsForShopIR);
 
 
 /** 'GetProductVariantCostsForShop' parameters type */

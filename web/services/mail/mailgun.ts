@@ -3,7 +3,7 @@ import Mailgun from 'mailgun.js';
 import { MailgunMessageData } from 'mailgun.js/Types/Messages/Messages.js';
 import { IMailgunClient } from 'mailgun.js/Interfaces/MailgunClient/IMailgunClient.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { ShopSettings } from '../../schemas/generated/shop-settings.js';
+import { ShopSettings } from '../settings/schema.js';
 
 export type MailgunProps = {
   key: string;
@@ -24,10 +24,10 @@ export class MailgunService {
     this.fromEmail = fromEmail;
   }
 
-  async send(settings: Pick<ShopSettings, 'emailFromTitle' | 'emailReplyTo'>, data: MailgunMessageData) {
+  async send({ from, replyTo }: { from: string; replyTo: string }, data: MailgunMessageData) {
     return this.client.messages.create(this.domain, {
-      from: `${settings.emailFromTitle} <${this.fromEmail}>`,
-      'h:Reply-To': data['h:Reply-To'] ?? settings.emailReplyTo,
+      from: `${from} <${this.fromEmail}>`,
+      'h:Reply-To': data['h:Reply-To'] ?? replyTo,
       ...data,
     });
   }

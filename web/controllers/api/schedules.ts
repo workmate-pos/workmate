@@ -56,6 +56,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getTasks } from '../../services/tasks/queries.js';
 import * as taskQueries from '../../services/tasks/queries.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { getMissingPermissionsForRoleUuid } from '../../services/permissions/permissions.js';
 
 // TODO: Add to MANAGE_SCHEDULES permission to schedlue changing shit
 
@@ -92,13 +93,17 @@ export default class SchedulesController {
     req: Request<{ id: string }, unknown, unknown, ScheduleEventsOptions>,
     res: Response<GetScheduleEventsResponse>,
   ) {
+    const { shop }: Session = res.locals.shopify.session;
     const id = req.params.id;
     const from = new Date(req.query.from);
     const to = new Date(req.query.to);
     const { staffMemberIds, published, taskId } = req.query;
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
-    if (!user.user.permissions?.includes('manage_schedules') && !user.user.superuser) {
+    if (
+      (await getMissingPermissionsForRoleUuid(shop, user.user.role, ['manage_schedules'])).length > 0 &&
+      !user.user.superuser
+    ) {
       if (!staffMemberIds || staffMemberIds.some(staffMemberId => staffMemberId !== user.staffMember.id)) {
         throw new HttpError('You are not authorized to view schedules of other staff members', 401);
       }
@@ -111,8 +116,6 @@ export default class SchedulesController {
     if (id === 'all' && taskId === undefined) {
       assertDateRange(from, to);
     }
-
-    const { shop }: Session = res.locals.shopify.session;
 
     const events = await getScheduleEvents({
       shop,
@@ -247,7 +250,7 @@ export default class SchedulesController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     if (
-      !user.user.permissions?.includes('manage_schedules') &&
+      (await getMissingPermissionsForRoleUuid(shop, user.user.role, ['manage_schedules'])).length > 0 &&
       !user.user.superuser &&
       staffMemberIds.some(staffMemberId => staffMemberId !== user.staffMember.id)
     ) {
@@ -289,7 +292,7 @@ export default class SchedulesController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     if (
-      !user.user.permissions?.includes('manage_schedules') &&
+      (await getMissingPermissionsForRoleUuid(shop, user.user.role, ['manage_schedules'])).length > 0 &&
       !user.user.superuser &&
       staffMemberId !== user.staffMember.id
     ) {
@@ -320,7 +323,7 @@ export default class SchedulesController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     if (
-      !user.user.permissions?.includes('manage_schedules') &&
+      (await getMissingPermissionsForRoleUuid(shop, user.user.role, ['manage_schedules'])).length > 0 &&
       !user.user.superuser &&
       staffMemberId !== user.staffMember.id
     ) {
@@ -354,7 +357,7 @@ export default class SchedulesController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
 
     if (
-      !user.user.permissions?.includes('manage_schedules') &&
+      (await getMissingPermissionsForRoleUuid(shop, user.user.role, ['manage_schedules'])).length > 0 &&
       !user.user.superuser &&
       staffMemberId !== user.staffMember.id
     ) {

@@ -1,8 +1,9 @@
 import { TeifiSessionStorage } from '@teifi-digital/shopify-app-express';
 import { Session } from '@shopify/shopify-api';
 import { db } from './db/db.js';
-import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { IGetResult as ShopifySession } from './db/queries/generated/shopify-session.sql.js';
+import { getStaffMembers } from './staff-members/queries.js';
 
 export class ShopifySessionStorage implements TeifiSessionStorage {
   deleteSession(id: string): Promise<boolean> {
@@ -42,16 +43,21 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
       session = undefined;
     }
 
+    const parsedSessionId = parseSessionId(id);
+
     // always use an offline session
     // this ensures that you do not have to log into admin daily to use POS, and ensures that access scopes do not need to be updated per user
-    if (!this.isOfflineSessionId(id)) {
+    if (parsedSessionId.type !== 'offline') {
       // we should NOT fall back in case this is the first time the user logs in.
       // otherwise the staff member will never be added to the database in case they have a store without read_users capabilities
-      const staffMemberId = this.getOnlineSessionIdStaffMemberId(id);
-      const staffMembers = await db.employee.getMany({ employeeIds: [staffMemberId] });
+      const staffMemberId = parsedSessionId.staffMemberId;
+      const staffMembers = await getStaffMembers(parsedSessionId.shop, [staffMemberId]);
 
       if (staffMembers.length) {
-        [session] = await db.shopifySession.get({ id: this.onlineSessionIdToOfflineSessionId(id), limit: 1 });
+        [session] = await db.shopifySession.get({
+          id: createSessionId({ type: 'offline', shop: parsedSessionId.shop }),
+          limit: 1,
+        });
       }
     }
 
@@ -66,28 +72,6 @@ export class ShopifySessionStorage implements TeifiSessionStorage {
     const record = sessionToShopifySession(session);
     await db.shopifySession.upsert(record);
     return true;
-  }
-
-  private isOfflineSessionId(id: string): boolean {
-    return id.startsWith('offline_');
-  }
-
-  private onlineSessionIdToOfflineSessionId(id: string): string {
-    return 'offline_' + id.replace(/_.+/, '');
-  }
-
-  private getOnlineSessionIdStaffMemberId(sessionId: string): ID {
-    if (this.isOfflineSessionId(sessionId)) {
-      throw new Error('Cannot get staff member id for offline session');
-    }
-
-    const id = sessionId.split('_').at(-1);
-
-    if (!id) {
-      throw new Error('Invalid session id');
-    }
-
-    return createGid('StaffMember', id);
   }
 }
 
@@ -115,4 +99,35 @@ function sessionToShopifySession(session: Session): ShopifySession {
     accessToken: session.accessToken ?? null,
     onlineAccessInfo: session.onlineAccessInfo ? JSON.stringify(session.onlineAccessInfo) : null,
   };
+}
+
+type ParsedSessionId = { type: 'offline'; shop: string } | { type: 'online'; shop: string; staffMemberId: ID };
+
+function parseSessionId(id: string): ParsedSessionId {
+  if (id.startsWith('offline_')) {
+    return {
+      type: 'offline',
+      shop: id.replace('offline_', ''),
+    };
+  }
+  const [staffMemberId, ...shopParts] = id.split('_').toReversed();
+  const shop = shopParts.join('_');
+  if (staffMemberId === undefined || shopParts.length === 0 || shop.length === 0) {
+    throw new Error('Invalid session id');
+  }
+  return {
+    type: 'online',
+    shop,
+    staffMemberId: createGid('StaffMember', staffMemberId),
+  };
+}
+
+function createSessionId(parsedSessionId: ParsedSessionId) {
+  if (parsedSessionId.type === 'offline') {
+    return `offline_${parsedSessionId.shop}`;
+  }
+  if (parsedSessionId.type === 'online') {
+    return `${parsedSessionId.shop}_${parseGid(parsedSessionId.staffMemberId).id}`;
+  }
+  return parsedSessionId satisfies never;
 }

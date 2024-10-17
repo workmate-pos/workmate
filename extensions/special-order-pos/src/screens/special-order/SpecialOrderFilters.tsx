@@ -1,7 +1,7 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { OrderState, PurchaseOrderState } from '@web/schemas/generated/special-order-pagination-options.js';
 import { Button, ScrollView, Text } from '@shopify/ui-extensions-react/point-of-sale';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../../routes.js';
@@ -97,7 +97,7 @@ export function SpecialOrderFilters({
             }
           />
           <Button
-            title={'Order state' + (orderState ? `: ${titleCase(orderState).toLowerCase()}` : '')}
+            title={'Order state' + (orderState ? `: ${sentenceCase(orderState).toLowerCase()}` : '')}
             onPress={() =>
               router.push('OrderStateSelector', {
                 onSelect: setOrderState,
@@ -107,7 +107,7 @@ export function SpecialOrderFilters({
           />
           <Button
             title={
-              'Purchase order state' + (purchaseOrderState ? `: ${titleCase(purchaseOrderState).toLowerCase()}` : '')
+              'Purchase order state' + (purchaseOrderState ? `: ${sentenceCase(purchaseOrderState).toLowerCase()}` : '')
             }
             onPress={() =>
               router.push('PurchaseOrderStateSelector', {

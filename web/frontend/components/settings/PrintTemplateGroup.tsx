@@ -1,4 +1,4 @@
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { string } from '@teifi-digital/shopify-app-toolbox';
 import { useState } from 'react';
 import { BlockStack, Button, DescriptionList, InlineStack, Modal, Text } from '@shopify/polaris';
@@ -14,17 +14,17 @@ export function PrintTemplateGroup({
 }: {
   settings: ShopSettings;
   setSettings: (settings: ShopSettings) => void;
-  templateType: 'workOrderPrintTemplates' | 'purchaseOrderPrintTemplates';
+  templateType: 'workOrders' | 'purchaseOrders';
 }) {
-  const templates = settings[templateType];
+  const templates = settings[templateType].printTemplates;
   const [templateNames, setTemplateNames] = useState(Object.keys(templates));
 
-  const title = string.titleCase(templateType);
+  const title = string.sentenceCase(templateType);
 
   const [modalOpened, setModalOpened] = useState(false);
 
   const availableVariables = {
-    workOrderPrintTemplates: {
+    workOrders: {
       '{{ name }}': 'The name of the work order',
       '{{ date }}': 'The current date',
       '{{ dueDate }}': 'The due date of the work order',
@@ -71,7 +71,7 @@ export function PrintTemplateGroup({
       '{{ charges[*].totalPrice }}': 'The total price of the charge at index x',
       '{{ charges[*].fullyPaid }}': 'Whether the charge at index x has been fully paid for',
     },
-    purchaseOrderPrintTemplates: {
+    purchaseOrders: {
       '{{ name }}': 'The name of the purchase order',
       '{{ date }}': 'The current date',
       '{{ shipFrom }}': 'The address the purchase order will be shipped from',
@@ -133,29 +133,42 @@ export function PrintTemplateGroup({
             setTemplate={(template: string) =>
               setSettings({
                 ...settings,
-                [templateType]: { ...settings[templateType], [name]: { ...settings[templateType][name], template } },
+                [templateType]: {
+                  printTemplates: {
+                    ...settings[templateType].printTemplates,
+                    [name]: { ...settings[templateType].printTemplates[name], template },
+                  },
+                },
               })
             }
             setSubject={(subject: string) => {
               setSettings({
                 ...settings,
-                [templateType]: { ...settings[templateType], [name]: { ...settings[templateType][name], subject } },
+                [templateType]: {
+                  printTemplates: {
+                    ...settings[templateType].printTemplates,
+                    [name]: { ...settings[templateType].printTemplates[name], subject },
+                  },
+                },
               });
             }}
             onRemove={() => {
-              const groupContent = { ...settings[templateType] };
-              delete groupContent[name];
+              const printTemplates = { ...settings[templateType].printTemplates };
+              delete printTemplates[name];
               setSettings({
                 ...settings,
-                [templateType]: groupContent,
+                [templateType]: { ...settings[templateType], printTemplates },
               });
             }}
             setName={(newName: string) => {
-              const groupContent = { ...settings[templateType], [newName]: settings[templateType][name] };
-              delete groupContent[name];
+              const printTemplates = {
+                ...settings[templateType].printTemplates,
+                [newName]: settings[templateType].printTemplates[name],
+              };
+              delete printTemplates[name];
               setSettings({
                 ...settings,
-                [templateType]: groupContent,
+                [templateType]: { ...settings[templateType], printTemplates },
               });
 
               setTemplateNames(templateNames =>
@@ -166,7 +179,7 @@ export function PrintTemplateGroup({
         ))}
       <Button
         onClick={() => {
-          let name = 'New Template';
+          let name = 'New template';
           if (name in settings[templateType]) {
             let i = 2;
             while (`${name} (${i})` in settings[templateType]) {

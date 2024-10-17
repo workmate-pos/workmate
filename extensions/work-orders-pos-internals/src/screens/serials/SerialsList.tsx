@@ -12,7 +12,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
@@ -92,7 +92,7 @@ export function SerialsList() {
 
           <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
             <Button
-              title={'New Serial'}
+              title={'New serial'}
               type={'primary'}
               onPress={() =>
                 router.push('ProductVariantSelector', {
@@ -133,13 +133,13 @@ export function SerialsList() {
 
           <ResponsiveGrid columns={2} smColumns={2} spacing={2}>
             <Button
-              title={`Sort by ${titleCase(sort)}`}
+              title={`Sort by ${sentenceCase(sort).toLowerCase()}`}
               onPress={() =>
                 setSort(current => sortColumns[(sortColumns.indexOf(current) + 1) % sortColumns.length] ?? current)
               }
             />
             <Button
-              title={titleCase(order)}
+              title={sentenceCase(order)}
               onPress={() =>
                 setOrder(current => sortOrders[(sortOrders.indexOf(current) + 1) % sortOrders.length] ?? current)
               }
@@ -174,7 +174,7 @@ export function SerialsList() {
               id: `${serial.productVariant.id}-${serial.serial}`,
               onPress: () => setSelectedSerial({ serial: serial.serial, productVariantId: serial.productVariant.id }),
               leftSide: {
-                label: getProductVariantName(productVariant ?? serial.productVariant) ?? 'Unknown Product',
+                label: getProductVariantName(productVariant ?? serial.productVariant) ?? 'Unknown product',
                 subtitle: getSubtitle([serial.serial, serial.location?.name]),
                 image: {
                   source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,

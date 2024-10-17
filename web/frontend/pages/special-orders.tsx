@@ -19,7 +19,7 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useEffect, useMemo, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { useSpecialOrdersQuery } from '@work-orders/common/queries/use-special-orders-query.js';
@@ -60,7 +60,7 @@ function SpecialOrders() {
 
   const [locationId, setLocationId] = useState<ID>();
   const [vendorName, setVendorName] = useState<string>();
-  const [lineItemState, setLineItemState] = useState<'NOT_FULLY_ORDERED' | 'FULLY_ORDERED'>();
+  const [lineItemState, setLineItemState] = useState<'not-fully-ordered' | 'fully-ordered'>();
 
   const locationsQuery = useLocationsQuery({ fetch, params: { first: 50 } });
   const locations = locationsQuery.data?.pages.flat() ?? [];
@@ -128,11 +128,11 @@ function SpecialOrders() {
   return (
     <>
       <TitleBar
-        title="Special Orders"
+        title="Special orders"
         primaryAction={
           false
             ? {
-                content: 'New Special Order',
+                content: 'New special order',
                 onAction: () => redirectToSpecialOrder('new'),
               }
             : undefined
@@ -169,10 +169,10 @@ function SpecialOrders() {
             pinned: true,
             filter: (
               <Checkbox
-                label={'Not Fully Ordered'}
-                checked={lineItemState === 'NOT_FULLY_ORDERED'}
+                label={'Not fully ordered'}
+                checked={lineItemState === 'not-fully-ordered'}
                 onChange={checked => {
-                  setLineItemState(checked ? 'NOT_FULLY_ORDERED' : undefined);
+                  setLineItemState(checked ? 'not-fully-ordered' : undefined);
                   clearSelection();
                 }}
               />
@@ -242,12 +242,12 @@ function SpecialOrders() {
       />
       <IndexTable
         headings={[
-          { title: 'Special Order' },
-          { title: 'Order State' },
-          { title: 'PO State' },
+          { title: 'Special order' },
+          { title: 'Order state' },
+          { title: 'PO state' },
           { title: 'Location' },
           { title: 'Customer' },
-          { title: 'Required By' },
+          { title: 'Required by' },
           { title: 'PO #' },
           { title: 'SO #' },
           { title: 'WO #' },
@@ -257,7 +257,7 @@ function SpecialOrders() {
         emptyState={
           <Card>
             <EmptyState
-              heading={'Special Orders'}
+              heading={'Special orders'}
               image={emptyState}
               action={{
                 content: 'Create special orders through Work Orders',
@@ -299,11 +299,11 @@ function SpecialOrders() {
               </Text>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Badge tone={'info'}>{titleCase(specialOrder.orderState)}</Badge>
+              <Badge tone={'info'}>{sentenceCase(specialOrder.orderState)}</Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>
               {specialOrder.purchaseOrders.length > 0 && (
-                <Badge tone={'info'}>{titleCase(specialOrder.purchaseOrderState)}</Badge>
+                <Badge tone={'info'}>{sentenceCase(specialOrder.purchaseOrderState)}</Badge>
               )}
             </IndexTable.Cell>
             <IndexTable.Cell>
@@ -423,7 +423,7 @@ function useMergeSpecialOrdersBulkAction(
     };
   }
 
-  const status = settingsQuery.data?.settings.defaultPurchaseOrderStatus;
+  const status = settingsQuery.data?.settings.purchaseOrders.defaultStatus;
   const purchaseOrderCustomFields = purchaseOrderCustomFieldsPresetsQuery.data?.defaultCustomFields;
   const lineItemCustomFields = lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields;
 

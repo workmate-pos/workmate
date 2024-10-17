@@ -10,9 +10,9 @@ import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-s
 import { useState } from 'react';
 import { DraftOrder, useDraftOrdersQuery } from '@work-orders/common/queries/use-draft-orders-query.js';
 
-type OrderTypeSegment = 'Orders' | 'Draft Orders';
+type OrderTypeSegment = 'Orders' | 'Draft orders';
 
-const orderTypeSegments: OrderTypeSegment[] = ['Orders', 'Draft Orders'];
+const orderTypeSegments: OrderTypeSegment[] = ['Orders', 'Draft orders'];
 
 export function PurchaseOrderOrderSelector({ onSelect }: { onSelect: (orderId: ID) => void }) {
   const [query, setQuery] = useDebouncedState('');
@@ -52,7 +52,7 @@ export function PurchaseOrderOrderSelector({ onSelect }: { onSelect: (orderId: I
       <List
         data={rows}
         onEndReached={() => {
-          if (orderType === 'Draft Orders') {
+          if (orderType === 'Draft orders') {
             draftOrdersQuery.fetchNextPage();
           } else if (orderType === 'Orders') {
             ordersQuery.fetchNextPage();
@@ -61,7 +61,7 @@ export function PurchaseOrderOrderSelector({ onSelect }: { onSelect: (orderId: I
           }
         }}
         isLoadingMore={(() => {
-          if (orderType === 'Draft Orders') {
+          if (orderType === 'Draft orders') {
             return draftOrdersQuery.isFetchingNextPage;
           } else if (orderType === 'Orders') {
             return ordersQuery.isFetchingNextPage;

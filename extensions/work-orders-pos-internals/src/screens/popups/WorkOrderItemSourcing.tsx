@@ -102,12 +102,12 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
 
         <ResponsiveGrid columns={3}>
           <Button
-            title={'Layaway'}
+            title={'Reserve'}
             isDisabled={isSubmitting}
             isLoading={reserveLineItemInventoryMutation.isPending}
             onPress={() => {
               router.push('UnsourcedItemList', {
-                title: 'Select items to layaway',
+                title: 'Select items to reserve',
                 items: getUnsourcedWorkOrderItems(workOrder)
                   // if already in an order we cannot even reserve it smh
                   .filter(item => !isOrderId(item.shopifyOrderLineItem?.orderId))
@@ -153,7 +153,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             }}
           />
           <Button
-            title={'Create Transfer Order'}
+            title={'Create transfer order'}
             isDisabled={isSubmitting}
             onPress={() =>
               router.push('CreateTransferOrderForLocation', {
@@ -163,7 +163,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             }
           />
           <Button
-            title={'Create Special Order'}
+            title={'Create special order'}
             isDisabled={isSubmitting}
             onPress={() =>
               router.push('CreateSpecialOrderList', {
@@ -230,7 +230,7 @@ function useItemListRows(name: string): ListRow[] {
       onPress: () => {
         // TODO : ability to open PO/TO from this menu
         // TODO : ability to open PO/TO from the entire page too (just a response grid of them below a header)
-        router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
+        // router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
       },
       leftSide: {
         image: {
@@ -261,7 +261,7 @@ function useItemListRows(name: string): ListRow[] {
         badges: getWorkOrderItemSourcingBadges(workOrder, item, { includeOrderBadge: true, includeStatusBadge: true }),
         subtitle,
       },
-      rightSide: { showChevron: true },
+      // rightSide: { showChevron: true },
     };
   });
 }

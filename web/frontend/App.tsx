@@ -20,15 +20,15 @@ export default function App() {
               <NavigationMenu
                 navigationLinks={[
                   {
-                    label: 'Work Orders',
+                    label: 'Work orders',
                     destination: '/work-orders',
                   },
                   {
-                    label: 'Purchase Orders',
+                    label: 'Purchase orders',
                     destination: '/purchase-orders',
                   },
                   {
-                    label: 'Special Orders',
+                    label: 'Special orders',
                     destination: '/special-orders',
                   },
                   {
@@ -44,12 +44,8 @@ export default function App() {
                     destination: '/services-and-labour',
                   },
                   {
-                    label: 'Employee Rates',
-                    destination: '/employee-rates',
-                  },
-                  {
-                    label: 'Employee Permissions',
-                    destination: '/employee-permissions',
+                    label: 'Employees',
+                    destination: '/employees',
                   },
                   {
                     label: 'Settings',

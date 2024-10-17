@@ -37,7 +37,7 @@ export function PurchaseOrderCsvUploadDropZoneModal({ open, onClose }: { open: b
     <>
       <Modal
         open={open}
-        title={'Import Purchase Orders'}
+        title={'Import purchase orders'}
         onClose={onClose}
         primaryAction={{
           content: 'Import',

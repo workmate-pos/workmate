@@ -169,11 +169,11 @@ export default function Labour() {
                     />
 
                     <Select
-                      label={'Labour Type'}
+                      label={'Labour type'}
                       options={[
                         {
                           value: 'fixed' satisfies UpsertLabour['type'],
-                          label: 'Fixed Price',
+                          label: 'Fixed price',
                         },
                         {
                           value: 'hourly' satisfies UpsertLabour['type'],
@@ -208,7 +208,7 @@ export default function Labour() {
                         />
 
                         <Checkbox
-                          label={'Customizable Price'}
+                          label={'Customizable price'}
                           checked={customizeAmount}
                           onChange={setCustomizeAmount}
                           name={fields.customizeAmount.name}
@@ -235,7 +235,7 @@ export default function Labour() {
                         />
 
                         <Checkbox
-                          label={'Customizable Rate'}
+                          label={'Customizable rate'}
                           checked={customizeRate}
                           onChange={setCustomizeRate}
                           name={fields.customizeRate.name}
@@ -257,7 +257,7 @@ export default function Labour() {
                         />
 
                         <Checkbox
-                          label={'Customizable Hours'}
+                          label={'Customizable hours'}
                           checked={customizeHours}
                           onChange={setCustomizeHours}
                           name={fields.customizeHours.name}

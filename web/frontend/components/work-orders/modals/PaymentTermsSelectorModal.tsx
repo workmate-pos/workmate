@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { DAY_IN_MS } from '@work-orders/common/time/constants.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { DateModal } from '@web/frontend/components/shared-orders/modals/DateModal.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
@@ -105,7 +105,7 @@ export function PaymentTermsSelectorModal({
   return (
     <Modal
       open={open}
-      title={'Select Payment Terms'}
+      title={'Select payment terms'}
       onClose={onClose}
       primaryAction={{
         content: 'Save',
@@ -126,7 +126,7 @@ export function PaymentTermsSelectorModal({
           tabs={tabNames.map(type => ({
             id: type,
             selected: type === currentTemplate?.paymentTermsType,
-            content: titleCase(type),
+            content: sentenceCase(type),
             onAction: () => onPaymentTermsTypeTransition(type),
           }))}
           selected={tabNames.findIndex(type => type === (currentTemplate?.paymentTermsType ?? 'NONE'))}
@@ -143,7 +143,7 @@ export function PaymentTermsSelectorModal({
 function EmptyPaymentTerms({ type }: { type: string }) {
   return (
     <Text as={'p'} tone="subdued">
-      Selected {titleCase(type)}
+      Selected {sentenceCase(type)}
     </Text>
   );
 }
@@ -255,7 +255,7 @@ function NetPaymentTerms({
 
   return (
     <Select
-      label="Payment Terms"
+      label="Payment terms"
       value={currentTemplate?.id}
       options={templates.map(template => ({
         label: template.name,

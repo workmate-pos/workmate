@@ -1,7 +1,7 @@
 import { SegmentedControl, Text, TextField, Stack, Selectable } from '@shopify/ui-extensions-react/point-of-sale';
 import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { DiscriminatedUnionOmit } from '@work-orders/common/types/DiscriminatedUnionOmit.js';
-import type { ShopSettings } from '@web/schemas/generated/shop-settings.js';
+import type { ShopSettings } from '@web/services/settings/schema.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common-pos/hooks/use-currency-formatter.js';
@@ -15,13 +15,13 @@ type SegmentId = CreateWorkOrderCharge['type'] | 'none';
 
 const segmentLabels: Record<SegmentId, string> = {
   none: 'None',
-  'fixed-price-labour': 'Fixed Price',
+  'fixed-price-labour': 'Fixed price',
   'hourly-labour': 'Hourly',
 };
 
-const segmentToggleName: Partial<Record<SegmentId, keyof ShopSettings['chargeSettings']>> = {
-  'fixed-price-labour': 'fixedPriceLabour',
-  'hourly-labour': 'hourlyLabour',
+const segmentToggleName: Partial<Record<SegmentId, keyof ShopSettings['workOrders']['charges']>> = {
+  'fixed-price-labour': 'allowFixedPriceLabour',
+  'hourly-labour': 'allowHourlyLabour',
 };
 
 type ChargeType<SegmentTypes extends SegmentId> = SegmentTypes extends 'none'
@@ -57,7 +57,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
     if (charge?.removeLocked) return false;
     const toggleName = segmentToggleName[type];
     if (!toggleName) return true;
-    return settings.chargeSettings[toggleName];
+    return settings.workOrders.charges[toggleName];
   };
 
   const segments = types.map<Segment>(type => ({
@@ -84,7 +84,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       case 'fixed-price-labour': {
         const fixedPriceLabour: ChargeType<'fixed-price-labour'> = {
           type: 'fixed-price-labour',
-          name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
+          name: charge?.name ?? (settings.workOrders.charges.defaultLabourLineItemName || 'Labour'),
           amount: getTotalPriceForCharges(charge ? [charge] : []),
           amountLocked: false,
           removeLocked: false,
@@ -97,7 +97,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       case 'hourly-labour': {
         const hourlyLabour: ChargeType<'hourly-labour'> = {
           type: 'hourly-labour',
-          name: charge?.name ?? (settings.labourLineItemName || 'Labour'),
+          name: charge?.name ?? (settings.workOrders.charges.defaultLabourLineItemName || 'Labour'),
           rate: getTotalPriceForCharges(charge ? [charge] : []),
           hours: BigDecimal.ONE.toDecimal(),
           rateLocked: false,
@@ -130,7 +130,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
       )}
       {charge && (
         <TextField
-          label={'Labour Name'}
+          label={'Labour name'}
           value={charge.name}
           onChange={(name: string) => onChange({ ...charge, name })}
           isValid={charge.name.length > 0}
@@ -152,7 +152,7 @@ export function SegmentedLabourControl<const SegmentTypes extends readonly Segme
           </Stack>
 
           <FormMoneyField
-            label={'Hourly Rate'}
+            label={'Hourly rate'}
             disabled={disabled || charge.rateLocked}
             value={charge.rate}
             min={0}

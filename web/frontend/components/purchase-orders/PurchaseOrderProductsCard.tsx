@@ -34,7 +34,6 @@ export function PurchaseOrderProductsCard({
   dispatch,
   disabled,
   onAddProductClick,
-  onAddSpecialOrderProductClick,
   onMarkAllAsReceivedClick,
   onMarkAllAsNotReceivedClick,
 }: {
@@ -43,7 +42,6 @@ export function PurchaseOrderProductsCard({
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
   onAddProductClick: () => void;
-  onAddSpecialOrderProductClick: () => void;
   onMarkAllAsReceivedClick: () => void;
   onMarkAllAsNotReceivedClick: () => void;
 }) {
@@ -69,7 +67,7 @@ export function PurchaseOrderProductsCard({
         />
         <ButtonGroup fullWidth>
           <Button onClick={() => onAddProductClick()} disabled={disabled}>
-            Add Product
+            Add product
           </Button>
           {noLineItems || allAreReceived ? (
             <Button
@@ -131,7 +129,7 @@ function ProductsList({
         loading={isLoading}
         renderItem={(item, id) => {
           const productVariant = productVariantQueries[item.productVariantId]?.data;
-          const name = getProductVariantName(productVariant) ?? 'Unknown Product';
+          const name = getProductVariantName(productVariant) ?? 'Unknown product';
           const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
 
           let quantityBadgeTone: Tone | undefined;

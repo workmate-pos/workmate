@@ -5,7 +5,7 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProducts, upsertProducts } from './queries.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { upsertMetafields } from '../metafields/queries.js';
+import { removeObjectMetafields, upsertMetafields } from '../metafields/queries.js';
 
 export async function ensureProductsExist(session: Session, productIds: ID[]) {
   if (productIds.length === 0) {
@@ -61,6 +61,8 @@ export async function syncProducts(session: Session, productIds: ID[]) {
   );
 
   const errors: unknown[] = [];
+
+  await removeObjectMetafields(session.shop, productIds);
 
   await Promise.all([
     upsertProducts(

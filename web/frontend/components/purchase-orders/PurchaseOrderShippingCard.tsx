@@ -22,7 +22,7 @@ export function PurchaseOrderShippingCard({
         </Text>
 
         <TextField
-          label={'Ship From'}
+          label={'Ship from'}
           autoComplete={'off'}
           value={createPurchaseOrder.shipFrom ?? ''}
           onChange={(value: string) => dispatch.setPartial({ shipFrom: value })}
@@ -30,7 +30,7 @@ export function PurchaseOrderShippingCard({
           disabled={disabled}
         />
         <TextField
-          label={'Ship To'}
+          label={'Ship to'}
           autoComplete={'off'}
           value={createPurchaseOrder.shipTo ?? ''}
           onChange={(value: string) => dispatch.setPartial({ shipTo: value })}

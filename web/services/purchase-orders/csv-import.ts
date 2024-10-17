@@ -22,7 +22,7 @@ const CsvPurchaseOrderInfo = z.object({
   ID: CsvPurchaseOrderId,
   Status: z.string(),
   PlacedDate: zCsvNullable(zDateTime),
-  LocationID: zCsvNullable(zNamespacedID('Location')),
+  LocationID: zNamespacedID('Location'),
   VendorName: zCsvNullable(z.string()),
   ShipFrom: z.string(),
   ShipTo: z.string(),

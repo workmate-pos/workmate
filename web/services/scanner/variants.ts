@@ -1,5 +1,5 @@
 import { findMetafields } from '../metafields/queries.js';
-import { getShopSettings } from '../settings.js';
+import { getShopSettings } from '../settings/settings.js';
 import { getProductVariantsByProductIds } from '../product-variants/queries.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';

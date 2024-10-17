@@ -86,12 +86,12 @@ export const useWorkOrderInfoQuery = (
         const beforeDueDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0));
         searchParams.set('beforeDueDate', beforeDueDate.toISOString());
         searchParams.set('excludePaymentStatus', 'true');
-        searchParams.set('paymentStatus', 'FULLY_PAID' satisfies PaymentStatus);
+        searchParams.set('paymentStatus', 'fully-paid' satisfies PaymentStatus);
       } else if (overdueStatus === 'NOT_OVERDUE') {
         const afterDueDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999));
         searchParams.set('afterDueDate', afterDueDate.toISOString());
         searchParams.set('excludePaymentStatus', 'true');
-        searchParams.set('paymentStatus', 'FULLY_PAID' satisfies PaymentStatus);
+        searchParams.set('paymentStatus', 'fully-paid' satisfies PaymentStatus);
       }
 
       for (const filter of customFieldFilters) {

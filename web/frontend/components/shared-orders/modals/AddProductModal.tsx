@@ -32,7 +32,7 @@ import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
@@ -182,26 +182,27 @@ export function AddProductModal({
       <Modal
         open={open && !isSpecialOrderModalOpen}
         onClose={onClose}
-        title={`Add ${titleCase(thing)}`}
+        title={`Add ${sentenceCase(thing).toLowerCase()}`}
         secondaryActions={[
           {
             content: 'Reload',
             onAction: () => productVariantsQuery.refetch(),
             loading: productVariantsQuery.isRefetching,
           },
-          {
-            content: 'Import Special Order',
+          outputType === 'PURCHASE_ORDER'
+            ?{
+            content: 'Import special order',
             onAction: () => setIsSpecialOrderModalOpen(true),
-          },
+          }: null,
           productType === 'SERVICE'
             ? {
-                content: 'Create Service',
+                content: 'Create service',
                 onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/service/new'),
               }
             : null,
           outputType === 'WORK_ORDER' && productType === 'PRODUCT'
             ? {
-                content: 'Custom Product',
+                content: 'Custom product',
                 loading: !customFieldsPresetsQuery.data,
                 onAction: () => {
                   if (!customFieldsPresetsQuery.data) {

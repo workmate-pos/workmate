@@ -87,10 +87,10 @@ export function EditCustomFieldPresetModal({
   return (
     <Modal
       open={open}
-      title={'Edit Custom Field Preset'}
+      title={'Edit custom field preset'}
       onClose={onClose}
       primaryAction={{
-        content: 'Save Preset',
+        content: 'Save preset',
         loading: presetMutation.isPending,
         onAction: () =>
           presetMutation.mutate(
@@ -129,7 +129,7 @@ export function EditCustomFieldPresetModal({
       <Modal.Section>
         <BlockStack gap={'400'}>
           <TextField
-            label={'Preset Name'}
+            label={'Preset name'}
             autoComplete={'off'}
             requiredIndicator
             value={name}
@@ -145,11 +145,11 @@ export function EditCustomFieldPresetModal({
               activator={
                 <Combobox.TextField
                   autoComplete={'off'}
-                  label={'Custom Fields'}
+                  label={'Custom fields'}
                   labelHidden
                   value={newCustomFieldName}
                   onChange={setNewCustomFieldName}
-                  placeholder={'New Custom Field'}
+                  placeholder={'New custom field'}
                   verticalContent={
                     <LegacyStack spacing="extraTight" alignment="center">
                       {keys.map(key => (

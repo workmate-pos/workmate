@@ -104,7 +104,7 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
       </Stack>
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
-        <Form disabled={createProductMutation.isPending}>
+        <Form disabled={createProductMutation.isPending || !router.isCurrent}>
           <ResponsiveGrid columns={2}>
             <FormStringField
               label={'Title'}
@@ -123,7 +123,7 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
               onChange={(value: string) => dispatch.setPartial({ barcode: value || null })}
             />
             <FormStringField
-              label={'Product Type'}
+              label={'Product type'}
               value={createProduct.productType ?? ''}
               onChange={(value: string) => dispatch.setPartial({ productType: value || null })}
             />
@@ -143,7 +143,7 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
               />
             )}
             <FormDecimalField
-              label={'Selection Quantity'}
+              label={'Selection quantity'}
               value={BigDecimal.fromString(String(quantity)).toDecimal()}
               onChange={decimal => setQuantity(current => (decimal ? (Number(decimal) as Int) : current))}
               postprocessor={roundingPostProcessor(0)}
