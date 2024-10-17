@@ -184,8 +184,10 @@ function WorkOrders() {
                 {workOrder.orders
                   .filter(hasPropertyValue('type', 'ORDER'))
                   .map(order => order.name)
-                  .map(sp => (
-                    <Badge tone="enabled">{sp}</Badge>
+                  .map((sp, i) => (
+                    <Badge tone="enabled" key={i}>
+                      {sp}
+                    </Badge>
                   ))}
               </InlineStack>
             </IndexTable.Cell>
@@ -195,8 +197,10 @@ function WorkOrders() {
                   workOrder.items
                     .filter(hasPropertyValue('type', 'product'))
                     .flatMap(item => item.specialOrders.map(spo => spo.name)),
-                ).map(sp => (
-                  <Badge tone="enabled">{sp}</Badge>
+                ).map((sp, i) => (
+                  <Badge tone="enabled" key={i}>
+                    {sp}
+                  </Badge>
                 ))}
               </InlineStack>
             </IndexTable.Cell>
@@ -206,8 +210,10 @@ function WorkOrders() {
                   workOrder.items
                     .filter(hasPropertyValue('type', 'product'))
                     .flatMap(item => item.purchaseOrders.map(po => po.name)),
-                ).map(sp => (
-                  <Badge tone="enabled">{sp}</Badge>
+                ).map((sp, i) => (
+                  <Badge tone="enabled" key={i}>
+                    {sp}
+                  </Badge>
                 ))}
               </InlineStack>
             </IndexTable.Cell>

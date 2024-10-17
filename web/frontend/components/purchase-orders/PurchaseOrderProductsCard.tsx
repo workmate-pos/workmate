@@ -34,7 +34,6 @@ export function PurchaseOrderProductsCard({
   dispatch,
   disabled,
   onAddProductClick,
-  onAddSpecialOrderProductClick,
   onMarkAllAsReceivedClick,
   onMarkAllAsNotReceivedClick,
 }: {
@@ -43,7 +42,6 @@ export function PurchaseOrderProductsCard({
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
   onAddProductClick: () => void;
-  onAddSpecialOrderProductClick: () => void;
   onMarkAllAsReceivedClick: () => void;
   onMarkAllAsNotReceivedClick: () => void;
 }) {

@@ -129,7 +129,7 @@ export function PaymentTermsSelector({
         }))}
       />
 
-      <Form disabled={disabled}>
+      <Form disabled={disabled || !router.isCurrent}>
         <Stack direction={'vertical'} paddingVertical={'ExtraLarge'} alignment={'center'}>
           {getSegmentContents()}
         </Stack>

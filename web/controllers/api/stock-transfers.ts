@@ -15,6 +15,7 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { StockTransferCountOptions } from '../../schemas/generated/stock-transfer-count-options.js';
 
 @Authenticated()
+@Permission('none')
 export default class StockTransfersController {
   @Post('/')
   @BodySchema('create-stock-transfer')

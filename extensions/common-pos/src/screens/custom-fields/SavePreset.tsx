@@ -54,7 +54,7 @@ export function SavePreset({ keys, useRouter, type }: SavePresetProps) {
         <Text variant={'headingLarge'}>Save custom field Preset</Text>
       </Stack>
 
-      <Form disabled={presetMutation.isPending}>
+      <Form disabled={presetMutation.isPending || !router.isCurrent}>
         <Stack direction={'vertical'} paddingHorizontal={'ExtraExtraLarge'}>
           <FormStringField label={'Preset name'} value={name} onChange={setName} required />
           <FormButton

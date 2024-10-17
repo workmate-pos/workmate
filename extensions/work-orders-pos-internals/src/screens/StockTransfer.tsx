@@ -71,8 +71,10 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
     );
   };
 
+  const router = useRouter();
+
   return (
-    <Form disabled={stockTransferMutation.isPending}>
+    <Form disabled={stockTransferMutation.isPending || !router.isCurrent}>
       <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {stockTransferMutation.error && (

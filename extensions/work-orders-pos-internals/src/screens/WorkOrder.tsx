@@ -115,7 +115,7 @@ export function WorkOrder({ initial }: WorkOrderProps) {
   );
 
   return (
-    <Form disabled={saveWorkOrderMutation.isPending}>
+    <Form disabled={saveWorkOrderMutation.isPending || !router.isCurrent}>
       <ScrollView>
         <ResponsiveStack direction={'vertical'} spacing={2}>
           {saveWorkOrderMutation.error && (

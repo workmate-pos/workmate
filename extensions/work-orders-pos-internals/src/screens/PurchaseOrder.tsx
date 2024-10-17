@@ -152,7 +152,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const placedDateIsToday = createPurchaseOrder.placedDate === TODAY_DATE.toISOString();
 
   return (
-    <Form disabled={purchaseOrderMutation.isPending}>
+    <Form disabled={purchaseOrderMutation.isPending || !router.isCurrent}>
       <ScrollView>
         {purchaseOrderMutation.error && (
           <Banner

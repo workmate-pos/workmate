@@ -83,7 +83,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
   const router = useRouter();
 
   return (
-    <Form disabled={purchaseOrderMutation.isPending}>
+    <Form disabled={purchaseOrderMutation.isPending || !router.isCurrent}>
       <ScrollView>
         <FormStringField
           label={'Location'}

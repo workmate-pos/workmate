@@ -26,7 +26,7 @@ export function CreateSpecialOrderList({
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   return (
-    <Form disabled={specialOrderMutation.isPending}>
+    <Form disabled={specialOrderMutation.isPending || !router.isCurrent}>
       <UnsourcedItemList
         title="Create Special Order"
         primaryAction={{

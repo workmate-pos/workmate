@@ -105,7 +105,7 @@ export function CycleCount({ initial }: { initial: CreateCycleCount }) {
   screen.setIsLoading(cycleCountQuery.isLoading);
 
   return (
-    <Form disabled={cycleCountMutation.isPending || isImmutable}>
+    <Form disabled={cycleCountMutation.isPending || isImmutable || !router.isCurrent}>
       <DatePicker
         inputMode={'spinner'}
         visibleState={[datePickerOpen, setDatePickerOpen]}
