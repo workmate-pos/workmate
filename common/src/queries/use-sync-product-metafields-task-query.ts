@@ -1,6 +1,6 @@
 import { Fetch } from './fetch.js';
 import { useMutation, useQuery, UseQueryOptions } from '@tanstack/react-query';
-import { FetchTaskResponse } from '@web/controllers/api/tasks.js';
+import { FetchTaskResponse } from '@web/controllers/api/long-running-tasks.js';
 
 export const useSyncProductMetafieldsTaskQuery = (
   { fetch }: { fetch: Fetch },
@@ -10,7 +10,7 @@ export const useSyncProductMetafieldsTaskQuery = (
     ...options,
     queryKey: ['sync-product-metafields-task'],
     queryFn: async () => {
-      const response = await fetch('/api/tasks/sync/products');
+      const response = await fetch('/api/long-running-tasks/sync/products');
 
       if (!response.ok) {
         throw new Error('Failed to get sync product metafields task');

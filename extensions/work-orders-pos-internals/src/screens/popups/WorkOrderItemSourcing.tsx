@@ -28,6 +28,7 @@ import { StockTransferLineItem } from '@web/schemas/generated/create-stock-trans
 import { useReserveLineItemsInventoryMutation } from '@work-orders/common/queries/use-reserve-line-items-inventory-mutation.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 /**
  * Fulfillment options for some work order.
@@ -222,10 +223,7 @@ function useItemListRows(name: string): ListRow[] {
       .with({ type: 'custom-item' }, () => null)
       .exhaustive();
 
-    const subtitle =
-      typeof availableInventoryCount === 'number'
-        ? ([`${availableInventoryCount} available at current location`] as const)
-        : undefined;
+    const subtitle = getSubtitle([`${availableInventoryCount} available at current location`]);
 
     return {
       id: item.uuid,

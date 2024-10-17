@@ -61,6 +61,7 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 
 export type WorkOrderProps = {
@@ -162,6 +163,12 @@ export function WorkOrder({ initial }: WorkOrderProps) {
               <WorkOrderMoneySummary createWorkOrder={createWorkOrder} dispatch={dispatch} />
             </ResponsiveGrid>
           </ResponsiveGrid>
+
+          <LinkedTasks
+            links={{ workOrders: [createWorkOrder.name].filter(isNonNullable) }}
+            disabled={saveWorkOrderMutation.isPending}
+            useRouter={useRouter}
+          />
         </ResponsiveStack>
       </ScrollView>
 

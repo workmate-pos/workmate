@@ -7,7 +7,7 @@ import { httpError } from '../../util/http-error.js';
 import { hasNestedPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { unit } from '../db/unit-of-work.js';
-import { runTask } from '../task/task.js';
+import { runLongRunningTask } from '../long-running-task/long-running-task.js';
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 
@@ -21,7 +21,7 @@ export function getSyncProductOrVariantMetafieldsTaskName(shop: string, type: 'p
 export async function syncProductOrVariantMetafields(session: Session, type: 'product' | 'variant') {
   const name = getSyncProductOrVariantMetafieldsTaskName(session.shop, type);
 
-  return await runTask(name, async ({ updateProgress }) => {
+  return await runLongRunningTask(name, async ({ updateProgress }) => {
     const { shop } = session;
     const graphql = new Graphql(session);
 

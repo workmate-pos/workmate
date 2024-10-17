@@ -76,6 +76,7 @@ model WorkOrder {
   charges          WorkOrderCharge[]
   customFields     WorkOrderCustomField[]
   itemCustomFields WorkOrderItemCustomField[]
+  tasks            TaskWorkOrderLink[]
 
   @@unique([shop, name])
   @@index([shop, locationId])
@@ -275,6 +276,7 @@ enum PermissionNode {
   write_stock_transfers
   read_special_orders
   write_special_orders
+  manage_schedules
 }
 
 model AppPlanSubscription {
@@ -393,6 +395,7 @@ model PurchaseOrder {
   createdAt                         DateTime                           @default(now()) @db.Timestamptz(3)
   updatedAt                         DateTime                           @default(now()) @db.Timestamptz(3)
   purchaseOrderLineItemCustomFields PurchaseOrderLineItemCustomField[]
+  tasks                             TaskPurchaseOrderLink[]
 
   @@unique([shop, name])
 }
@@ -455,6 +458,8 @@ model StockTransfer {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  tasks TaskStockTransferLink[]
 
   @@unique([shop, name])
 }
@@ -777,6 +782,7 @@ model CycleCount {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   employees CycleCountEmployeeAssignment[]
+  tasks     TaskCycleCountLink[]
 
   @@unique([shop, name])
   @@index([createdAt])
@@ -871,6 +877,7 @@ model SpecialOrder {
   note       String
 
   lineItems SpecialOrderLineItem[]
+  tasks     TaskSpecialOrderLink[]
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
@@ -923,6 +930,7 @@ model ProductVariantSerial {
 
   purchaseOrderLineItems PurchaseOrderLineItem[]
   workOrders             WorkOrder[]
+  tasks                  TaskSerialLink[]
 
   @@unique([shop, productVariantId, serial])
 }
@@ -950,7 +958,7 @@ model Metafield {
 }
 
 // Table used for blocking concurrent tasks and for tracking the progress of long-running tasks.
-model Task {
+model LongRunningTask {
   id Int @id @default(autoincrement())
 
   name        String @unique
@@ -959,4 +967,257 @@ model Task {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// Employees can mark themselves as available or unavailable for datetime ranges
+// If the employee is available you can schedule them for work without any warnings.
+// If the employee is unavailable you are warned but can override it.
+// If no availability is set a warning is shown indicating that the employee's availability is unknown.
+
+// In principle the app should ensure that date ranges do not overlap (i.e. by automatically merging them).
+// If this is not the case, unavailability should take precedence.
+model EmployeeAvailability {
+  id Int @id @default(autoincrement())
+
+  staffMemberId String
+  shop          String
+
+  description String
+
+  available Boolean
+
+  start DateTime @db.Timestamptz(3)
+  end   DateTime @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([shop, staffMemberId, available, start, end])
+  @@index([shop, available, start, end])
+  @@index([shop, available, end])
+  @@index([shop, id, staffMemberId])
+}
+
+model ScheduleEvent {
+  id Int @id @default(autoincrement())
+
+  schedule   Schedule @relation(fields: [scheduleId], references: [id])
+  scheduleId Int
+
+  name        String
+  description String
+  // Color of the item in the schedule. Should be a hex color including the leading '#'
+  color       String
+
+  start DateTime @db.Timestamptz(3)
+  end   DateTime @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  tasks       ScheduleEventTask[]
+  assignments ScheduleEventAssignment[]
+
+  @@index([scheduleId])
+  @@index([start, end])
+  @@index([end])
+}
+
+model ScheduleEventAssignment {
+  id Int @id @default(autoincrement())
+
+  scheduleEventId Int
+  scheduleEvent   ScheduleEvent @relation(fields: [scheduleEventId], references: [id])
+
+  staffMemberId String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([scheduleEventId, staffMemberId])
+  @@index([staffMemberId])
+}
+
+// A link between an ScheduleEvent and a Task
+// A checklist item will be shown on the schedule item for each task
+model ScheduleEventTask {
+  id Int @id @default(autoincrement())
+
+  scheduleEventId Int
+  scheduleEvent   ScheduleEvent @relation(fields: [scheduleEventId], references: [id])
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([scheduleEventId, taskId])
+  @@index([taskId])
+}
+
+// Some task that should be done by an employee.
+// Can be used for anything that needs to be scheduled, e.g. fulfilling a work order, performing a cycle count, etc.
+// Essentially a checklist item.
+//
+// Tasks can be assigned to employees, which will cause the task to show up while scheduling too.
+// Tasks are scheduled through a connection to ScheduleEvent.
+// Task deadlines are also used for timely scheduling.
+//
+// It is not required to create elaborate task lists.
+// You can simply create a single task (e.g. "Process WO-#4") and assign it to employees to take advantage
+// of scheduling features.
+model Task {
+  id Int @id @default(autoincrement())
+
+  shop String
+
+  name                 String
+  description          String
+  estimatedTimeMinutes Int?
+  deadline             DateTime? @db.Timestamptz(3)
+
+  done Boolean
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  assignments    TaskAssignment[]
+  scheduleEvents  ScheduleEventTask[]
+  workOrders     TaskWorkOrderLink[]
+  purchaseOrders TaskPurchaseOrderLink[]
+  specialOrders  TaskSpecialOrderLink[]
+  stockTransfers TaskStockTransferLink[]
+  cycleCounts    TaskCycleCountLink[]
+  serials        TaskSerialLink[]
+
+  @@index([shop])
+}
+
+// Tasks can be linked to work orders.
+model TaskWorkOrderLink {
+  id Int @id @default(autoincrement())
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+
+  workOrderId Int
+  workOrder   WorkOrder @relation(fields: [workOrderId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// Tasks can be linked to purchase orders.
+model TaskPurchaseOrderLink {
+  id Int @id @default(autoincrement())
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+
+  purchaseOrderId Int
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// Tasks can be linked to special orders.
+model TaskSpecialOrderLink {
+  id Int @id @default(autoincrement())
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+
+  specialOrderId Int
+  specialOrder   SpecialOrder @relation(fields: [specialOrderId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// Tasks can be linked to stock transfers.
+model TaskStockTransferLink {
+  id Int @id @default(autoincrement())
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+
+  stockTransferId Int
+  stockTransfer   StockTransfer @relation(fields: [stockTransferId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// Tasks can be linked to cycle counts.
+model TaskCycleCountLink {
+  id Int @id @default(autoincrement())
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+
+  cycleCountId Int
+  cycleCount   CycleCount @relation(fields: [cycleCountId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// Tasks can be linked to serials.
+model TaskSerialLink {
+  id Int @id @default(autoincrement())
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+
+  serialId Int
+  serial   ProductVariantSerial @relation(fields: [serialId], references: [id])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+// Employees can be assigned to tasks.
+// These assignments can be used during scheduling to ensure that employee tasks are scheduled at some time.
+// Note that this is not binding/enforced, i.e. an employee can be scheduled for a task that they are not assigned to.
+model TaskAssignment {
+  id Int @id @default(autoincrement())
+
+  taskId Int
+  task   Task @relation(fields: [taskId], references: [id])
+
+  staffMemberId String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([taskId])
+  @@index([staffMemberId])
+}
+
+// Schedule items are grouped into Schedule rows.
+model Schedule {
+  id Int @id @default(autoincrement())
+
+  shop String
+  name String
+
+  // Schedules can be connected to locations.
+  locationId String?
+
+  // When schedules are manually published this will be set to the current date.
+  // It is also possible to set this to a future date to schedule a future date.
+  // TODO: Notifications with a cronjob - should check all schedules since the last notification
+  // TODO: Table that links notifs to this schedule
+  publishedAt DateTime? @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  scheduleEvents ScheduleEvent[]
+
+  @@index([shop, id])
+  @@index([shop, locationId])
+  @@index([shop, publishedAt])
 }

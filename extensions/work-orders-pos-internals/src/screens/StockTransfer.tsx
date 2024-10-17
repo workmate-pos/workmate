@@ -33,6 +33,7 @@ import { useOrderQueries } from '@work-orders/common/queries/use-order-query.js'
 import { useDraftOrderQueries } from '@work-orders/common/queries/use-draft-order-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
 
 export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) {
   const [createStockTransfer, dispatch, hasUnsavedChanges, setHasUnsavedChanges] =
@@ -94,6 +95,12 @@ export function StockTransfer({ initial }: { initial: WIPCreateStockTransfer }) 
             onChange={(value: string) => dispatch.setPartial({ note: value })}
           />
         </ResponsiveStack>
+
+        <LinkedTasks
+          links={{ transferOrders: [createStockTransfer.name].filter(isNonNullable) }}
+          disabled={stockTransferMutation.isPending}
+          useRouter={useRouter}
+        />
       </ScrollView>
 
       <ResponsiveStack

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "offset": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "query": {
+      "type": "string"
+    },
+    "staffMemberIds": {
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/ID"
+      }
+    },
+    "sortMode": {
+      "type": "string",
+      "enum": ["done", "deadline", "estimated-time-minutes", "name", "created-at", "updated-at"]
+    },
+    "sortOrder": {
+      "type": "string",
+      "enum": ["ascending", "descending"]
+    },
+    "done": {
+      "type": "boolean"
+    },
+    "links.workOrders": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links.purchaseOrders": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links.specialOrders": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links.transferOrders": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links.cycleCounts": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "links.serials": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "required": ["limit", "offset"],
+  "additionalProperties": false
+}

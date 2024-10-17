@@ -1,7 +1,4 @@
 import { getShopSettings } from './settings/settings.js';
-import { db } from './db/db.js';
-import { useClient } from './db/client.js';
-import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getCount } from './counter/queries.js';
 

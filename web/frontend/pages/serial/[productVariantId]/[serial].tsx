@@ -16,6 +16,7 @@ import {
   Text,
   TextField,
   Thumbnail,
+  Tooltip,
 } from '@shopify/polaris';
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -35,6 +36,8 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 import { CreateSerial } from '@web/schemas/generated/create-serial.js';
 import { Redirect } from '@shopify/app-bridge/actions';
+import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function Serial() {
   const routes = useParams<'productVariantId' | 'serial'>();
@@ -252,60 +255,68 @@ export default function Serial() {
             </FormLayout>
 
             {serial && (
-              <BlockStack gap={'200'}>
-                <Text as="h2" variant="headingMd" fontWeight="bold">
-                  Order History
-                </Text>
-
-                <ResourceList
-                  items={serial.history}
-                  emptyState={
-                    <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                      This serial does not have any associated orders.
-                    </Text>
-                  }
-                  renderItem={item => {
-                    const id = `${item.type}-${item.name}`;
-
-                    if (item.type === 'purchase-order') {
-                      return (
-                        <ResourceItem url={`/purchase-orders/${encodeURIComponent(item.name)}`} id={id}>
-                          <BlockStack gap={'400'}>
-                            <Box>
-                              <Badge tone="info">{item.name}</Badge>
-                            </Box>
-                            <BlockStack gap={'200'}>
-                              {item.location && (
-                                <Text as="p" variant="bodyMd" tone="subdued">
-                                  {item.location?.name}
-                                </Text>
-                              )}
-                            </BlockStack>
-                          </BlockStack>
-                        </ResourceItem>
-                      );
-                    }
-
-                    if (item.type === 'work-order') {
-                      return (
-                        <ResourceItem url={`/work-orders/${encodeURIComponent(item.name)}`} id={id}>
-                          <BlockStack gap={'400'}>
-                            <Box>
-                              <Badge tone="info">{item.name}</Badge>
-                            </Box>
-                            <BlockStack gap={'200'}>
-                              <Text as="p" variant="bodyMd" tone="subdued">
-                                {item.customer.displayName}
-                              </Text>
-                            </BlockStack>
-                          </BlockStack>
-                        </ResourceItem>
-                      );
-                    }
-
-                    return item satisfies never;
-                  }}
+              <BlockStack gap={'1000'}>
+                <LinkedTasks
+                  links={{ serials: [serial.serial] }}
+                  disabled={serialMutation.isPending}
+                  action={<NewLinkedTaskButton links={{ serials: [serial.serial] }} />}
                 />
+
+                <BlockStack gap={'200'}>
+                  <Text as="h2" variant="headingMd" fontWeight="bold">
+                    Order History
+                  </Text>
+
+                  <ResourceList
+                    items={serial.history}
+                    emptyState={
+                      <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+                        This serial does not have any associated orders.
+                      </Text>
+                    }
+                    renderItem={item => {
+                      const id = `${item.type}-${item.name}`;
+
+                      if (item.type === 'purchase-order') {
+                        return (
+                          <ResourceItem url={`/purchase-orders/${encodeURIComponent(item.name)}`} id={id}>
+                            <BlockStack gap={'400'}>
+                              <Box>
+                                <Badge tone="info">{item.name}</Badge>
+                              </Box>
+                              <BlockStack gap={'200'}>
+                                {item.location && (
+                                  <Text as="p" variant="bodyMd" tone="subdued">
+                                    {item.location?.name}
+                                  </Text>
+                                )}
+                              </BlockStack>
+                            </BlockStack>
+                          </ResourceItem>
+                        );
+                      }
+
+                      if (item.type === 'work-order') {
+                        return (
+                          <ResourceItem url={`/work-orders/${encodeURIComponent(item.name)}`} id={id}>
+                            <BlockStack gap={'400'}>
+                              <Box>
+                                <Badge tone="info">{item.name}</Badge>
+                              </Box>
+                              <BlockStack gap={'200'}>
+                                <Text as="p" variant="bodyMd" tone="subdued">
+                                  {item.customer.displayName}
+                                </Text>
+                              </BlockStack>
+                            </BlockStack>
+                          </ResourceItem>
+                        );
+                      }
+
+                      return item satisfies never;
+                    }}
+                  />
+                </BlockStack>
               </BlockStack>
             )}
           </BlockStack>
