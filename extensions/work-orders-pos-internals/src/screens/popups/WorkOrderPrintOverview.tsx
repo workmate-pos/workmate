@@ -265,7 +265,7 @@ export function WorkOrderPrintOverview({ name, dueDateUtc }: { name: string; due
 
   return (
     <ScrollView>
-      <Form disabled={printJobMutation.isPending}>
+      <Form disabled={printJobMutation.isPending || !router.isCurrent}>
         <Stack direction={'vertical'} spacing={4}>
           {TabsDisplay({ tabs: emailTabs, setTab: setEmailTab, selectedTabId: emailTab })}
           {TabsDisplay({ tabs: fromTabs, setTab: setFromTab, selectedTabId: fromTab })}

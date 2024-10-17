@@ -7,7 +7,6 @@ import { useLabourQuery } from './use-labour-query.js';
 import { UseQueryData } from './react-query.js';
 
 export const useLabourMutation = ({ fetch }: { fetch: Fetch }) => {
-  // TODO: Query client
   const queryClient = useQueryClient();
 
   return useMutation({

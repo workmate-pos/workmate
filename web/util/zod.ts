@@ -15,6 +15,7 @@ export const zDecimal = z.string().refine((text): text is Decimal => BigDecimal.
 
 export const zQsBool = z
   .string()
+  .default('')
   .refine(value => value === 'true' || value === 'false' || value === '1' || value === '0' || value === '')
   .transform(value => value === 'true' || value === '1' || value === '');
 
