@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 
 export default async function migrate() {
   await transaction(async () => {
+    await deleteOldPrintTemplates();
     await insertOldPrintTemplates();
 
     const shops = await sql<{ shop: string }>`SELECT DISTINCT shop FROM "Settings";`.then(rows =>
