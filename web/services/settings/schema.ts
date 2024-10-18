@@ -20,7 +20,13 @@ export type ShopSettings = z.infer<typeof ShopSettings>;
 const AnyShopSettingsVersion = z.discriminatedUnion('version', [ShopSettings01, ShopSettings02]);
 type AnyShopSettingsVersion = z.infer<typeof AnyShopSettingsVersion>;
 
+const newShopSettings = ShopSettings.parse({});
+
 export function parseShopSettings(shopSettings: unknown) {
+  if (!shopSettings) {
+    return newShopSettings;
+  }
+
   const parsed = AnyShopSettingsVersion.safeParse(shopSettings);
 
   if (!parsed.success) {

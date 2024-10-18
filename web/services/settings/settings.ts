@@ -13,8 +13,8 @@ function deserialize(value: string): unknown {
 export async function getShopSettings(shop: string): Promise<ShopSettings> {
   // TODO: Schema migration to store json blobs
   //  (this cannot be done now because we must first do an app migration to move to zod)
-  const [{ value } = { value: '{}' }] = await db.settings.getSetting({ shop, key: 'settings' });
-  return parseShopSettings(deserialize(value));
+  const [{ value } = { value: undefined }] = await db.settings.getSetting({ shop, key: 'settings' });
+  return parseShopSettings(value ? deserialize(value) : undefined);
 }
 
 export async function updateShopSettings(shop: string, settings: ShopSettings) {
