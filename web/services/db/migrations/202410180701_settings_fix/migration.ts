@@ -36,7 +36,7 @@ export default async function migrate() {
 
         const currentTemplates = JSON.parse(templates.value);
         const parsedTemplates = ShopSettings01.shape[schemaKey].parse(JSON.parse(templates.value));
-        const mergedTemplates = mergeRecords(currentTemplates, parsedTemplates);
+        const mergedTemplates = mergeRecords(parsedTemplates, currentTemplates);
 
         await updateShopSettings(shop, {
           ...settings,
@@ -54,21 +54,27 @@ export default async function migrate() {
   });
 }
 
-function mergeRecords<T>(a: Record<string, T>, b: Record<string, T>) {
+function mergeRecords<T>(newRecord: Record<string, T>, oldRecord: Record<string, T>) {
   const keyOccurrences: Record<string, number> = {};
 
   const merged: Record<string, T> = {};
 
-  for (const [key, value] of [...Object.entries(a), ...Object.entries(b)]) {
+  for (const [key, value] of [...Object.entries(newRecord), ...Object.entries(oldRecord)]) {
     if (merged[key] === value) {
       // no difference in the two so just keep the one
       continue;
     }
 
-    const occurrences = keyOccurrences[key] ?? 0;
-    keyOccurrences[key] = occurrences + 1;
+    const previousOccurrences = keyOccurrences[key] ?? 0;
 
-    merged[occurrences === 0 ? key : `${key} (${occurrences + 1})`] = value;
+    if (previousOccurrences > 1) {
+      // should not be possible as were merging 2 settings
+      throw new Error(`Duplicate key ${key}`);
+    }
+
+    keyOccurrences[key] = previousOccurrences + 1;
+
+    merged[previousOccurrences === 0 ? key : `${key} (Restored)`] = value;
   }
 
   return merged;
