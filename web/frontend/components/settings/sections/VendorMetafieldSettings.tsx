@@ -22,7 +22,7 @@ export function VendorMetafieldSettings({
 
   return (
     <BlockStack gap={'400'}>
-      <Label id={'selected-metafields'}>Displayed Customer Metafields</Label>
+      <Label id={'selected-metafields'}>Displayed customer metafields</Label>
 
       {customerMetafieldsQuery.isError && (
         <Text as="p" tone={'critical'}>

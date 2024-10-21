@@ -59,12 +59,12 @@ export default function ServicesAndLabour() {
   return (
     <Frame>
       <Page>
-        <TitleBar title="Services and Labour" />
+        <TitleBar title="Services and labour" />
 
         <Layout>
           <Layout.Section>
             <Text as="h1" variant="heading2xl">
-              Services & Labour
+              Services and labour
             </Text>
             <Text as="p" tone="subdued" variant="bodyLg">
               WorkMate's services and labour options allows you to add stand-alone services and product-related labour
@@ -86,7 +86,7 @@ export default function ServicesAndLabour() {
                         variant="primary"
                         onClick={() => Redirect.create(app).dispatch(Redirect.Action.APP, '/service/new')}
                       >
-                        Create Service
+                        Create service
                       </Button>
                     </InlineStack>
                     <Text as="p" tone="subdued">
@@ -153,7 +153,7 @@ export default function ServicesAndLabour() {
                         variant="primary"
                         onClick={() => Redirect.create(app).dispatch(Redirect.Action.APP, '/labour/new')}
                       >
-                        Create Labour
+                        Create labour
                       </Button>
                     </InlineStack>
                     <Text as="p" tone="subdued">

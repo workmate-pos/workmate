@@ -12,7 +12,7 @@ export function FranchiseModeSettings({
     <BlockStack gap="400">
       <BlockStack gap="200">
         <Text as="h2" variant="headingMd" fontWeight="bold">
-          Franchise Mode
+          Franchise mode
         </Text>
         <Text as="p" variant="bodyMd" tone="subdued">
           Franchise mode allows you to restrict locations on a per-employee basis. Employees will only be able to

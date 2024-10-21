@@ -102,7 +102,7 @@ export function PrintTemplateGroup({
         </Text>
 
         <Button onClick={() => setModalOpened(true)} variant={'plain'}>
-          View Template Variables
+          View template variables
         </Button>
       </InlineStack>
 
@@ -199,7 +199,7 @@ export function PrintTemplateGroup({
           });
         }}
       >
-        New Template
+        New template
       </Button>
     </BlockStack>
   );

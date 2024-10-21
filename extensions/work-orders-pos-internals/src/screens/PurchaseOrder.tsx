@@ -317,6 +317,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               title={'Custom fields'}
               onPress={() => {
                 router.push('CustomFieldConfig', {
+                  title: 'Purchase order custom fields',
                   initialCustomFields: createPurchaseOrder.customFields,
                   onSave: customFields => dispatch.setPartial({ customFields }),
                   type: 'PURCHASE_ORDER',

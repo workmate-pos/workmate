@@ -40,7 +40,7 @@ export default function App() {
                     destination: '/schedule',
                   },
                   {
-                    label: 'Services & Labour',
+                    label: 'Services and labour',
                     destination: '/services-and-labour',
                   },
                   {
