@@ -13,7 +13,13 @@ export function useWorkOrderPrintJobMutation({ fetch }: { fetch: Fetch }) {
       workOrderName: string;
       templateName: string;
     } & WorkOrderPrintJob) => {
-      const searchParams = new URLSearchParams(qs);
+      const searchParams = new URLSearchParams();
+
+      for (const [key, value] of Object.entries(qs)) {
+        if (value) {
+          searchParams.set(key, value);
+        }
+      }
 
       const response = await fetch(
         `/api/work-order/${encodeURIComponent(workOrderName)}/print/${encodeURIComponent(templateName)}?${searchParams}`,

@@ -172,7 +172,7 @@ export default class WorkOrderController {
       throw new HttpError('Invalid destination email address', 400);
     }
 
-    if (!z.string().email().safeParse(replyTo).success) {
+    if (!z.string().email().optional().safeParse(replyTo).success) {
       throw new HttpError('Invalid reply-to email address', 400);
     }
 
@@ -193,7 +193,7 @@ export default class WorkOrderController {
       },
       () =>
         mg.send(
-          { replyTo, from },
+          { replyTo: replyTo ?? '', from },
           {
             to: email,
             attachment: [file],
