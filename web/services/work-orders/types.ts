@@ -58,6 +58,7 @@ export type DetailedWorkOrderItem = {
   transferOrders: WorkOrderTransferOrder[];
   reservations: LineItemReservation[];
   specialOrders: WorkOrderSpecialOrder[];
+  availableInventoryQuantity: number;
 } & (
   | {
       type: 'product';
