@@ -27,6 +27,7 @@ import { useReserveLineItemsInventoryMutation } from '@work-orders/common/querie
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 import { getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 /**
  * Fulfillment options for some work order.
@@ -233,10 +234,7 @@ function useItemListRows(name: string): ListRow[] {
       return inventoryItemQuery.data.inventoryLevel?.quantities.find(hasPropertyValue('name', 'available'))?.quantity;
     })();
 
-    const subtitle =
-      typeof availableInventoryCount === 'number'
-        ? ([`${availableInventoryCount} available at current location`] as const)
-        : undefined;
+    const subtitle = getSubtitle([`${availableInventoryCount} available at current location`]);
 
     return [
       {
@@ -244,7 +242,7 @@ function useItemListRows(name: string): ListRow[] {
         onPress: () => {
           // TODO : ability to open PO/TO from this menu
           // TODO : ability to open PO/TO from the entire page too (just a response grid of them below a header)
-          router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
+          // router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
         },
         leftSide: {
           image: {
@@ -264,7 +262,7 @@ function useItemListRows(name: string): ListRow[] {
           }),
           subtitle,
         },
-        rightSide: { showChevron: true },
+        // rightSide: { showChevron: true },
       },
     ];
   });

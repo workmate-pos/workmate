@@ -104,7 +104,7 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
       </Stack>
 
       <Stack direction={'vertical'} paddingVertical={'ExtraLarge'}>
-        <Form disabled={createProductMutation.isPending}>
+        <Form disabled={createProductMutation.isPending || !router.isCurrent}>
           <ResponsiveGrid columns={2}>
             <FormStringField
               label={'Title'}

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "estimatedTimeMinutes": {
+      "anyOf": [{ "const": null }, { "type": "integer" }]
+    },
+    "deadline": {
+      "anyOf": [{ "const": null }, { "$ref": "scalars.json#/definitions/DateTime" }]
+    },
+    "done": {
+      "type": "boolean"
+    },
+    "staffMemberIds": {
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/ID"
+      }
+    },
+    "links": {
+      "type": "object",
+      "properties": {
+        "workOrders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "purchaseOrders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "specialOrders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "transferOrders": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "cycleCounts": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "serials": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["workOrders", "purchaseOrders", "specialOrders", "transferOrders", "cycleCounts", "serials"]
+    }
+  },
+  "required": ["name", "description", "estimatedTimeMinutes", "deadline", "done", "staffMemberIds", "links"],
+  "additionalProperties": false
+}

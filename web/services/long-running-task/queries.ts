@@ -1,6 +1,6 @@
 import { sql } from '../db/sql-tag.js';
 
-export async function getTask(name: string) {
+export async function getLongRunningTask(name: string) {
   const [task] = await sql<{
     id: number;
     name: string;
@@ -10,7 +10,7 @@ export async function getTask(name: string) {
     updatedAt: Date;
   }>`
     SELECT *
-    FROM "Task"
+    FROM "LongRunningTask"
     WHERE name = ${name};
   `;
 
@@ -21,7 +21,7 @@ export async function getTask(name: string) {
   return task;
 }
 
-export async function insertTask({
+export async function insertLongRunningTask({
   name,
   progress,
   progressMax,
@@ -31,12 +31,12 @@ export async function insertTask({
   progressMax?: number;
 }) {
   await sql`
-    INSERT INTO "Task" (name, progress, "progressMax")
+    INSERT INTO "LongRunningTask" (name, progress, "progressMax")
     VALUES (${name}, ${progress}, ${progressMax ?? null})
   `;
 }
 
-export async function updateTask({
+export async function updateLongRunningTask({
   name,
   progress,
   progressMax,
@@ -46,17 +46,17 @@ export async function updateTask({
   progressMax?: number;
 }) {
   await sql`
-    UPDATE "Task"
+    UPDATE "LongRunningTask"
     SET "progress"    = ${progress},
-        "progressMax" = ${progressMax!}
+        "progressMax" = ${progressMax ?? null}
     WHERE name = ${name};
   `;
 }
 
-export async function removeTask(name: string) {
+export async function removeLongRunningTask(name: string) {
   await sql`
     DELETE
-    FROM "Task"
+    FROM "LongRunningTask"
     WHERE name = ${name};
   `;
 }

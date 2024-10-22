@@ -1,0 +1,15 @@
+api_version = "2024-07"
+
+[[extensions]]
+type = "ui_extension"
+name = "your-schedule-pos"
+handle = "your-schedule-pos"
+description = "Your Schedule"
+
+[[extensions.targeting]]
+module = "./src/Tile.tsx"
+target = "pos.home.tile.render"
+
+[[extensions.targeting]]
+module = "./src/Modal.tsx"
+target = "pos.home.modal.render"

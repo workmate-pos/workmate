@@ -10,6 +10,7 @@ import { useRouter } from '../../routes.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { ListPopup } from '@work-orders/common-pos/screens/ListPopup.js';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 export type UnsourcedItemListSelectedItem = {
   uuid: UUID;
@@ -61,10 +62,10 @@ export function UnsourcedItemList({
     id: item.uuid,
     leftSide: {
       label: getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
-      subtitle: [
+      subtitle: getSubtitle([
         `${item.unsourcedQuantity} unsourced`,
         Number.isFinite(item.maxQuantity) ? `${item.maxQuantity} available` : '',
-      ] as const,
+      ]),
       image: {
         source:
           productVariantQueries[item.productVariantId]?.data?.image?.url ??

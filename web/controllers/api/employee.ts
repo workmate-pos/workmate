@@ -39,6 +39,7 @@ export default class EmployeeController {
     return res.json({
       employee: {
         ...employee,
+        staffMemberId: user.staffMember.id,
         rate: user.user.rate ?? settings.workOrders.charges.defaultHourlyRate,
         intercomUser: intercom.getUser(session.shop, user.staffMember.id),
       },
@@ -183,6 +184,7 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
     return {
       ...staffMember,
       ...employee,
+      staffMemberId: staffMember.id,
       rate,
       isDefaultRate,
       permissions,

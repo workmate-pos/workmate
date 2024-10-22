@@ -37,6 +37,10 @@
   },
   "author": "Tim van Dam",
   "dependencies": {
-    "@work-orders/common": "file:../../common"
+    "@work-orders/common": "file:../../common",
+    "humanize-duration": "^3.32.1"
+  },
+  "devDependencies": {
+    "@types/humanize-duration": "^3.27.4"
   }
 }

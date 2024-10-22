@@ -20,6 +20,7 @@ export const permissions = [
   'write_stock_transfers',
   'read_special_orders',
   'write_special_orders',
+  'manage_schedules',
 ] as const;
 
 export type Permission = (typeof permissions)[number];
@@ -47,6 +48,10 @@ export async function getMissingPermissionsForStaffMember(shop: string, staffMem
 
   if (!staffMember) {
     return permissions;
+  }
+
+  if (staffMember.superuser) {
+    return [];
   }
 
   return getMissingPermissionsForRoleUuid(shop, staffMember.role, permissions);

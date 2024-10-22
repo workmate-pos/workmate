@@ -87,8 +87,9 @@ export async function stickyClient<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 /**
- * Gets rid of a transactional context. Pretty dangerous but has some use cases.
+ * Gets rid of a transactional context.
+ * Useful for things that should never be rolled back, e.g. incrementing a counter.
  */
 export async function escapeTransaction<T>(fn: () => Promise<T>): Promise<T> {
-  return await asyncLocalStorage.run(undefined, fn);
+  return await asyncLocalStorage.exit(fn);
 }
