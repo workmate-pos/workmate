@@ -143,6 +143,7 @@ export async function upsertCreatePurchaseOrder(
 
     const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name, locationIds)) ?? never('We just made it');
 
+    // TODO: Do these upon receipt instead of here
     await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
     await adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
 
@@ -408,6 +409,7 @@ async function assertValidSpecialOrderLineItems(
         .map(lineItem => lineItem.quantity) ?? [],
     );
 
+    // TODO: Current PO order quantity for this SPO
     const usedQuantity = sum(lineItem.purchaseOrderLineItems.map(poli => poli.quantity));
 
     if (usedQuantity - existingUsedQuantity + createUsedQuantity > lineItem.quantity) {

@@ -33,7 +33,11 @@ import {
 } from './queries.js';
 import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
-import { getPurchaseOrdersByIds } from '../purchase-orders/queries.js';
+import {
+  getPurchaseOrderLineItemsByShopifyOrderLineItemIds,
+  getPurchaseOrderReceiptLineItemsByShopifyOrderLineItemIds,
+  getPurchaseOrdersByIds,
+} from '../purchase-orders/queries.js';
 import {
   getStockTransfersByIds,
   getTransferOrderLineItemsByShopifyOrderLineItemIds,
@@ -42,7 +46,6 @@ import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
 import { getSerial } from '../serials/queries.js';
-import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 export async function getDetailedWorkOrder(
   session: Session,
@@ -106,22 +109,27 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
 
   const lineItemIds = unique(items.map(item => item.shopifyOrderLineItemId).filter(isNonNullable));
 
-  const [lineItemById, lineItemReservations, transferOrderLineItems, specialOrderLineItems] = await Promise.all([
+  const [
+    lineItemById,
+    lineItemReservations,
+    transferOrderLineItems,
+    specialOrderLineItems,
+    purchaseOrderLineItems,
+    purchaseOrderReceiptLineItems,
+  ] = await Promise.all([
     getLineItemsById(lineItemIds),
     // TODO: Show reservations inside the work order
     // TODO: Show special orders inside the work order
     getShopifyOrderLineItemReservationsByIds(lineItemIds),
     getTransferOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
     getSpecialOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
+    getPurchaseOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
+    getPurchaseOrderReceiptLineItemsByShopifyOrderLineItemIds(lineItemIds),
   ]);
 
   const transferOrderIds = unique(transferOrderLineItems.map(lineItem => lineItem.stockTransferId));
   const specialOrderIds = unique(specialOrderLineItems.map(lineItem => lineItem.specialOrderId));
-  const purchaseOrderIds = unique(
-    specialOrderLineItems.flatMap(lineItem =>
-      lineItem.purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId),
-    ),
-  );
+  const purchaseOrderIds = unique(purchaseOrderLineItems.map(lineItem => lineItem.purchaseOrderId));
 
   const [transferOrders, specialOrders, purchaseOrders] = await Promise.all([
     getStockTransfersByIds(transferOrderIds),
@@ -147,6 +155,13 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
           .filter(hasPropertyValue('shopifyOrderLineItemId', item.shopifyOrderLineItemId))
           .filter(hasNonNullableProperty('specialOrderId'))
       : [];
+    const itemPurchaseOrderLineItems = item.shopifyOrderLineItemId
+      ? purchaseOrderLineItems.filter(
+          li =>
+            !!li.specialOrderLineItemId &&
+            itemSpecialOrderLineItems.some(hasPropertyValue('id', li.specialOrderLineItemId)),
+        )
+      : [];
 
     const itemTransferOrders = itemTransferOrderLineItems.map(
       poLineItem => transferOrderById[poLineItem.stockTransferId] ?? never('fk'),
@@ -154,8 +169,8 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
     const itemSpecialOrders = itemSpecialOrderLineItems.map(
       poLineItem => specialOrderById[poLineItem.specialOrderId] ?? never('fk'),
     );
-    const itemPurchaseOrders = itemSpecialOrderLineItems.flatMap(lineItem =>
-      lineItem.purchaseOrderLineItems.map(lineItem => purchaseOrderById[lineItem.purchaseOrderId] ?? never('fk')),
+    const itemPurchaseOrders = itemPurchaseOrderLineItems.map(
+      poLineItem => purchaseOrderById[poLineItem.purchaseOrderId] ?? never('fk'),
     );
 
     const base = {
@@ -167,9 +182,19 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
         : null,
       purchaseOrders: itemPurchaseOrders.map(po => ({
         name: po.name,
-        items: itemSpecialOrderLineItems
-          .flatMap(lineItem => lineItem.purchaseOrderLineItems)
-          .filter(hasPropertyValue('purchaseOrderId', po.id)),
+        items: itemPurchaseOrderLineItems.filter(hasPropertyValue('purchaseOrderId', po.id)).map(li => {
+          const availableQuantity = purchaseOrderReceiptLineItems
+            .filter(hasPropertyValue('purchaseOrderId', po.id))
+            .filter(hasPropertyValue('lineItemUuid', li.uuid))
+            .map(li => li.quantity)
+            .reduce((a, b) => a + b, 0);
+
+          return {
+            unitCost: li.unitCost,
+            quantity: li.quantity,
+            availableQuantity,
+          };
+        }),
       })),
       transferOrders: itemTransferOrders.map(to => ({
         name: to.name,
@@ -177,10 +202,18 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
       })),
       specialOrders: itemSpecialOrders.map(so => ({
         name: so.name,
-        items: itemSpecialOrderLineItems.filter(hasPropertyValue('specialOrderId', so.id)).map(lineItem => ({
-          quantity: lineItem.quantity,
-          orderedQuantity: sum(lineItem.purchaseOrderLineItems.map(lineItem => lineItem.quantity)),
-        })),
+        items: itemSpecialOrderLineItems.filter(hasPropertyValue('specialOrderId', so.id)).map(lineItem => {
+          const orderedQuantity = itemPurchaseOrderLineItems
+            .filter(hasPropertyValue('specialOrderLineItemId', lineItem.id))
+            .filter(hasPropertyValue('specialOrderLineItemId', lineItem.id))
+            .map(lineItem => lineItem.quantity)
+            .reduce((a, b) => a + b, 0);
+
+          return {
+            quantity: lineItem.quantity,
+            orderedQuantity,
+          };
+        }),
       })),
       reservations: itemReservations.map(({ quantity, locationId }) => ({ quantity, locationId })),
       customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),

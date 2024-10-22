@@ -1,7 +1,11 @@
 import { Session } from '@shopify/shopify-api';
 import { getSpecialOrder, getSpecialOrderLineItems, getSpecialOrdersPage } from './queries.js';
 import { getShopifyOrdersForSpecialOrder } from '../orders/queries.js';
-import { getPurchaseOrdersForSpecialOrder } from '../purchase-orders/queries.js';
+import {
+  getPurchaseOrderLineItemsForSpecialOrder,
+  getPurchaseOrderReceiptLineItemsForSpecialOrder,
+  getPurchaseOrdersForSpecialOrder,
+} from '../purchase-orders/queries.js';
 import { getWorkOrdersForSpecialOrder } from '../work-orders/queries.js';
 import { getCustomerForSpecialOrder } from '../customer/queries.js';
 import { getLocationForSpecialOrder } from '../locations/queries.js';
@@ -15,7 +19,6 @@ import {
 } from '../../schemas/generated/special-order-pagination-options.js';
 import { escapeLike } from '../db/like.js';
 import { pick } from '@teifi-digital/shopify-app-toolbox/object';
-import { sum } from '@teifi-digital/shopify-app-toolbox/array';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 export async function getDetailedSpecialOrder({ shop }: Session, name: string, locationIds: ID[] | null) {
@@ -25,24 +28,46 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string, l
     return null;
   }
 
-  const [shopifyOrders, purchaseOrders, workOrders, customer, location, lineItems] = await Promise.all([
+  const [
+    shopifyOrders,
+    purchaseOrders,
+    workOrders,
+    customer,
+    location,
+    specialOrderLineItems,
+    purchaseOrderLineItems,
+    purchaseOrderReceiptLineItems,
+  ] = await Promise.all([
     getShopifyOrdersForSpecialOrder(specialOrder.id),
     getPurchaseOrdersForSpecialOrder(specialOrder.id),
     getWorkOrdersForSpecialOrder(specialOrder.id),
     getCustomerForSpecialOrder(specialOrder.id),
     getLocationForSpecialOrder(specialOrder.id),
     getSpecialOrderLineItems(specialOrder.id),
+    getPurchaseOrderLineItemsForSpecialOrder(specialOrder.id),
+    getPurchaseOrderReceiptLineItemsForSpecialOrder(specialOrder.id),
   ]);
 
-  const purchaseOrderState: PurchaseOrderState = !lineItems
-    .flatMap(lineItem => lineItem.purchaseOrderLineItems)
-    .some(lineItem => lineItem.availableQuantity < lineItem.quantity)
+  const purchaseOrderState: PurchaseOrderState = purchaseOrderLineItems.every(li => {
+    const receivedQuantity = purchaseOrderReceiptLineItems
+      .filter(hasPropertyValue('purchaseOrderId', li.purchaseOrderId))
+      .filter(hasPropertyValue('lineItemUuid', li.uuid))
+      .map(li => li.quantity)
+      .reduce((a, b) => a + b, 0);
+
+    return receivedQuantity >= li.quantity;
+  })
     ? 'all-received'
     : 'not-all-received';
 
-  const orderState: OrderState = lineItems.every(
-    lineItem => lineItem.quantity <= sum(lineItem.purchaseOrderLineItems.map(lineItem => lineItem.quantity)),
-  )
+  const orderState: OrderState = specialOrderLineItems.every(li => {
+    const orderedQuantity = purchaseOrderLineItems
+      .filter(hasPropertyValue('specialOrderLineItemId', li.id))
+      .map(li => li.quantity)
+      .reduce((a, b) => a + b, 0);
+
+    return orderedQuantity >= li.quantity;
+  })
     ? 'fully-ordered'
     : 'not-fully-ordered';
 
@@ -70,22 +95,22 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string, l
       type: order.orderType,
     })),
     purchaseOrders: purchaseOrders.map(po => {
-      const purchaseOrderLineItems = lineItems
-        .flatMap(lineItem => lineItem.purchaseOrderLineItems)
-        .filter(hasPropertyValue('purchaseOrderId', po.id));
+      const lineItems = purchaseOrderLineItems.filter(hasPropertyValue('purchaseOrderId', po.id));
 
-      const purchaseOrderQuantity = sum(purchaseOrderLineItems.map(lineItem => lineItem.quantity));
-      const purchaseOrderAvailableQuantity = sum(purchaseOrderLineItems.map(lineItem => lineItem.availableQuantity));
+      const orderedQuantity = lineItems.reduce((acc, lineItem) => acc + lineItem.quantity, 0);
+      const availableQuantity = purchaseOrderReceiptLineItems
+        .filter(hasPropertyValue('purchaseOrderId', po.id))
+        .reduce((acc, lineItem) => acc + lineItem.quantity, 0);
 
       return {
         name: po.name,
         status: po.status,
         vendorName: po.vendorName,
-        quantity: purchaseOrderQuantity,
-        availableQuantity: purchaseOrderAvailableQuantity,
+        orderedQuantity,
+        availableQuantity,
       };
     }),
-    lineItems: lineItems.map(lineItem => ({
+    lineItems: specialOrderLineItems.map(lineItem => ({
       uuid: lineItem.uuid,
       quantity: lineItem.quantity,
       productVariantId: lineItem.productVariantId,
@@ -99,11 +124,17 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string, l
               quantity: lineItem.shopifyOrderLineItem.shopifyOrderLineItemQuantity,
             }
           : null,
-      purchaseOrderLineItems: lineItem.purchaseOrderLineItems.map(lineItem => ({
-        purchaseOrderName: purchaseOrders.find(hasPropertyValue('id', lineItem.purchaseOrderId))?.name ?? never(),
-        quantity: lineItem.quantity,
-        availableQuantity: lineItem.availableQuantity,
-      })),
+      purchaseOrderLineItems: purchaseOrderLineItems
+        .filter(hasPropertyValue('specialOrderLineItemId', lineItem.id))
+        .map(lineItem => ({
+          purchaseOrderName: purchaseOrders.find(hasPropertyValue('id', lineItem.purchaseOrderId))?.name ?? never(),
+          quantity: lineItem.quantity,
+          availableQuantity: purchaseOrderReceiptLineItems
+            .filter(hasPropertyValue('purchaseOrderId', lineItem.purchaseOrderId))
+            .filter(hasPropertyValue('lineItemUuid', lineItem.uuid))
+            .map(li => li.quantity)
+            .reduce((a, b) => a + b, 0),
+        })),
     })),
   };
 }
