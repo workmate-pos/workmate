@@ -24,7 +24,7 @@ export function WelcomeSection({}: {}) {
           <Text variant="bodyMd" as={'p'}>
             Frequently asked questions can be found{' '}
             <Link
-              url="https://docs.google.com/document/d/1QHo_-8kUdccklh8wuc0iY5TTclw6UK5MqaUnWFQIYMI/edit?usp=sharing"
+              url="https://workmate.gitbook.io/workmate-knowledge-base/frequently-asked-questions/faq"
               target="_blank"
             >
               here
@@ -42,19 +42,21 @@ export function WelcomeSection({}: {}) {
             Demo Video
           </Text>
 
-          <iframe
-            width="560"
-            height="315"
-            src="https://www.youtube.com/embed/hCvzMtb0MxE?si=uivVnLXOg9zUtKsl"
-            title="YouTube video player"
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerPolicy="strict-origin-when-cross-origin"
-            allowFullScreen
-          />
+          <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+            <iframe
+              src="https://www.loom.com/embed/eaa1d1ed1b604436863ba38316cb327a?sid=75344420-004f-4924-bab3-1f9f5bcdef15"
+              frameBorder="0"
+              allowFullScreen
+              style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            ></iframe>
+          </div>
 
           <Text variant="bodyMd" as={'p'} tone={'subdued'}>
-            <Link monochrome url="https://www.youtube.com/watch?v=hCvzMtb0MxE" target="_blank">
+            <Link
+              monochrome
+              url="https://www.loom.com/share/eaa1d1ed1b604436863ba38316cb327a?sid=b3ab7af8-67cc-406c-88a2-bc206899d50c"
+              target="_blank"
+            >
               Video not loading?
             </Link>
           </Text>
