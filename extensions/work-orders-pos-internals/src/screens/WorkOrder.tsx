@@ -678,6 +678,7 @@ function WorkOrderCustomFields({
         title={'Custom fields'}
         onPress={() =>
           router.push('CustomFieldConfig', {
+            title: 'Work order custom fields',
             initialCustomFields: createWorkOrder.customFields,
             onSave: customFields => dispatch.setPartial({ customFields }),
             type: 'WORK_ORDER',

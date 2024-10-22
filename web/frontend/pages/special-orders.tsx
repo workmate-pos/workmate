@@ -260,7 +260,7 @@ function SpecialOrders() {
               heading={'Special orders'}
               image={emptyState}
               action={{
-                content: 'Create special orders through Work Orders',
+                content: 'Create special orders through work orders',
                 onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/work-orders'),
               }}
             >
