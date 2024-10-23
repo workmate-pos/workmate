@@ -17,8 +17,9 @@ export type UnsourcedItemListSelectedItem = {
   shopifyOrderLineItem: { id: ID; orderId: ID };
   productVariantId: ID;
   unsourcedQuantity: number;
+
   quantity: number;
-  availableQuantity: number;
+  maxQuantity: number;
 };
 
 export type UnsourcedItemListProps = {
@@ -63,7 +64,7 @@ export function UnsourcedItemList({
       label: getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
       subtitle: getSubtitle([
         `${item.unsourcedQuantity} unsourced`,
-        Number.isFinite(item.availableQuantity) ? `${item.availableQuantity} available` : '',
+        Number.isFinite(item.maxQuantity) ? `${item.maxQuantity} available` : '',
       ]),
       image: {
         source:
@@ -113,7 +114,7 @@ export function UnsourcedItemList({
                       id: item.uuid,
                       quantity: item.quantity,
                       min: 1,
-                      max: Math.min(item.unsourcedQuantity, item.availableQuantity),
+                      max: Math.min(item.unsourcedQuantity, item.maxQuantity),
                       name:
                         getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
                     })),
