@@ -2,20 +2,7 @@ import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { usePurchaseOrderPrintJobMutation } from '@work-orders/common/queries/use-purchase-order-print-job-mutation.js';
-import {
-  BlockStack,
-  Box,
-  FormLayout,
-  InlineStack,
-  Modal,
-  ResourceItem,
-  ResourceList,
-  Select,
-  Spinner,
-  Tabs,
-  Text,
-  TextField,
-} from '@shopify/polaris';
+import { Box, FormLayout, Modal, Select, Tabs, TextField } from '@shopify/polaris';
 import { useWorkOrderPrintJobMutation } from '@work-orders/common/queries/use-work-order-print-job-mutation.js';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
@@ -293,12 +280,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
             return;
           }
 
-          if (!settingsQuery.data?.settings) {
-            setToastAction({ content: 'Settings not loaded' });
-            return;
-          }
-
-          if (!settingsQuery.data.settings.printing.global.defaultEmail) {
+          if (!email) {
             setToastAction({ content: 'Print email is not configured' });
             return;
           }
