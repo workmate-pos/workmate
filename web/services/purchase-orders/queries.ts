@@ -537,7 +537,11 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
   return purchaseOrders.map(mapPurchaseOrder);
 }
 
-export async function getPurchaseOrderLineItemsForSpecialOrder(specialOrderId: number) {
+export async function getPurchaseOrderLineItemsForSpecialOrders(specialOrderIds: number[]) {
+  if (specialOrderIds.length === 0) {
+    return [];
+  }
+
   const lineItems = await sql<{
     purchaseOrderId: number;
     productVariantId: string;
@@ -552,7 +556,7 @@ export async function getPurchaseOrderLineItemsForSpecialOrder(specialOrderId: n
     SELECT poli.*
     FROM "PurchaseOrderLineItem" poli
            INNER JOIN "SpecialOrderLineItem" soli ON poli."specialOrderLineItemId" = soli.id
-    WHERE soli."specialOrderId" = ${specialOrderId};
+    WHERE soli."specialOrderId" = ANY (${specialOrderIds} :: int[]);
   `;
 
   return lineItems.map(mapPurchaseOrderLineItem);
@@ -777,7 +781,8 @@ export async function getPurchaseOrderReceipts(purchaseOrderId: number) {
   }>`
     SELECT *
     FROM "PurchaseOrderReceipt"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};
+    WHERE "purchaseOrderId" = ${purchaseOrderId}
+    ORDER BY "createdAt";
   `;
 
   return receipts;

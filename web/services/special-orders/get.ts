@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { getSpecialOrder, getSpecialOrderLineItems, getSpecialOrdersPage } from './queries.js';
 import { getShopifyOrdersForSpecialOrder } from '../orders/queries.js';
 import {
-  getPurchaseOrderLineItemsForSpecialOrder,
+  getPurchaseOrderLineItemsForSpecialOrders,
   getPurchaseOrderReceiptLineItemsForSpecialOrder,
   getPurchaseOrdersForSpecialOrder,
 } from '../purchase-orders/queries.js';
@@ -44,7 +44,7 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string, l
     getCustomerForSpecialOrder(specialOrder.id),
     getLocationForSpecialOrder(specialOrder.id),
     getSpecialOrderLineItems(specialOrder.id),
-    getPurchaseOrderLineItemsForSpecialOrder(specialOrder.id),
+    getPurchaseOrderLineItemsForSpecialOrders([specialOrder.id]),
     getPurchaseOrderReceiptLineItemsForSpecialOrder(specialOrder.id),
   ]);
 

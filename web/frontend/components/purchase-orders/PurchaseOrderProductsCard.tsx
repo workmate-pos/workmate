@@ -34,25 +34,13 @@ export function PurchaseOrderProductsCard({
   dispatch,
   disabled,
   onAddProductClick,
-  onMarkAllAsReceivedClick,
-  onMarkAllAsNotReceivedClick,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
   purchaseOrder: DetailedPurchaseOrder | null;
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
   onAddProductClick: () => void;
-  onMarkAllAsReceivedClick: () => void;
-  onMarkAllAsNotReceivedClick: () => void;
 }) {
-  const noLineItems = createPurchaseOrder.lineItems.length === 0;
-  const allAreReceived = createPurchaseOrder.lineItems.every(li => li.availableQuantity === li.quantity);
-  const noneAreReceived = createPurchaseOrder.lineItems.every(li => {
-    const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', li.uuid));
-    const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-    return li.availableQuantity === minimumAvailableQuantity;
-  });
-
   return (
     <Card>
       <BlockStack gap={'400'}>
@@ -69,19 +57,6 @@ export function PurchaseOrderProductsCard({
           <Button onClick={() => onAddProductClick()} disabled={disabled}>
             Add product
           </Button>
-          {noLineItems || allAreReceived ? (
-            <Button
-              onClick={() => onMarkAllAsNotReceivedClick()}
-              disabled={disabled || noLineItems || noneAreReceived}
-              tone={'critical'}
-            >
-              Mark all as not received
-            </Button>
-          ) : (
-            <Button onClick={() => onMarkAllAsReceivedClick()} disabled={disabled || noLineItems || allAreReceived}>
-              Mark all as received
-            </Button>
-          )}
         </ButtonGroup>
       </BlockStack>
     </Card>
@@ -132,20 +107,22 @@ function ProductsList({
           const name = getProductVariantName(productVariant) ?? 'Unknown product';
           const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
 
-          let quantityBadgeTone: Tone | undefined;
+          const availableQuantity =
+            purchaseOrder?.receipts
+              .flatMap(receipt => receipt.lineItems)
+              .filter(hasPropertyValue('uuid', item.uuid))
+              .map(lineItem => lineItem.quantity)
+              .reduce((a, b) => a + b, 0) ?? 0;
 
-          if (item.availableQuantity >= item.quantity) {
-            quantityBadgeTone = 'success';
-          } else {
-            quantityBadgeTone = 'warning';
-          }
+          const quantityBadgeTone: Tone | undefined = disabled
+            ? undefined
+            : availableQuantity >= item.quantity
+              ? 'success'
+              : undefined;
 
-          if (disabled) {
-            quantityBadgeTone = undefined;
-          }
-
-          const canRemove =
-            purchaseOrder?.lineItems.some(li => li.uuid === item.uuid && item.availableQuantity === 0) ?? true;
+          const canRemove = !purchaseOrder?.receipts
+            .flatMap(receipt => receipt.lineItems)
+            .some(hasPropertyValue('uuid', item.uuid));
 
           return (
             <ResourceItem
@@ -169,7 +146,7 @@ function ProductsList({
                   <InlineStack align={'space-between'} blockAlign={'center'}>
                     <InlineStack gap={'400'}>
                       <Badge tone={quantityBadgeTone}>
-                        {`${item.availableQuantity.toString()} / ${item.quantity.toString()}`}
+                        {`${availableQuantity.toString()} / ${item.quantity.toString()}`}
                       </Badge>
                       {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
                     </InlineStack>

@@ -205,7 +205,6 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
         items: itemSpecialOrderLineItems.filter(hasPropertyValue('specialOrderId', so.id)).map(lineItem => {
           const orderedQuantity = itemPurchaseOrderLineItems
             .filter(hasPropertyValue('specialOrderLineItemId', lineItem.id))
-            .filter(hasPropertyValue('specialOrderLineItemId', lineItem.id))
             .map(lineItem => lineItem.quantity)
             .reduce((a, b) => a + b, 0);
 

@@ -138,14 +138,6 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
     ),
   );
 
-  const noLineItems = createPurchaseOrder.lineItems.length === 0;
-  const allAreReceived = createPurchaseOrder.lineItems.every(li => li.availableQuantity === li.quantity);
-  const noneAreReceived = createPurchaseOrder.lineItems.every(li => {
-    const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', li.uuid));
-    const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-    return li.availableQuantity === minimumAvailableQuantity;
-  });
-
   useEffect(() => {
     screen.setTitle(createPurchaseOrder.name ?? 'New purchase order');
   }, [createPurchaseOrder]);
@@ -331,33 +323,6 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
             <ResponsiveGrid columns={1}>
               <FormButton title={'Add product'} type={'primary'} onPress={addProductPrerequisitesDialog.show} />
 
-              {noLineItems || allAreReceived ? (
-                <FormButton
-                  title={'Mark all as not received'}
-                  type={'destructive'}
-                  disabled={noLineItems || noneAreReceived}
-                  onPress={() => {
-                    for (const product of createPurchaseOrder.lineItems) {
-                      const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
-                      const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-                      dispatch.updateProduct({
-                        product: { ...product, availableQuantity: minimumAvailableQuantity as Int },
-                      });
-                    }
-                  }}
-                />
-              ) : (
-                <FormButton
-                  title={'Mark all as received'}
-                  disabled={noLineItems || allAreReceived}
-                  onPress={() => {
-                    for (const product of createPurchaseOrder.lineItems) {
-                      dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
-                    }
-                  }}
-                />
-              )}
-
               <ControlledSearchBar placeholder={'Search products'} onTextChange={setQuery} onSearch={() => {}} />
               <List data={productRows} isLoadingMore={false} onEndReached={() => {}} imageDisplayStrategy={'always'} />
               {productRows.length === 0 ? (
@@ -513,7 +478,12 @@ function useProductRows(
 
     const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', product.uuid));
 
-    product.specialOrderLineItem?.name;
+    const receivedQuantity =
+      purchaseOrder?.receipts
+        .flatMap(receipt => receipt.lineItems)
+        .filter(hasPropertyValue('uuid', product.uuid))
+        .map(li => li.quantity)
+        .reduce((a, b) => a + b, 0) ?? 0;
 
     return {
       id: String(i),
@@ -538,7 +508,7 @@ function useProductRows(
           source: imageUrl,
           badge: product.quantity,
         },
-        subtitle: getSubtitle([product.serialNumber, `${product.availableQuantity} received`]),
+        subtitle: getSubtitle([product.serialNumber, `${receivedQuantity} received`]),
         badges: [
           product.specialOrderLineItem
             ? getSpecialOrderBadge({ name: product.specialOrderLineItem.name, items: [] }, false)

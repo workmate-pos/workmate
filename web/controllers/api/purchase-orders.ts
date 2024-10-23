@@ -26,6 +26,8 @@ import {
 } from '../../services/purchase-orders/csv-import.js';
 import * as Sentry from '@sentry/node';
 import { z } from 'zod';
+import { UpsertPurchaseOrderReceipt } from '../../schemas/generated/upsert-purchase-order-receipt.js';
+import { upsertReceipt } from '../../services/purchase-orders/receipt.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -46,6 +48,28 @@ export default class PurchaseOrdersController {
     );
 
     return res.json({ purchaseOrder });
+  }
+
+  @Post('/:name/receipts')
+  @Permission('write_purchase_orders')
+  @BodySchema('upsert-purchase-order-receipt')
+  @Authenticated()
+  async createPurchaseOrderReceipt(
+    req: Request<{ name: string }, unknown, UpsertPurchaseOrderReceipt>,
+    res: Response<UpsertPurchaseOrderReceiptResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { name } = req.params;
+    const receipt = req.body;
+
+    await upsertReceipt(session, name, receipt, user.user.allowedLocationIds);
+
+    return res.json({
+      purchaseOrder:
+        (await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds)) ??
+        never('upsertReceipt would have thrown if not this doesnt exist'),
+    });
   }
 
   @Get('/:name')
@@ -184,3 +208,7 @@ export type FetchPurchaseOrderResponse = {
 };
 
 export type PrintPurchaseOrderResponse = { success: true };
+
+export type UpsertPurchaseOrderReceiptResponse = {
+  purchaseOrder: DetailedPurchaseOrder;
+};

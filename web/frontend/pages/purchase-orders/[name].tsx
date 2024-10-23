@@ -49,8 +49,13 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
-import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { LinkedTasks, NewLinkedTaskButton, BaseNewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import {
+  BaseNewPurchaseOrderReceiptButton,
+  NewPurchaseOrderReceiptButton,
+  PurchaseOrderReceipts,
+} from '@web/frontend/components/purchase-orders/PurchaseOrderReceipts.js';
 
 export default function () {
   return (
@@ -301,37 +306,38 @@ function PurchaseOrder({
 
                 setIsAddProductModalOpen(true);
               }}
-              onMarkAllAsNotReceivedClick={() => {
-                for (const product of createPurchaseOrder.lineItems) {
-                  const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
-                  const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-                  dispatch.updateProduct({
-                    product: {
-                      ...product,
-                      availableQuantity: minimumAvailableQuantity as Int,
-                    },
-                  });
-                }
-              }}
-              onMarkAllAsReceivedClick={() => {
-                for (const product of createPurchaseOrder.lineItems) {
-                  dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
-                }
-              }}
             />
           </Layout.Section>
 
-          <Layout.Section variant="oneThird">
+          <Layout.Section variant="oneHalf">
+            <Card>
+              <PurchaseOrderReceipts
+                disabled={purchaseOrderMutation.isPending || hasUnsavedChanges || !createPurchaseOrder.name}
+                name={createPurchaseOrder.name}
+                action={
+                  !!createPurchaseOrder.name && !hasUnsavedChanges ? (
+                    <NewPurchaseOrderReceiptButton name={createPurchaseOrder.name} disabled={hasUnsavedChanges} />
+                  ) : (
+                    <Tooltip content="You must save your purchase order before you can add receipts.">
+                      <BaseNewPurchaseOrderReceiptButton disabled />
+                    </Tooltip>
+                  )
+                }
+              />
+            </Card>
+          </Layout.Section>
+
+          <Layout.Section variant="oneHalf">
             <Card>
               <LinkedTasks
                 links={{ purchaseOrders: [createPurchaseOrder.name].filter(isNonNullable) }}
-                disabled={purchaseOrderMutation.isPending}
+                disabled={purchaseOrderMutation.isPending || !createPurchaseOrder.name}
                 action={
                   !!createPurchaseOrder.name ? (
                     <NewLinkedTaskButton links={{ purchaseOrders: [createPurchaseOrder.name] }} />
                   ) : (
                     <Tooltip content={'You must save your purchase order before you can create tasks'}>
-                      <NewTaskButton disabled />
+                      <BaseNewTaskButton disabled />
                     </Tooltip>
                   )
                 }

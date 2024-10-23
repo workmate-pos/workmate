@@ -77,9 +77,9 @@ ALTER TABLE "PurchaseOrderLineItem"
 CREATE TRIGGER "PurchaseOrderReceipt_updatedAt"
   BEFORE UPDATE ON "PurchaseOrderReceipt"
   FOR EACH ROW
-  EXECUTE PROCEDURE "setCurrentTimestamp"();
+  EXECUTE PROCEDURE updated_at();
 
 CREATE TRIGGER "PurchaseOrderReceiptLineItem_updatedAt"
   BEFORE UPDATE ON "PurchaseOrderReceiptLineItem"
   FOR EACH ROW
-  EXECUTE PROCEDURE "setCurrentTimestamp"();
+  EXECUTE PROCEDURE updated_at();

@@ -22,7 +22,9 @@ import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/
 import { SelectCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SelectCustomFieldPresetModal.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
+// TODO: Show receipts
 export function PurchaseOrderLineItemModal({
   initialProduct,
   purchaseOrder,
@@ -74,7 +76,14 @@ export function PurchaseOrderLineItemModal({
 
   const isLoading = inventoryItemQuery.isLoading || locationQuery.isLoading;
 
-  const isImmutable = savedProduct && savedProduct.availableQuantity > 0;
+  const availableQuantity =
+    purchaseOrder?.receipts
+      .flatMap(receipt => receipt.lineItems)
+      .filter(hasPropertyValue('uuid', product.uuid))
+      .map(li => li.quantity)
+      .reduce((a, b) => a + b, 0) ?? 0;
+
+  const isImmutable = savedProduct && availableQuantity > 0;
 
   // TODO: TO/SO info (just like pos)
 
@@ -157,16 +166,6 @@ export function PurchaseOrderLineItemModal({
               onChange={value => setProduct(product => ({ ...product, quantity: Number(value) as Int }))}
               helpText={'The quantity that has been ordered'}
               min={isImmutable ? savedProduct.quantity : 1}
-              requiredIndicator
-            />
-            <IntegerField
-              label={'Available quantity'}
-              autoComplete={'off'}
-              value={product.availableQuantity.toString()}
-              onChange={value => setProduct(product => ({ ...product, availableQuantity: Number(value) as Int }))}
-              min={savedProduct ? savedProduct.availableQuantity : 0}
-              max={product.quantity}
-              helpText={'The quantity that has been delivered'}
               requiredIndicator
             />
           </BlockStack>
