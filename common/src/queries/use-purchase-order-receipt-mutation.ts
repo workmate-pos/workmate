@@ -24,12 +24,12 @@ export const usePurchaseOrderReceiptMutation = ({ fetch }: { fetch: Fetch }) => 
       return res.purchaseOrder;
     },
     async onSuccess(purchaseOrder) {
+      await queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
+
       queryClient.setQueryData(
         ['purchase-order', purchaseOrder.name],
         purchaseOrder satisfies UseQueryData<typeof usePurchaseOrderQuery>,
       );
-
-      await queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
     },
   });
 };

@@ -45,6 +45,11 @@ import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer
 import { getSpecialOrderBadge } from '../util/badges.js';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
+import {
+  BaseNewPurchaseOrderReceiptButton,
+  NewPurchaseOrderReceiptButton,
+  PurchaseOrderReceipts,
+} from '../components/purchase-orders/PurchaseOrderReceipts.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -370,6 +375,18 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               <FormMoneyField label={'Balance due'} value={balanceDue.toMoney()} disabled />
             </ResponsiveGrid>
           </ResponsiveGrid>
+
+          <PurchaseOrderReceipts
+            name={createPurchaseOrder.name}
+            disabled={purchaseOrderMutation.isPending}
+            action={
+              !!createPurchaseOrder.name && !hasUnsavedChanges ? (
+                <NewPurchaseOrderReceiptButton name={createPurchaseOrder.name} disabled={hasUnsavedChanges} />
+              ) : (
+                <BaseNewPurchaseOrderReceiptButton isDisabled />
+              )
+            }
+          />
 
           <LinkedTasks
             links={{ purchaseOrders: [createPurchaseOrder.name].filter(isNonNullable) }}

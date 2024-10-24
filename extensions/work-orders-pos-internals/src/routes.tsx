@@ -66,7 +66,7 @@ import { QuantityAdjustmentList } from './screens/popups/QuantityAdjustmentList.
 import { UnsourcedItemList } from './screens/popups/UnsourcedItemList.js';
 import { SelectPurchaseOrderProductsToTransfer } from './screens/popups/SelectPurchaseOrderProductsToTransfer.js';
 import { CreateSpecialOrderList } from './screens/popups/CreateSpecialOrderList.js';
-import { CreatePurchaseOrderSpecialOrderSelector } from './screens/purchase-order/CreatePurchaseOrderSpecialOrderSelector.js';
+import { CreatePurchaseOrderSpecialOrderSelector } from './screens/purchase-orders/CreatePurchaseOrderSpecialOrderSelector.js';
 import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
 import {
   CompanyLocationSelector,
@@ -104,8 +104,8 @@ import {
   ProductVariantSelector,
   ProductVariantSelectorProps,
 } from '@work-orders/common-pos/screens/selector/ProductVariantSelector.js';
-import { WorkOrderLoader } from './screens/work-order/WorkOrderLoader.js';
-import { PurchaseOrderLoader } from './screens/purchase-order/PurchaseOrderLoader.js';
+import { WorkOrderLoader } from './screens/work-orders/WorkOrderLoader.js';
+import { PurchaseOrderLoader } from './screens/purchase-orders/PurchaseOrderLoader.js';
 import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
 import { Scanner } from './screens/smart-scanner/Scanner.js';
 import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
@@ -114,6 +114,7 @@ import { TaskInfo, TaskInfoProps } from '@work-orders/common-pos/screens/tasks/T
 import { YourSchedule } from './screens/schedule/YourSchedule.js';
 import { EventInfo, EventInfoProps } from '@work-orders/common-pos/screens/events/EventInfo.js';
 import { Permission } from '@web/services/permissions/permissions.js';
+import { PurchaseOrderReceipt } from './screens/purchase-orders/PurchaseOrderReceipt.js';
 
 const requiredPermissions: Permission[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -485,5 +486,10 @@ export const { Router, useRouter } = createRouter({
   YourSchedule: {
     title: 'Your Schedule',
     Component: YourSchedule,
+  },
+
+  PurchaseOrderReceipt: {
+    title: 'Purchase order receipt',
+    Component: PurchaseOrderReceipt,
   },
 });

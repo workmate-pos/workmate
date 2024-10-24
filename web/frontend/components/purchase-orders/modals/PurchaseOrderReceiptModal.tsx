@@ -21,11 +21,10 @@ import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-
 import { useEffect, useState } from 'react';
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { UUID } from '@work-orders/common/util/uuid.js';
 
 type PurchaseOrderReceipt = DetailedPurchaseOrder['receipts'][number];
 
@@ -136,10 +135,10 @@ export function PurchaseOrderReceiptModal({
         title={'Purchase Order Receipt'}
         open={open}
         onClose={onClose}
-        loading={purchaseOrderQuery.isPending}
+        loading={purchaseOrderQuery.isLoading}
         primaryAction={{
           content: 'Save',
-          disabled: !receiptName || !lineItems.length || !purchaseOrderQuery.isSuccess,
+          disabled: !receiptName || !lineItems.filter(li => li.quantity > 0).length || !purchaseOrderQuery.isSuccess,
           loading: purchaseOrderReceiptMutation.isPending,
           onAction: () =>
             purchaseOrderReceiptMutation.mutate(
@@ -213,9 +212,7 @@ export function PurchaseOrderReceiptModal({
                   const maxQuantity = Math.max(0, quantity - availableQuantity);
 
                   const saveLineItemQuantity = (quantity: number) => {
-                    setLineItems(current =>
-                      [...current.filter(x => x.uuid !== uuid), { uuid, quantity }].filter(isNonNullable),
-                    );
+                    setLineItems(current => [...current.filter(x => x.uuid !== uuid), { uuid, quantity }]);
                   };
 
                   return (

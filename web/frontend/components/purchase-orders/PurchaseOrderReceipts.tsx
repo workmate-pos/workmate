@@ -24,7 +24,7 @@ export function PurchaseOrderReceipts({
 
   return (
     <BlockStack gap={'400'}>
-      <InlineStack align={'space-between'}>
+      <InlineStack gap={'200'} align={'space-between'}>
         <Text as={'h2'} variant={'headingMd'} fontWeight={'bold'}>
           Receipts
         </Text>
@@ -66,7 +66,7 @@ export function PurchaseOrderReceipts({
 export function BaseNewPurchaseOrderReceiptButton(props: Omit<ButtonProps, 'variant' | 'icon'>) {
   return (
     <Button icon={PlusMinor} variant={'plain'} {...props}>
-      New Receipt
+      New receipt
     </Button>
   );
 }
