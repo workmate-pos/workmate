@@ -9,6 +9,8 @@ import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-ca
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useToast } from '@teifi-digital/shopify-app-react';
+import { useState } from 'react';
+import { WorkOrderSourcingModal } from '@web/frontend/components/work-orders/modals/WorkOrderSourcingModal.js';
 
 export function WorkOrderSummary({
   createWorkOrder,
@@ -43,6 +45,7 @@ export function WorkOrderSummary({
   }
 
   const canPrint = createWorkOrder.name && !hasUnsavedChanges;
+  const [isSourcingModalOpen, setIsSourcingModalOpen] = useState(false);
 
   return (
     <>
@@ -160,6 +163,10 @@ export function WorkOrderSummary({
         </InlineGrid>
 
         <ButtonGroup fullWidth>
+          <Button disabled={!createWorkOrder.name || hasUnsavedChanges} onClick={() => setIsSourcingModalOpen(true)}>
+            Sourcing
+          </Button>
+
           <Tooltip content={canPrint ? '' : 'You must save your work order before you can print'} dismissOnMouseOut>
             <Button disabled={disabled || !canPrint} onClick={() => onPrint()}>
               Print
@@ -181,6 +188,14 @@ export function WorkOrderSummary({
           </Button>
         </ButtonGroup>
       </BlockStack>
+
+      {createWorkOrder.name && (
+        <WorkOrderSourcingModal
+          open={isSourcingModalOpen}
+          onClose={() => setIsSourcingModalOpen(false)}
+          name={createWorkOrder.name}
+        />
+      )}
 
       {toast}
     </>

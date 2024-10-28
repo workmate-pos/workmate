@@ -28,9 +28,11 @@ export type CustomFieldConfigProps = {
     ListPopup: Route<ListPopupProps>;
   }>;
   type: CustomFieldsPresetType;
+  // TODO: Undo this perhaps - doesnt match shopify so ask brian why he wants this
+  title: `${'Work order' | 'Purchase order' | 'Product' | 'Service'} custom fields`;
 };
 
-export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type }: CustomFieldConfigProps) {
+export function CustomFieldConfig({ title, initialCustomFields, onSave, useRouter, type }: CustomFieldConfigProps) {
   const [customFields, setCustomFields] = useState<Record<string, string>>({ ...initialCustomFields });
   const hasUnsavedChanges = JSON.stringify(customFields) !== JSON.stringify(initialCustomFields);
 
@@ -73,7 +75,7 @@ export function CustomFieldConfig({ initialCustomFields, onSave, useRouter, type
     <ScrollView>
       <ResponsiveGrid columns={2}>
         <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center' }} paddingVertical={'ExtraLarge'}>
-          <Text variant="headingLarge">Custom Fields</Text>
+          <Text variant="headingLarge">{title}</Text>
         </ResponsiveStack>
 
         <Button

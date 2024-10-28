@@ -173,7 +173,7 @@ export function PurchaseOrderLineItemModal({
 
         <Modal.Section>
           <CustomFieldsList
-            kind="line-item"
+            kind="product"
             customFields={product.customFields}
             onPresetsClick={() => setIsCustomFieldPresetsModalOpen(true)}
             onAddCustomFieldClick={() => setIsNewCustomFieldModalOpen(true)}

@@ -12,7 +12,7 @@ export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) 
   const screen = useScreen();
   screen.setTitle(title);
 
-  const hasUnsourcedItems = getUnsourcedWorkOrderItems(workOrder).length > 0;
+  const hasUnsourcedItems = getUnsourcedWorkOrderItems(workOrder, { includeAvailable: true }).length > 0;
 
   return (
     <ScrollView>

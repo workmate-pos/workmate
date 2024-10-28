@@ -45,7 +45,7 @@ export function LabourSettings({
         }
       />
       <BlockStack>
-        <Text as={'p'}>Enabled Labour Options</Text>
+        <Text as={'p'}>Enabled labour options</Text>
         <Checkbox
           label={'Employee assignments'}
           checked={settings.workOrders.charges.allowEmployeeAssignments}

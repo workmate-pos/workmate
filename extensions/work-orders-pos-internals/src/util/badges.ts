@@ -198,7 +198,7 @@ export function getReservationBadge(
 ): BadgeProps {
   const { quantity } = reservation;
 
-  let text = 'Layaway';
+  let text = 'Reserved';
 
   if (includeQuantity) {
     text = `${text} • ${quantity}`;
@@ -228,11 +228,18 @@ export function getWorkOrderItemSourcingBadges(
     includeStatusBadge?: boolean;
   },
 ): BadgeProps[] {
-  const totalSourced = getWorkOrderItemSourcedCount(item);
+  const totalSourced = getWorkOrderItemSourcedCount(item, { includeAvailable: true });
+  const totalSourcedExcludingAvailable = getWorkOrderItemSourcedCount(item, { includeAvailable: false });
 
   const sourcedAllItemsBadge: BadgeProps | undefined =
     options?.includeStatusBadge && totalSourced >= item.quantity
-      ? { text: 'Sourced all items', status: 'complete', variant: 'success' }
+      ? totalSourcedExcludingAvailable >= item.quantity
+        ? { text: 'Sourced all items', status: 'complete', variant: 'success' }
+        : {
+            text: `Sourced all items (${totalSourced - totalSourcedExcludingAvailable} unreserved)`,
+            status: 'complete',
+            variant: 'success',
+          }
       : undefined;
   const requiresSourcingBadge: BadgeProps | undefined =
     options?.includeStatusBadge && totalSourced < item.quantity && !isOrderId(item.shopifyOrderLineItem?.orderId)
@@ -266,13 +273,21 @@ export function getWorkOrderItemSourcingBadges(
 }
 
 export function getWorkOrderItemSourcedCount(
-  item: Pick<DetailedWorkOrderItem, 'specialOrders' | 'transferOrders' | 'reservations'>,
+  item: Pick<
+    DetailedWorkOrderItem,
+    'quantity' | 'specialOrders' | 'transferOrders' | 'reservations' | 'availableInventoryQuantity'
+  >,
+  { includeAvailable }: { includeAvailable: boolean },
 ) {
-  return sum([
-    ...item.specialOrders.flatMap(po => po.items).map(item => item.quantity),
-    ...item.transferOrders.flatMap(to => to.items).map(item => item.quantity),
-    ...item.reservations.map(reservation => reservation.quantity),
-  ]);
+  return Math.min(
+    item.quantity,
+    sum([
+      includeAvailable ? item.availableInventoryQuantity : 0,
+      ...item.specialOrders.flatMap(po => po.items).map(item => item.quantity),
+      ...item.transferOrders.flatMap(to => to.items).map(item => item.quantity),
+      ...item.reservations.map(reservation => reservation.quantity),
+    ]),
+  );
 }
 
 export function isOrderId(id: string | null | undefined): id is ID {

@@ -18,6 +18,7 @@ export function CustomFieldsList({
   customFields,
   onSave,
   type,
+  title,
 }: {
   useRouter: UseRouter<{
     CustomFieldConfig: Route<CustomFieldConfigProps>;
@@ -31,6 +32,7 @@ export function CustomFieldsList({
   customFields: Record<string, string>;
   onSave: (customFields: Record<string, string>) => void;
   type: CustomFieldConfigProps['type'];
+  title: `${'Work order' | 'Purchase order' | 'Product' | 'Service'} custom fields`;
 }) {
   const router = useRouter();
 
@@ -53,6 +55,7 @@ export function CustomFieldsList({
         title={'Configure custom fields'}
         onPress={() =>
           router.push('CustomFieldConfig', {
+            title,
             initialCustomFields: customFields,
             onSave,
             useRouter,

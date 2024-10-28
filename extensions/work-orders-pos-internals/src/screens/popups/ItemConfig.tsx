@@ -101,6 +101,8 @@ export function ItemConfig({
     item.type === 'custom-item' ||
     getProductServiceType(itemLineItem.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE;
 
+  const isService = getProductServiceType(itemLineItem.variant?.product?.serviceType?.value) !== null;
+
   const name = item.type === 'custom-item' ? item.name : itemLineItem.name;
   screen.setTitle(name);
 
@@ -170,9 +172,10 @@ export function ItemConfig({
           </Stack>
           <Stack direction="vertical" spacing={2}>
             <Text variant="body" color="TextSubdued">
-              Line item custom fields
+              {isService ? 'Service' : 'Product'} custom fields
             </Text>
             <CustomFieldsList
+              title={isService ? 'Service custom fields' : 'Product custom fields'}
               customFields={item.customFields}
               onSave={customFields => {
                 setHasUnsavedChanges(true);

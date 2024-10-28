@@ -23,16 +23,18 @@ export const useSpecialOrderMutation = ({ fetch }: { fetch: Fetch }) => {
       const { specialOrder }: CreateSpecialOrderResponse = await response.json();
       return specialOrder;
     },
-    onSuccess(...args) {
+    async onSuccess(...args) {
       const [specialOrder] = args;
 
-      queryClient.invalidateQueries({ queryKey: ['special-orders'] });
-      queryClient.setQueryData(
-        ['special-order', specialOrder.name],
-        specialOrder satisfies UseQueryData<typeof useSpecialOrderQuery>,
-      );
-      queryClient.invalidateQueries({ queryKey: ['work-order'] });
-      queryClient.invalidateQueries({ queryKey: ['work-order-info'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['special-orders'] }),
+        queryClient.setQueryData(
+          ['special-order', specialOrder.name],
+          specialOrder satisfies UseQueryData<typeof useSpecialOrderQuery>,
+        ),
+        queryClient.invalidateQueries({ queryKey: ['work-order'] }),
+        queryClient.invalidateQueries({ queryKey: ['work-order-info'] }),
+      ]);
     },
   });
 };

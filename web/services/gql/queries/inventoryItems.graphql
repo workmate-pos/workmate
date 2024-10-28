@@ -63,6 +63,19 @@ query getWithLocationInventoryLevel($id: ID!, $locationId: ID!) {
   }
 }
 
+query getManyWithLocationInventoryLevelByProductVariantIds($ids: [ID!]!, $locationId: ID!) {
+  nodes(ids: $ids) {
+    __typename
+    ... on ProductVariant {
+      id
+      inventoryItem {
+        ...InventoryItemFragment
+        ...InventoryItemInventoryLevelFragment
+      }
+    }
+  }
+}
+
 query getPage($first: Int = 10, $after: String, $query: String) {
   inventoryItems(first: $first, after: $after, query: $query) {
     nodes {

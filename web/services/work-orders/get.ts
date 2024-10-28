@@ -18,7 +18,12 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { indexBy, indexByMap, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import {
+  hasNestedPropertyValue,
+  hasNonNullableProperty,
+  hasPropertyValue,
+  isNonNullable,
+} from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { Value } from '@sinclair/typebox/value';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
@@ -46,6 +51,9 @@ import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
 import { getSerial } from '../serials/queries.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { gql } from '../gql/gql.js';
 
 export async function getDetailedWorkOrder(
   session: Session,
@@ -70,7 +78,7 @@ export async function getDetailedWorkOrder(
     derivedFromOrderId: workOrder.derivedFromOrderId,
     note: workOrder.note,
     internalNote: workOrder.internalNote,
-    items: getDetailedWorkOrderItems(workOrder.id),
+    items: getDetailedWorkOrderItems(session, workOrder.id, workOrder.locationId),
     charges: getDetailedWorkOrderCharges(workOrder.id),
     orders: getWorkOrderOrders(workOrder.id),
     customFields: getWorkOrderCustomFieldsRecord(workOrder.id),
@@ -101,15 +109,28 @@ export async function getLineItemsById(lineItemIds: ID[]): Promise<Record<string
   );
 }
 
-async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedWorkOrderItem[]> {
+async function getDetailedWorkOrderItems(
+  session: Session,
+  workOrderId: number,
+  locationId: ID | null,
+): Promise<DetailedWorkOrderItem[]> {
   const [items, customFields] = await Promise.all([
     getWorkOrderItems(workOrderId),
     getWorkOrderItemCustomFields(workOrderId),
   ]);
 
+  const graphql = new Graphql(session);
+  const productVariantIds = unique(
+    items
+      .filter(hasNestedPropertyValue('data.type', 'product'))
+      .map(item => item.data.productVariantId)
+      .filter(isNonNullable),
+  );
+
   const lineItemIds = unique(items.map(item => item.shopifyOrderLineItemId).filter(isNonNullable));
 
   const [
+    inventoryItems,
     lineItemById,
     lineItemReservations,
     transferOrderLineItems,
@@ -117,6 +138,13 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
     purchaseOrderLineItems,
     purchaseOrderReceiptLineItems,
   ] = await Promise.all([
+    await Promise.all([
+      !!locationId
+        ? gql.inventoryItems.getManyWithLocationInventoryLevelByProductVariantIds.run(graphql, {
+          ids: productVariantIds,
+          locationId,
+        })
+        : null,
     getLineItemsById(lineItemIds),
     // TODO: Show reservations inside the work order
     // TODO: Show special orders inside the work order
@@ -173,6 +201,14 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
       poLineItem => purchaseOrderById[poLineItem.purchaseOrderId] ?? never('fk'),
     );
 
+    const availableInventoryQuantity =
+      item.data.type !== 'product'
+        ? 0
+        : (inventoryItems?.nodes
+            .filter(hasNestedPropertyValue('__typename', 'ProductVariant'))
+            .find(hasPropertyValue('id', item.data.productVariantId))
+            ?.inventoryItem.inventoryLevel?.quantities.find(quantity => quantity.name === 'available')?.quantity ?? 0);
+
     const base = {
       uuid: item.uuid,
       quantity: item.data.quantity,
@@ -215,6 +251,7 @@ async function getDetailedWorkOrderItems(workOrderId: number): Promise<DetailedW
         }),
       })),
       reservations: itemReservations.map(({ quantity, locationId }) => ({ quantity, locationId })),
+      availableInventoryQuantity,
       customFields: Object.fromEntries(itemCustomFields.map(({ key, value }) => [key, value])),
     } as const satisfies Partial<DetailedWorkOrderItem>;
 

@@ -61,7 +61,7 @@ export function PurchaseOrderEmployeesCard({
                 }}
               />
               <Button onClick={onAssignEmployeesClick} disabled={disabled}>
-                Assign Employees
+                Assign employees
               </Button>
             </>
           )}

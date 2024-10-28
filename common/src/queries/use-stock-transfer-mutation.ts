@@ -32,13 +32,8 @@ export const useStockTransferMutation = ({ fetch }: { fetch: Fetch }) => {
       const body: CreateStockTransferResponse = await response.json();
       return body;
     },
-    onSuccess(stockTransfer) {
-      queryClient.invalidateQueries({ queryKey: ['stock-transfer-page'] });
-      queryClient.invalidateQueries({ queryKey: ['stock-transfer-count'] });
-      queryClient.invalidateQueries({ queryKey: ['work-order'] });
-      queryClient.invalidateQueries({ queryKey: ['work-order-info'] });
-      queryClient.invalidateQueries({ queryKey: ['purchase-order'] });
-      queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
+    async onSuccess(stockTransfer) {
+      await queryClient.invalidateQueries();
 
       queryClient.setQueryData(
         ['stock-transfer', stockTransfer.name],

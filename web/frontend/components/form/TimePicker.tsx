@@ -1,5 +1,4 @@
 import { InlineStack, Select, TextField } from '@shopify/polaris';
-import { useEffect } from 'react';
 
 export function TimePicker({
   readOnly,

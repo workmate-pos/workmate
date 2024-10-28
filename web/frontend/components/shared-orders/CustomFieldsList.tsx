@@ -3,7 +3,7 @@ import { CustomField } from '@web/frontend/components/shared-orders/CustomField.
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export type CustomFieldsListProps = {
-  kind: 'line-item' | 'work-order' | 'purchase-order';
+  kind: 'product' | 'service' | 'work-order' | 'purchase-order';
   customFields: Record<string, string>;
   onUpdate: (customFields: Record<string, string>) => void;
   disabled?: boolean;
@@ -27,7 +27,7 @@ export function CustomFieldsList({
     <BlockStack gap={'400'}>
       <InlineStack align={'space-between'}>
         <Text as={'h2'} variant={'headingMd'} fontWeight={'bold'}>
-          {sentenceCase(kind === 'line-item' ? `${kind} custom fields` : 'custom fields')}
+          {sentenceCase(`${kind} custom fields`)}
         </Text>
         <ButtonGroup>
           <Button variant={'plain'} onClick={() => onFieldValuesClick()} disabled={disabled}>
