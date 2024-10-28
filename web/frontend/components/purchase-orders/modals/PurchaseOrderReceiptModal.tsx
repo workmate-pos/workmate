@@ -25,6 +25,8 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { DateTime } from '@web/schemas/generated/upsert-purchase-order-receipt.js';
+import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
 
 type PurchaseOrderReceipt = DetailedPurchaseOrder['receipts'][number];
 
@@ -51,6 +53,7 @@ export function PurchaseOrderReceiptModal({
   const [receiptName, setReceiptName] = useState('');
   const [description, setDescription] = useState('');
   const [lineItems, setLineItems] = useState<PurchaseOrderReceipt['lineItems']>([]);
+  const [receivedAt, setReceivedAt] = useState<Date>(new Date());
 
   useEffect(() => {
     if (id === null) {
@@ -74,12 +77,14 @@ export function PurchaseOrderReceiptModal({
             quantity: Math.max(0, quantity - availableQuantity),
           })) ?? [],
       );
+      setReceivedAt(new Date());
     } else if (purchaseOrderQuery.isSuccess) {
       const receipt = purchaseOrderQuery.data?.receipts.find(receipt => receipt.id === id);
 
       setReceiptName(receipt?.name ?? '');
       setDescription(receipt?.description ?? '');
       setLineItems(receipt?.lineItems ?? []);
+      setReceivedAt(receipt ? new Date(receipt.receivedAt) : new Date());
     }
   }, [purchaseOrderQuery.data]);
 
@@ -148,6 +153,7 @@ export function PurchaseOrderReceiptModal({
                 name: receiptName,
                 description,
                 lineItems: id !== null ? [] : lineItems.filter(li => li.quantity > 0),
+                receivedAt: receivedAt.toISOString() as DateTime,
               },
               {
                 onSuccess() {
@@ -175,6 +181,8 @@ export function PurchaseOrderReceiptModal({
               value={description}
               onChange={setDescription}
             />
+
+            <DateTimeField label="Received at" value={receivedAt} onChange={setReceivedAt} requiredIndicator />
 
             <BlockStack gap={'100'}>
               <Text as="p" variant="bodyMd" fontWeight="bold">

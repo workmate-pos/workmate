@@ -11,6 +11,9 @@
     "description": {
       "type": "string"
     },
+    "receivedAt": {
+      "$ref": "scalars.json#/definitions/DateTime"
+    },
     "lineItems": {
       "type": "array",
       "items": {
@@ -29,5 +32,5 @@
     }
   },
   "additionalProperties": false,
-  "required": ["name", "description", "lineItems"]
+  "required": ["name", "description", "receivedAt", "lineItems"]
 }

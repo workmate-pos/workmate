@@ -43,7 +43,6 @@ import { PurchaseOrderEmployeesCard } from '@web/frontend/components/purchase-or
 import { PurchaseOrderProductsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderProductsCard.js';
 import { PurchaseOrderSummary } from '@web/frontend/components/purchase-orders/PurchaseOrderSummary.js';
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
-import { Int } from '@web/schemas/generated/create-product.js';
 import type { DetailedPurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';

@@ -287,10 +287,11 @@ async function getDetailedPurchaseOrderReceipts(purchaseOrderId: number) {
     getPurchaseOrderReceiptLineItems({ purchaseOrderId }),
   ]);
 
-  return receipts.map(({ id, name, description }) => ({
+  return receipts.map(({ id, name, description, receivedAt }) => ({
     id,
     name,
     description,
+    receivedAt: receivedAt.toISOString() as DateTime,
     lineItems: receiptLineItems
       .filter(hasPropertyValue('purchaseOrderReceiptId', id))
       .map(({ lineItemUuid: uuid, quantity }) => ({

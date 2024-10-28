@@ -761,6 +761,7 @@ export async function getPurchaseOrderReceipt(id: number) {
     purchaseOrderId: number;
     createdAt: Date;
     updatedAt: Date;
+    receivedAt: Date;
   }>`
     SELECT *
     FROM "PurchaseOrderReceipt"
@@ -778,6 +779,7 @@ export async function getPurchaseOrderReceipts(purchaseOrderId: number) {
     purchaseOrderId: number;
     createdAt: Date;
     updatedAt: Date;
+    receivedAt: Date;
   }>`
     SELECT *
     FROM "PurchaseOrderReceipt"
@@ -819,14 +821,16 @@ export async function insertPurchaseOrderReceipt({
   name,
   description,
   purchaseOrderId,
+  receivedAt,
 }: {
   name: string;
   description: string;
   purchaseOrderId: number;
+  receivedAt: Date;
 }) {
   return await sqlOne<{ id: number }>`
-    INSERT INTO "PurchaseOrderReceipt" (name, description, "purchaseOrderId")
-    VALUES (${name}, ${description}, ${purchaseOrderId})
+    INSERT INTO "PurchaseOrderReceipt" (name, description, "purchaseOrderId", "receivedAt")
+    VALUES (${name}, ${description}, ${purchaseOrderId}, ${receivedAt})
     RETURNING id;
   `.then(row => row.id);
 }
@@ -836,17 +840,20 @@ export async function updatePurchaseOrderReceipt({
   description,
   purchaseOrderId,
   purchaseOrderReceiptId,
+  receivedAt,
 }: {
   name: string;
   description: string;
   purchaseOrderId: number;
   purchaseOrderReceiptId: number;
+  receivedAt: Date;
 }) {
   return await sqlOne<{ id: number }>`
     UPDATE "PurchaseOrderReceipt"
     SET name              = ${name},
         description       = ${description},
-        "purchaseOrderId" = ${purchaseOrderId}
+        "purchaseOrderId" = ${purchaseOrderId},
+        "receivedAt"      = ${receivedAt}
     WHERE id = ${purchaseOrderReceiptId}
     RETURNING id;
   `.then(row => row.id);

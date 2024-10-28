@@ -6,7 +6,15 @@ import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { Banner, Button, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
+import {
+  Banner,
+  Button,
+  DatePicker,
+  ScrollView,
+  Stack,
+  Text,
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
@@ -15,6 +23,7 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { List } from '../../components/List.js';
 import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { useRouter } from '../../routes.js';
+import { DateTime } from '@web/schemas/generated/create-special-order.js';
 
 type PurchaseOrderReceipt = DetailedPurchaseOrder['receipts'][number];
 
@@ -30,6 +39,9 @@ export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | 
   const [receiptName, setReceiptName] = useState('');
   const [description, setDescription] = useState('');
   const [lineItems, setLineItems] = useState<PurchaseOrderReceipt['lineItems']>([]);
+  const [receivedAt, setReceivedAt] = useState<Date>(new Date());
+
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   useEffect(() => {
     if (id === null) {
@@ -53,12 +65,14 @@ export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | 
             quantity: Math.max(0, quantity - availableQuantity),
           })) ?? [],
       );
+      setReceivedAt(new Date());
     } else if (purchaseOrderQuery.isSuccess) {
       const receipt = purchaseOrderQuery.data?.receipts.find(receipt => receipt.id === id);
 
       setReceiptName(receipt?.name ?? '');
       setDescription(receipt?.description ?? '');
       setLineItems(receipt?.lineItems ?? []);
+      setReceivedAt(receipt ? new Date(receipt.receivedAt) : new Date());
     }
   }, [purchaseOrderQuery.data]);
 
@@ -102,6 +116,18 @@ export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | 
       <Form disabled={purchaseOrderReceiptMutation.isPending}>
         <FormStringField label="Name" value={receiptName} onChange={setReceiptName} required />
         <FormStringField label="Description" value={description} onChange={setDescription} type="area" />
+
+        <FormStringField
+          label="Received at"
+          value={receivedAt.toLocaleDateString()}
+          onFocus={() => setIsDatePickerOpen(true)}
+        />
+
+        <DatePicker
+          inputMode={'spinner'}
+          visibleState={[isDatePickerOpen, setIsDatePickerOpen]}
+          onChange={(date: string) => setReceivedAt(new Date(date))}
+        />
 
         <List pre={lineItems.length === 0 && <List.EmptyState title="No line items available to add to a receipt" />}>
           {lineItems.map(({ uuid, quantity: selectedQuantity }) => {
@@ -184,6 +210,7 @@ export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | 
                 name: receiptName,
                 description,
                 lineItems: id !== null ? [] : lineItems.filter(li => li.quantity > 0),
+                receivedAt: receivedAt.toISOString() as DateTime,
               },
               {
                 onSuccess() {

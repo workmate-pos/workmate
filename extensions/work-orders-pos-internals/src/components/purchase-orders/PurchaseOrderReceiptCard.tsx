@@ -2,7 +2,7 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { ReactNode } from 'react';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
-import { Banner, Button, Section, Selectable, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
+import { Banner, Button, Icon, Section, Selectable, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
 
@@ -80,7 +80,6 @@ export function PurchaseOrderReceiptCard({
 export function ConfigurablePurchaseOrderReceiptCard({
   name,
   id,
-  right,
   content,
   disabled,
 }: {
@@ -96,7 +95,7 @@ export function ConfigurablePurchaseOrderReceiptCard({
     <PurchaseOrderReceiptCard
       name={name}
       id={id}
-      right={right}
+      right={<Icon name="chevron-right" />}
       content={content}
       disabled={disabled}
       onClick={() => router.push('PurchaseOrderReceipt', { name, id })}

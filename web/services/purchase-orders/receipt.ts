@@ -56,11 +56,13 @@ export async function upsertReceipt(
           description: upsertPurchaseOrderReceipt.description,
           purchaseOrderId: purchaseOrderId,
           purchaseOrderReceiptId: upsertPurchaseOrderReceipt.id,
+          receivedAt: new Date(upsertPurchaseOrderReceipt.receivedAt),
         })
       : await insertPurchaseOrderReceipt({
           name: upsertPurchaseOrderReceipt.name,
           description: upsertPurchaseOrderReceipt.description,
           purchaseOrderId: purchaseOrderId,
+          receivedAt: new Date(upsertPurchaseOrderReceipt.receivedAt),
         });
 
     for (const { uuid, quantity } of upsertPurchaseOrderReceipt.lineItems) {
