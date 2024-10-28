@@ -2,17 +2,31 @@ import { Button, ScrollView, Stack, Text } from '@shopify/ui-extensions-react/po
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../../routes.js';
-import { getUnsourcedWorkOrderItems } from './WorkOrderItemSourcing.js';
+import { getUnsourcedWorkOrderItems, useWorkOrderQueries } from './WorkOrderItemSourcing.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
+import { useMemo } from 'react';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function WorkOrderSaved({ workOrder }: { workOrder: DetailedWorkOrder }) {
   const title = `Work order ${workOrder.name} saved`;
+
+  const { productVariantQueries } = useWorkOrderQueries(workOrder.name);
 
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(title);
 
-  const hasUnsourcedItems = getUnsourcedWorkOrderItems(workOrder, { includeAvailable: true }).length > 0;
+  const hasUnsourcedItems = useMemo(
+    () =>
+      getUnsourcedWorkOrderItems(
+        workOrder,
+        { includeAvailable: true },
+        Object.values(productVariantQueries)
+          .map(query => query.data)
+          .filter(isNonNullable),
+      ).length > 0,
+    [productVariantQueries],
+  );
 
   return (
     <ScrollView>
