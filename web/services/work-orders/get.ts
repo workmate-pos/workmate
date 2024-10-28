@@ -138,13 +138,12 @@ async function getDetailedWorkOrderItems(
     purchaseOrderLineItems,
     purchaseOrderReceiptLineItems,
   ] = await Promise.all([
-    await Promise.all([
-      !!locationId
-        ? gql.inventoryItems.getManyWithLocationInventoryLevelByProductVariantIds.run(graphql, {
+    !!locationId
+      ? gql.inventoryItems.getManyWithLocationInventoryLevelByProductVariantIds.run(graphql, {
           ids: productVariantIds,
           locationId,
         })
-        : null,
+      : null,
     getLineItemsById(lineItemIds),
     // TODO: Show reservations inside the work order
     // TODO: Show special orders inside the work order
