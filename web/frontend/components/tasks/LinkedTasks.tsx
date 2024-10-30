@@ -10,6 +10,11 @@ import { TaskModal } from '@web/frontend/components/tasks/TaskModal.js';
 import { DetailedTask } from '@work-orders/common/queries/use-task-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
+export type LinkedTasksSlot = ReactNode | ((tasks: DetailedTask[]) => ReactNode);
+
+const renderLinkedTasksSlot = (slot: LinkedTasksSlot, tasks: DetailedTask[]) =>
+  typeof slot === 'function' ? slot(tasks) : slot;
+
 export function LinkedTasks({
   links,
   action,
@@ -17,7 +22,7 @@ export function LinkedTasks({
 }: {
   links: Partial<DetailedTask['links']>;
   disabled: boolean;
-  action?: ReactNode;
+  action?: LinkedTasksSlot;
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -50,7 +55,7 @@ export function LinkedTasks({
           Tasks
         </Text>
 
-        {action}
+        {renderLinkedTasksSlot(action, tasks ?? [])}
       </InlineStack>
 
       {tasksQuery.isError && (
@@ -97,12 +102,19 @@ export function NewTaskButton(props: Omit<ButtonProps, 'variant' | 'icon'>) {
   );
 }
 
-export function NewLinkedTaskButton({ links }: { links: Partial<DetailedTask['links']> }) {
+export function NewLinkedTaskButton({
+  links,
+  suggestedDeadlines,
+}: {
+  links: Partial<DetailedTask['links']>;
+  suggestedDeadlines?: Date[];
+}) {
   const [isCreatingTask, setIsCreatingTask] = useState(false);
 
   return (
     <>
       <NewTaskButton onClick={() => setIsCreatingTask(true)}>New Task</NewTaskButton>
+
       <TaskModal
         open={isCreatingTask}
         onClose={() => setIsCreatingTask(false)}
@@ -120,6 +132,7 @@ export function NewLinkedTaskButton({ links }: { links: Partial<DetailedTask['li
             ...Object.fromEntries(Object.entries(links).filter(([, value]) => value !== undefined)),
           },
         }}
+        suggestedDeadlines={suggestedDeadlines}
       />
     </>
   );

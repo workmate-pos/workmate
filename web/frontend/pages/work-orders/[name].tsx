@@ -298,9 +298,12 @@ function WorkOrder({
               <LinkedTasks
                 links={{ workOrders: [createWorkOrder.name].filter(isNonNullable) }}
                 disabled={workOrderMutation.isPending}
-                action={
+                action={tasks =>
                   !!createWorkOrder.name ? (
-                    <NewLinkedTaskButton links={{ workOrders: [createWorkOrder.name] }} />
+                    <NewLinkedTaskButton
+                      links={{ workOrders: [createWorkOrder.name] }}
+                      suggestedDeadlines={tasks.map(task => task.deadline).filter(isNonNullable)}
+                    />
                   ) : (
                     <Tooltip content={'You must save your work order before you can create tasks'}>
                       <NewTaskButton disabled />

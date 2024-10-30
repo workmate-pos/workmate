@@ -259,7 +259,12 @@ export default function Serial() {
                 <LinkedTasks
                   links={{ serials: [serial.serial] }}
                   disabled={serialMutation.isPending}
-                  action={<NewLinkedTaskButton links={{ serials: [serial.serial] }} />}
+                  action={tasks => (
+                    <NewLinkedTaskButton
+                      links={{ serials: [serial.serial] }}
+                      suggestedDeadlines={tasks.map(task => task.deadline).filter(isNonNullable)}
+                    />
+                  )}
                 />
 
                 <BlockStack gap={'200'}>
