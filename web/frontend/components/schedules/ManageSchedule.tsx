@@ -269,7 +269,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
         <Layout.Section>
           <FullCalendar
             ref={calendarRef}
-            schedulerLicenseKey="CC-Attribution-NonCommercial-NoDerivatives"
+            schedulerLicenseKey={process.env.VITE_SCHEDULER_LICENSE_KEY}
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin, resourceTimeGridPlugin]}
             initialView="timeGridWeek"
             headerToolbar={{
