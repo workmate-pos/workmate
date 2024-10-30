@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID'];
+const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID', 'VITE_SCHEDULER_LICENSE_KEY'];
 
 if (process.env.NODE_ENV === 'production' && process.env.npm_lifecycle_event === 'build' && !process.env.CI) {
   for (const envVar of requiredEnvVars) {
