@@ -13,7 +13,6 @@ import {
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { match } from 'ts-pattern';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasNonNullableProperty, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -24,10 +23,11 @@ import { SECOND_IN_MS } from '@work-orders/common/time/constants.js';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { useReserveLineItemsInventoryMutation } from '@work-orders/common/queries/use-reserve-line-items-inventory-mutation.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
+import { getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 /**
  * Fulfillment options for some work order.
@@ -85,7 +85,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             </Selectable>
           </ResponsiveStack>
           <Text variant={'body'} color={'TextSubdued'}>
-            Control line item inventory sourcing by creating purchase orders, transfer orders, and by committing
+            Control line item inventory sourcing by creating special orders, transfer orders, and by committing
             inventory to this work order.
           </Text>
         </ResponsiveStack>
@@ -107,14 +107,14 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             onPress={() => {
               router.push('UnsourcedItemList', {
                 title: 'Select items to reserve',
-                items: getUnsourcedWorkOrderItems(workOrder)
+                items: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false })
                   // if already in an order we cannot even reserve it smh
                   .filter(item => !isOrderId(item.shopifyOrderLineItem?.orderId))
                   .map(({ uuid, shopifyOrderLineItem, unsourcedQuantity, productVariantId }) => {
                     const productVariantQuery = productVariantQueries[productVariantId];
                     const inventoryItemId = productVariantQuery?.data?.inventoryItem.id;
                     const inventoryItemQuery = inventoryItemId ? inventoryItemQueries[inventoryItemId] : null;
-                    const availableQuantity =
+                    const maxQuantity =
                       inventoryItemQuery?.data?.inventoryLevel?.quantities.find(hasPropertyValue('name', 'available'))
                         ?.quantity ?? Infinity;
 
@@ -124,7 +124,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
                       unsourcedQuantity,
                       productVariantId,
                       quantity: unsourcedQuantity,
-                      availableQuantity,
+                      maxQuantity,
                     };
                   }),
                 primaryAction: {
@@ -154,12 +154,17 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
           <Button
             title={'Create transfer order'}
             isDisabled={isSubmitting}
-            onPress={() =>
+            onPress={() => {
+              if (!workOrder.locationId) {
+                toast.show('Work order location must be set to create transfer orders');
+                return;
+              }
+
               router.push('CreateTransferOrderForLocation', {
-                products: getUnsourcedWorkOrderItems(workOrder),
-                toLocationId: createGid('Location', session.currentSession.locationId),
-              })
-            }
+                products: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: true }),
+                toLocationId: workOrder.locationId,
+              });
+            }}
           />
           <Button
             title={'Create special order'}
@@ -167,14 +172,14 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             onPress={() =>
               router.push('CreateSpecialOrderList', {
                 workOrder,
-                items: getUnsourcedWorkOrderItems(workOrder).map(
+                items: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: true }).map(
                   ({ uuid, shopifyOrderLineItem, unsourcedQuantity, productVariantId }) => ({
                     uuid,
                     shopifyOrderLineItem,
                     unsourcedQuantity,
                     productVariantId,
                     quantity: unsourcedQuantity,
-                    availableQuantity: Infinity,
+                    maxQuantity: Infinity,
                   }),
                 ),
               })
@@ -196,75 +201,70 @@ function useItemListRows(name: string): ListRow[] {
     return [];
   }
 
-  return workOrder.items.map<ListRow>(item => {
-    const productVariantQuery = item.type === 'product' ? productVariantQueries[item.productVariantId] : null;
+  return workOrder.items.flatMap<ListRow>(item => {
+    if (item.type !== 'product') {
+      return [];
+    }
+
+    const productVariantQuery = productVariantQueries[item.productVariantId];
     const productVariant = productVariantQuery?.data;
 
-    const availableInventoryCount = match(item)
-      .with({ type: 'product' }, item => {
-        if (!productVariant) {
-          return null;
-        }
+    const serviceType = getProductServiceType(productVariant?.product.serviceType?.value);
 
-        const inventoryItemId = productVariant.inventoryItem.id;
-        const inventoryItemQuery = inventoryItemQueries[inventoryItemId];
+    if (serviceType !== null) {
+      return [];
+    }
 
-        if (!inventoryItemQuery) {
-          return null;
-        }
+    const availableInventoryCount = (() => {
+      if (!productVariant) {
+        return null;
+      }
 
-        if (!inventoryItemQuery?.data) {
-          return null;
-        }
+      const inventoryItemId = productVariant.inventoryItem.id;
+      const inventoryItemQuery = inventoryItemQueries[inventoryItemId];
 
-        return inventoryItemQuery.data.inventoryLevel?.quantities.find(hasPropertyValue('name', 'available'))?.quantity;
-      })
-      .with({ type: 'custom-item' }, () => null)
-      .exhaustive();
+      if (!inventoryItemQuery) {
+        return null;
+      }
 
-    const subtitle =
-      typeof availableInventoryCount === 'number'
-        ? ([`${availableInventoryCount} available at current location`] as const)
-        : undefined;
+      if (!inventoryItemQuery?.data) {
+        return null;
+      }
 
-    return {
-      id: item.uuid,
-      onPress: () => {
-        // TODO : ability to open PO/TO from this menu
-        // TODO : ability to open PO/TO from the entire page too (just a response grid of them below a header)
-        // router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
-      },
-      leftSide: {
-        image: {
-          source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
-          badge: item.quantity,
+      return inventoryItemQuery.data.inventoryLevel?.quantities.find(hasPropertyValue('name', 'available'))?.quantity;
+    })();
+
+    const subtitle = getSubtitle([`${availableInventoryCount} available at current location`]);
+
+    return [
+      {
+        id: item.uuid,
+        onPress: () => {
+          // TODO : ability to open PO/TO from this menu
+          // TODO : ability to open PO/TO from the entire page too (just a response grid of them below a header)
+          // router.push('WorkOrderItemSourcingItem', { workOrderName: workOrder.name, uuid: item.uuid });
         },
-        label: match(item)
-          .with({ type: 'product' }, item => {
-            const productVariantQuery = productVariantQueries[item.productVariantId];
-
-            if (!productVariantQuery) {
-              return 'N/A';
-            }
-
-            if (productVariantQuery.isLoading) {
-              return 'Loading...';
-            }
-
-            if (productVariantQuery.isError) {
-              return 'Error loading product';
-            }
-
-            const productVariant = productVariantQuery.data;
-            return getProductVariantName(productVariant) ?? 'Unknown product';
-          })
-          .with({ type: 'custom-item' }, item => item.name)
-          .exhaustive(),
-        badges: getWorkOrderItemSourcingBadges(workOrder, item, { includeOrderBadge: true, includeStatusBadge: true }),
-        subtitle,
+        leftSide: {
+          image: {
+            source: productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url,
+            badge: item.quantity,
+          },
+          label: productVariant
+            ? (getProductVariantName(productVariant) ?? '')
+            : productVariantQuery?.isLoading
+              ? 'Loading...'
+              : productVariantQuery?.isError
+                ? 'Error loading product'
+                : 'Unknown product',
+          badges: getWorkOrderItemSourcingBadges(workOrder, item, {
+            includeOrderBadge: true,
+            includeStatusBadge: true,
+          }),
+          subtitle,
+        },
+        // rightSide: { showChevron: true },
       },
-      // rightSide: { showChevron: true },
-    };
+    ];
   });
 }
 
@@ -289,7 +289,7 @@ function useWorkOrderQueries(name: string) {
   const inventoryItemQueries = useInventoryItemQueries({
     fetch,
     ids: inventoryItemIds,
-    locationId: createGid('Location', session.currentSession.locationId),
+    locationId: workOrderQuery.data?.workOrder?.locationId ?? createGid('Location', session.currentSession.locationId),
   });
 
   return {
@@ -303,18 +303,39 @@ export type UnsourcedWorkOrderItem = {
   uuid: UUID;
   productVariantId: ID;
   unsourcedQuantity: number;
-  shopifyOrderLineItem: NonNullable<StockTransferLineItem['shopifyOrderLineItem']>;
+  shopifyOrderLineItem: { id: ID; orderId: ID };
 };
 
-export function getUnsourcedWorkOrderItems(workOrder: DetailedWorkOrder): UnsourcedWorkOrderItem[] {
+export function getUnsourcedWorkOrderItems(
+  workOrder: DetailedWorkOrder,
+  { includeAvailable }: { includeAvailable: boolean },
+): UnsourcedWorkOrderItem[] {
   return (
     workOrder.items
       .filter(hasPropertyValue('type', 'product'))
       // very important that this is set bcs the TO/PO line item will not be linked to the WO item in any way
       .filter(hasNonNullableProperty('shopifyOrderLineItem'))
       .map(
-        ({ uuid, quantity, productVariantId, specialOrders, transferOrders, reservations, shopifyOrderLineItem }) => {
-          const sourced = getWorkOrderItemSourcedCount({ specialOrders, transferOrders, reservations });
+        ({
+          uuid,
+          quantity,
+          productVariantId,
+          specialOrders,
+          transferOrders,
+          reservations,
+          shopifyOrderLineItem,
+          availableInventoryQuantity,
+        }) => {
+          const sourced = getWorkOrderItemSourcedCount(
+            {
+              specialOrders,
+              transferOrders,
+              reservations,
+              availableInventoryQuantity,
+              quantity,
+            },
+            { includeAvailable },
+          );
           const unsourcedQuantity = Math.max(0, quantity - sourced);
 
           return {

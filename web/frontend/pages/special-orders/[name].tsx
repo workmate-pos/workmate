@@ -1,4 +1,4 @@
-import { BlockStack, Box, Button, ButtonGroup, Card, EmptyState, Frame, Page, Text } from '@shopify/polaris';
+import { BlockStack, Box, Button, ButtonGroup, Card, EmptyState, Frame, Page, Text, Tooltip } from '@shopify/polaris';
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
 import { useLocation } from 'react-router-dom';
@@ -20,6 +20,8 @@ import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 import { SpecialOrderGeneralCard } from '@web/frontend/components/special-orders/SpecialOrderGeneralCard.js';
 import { SpecialOrderLineItemsCard } from '@web/frontend/components/special-orders/SpecialOrderLineItemsCard.js';
+import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function () {
   return (
@@ -185,6 +187,22 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
           setCreateSpecialOrder={setCreateSpecialOrder}
           disabled={disabled}
         />
+
+        <Card>
+          <LinkedTasks
+            links={{ specialOrders: [createSpecialOrder.name].filter(isNonNullable) }}
+            disabled={specialOrderMutation.isPending}
+            action={
+              !!createSpecialOrder.name ? (
+                <NewLinkedTaskButton links={{ specialOrders: [createSpecialOrder.name] }} />
+              ) : (
+                <Tooltip content={'You must save your special order before you can create tasks'}>
+                  <NewTaskButton disabled />
+                </Tooltip>
+              )
+            }
+          />
+        </Card>
 
         <ButtonGroup fullWidth>
           <Button disabled={disabled} loading={specialOrderMutation.isPending} onClick={saveSpecialOrder}>

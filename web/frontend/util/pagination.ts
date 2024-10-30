@@ -1,8 +1,7 @@
 import { InfiniteData, UseInfiniteQueryResult } from '@tanstack/react-query';
 import { Dispatch, SetStateAction } from 'react';
 
-// TODO: Track index internally and just return the page
-export function getInfiniteQueryPagination<T extends UseInfiniteQueryResult<InfiniteData<unknown, unknown>, unknown>>(
+export function getInfiniteQueryPagination<T extends UseInfiniteQueryResult<{ pages: unknown[] }, unknown>>(
   pageIndex: number,
   setPageIndex: Dispatch<SetStateAction<number>>,
   query: T,

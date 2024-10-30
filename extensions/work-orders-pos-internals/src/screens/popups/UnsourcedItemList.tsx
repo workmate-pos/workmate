@@ -10,14 +10,16 @@ import { useRouter } from '../../routes.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { ListPopup } from '@work-orders/common-pos/screens/ListPopup.js';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 export type UnsourcedItemListSelectedItem = {
   uuid: UUID;
   shopifyOrderLineItem: { id: ID; orderId: ID };
   productVariantId: ID;
   unsourcedQuantity: number;
+
   quantity: number;
-  availableQuantity: number;
+  maxQuantity: number;
 };
 
 export type UnsourcedItemListProps = {
@@ -60,10 +62,10 @@ export function UnsourcedItemList({
     id: item.uuid,
     leftSide: {
       label: getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
-      subtitle: [
+      subtitle: getSubtitle([
         `${item.unsourcedQuantity} unsourced`,
-        Number.isFinite(item.availableQuantity) ? `${item.availableQuantity} available` : '',
-      ] as const,
+        Number.isFinite(item.maxQuantity) ? `${item.maxQuantity} available` : '',
+      ]),
       image: {
         source:
           productVariantQueries[item.productVariantId]?.data?.image?.url ??
@@ -112,7 +114,7 @@ export function UnsourcedItemList({
                       id: item.uuid,
                       quantity: item.quantity,
                       min: 1,
-                      max: Math.min(item.unsourcedQuantity, item.availableQuantity),
+                      max: Math.min(item.unsourcedQuantity, item.maxQuantity),
                       name:
                         getProductVariantName(productVariantQueries[item.productVariantId]?.data) ?? 'Unknown product',
                     })),

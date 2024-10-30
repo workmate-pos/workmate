@@ -223,10 +223,11 @@ export function PurchaseOrderProductConfig({
           <Stack direction="vertical" spacing={2}>
             <Stack direction={'horizontal'} alignment={'center'}>
               <Text variant="headingSmall" color="TextSubdued">
-                Line item custom fields
+                Product custom fields
               </Text>
             </Stack>
             <CustomFieldsList
+              title={'Product custom fields'}
               customFields={product.customFields}
               onSave={customFields => setProduct({ ...product, customFields })}
               type={'LINE_ITEM'}

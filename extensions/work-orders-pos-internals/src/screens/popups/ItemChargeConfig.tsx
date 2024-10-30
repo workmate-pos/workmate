@@ -25,6 +25,7 @@ import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMon
 import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { keepPreviousData } from '@tanstack/react-query';
+import { getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 
 export function ItemChargeConfig({
   item: { uuid: itemUuid },
@@ -154,6 +155,8 @@ export function ItemChargeConfig({
   );
   const chargesPrice = BigDecimal.sum(...chargePrices.map(price => BigDecimal.fromMoney(price))).toMoney();
   const totalPrice = BigDecimal.sum(BigDecimal.fromMoney(basePrice), BigDecimal.fromMoney(chargesPrice)).toMoney();
+
+  const isService = getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) === null;
 
   return (
     <Form>
@@ -322,9 +325,10 @@ export function ItemChargeConfig({
           </Stack>
 
           <Stack direction={'vertical'} spacing={2}>
-            <Text variant={'headingLarge'}>Line item custom fields</Text>
+            <Text variant={'headingLarge'}>{isService ? 'Service' : 'Product'} custom fields</Text>
 
             <CustomFieldsList
+              title={isService ? 'Service custom fields' : 'Product custom fields'}
               customFields={item.customFields}
               onSave={customFields => dispatch.updateItemCustomFields({ item, customFields })}
               type={'LINE_ITEM'}

@@ -36,7 +36,11 @@ export default function App() {
                     destination: '/serials',
                   },
                   {
-                    label: 'Services & Labour',
+                    label: 'Schedule',
+                    destination: '/schedule',
+                  },
+                  {
+                    label: 'Services and labour',
                     destination: '/services-and-labour',
                   },
                   {

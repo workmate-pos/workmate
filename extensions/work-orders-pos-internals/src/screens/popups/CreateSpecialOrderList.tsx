@@ -37,7 +37,8 @@ export function CreateSpecialOrderList({
               {
                 name: null,
                 customerId: workOrder.customerId,
-                locationId: createGid('Location', session.currentSession.locationId),
+                // TODO: Make sure to get rid of currentSession.locationId everywhere
+                locationId: workOrder.locationId ?? createGid('Location', session.currentSession.locationId),
                 companyId: workOrder.companyId,
                 companyLocationId: workOrder.companyLocationId,
                 companyContactId: workOrder.companyContactId,

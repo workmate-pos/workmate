@@ -33,6 +33,7 @@ const permissions: typeof AllPermissions = [
   'write_stock_transfers',
   'read_special_orders',
   'write_special_orders',
+  'manage_schedules',
 ];
 
 export function RolesSettings({

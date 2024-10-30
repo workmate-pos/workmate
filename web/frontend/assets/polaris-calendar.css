@@ -1,0 +1,55 @@
+:root {
+  --fc-small-font-size: 0.85em;
+  --fc-page-bg-color: #ffffff;
+  --fc-neutral-bg-color: #f9fafb;
+  --fc-neutral-text-color: #202223;
+  --fc-border-color: #dfe3e8;
+
+  /* Button Styling */
+  --fc-button-text-color: #202223;
+  --fc-button-bg-color: #ffffff;
+  --fc-button-border-color: transparent;
+  --fc-button-hover-bg-color: #f4f6f8;
+  --fc-button-hover-border-color: transparent;
+  --fc-button-active-bg-color: #e3e7eb;
+  --fc-button-active-border-color: transparent;
+  --fc-button-border-radius: 6px;
+
+  /* Event Styling */
+  /*--fc-event-bg-color: rgb(119, 213, 251);*/
+  /*--fc-event-bg-color: rgb(10, 35, 70);*/
+  --fc-event-bg-color: rgb(64.5, 134, 160.5);
+  --fc-event-border-color: transparent; /* No borders */
+  --fc-event-text-color: #ffffff; /* White text for contrast */
+  --fc-event-selected-overlay-color: rgba(0, 0, 0, 0.1); /* Slightly darker overlay for selected events */
+
+  --fc-more-link-bg-color: #ffffff;
+  --fc-more-link-text-color: #006fbb;
+
+  /* Resizer Styling */
+  --fc-event-resizer-thickness: 6px;
+  --fc-event-resizer-dot-total-width: 6px;
+  --fc-event-resizer-dot-border-width: 1px;
+
+  /* Non-Business Hours */
+  --fc-non-business-color: #f9fafb;
+  --fc-bg-event-color: #f4f6f8;
+  --fc-bg-event-opacity: 0.4;
+  --fc-highlight-color: rgba(235, 238, 240, 0.5);
+  --fc-today-bg-color: rgba(255, 255, 255, 0.8);
+  --fc-now-indicator-color: #d72c16;
+}
+
+:root {
+  --fc-daygrid-event-dot-width: 6px;
+}
+
+:root {
+  --fc-list-event-dot-width: 8px;
+  --fc-list-event-hover-bg-color: #f9fafb;
+}
+
+.fc-event-description {
+  font-size: 0.9em;
+  color: #f0f0f0;
+}
