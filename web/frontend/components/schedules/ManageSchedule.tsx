@@ -54,7 +54,7 @@ import {
   TaskCard,
   TaskCardScheduledTimeContent,
 } from '@web/frontend/components/tasks/TaskCard.js';
-import { useTaskQuery } from '@work-orders/common/queries/use-task-query.js';
+import { useTaskQueries, useTaskQuery } from '@work-orders/common/queries/use-task-query.js';
 import { UseQueryData } from '@work-orders/common/queries/react-query.js';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { MultiStaffMemberSelectorModal } from '@web/frontend/components/selectors/MultiStaffMemberSelectorModal.js';
@@ -743,8 +743,14 @@ function EditScheduleEventModal({
 
   const eventQuery = useScheduleEventQuery({ fetch, scheduleId, eventId: eventId ?? null }, { enabled: open });
   const editScheduleEventMutation = useScheduleEventMutation({ fetch });
-  const deleteScheduleEventMutation = useDeleteScheduleEventMutation({ fetch });
-  const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
+  const taskQueries = useTaskQueries({ fetch, ids: taskIds });
+
+  // All staff members assigned to event tasks are always shown in the choice list.
+  // Unrelated staff members can be added through the the "Add staff member" button.
+  const taskStaffMemberIds = Object.values(taskQueries).flatMap(query => query.data?.staffMemberIds ?? []);
+
+  const relevantStaffMemberIds = unique([...staffMemberIds, ...taskStaffMemberIds]).sort();
+  const staffMemberQueries = useEmployeeQueries({ fetch, ids: relevantStaffMemberIds });
 
   useEffect(() => {
     if (eventQuery.data) {
@@ -839,7 +845,7 @@ function EditScheduleEventModal({
           <BlockStack gap="200" inlineAlign="start">
             <SearchableChoiceList
               title="Assigned staff members"
-              choices={staffMemberIds.map(id => {
+              choices={relevantStaffMemberIds.map(id => {
                 const query = staffMemberQueries[id]?.data;
                 return {
                   value: id,
