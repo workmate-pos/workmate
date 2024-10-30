@@ -8,6 +8,7 @@ import { ConfigurableTaskCard, TaskCardScheduledTimeContent } from '@web/fronten
 import { PlusMinor } from '@shopify/polaris-icons';
 import { TaskModal } from '@web/frontend/components/tasks/TaskModal.js';
 import { DetailedTask } from '@work-orders/common/queries/use-task-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function LinkedTasks({
   links,
@@ -39,6 +40,9 @@ export function LinkedTasks({
     }
   }, [tasksQuery.isFetching, tasksQuery.hasNextPage]);
 
+  const tasks = tasksQuery.data?.pages.flat(1);
+  const suggestedDeadlines = tasks?.map(task => task.deadline).filter(isNonNullable);
+
   return (
     <BlockStack gap={'400'}>
       <InlineStack align={'space-between'}>
@@ -62,22 +66,21 @@ export function LinkedTasks({
         </Banner>
       )}
 
-      {!tasksQuery.data?.pages.flat(1).length && (
+      {!tasks?.length && (
         <Text as="p" variant="bodyMd" tone="subdued">
           No tasks found
         </Text>
       )}
 
-      {tasksQuery.data?.pages
-        .flat(1)
-        .map(task => (
-          <ConfigurableTaskCard
-            disabled={disabled}
-            key={task.id}
-            taskId={task.id}
-            content={<TaskCardScheduledTimeContent taskId={task.id} />}
-          />
-        ))}
+      {tasks?.map(task => (
+        <ConfigurableTaskCard
+          disabled={disabled}
+          key={task.id}
+          taskId={task.id}
+          content={<TaskCardScheduledTimeContent taskId={task.id} />}
+          suggestedDeadlines={suggestedDeadlines}
+        />
+      ))}
 
       {tasksQuery.isFetchingNextPage && <Spinner />}
 
