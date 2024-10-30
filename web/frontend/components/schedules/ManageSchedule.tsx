@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Collapsible,
   Divider,
   FormLayout,
   Icon,
@@ -23,7 +24,7 @@ import {
 } from '@shopify/polaris';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronLeftMinor, EditMajor, PlusMinor, SearchMinor } from '@shopify/polaris-icons';
 import { useScheduleEventsQuery } from '@work-orders/common/queries/use-schedule-events-query.js';
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query';
@@ -81,6 +82,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
   const [hideStaffMemberAvailability, setHideStaffMemberAvailability] = useState<Record<ID, boolean>>({});
   const [shouldHideFinishedTasks, setShouldHideFinishedTasks] = useState(true);
+  const [shouldOnlyShowTasksForSelectedStaffMembers, setShouldOnlyShowTasksForSelectedStaffMembers] = useState(true);
 
   const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
 
@@ -132,10 +134,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
       fetch,
       filters: {
         query: taskQuery,
-        // TODO: Make this match ANY staff member
-        // TODO: Maybe an option that will make it exact match?
-        // TODO: When adding a task make sure to add the right staff members (assigned AND selected?)
-        staffMemberIds,
+        staffMemberIds: shouldOnlyShowTasksForSelectedStaffMembers ? staffMemberIds : undefined,
         done: shouldHideFinishedTasks ? false : undefined,
         sortMode: 'deadline',
         sortOrder: 'ascending',
@@ -151,6 +150,9 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
   const [shouldShowEditScheduleModal, setShouldShowEditScheduleModal] = useState(false);
   const [shouldShowDeleteScheduleEventModal, setShouldShowDeleteScheduleEventModal] = useState(false);
   const [shouldShowEditScheduleEventModal, setShouldShowEditScheduleEventModal] = useState(false);
+
+  const taskFilterCollapsibleId = useId();
+  const [shouldShowTaskFilters, setShouldShowTaskFilters] = useState(false);
 
   const [eventIdToEdit, setEventIdToEdit] = useState<number>();
   const [hoveringHeader, setHoveringHeader] = useState(false);
@@ -539,18 +541,9 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
               <Card>
                 <BlockStack gap="200">
-                  <Box paddingBlockEnd="200">
-                    <InlineStack gap="200" align="space-between" blockAlign="start">
-                      <Text as="h2" variant="headingMd" fontWeight="bold">
-                        Tasks
-                      </Text>
-                      <Checkbox
-                        label={'Hide finished tasks'}
-                        checked={shouldHideFinishedTasks}
-                        onChange={shouldHideFinishedTasks => setShouldHideFinishedTasks(shouldHideFinishedTasks)}
-                      />
-                    </InlineStack>
-                  </Box>
+                  <Text as="h2" variant="headingMd" fontWeight="bold">
+                    Tasks
+                  </Text>
 
                   <Text as="p" variant="bodyMd" tone="subdued">
                     Tasks can be dragged and dropped to schedule them. They will automatically be associated with the
@@ -579,8 +572,41 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                       clearButton
                       onClearButtonClick={() => setTaskQuery('')}
                       prefix={<Icon source={SearchMinor} tone="base" />}
+                      connectedRight={
+                        <Box paddingInlineStart="200">
+                          <Button variant="plain" onClick={() => setShouldShowTaskFilters(x => !x)}>
+                            Filters
+                          </Button>
+                        </Box>
+                      }
                       loading={tasksQuery.isFetching}
                     />
+
+                    <Collapsible id={taskFilterCollapsibleId} open={shouldShowTaskFilters}>
+                      <Box paddingInlineStart="200">
+                        <BlockStack align="start" inlineAlign="start">
+                          <InlineStack align="center">
+                            <Checkbox
+                              label={'Hide finished tasks'}
+                              checked={shouldHideFinishedTasks}
+                              onChange={shouldHideFinishedTasks => setShouldHideFinishedTasks(shouldHideFinishedTasks)}
+                            />
+                          </InlineStack>
+
+                          <InlineStack align="center">
+                            <Checkbox
+                              label={'Only show tasks for selected staff members'}
+                              checked={shouldOnlyShowTasksForSelectedStaffMembers}
+                              onChange={shouldOnlyShowTasksForSelectedStaffMembers =>
+                                setShouldOnlyShowTasksForSelectedStaffMembers(
+                                  shouldOnlyShowTasksForSelectedStaffMembers,
+                                )
+                              }
+                            />
+                          </InlineStack>
+                        </BlockStack>
+                      </Box>
+                    </Collapsible>
 
                     {tasks.map(task => (
                       <DraggableTaskCard taskId={task.id} />
