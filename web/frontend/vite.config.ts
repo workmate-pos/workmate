@@ -4,16 +4,6 @@ import { fileURLToPath } from 'url';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
-const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID'];
-
-if (process.env.NODE_ENV === 'production' && process.env.npm_lifecycle_event === 'build' && !process.env.CI) {
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
-      throw new Error(`${envVar} environment variable is required to build the frontend app`);
-    }
-  }
-}
-
 const proxyOptions = {
   target: `http://127.0.0.1:${process.env.BACKEND_PORT}`,
   changeOrigin: false,
@@ -42,6 +32,17 @@ if (host === 'localhost') {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, dirname(process.cwd()), '');
+
+  const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID'];
+
+  if (env.NODE_ENV === 'production' && env.npm_lifecycle_event === 'build' && !env.CI) {
+    for (const envVar of requiredEnvVars) {
+      if (!env[envVar]) {
+        throw new Error(`${envVar} environment variable is required to build the frontend app`);
+      }
+    }
+  }
+
   const define = Object.entries(env)
     .filter(([k]) => k.startsWith('VITE_'))
     .reduce(

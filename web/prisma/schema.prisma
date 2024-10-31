@@ -1083,7 +1083,7 @@ model Task {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   assignments    TaskAssignment[]
-  scheduleEvents  ScheduleEventTask[]
+  scheduleEvents ScheduleEventTask[]
   workOrders     TaskWorkOrderLink[]
   purchaseOrders TaskPurchaseOrderLink[]
   specialOrders  TaskSpecialOrderLink[]
@@ -1220,4 +1220,42 @@ model Schedule {
   @@index([shop, id])
   @@index([shop, locationId])
   @@index([shop, publishedAt])
+}
+
+model ReorderPoint {
+  id Int @id @default(autoincrement())
+
+  shop            String
+  inventoryItemId String
+
+  // The location to which the reorder point applies
+  // If null, the reorder point applies to all locations that do not have an explicit reorder point
+  locationId String?
+
+  // This product variant will be reordered if its available quantity is less than this value.
+  min Int
+  // Re-orders will order up to this quantity.
+  max Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([shop, locationId, inventoryItemId])
+}
+
+model InventoryQuantity {
+  id Int @id @default(autoincrement())
+
+  shop            String
+  inventoryItemId String
+  locationId      String
+
+  // the name of the quantity (currently we only support 'available' because that's all that webhooks support)
+  name     String
+  quantity Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([shop, locationId, inventoryItemId, name])
 }

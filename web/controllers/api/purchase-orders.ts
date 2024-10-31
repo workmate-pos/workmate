@@ -26,6 +26,8 @@ import {
 } from '../../services/purchase-orders/csv-import.js';
 import * as Sentry from '@sentry/node';
 import { z } from 'zod';
+import { PlanReorder } from '../../schemas/generated/plan-reorder.js';
+import { getReorderQuantities } from '../../services/reorder/plan.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -169,6 +171,20 @@ export default class PurchaseOrdersController {
     res.setHeader('Content-Type', 'application/zip');
     res.end(zip);
   }
+
+  @Get('/reorder/plan')
+  @QuerySchema('plan-reorder')
+  @Permission('write_purchase_orders')
+  @Permission('read_purchase_orders')
+  async planReorder(req: Request<unknown, unknown, unknown, PlanReorder>, res: Response<PlanReorderResponse>) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { locationId } = req.query;
+
+    const plan = await getReorderQuantities(session, locationId, user);
+
+    return res.json(plan);
+  }
 }
 
 export type FetchPurchaseOrderInfoPageResponse = {
@@ -184,3 +200,5 @@ export type FetchPurchaseOrderResponse = {
 };
 
 export type PrintPurchaseOrderResponse = { success: true };
+
+export type PlanReorderResponse = { quantity: number; inventoryItemId: ID; vendor: string }[];
