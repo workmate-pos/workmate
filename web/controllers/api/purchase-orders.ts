@@ -219,7 +219,7 @@ export default class PurchaseOrdersController {
   }
 
   @Post('/reorder')
-  @BodySchema('create-reorder-point')
+  @BodySchema('reorder-point')
   @Permission('write_purchase_orders')
   async createReorderPoint(
     req: Request<unknown, unknown, {
