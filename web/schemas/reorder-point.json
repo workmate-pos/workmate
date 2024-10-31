@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "inventoryItemId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "locationId": {
+      "$ref": "scalars.json#/definitions/ID"
+    },
+    "min": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Minimum stock level before reordering"
+    },
+    "max": {
+      "type": "number",
+      "minimum": 1,
+      "description": "Maximum stock level to order up to"
+    }
+  },
+  "required": ["inventoryItemId", "min", "max"],
+  "additionalProperties": false
+}

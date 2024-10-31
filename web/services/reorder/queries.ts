@@ -6,12 +6,13 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { MergeUnion } from '../../util/types.js';
+import { ReorderPoint } from './types.js';
 
 export async function getReorderPoints({
   shop,
   locationIds,
   inventoryItemIds,
-}: { shop: string } & MergeUnion<{ locationIds: ID[] } | { inventoryItemIds: ID[] }>) {
+}: { shop: string } & MergeUnion<{ locationIds: ID[] } | { inventoryItemIds: ID[] }>): Promise<ReorderPoint[]> {
   const _locationIds: string[] | null = locationIds ?? null;
   const _inventoryItemIds: string[] | null = inventoryItemIds ?? null;
 

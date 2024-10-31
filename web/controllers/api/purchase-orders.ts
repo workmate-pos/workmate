@@ -29,6 +29,9 @@ import { z } from 'zod';
 import { PlanReorder } from '../../schemas/generated/plan-reorder.js';
 import { getReorderQuantities } from '../../services/reorder/plan.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
+import { getReorderPoints, upsertReorderPoints } from '../../services/reorder/queries.js';
+import { ReorderPoint } from '../../services/reorder/types.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -186,6 +189,84 @@ export default class PurchaseOrdersController {
 
     return res.json(plan);
   }
+
+  @Get('/reorder/:inventoryItemId')
+  @Permission('read_purchase_orders')
+  async getReorderPoint(
+    req: Request<{ inventoryItemId: ID }, unknown, unknown, { locationId?: ID }>,
+    res: Response<ReorderPointResponse>
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { inventoryItemId } = req.params;
+    const { locationId } = req.query;
+
+    if (locationId) {
+      await assertLocationsPermitted({
+        shop: session.shop,
+        staffMemberId: user.staffMember.id,
+        locationIds: [locationId],
+      });
+    }
+
+    const reorderPoints = await getReorderPoints({
+      shop: session.shop,
+      inventoryItemIds: [inventoryItemId],
+      ...(locationId ? { locationIds: [locationId] } : {}),
+    });
+
+    return res.json({ reorderPoints });
+  }
+
+  @Post('/reorder')
+  @BodySchema('create-reorder-point')
+  @Permission('write_purchase_orders')
+  async createReorderPoint(
+    req: Request<unknown, unknown, {
+      inventoryItemId: ID;
+      locationId?: ID;
+      min: number;
+      max: number;
+    }>,
+    res: Response<CreateReorderPointResponse>
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { inventoryItemId, locationId, min, max } = req.body;
+
+    if (locationId) {
+      await assertLocationsPermitted({
+        shop: session.shop,
+        staffMemberId: user.staffMember.id,
+        locationIds: [locationId],
+      });
+    }
+
+    if (max <= min) {
+      throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
+    }
+
+    await upsertReorderPoints(session.shop, [
+      {
+        inventoryItemId,
+        locationId: locationId || null,
+        min,
+        max,
+      },
+    ]);
+
+    const [reorderPoint] = await getReorderPoints({
+      shop: session.shop,
+      inventoryItemIds: [inventoryItemId],
+      ...(locationId ? { locationIds: [locationId] } : {}),
+    });
+
+    if (!reorderPoint) {
+      throw new HttpError('Reorder point not found after creation', 404);
+    }
+
+    return res.json({ reorderPoint });
+  }
 }
 
 export type FetchPurchaseOrderInfoPageResponse = {
@@ -203,3 +284,11 @@ export type FetchPurchaseOrderResponse = {
 export type PrintPurchaseOrderResponse = { success: true };
 
 export type PlanReorderResponse = { quantity: number; inventoryItemId: ID; vendor: string }[];
+
+export type ReorderPointResponse = {
+  reorderPoints: ReorderPoint[];
+};
+
+export type CreateReorderPointResponse = {
+  reorderPoint: ReorderPoint;
+}
