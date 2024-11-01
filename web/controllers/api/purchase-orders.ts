@@ -28,10 +28,10 @@ import * as Sentry from '@sentry/node';
 import { z } from 'zod';
 import { PlanReorder } from '../../schemas/generated/plan-reorder.js';
 import { getReorderQuantities } from '../../services/reorder/plan.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
-import { getReorderPoints, upsertReorderPoints } from '../../services/reorder/queries.js';
-import { ReorderPoint } from '../../services/reorder/types.js';
+import { getReorderPoints, ReorderPoint, upsertReorderPoints } from '../../services/reorder/queries.js';
+import { ReorderPoints } from '../../schemas/generated/reorder-points.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -191,15 +191,21 @@ export default class PurchaseOrdersController {
   }
 
   @Get('/reorder/:inventoryItemId')
-  @Permission('read_purchase_orders')
+  @QuerySchema('reorder-points')
+  @Permission('read_settings')
+  @Authenticated()
   async getReorderPoint(
-    req: Request<{ inventoryItemId: ID }, unknown, unknown, { locationId?: ID }>,
+    req: Request<{ inventoryItemId: string }, unknown, unknown, ReorderPoints>,
     res: Response<ReorderPointResponse>
   ) {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const { inventoryItemId } = req.params;
     const { locationId } = req.query;
+
+    if (!isGid(inventoryItemId)) {
+      throw new HttpError('Invalid inventory item id', 400);
+    }
 
     if (locationId) {
       await assertLocationsPermitted({
@@ -219,15 +225,11 @@ export default class PurchaseOrdersController {
   }
 
   @Post('/reorder')
-  @BodySchema('reorder-point')
-  @Permission('write_purchase_orders')
+  @BodySchema('create-reorder-point')
+  @Permission('write_settings')
+  @Authenticated()
   async createReorderPoint(
-    req: Request<unknown, unknown, {
-      inventoryItemId: ID;
-      locationId?: ID;
-      min: number;
-      max: number;
-    }>,
+    req: Request<unknown, unknown, ReorderPoint>,
     res: Response<CreateReorderPointResponse>
   ) {
     const session: Session = res.locals.shopify.session;
