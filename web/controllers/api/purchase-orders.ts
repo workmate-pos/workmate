@@ -229,7 +229,7 @@ export default class PurchaseOrdersController {
   @Permission('write_settings')
   @Authenticated()
   async createReorderPoint(
-    req: Request<unknown, unknown, ReorderPoint>,
+    req: Request<unknown, unknown, CreateReorderPoint>,
     res: Response<CreateReorderPointResponse>
   ) {
     const session: Session = res.locals.shopify.session;
