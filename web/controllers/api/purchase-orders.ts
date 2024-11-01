@@ -32,6 +32,7 @@ import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
 import { getReorderPoints, ReorderPoint, upsertReorderPoints } from '../../services/reorder/queries.js';
 import { ReorderPoints } from '../../schemas/generated/reorder-points.js';
+import { CreateReorderPoint } from '../../schemas/generated/create-reorder-point.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
