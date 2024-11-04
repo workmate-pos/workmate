@@ -29,6 +29,11 @@ import { getReorderQuantities } from '../../services/reorder/plan.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { BulkCreatePurchaseOrders } from '../../schemas/generated/bulk-create-purchase-orders.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { getReorderPointCsvTemplatesZip, readReorderPointCsvImport } from '../../services/reorder/csv-import.js';
+import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { getLocations } from '../../services/locations/get.js';
+import { upsertReorderPoints } from '../../services/reorder/queries.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -143,6 +148,15 @@ export default class PurchaseOrdersController {
     return res.json({ success: true });
   }
 
+  @Get('/upload/csv/templates')
+  async getPurchaseOrderCsvTemplates(req: Request, res: Response) {
+    const zip = await getPurchaseOrderCsvTemplatesZip();
+
+    res.attachment('purchase-order-csv-templates.zip');
+    res.setHeader('Content-Type', 'application/zip');
+    res.end(zip);
+  }
+
   @Post('/upload/csv')
   @Authenticated()
   @Permission('write_purchase_orders')
@@ -164,13 +178,53 @@ export default class PurchaseOrdersController {
     return res.json({ success: true });
   }
 
-  @Get('/upload/csv/templates')
-  async getPurchaseOrderCsvTemplates(req: Request, res: Response) {
-    const zip = await getPurchaseOrderCsvTemplatesZip();
+  // TODO: After merge with tommy, move all reorder endpoints to their own controller
+  @Get('/reorder/upload/csv/templates')
+  async getReorderPointCsvTemplates(req: Request, res: Response) {
+    const zip = await getReorderPointCsvTemplatesZip();
 
-    res.attachment('purchase-order-csv-templates.zip');
+    res.attachment('reorder-point-csv-templates.zip');
     res.setHeader('Content-Type', 'application/zip');
     res.end(zip);
+  }
+
+  @Post('/reorder/upload/csv')
+  @Authenticated()
+  @Permission('write_settings')
+  async uploadReorderPointsCsv(req: Request, res: Response) {
+    const session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+
+    const [shopLocations, createReorderPoints] = await Promise.all([
+      getLocations(session, user.user.allowedLocationIds),
+      readReorderPointCsvImport({
+        formData: req,
+        headers: req.headers,
+      }),
+    ]);
+
+    const shopLocationIds = shopLocations.map(location => location.id);
+    const locationIds = unique(createReorderPoints.flatMap(reorderPoint => reorderPoint.locationId ?? shopLocationIds));
+
+    await assertLocationsPermitted({
+      shop: session.shop,
+      staffMemberId: user.staffMember.id,
+      locationIds,
+    });
+
+    // TODO: Replace this with Tommy's create function (which should sync inventory quantities)
+    //  -> Should also check whether the inventoryItem is valid
+    await upsertReorderPoints(
+      session.shop,
+      createReorderPoints.map(({ min, max, inventoryItemId, locationId = null }) => ({
+        min,
+        max,
+        inventoryItemId,
+        locationId,
+      })),
+    );
+
+    return res.json({ success: true });
   }
 
   @Get('/reorder/plan')

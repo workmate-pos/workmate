@@ -15,6 +15,7 @@ import csv from 'csv-parser';
 import { finished } from 'node:stream/promises';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { getSchemaCsvTemplate } from '../csv/csv-template.js';
 
 const CsvWorkOrderId = z
   .string()
@@ -510,12 +511,4 @@ export async function getWorkOrderCsvTemplatesZip() {
 
   workOrderCsvTemplatesArchive = await archiveOutput;
   return workOrderCsvTemplatesArchive;
-}
-
-type FileSchema = (typeof FILE_SCHEMA)[WorkOrderImportFileName];
-
-function getSchemaCsvTemplate(schema: FileSchema) {
-  const headers = Object.keys(schema.shape);
-  const emptyLine = Array.from({ length: headers.length }, () => '');
-  return [headers, emptyLine].map(cells => cells.join(',')).join('\n');
 }

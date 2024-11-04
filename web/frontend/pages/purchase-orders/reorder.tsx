@@ -41,6 +41,7 @@ import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-cus
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { ReorderPointCsvUploadDropZoneModal } from '@web/frontend/components/reorder-points/ReorderPointCsvUploadDropZoneModal.js';
 
 const PAGE_SIZE = 50;
 
@@ -88,10 +89,19 @@ function Reorder() {
   }, [locationId]);
 
   const [isCreatePurchaseOrderModalOpen, setIsBulkCreatePurchaseOrdersModalOpen] = useState(false);
+  const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
 
   return (
     <Card>
-      <TitleBar title="Re-order" />
+      <TitleBar
+        title="Re-order"
+        secondaryActions={[
+          {
+            content: 'Import CSV',
+            onAction: () => setIsCsvUploadDropZoneModalOpen(true),
+          },
+        ]}
+      />
 
       <Text as="h1" variant="headingMd" fontWeight="bold">
         Reorder
@@ -290,6 +300,11 @@ function Reorder() {
               quantity: item.orderQuantity,
             })) ?? []
         }
+      />
+
+      <ReorderPointCsvUploadDropZoneModal
+        open={isCsvUploadDropZoneModalOpen}
+        onClose={() => setIsCsvUploadDropZoneModalOpen(false)}
       />
 
       {toast}
