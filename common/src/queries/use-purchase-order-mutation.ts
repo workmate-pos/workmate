@@ -4,6 +4,7 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 import { CreatePurchaseOrderResponse } from '@web/controllers/api/purchase-orders.js';
 import { UseQueryData } from './react-query.js';
 import { usePurchaseOrderQuery } from './use-purchase-order-query.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 export const usePurchaseOrderMutation = (
   { fetch }: { fetch: Fetch },
@@ -24,14 +25,18 @@ export const usePurchaseOrderMutation = (
       const result: CreatePurchaseOrderResponse = await response.json();
       return result;
     },
-    onSuccess(...args) {
+    async onSuccess(...args) {
       const [{ purchaseOrder }] = args;
 
-      queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] }),
 
-      // we don't know if any items were removed so we must invalidate all inventory items
-      queryClient.invalidateQueries({ queryKey: ['inventory-item'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
+        // we don't know if any items were removed so we must invalidate all inventory items
+        queryClient.invalidateQueries({ queryKey: ['inventory-item'] }),
+        queryClient.invalidateQueries({ queryKey: ['inventory-items'] }),
+
+        queryClient.invalidateQueries({ queryKey: ['reorder-plan', { locationId: purchaseOrder.location?.id }] }),
+      ]);
 
       queryClient.setQueryData(
         ['purchase-order', purchaseOrder.name],

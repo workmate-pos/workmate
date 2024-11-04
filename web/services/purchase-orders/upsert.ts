@@ -43,6 +43,7 @@ import { getProductVariants } from '../product-variants/queries.js';
 import { getSerialsByProductVariantSerials, upsertSerials } from '../serials/queries.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
+import { syncInventoryQuantities } from '../inventory/sync.js';
 
 export async function upsertCreatePurchaseOrder(
   session: Session,
@@ -66,8 +67,6 @@ export async function upsertCreatePurchaseOrder(
       ? await getDetailedPurchaseOrder(session, createPurchaseOrder.name, user.user.allowedLocationIds)
       : null;
 
-    const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
-
     assertNoIllegalPurchaseOrderChanges(createPurchaseOrder, existingPurchaseOrder);
     assertNoIllegalLineItems(createPurchaseOrder);
     assertNoIllegalLineItemChanges(createPurchaseOrder, existingPurchaseOrder?.lineItems ?? []);
@@ -83,6 +82,8 @@ export async function upsertCreatePurchaseOrder(
       assertAllSameVendor(createPurchaseOrder),
       assertValidSpecialOrderLineItems(shop, createPurchaseOrder, existingPurchaseOrder),
     ]);
+
+    const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
 
     const { id: purchaseOrderId } = await upsertPurchaseOrder({
       ...createPurchaseOrder,
@@ -143,12 +144,29 @@ export async function upsertCreatePurchaseOrder(
 
     const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name, locationIds)) ?? never('We just made it');
 
-    await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
-    await adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
+    return {
+      existingPurchaseOrder,
+      newPurchaseOrder,
+      name,
+    };
+  }).then(async ({ existingPurchaseOrder, newPurchaseOrder, name }) => {
+    await Promise.all([
+      adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder),
+      adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder),
+    ]);
 
     sendPurchaseOrderWebhook(session, name).catch(error => {
       sentryErr('Failed to send webhook', { error });
     });
+
+    const inventoryItemIds = unique([
+      ...(existingPurchaseOrder?.lineItems.map(li => li.productVariant.inventoryItemId) ?? []),
+      ...newPurchaseOrder.lineItems.map(li => li.productVariant.inventoryItemId),
+    ]);
+
+    // we need to sync inventory quantities manually because shopify does not fire webhooks any except available
+    // (and we need incoming quantity too for re-ordering)
+    await syncInventoryQuantities(session, inventoryItemIds);
 
     return { name };
   });

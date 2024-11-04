@@ -9,8 +9,6 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getDetailedPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
 import { DetailedPurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
-import { db } from '../../services/db/db.js';
 import { PurchaseOrderPrintJob } from '../../schemas/generated/purchase-order-print-job.js';
 import { getShopSettings } from '../../services/settings/settings.js';
 import {
@@ -29,6 +27,8 @@ import { z } from 'zod';
 import { PlanReorder } from '../../schemas/generated/plan-reorder.js';
 import { getReorderQuantities } from '../../services/reorder/plan.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { BulkCreatePurchaseOrders } from '../../schemas/generated/bulk-create-purchase-orders.js';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -174,6 +174,7 @@ export default class PurchaseOrdersController {
   }
 
   @Get('/reorder/plan')
+  @Authenticated()
   @QuerySchema('plan-reorder')
   @Permission('write_purchase_orders')
   @Permission('read_purchase_orders')
@@ -185,6 +186,61 @@ export default class PurchaseOrdersController {
     const plan = await getReorderQuantities(session, locationId, user);
 
     return res.json(plan);
+  }
+
+  @Post('/bulk')
+  @Authenticated()
+  @BodySchema('bulk-create-purchase-orders')
+  @Permission('write_purchase_orders')
+  async bulkCreatePurchaseOrder(
+    req: Request<unknown, unknown, BulkCreatePurchaseOrders>,
+    res: Response<BulkCreatePurchaseOrdersResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const bulkCreatePurchaseOrder = req.body;
+
+    const purchaseOrders = await Promise.all(
+      bulkCreatePurchaseOrder.purchaseOrders.map(createPurchaseOrder =>
+        upsertCreatePurchaseOrder(session, user, createPurchaseOrder).then(
+          purchaseOrder =>
+            ({
+              type: 'success',
+              purchaseOrder,
+            }) as const,
+          error =>
+            ({
+              type: 'error',
+              error,
+            }) as const,
+        ),
+      ),
+    );
+
+    const errorCount = purchaseOrders.filter(purchaseOrder => purchaseOrder.type === 'error').length;
+    const status = errorCount === purchaseOrders.length ? 500 : errorCount > 0 ? 207 : 200;
+
+    return res.status(status).json({
+      purchaseOrders: purchaseOrders.map((result, i) => {
+        if (result.type === 'success') {
+          return result;
+        }
+
+        if (result.error instanceof HttpError) {
+          return {
+            type: 'error',
+            error: result.error.message,
+          };
+        }
+
+        sentryErr(result.error, { createPurchaseOrder: bulkCreatePurchaseOrder.purchaseOrders[i] });
+
+        return {
+          type: 'error',
+          error: 'Internal server error',
+        };
+      }),
+    });
   }
 }
 
@@ -202,4 +258,28 @@ export type FetchPurchaseOrderResponse = {
 
 export type PrintPurchaseOrderResponse = { success: true };
 
-export type PlanReorderResponse = { quantity: number; inventoryItemId: ID; vendor: string }[];
+export type PlanReorderResponse = {
+  min: number;
+  max: number;
+  orderQuantity: number;
+  availableQuantity: number;
+  incomingQuantity: number;
+  inventoryItemId: ID;
+  productVariantId: ID;
+  vendor: string;
+}[];
+
+export type BulkCreatePurchaseOrdersResponse = {
+  purchaseOrders: (
+    | {
+        type: 'success';
+        purchaseOrder: {
+          name: string;
+        };
+      }
+    | {
+        type: 'error';
+        error: string;
+      }
+  )[];
+};

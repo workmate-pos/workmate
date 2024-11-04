@@ -7,7 +7,7 @@ import { upsertInventoryQuantities } from './queries.js';
 import { hasNestedPropertyValue, hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export async function syncInventoryQuantities(session: Session, inventoryItemIds: ID[]) {
-  const locations = await getLocations(session);
+  const locations = await getLocations(session, null);
 
   const graphql = new Graphql(session);
 

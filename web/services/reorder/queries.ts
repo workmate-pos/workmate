@@ -130,15 +130,31 @@ export async function deleteReorderPoints(
 export async function getReorderQuantities(shop: string, locationId: ID) {
   const _locationId: string = locationId;
 
-  const reorders = await sql<{ vendor: string; inventoryItemId: string; quantity: number | null }>`
-    SELECT p.vendor, rp."inventoryItemId", rp.max - available.quantity - incoming.quantity AS "quantity"
+  const reorders = await sql<{
+    vendor: string;
+    inventoryItemId: string;
+    productVariantId: string;
+    max: number;
+    min: number;
+    availableQuantity: number;
+    incomingQuantity: number;
+  }>`
+    SELECT p.vendor,
+           rp."inventoryItemId",
+           pv."productVariantId",
+           rp.max,
+           rp.min,
+           available.quantity AS "availableQuantity",
+           incoming.quantity  AS "incomingQuantity"
     FROM "ReorderPoint" rp
            INNER JOIN "ProductVariant" pv ON rp."inventoryItemId" = pv."inventoryItemId"
            INNER JOIN "Product" p on pv."productId" = p."productId"
            INNER JOIN "InventoryQuantity" available
-                      ON available."inventoryItemId" = rp."inventoryItemId" AND available.name = 'available'
+                      ON available."inventoryItemId" = rp."inventoryItemId" AND
+                         available."locationId" = ${_locationId} AND available.name = 'available'
            INNER JOIN "InventoryQuantity" incoming
-                      ON incoming."inventoryItemId" = rp."inventoryItemId" AND incoming.name = 'incoming'
+                      ON incoming."inventoryItemId" = rp."inventoryItemId" AND
+                         incoming."locationId" = ${_locationId} AND incoming.name = 'incoming'
     WHERE rp.shop = ${shop}
       AND available.quantity + incoming.quantity < rp.min
       AND (
@@ -155,14 +171,16 @@ export async function getReorderQuantities(shop: string, locationId: ID) {
       );
   `;
 
-  return reorders.map(({ inventoryItemId, quantity, ...reorderPoint }) => {
+  return reorders.map(({ inventoryItemId, productVariantId, ...reorderPoint }) => {
     try {
       assertGid(inventoryItemId);
+      assertGid(productVariantId);
 
       return {
         ...reorderPoint,
-        quantity: quantity ?? never('all columns are non nullable'),
+        orderQuantity: reorderPoint.max - reorderPoint.availableQuantity - reorderPoint.incomingQuantity,
         inventoryItemId,
+        productVariantId,
       };
     } catch (e) {
       throw new HttpError('Failed to parse reorder point', 500);

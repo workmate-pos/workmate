@@ -27,7 +27,7 @@ import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purcha
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useAppBridge } from '@shopify/app-bridge-react';
+import { TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { getCreatePurchaseOrderForSpecialOrders } from '@work-orders/common/create-purchase-order/from-special-orders.js';
@@ -107,6 +107,8 @@ function Merge() {
 
   return (
     <LegacyCard>
+      <TitleBar title="Merge special orders" />
+
       <IndexFilters
         mode={IndexFiltersMode.Default}
         setMode={() => {}}
