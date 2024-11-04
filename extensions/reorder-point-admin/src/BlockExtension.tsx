@@ -15,21 +15,21 @@ import { useReorderPointMutation } from '@work-orders/common/queries/use-reorder
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 
 const TARGET = 'admin.product-details.block.render';
 
-export default reactExtension(TARGET, () => {
+export default reactExtension(TARGET, () => <App />);
+
+function App() {
   const [queryClient] = useState(() => new QueryClient());
   return (
     <QueryClientProvider client={queryClient}>
-      <App />
+      <Content />
     </QueryClientProvider>
   );
-});
+}
 
 function useLocationOptions() {
-  const fetch = useAuthenticatedFetch();
   const locationsQuery = useLocationsQuery({
     fetch,
     params: {},
@@ -50,9 +50,8 @@ function useLocationOptions() {
   };
 }
 
-function App() {
+function Content() {
   const { data } = useApi(TARGET);
-  const fetch = useAuthenticatedFetch();
   const productId = data.selected[0]?.id;
 
   const [selectedLocationId, setSelectedLocationId] = useState<ID | undefined>(undefined);
