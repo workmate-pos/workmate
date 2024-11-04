@@ -6,6 +6,5 @@
       "$ref": "scalars.json#/definitions/ID"
     }
   },
-  "required": ["locationId"],
   "additionalProperties": false
 }
