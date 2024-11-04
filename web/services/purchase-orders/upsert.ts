@@ -4,7 +4,7 @@ import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express
 import { getNewPurchaseOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
 import { getDetailedPurchaseOrder } from './get.js';
-import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
+import { InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { gql } from '../gql/gql.js';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';

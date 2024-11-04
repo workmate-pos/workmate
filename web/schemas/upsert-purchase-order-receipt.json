@@ -29,8 +29,11 @@
         "additionalProperties": false,
         "required": ["uuid", "quantity"]
       }
+    },
+    "status": {
+      "enum": ["DRAFT", "ARCHIVED", "COMPLETED"]
     }
   },
   "additionalProperties": false,
-  "required": ["name", "description", "receivedAt", "lineItems"]
+  "required": ["name", "description", "receivedAt", "lineItems", "status"]
 }

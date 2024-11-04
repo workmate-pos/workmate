@@ -1,11 +1,12 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
-import { Banner, BlockStack, Card, InlineStack, Spinner, Text } from '@shopify/polaris';
+import { Badge, Banner, BlockStack, Box, Card, InlineStack, Spinner, Text } from '@shopify/polaris';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { ReactNode, useState } from 'react';
 import { PurchaseOrderReceiptModal } from '@web/frontend/components/purchase-orders/modals/PurchaseOrderReceiptModal.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 type PurchaseOrderReceipt = DetailedPurchaseOrder['receipts'][number];
 
@@ -19,14 +20,12 @@ export function PurchaseOrderReceiptCard({
   disabled,
   onClick,
   content,
-  right,
 }: {
   name: string;
   id: number;
   disabled?: boolean;
   onClick?: () => void;
   content?: PurchaseOrderReceiptCardSlot;
-  right?: PurchaseOrderReceiptCardSlot;
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -91,7 +90,11 @@ export function PurchaseOrderReceiptCard({
             {renderPurchaseOrderReceiptCardSlot(content, receipt)}
           </BlockStack>
 
-          {renderPurchaseOrderReceiptCardSlot(right, receipt)}
+          <Box>
+            <Badge tone={({ DRAFT: 'info', ARCHIVED: 'warning', COMPLETED: 'success' } as const)[receipt.status]}>
+              {sentenceCase(receipt.status.toLowerCase())}
+            </Badge>
+          </Box>
         </InlineStack>
 
         {toast}
@@ -106,14 +109,12 @@ export function PurchaseOrderReceiptCard({
 export function ConfigurablePurchaseOrderReceiptCard({
   name,
   id,
-  right,
   content,
   onOpenChange,
   disabled,
 }: {
   name: string;
   id: number;
-  right?: PurchaseOrderReceiptCardSlot;
   content?: PurchaseOrderReceiptCardSlot;
   onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
@@ -125,7 +126,6 @@ export function ConfigurablePurchaseOrderReceiptCard({
       <PurchaseOrderReceiptCard
         name={name}
         id={id}
-        right={right}
         content={content}
         disabled={disabled}
         onClick={() => setOpen(true)}

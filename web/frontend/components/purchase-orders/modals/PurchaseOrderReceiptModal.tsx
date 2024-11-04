@@ -4,11 +4,13 @@ import {
   BlockStack,
   Box,
   FormLayout,
+  Icon,
   InlineGrid,
   InlineStack,
   Modal,
   ResourceItem,
   ResourceList,
+  Select,
   SkeletonThumbnail,
   Text,
   TextField,
@@ -27,8 +29,18 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { DateTime } from '@web/schemas/generated/upsert-purchase-order-receipt.js';
 import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { AlertMinor } from '@shopify/polaris-icons';
+import { useDeletePurchaseOrderReceiptMutation } from '@work-orders/common/queries/use-delete-purchase-order-receipt-mutation.js';
 
 type PurchaseOrderReceipt = DetailedPurchaseOrder['receipts'][number];
+type PurchaseOrderReceiptStatus = PurchaseOrderReceipt['status'];
+
+const RECEIPT_STATUSES: PurchaseOrderReceiptStatus[] = ['DRAFT', 'ARCHIVED', 'COMPLETED'];
+
+function isReceiptStatus(status: string): status is PurchaseOrderReceiptStatus {
+  return (RECEIPT_STATUSES as string[]).includes(status);
+}
 
 export function PurchaseOrderReceiptModal({
   open,
@@ -49,44 +61,61 @@ export function PurchaseOrderReceiptModal({
 
   const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
   const purchaseOrderReceiptMutation = usePurchaseOrderReceiptMutation({ fetch });
+  const deletePurchaseOrderReceiptMutation = useDeletePurchaseOrderReceiptMutation({ fetch });
 
   const [receiptName, setReceiptName] = useState('');
+  const [status, setStatus] = useState<PurchaseOrderReceipt['status']>();
   const [description, setDescription] = useState('');
   const [lineItems, setLineItems] = useState<PurchaseOrderReceipt['lineItems']>([]);
   const [receivedAt, setReceivedAt] = useState<Date>(new Date());
 
+  const [receipt, setReceipt] = useState<PurchaseOrderReceipt>();
+
   useEffect(() => {
+    const unsatisfiedLineItems =
+      purchaseOrderQuery.data?.lineItems
+        .map(lineItem => {
+          const availableQuantity =
+            purchaseOrderQuery.data?.receipts
+              .filter(receipt => receipt.id !== id)
+              .flatMap(receipt => receipt.lineItems)
+              .filter(hasPropertyValue('uuid', lineItem.uuid))
+              .map(lineItem => lineItem.quantity)
+              .reduce((a, b) => a + b, 0) ?? 0;
+
+          return { ...lineItem, availableQuantity };
+        })
+        .filter(lineItem => lineItem.quantity > lineItem.availableQuantity)
+        .map(({ uuid, quantity, availableQuantity }) => ({
+          uuid,
+          quantity: Math.max(0, quantity - availableQuantity),
+        })) ?? [];
+
     if (id === null) {
       setReceiptName('');
       setDescription('');
-      setLineItems(
-        purchaseOrderQuery.data?.lineItems
-          .map(lineItem => {
-            const availableQuantity =
-              purchaseOrderQuery.data?.receipts
-                .flatMap(receipt => receipt.lineItems)
-                .filter(hasPropertyValue('uuid', lineItem.uuid))
-                .map(lineItem => lineItem.quantity)
-                .reduce((a, b) => a + b, 0) ?? 0;
-
-            return { ...lineItem, availableQuantity };
-          })
-          .filter(lineItem => lineItem.quantity > lineItem.availableQuantity)
-          .map(({ uuid, quantity, availableQuantity }) => ({
-            uuid,
-            quantity: Math.max(0, quantity - availableQuantity),
-          })) ?? [],
-      );
+      setStatus(undefined);
+      setLineItems(unsatisfiedLineItems);
       setReceivedAt(new Date());
+      setReceipt(undefined);
     } else if (purchaseOrderQuery.isSuccess) {
       const receipt = purchaseOrderQuery.data?.receipts.find(receipt => receipt.id === id);
 
       setReceiptName(receipt?.name ?? '');
       setDescription(receipt?.description ?? '');
-      setLineItems(receipt?.lineItems ?? []);
+      setStatus(receipt?.status);
+      setLineItems([
+        ...(receipt?.lineItems ?? []),
+        ...(receipt?.status === 'COMPLETED'
+          ? []
+          : unsatisfiedLineItems
+              .filter(lineItem => !receipt?.lineItems.some(receiptLineItem => lineItem.uuid === receiptLineItem.uuid))
+              .map(lineItem => ({ ...lineItem, quantity: 0 }))),
+      ]);
       setReceivedAt(receipt ? new Date(receipt.receivedAt) : new Date());
+      setReceipt(receipt);
     }
-  }, [purchaseOrderQuery.data]);
+  }, [id, purchaseOrderQuery.data]);
 
   const productVariantIds = unique(purchaseOrderQuery.data?.lineItems.map(li => li.productVariant.id) ?? []);
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
@@ -141,27 +170,57 @@ export function PurchaseOrderReceiptModal({
         open={open}
         onClose={onClose}
         loading={purchaseOrderQuery.isLoading}
+        secondaryActions={[
+          {
+            content: 'Delete',
+            destructive: true,
+            disabled: id === null || receipt?.status === 'COMPLETED',
+            loading: deletePurchaseOrderReceiptMutation.isPending,
+            onAction: () => {
+              if (id === null) {
+                return;
+              }
+
+              deletePurchaseOrderReceiptMutation.mutate(
+                { purchaseOrderName: name, id },
+                {
+                  onSuccess() {
+                    setToastAction({ content: 'Purchase order receipt deleted' });
+                    onClose();
+                  },
+                },
+              );
+            },
+          },
+        ]}
         primaryAction={{
           content: 'Save',
-          disabled: !receiptName || !lineItems.filter(li => li.quantity > 0).length || !purchaseOrderQuery.isSuccess,
+          disabled:
+            !receiptName || !status || !lineItems.filter(li => li.quantity > 0).length || !purchaseOrderQuery.isSuccess,
           loading: purchaseOrderReceiptMutation.isPending,
-          onAction: () =>
+          onAction: () => {
+            if (!status) {
+              return;
+            }
+
             purchaseOrderReceiptMutation.mutate(
               {
                 purchaseOrderName: name,
                 id: id ?? undefined,
+                status,
                 name: receiptName,
                 description,
-                lineItems: id !== null ? [] : lineItems.filter(li => li.quantity > 0),
+                lineItems: receipt?.status === 'COMPLETED' ? [] : lineItems.filter(li => li.quantity > 0),
                 receivedAt: receivedAt.toISOString() as DateTime,
               },
               {
                 onSuccess() {
-                  setToastAction({ content: 'Saved purchase order receipt' });
+                  setToastAction({ content: 'Purchase order receipt saved' });
                   onClose();
                 },
               },
-            ),
+            );
+          },
         }}
       >
         <Modal.Section>
@@ -182,6 +241,34 @@ export function PurchaseOrderReceiptModal({
               onChange={setDescription}
             />
 
+            <BlockStack gap="100">
+              <Select
+                label="Status"
+                placeholder="Select a status"
+                id="status"
+                disabled={receipt?.status === 'COMPLETED'}
+                requiredIndicator
+                options={RECEIPT_STATUSES.map(status => ({ label: sentenceCase(status.toLowerCase()), value: status }))}
+                onChange={status => {
+                  if (isReceiptStatus(status)) {
+                    setStatus(status);
+                  }
+                }}
+                value={status}
+              />
+
+              {receipt?.status !== 'COMPLETED' && status === 'COMPLETED' && (
+                <InlineStack>
+                  <InlineStack gap="100" align="start">
+                    <Icon source={AlertMinor} tone="caution" />
+                    <Text as="p" tone="caution">
+                      Completed receipts cannot be changed
+                    </Text>
+                  </InlineStack>
+                </InlineStack>
+              )}
+            </BlockStack>
+
             <DateTimeField label="Received at" value={receivedAt} onChange={setReceivedAt} requiredIndicator />
 
             <BlockStack gap={'100'}>
@@ -189,7 +276,6 @@ export function PurchaseOrderReceiptModal({
                 Line items
               </Text>
 
-              {/*TODO: Loop through line items*/}
               <ResourceList
                 items={lineItems}
                 resourceName={{ singular: 'line item', plural: 'line items' }}
@@ -209,6 +295,7 @@ export function PurchaseOrderReceiptModal({
 
                   const availableQuantity =
                     purchaseOrderQuery.data?.receipts
+                      .filter(receipt => receipt.id !== id)
                       .flatMap(receipt => receipt.lineItems)
                       .filter(hasPropertyValue('uuid', uuid))
                       .map(lineItem => lineItem.quantity)
@@ -219,14 +306,19 @@ export function PurchaseOrderReceiptModal({
 
                   const maxQuantity = Math.max(0, quantity - availableQuantity);
 
-                  const saveLineItemQuantity = (quantity: number) => {
-                    setLineItems(current => [...current.filter(x => x.uuid !== uuid), { uuid, quantity }]);
-                  };
+                  const saveLineItemQuantity = (quantity: number) =>
+                    setLineItems(current => {
+                      if (current.some(li => li.uuid === uuid)) {
+                        return current.map(li => (li.uuid === uuid ? { ...li, quantity } : li));
+                      }
+
+                      return [...current, { uuid, quantity }];
+                    });
 
                   return (
                     <ResourceItem
                       id={uuid}
-                      disabled={id !== null}
+                      disabled={receipt?.status === 'COMPLETED'}
                       onClick={() => saveLineItemQuantity(selectedQuantity === 0 ? maxQuantity : 0)}
                     >
                       <InlineGrid gap={'200'} columns={['twoThirds', 'oneThird']}>
@@ -246,7 +338,7 @@ export function PurchaseOrderReceiptModal({
                           </BlockStack>
                         </InlineStack>
 
-                        {id === null && (
+                        {receipt?.status !== 'COMPLETED' && (
                           <span onClick={event => event.stopPropagation()}>
                             <TextField
                               label="Quantity"

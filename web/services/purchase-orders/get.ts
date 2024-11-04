@@ -287,8 +287,9 @@ async function getDetailedPurchaseOrderReceipts(purchaseOrderId: number) {
     getPurchaseOrderReceiptLineItems({ purchaseOrderId }),
   ]);
 
-  return receipts.map(({ id, name, description, receivedAt }) => ({
+  return receipts.map(({ id, status, name, description, receivedAt }) => ({
     id,
+    status,
     name,
     description,
     receivedAt: receivedAt.toISOString() as DateTime,

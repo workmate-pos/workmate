@@ -1,4 +1,5 @@
 import {
+  deletePurchaseOrderReceiptLineItems,
   getPurchaseOrder,
   getPurchaseOrderReceipt,
   insertPurchaseOrderReceipt,
@@ -34,8 +35,6 @@ export async function upsertReceipt(
     throw new HttpError(`Purchase order with name ${upsertPurchaseOrderReceipt.name} not found`, 404);
   }
 
-  // TODO: Make sure that the receipt quantity does not exceed the purchase order quantity
-
   if (upsertPurchaseOrderReceipt.id) {
     const existingReceipt = await getPurchaseOrderReceipt(upsertPurchaseOrderReceipt.id);
 
@@ -43,9 +42,9 @@ export async function upsertReceipt(
       throw new HttpError(`Receipt with id ${upsertPurchaseOrderReceipt.id} not found`, 404);
     }
 
-    if (upsertPurchaseOrderReceipt.lineItems.length > 0) {
+    if (existingReceipt.status === 'COMPLETED' && upsertPurchaseOrderReceipt.lineItems.length > 0) {
       // client should send empty array if updating
-      throw new HttpError('Receipt line items cannot be changed', 400);
+      throw new HttpError("Completed receipts' line items cannot be changed", 400);
     }
   }
 
@@ -57,18 +56,26 @@ export async function upsertReceipt(
           purchaseOrderId: purchaseOrderId,
           purchaseOrderReceiptId: upsertPurchaseOrderReceipt.id,
           receivedAt: new Date(upsertPurchaseOrderReceipt.receivedAt),
+          status: upsertPurchaseOrderReceipt.status,
         })
       : await insertPurchaseOrderReceipt({
           name: upsertPurchaseOrderReceipt.name,
           description: upsertPurchaseOrderReceipt.description,
           purchaseOrderId: purchaseOrderId,
           receivedAt: new Date(upsertPurchaseOrderReceipt.receivedAt),
+          status: upsertPurchaseOrderReceipt.status,
         });
 
+    await deletePurchaseOrderReceiptLineItems({ purchaseOrderReceiptId });
+
     for (const { uuid, quantity } of upsertPurchaseOrderReceipt.lineItems) {
+      // TODO: How shoudl we handle statuses here? doesnt make snese to count archived
+      // TODO: Validate valid uuids
+
       const newAvailableQuantity =
         quantity +
         purchaseOrder.receipts
+          .filter(receipt => receipt.id !== purchaseOrderReceiptId)
           .flatMap(receipt => receipt.lineItems)
           .filter(hasPropertyValue('uuid', uuid))
           .map(lineItem => lineItem.quantity)
