@@ -222,7 +222,7 @@ export default class PurchaseOrdersController {
       inventoryItemIds: [inventoryItemId],
       ...(locationId ? { locationIds: [locationId] } : {}),
     });
-    
+
     if (!reorderPoint) {
       throw new HttpError('Reorder point not found', 404);
     }
@@ -254,10 +254,8 @@ export default class PurchaseOrdersController {
       throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
     }
 
-    const errors: unknown[] = [];
-
     await Promise.all([
-      syncInventoryQuantities(session, [inventoryItemId]).catch(error => errors.push(error)),
+      syncInventoryQuantities(session, [inventoryItemId]),
       upsertReorderPoints(session.shop, [
         {
           inventoryItemId,
@@ -265,7 +263,7 @@ export default class PurchaseOrdersController {
           min,
           max,
         },
-      ]).catch(error => errors.push(error)),
+      ]),
     ]);
 
     const [reorderPoint] = await getReorderPoints({
@@ -276,10 +274,6 @@ export default class PurchaseOrdersController {
 
     if (!reorderPoint) {
       throw new HttpError('Reorder point not found after creation', 404);
-    }
-
-    if (errors.length > 0) {
-      throw new AggregateError(errors, 'Failed to create reorder point');
     }
 
     return res.json({ reorderPoint });

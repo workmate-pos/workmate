@@ -85,7 +85,7 @@ export function ReorderPointForm() {
   }
 
   if (reorderPointError) {
-    return <Text>{extractErrorMessage(reorderPointError, 'Failed to load reorder points')}</Text>;
+    return <Text>{extractErrorMessage(reorderPointError, 'Failed to load reorder point')}</Text>;
   }
 
   return (
@@ -96,21 +96,24 @@ export function ReorderPointForm() {
           value={formValues.locationId ?? ''}
           onChange={(value: ID) => setFormValues(prev => ({ ...prev, locationId: value || undefined }))}
           options={locationOptions}
+          disabled={mutation.isPending}
         />
 
         <NumberField
           label="Minimum Stock Level"
           value={formValues.min}
-          onChange={(value: number) => setFormValues(prev => ({ ...prev, min: value }))}
+          onChange={(value: number | string) => setFormValues(prev => ({ ...prev, min: Number(value) }))}
+          disabled={mutation.isPending}
         />
 
         <NumberField
           label="Maximum Stock Level"
           value={formValues.max}
-          onChange={(value: number) => setFormValues(prev => ({ ...prev, max: value }))}
+          onChange={(value: number | string) => setFormValues(prev => ({ ...prev, max: Number(value) }))}
+          disabled={mutation.isPending}
         />
 
-        <Button onPress={handleSubmit} disabled={!validateForm()}>
+        <Button onPress={handleSubmit} disabled={!validateForm() || mutation.isPending}>
           {mutation.isPending ? 'Saving...' : 'Save Configuration'}
         </Button>
 
