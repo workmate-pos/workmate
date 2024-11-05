@@ -347,9 +347,12 @@ function PurchaseOrder({
               <LinkedTasks
                 links={{ purchaseOrders: [createPurchaseOrder.name].filter(isNonNullable) }}
                 disabled={purchaseOrderMutation.isPending || !createPurchaseOrder.name}
-                action={
+                action={tasks =>
                   !!createPurchaseOrder.name ? (
-                    <NewLinkedTaskButton links={{ purchaseOrders: [createPurchaseOrder.name] }} />
+                    <NewLinkedTaskButton
+                      links={{ purchaseOrders: [createPurchaseOrder.name] }}
+                      suggestedDeadlines={tasks.map(task => task.deadline).filter(isNonNullable)}
+                    />
                   ) : (
                     <Tooltip content={'You must save your purchase order before you can create tasks'}>
                       <BaseNewTaskButton disabled />

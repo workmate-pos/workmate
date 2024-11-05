@@ -208,9 +208,12 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
               <LinkedTasks
                 links={{ specialOrders: [createSpecialOrder.name].filter(isNonNullable) }}
                 disabled={specialOrderMutation.isPending}
-                action={
+                action={tasks =>
                   !!createSpecialOrder.name ? (
-                    <NewLinkedTaskButton links={{ specialOrders: [createSpecialOrder.name] }} />
+                    <NewLinkedTaskButton
+                      links={{ specialOrders: [createSpecialOrder.name] }}
+                      suggestedDeadlines={tasks.map(task => task.deadline).filter(isNonNullable)}
+                    />
                   ) : (
                     <Tooltip content={'You must save your special order before you can create tasks'}>
                       <BaseNewTaskButton disabled />

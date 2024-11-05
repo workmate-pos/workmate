@@ -45,7 +45,7 @@ import { WorkOrderPrintModal } from '@web/frontend/components/work-orders/modals
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/CreateOrderModal.js';
 import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';
@@ -298,9 +298,12 @@ function WorkOrder({
               <LinkedTasks
                 links={{ workOrders: [createWorkOrder.name].filter(isNonNullable) }}
                 disabled={workOrderMutation.isPending}
-                action={
+                action={tasks =>
                   !!createWorkOrder.name ? (
-                    <NewLinkedTaskButton links={{ workOrders: [createWorkOrder.name] }} />
+                    <NewLinkedTaskButton
+                      links={{ workOrders: [createWorkOrder.name] }}
+                      suggestedDeadlines={tasks.map(task => task.deadline).filter(isNonNullable)}
+                    />
                   ) : (
                     <Tooltip content={'You must save your work order before you can create tasks'}>
                       <BaseNewTaskButton disabled />

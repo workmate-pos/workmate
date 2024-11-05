@@ -8,6 +8,12 @@ import { ConfigurableTaskCard, TaskCardScheduledTimeContent } from '@web/fronten
 import { PlusMinor } from '@shopify/polaris-icons';
 import { TaskModal } from '@web/frontend/components/tasks/TaskModal.js';
 import { DetailedTask } from '@work-orders/common/queries/use-task-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+
+export type LinkedTasksSlot = ReactNode | ((tasks: DetailedTask[]) => ReactNode);
+
+const renderLinkedTasksSlot = (slot: LinkedTasksSlot, tasks: DetailedTask[]) =>
+  typeof slot === 'function' ? slot(tasks) : slot;
 
 export function LinkedTasks({
   links,
@@ -16,7 +22,7 @@ export function LinkedTasks({
 }: {
   links: Partial<DetailedTask['links']>;
   disabled: boolean;
-  action?: ReactNode;
+  action?: LinkedTasksSlot;
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -39,6 +45,9 @@ export function LinkedTasks({
     }
   }, [tasksQuery.isFetching, tasksQuery.hasNextPage]);
 
+  const tasks = tasksQuery.data?.pages.flat(1);
+  const suggestedDeadlines = tasks?.map(task => task.deadline).filter(isNonNullable);
+
   return (
     <BlockStack gap={'400'}>
       <InlineStack align={'space-between'}>
@@ -46,7 +55,7 @@ export function LinkedTasks({
           Tasks
         </Text>
 
-        {action}
+        {renderLinkedTasksSlot(action, tasks ?? [])}
       </InlineStack>
 
       {tasksQuery.isError && (
@@ -62,22 +71,21 @@ export function LinkedTasks({
         </Banner>
       )}
 
-      {!tasksQuery.data?.pages.flat(1).length && (
+      {!tasks?.length && (
         <Text as="p" variant="bodyMd" tone="subdued">
           No tasks found
         </Text>
       )}
 
-      {tasksQuery.data?.pages
-        .flat(1)
-        .map(task => (
-          <ConfigurableTaskCard
-            disabled={disabled}
-            key={task.id}
-            taskId={task.id}
-            content={<TaskCardScheduledTimeContent taskId={task.id} />}
-          />
-        ))}
+      {tasks?.map(task => (
+        <ConfigurableTaskCard
+          disabled={disabled}
+          key={task.id}
+          taskId={task.id}
+          content={<TaskCardScheduledTimeContent taskId={task.id} />}
+          suggestedDeadlines={suggestedDeadlines}
+        />
+      ))}
 
       {tasksQuery.isFetchingNextPage && <Spinner />}
 
@@ -94,13 +102,18 @@ export function BaseNewTaskButton(props: Omit<ButtonProps, 'variant' | 'icon'>) 
   );
 }
 
-export function NewLinkedTaskButton({ links }: { links: Partial<DetailedTask['links']> }) {
+export function NewLinkedTaskButton({
+  links,
+  suggestedDeadlines,
+}: {
+  links: Partial<DetailedTask['links']>;
+  suggestedDeadlines?: Date[];
+}) {
   const [isCreatingTask, setIsCreatingTask] = useState(false);
 
   return (
     <>
       <BaseNewTaskButton onClick={() => setIsCreatingTask(true)}>New Task</BaseNewTaskButton>
-
       <TaskModal
         open={isCreatingTask}
         onClose={() => setIsCreatingTask(false)}
@@ -118,6 +131,7 @@ export function NewLinkedTaskButton({ links }: { links: Partial<DetailedTask['li
             ...Object.fromEntries(Object.entries(links).filter(([, value]) => value !== undefined)),
           },
         }}
+        suggestedDeadlines={suggestedDeadlines}
       />
     </>
   );
