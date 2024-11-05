@@ -29,7 +29,9 @@ export const useReorderPointQuery = (
       const searchParams = new URLSearchParams();
       if (locationId?.trim()) searchParams.append('locationId', locationId);
 
-      const response = await fetch(`/api/purchase-orders/reorder/${inventoryItemId}?${searchParams}`);
+      const encodedInventoryItemId = encodeURIComponent(inventoryItemId.toString());
+
+      const response = await fetch(`/api/purchase-orders/reorder/${encodedInventoryItemId}?${searchParams}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch reorder point');

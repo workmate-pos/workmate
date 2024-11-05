@@ -37,7 +37,7 @@ export function useInventoryItem(variantId: ID | undefined) {
         });
 
         if (mounted && response?.data) {
-          setInventoryItemId(encodeURIComponent(response.data.productVariant.inventoryItem.id));
+          setInventoryItemId(response.data.productVariant.inventoryItem.id);
         }
       } finally {
         if (mounted) {
