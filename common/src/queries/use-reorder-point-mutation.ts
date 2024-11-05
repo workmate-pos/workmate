@@ -21,14 +21,16 @@ export const useReorderPointMutation = ({ fetch }: { fetch: Fetch }) => {
       const data: CreateReorderPointResponse = await response.json();
       return data;
     },
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
       // Invalidate relevant queries
-      queryClient.invalidateQueries({
-        queryKey: ['reorder-point', variables.inventoryItemId, variables.locationId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['reorder-plan'],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ['reorder-point', variables.inventoryItemId, variables.locationId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ['reorder-points'],
+        }),
+      ]);
     },
   });
 };

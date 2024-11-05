@@ -26,11 +26,15 @@ export function ReorderPointForm() {
     locationId: undefined,
   });
 
-  const { data: reorderPoints } = useReorderPointQuery(
+  const {
+    data: reorderPoints,
+    isLoading: isLoadingReorderPoints,
+    error: reorderPointError,
+  } = useReorderPointQuery(
     {
       fetch,
-      inventoryItemId: inventoryItemId as ID,
-      locationId: formValues.locationId,
+      inventoryItemId: inventoryItemId!,
+      locationId: formValues.locationId!,
     },
     { enabled: !!inventoryItemId },
   );
@@ -48,12 +52,12 @@ export function ReorderPointForm() {
     }
   }, [reorderPoints]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!validateForm()) return;
 
     try {
-      await mutation.mutateAsync({
-        inventoryItemId: inventoryItemId as ID,
+      mutation.mutate({
+        inventoryItemId: inventoryItemId!,
         locationId: formValues.locationId,
         min: parseInt(formValues.min),
         max: parseInt(formValues.max),
@@ -69,12 +73,16 @@ export function ReorderPointForm() {
     return !isNaN(min) && !isNaN(max) && min <= max;
   };
 
-  if (!inventoryItemId || isLoadingInventory || isLoadingLocations) {
+  if (!inventoryItemId || isLoadingInventory || isLoadingLocations || isLoadingReorderPoints) {
     return <Text>Loading...</Text>;
   }
 
   if (locationError) {
     return <Text>{extractErrorMessage(locationError, 'Failed to load locations')}</Text>;
+  }
+
+  if (reorderPointError) {
+    return <Text>{extractErrorMessage(reorderPointError, 'Failed to load reorder points')}</Text>;
   }
 
   return (
@@ -103,6 +111,7 @@ export function ReorderPointForm() {
           Save Configuration
         </Button>
 
+        {mutation.isPending && <Text>Saving...</Text>}
         {mutation.isError && <Text>{extractErrorMessage(mutation.error, 'Failed to save reorder point')}</Text>}
       </BlockStack>
     </AdminBlock>

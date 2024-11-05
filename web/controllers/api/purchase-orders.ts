@@ -33,6 +33,7 @@ import { assertLocationsPermitted } from '../../services/franchises/assert-locat
 import { getReorderPoints, ReorderPoint, upsertReorderPoints } from '../../services/reorder/queries.js';
 import { ReorderPoints } from '../../schemas/generated/reorder-points.js';
 import { CreateReorderPoint } from '../../schemas/generated/create-reorder-point.js';
+import { syncInventoryQuantities } from '../../services/inventory/sync.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -197,7 +198,7 @@ export default class PurchaseOrdersController {
   @Authenticated()
   async getReorderPoint(
     req: Request<{ inventoryItemId: string }, unknown, unknown, ReorderPoints>,
-    res: Response<ReorderPointResponse>
+    res: Response<ReorderPointResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
@@ -216,13 +217,13 @@ export default class PurchaseOrdersController {
       });
     }
 
-    const reorderPoints = await getReorderPoints({
+    const [reorderPoint] = await getReorderPoints({
       shop: session.shop,
       inventoryItemIds: [inventoryItemId],
       ...(locationId ? { locationIds: [locationId] } : {}),
     });
 
-    return res.json({ reorderPoints });
+    return res.json({ reorderPoint });
   }
 
   @Post('/reorder')
@@ -231,7 +232,7 @@ export default class PurchaseOrdersController {
   @Authenticated()
   async createReorderPoint(
     req: Request<unknown, unknown, CreateReorderPoint>,
-    res: Response<CreateReorderPointResponse>
+    res: Response<CreateReorderPointResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
@@ -249,13 +250,18 @@ export default class PurchaseOrdersController {
       throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
     }
 
-    await upsertReorderPoints(session.shop, [
-      {
-        inventoryItemId,
-        locationId: locationId || null,
-        min,
-        max,
-      },
+    const errors: unknown[] = [];
+
+    await Promise.all([
+      syncInventoryQuantities(session, [inventoryItemId]).catch(error => errors.push(error)),
+      upsertReorderPoints(session.shop, [
+        {
+          inventoryItemId,
+          locationId: locationId || null,
+          min,
+          max,
+        },
+      ]).catch(error => errors.push(error)),
     ]);
 
     const [reorderPoint] = await getReorderPoints({
@@ -266,6 +272,10 @@ export default class PurchaseOrdersController {
 
     if (!reorderPoint) {
       throw new HttpError('Reorder point not found after creation', 404);
+    }
+
+    if (errors.length > 0) {
+      throw new AggregateError(errors, 'Failed to create reorder point');
     }
 
     return res.json({ reorderPoint });
@@ -289,9 +299,9 @@ export type PrintPurchaseOrderResponse = { success: true };
 export type PlanReorderResponse = { quantity: number; inventoryItemId: ID; vendor: string }[];
 
 export type ReorderPointResponse = {
-  reorderPoints: ReorderPoint[];
+  reorderPoint: ReorderPoint;
 };
 
 export type CreateReorderPointResponse = {
   reorderPoint: ReorderPoint;
-}
+};
