@@ -6,6 +6,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItem } from '../hooks/useInventoryItem.js';
 import { useLocationOptions } from '../hooks/useLocationOptions.js';
+import { TARGET } from '../BlockExtension.js';
 
 interface FormValues {
   min: number;
@@ -14,7 +15,7 @@ interface FormValues {
 }
 
 export function ReorderPointForm() {
-  const { data } = useApi('admin.product-variant-details.block.render');
+  const { data } = useApi(TARGET);
   const variantId = data.selected[0]?.id as ID;
 
   const { inventoryItemId, isLoading: isLoadingInventory } = useInventoryItem(variantId);
