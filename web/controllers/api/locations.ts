@@ -7,6 +7,7 @@ import type { Request, Response } from 'express-serve-static-core';
 import { Ids } from '../../schemas/generated/ids.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
+import { getLocations } from '../../services/locations/get.js';
 
 @Authenticated()
 @Permission('none')
@@ -33,6 +34,16 @@ export default class LocationsController {
     const pageInfo = response.locations.pageInfo;
 
     return res.json({ locations, pageInfo });
+  }
+
+  @Get('/all')
+  async fetchAllLocations(req: Request, response: Response<FetchAllLocationsResponse>) {
+    const session: Session = response.locals.shopify.session;
+    const user: LocalsTeifiUser = response.locals.teifi.user;
+
+    const locations = await getLocations(session, user.user.allowedLocationIds);
+
+    return response.json(locations);
   }
 
   @Get('/by-ids')
@@ -79,6 +90,8 @@ export type FetchLocationsResponse = {
   locations: gql.location.getPage.Result['locations']['nodes'];
   pageInfo: gql.location.getPage.Result['locations']['pageInfo'];
 };
+
+export type FetchAllLocationsResponse = gql.location.LocationFragment.Result[];
 
 export type FetchLocationsByIdResponse = {
   locations: (gql.location.LocationFragment.Result | null)[];

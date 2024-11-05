@@ -9,8 +9,6 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getDetailedPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
 import { DetailedPurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
-import { db } from '../../services/db/db.js';
 import { PurchaseOrderPrintJob } from '../../schemas/generated/purchase-order-print-job.js';
 import { getShopSettings } from '../../services/settings/settings.js';
 import {
@@ -28,6 +26,11 @@ import * as Sentry from '@sentry/node';
 import { z } from 'zod';
 import { PlanReorder } from '../../schemas/generated/plan-reorder.js';
 import { getReorderQuantities } from '../../services/reorder/plan.js';
+import { BulkCreatePurchaseOrders } from '../../schemas/generated/bulk-create-purchase-orders.js';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { getReorderPointCsvTemplatesZip, readReorderPointCsvImport } from '../../services/reorder/csv-import.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { getLocations } from '../../services/locations/get.js';
 import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
 import { getReorderPoints, ReorderPoint, upsertReorderPoints } from '../../services/reorder/queries.js';
@@ -148,6 +151,15 @@ export default class PurchaseOrdersController {
     return res.json({ success: true });
   }
 
+  @Get('/upload/csv/templates')
+  async getPurchaseOrderCsvTemplates(req: Request, res: Response) {
+    const zip = await getPurchaseOrderCsvTemplatesZip();
+
+    res.attachment('purchase-order-csv-templates.zip');
+    res.setHeader('Content-Type', 'application/zip');
+    res.end(zip);
+  }
+
   @Post('/upload/csv')
   @Authenticated()
   @Permission('write_purchase_orders')
@@ -169,16 +181,65 @@ export default class PurchaseOrdersController {
     return res.json({ success: true });
   }
 
-  @Get('/upload/csv/templates')
-  async getPurchaseOrderCsvTemplates(req: Request, res: Response) {
-    const zip = await getPurchaseOrderCsvTemplatesZip();
+  // TODO: After QA, move all reorder endpoints to their own controller
+  @Get('/reorder/upload/csv/templates')
+  async getReorderPointCsvTemplates(req: Request, res: Response) {
+    const zip = await getReorderPointCsvTemplatesZip();
 
-    res.attachment('purchase-order-csv-templates.zip');
+    res.attachment('reorder-point-csv-templates.zip');
     res.setHeader('Content-Type', 'application/zip');
     res.end(zip);
   }
 
+  @Post('/reorder/upload/csv')
+  @Authenticated()
+  @Permission('write_settings')
+  async uploadReorderPointsCsv(req: Request, res: Response) {
+    const session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+
+    const [shopLocations, createReorderPoints] = await Promise.all([
+      getLocations(session, user.user.allowedLocationIds),
+      readReorderPointCsvImport({
+        formData: req,
+        headers: req.headers,
+      }),
+    ]);
+
+    for (const { min, max } of createReorderPoints) {
+      if (max <= min) {
+        throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
+      }
+    }
+
+    const shopLocationIds = shopLocations.map(location => location.id);
+    const locationIds = unique(createReorderPoints.flatMap(reorderPoint => reorderPoint.locationId ?? shopLocationIds));
+
+    await assertLocationsPermitted({
+      shop: session.shop,
+      staffMemberId: user.staffMember.id,
+      locationIds,
+    });
+
+    await upsertReorderPoints(
+      session.shop,
+      createReorderPoints.map(({ min, max, inventoryItemId, locationId = null }) => ({
+        min,
+        max,
+        inventoryItemId,
+        locationId,
+      })),
+    );
+
+    const inventoryItemIds = unique(createReorderPoints.map(reorderPoint => reorderPoint.inventoryItemId));
+
+    syncInventoryQuantities(session, inventoryItemIds).catch(error => sentryErr(error, { createReorderPoints }));
+
+    return res.status(202).json({ success: true });
+  }
+
   @Get('/reorder/plan')
+  @Authenticated()
   @QuerySchema('plan-reorder')
   @Permission('write_purchase_orders')
   @Permission('read_purchase_orders')
@@ -190,6 +251,61 @@ export default class PurchaseOrdersController {
     const plan = await getReorderQuantities(session, locationId, user);
 
     return res.json(plan);
+  }
+
+  @Post('/bulk')
+  @Authenticated()
+  @BodySchema('bulk-create-purchase-orders')
+  @Permission('write_purchase_orders')
+  async bulkCreatePurchaseOrder(
+    req: Request<unknown, unknown, BulkCreatePurchaseOrders>,
+    res: Response<BulkCreatePurchaseOrdersResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const bulkCreatePurchaseOrder = req.body;
+
+    const purchaseOrders = await Promise.all(
+      bulkCreatePurchaseOrder.purchaseOrders.map(createPurchaseOrder =>
+        upsertCreatePurchaseOrder(session, user, createPurchaseOrder).then(
+          purchaseOrder =>
+            ({
+              type: 'success',
+              purchaseOrder,
+            }) as const,
+          error =>
+            ({
+              type: 'error',
+              error,
+            }) as const,
+        ),
+      ),
+    );
+
+    const errorCount = purchaseOrders.filter(purchaseOrder => purchaseOrder.type === 'error').length;
+    const status = errorCount === purchaseOrders.length ? 500 : errorCount > 0 ? 207 : 200;
+
+    return res.status(status).json({
+      purchaseOrders: purchaseOrders.map((result, i) => {
+        if (result.type === 'success') {
+          return result;
+        }
+
+        if (result.error instanceof HttpError) {
+          return {
+            type: 'error',
+            error: result.error.message,
+          };
+        }
+
+        sentryErr(result.error, { createPurchaseOrder: bulkCreatePurchaseOrder.purchaseOrders[i] });
+
+        return {
+          type: 'error',
+          error: 'Internal server error',
+        };
+      }),
+    });
   }
 
   @Get('/reorder/:inventoryItemId')
@@ -209,13 +325,17 @@ export default class PurchaseOrdersController {
       throw new HttpError('Invalid inventory item id', 400);
     }
 
-    if (locationId) {
-      await assertLocationsPermitted({
-        shop: session.shop,
-        staffMemberId: user.staffMember.id,
-        locationIds: [locationId],
-      });
-    }
+    const locationIds = locationId
+      ? [locationId]
+      : await getLocations(session, user.user.allowedLocationIds).then(locations =>
+          locations.map(location => location.id),
+        );
+
+    await assertLocationsPermitted({
+      shop: session.shop,
+      staffMemberId: user.staffMember.id,
+      locationIds,
+    });
 
     const [reorderPoint] = await getReorderPoints({
       shop: session.shop,
@@ -242,13 +362,17 @@ export default class PurchaseOrdersController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const { inventoryItemId, locationId, min, max } = req.body;
 
-    if (locationId) {
-      await assertLocationsPermitted({
-        shop: session.shop,
-        staffMemberId: user.staffMember.id,
-        locationIds: [locationId],
-      });
-    }
+    const locationIds = locationId
+      ? [locationId]
+      : await getLocations(session, user.user.allowedLocationIds).then(locations =>
+          locations.map(location => location.id),
+        );
+
+    await assertLocationsPermitted({
+      shop: session.shop,
+      staffMemberId: user.staffMember.id,
+      locationIds,
+    });
 
     if (max <= min) {
       throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
@@ -294,7 +418,31 @@ export type FetchPurchaseOrderResponse = {
 
 export type PrintPurchaseOrderResponse = { success: true };
 
-export type PlanReorderResponse = { quantity: number; inventoryItemId: ID; vendor: string }[];
+export type PlanReorderResponse = {
+  min: number;
+  max: number;
+  orderQuantity: number;
+  availableQuantity: number;
+  incomingQuantity: number;
+  inventoryItemId: ID;
+  productVariantId: ID;
+  vendor: string;
+}[];
+
+export type BulkCreatePurchaseOrdersResponse = {
+  purchaseOrders: (
+    | {
+        type: 'success';
+        purchaseOrder: {
+          name: string;
+        };
+      }
+    | {
+        type: 'error';
+        error: string;
+      }
+  )[];
+};
 
 export type ReorderPointResponse = {
   reorderPoint: ReorderPoint;

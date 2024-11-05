@@ -12,6 +12,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import archiver from 'archiver';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { getSchemaCsvTemplate } from '../csv/csv-template.js';
 
 const CsvPurchaseOrderId = z
   .string()
@@ -78,7 +79,7 @@ const FILE_SCHEMA = {
 export type PurchaseOrderImportFileName = keyof typeof FILE_SCHEMA;
 
 function isPurchaseOrderImportFileName(value: unknown): value is PurchaseOrderImportFileName {
-  return Object.keys(FILE_SCHEMA).includes(value as PurchaseOrderImportFileName);
+  return Object.keys(FILE_SCHEMA).includes(value as string);
 }
 
 export async function readPurchaseOrderCsvImport({
@@ -317,12 +318,4 @@ export async function getPurchaseOrderCsvTemplatesZip() {
 
   purchaseOrderCsvTemplatesArchive = await archiveOutput;
   return purchaseOrderCsvTemplatesArchive;
-}
-
-type FileSchema = (typeof FILE_SCHEMA)[PurchaseOrderImportFileName];
-
-function getSchemaCsvTemplate(schema: FileSchema) {
-  const headers = Object.keys(schema.shape);
-  const emptyLine = Array.from({ length: headers.length }, () => '');
-  return [headers, emptyLine].map(cells => cells.join(',')).join('\n');
 }

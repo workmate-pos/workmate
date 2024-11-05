@@ -1,10 +1,10 @@
-import { useMutation, UseMutationOptions, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { PurchaseOrderImportFileName } from '@web/services/purchase-orders/csv-import.js';
 import { Fetch } from './fetch.js';
 
 export const usePurchaseOrdersUploadCsvMutation = (
   { fetch }: { fetch: Fetch },
-  { onSuccess }: { onSuccess?: () => void } = {},
+  { onSuccess }: { onSuccess?: () => void | Promise<void> } = {},
 ) => {
   const queryClient = useQueryClient();
 
@@ -39,10 +39,12 @@ export const usePurchaseOrdersUploadCsvMutation = (
         throw new Error('Failed to upload purchase orders');
       }
     },
-    onSuccess() {
-      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
-      onSuccess?.();
+    async onSuccess() {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }),
+        queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] }),
+      ]);
+      await onSuccess?.();
     },
   });
 };
