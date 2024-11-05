@@ -3,7 +3,7 @@ import { useApi } from '@shopify/ui-extensions-react/admin';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { TARGET } from '../BlockExtension.js';
 
-const VARIANT_QUERY = `
+const VARIANT_QUERY = `#graphql
   query getVariant($id: ID!) {
     productVariant(id: $id) {
       inventoryItem {
