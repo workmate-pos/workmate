@@ -11,8 +11,7 @@
       "type": "string"
     },
     "replyTo": {
-      "type": "string",
-      "minLength": 1
+      "type": "string"
     },
     "email": {
       "type": "string",
@@ -23,6 +22,6 @@
       "minLength": 1
     }
   },
-  "required": ["date", "dueDate", "replyTo", "email", "from"],
+  "required": ["date", "dueDate", "email", "from"],
   "additionalProperties": false
 }

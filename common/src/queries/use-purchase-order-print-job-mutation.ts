@@ -13,7 +13,13 @@ export function usePurchaseOrderPrintJobMutation({ fetch }: { fetch: Fetch }) {
       purchaseOrderName: string;
       templateName: string;
     } & PurchaseOrderPrintJob) => {
-      const searchParams = new URLSearchParams(qs);
+      const searchParams = new URLSearchParams();
+
+      for (const [key, value] of Object.entries(qs)) {
+        if (value) {
+          searchParams.set(key, value);
+        }
+      }
 
       const response = await fetch(
         `/api/purchase-orders/${encodeURIComponent(purchaseOrderName)}/print/${encodeURIComponent(templateName)}?${searchParams}`,
