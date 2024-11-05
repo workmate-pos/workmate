@@ -47,18 +47,21 @@ export function WorkOrderSourcingModal({ name, open, onClose }: { name: string; 
   const [isSpecialOrderModalOpen, setIsSpecialOrderModalOpen] = useState(false);
 
   const workOrder = workOrderQuery.data?.workOrder;
+  const productVariants = Object.values(productVariantQueries)
+    .map(query => query.data)
+    .filter(isNonNullable);
 
   const canReserve =
     !workOrder || !workOrder.locationId
       ? false
-      : getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false })
+      : getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false }, productVariants)
           .map(item => item.unsourcedQuantity)
           .reduce((a, b) => a + b, 0) > 0;
 
   const canTransfer =
     !workOrder || !workOrder.locationId
       ? false
-      : getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false })
+      : getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false }, productVariants)
           .map(item => item.unsourcedQuantity)
           .reduce((a, b) => a + b, 0) > 0;
 

@@ -15,7 +15,7 @@ import { useScreen } from '@teifi-digital/pos-tools/router';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { hasNonNullableProperty, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { getWorkOrderItemSourcedCount, getWorkOrderItemSourcingBadges, isOrderId } from '../../util/badges.js';
 import { useRouter } from '../../routes.js';
@@ -28,6 +28,7 @@ import { UUID } from '@work-orders/common/util/uuid.js';
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 import { getProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
+import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 
 /**
  * Fulfillment options for some work order.
@@ -49,7 +50,10 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
   const router = useRouter();
   const screen = useScreen();
   screen.setTitle(`${name} Sourcing`);
-  screen.setIsLoading(workOrderQuery.isFetching);
+  screen.setIsLoading(workOrderQuery.isFetching || Object.values(productVariantQueries).some(query => query.isLoading));
+  const productVariants = Object.values(productVariantQueries)
+    .map(query => query.data)
+    .filter(isNonNullable);
 
   const reserveLineItemInventoryMutation = useReserveLineItemsInventoryMutation({ fetch });
   const specialOrderMutation = useSpecialOrderMutation({ fetch });
@@ -107,7 +111,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             onPress={() => {
               router.push('UnsourcedItemList', {
                 title: 'Select items to reserve',
-                items: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false })
+                items: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false }, productVariants)
                   // if already in an order we cannot even reserve it smh
                   .filter(item => !isOrderId(item.shopifyOrderLineItem?.orderId))
                   .map(({ uuid, shopifyOrderLineItem, unsourcedQuantity, productVariantId }) => {
@@ -161,7 +165,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
               }
 
               router.push('CreateTransferOrderForLocation', {
-                products: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: true }),
+                products: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: true }, productVariants),
                 toLocationId: workOrder.locationId,
               });
             }}
@@ -172,7 +176,7 @@ export function WorkOrderItemSourcing({ name }: { name: string }) {
             onPress={() =>
               router.push('CreateSpecialOrderList', {
                 workOrder,
-                items: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: true }).map(
+                items: getUnsourcedWorkOrderItems(workOrder, { includeAvailable: true }, productVariants).map(
                   ({ uuid, shopifyOrderLineItem, unsourcedQuantity, productVariantId }) => ({
                     uuid,
                     shopifyOrderLineItem,
@@ -268,7 +272,7 @@ function useItemListRows(name: string): ListRow[] {
   });
 }
 
-function useWorkOrderQueries(name: string) {
+export function useWorkOrderQueries(name: string) {
   const { session } = useApi<'pos.home.modal.render'>();
   const fetch = useAuthenticatedFetch();
 
@@ -309,12 +313,16 @@ export type UnsourcedWorkOrderItem = {
 export function getUnsourcedWorkOrderItems(
   workOrder: DetailedWorkOrder,
   { includeAvailable }: { includeAvailable: boolean },
+  productVariants: ProductVariant[],
 ): UnsourcedWorkOrderItem[] {
   return (
     workOrder.items
       .filter(hasPropertyValue('type', 'product'))
       // very important that this is set bcs the TO/PO line item will not be linked to the WO item in any way
       .filter(hasNonNullableProperty('shopifyOrderLineItem'))
+      .filter(
+        item => productVariants.find(variant => variant.id === item.productVariantId)?.product.serviceType === null,
+      )
       .map(
         ({
           uuid,
