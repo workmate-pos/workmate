@@ -164,7 +164,7 @@ export function TaskModal({
   return (
     <>
       <Modal
-        open={open}
+        open={open && !shouldShowStaffMemberSelector}
         title={title}
         onClose={onClose}
         loading={taskQuery.isLoading || taskScheduleEventsQuery.isLoading}

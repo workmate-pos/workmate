@@ -1,10 +1,4 @@
 import { z } from 'zod';
-import { zDecimal, zLiquidTemplate, zMoney } from '../../util/zod.js';
-import { quoteTemplate } from '../mail/templates/defaults/work-order/quote.js';
-import { workOrderInvoiceTemplate } from '../mail/templates/defaults/work-order/invoice.js';
-import { purchaseOrderInvoiceTemplate } from '../mail/templates/defaults/purchase-order/invoice.js';
-import { isPermission, permissions } from '../permissions/permissions.js';
-import { uuid } from '@work-orders/common/util/uuid.js';
 import { ShopSettings01 } from './versions/01.js';
 import { lastElement } from '@teifi-digital/shopify-app-toolbox/array';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
@@ -69,6 +63,7 @@ function migrateShopSettings(shopSettings: AnyShopSettingsVersion): ShopSettings
         defaultStatus: shopSettings.defaultPurchaseOrderStatus,
         printTemplates: shopSettings.purchaseOrders,
         vendorCustomerMetafieldsToShow: shopSettings.vendorCustomerMetafieldsToShow,
+        receipts: { idFormat: 'PO-RCPT-#{{id}}' },
       },
 
       workOrders: {

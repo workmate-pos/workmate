@@ -12,7 +12,6 @@ export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: DetailedPurc
           }
         : null,
       serialNumber: lineItem.serial?.serial ?? null,
-      availableQuantity: lineItem.availableQuantity,
       productVariantId: lineItem.productVariant.id,
       quantity: lineItem.quantity,
       unitCost: lineItem.unitCost,

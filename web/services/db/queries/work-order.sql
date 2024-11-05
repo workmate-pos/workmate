@@ -96,7 +96,7 @@ HAVING (
           NOT :partiallyPaid!) AND
          (COALESCE(BOOL_AND(so."fullyPaid"), FALSE) OR NOT :fullyPaid!)
          ) != :inverseOrderConditions!
-   AND ((SUM(poli."availableQuantity") IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled
+   AND ((SUM((SELECT r.quantity FROM "PurchaseOrderReceiptLineItem" r WHERE r."purchaseOrderId" = poli."purchaseOrderId" AND r."lineItemUuid" = poli.uuid)) IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled
   OR :purchaseOrdersFulfilled IS NULL)
 ORDER BY wo.id DESC
 LIMIT :limit! OFFSET :offset;

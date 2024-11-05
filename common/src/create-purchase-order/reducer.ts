@@ -112,8 +112,6 @@ function shouldMergeProducts(a: Product, b: Product) {
     a.productVariantId === b.productVariantId &&
     a.specialOrderLineItem?.name === b.specialOrderLineItem?.name &&
     a.specialOrderLineItem?.uuid === b.specialOrderLineItem?.uuid &&
-    a.availableQuantity === 0 &&
-    b.availableQuantity === 0 &&
     a.serialNumber === null &&
     b.serialNumber === null
   );
@@ -139,7 +137,6 @@ function mergeProducts(products: Product[]) {
           .toMoney();
 
         existing.quantity = (existing.quantity + product.quantity) as Int;
-        existing.availableQuantity = (existing.availableQuantity + product.availableQuantity) as Int;
         existing.unitCost = unitCost;
         found = true;
         break;

@@ -94,7 +94,7 @@ export function LinkedTasks({
   );
 }
 
-export function NewTaskButton(props: Omit<ButtonProps, 'variant' | 'icon'>) {
+export function BaseNewTaskButton(props: Omit<ButtonProps, 'variant' | 'icon'>) {
   return (
     <Button icon={PlusMinor} variant={'plain'} {...props}>
       New Task
@@ -113,8 +113,7 @@ export function NewLinkedTaskButton({
 
   return (
     <>
-      <NewTaskButton onClick={() => setIsCreatingTask(true)}>New Task</NewTaskButton>
-
+      <BaseNewTaskButton onClick={() => setIsCreatingTask(true)}>New Task</BaseNewTaskButton>
       <TaskModal
         open={isCreatingTask}
         onClose={() => setIsCreatingTask(false)}

@@ -17,7 +17,6 @@ import {
 import { getUnsourcedWorkOrderItems } from '@web/frontend/components/work-orders/components/UnsourcedItemList.js';
 import { ToastActionCallable, useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
 import {
   StockTransferLocationItem,
   useTransferOrderLocationItems,
@@ -29,6 +28,8 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useStockTransferMutation } from '@work-orders/common/queries/use-stock-transfer-mutation.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useWorkOrderQueries } from '@web/frontend/components/work-orders/modals/WorkOrderSourcingModal.js';
 
 export function WorkOrderSourcingTransferOrderModal({
   name,
@@ -42,15 +43,19 @@ export function WorkOrderSourcingTransferOrderModal({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const workOrderQuery = useWorkOrderQuery({ fetch, name });
+  const { workOrderQuery, productVariantQueries } = useWorkOrderQueries(fetch, name);
+
   const workOrder = workOrderQuery.data?.workOrder;
+  const productVariants = Object.values(productVariantQueries)
+    .map(query => query.data)
+    .filter(isNonNullable);
 
   const { isLoading, locations } = useTransferOrderLocationItems(
     fetch,
     workOrder?.locationId ?? createGid('Location', '0'),
     !workOrder
       ? []
-      : getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false }).map(item => ({
+      : getUnsourcedWorkOrderItems(workOrder, { includeAvailable: false }, productVariants).map(item => ({
           ...item,
           quantity: item.unsourcedQuantity,
         })),
@@ -58,7 +63,14 @@ export function WorkOrderSourcingTransferOrderModal({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} title="Transfer Order" loading={workOrderQuery.isLoading || isLoading}>
+      <Modal
+        open={open}
+        onClose={onClose}
+        title="Transfer Order"
+        loading={
+          workOrderQuery.isLoading || Object.values(productVariantQueries).some(query => query.isLoading) || isLoading
+        }
+      >
         <ResourceList
           items={locations}
           resourceName={{ singular: 'location', plural: 'locations' }}

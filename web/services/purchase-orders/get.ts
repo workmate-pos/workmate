@@ -17,6 +17,8 @@ import {
   getPurchaseOrderCustomFields,
   getPurchaseOrderLineItemCustomFields,
   getPurchaseOrderLineItems,
+  getPurchaseOrderReceiptLineItems,
+  getPurchaseOrderReceipts,
 } from './queries.js';
 import { getStockTransferLineItemsForPurchaseOrder } from '../stock-transfers/queries.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -72,6 +74,7 @@ export async function getDetailedPurchaseOrder(
     customFields: getPurchaseOrderCustomFieldsRecord(purchaseOrder.id),
     lineItems: getDetailedPurchaseOrderLineItems(purchaseOrder.id),
     employeeAssignments: getDetailedPurchaseOrderEmployeeAssignments(shop, purchaseOrder.id),
+    receipts: getDetailedPurchaseOrderReceipts(purchaseOrder.id),
     linkedOrders: linkedOrders.map(({ orderId: id, name, orderType }) => ({
       id,
       name,
@@ -164,15 +167,7 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
   const specialOrderById = indexBy(specialOrders, so => String(so.id));
 
   return lineItems.map(
-    ({
-      uuid,
-      quantity,
-      availableQuantity,
-      productVariantId,
-      unitCost,
-      specialOrderLineItemId,
-      productVariantSerialId,
-    }) => {
+    ({ uuid, quantity, productVariantId, unitCost, specialOrderLineItemId, productVariantSerialId }) => {
       const productVariant = productVariantById[productVariantId] ?? never('fk');
       const product = productById[productVariant.productId] ?? never('fk');
       const serial = productVariantSerialId ? (serialById[productVariantSerialId] ?? never('fk')) : null;
@@ -239,7 +234,6 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
         ),
         unitCost,
         quantity,
-        availableQuantity,
         specialOrderLineItem: specialOrderLineItem
           ? {
               uuid: specialOrderLineItem.uuid,
@@ -247,11 +241,7 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
               quantity: specialOrderLineItem.quantity,
             }
           : null,
-        serial: serial
-          ? {
-              serial: serial.serial,
-            }
-          : null,
+        serial: serial ? { serial: serial.serial } : null,
       };
     },
   );
@@ -289,4 +279,25 @@ async function getLocation(locationId: string | null) {
     id: locationId,
     name: location.name,
   };
+}
+
+async function getDetailedPurchaseOrderReceipts(purchaseOrderId: number) {
+  const [receipts, receiptLineItems] = await Promise.all([
+    getPurchaseOrderReceipts(purchaseOrderId),
+    getPurchaseOrderReceiptLineItems({ purchaseOrderId }),
+  ]);
+
+  return receipts.map(({ id, status, name, description, receivedAt }) => ({
+    id,
+    status,
+    name,
+    description,
+    receivedAt: receivedAt.toISOString() as DateTime,
+    lineItems: receiptLineItems
+      .filter(hasPropertyValue('purchaseOrderReceiptId', id))
+      .map(({ lineItemUuid: uuid, quantity }) => ({
+        uuid,
+        quantity,
+      })),
+  }));
 }

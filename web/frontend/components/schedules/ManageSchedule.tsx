@@ -437,17 +437,25 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                 return;
               }
 
-              scheduleEventMutation.mutate({
-                scheduleId: id,
-                eventId: null,
-                name: task.name,
-                description: task.description,
-                staffMemberIds: staffMemberIds.filter(staffMemberId => task.staffMemberIds.includes(staffMemberId)),
-                start: event.start,
-                end: new Date(event.start.getTime() + durationMinutes * MINUTE_IN_MS),
-                color: DEFAULT_COLOR_HEX,
-                taskIds: [taskId],
-              });
+              scheduleEventMutation.mutate(
+                {
+                  scheduleId: id,
+                  eventId: null,
+                  name: task.name,
+                  description: task.description,
+                  staffMemberIds: staffMemberIds.filter(staffMemberId => task.staffMemberIds.includes(staffMemberId)),
+                  start: event.start,
+                  end: new Date(event.start.getTime() + durationMinutes * MINUTE_IN_MS),
+                  color: DEFAULT_COLOR_HEX,
+                  taskIds: [taskId],
+                },
+                {
+                  onSuccess(event) {
+                    setEventIdToEdit(current => current ?? event.id);
+                    setShouldShowEditScheduleEventModal(true);
+                  },
+                },
+              );
             }}
           />
         </Layout.Section>
@@ -704,7 +712,7 @@ function DeleteScheduleEventModal({
   eventId,
 }: {
   open: boolean;
-  onClose: () => void;
+  onClose: (deleted: boolean) => void;
   scheduleId: number;
   eventId: number | undefined;
 }) {
@@ -718,7 +726,7 @@ function DeleteScheduleEventModal({
       <Modal
         open={open}
         title={'Delete Schedule Event'}
-        onClose={onClose}
+        onClose={() => onClose(false)}
         primaryAction={{
           content: 'Delete',
           disabled: !eventId,
@@ -729,7 +737,7 @@ function DeleteScheduleEventModal({
             }
 
             deleteScheduleEventMutation.mutate({ scheduleId, eventId });
-            onClose();
+            onClose(true);
           },
         }}
       >
@@ -907,13 +915,17 @@ function EditScheduleEventModal({
                 taskId={taskId}
                 content={<TaskCardScheduledTimeContent taskId={taskId} />}
                 right={
-                  <Button
-                    tone="critical"
-                    variant="plain"
-                    onClick={() => setTaskIds(current => current.filter(x => x !== taskId))}
-                  >
-                    Remove
-                  </Button>
+                  <BlockStack align="center">
+                    <span onClick={event => event.stopPropagation()}>
+                      <Button
+                        tone="critical"
+                        variant="plain"
+                        onClick={() => setTaskIds(current => current.filter(x => x !== taskId))}
+                      >
+                        Remove
+                      </Button>
+                    </span>
+                  </BlockStack>
                 }
                 onClick={() => setSelectedTaskId(taskId)}
               />
@@ -932,7 +944,12 @@ function EditScheduleEventModal({
         scheduleId={scheduleId}
         eventId={eventId}
         open={shouldShowDeleteScheduleEventModal}
-        onClose={() => setShouldShowDeleteScheduleEventModal(false)}
+        onClose={deleted => {
+          setShouldShowDeleteScheduleEventModal(false);
+          if (deleted) {
+            onClose();
+          }
+        }}
       />
 
       <MultiStaffMemberSelectorModal

@@ -36,7 +36,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 import { CreateSerial } from '@web/schemas/generated/create-serial.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { LinkedTasks, NewLinkedTaskButton, BaseNewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function Serial() {

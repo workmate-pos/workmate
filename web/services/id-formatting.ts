@@ -39,6 +39,11 @@ const specialOrderFormatters: Formatters = {
   id: ({ shop }) => getCount(`special-order.${shop}`).then(String),
 };
 
+const purchaseOrderReceiptFormatters: Formatters = {
+  ...baseFormatters,
+  id: ({ shop }) => getCount(`purchase-order-receipt.${shop}`).then(String),
+};
+
 async function applyFormatters<Arg>(
   format: string,
   formatters: Record<string, (arg: Arg) => Promise<string> | string>,
@@ -80,6 +85,11 @@ export async function getNewSpecialOrderName(shop: string): Promise<string> {
 export async function getNewCycleCountName(shop: string) {
   const settings = await getShopSettings(shop);
   return await applyFormatters(settings.cycleCount.idFormat, cycleCountFormatters, { shop });
+}
+
+export async function getNewPurchaseOrderReceiptName(shop: string) {
+  const settings = await getShopSettings(shop);
+  return await applyFormatters(settings.purchaseOrders.receipts.idFormat, purchaseOrderReceiptFormatters, { shop });
 }
 
 export function assertValidFormatString(format: string) {
