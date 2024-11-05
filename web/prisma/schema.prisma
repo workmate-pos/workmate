@@ -1083,7 +1083,7 @@ model Task {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   assignments    TaskAssignment[]
-  scheduleEvents  ScheduleEventTask[]
+  scheduleEvents ScheduleEventTask[]
   workOrders     TaskWorkOrderLink[]
   purchaseOrders TaskPurchaseOrderLink[]
   specialOrders  TaskSpecialOrderLink[]
@@ -1220,4 +1220,56 @@ model Schedule {
   @@index([shop, id])
   @@index([shop, locationId])
   @@index([shop, publishedAt])
+}
+
+enum InventoryMutationType {
+  MOVE
+  SET
+  ADJUST
+}
+
+enum InventoryMutationInitiatorType {
+  PURCHASE_ORDER
+  STOCK_TRANSFER
+  CYCLE_COUNT
+}
+
+model InventoryMutation {
+  id Int @id @default(autoincrement())
+
+  shop String
+  type InventoryMutationType
+
+  initiatorType InventoryMutationInitiatorType
+  initiatorName String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  items InventoryMutationItem[]
+
+  @@index([shop])
+}
+
+model InventoryMutationItem {
+  id Int @id @default(autoincrement())
+
+  inventoryMutationId Int
+  inventoryMutation   InventoryMutation @relation(fields: [inventoryMutationId], references: [id])
+
+  inventoryItemId String
+  name            String
+  locationId      String
+
+  // type = set
+  compareQuantity Int?
+
+  // type = set / move
+  quantity        Int?
+
+  // type = adjust
+  delta           Int?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }
