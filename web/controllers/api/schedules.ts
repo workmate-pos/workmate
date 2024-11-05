@@ -58,8 +58,6 @@ import * as taskQueries from '../../services/tasks/queries.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getMissingPermissionsForRoleUuid } from '../../services/permissions/permissions.js';
 
-// TODO: Add to MANAGE_SCHEDULES permission to schedlue changing shit
-
 @Authenticated()
 @Permission('none')
 export default class SchedulesController {

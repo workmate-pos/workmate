@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { BlockStack, DropZone, Icon, InlineGrid, Modal, Text } from '@shopify/polaris';
-import { FileMinor } from '@shopify/polaris-icons';
+import { BlockStack, Modal, Text } from '@shopify/polaris';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { usePurchaseOrdersUploadCsvMutation } from '@work-orders/common/queries/use-purchase-orders-upload-csv-mutation.js';
+import { CsvDropZones } from '@web/frontend/components/csv/CsvDropZones.js';
 
 export function PurchaseOrderCsvUploadDropZoneModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [toast, setToastAction] = useToast();
@@ -31,7 +31,7 @@ export function PurchaseOrderCsvUploadDropZoneModal({ open, onClose }: { open: b
     { name: 'custom-fields.csv', file: customFieldsFile, setFile: setCustomFieldsFile },
     { name: 'employee-assignments.csv', file: employeeAssignmentsFile, setFile: setEmployeeAssignmentsFile },
     { name: 'line-item-custom-fields.csv', file: lineItemCustomFieldsFile, setFile: setLineItemCustomFieldsFile },
-  ] as const;
+  ];
 
   return (
     <>
@@ -71,30 +71,8 @@ export function PurchaseOrderCsvUploadDropZoneModal({ open, onClose }: { open: b
                 here
               </a>
             </Text>
-            <InlineGrid gap={'200'} columns={5} alignItems="end">
-              {files.map(({ name, file, setFile }) => (
-                <DropZone
-                  key={name}
-                  label={name}
-                  active={!file}
-                  type="file"
-                  allowMultiple={false}
-                  onDropAccepted={([file]) => setFile(file)}
-                  onDropRejected={() => setToastAction({ content: 'Invalid file type' })}
-                  accept="text/csv"
-                >
-                  {!file && <DropZone.FileUpload actionTitle="Upload" />}
-                  {file && (
-                    <BlockStack align="center" inlineAlign="center">
-                      <Icon source={FileMinor} tone="base" />
-                      <Text as="p" variant="bodyMd" tone="subdued" alignment="center">
-                        {file.name}
-                      </Text>
-                    </BlockStack>
-                  )}
-                </DropZone>
-              ))}
-            </InlineGrid>
+
+            <CsvDropZones files={files} columns={5} />
           </BlockStack>
         </Modal.Section>
       </Modal>

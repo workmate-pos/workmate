@@ -18,7 +18,6 @@ import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-p
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useEffect, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -83,6 +82,10 @@ function PurchaseOrders() {
       <TitleBar
         title="Purchase orders"
         secondaryActions={[
+          {
+            content: 'Re-order',
+            onAction: () => redirectToPurchaseOrder('reorder'),
+          },
           {
             content: 'Import CSV',
             onAction: () => setIsCsvUploadDropZoneModalOpen(true),
