@@ -9,7 +9,7 @@ export const useReorderPointMutation = ({ fetch }: { fetch: Fetch }) => {
   return useMutation({
     mutationFn: async (params: { inventoryItemId: ID; locationId?: ID; min: number; max: number }) => {
       const response = await fetch('/api/purchase-orders/reorder', {
-        method: 'PUT',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       });

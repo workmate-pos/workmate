@@ -15,9 +15,9 @@ export const useReorderPointQuery = (
   },
   options?: Partial<
     UseQueryOptions<
-      ReorderPointResponse['reorderPoints'],
+      ReorderPointResponse['reorderPoint'] | null,
       unknown,
-      ReorderPointResponse['reorderPoints'],
+      ReorderPointResponse['reorderPoint'] | null,
       (string | ID)[]
     >
   >,
@@ -33,12 +33,16 @@ export const useReorderPointQuery = (
 
       const response = await fetch(`/api/purchase-orders/reorder/${encodedInventoryItemId}?${searchParams}`);
 
+      if (response.status === 404) {
+        return null;
+      }
+
       if (!response.ok) {
         throw new Error('Failed to fetch reorder point');
       }
 
-      const { reorderPoints }: ReorderPointResponse = await response.json();
-      return reorderPoints;
+      const { reorderPoint }: ReorderPointResponse = await response.json();
+      return reorderPoint;
     },
   });
 };
