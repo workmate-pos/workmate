@@ -33,7 +33,7 @@ if (host === 'localhost') {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, dirname(process.cwd()), '');
 
-  const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID'];
+  const requiredEnvVars = ['SHOPIFY_API_KEY', 'VITE_INTERCOM_APP_ID', 'VITE_SCHEDULER_LICENSE_KEY'];
 
   if (env.NODE_ENV === 'production' && env.npm_lifecycle_event === 'build' && !env.CI) {
     for (const envVar of requiredEnvVars) {

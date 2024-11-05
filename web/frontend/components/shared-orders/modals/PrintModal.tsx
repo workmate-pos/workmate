@@ -2,18 +2,7 @@ import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { usePurchaseOrderPrintJobMutation } from '@work-orders/common/queries/use-purchase-order-print-job-mutation.js';
-import {
-  BlockStack,
-  Box,
-  FormLayout,
-  Modal,
-  ResourceItem,
-  ResourceList,
-  Select,
-  Tabs,
-  Text,
-  TextField,
-} from '@shopify/polaris';
+import { Box, FormLayout, Modal, Select, Tabs, TextField } from '@shopify/polaris';
 import { useWorkOrderPrintJobMutation } from '@work-orders/common/queries/use-work-order-print-job-mutation.js';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-query.js';
@@ -70,6 +59,9 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
   const [from, setFrom] = useState('');
   const [replyTo, setReplyTo] = useState('');
 
+  const isLoading = [settingsQuery.isLoading, workOrderQuery.isFetching, purchaseOrderQuery.isFetching].includes(true);
+  const isSubmitting = [purchaseOrderPrintJobMutation.isPending, workOrderPrintJobMutation.isPending].includes(true);
+
   useEffect(() => {
     if (printSettings) {
       setEmail(printSettings.defaultEmail ?? '');
@@ -120,7 +112,16 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
       id: 'custom',
       label: 'Custom email',
       disabled: !printSettings?.allowCustomEmail,
-      content: <TextField autoComplete="off" label={'Email'} value={email} onChange={setEmail} requiredIndicator />,
+      content: (
+        <TextField
+          disabled={isSubmitting}
+          autoComplete="off"
+          label={'Email'}
+          value={email}
+          onChange={setEmail}
+          requiredIndicator
+        />
+      ),
       onClick: () => {
         if (!printSettings?.allowCustomEmail) {
           setToastAction({ content: 'Custom email is not allowed' });
@@ -156,7 +157,16 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
       id: 'custom',
       label: 'Custom from',
       disabled: !printSettings?.allowCustomFrom,
-      content: <TextField autoComplete="off" label={'From'} value={from} onChange={setFrom} requiredIndicator />,
+      content: (
+        <TextField
+          disabled={isSubmitting}
+          autoComplete="off"
+          label={'From'}
+          value={from}
+          onChange={setFrom}
+          requiredIndicator
+        />
+      ),
       onClick: () => {
         if (!printSettings?.allowCustomFrom) {
           setToastAction({ content: 'Custom from is not allowed' });
@@ -192,7 +202,15 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
       id: 'custom',
       label: 'Custom reply-to',
       disabled: !printSettings?.allowCustomReplyTo,
-      content: <TextField autoComplete="off" label={'Reply-to'} value={replyTo} onChange={setReplyTo} />,
+      content: (
+        <TextField
+          disabled={isSubmitting}
+          autoComplete="off"
+          label={'Reply-to'}
+          value={replyTo}
+          onChange={setReplyTo}
+        />
+      ),
       onClick: () => {
         if (!printSettings?.allowCustomReplyTo) {
           setToastAction({ content: 'Custom reply to is not allowed' });
@@ -208,25 +226,20 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
   const printTemplatesKey = props.type === 'work-order' ? 'workOrders' : 'purchaseOrders';
   const printTemplates = settingsQuery.data?.settings[printTemplatesKey].printTemplates ?? {};
 
-  const isLoading = [
-    settingsQuery.isLoading,
-    purchaseOrderPrintJobMutation.isPending,
-    workOrderPrintJobMutation.isPending,
-    workOrderQuery.isFetching,
-    purchaseOrderQuery.isFetching,
-  ].includes(true);
-
   const TabsDisplay = ({
     tabs,
     setTab,
     selectedTabId,
+    disabled,
   }: {
     tabs: typeof emailTabs | typeof fromTabs | typeof replyToTabs;
     setTab: (tabId: string) => void;
     selectedTabId: string;
+    disabled?: boolean;
   }) => (
     <Tabs
       fitted
+      disabled={disabled}
       tabs={tabs
         .filter(tab => !('hidden' in tab) || !tab.hidden)
         .map(tab => ({
@@ -252,10 +265,11 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
       open={open}
       title={'Print'}
       onClose={onClose}
+      loading={isLoading}
       primaryAction={{
         content: 'Print',
         disabled: isLoading || !printTemplate,
-        loading: purchaseOrderPrintJobMutation.isPending || workOrderPrintJobMutation.isPending,
+        loading: isSubmitting,
         onAction: () => {
           if (!name) {
             setToastAction({ content: `You must save this ${props.type.replace('-', ' ')} before printing!` });
@@ -266,12 +280,7 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
             return;
           }
 
-          if (!settingsQuery.data?.settings) {
-            setToastAction({ content: 'Settings not loaded' });
-            return;
-          }
-
-          if (!settingsQuery.data.settings.printing.global.defaultEmail) {
+          if (!email) {
             setToastAction({ content: 'Print email is not configured' });
             return;
           }
@@ -320,18 +329,22 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
         },
       }}
     >
-      <Modal.Section>{TabsDisplay({ tabs: emailTabs, setTab: setEmailTab, selectedTabId: emailTab })}</Modal.Section>
-      <Modal.Section>{TabsDisplay({ tabs: fromTabs, setTab: setFromTab, selectedTabId: fromTab })}</Modal.Section>
       <Modal.Section>
-        {TabsDisplay({ tabs: replyToTabs, setTab: setReplyToTab, selectedTabId: replyToTab })}
+        {TabsDisplay({ tabs: emailTabs, setTab: setEmailTab, selectedTabId: emailTab, disabled: isSubmitting })}
+      </Modal.Section>
+      <Modal.Section>
+        {TabsDisplay({ tabs: fromTabs, setTab: setFromTab, selectedTabId: fromTab, disabled: isSubmitting })}
+      </Modal.Section>
+      <Modal.Section>
+        {TabsDisplay({ tabs: replyToTabs, setTab: setReplyToTab, selectedTabId: replyToTab, disabled: isSubmitting })}
       </Modal.Section>
 
       <Modal.Section>
         <FormLayout>
           <Select
             label={'Print template'}
-            disabled={isLoading}
             requiredIndicator
+            disabled={isSubmitting}
             options={[
               {
                 label: 'Select template',
