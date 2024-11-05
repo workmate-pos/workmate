@@ -46,7 +46,8 @@ const CsvPurchaseOrderLineItem = z.object({
   ProductVariantID: zNamespacedID('ProductVariant'),
   Quantity: z.coerce.number().int(),
   UnitCost: zMoney,
-  AvailableQuantity: z.coerce.number().int(),
+  // TODO: Add Receipt.csv
+  // AvailableQuantity: z.coerce.number().int(),
   SerialNumber: zCsvNullable(z.string()),
 });
 
@@ -152,7 +153,7 @@ export async function readPurchaseOrderCsvImport({
         specialOrderLineItem: null,
         productVariantId: data.ProductVariantID,
         unitCost: data.UnitCost,
-        availableQuantity: data.AvailableQuantity,
+        // availableQuantity: data.AvailableQuantity,
         customFields: Object.create(null),
         serialNumber: data.SerialNumber,
       });

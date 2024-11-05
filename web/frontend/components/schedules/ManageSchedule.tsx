@@ -9,6 +9,7 @@ import {
   Button,
   Card,
   Checkbox,
+  Collapsible,
   Divider,
   FormLayout,
   Icon,
@@ -23,7 +24,7 @@ import {
 } from '@shopify/polaris';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { ChevronLeftMinor, EditMajor, PlusMinor, SearchMinor } from '@shopify/polaris-icons';
 import { useScheduleEventsQuery } from '@work-orders/common/queries/use-schedule-events-query.js';
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query';
@@ -54,7 +55,7 @@ import {
   TaskCard,
   TaskCardScheduledTimeContent,
 } from '@web/frontend/components/tasks/TaskCard.js';
-import { useTaskQuery } from '@work-orders/common/queries/use-task-query.js';
+import { useTaskQueries, useTaskQuery } from '@work-orders/common/queries/use-task-query.js';
 import { UseQueryData } from '@work-orders/common/queries/react-query.js';
 import { MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
 import { MultiStaffMemberSelectorModal } from '@web/frontend/components/selectors/MultiStaffMemberSelectorModal.js';
@@ -81,6 +82,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
   const [hideStaffMemberAvailability, setHideStaffMemberAvailability] = useState<Record<ID, boolean>>({});
   const [shouldHideFinishedTasks, setShouldHideFinishedTasks] = useState(true);
+  const [shouldOnlyShowTasksForSelectedStaffMembers, setShouldOnlyShowTasksForSelectedStaffMembers] = useState(true);
 
   const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
 
@@ -132,10 +134,7 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
       fetch,
       filters: {
         query: taskQuery,
-        // TODO: Make this match ANY staff member
-        // TODO: Maybe an option that will make it exact match?
-        // TODO: When adding a task make sure to add the right staff members (assigned AND selected?)
-        staffMemberIds,
+        staffMemberIds: shouldOnlyShowTasksForSelectedStaffMembers ? staffMemberIds : undefined,
         done: shouldHideFinishedTasks ? false : undefined,
         sortMode: 'deadline',
         sortOrder: 'ascending',
@@ -151,6 +150,9 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
   const [shouldShowEditScheduleModal, setShouldShowEditScheduleModal] = useState(false);
   const [shouldShowDeleteScheduleEventModal, setShouldShowDeleteScheduleEventModal] = useState(false);
   const [shouldShowEditScheduleEventModal, setShouldShowEditScheduleEventModal] = useState(false);
+
+  const taskFilterCollapsibleId = useId();
+  const [shouldShowTaskFilters, setShouldShowTaskFilters] = useState(false);
 
   const [eventIdToEdit, setEventIdToEdit] = useState<number>();
   const [hoveringHeader, setHoveringHeader] = useState(false);
@@ -435,17 +437,25 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                 return;
               }
 
-              scheduleEventMutation.mutate({
-                scheduleId: id,
-                eventId: null,
-                name: task.name,
-                description: task.description,
-                staffMemberIds: staffMemberIds.filter(staffMemberId => task.staffMemberIds.includes(staffMemberId)),
-                start: event.start,
-                end: new Date(event.start.getTime() + durationMinutes * MINUTE_IN_MS),
-                color: DEFAULT_COLOR_HEX,
-                taskIds: [taskId],
-              });
+              scheduleEventMutation.mutate(
+                {
+                  scheduleId: id,
+                  eventId: null,
+                  name: task.name,
+                  description: task.description,
+                  staffMemberIds: staffMemberIds.filter(staffMemberId => task.staffMemberIds.includes(staffMemberId)),
+                  start: event.start,
+                  end: new Date(event.start.getTime() + durationMinutes * MINUTE_IN_MS),
+                  color: DEFAULT_COLOR_HEX,
+                  taskIds: [taskId],
+                },
+                {
+                  onSuccess(event) {
+                    setEventIdToEdit(current => current ?? event.id);
+                    setShouldShowEditScheduleEventModal(true);
+                  },
+                },
+              );
             }}
           />
         </Layout.Section>
@@ -539,18 +549,9 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
 
               <Card>
                 <BlockStack gap="200">
-                  <Box paddingBlockEnd="200">
-                    <InlineStack gap="200" align="space-between" blockAlign="start">
-                      <Text as="h2" variant="headingMd" fontWeight="bold">
-                        Tasks
-                      </Text>
-                      <Checkbox
-                        label={'Hide finished tasks'}
-                        checked={shouldHideFinishedTasks}
-                        onChange={shouldHideFinishedTasks => setShouldHideFinishedTasks(shouldHideFinishedTasks)}
-                      />
-                    </InlineStack>
-                  </Box>
+                  <Text as="h2" variant="headingMd" fontWeight="bold">
+                    Tasks
+                  </Text>
 
                   <Text as="p" variant="bodyMd" tone="subdued">
                     Tasks can be dragged and dropped to schedule them. They will automatically be associated with the
@@ -579,8 +580,41 @@ export function ManageSchedule({ id, onBack }: { id: number; onBack: () => void 
                       clearButton
                       onClearButtonClick={() => setTaskQuery('')}
                       prefix={<Icon source={SearchMinor} tone="base" />}
+                      connectedRight={
+                        <Box paddingInlineStart="200">
+                          <Button variant="plain" onClick={() => setShouldShowTaskFilters(x => !x)}>
+                            Filters
+                          </Button>
+                        </Box>
+                      }
                       loading={tasksQuery.isFetching}
                     />
+
+                    <Collapsible id={taskFilterCollapsibleId} open={shouldShowTaskFilters}>
+                      <Box paddingInlineStart="200">
+                        <BlockStack align="start" inlineAlign="start">
+                          <InlineStack align="center">
+                            <Checkbox
+                              label={'Hide finished tasks'}
+                              checked={shouldHideFinishedTasks}
+                              onChange={shouldHideFinishedTasks => setShouldHideFinishedTasks(shouldHideFinishedTasks)}
+                            />
+                          </InlineStack>
+
+                          <InlineStack align="center">
+                            <Checkbox
+                              label={'Only show tasks for selected staff members'}
+                              checked={shouldOnlyShowTasksForSelectedStaffMembers}
+                              onChange={shouldOnlyShowTasksForSelectedStaffMembers =>
+                                setShouldOnlyShowTasksForSelectedStaffMembers(
+                                  shouldOnlyShowTasksForSelectedStaffMembers,
+                                )
+                              }
+                            />
+                          </InlineStack>
+                        </BlockStack>
+                      </Box>
+                    </Collapsible>
 
                     {tasks.map(task => (
                       <DraggableTaskCard taskId={task.id} />
@@ -678,7 +712,7 @@ function DeleteScheduleEventModal({
   eventId,
 }: {
   open: boolean;
-  onClose: () => void;
+  onClose: (deleted: boolean) => void;
   scheduleId: number;
   eventId: number | undefined;
 }) {
@@ -692,7 +726,7 @@ function DeleteScheduleEventModal({
       <Modal
         open={open}
         title={'Delete Schedule Event'}
-        onClose={onClose}
+        onClose={() => onClose(false)}
         primaryAction={{
           content: 'Delete',
           disabled: !eventId,
@@ -703,7 +737,7 @@ function DeleteScheduleEventModal({
             }
 
             deleteScheduleEventMutation.mutate({ scheduleId, eventId });
-            onClose();
+            onClose(true);
           },
         }}
       >
@@ -743,8 +777,14 @@ function EditScheduleEventModal({
 
   const eventQuery = useScheduleEventQuery({ fetch, scheduleId, eventId: eventId ?? null }, { enabled: open });
   const editScheduleEventMutation = useScheduleEventMutation({ fetch });
-  const deleteScheduleEventMutation = useDeleteScheduleEventMutation({ fetch });
-  const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
+  const taskQueries = useTaskQueries({ fetch, ids: taskIds });
+
+  // All staff members assigned to event tasks are always shown in the choice list.
+  // Unrelated staff members can be added through the the "Add staff member" button.
+  const taskStaffMemberIds = Object.values(taskQueries).flatMap(query => query.data?.staffMemberIds ?? []);
+
+  const relevantStaffMemberIds = unique([...staffMemberIds, ...taskStaffMemberIds]).sort();
+  const staffMemberQueries = useEmployeeQueries({ fetch, ids: relevantStaffMemberIds });
 
   useEffect(() => {
     if (eventQuery.data) {
@@ -839,7 +879,7 @@ function EditScheduleEventModal({
           <BlockStack gap="200" inlineAlign="start">
             <SearchableChoiceList
               title="Assigned staff members"
-              choices={staffMemberIds.map(id => {
+              choices={relevantStaffMemberIds.map(id => {
                 const query = staffMemberQueries[id]?.data;
                 return {
                   value: id,
@@ -875,13 +915,17 @@ function EditScheduleEventModal({
                 taskId={taskId}
                 content={<TaskCardScheduledTimeContent taskId={taskId} />}
                 right={
-                  <Button
-                    tone="critical"
-                    variant="plain"
-                    onClick={() => setTaskIds(current => current.filter(x => x !== taskId))}
-                  >
-                    Remove
-                  </Button>
+                  <BlockStack align="center">
+                    <span onClick={event => event.stopPropagation()}>
+                      <Button
+                        tone="critical"
+                        variant="plain"
+                        onClick={() => setTaskIds(current => current.filter(x => x !== taskId))}
+                      >
+                        Remove
+                      </Button>
+                    </span>
+                  </BlockStack>
                 }
                 onClick={() => setSelectedTaskId(taskId)}
               />
@@ -900,7 +944,12 @@ function EditScheduleEventModal({
         scheduleId={scheduleId}
         eventId={eventId}
         open={shouldShowDeleteScheduleEventModal}
-        onClose={() => setShouldShowDeleteScheduleEventModal(false)}
+        onClose={deleted => {
+          setShouldShowDeleteScheduleEventModal(false);
+          if (deleted) {
+            onClose();
+          }
+        }}
       />
 
       <MultiStaffMemberSelectorModal

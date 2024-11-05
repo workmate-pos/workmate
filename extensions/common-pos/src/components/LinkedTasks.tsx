@@ -2,22 +2,10 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { DetailedTask } from '@work-orders/common/queries/use-task-query.js';
 import { useEffect } from 'react';
 import { useTasksQuery } from '@work-orders/common/queries/use-tasks-query.js';
-import {
-  Banner,
-  Button,
-  Icon,
-  List,
-  ScrollView,
-  Section,
-  Selectable,
-  Stack,
-  Text,
-} from '@shopify/ui-extensions-react/point-of-sale';
+import { Banner, Button, Icon, Section, Selectable, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { getSubtitle } from '../util/subtitle.js';
 import { DAY_IN_MS, MINUTE_IN_MS } from '@work-orders/common/time/constants.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import humanizeDuration from 'humanize-duration';
 import { Route, UseRouter } from '../screens/router.js';
 import { TaskInfoProps } from '../screens/tasks/TaskInfo.js';
@@ -71,36 +59,34 @@ export function LinkedTasks({
   }, [tasksQuery.isFetching, tasksQuery.hasNextPage]);
 
   return (
-    <ScrollView>
-      <ResponsiveStack direction="vertical">
-        <ResponsiveStack direction="horizontal" alignment="space-between">
-          <Text variant="headingLarge">Tasks</Text>
+    <ResponsiveStack direction="vertical">
+      <ResponsiveStack direction="horizontal" alignment="space-between">
+        <Text variant="headingLarge">Tasks</Text>
 
-          <Button
-            type="plain"
-            title="New Task"
-            isDisabled={disabled || !Object.values(links).some(values => values.length > 0)}
-            onPress={() =>
-              router.push('TaskModal', {
-                id: null,
-                editable: true,
-                onSave: () => {},
-                useRouter,
-                initial: {
-                  links: {
-                    workOrders: [],
-                    purchaseOrders: [],
-                    specialOrders: [],
-                    transferOrders: [],
-                    cycleCounts: [],
-                    serials: [],
-                    ...Object.fromEntries(Object.entries(links).filter(([, value]) => value !== undefined)),
-                  },
+        <Button
+          type="plain"
+          title="New task"
+          isDisabled={disabled || !Object.values(links).some(values => values.length > 0)}
+          onPress={() =>
+            router.push('TaskModal', {
+              id: null,
+              editable: true,
+              onSave: () => {},
+              useRouter,
+              initial: {
+                links: {
+                  workOrders: [],
+                  purchaseOrders: [],
+                  specialOrders: [],
+                  transferOrders: [],
+                  cycleCounts: [],
+                  serials: [],
+                  ...Object.fromEntries(Object.entries(links).filter(([, value]) => value !== undefined)),
                 },
-              })
-            }
-          />
-        </ResponsiveStack>
+              },
+            })
+          }
+        />
       </ResponsiveStack>
 
       {tasksQuery.isError && (
@@ -124,7 +110,7 @@ export function LinkedTasks({
       )}
 
       {tasksQuery.isFetchingNextPage && <Text color="TextSubdued">Loading...</Text>}
-    </ScrollView>
+    </ResponsiveStack>
   );
 }
 
@@ -142,54 +128,56 @@ export function TaskList({
   const router = useRouter();
 
   return (
-    <Stack direction="vertical" spacing={0.5}>
-      <Section>
-        {tasks.map(task => (
-          <Selectable
-            key={task.id}
-            onPress={() => router.push('TaskModal', { id: task.id, onSave: () => {}, useRouter, editable: true })}
+    <Section>
+      {tasks.map(task => (
+        <Selectable
+          key={task.id}
+          onPress={() => router.push('TaskModal', { id: task.id, onSave: () => {}, useRouter, editable: true })}
+        >
+          <Stack
+            direction="horizontal"
+            spacing={2}
+            alignment="space-between"
+            paddingVertical="Small"
+            paddingHorizontal="Small"
           >
-            <Stack
-              direction="horizontal"
-              spacing={2}
-              alignment="space-between"
-              paddingVertical={'Small'}
-              paddingHorizontal={'Small'}
-            >
-              <Stack direction="vertical" spacing={0.5}>
-                <Text variant="headingSmall" color={'TextNeutral'}>
-                  {(task.done ? '✅ ' : '') + task.name}
+            <Stack direction="vertical" spacing={0.5}>
+              <Text variant="headingSmall" color={'TextNeutral'}>
+                {(task.done ? '✅ ' : '') + task.name}
+              </Text>
+
+              {!!task.deadline && (
+                <Text
+                  variant="captionMedium"
+                  color={
+                    !task.done && new Date().getTime() + DEADLINE_CRITICAL_THRESHOLD_MS >= task.deadline.getTime()
+                      ? 'TextCritical'
+                      : 'TextSubdued'
+                  }
+                >
+                  Due{task.deadline.getTime() > new Date().getTime() ? ' in ' : ' '}
+                  {humanizeDuration(task.deadline.getTime() - new Date().getTime(), { largest: 2 })}
+                  {task.deadline.getTime() < new Date().getTime() ? ' ago' : ''}
                 </Text>
+              )}
 
-                {!!task.deadline && (
-                  <Text
-                    variant="body"
-                    color={
-                      !task.done && new Date().getTime() + DEADLINE_CRITICAL_THRESHOLD_MS >= task.deadline.getTime()
-                        ? 'TextCritical'
-                        : 'TextSubdued'
-                    }
-                  >
-                    Due{task.deadline.getTime() > new Date().getTime() ? ' in ' : ' '}
-                    {humanizeDuration(task.deadline.getTime() - new Date().getTime(), { largest: 2 })}
-                    {task.deadline.getTime() < new Date().getTime() ? ' ago' : ''}
-                  </Text>
-                )}
+              {!!task.description.trim() && (
+                <Text variant="captionMedium" color="TextSubdued">
+                  {task.description}
+                </Text>
+              )}
 
-                {!!task.description.trim() && <Text color={'TextSubdued'}>{task.description}</Text>}
-
-                {!!task.estimatedTimeMinutes && (
-                  <Text variant="body" color={'TextSubdued'}>
-                    Estimated to take {humanizeDuration(task.estimatedTimeMinutes * MINUTE_IN_MS, {})}
-                  </Text>
-                )}
-              </Stack>
-
-              <Icon name="chevron-right" />
+              {!!task.estimatedTimeMinutes && (
+                <Text variant="captionMedium" color="TextSubdued">
+                  Estimated to take {humanizeDuration(task.estimatedTimeMinutes * MINUTE_IN_MS, {})}
+                </Text>
+              )}
             </Stack>
-          </Selectable>
-        ))}
-      </Section>
-    </Stack>
+
+            <Icon name="chevron-right" />
+          </Stack>
+        </Selectable>
+      ))}
+    </Section>
   );
 }

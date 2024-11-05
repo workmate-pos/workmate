@@ -1,4 +1,16 @@
-import { BlockStack, Box, Button, ButtonGroup, Card, EmptyState, Frame, Page, Text, Tooltip } from '@shopify/polaris';
+import {
+  BlockStack,
+  Box,
+  Button,
+  ButtonGroup,
+  Card,
+  EmptyState,
+  Frame,
+  Layout,
+  Page,
+  Text,
+  Tooltip,
+} from '@shopify/polaris';
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-order-query.js';
 import { useLocation } from 'react-router-dom';
@@ -20,7 +32,7 @@ import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company
 import { useSpecialOrderMutation } from '@work-orders/common/queries/use-special-order-mutation.js';
 import { SpecialOrderGeneralCard } from '@web/frontend/components/special-orders/SpecialOrderGeneralCard.js';
 import { SpecialOrderLineItemsCard } from '@web/frontend/components/special-orders/SpecialOrderLineItemsCard.js';
-import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { LinkedTasks, NewLinkedTaskButton, BaseNewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function () {
@@ -182,27 +194,36 @@ function SpecialOrder({ initial }: { initial: WIPCreateSpecialOrder }) {
           disabled={disabled}
         />
 
-        <SpecialOrderLineItemsCard
-          createSpecialOrder={createSpecialOrder}
-          setCreateSpecialOrder={setCreateSpecialOrder}
-          disabled={disabled}
-        />
+        <Layout>
+          <Layout.Section>
+            <SpecialOrderLineItemsCard
+              createSpecialOrder={createSpecialOrder}
+              setCreateSpecialOrder={setCreateSpecialOrder}
+              disabled={disabled}
+            />
+          </Layout.Section>
 
-        <Card>
-          <LinkedTasks
-            links={{ specialOrders: [createSpecialOrder.name].filter(isNonNullable) }}
-            disabled={specialOrderMutation.isPending}
-            action={
-              !!createSpecialOrder.name ? (
-                <NewLinkedTaskButton links={{ specialOrders: [createSpecialOrder.name] }} />
-              ) : (
-                <Tooltip content={'You must save your special order before you can create tasks'}>
-                  <NewTaskButton disabled />
-                </Tooltip>
-              )
-            }
-          />
-        </Card>
+          <Layout.Section variant="oneThird">
+            <Card>
+              <LinkedTasks
+                links={{ specialOrders: [createSpecialOrder.name].filter(isNonNullable) }}
+                disabled={specialOrderMutation.isPending}
+                action={tasks =>
+                  !!createSpecialOrder.name ? (
+                    <NewLinkedTaskButton
+                      links={{ specialOrders: [createSpecialOrder.name] }}
+                      suggestedDeadlines={tasks.map(task => task.deadline).filter(isNonNullable)}
+                    />
+                  ) : (
+                    <Tooltip content={'You must save your special order before you can create tasks'}>
+                      <BaseNewTaskButton disabled />
+                    </Tooltip>
+                  )
+                }
+              />
+            </Card>
+          </Layout.Section>
+        </Layout>
 
         <ButtonGroup fullWidth>
           <Button disabled={disabled} loading={specialOrderMutation.isPending} onClick={saveSpecialOrder}>

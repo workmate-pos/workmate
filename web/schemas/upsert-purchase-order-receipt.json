@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "name": {
+      "anyOf": [
+        {
+          "const": null
+        },
+        {
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "description": {
+      "type": "string"
+    },
+    "receivedAt": {
+      "$ref": "scalars.json#/definitions/DateTime"
+    },
+    "lineItems": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "uuid": {
+            "$ref": "scalars.json#/definitions/UUID"
+          },
+          "quantity": {
+            "$ref": "scalars.json#/definitions/Int"
+          }
+        },
+        "additionalProperties": false,
+        "required": ["uuid", "quantity"]
+      }
+    },
+    "status": {
+      "enum": ["DRAFT", "ARCHIVED", "COMPLETED"]
+    }
+  },
+  "additionalProperties": false,
+  "required": ["name", "description", "receivedAt", "lineItems", "status"]
+}

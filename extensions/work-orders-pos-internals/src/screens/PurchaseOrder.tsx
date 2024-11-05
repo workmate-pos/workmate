@@ -9,8 +9,8 @@ import {
   TextArea,
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { CreatePurchaseOrder, DateTime, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { CreatePurchaseOrder, DateTime, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -45,6 +45,11 @@ import { getStockTransferLineItemStatusBadgeProps } from '../util/stock-transfer
 import { getSpecialOrderBadge } from '../util/badges.js';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
+import {
+  BaseNewPurchaseOrderReceiptButton,
+  NewPurchaseOrderReceiptButton,
+  PurchaseOrderReceipts,
+} from '../components/purchase-orders/PurchaseOrderReceipts.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -137,14 +142,6 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
       createPurchaseOrder.paid ? BigDecimal.fromMoney(createPurchaseOrder.paid) : BigDecimal.ZERO,
     ),
   );
-
-  const noLineItems = createPurchaseOrder.lineItems.length === 0;
-  const allAreReceived = createPurchaseOrder.lineItems.every(li => li.availableQuantity === li.quantity);
-  const noneAreReceived = createPurchaseOrder.lineItems.every(li => {
-    const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', li.uuid));
-    const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-    return li.availableQuantity === minimumAvailableQuantity;
-  });
 
   useEffect(() => {
     screen.setTitle(createPurchaseOrder.name ?? 'New purchase order');
@@ -331,32 +328,14 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
           <ResponsiveGrid columns={2}>
             <ResponsiveGrid columns={1}>
               <FormButton title={'Add product'} type={'primary'} onPress={addProductPrerequisitesDialog.show} />
-
-              {noLineItems || allAreReceived ? (
-                <FormButton
-                  title={'Mark all as not received'}
-                  type={'destructive'}
-                  disabled={noLineItems || noneAreReceived}
-                  onPress={() => {
-                    for (const product of createPurchaseOrder.lineItems) {
-                      const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
-                      const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-                      dispatch.updateProduct({
-                        product: { ...product, availableQuantity: minimumAvailableQuantity as Int },
-                      });
-                    }
-                  }}
+              {!!createPurchaseOrder.name && !hasUnsavedChanges ? (
+                <NewPurchaseOrderReceiptButton
+                  purchaseOrderName={createPurchaseOrder.name}
+                  disabled={hasUnsavedChanges}
+                  props={{ title: 'Receive products' }}
                 />
               ) : (
-                <FormButton
-                  title={'Mark all as received'}
-                  disabled={noLineItems || allAreReceived}
-                  onPress={() => {
-                    for (const product of createPurchaseOrder.lineItems) {
-                      dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
-                    }
-                  }}
-                />
+                <BaseNewPurchaseOrderReceiptButton disabled title="Receive products" />
               )}
 
               <ControlledSearchBar placeholder={'Search products'} onTextChange={setQuery} onSearch={() => {}} />
@@ -406,6 +385,21 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               <FormMoneyField label={'Balance due'} value={balanceDue.toMoney()} disabled />
             </ResponsiveGrid>
           </ResponsiveGrid>
+
+          <PurchaseOrderReceipts
+            purchaseOrderName={createPurchaseOrder.name}
+            disabled={purchaseOrderMutation.isPending}
+            action={
+              !!createPurchaseOrder.name && !hasUnsavedChanges ? (
+                <NewPurchaseOrderReceiptButton
+                  purchaseOrderName={createPurchaseOrder.name}
+                  disabled={hasUnsavedChanges}
+                />
+              ) : (
+                <BaseNewPurchaseOrderReceiptButton disabled />
+              )
+            }
+          />
 
           <LinkedTasks
             links={{ purchaseOrders: [createPurchaseOrder.name].filter(isNonNullable) }}
@@ -514,7 +508,12 @@ function useProductRows(
 
     const savedLineItem = purchaseOrder?.lineItems.find(hasPropertyValue('uuid', product.uuid));
 
-    product.specialOrderLineItem?.name;
+    const receivedQuantity =
+      purchaseOrder?.receipts
+        .flatMap(receipt => receipt.lineItems)
+        .filter(hasPropertyValue('uuid', product.uuid))
+        .map(li => li.quantity)
+        .reduce((a, b) => a + b, 0) ?? 0;
 
     return {
       id: String(i),
@@ -539,7 +538,7 @@ function useProductRows(
           source: imageUrl,
           badge: product.quantity,
         },
-        subtitle: getSubtitle([product.serialNumber, `${product.availableQuantity} received`]),
+        subtitle: getSubtitle([product.serialNumber, `${receivedQuantity} received`]),
         badges: [
           product.specialOrderLineItem
             ? getSpecialOrderBadge({ name: product.specialOrderLineItem.name, items: [] }, false)

@@ -41,7 +41,7 @@ export const usePurchaseOrdersUploadCsvMutation = (
     },
     async onSuccess() {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['purchase-orders'] }),
+        queryClient.invalidateQueries({ queryKey: ['purchase-order'] }),
         queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] }),
       ]);
       await onSuccess?.();

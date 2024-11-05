@@ -396,8 +396,58 @@ model PurchaseOrder {
   updatedAt                         DateTime                           @default(now()) @db.Timestamptz(3)
   purchaseOrderLineItemCustomFields PurchaseOrderLineItemCustomField[]
   tasks                             TaskPurchaseOrderLink[]
+  receiptLineItems                  PurchaseOrderReceiptLineItem[]
+  receipts                          PurchaseOrderReceipt[]
 
   @@unique([shop, name])
+}
+
+enum PurchaseOrderReceiptStatus {
+  DRAFT
+  ARCHIVED
+  COMPLETED
+}
+
+// A receipt is a collection of line items that have arrived, e.g. a shipment.
+// They are immutable after creation.
+// All quantities are added as "available" inventory in Shopify once added to a receipt.
+model PurchaseOrderReceipt {
+  id Int @id @default(autoincrement())
+
+  shop        String
+  name        String
+  description String
+  status      PurchaseOrderReceiptStatus
+
+  purchaseOrderId Int
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+
+  receivedAt DateTime @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  lineItems PurchaseOrderReceiptLineItem[]
+
+  @@unique([shop, name])
+}
+
+model PurchaseOrderReceiptLineItem {
+  id Int @id @default(autoincrement())
+
+  quantity Int
+
+  purchaseOrderReceipt   PurchaseOrderReceipt @relation(fields: [purchaseOrderReceiptId], references: [id])
+  purchaseOrderReceiptId Int
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  lineItemUuid String                @db.Uuid
+  lineItem     PurchaseOrderLineItem @relation(fields: [purchaseOrderId, lineItemUuid], references: [purchaseOrderId, uuid])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }
 
 // TODO: Add serial PK to all tables like this instead of composite PK (remove all @relation with more than 1 field)
@@ -416,15 +466,14 @@ model PurchaseOrderLineItem {
   productVariantSerial   ProductVariantSerial? @relation(fields: [productVariantSerialId], references: [id])
   productVariantSerialId Int?
 
-  unitCost          String
-  quantity          Int
-  /// Quantity that has been added to Shopify as available inventory
-  availableQuantity Int
+  unitCost String
+  quantity Int
 
   createdAt              DateTime                           @default(now()) @db.Timestamptz(3)
   updatedAt              DateTime                           @default(now()) @db.Timestamptz(3)
   customFields           PurchaseOrderLineItemCustomField[]
   stockTransferLineItems StockTransferLineItem[]
+  receiptLineItems       PurchaseOrderReceiptLineItem[]
 
   @@id([purchaseOrderId, uuid])
   @@index([purchaseOrderId])
