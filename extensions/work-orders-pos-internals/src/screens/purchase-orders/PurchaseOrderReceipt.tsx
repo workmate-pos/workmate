@@ -39,6 +39,7 @@ export function PurchaseOrderReceipt({
 
   const screen = useScreen();
   screen.setIsLoading(purchaseOrderQuery.isLoading);
+  screen.setTitle(receiptName ?? 'New Purchase Order Receipt');
 
   const [status, setStatus] = useState<PurchaseOrderReceipt['status']>();
   const [description, setDescription] = useState('');
@@ -273,12 +274,7 @@ export function PurchaseOrderReceipt({
           <FormButton
             title={receiptName === null ? 'Create receipt' : 'Save receipt'}
             action="submit"
-            disabled={
-              !receiptName ||
-              !status ||
-              !lineItems.filter(li => li.quantity > 0).length ||
-              !purchaseOrderQuery.isSuccess
-            }
+            disabled={!status || !lineItems.filter(li => li.quantity > 0).length || !purchaseOrderQuery.isSuccess}
             loading={purchaseOrderReceiptMutation.isPending}
             onPress={() => {
               if (!status) {

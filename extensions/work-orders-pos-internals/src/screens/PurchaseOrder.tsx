@@ -387,7 +387,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
           </ResponsiveGrid>
 
           <PurchaseOrderReceipts
-            name={createPurchaseOrder.name}
+            purchaseOrderName={createPurchaseOrder.name}
             disabled={purchaseOrderMutation.isPending}
             action={
               !!createPurchaseOrder.name && !hasUnsavedChanges ? (

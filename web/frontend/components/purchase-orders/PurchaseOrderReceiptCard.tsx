@@ -15,14 +15,14 @@ const renderPurchaseOrderReceiptCardSlot = (slot: PurchaseOrderReceiptCardSlot, 
   typeof slot === 'function' ? slot(receipt) : slot;
 
 export function PurchaseOrderReceiptCard({
-  name,
-  id,
+  purchaseOrderName,
+  receiptName,
   disabled,
   onClick,
   content,
 }: {
-  name: string;
-  id: number;
+  purchaseOrderName: string;
+  receiptName: string | null;
   disabled?: boolean;
   onClick?: () => void;
   content?: PurchaseOrderReceiptCardSlot;
@@ -30,7 +30,7 @@ export function PurchaseOrderReceiptCard({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
+  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: purchaseOrderName });
 
   if (purchaseOrderQuery.isError) {
     return (
@@ -57,7 +57,7 @@ export function PurchaseOrderReceiptCard({
     );
   }
 
-  const receipt = purchaseOrderQuery.data.receipts.find(receipt => receipt.id === id);
+  const receipt = purchaseOrderQuery.data.receipts.find(receipt => receipt.name === receiptName);
 
   if (!receipt) {
     return (
@@ -107,14 +107,14 @@ export function PurchaseOrderReceiptCard({
  * A purchase order receipt card that opens a modal when clicked.
  */
 export function ConfigurablePurchaseOrderReceiptCard({
-  name,
-  id,
+  purchaseOrderName,
+  receiptName,
   content,
   onOpenChange,
   disabled,
 }: {
-  name: string;
-  id: number;
+  purchaseOrderName: string;
+  receiptName: string | null;
   content?: PurchaseOrderReceiptCardSlot;
   onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
@@ -124,8 +124,8 @@ export function ConfigurablePurchaseOrderReceiptCard({
   return (
     <>
       <PurchaseOrderReceiptCard
-        name={name}
-        id={id}
+        purchaseOrderName={purchaseOrderName}
+        receiptName={receiptName}
         content={content}
         disabled={disabled}
         onClick={() => setOpen(true)}
@@ -137,8 +137,8 @@ export function ConfigurablePurchaseOrderReceiptCard({
           setOpen(false);
           onOpenChange?.(false);
         }}
-        name={name}
-        id={id}
+        purchaseOrderName={purchaseOrderName}
+        receiptName={receiptName}
       />
     </>
   );

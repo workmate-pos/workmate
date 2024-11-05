@@ -9,6 +9,6 @@ CREATE TYPE "PurchaseOrderReceiptStatus" AS ENUM ('DRAFT', 'ARCHIVED', 'COMPLETE
 
 -- AlterTable
 ALTER TABLE "PurchaseOrderReceipt"
-  ADD COLUMN "status" "PurchaseOrderReceiptStatus" NOT NULL DEFAULT 'DRAFT';
+  ADD COLUMN "status" "PurchaseOrderReceiptStatus" NOT NULL DEFAULT 'COMPLETED';
 ALTER TABLE "PurchaseOrderReceipt"
   ALTER COLUMN "status" DROP DEFAULT;

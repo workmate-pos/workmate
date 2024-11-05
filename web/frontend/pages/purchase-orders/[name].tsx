@@ -8,7 +8,6 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import {
   BlockStack,
   Box,
-  Button,
   Card,
   EmptyState,
   Frame,
@@ -309,7 +308,7 @@ function PurchaseOrder({
               action={
                 !!createPurchaseOrder.name && !hasUnsavedChanges ? (
                   <NewPurchaseOrderReceiptButton
-                    name={createPurchaseOrder.name}
+                    purchaseOrderName={createPurchaseOrder.name}
                     disabled={hasUnsavedChanges}
                     props={{ icon: undefined, children: 'Receive products' }}
                   />
@@ -326,10 +325,13 @@ function PurchaseOrder({
             <Card>
               <PurchaseOrderReceipts
                 disabled={purchaseOrderMutation.isPending || hasUnsavedChanges || !createPurchaseOrder.name}
-                name={createPurchaseOrder.name}
+                purchaseOrderName={createPurchaseOrder.name}
                 action={
                   !!createPurchaseOrder.name && !hasUnsavedChanges ? (
-                    <NewPurchaseOrderReceiptButton name={createPurchaseOrder.name} disabled={hasUnsavedChanges} />
+                    <NewPurchaseOrderReceiptButton
+                      purchaseOrderName={createPurchaseOrder.name}
+                      disabled={hasUnsavedChanges}
+                    />
                   ) : (
                     <Tooltip content="You must save your purchase order before you can add receipts.">
                       <BaseNewPurchaseOrderReceiptButton disabled />

@@ -11,15 +11,15 @@ type FormButtonProps = Parameters<typeof FormButton>[0];
 
 export function PurchaseOrderReceipts({
   disabled,
-  name,
+  purchaseOrderName,
   action,
 }: {
   disabled?: boolean;
-  name: string | null;
+  purchaseOrderName: string | null;
   action?: ReactNode;
 }) {
   const fetch = useAuthenticatedFetch();
-  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
+  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: purchaseOrderName });
 
   // TODO: universal-ui - make this header + action thing a component
 
@@ -52,10 +52,10 @@ export function PurchaseOrderReceipts({
       <Section>
         {purchaseOrderQuery.data?.receipts.map(
           receipt =>
-            !!name && (
+            !!purchaseOrderName && (
               <ConfigurablePurchaseOrderReceiptCard
                 disabled={disabled}
-                purchaseOrderName={name}
+                purchaseOrderName={purchaseOrderName}
                 receiptName={receipt.name}
                 key={receipt.name}
               />

@@ -45,25 +45,21 @@ function isReceiptStatus(status: string): status is PurchaseOrderReceiptStatus {
 export function PurchaseOrderReceiptModal({
   open,
   onClose,
-  name,
-  id,
+  purchaseOrderName,
+  receiptName,
 }: {
   open: boolean;
   onClose: () => void;
-  name: string;
-  /**
-   * If null, this modal is creating a receipt.
-   */
-  id: number | null;
+  purchaseOrderName: string;
+  receiptName: string | null;
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
+  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: purchaseOrderName });
   const purchaseOrderReceiptMutation = usePurchaseOrderReceiptMutation({ fetch });
   const deletePurchaseOrderReceiptMutation = useDeletePurchaseOrderReceiptMutation({ fetch });
 
-  const [receiptName, setReceiptName] = useState('');
   const [status, setStatus] = useState<PurchaseOrderReceipt['status']>();
   const [description, setDescription] = useState('');
   const [lineItems, setLineItems] = useState<PurchaseOrderReceipt['lineItems']>([]);
@@ -77,7 +73,7 @@ export function PurchaseOrderReceiptModal({
         .map(lineItem => {
           const availableQuantity =
             purchaseOrderQuery.data?.receipts
-              .filter(receipt => receipt.id !== id)
+              .filter(receipt => receipt.name !== receiptName)
               .flatMap(receipt => receipt.lineItems)
               .filter(hasPropertyValue('uuid', lineItem.uuid))
               .map(lineItem => lineItem.quantity)
@@ -91,17 +87,15 @@ export function PurchaseOrderReceiptModal({
           quantity: Math.max(0, quantity - availableQuantity),
         })) ?? [];
 
-    if (id === null) {
-      setReceiptName('');
+    if (receiptName === null) {
       setDescription('');
       setStatus(undefined);
       setLineItems(unsatisfiedLineItems);
       setReceivedAt(new Date());
       setReceipt(undefined);
     } else if (purchaseOrderQuery.isSuccess) {
-      const receipt = purchaseOrderQuery.data?.receipts.find(receipt => receipt.id === id);
+      const receipt = purchaseOrderQuery.data?.receipts.find(receipt => receipt.name === receiptName);
 
-      setReceiptName(receipt?.name ?? '');
       setDescription(receipt?.description ?? '');
       setStatus(receipt?.status);
       setLineItems([
@@ -115,7 +109,7 @@ export function PurchaseOrderReceiptModal({
       setReceivedAt(receipt ? new Date(receipt.receivedAt) : new Date());
       setReceipt(receipt);
     }
-  }, [id, purchaseOrderQuery.data]);
+  }, [receiptName, purchaseOrderQuery.data]);
 
   const productVariantIds = unique(purchaseOrderQuery.data?.lineItems.map(li => li.productVariant.id) ?? []);
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
@@ -143,9 +137,9 @@ export function PurchaseOrderReceiptModal({
   }
 
   const receiptNotFound =
-    id !== null &&
+    receiptName !== null &&
     purchaseOrderQuery.isSuccess &&
-    !purchaseOrderQuery.data?.receipts.some(receipt => receipt.id === id);
+    !purchaseOrderQuery.data?.receipts.some(receipt => receipt.name === receiptName);
 
   if (receiptNotFound) {
     return (
@@ -166,7 +160,7 @@ export function PurchaseOrderReceiptModal({
   return (
     <>
       <Modal
-        title={'Purchase Order Receipt'}
+        title={receiptName ?? 'New Purchase Order Receipt'}
         open={open}
         onClose={onClose}
         loading={purchaseOrderQuery.isLoading}
@@ -182,7 +176,7 @@ export function PurchaseOrderReceiptModal({
               }
 
               deletePurchaseOrderReceiptMutation.mutate(
-                { purchaseOrderName: name, id: receipt.id },
+                { purchaseOrderName, receiptName: receipt.name },
                 {
                   onSuccess() {
                     setToastAction({ content: 'Purchase order receipt deleted' });
@@ -195,8 +189,7 @@ export function PurchaseOrderReceiptModal({
         ]}
         primaryAction={{
           content: 'Save',
-          disabled:
-            !receiptName || !status || !lineItems.filter(li => li.quantity > 0).length || !purchaseOrderQuery.isSuccess,
+          disabled: !status || !lineItems.filter(li => li.quantity > 0).length || !purchaseOrderQuery.isSuccess,
           loading: purchaseOrderReceiptMutation.isPending,
           onAction: () => {
             if (!status) {
@@ -205,10 +198,9 @@ export function PurchaseOrderReceiptModal({
 
             purchaseOrderReceiptMutation.mutate(
               {
-                purchaseOrderName: name,
-                id: id ?? undefined,
-                status,
+                purchaseOrderName,
                 name: receiptName,
+                status,
                 description,
                 lineItems: receipt?.status === 'COMPLETED' ? [] : lineItems.filter(li => li.quantity > 0),
                 receivedAt: receivedAt.toISOString() as DateTime,
@@ -225,14 +217,6 @@ export function PurchaseOrderReceiptModal({
       >
         <Modal.Section>
           <FormLayout>
-            <TextField
-              label={'Name'}
-              autoComplete="off"
-              value={receiptName}
-              onChange={setReceiptName}
-              requiredIndicator
-            />
-
             <TextField
               label={'Description'}
               autoComplete="off"
@@ -295,7 +279,7 @@ export function PurchaseOrderReceiptModal({
 
                   const availableQuantity =
                     purchaseOrderQuery.data?.receipts
-                      .filter(receipt => receipt.id !== id)
+                      .filter(receipt => receipt.name !== receiptName)
                       .flatMap(receipt => receipt.lineItems)
                       .filter(hasPropertyValue('uuid', uuid))
                       .map(lineItem => lineItem.quantity)

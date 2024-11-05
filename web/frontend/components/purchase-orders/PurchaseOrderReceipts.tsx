@@ -11,16 +11,16 @@ import { PurchaseOrderReceiptModal } from '@web/frontend/components/purchase-ord
 export function PurchaseOrderReceipts({
   action,
   disabled,
-  name,
+  purchaseOrderName,
 }: {
   action?: ReactNode;
   disabled?: boolean;
-  name: string | null;
+  purchaseOrderName: string | null;
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
+  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: purchaseOrderName });
 
   return (
     <BlockStack gap={'400'}>
@@ -53,8 +53,13 @@ export function PurchaseOrderReceipts({
 
       {purchaseOrderQuery.data?.receipts.map(
         receipt =>
-          !!name && (
-            <ConfigurablePurchaseOrderReceiptCard disabled={disabled} name={name} key={receipt.id} id={receipt.id} />
+          !!purchaseOrderName && (
+            <ConfigurablePurchaseOrderReceiptCard
+              key={receipt.name}
+              disabled={disabled}
+              purchaseOrderName={purchaseOrderName}
+              receiptName={receipt.name}
+            />
           ),
       )}
 
@@ -68,11 +73,11 @@ export function BaseNewPurchaseOrderReceiptButton(props: Partial<ButtonProps>) {
 }
 
 export function NewPurchaseOrderReceiptButton({
-  name,
+  purchaseOrderName,
   disabled,
   props,
 }: {
-  name: string;
+  purchaseOrderName: string;
   disabled?: boolean;
   props?: Omit<Partial<ButtonProps>, 'disabled' | 'onClick'>;
 }) {
@@ -81,7 +86,12 @@ export function NewPurchaseOrderReceiptButton({
   return (
     <>
       <BaseNewPurchaseOrderReceiptButton {...props} disabled={disabled} onClick={() => setOpen(true)} />
-      <PurchaseOrderReceiptModal open={open} onClose={() => setOpen(false)} name={name} id={null} />
+      <PurchaseOrderReceiptModal
+        open={open}
+        onClose={() => setOpen(false)}
+        purchaseOrderName={purchaseOrderName}
+        receiptName={null}
+      />
     </>
   );
 }

@@ -48,19 +48,33 @@ ALTER TABLE "PurchaseOrderReceiptLineItem"
 ALTER TABLE "PurchaseOrderReceiptLineItem"
   ADD CONSTRAINT "PurchaseOrderReceiptLineItem_purchaseOrderId_lineItemUuid_fkey" FOREIGN KEY ("purchaseOrderId", "lineItemUuid") REFERENCES "PurchaseOrderLineItem" ("purchaseOrderId", "uuid") ON DELETE RESTRICT ON UPDATE CASCADE;
 
+-- AlterTable
+ALTER TABLE "PurchaseOrderReceipt"
+  ADD COLUMN "shop" TEXT NOT NULL;
+
+-- CreateIndex
+CREATE UNIQUE INDEX "PurchaseOrderReceipt_shop_name_key" ON "PurchaseOrderReceipt" ("shop", "name");
+
+
 -- Make receipts for every purchase order with availableQuantity
 
-WITH "EligiblePurchaseOrder" AS (SELECT po.*
+WITH "EligiblePurchaseOrder" AS (SELECT po.*,
+                                        ROW_NUMBER() OVER (PARTITION BY po.shop ORDER BY po."createdAt" ASC) AS "rowNumber"
                                  FROM "PurchaseOrder" po
                                  WHERE EXISTS (SELECT 1
                                                FROM "PurchaseOrderLineItem" poli
                                                WHERE poli."purchaseOrderId" = po.id
                                                  AND poli."availableQuantity" > 0)),
      "Receipt" AS (
-       INSERT INTO "PurchaseOrderReceipt" (name, description, "purchaseOrderId")
-         SELECT 'Receipt #1', '', po.id
+       INSERT INTO "PurchaseOrderReceipt" (shop, name, description, "purchaseOrderId")
+         SELECT po.shop, 'PO-RCPT-#' || po."rowNumber", '', po.id
          FROM "EligiblePurchaseOrder" po
-         RETURNING *)
+         RETURNING *),
+     "UpdateCounters" AS (
+       INSERT INTO "Counter" (key, last_value)
+         SELECT 'purchase-order-receipt.' || po.shop, MAX(po."rowNumber")
+         FROM "EligiblePurchaseOrder" po
+         GROUP BY po.shop)
 INSERT
 INTO "PurchaseOrderReceiptLineItem" (quantity, "purchaseOrderReceiptId", "purchaseOrderId", "lineItemUuid")
 SELECT poli."availableQuantity",
@@ -75,11 +89,13 @@ ALTER TABLE "PurchaseOrderLineItem"
   DROP COLUMN "availableQuantity";
 
 CREATE TRIGGER "PurchaseOrderReceipt_updatedAt"
-  BEFORE UPDATE ON "PurchaseOrderReceipt"
+  BEFORE UPDATE
+  ON "PurchaseOrderReceipt"
   FOR EACH ROW
-  EXECUTE PROCEDURE updated_at();
+EXECUTE PROCEDURE updated_at();
 
 CREATE TRIGGER "PurchaseOrderReceiptLineItem_updatedAt"
-  BEFORE UPDATE ON "PurchaseOrderReceiptLineItem"
+  BEFORE UPDATE
+  ON "PurchaseOrderReceiptLineItem"
   FOR EACH ROW
-  EXECUTE PROCEDURE updated_at();
+EXECUTE PROCEDURE updated_at();
