@@ -96,7 +96,11 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
                   lineItemId: lineItem.shopifyOrderLineItem.id,
                 }
               : null,
-            availableQuantity: lineItem.availableQuantity,
+            availableQuantity: purchaseOrder.receipts
+              .flatMap(receipt => receipt.lineItems)
+              .filter(li => li.uuid === lineItem.uuid)
+              .map(li => li.quantity)
+              .reduce((acc, val) => acc + val, 0),
             quantity: lineItem.quantity,
             averageUnitCost: averageUnitCost.toMoney(),
             unitCost: lineItem.unitCost,

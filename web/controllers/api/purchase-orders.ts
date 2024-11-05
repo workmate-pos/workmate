@@ -1,4 +1,11 @@
-import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
+import {
+  Authenticated,
+  BodySchema,
+  Delete,
+  Get,
+  Post,
+  QuerySchema,
+} from '@teifi-digital/shopify-app-express/decorators';
 import type { Request, Response } from 'express-serve-static-core';
 import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
 import { PurchaseOrderPaginationOptions } from '../../schemas/generated/purchase-order-pagination-options.js';
@@ -9,8 +16,6 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getDetailedPurchaseOrder, getPurchaseOrderInfoPage } from '../../services/purchase-orders/get.js';
 import { DetailedPurchaseOrder, PurchaseOrderInfo } from '../../services/purchase-orders/types.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { OffsetPaginationOptions } from '../../schemas/generated/offset-pagination-options.js';
-import { db } from '../../services/db/db.js';
 import { PurchaseOrderPrintJob } from '../../schemas/generated/purchase-order-print-job.js';
 import { getShopSettings } from '../../services/settings/settings.js';
 import {
@@ -26,6 +31,9 @@ import {
 } from '../../services/purchase-orders/csv-import.js';
 import * as Sentry from '@sentry/node';
 import { z } from 'zod';
+import { UpsertPurchaseOrderReceipt } from '../../schemas/generated/upsert-purchase-order-receipt.js';
+import { upsertReceipt } from '../../services/purchase-orders/receipt.js';
+import { deletePurchaseOrderReceipt } from '../../services/purchase-orders/delete.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -46,6 +54,48 @@ export default class PurchaseOrdersController {
     );
 
     return res.json({ purchaseOrder });
+  }
+
+  @Post('/:name/receipts')
+  @Permission('write_purchase_orders')
+  @BodySchema('upsert-purchase-order-receipt')
+  @Authenticated()
+  async createPurchaseOrderReceipt(
+    req: Request<{ name: string }, unknown, UpsertPurchaseOrderReceipt>,
+    res: Response<UpsertPurchaseOrderReceiptResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { name } = req.params;
+    const receipt = req.body;
+
+    await upsertReceipt(session, name, receipt, user.user.allowedLocationIds);
+
+    return res.json({
+      purchaseOrder:
+        (await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds)) ??
+        never('upsertReceipt would have thrown if not this doesnt exist'),
+    });
+  }
+
+  @Delete('/:purchaseOrderName/receipts/:receiptName')
+  @Permission('write_purchase_orders')
+  @Authenticated()
+  async deletePurchaseOrderReceipt(
+    req: Request<{ purchaseOrderName: string; receiptName: string }>,
+    res: Response<DeletePurchaseOrderReceiptResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { purchaseOrderName, receiptName } = req.params;
+
+    await deletePurchaseOrderReceipt(session, user, { purchaseOrderName, receiptName });
+
+    return res.json({
+      purchaseOrder:
+        (await getDetailedPurchaseOrder(session, purchaseOrderName, user.user.allowedLocationIds)) ??
+        never('upsertReceipt would have thrown if not this doesnt exist'),
+    });
   }
 
   @Get('/:name')
@@ -184,3 +234,11 @@ export type FetchPurchaseOrderResponse = {
 };
 
 export type PrintPurchaseOrderResponse = { success: true };
+
+export type UpsertPurchaseOrderReceiptResponse = {
+  purchaseOrder: DetailedPurchaseOrder;
+};
+
+export type DeletePurchaseOrderReceiptResponse = {
+  purchaseOrder: DetailedPurchaseOrder;
+};

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { uuid } from '@work-orders/common/util/uuid.js';
-import { zDecimal, zID, zLiquidTemplate, zMoney, zNamespacedID } from '../../../util/zod.js';
+import { zDecimal, zLiquidTemplate, zMoney } from '../../../util/zod.js';
 import { quoteTemplate } from '../../mail/templates/defaults/work-order/quote.js';
 import { workOrderInvoiceTemplate } from '../../mail/templates/defaults/work-order/invoice.js';
 import { purchaseOrderInvoiceTemplate } from '../../mail/templates/defaults/purchase-order/invoice.js';
@@ -66,6 +66,12 @@ export const ShopSettings02 = z.object({
         }),
 
       vendorCustomerMetafieldsToShow: z.string().array().default([]),
+
+      receipts: z
+        .object({
+          idFormat: z.string().min(1).default('PO-RCPT-#{{id}}'),
+        })
+        .default({}),
     })
     .default({})
     .refine(

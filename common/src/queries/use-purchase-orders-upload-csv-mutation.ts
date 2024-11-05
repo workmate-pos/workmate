@@ -39,10 +39,12 @@ export const usePurchaseOrdersUploadCsvMutation = (
         throw new Error('Failed to upload purchase orders');
       }
     },
-    onSuccess() {
-      queryClient.invalidateQueries({ queryKey: ['purchase-orders'] });
-      queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] });
-      onSuccess?.();
+    async onSuccess() {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['purchase-order'] }),
+        queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] }),
+      ]);
+      await onSuccess?.();
     },
   });
 };
