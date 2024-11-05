@@ -8,9 +8,10 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import {
   Banner,
-  Button,
   DatePicker,
+  Icon,
   ScrollView,
+  Selectable,
   Stack,
   Text,
   useApi,
@@ -24,57 +25,79 @@ import { List } from '../../components/List.js';
 import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { useRouter } from '../../routes.js';
 import { DateTime } from '@web/schemas/generated/create-special-order.js';
+import { useDeletePurchaseOrderReceiptMutation } from '@work-orders/common/queries/use-delete-purchase-order-receipt-mutation.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 type PurchaseOrderReceipt = DetailedPurchaseOrder['receipts'][number];
+type PurchaseOrderReceiptStatus = PurchaseOrderReceipt['status'];
+
+const RECEIPT_STATUSES: PurchaseOrderReceiptStatus[] = ['DRAFT', 'ARCHIVED', 'COMPLETED'];
 
 export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | null }) {
   const fetch = useAuthenticatedFetch();
 
   const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
   const purchaseOrderReceiptMutation = usePurchaseOrderReceiptMutation({ fetch });
+  const deletePurchaseOrderReceiptMutation = useDeletePurchaseOrderReceiptMutation({ fetch });
 
   const screen = useScreen();
   screen.setIsLoading(purchaseOrderQuery.isLoading);
 
   const [receiptName, setReceiptName] = useState('');
+  const [status, setStatus] = useState<PurchaseOrderReceipt['status']>();
   const [description, setDescription] = useState('');
   const [lineItems, setLineItems] = useState<PurchaseOrderReceipt['lineItems']>([]);
   const [receivedAt, setReceivedAt] = useState<Date>(new Date());
 
+  const [receipt, setReceipt] = useState<PurchaseOrderReceipt>();
+
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
   useEffect(() => {
+    const unsatisfiedLineItems =
+      purchaseOrderQuery.data?.lineItems
+        .map(lineItem => {
+          const availableQuantity =
+            purchaseOrderQuery.data?.receipts
+              .filter(receipt => receipt.id !== id)
+              .flatMap(receipt => receipt.lineItems)
+              .filter(hasPropertyValue('uuid', lineItem.uuid))
+              .map(lineItem => lineItem.quantity)
+              .reduce((a, b) => a + b, 0) ?? 0;
+
+          return { ...lineItem, availableQuantity };
+        })
+        .filter(lineItem => lineItem.quantity > lineItem.availableQuantity)
+        .map(({ uuid, quantity, availableQuantity }) => ({
+          uuid,
+          quantity: Math.max(0, quantity - availableQuantity),
+        })) ?? [];
+
     if (id === null) {
       setReceiptName('');
       setDescription('');
-      setLineItems(
-        purchaseOrderQuery.data?.lineItems
-          .map(lineItem => {
-            const availableQuantity =
-              purchaseOrderQuery.data?.receipts
-                .flatMap(receipt => receipt.lineItems)
-                .filter(hasPropertyValue('uuid', lineItem.uuid))
-                .map(lineItem => lineItem.quantity)
-                .reduce((a, b) => a + b, 0) ?? 0;
-
-            return { ...lineItem, availableQuantity };
-          })
-          .filter(lineItem => lineItem.quantity > lineItem.availableQuantity)
-          .map(({ uuid, quantity, availableQuantity }) => ({
-            uuid,
-            quantity: Math.max(0, quantity - availableQuantity),
-          })) ?? [],
-      );
+      setStatus(undefined);
+      setLineItems(unsatisfiedLineItems);
       setReceivedAt(new Date());
+      setReceipt(undefined);
     } else if (purchaseOrderQuery.isSuccess) {
       const receipt = purchaseOrderQuery.data?.receipts.find(receipt => receipt.id === id);
 
       setReceiptName(receipt?.name ?? '');
       setDescription(receipt?.description ?? '');
-      setLineItems(receipt?.lineItems ?? []);
+      setStatus(receipt?.status);
+      setLineItems([
+        ...(receipt?.lineItems ?? []),
+        ...(receipt?.status === 'COMPLETED'
+          ? []
+          : unsatisfiedLineItems
+              .filter(lineItem => !receipt?.lineItems.some(receiptLineItem => lineItem.uuid === receiptLineItem.uuid))
+              .map(lineItem => ({ ...lineItem, quantity: 0 }))),
+      ]);
       setReceivedAt(receipt ? new Date(receipt.receivedAt) : new Date());
+      setReceipt(receipt);
     }
-  }, [purchaseOrderQuery.data]);
+  }, [id, purchaseOrderQuery.data]);
 
   const productVariantIds = unique(purchaseOrderQuery.data?.lineItems.map(li => li.productVariant.id) ?? []);
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
@@ -113,9 +136,42 @@ export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | 
 
   return (
     <ScrollView>
-      <Form disabled={purchaseOrderReceiptMutation.isPending}>
+      <Form disabled={purchaseOrderReceiptMutation.isPending || !router.isCurrent}>
         <FormStringField label="Name" value={receiptName} onChange={setReceiptName} required />
         <FormStringField label="Description" value={description} onChange={setDescription} type="area" />
+
+        <Stack direction="vertical" spacing={1}>
+          <FormStringField
+            label="Status"
+            value={status}
+            required
+            disabled={receipt?.status === 'COMPLETED'}
+            onFocus={() =>
+              router.push('ListPopup', {
+                title: 'Select status',
+                selection: {
+                  type: 'select',
+                  items: RECEIPT_STATUSES.map(status => ({
+                    id: status,
+                    leftSide: {
+                      label: sentenceCase(status.toLowerCase()),
+                    },
+                  })),
+                  onSelect: status => setStatus(status as PurchaseOrderReceiptStatus),
+                },
+              })
+            }
+          />
+
+          {receipt?.status !== 'COMPLETED' && status === 'COMPLETED' && (
+            <Stack direction="horizontal" spacing={1}>
+              <Icon name="circle-alert" />
+              <Text variant="body" color="TextWarning">
+                Completed receipts cannot be changed
+              </Text>
+            </Stack>
+          )}
+        </Stack>
 
         <FormStringField
           label="Received at"
@@ -141,6 +197,7 @@ export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | 
 
             const availableQuantity =
               purchaseOrderQuery.data?.receipts
+                .filter(receipt => receipt.id !== id)
                 .flatMap(receipt => receipt.lineItems)
                 .filter(hasPropertyValue('uuid', uuid))
                 .map(lineItem => lineItem.quantity)
@@ -150,14 +207,36 @@ export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | 
 
             const maxQuantity = Math.max(0, quantity - availableQuantity);
 
-            const saveLineItemQuantity = (quantity: number) => {
-              setLineItems(current => [...current.filter(x => x.uuid !== uuid), { uuid, quantity }]);
-            };
+            const saveLineItemQuantity = (quantity: number) =>
+              setLineItems(current => {
+                if (current.some(li => li.uuid === uuid)) {
+                  return current.map(li => (li.uuid === uuid ? { ...li, quantity } : li));
+                }
+
+                return [...current, { uuid, quantity }];
+              });
 
             // TODO: Just show a number + popup to change it. this shit is ugly
 
             return (
-              <List.Item key={uuid}>
+              <List.Item
+                key={uuid}
+                disabled={receipt?.status === 'COMPLETED'}
+                onClick={() => {
+                  if (!productVariantId) {
+                    toast.show('Product variant id not found');
+                    return;
+                  }
+
+                  router.push('PurchaseOrderReceiptLineItemStepper', {
+                    productVariantId,
+                    initialQuantity: selectedQuantity,
+                    min: 0,
+                    max: maxQuantity,
+                    onChange: quantity => saveLineItemQuantity(quantity),
+                  });
+                }}
+              >
                 <List.Item.Left
                   title={label}
                   subtitle={productVariant?.sku ?? undefined}
@@ -165,62 +244,74 @@ export function PurchaseOrderReceipt({ name, id }: { name: string; id: number | 
                   alwaysShowImage
                 />
 
-                {id === null && (
-                  <Stack direction="horizontal" alignment="flex-end" paddingHorizontal="Small" flexWrap="wrap" flex={0}>
-                    {(
-                      [
-                        ['0', 0],
-                        ['-', Math.max(0, selectedQuantity - 1)],
-                        [`${selectedQuantity}`, selectedQuantity],
-                        ['+', Math.min(maxQuantity, selectedQuantity + 1)],
-                        [`${maxQuantity}`, maxQuantity],
-                      ] as const
-                    ).map(([key, value], i) => (
-                      <Button
-                        key={i}
-                        type={'plain'}
-                        onPress={() => saveLineItemQuantity(value)}
-                        isDisabled={selectedQuantity === value}
-                        title={key}
-                      />
-                    ))}
-                  </Stack>
-                )}
-
-                {id !== null && (
-                  <Stack direction="horizontal" flex={0} alignment="flex-end">
-                    <Text variant="body">{selectedQuantity.toString()}</Text>
-                  </Stack>
-                )}
+                <Stack direction="horizontal" alignment="flex-end">
+                  <Text color={receipt?.status !== 'COMPLETED' ? 'TextInteractive' : undefined}>
+                    {selectedQuantity}
+                  </Text>
+                </Stack>
               </List.Item>
             );
           })}
         </List>
 
-        <FormButton
-          title={id === null ? 'Create receipt' : 'Save receipt'}
-          action="submit"
-          disabled={!receiptName || !lineItems.filter(li => li.quantity > 0).length || !purchaseOrderQuery.isSuccess}
-          loading={purchaseOrderReceiptMutation.isPending}
-          onPress={() =>
-            purchaseOrderReceiptMutation.mutate(
-              {
-                purchaseOrderName: name,
-                id: id ?? undefined,
-                name: receiptName,
-                description,
-                lineItems: id !== null ? [] : lineItems.filter(li => li.quantity > 0),
-                receivedAt: receivedAt.toISOString() as DateTime,
-              },
-              {
-                onSuccess() {
-                  toast.show('Saved purchase order receipt');
-                  router.popCurrent();
+        <Stack direction="horizontal" spacing={2}>
+          <FormButton
+            title="Delete"
+            type="destructive"
+            disabled={!receipt || receipt.status === 'COMPLETED'}
+            loading={deletePurchaseOrderReceiptMutation.isPending}
+            onPress={() => {
+              if (!receipt) {
+                return;
+              }
+
+              deletePurchaseOrderReceiptMutation.mutate(
+                { purchaseOrderName: name, id: receipt.id },
+                {
+                  onSuccess() {
+                    toast.show('Purchase order receipt deleted');
+                    router.popCurrent();
+                  },
                 },
-              },
-            )
-          }
-        />
+              );
+            }}
+          />
+
+          <FormButton
+            title={id === null ? 'Create receipt' : 'Save receipt'}
+            action="submit"
+            disabled={
+              !receiptName ||
+              !status ||
+              !lineItems.filter(li => li.quantity > 0).length ||
+              !purchaseOrderQuery.isSuccess
+            }
+            loading={purchaseOrderReceiptMutation.isPending}
+            onPress={() => {
+              if (!status) {
+                return;
+              }
+
+              purchaseOrderReceiptMutation.mutate(
+                {
+                  purchaseOrderName: name,
+                  id: id ?? undefined,
+                  status,
+                  name: receiptName,
+                  description,
+                  lineItems: id !== null ? [] : lineItems.filter(li => li.quantity > 0),
+                  receivedAt: receivedAt.toISOString() as DateTime,
+                },
+                {
+                  onSuccess() {
+                    toast.show('Saved purchase order receipt');
+                    router.popCurrent();
+                  },
+                },
+              );
+            }}
+          />
+        </Stack>
       </Form>
     </ScrollView>
   );

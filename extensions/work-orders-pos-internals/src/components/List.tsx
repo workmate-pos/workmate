@@ -53,7 +53,7 @@ function ListItem({ children, onClick, disabled }: { children: ReactNode; onClic
         spacing={2}
         alignment="space-between"
         paddingVertical="Small"
-        paddingHorizontal="Small"
+        paddingHorizontal="Medium"
         flexChildren
         flexWrap="nowrap"
       >

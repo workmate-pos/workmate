@@ -20,7 +20,7 @@ import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fet
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { PurchaseOrderLineItemModal } from '@web/frontend/components/purchase-orders/modals/PurchaseOrderLineItemModal.js';
 import { Tone } from '@shopify/polaris/build/ts/src/components/Badge/index.js';
@@ -34,19 +34,26 @@ export function PurchaseOrderProductsCard({
   dispatch,
   disabled,
   onAddProductClick,
+  action,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
   purchaseOrder: DetailedPurchaseOrder | null;
   dispatch: CreatePurchaseOrderDispatchProxy;
   disabled: boolean;
   onAddProductClick: () => void;
+  action?: ReactNode;
 }) {
   return (
     <Card>
       <BlockStack gap={'400'}>
-        <Text as={'h2'} variant={'headingMd'} fontWeight={'bold'}>
-          Products
-        </Text>
+        <InlineStack align={'space-between'}>
+          <Text as={'h2'} variant={'headingMd'} fontWeight={'bold'}>
+            Products
+          </Text>
+
+          <ButtonGroup>{action}</ButtonGroup>
+        </InlineStack>
+
         <ProductsList
           createPurchaseOrder={createPurchaseOrder}
           purchaseOrder={purchaseOrder}

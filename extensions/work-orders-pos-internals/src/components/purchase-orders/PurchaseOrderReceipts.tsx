@@ -1,10 +1,13 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
-import { Banner, Button, ButtonProps, Section, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
+import { Banner, Section, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ConfigurablePurchaseOrderReceiptCard } from './PurchaseOrderReceiptCard.js';
 import { ReactNode } from 'react';
 import { useRouter } from '../../routes.js';
+import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
+
+type FormButtonProps = Parameters<typeof FormButton>[0];
 
 export function PurchaseOrderReceipts({
   disabled,
@@ -58,16 +61,25 @@ export function PurchaseOrderReceipts({
   );
 }
 
-export function BaseNewPurchaseOrderReceiptButton(props: Omit<ButtonProps, 'title' | 'type'>) {
-  return <Button type="plain" title="New receipt" {...props} />;
+export function BaseNewPurchaseOrderReceiptButton(props: Partial<FormButtonProps>) {
+  return <FormButton type="plain" title="New receipt" {...props} />;
 }
 
-export function NewPurchaseOrderReceiptButton({ name, disabled }: { name: string; disabled?: boolean }) {
+export function NewPurchaseOrderReceiptButton({
+  name,
+  disabled,
+  props,
+}: {
+  name: string;
+  disabled?: boolean;
+  props?: Omit<Partial<FormButtonProps>, 'disabled' | 'onClick'>;
+}) {
   const router = useRouter();
 
   return (
     <BaseNewPurchaseOrderReceiptButton
-      isDisabled={disabled}
+      {...props}
+      disabled={disabled}
       onPress={() => router.push('PurchaseOrderReceipt', { name, id: null })}
     />
   );

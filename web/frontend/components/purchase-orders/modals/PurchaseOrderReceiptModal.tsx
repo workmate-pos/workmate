@@ -174,15 +174,15 @@ export function PurchaseOrderReceiptModal({
           {
             content: 'Delete',
             destructive: true,
-            disabled: id === null || receipt?.status === 'COMPLETED',
+            disabled: !receipt || receipt.status === 'COMPLETED',
             loading: deletePurchaseOrderReceiptMutation.isPending,
             onAction: () => {
-              if (id === null) {
+              if (!receipt) {
                 return;
               }
 
               deletePurchaseOrderReceiptMutation.mutate(
-                { purchaseOrderName: name, id },
+                { purchaseOrderName: name, id: receipt.id },
                 {
                   onSuccess() {
                     setToastAction({ content: 'Purchase order receipt deleted' });

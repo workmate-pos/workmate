@@ -63,20 +63,24 @@ export function PurchaseOrderReceipts({
   );
 }
 
-export function BaseNewPurchaseOrderReceiptButton(props: Omit<ButtonProps, 'variant' | 'icon'>) {
-  return (
-    <Button icon={PlusMinor} variant={'plain'} {...props}>
-      New receipt
-    </Button>
-  );
+export function BaseNewPurchaseOrderReceiptButton(props: Partial<ButtonProps>) {
+  return <Button icon={PlusMinor} variant={'plain'} children={'New receipt'} {...props} />;
 }
 
-export function NewPurchaseOrderReceiptButton({ name, disabled }: { name: string; disabled?: boolean }) {
+export function NewPurchaseOrderReceiptButton({
+  name,
+  disabled,
+  props,
+}: {
+  name: string;
+  disabled?: boolean;
+  props?: Omit<Partial<ButtonProps>, 'disabled' | 'onClick'>;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <BaseNewPurchaseOrderReceiptButton disabled={disabled} onClick={() => setOpen(true)} />
+      <BaseNewPurchaseOrderReceiptButton {...props} disabled={disabled} onClick={() => setOpen(true)} />
       <PurchaseOrderReceiptModal open={open} onClose={() => setOpen(false)} name={name} id={null} />
     </>
   );

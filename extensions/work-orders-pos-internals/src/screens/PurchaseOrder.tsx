@@ -328,6 +328,15 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
           <ResponsiveGrid columns={2}>
             <ResponsiveGrid columns={1}>
               <FormButton title={'Add product'} type={'primary'} onPress={addProductPrerequisitesDialog.show} />
+              {!!createPurchaseOrder.name && !hasUnsavedChanges ? (
+                <NewPurchaseOrderReceiptButton
+                  name={createPurchaseOrder.name}
+                  disabled={hasUnsavedChanges}
+                  props={{ title: 'Receive products' }}
+                />
+              ) : (
+                <BaseNewPurchaseOrderReceiptButton disabled title="Receive products" />
+              )}
 
               <ControlledSearchBar placeholder={'Search products'} onTextChange={setQuery} onSearch={() => {}} />
               <List data={productRows} isLoadingMore={false} onEndReached={() => {}} imageDisplayStrategy={'always'} />
@@ -384,7 +393,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               !!createPurchaseOrder.name && !hasUnsavedChanges ? (
                 <NewPurchaseOrderReceiptButton name={createPurchaseOrder.name} disabled={hasUnsavedChanges} />
               ) : (
-                <BaseNewPurchaseOrderReceiptButton isDisabled />
+                <BaseNewPurchaseOrderReceiptButton disabled />
               )
             }
           />

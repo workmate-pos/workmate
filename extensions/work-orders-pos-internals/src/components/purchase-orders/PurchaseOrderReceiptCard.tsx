@@ -2,7 +2,7 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { ReactNode } from 'react';
 import { usePurchaseOrderQuery } from '@work-orders/common/queries/use-purchase-order-query.js';
-import { Banner, Button, Icon, Section, Selectable, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
+import { Badge, Banner, Button, Selectable, Stack, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useRouter } from '../../routes.js';
 
@@ -18,14 +18,12 @@ export function PurchaseOrderReceiptCard({
   disabled,
   onClick,
   content,
-  right,
 }: {
   name: string;
   id: number;
   disabled?: boolean;
   onClick?: () => void;
   content?: PurchaseOrderReceiptCardSlot;
-  right?: PurchaseOrderReceiptCardSlot;
 }) {
   const fetch = useAuthenticatedFetch();
 
@@ -68,7 +66,10 @@ export function PurchaseOrderReceiptCard({
           {renderPurchaseOrderReceiptCardSlot(content, receipt)}
         </Stack>
 
-        {renderPurchaseOrderReceiptCardSlot(right, receipt)}
+        <Badge
+          variant={({ DRAFT: 'highlight', ARCHIVED: 'warning', COMPLETED: 'success' } as const)[receipt.status]}
+          text={receipt.status}
+        />
       </Stack>
     </Selectable>
   );
@@ -95,7 +96,6 @@ export function ConfigurablePurchaseOrderReceiptCard({
     <PurchaseOrderReceiptCard
       name={name}
       id={id}
-      right={<Icon name="chevron-right" />}
       content={content}
       disabled={disabled}
       onClick={() => router.push('PurchaseOrderReceipt', { name, id })}

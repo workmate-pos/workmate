@@ -8,6 +8,7 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import {
   BlockStack,
   Box,
+  Button,
   Card,
   EmptyState,
   Frame,
@@ -305,6 +306,19 @@ function PurchaseOrder({
 
                 setIsAddProductModalOpen(true);
               }}
+              action={
+                !!createPurchaseOrder.name && !hasUnsavedChanges ? (
+                  <NewPurchaseOrderReceiptButton
+                    name={createPurchaseOrder.name}
+                    disabled={hasUnsavedChanges}
+                    props={{ icon: undefined, children: 'Receive products' }}
+                  />
+                ) : (
+                  <Tooltip content="You must save your purchase order before you can receive products.">
+                    <BaseNewPurchaseOrderReceiptButton disabled icon={undefined} children={'Receive products'} />
+                  </Tooltip>
+                )
+              }
             />
           </Layout.Section>
 

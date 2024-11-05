@@ -115,6 +115,7 @@ import { YourSchedule } from './screens/schedule/YourSchedule.js';
 import { EventInfo, EventInfoProps } from '@work-orders/common-pos/screens/events/EventInfo.js';
 import { Permission } from '@web/services/permissions/permissions.js';
 import { PurchaseOrderReceipt } from './screens/purchase-orders/PurchaseOrderReceipt.js';
+import { PurchaseOrderReceiptLineItemStepper } from './screens/purchase-orders/PurchaseOrderReceiptLineItemStepper.js';
 
 const requiredPermissions: Permission[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
@@ -491,5 +492,10 @@ export const { Router, useRouter } = createRouter({
   PurchaseOrderReceipt: {
     title: 'Purchase order receipt',
     Component: PurchaseOrderReceipt,
+  },
+
+  PurchaseOrderReceiptLineItemStepper: {
+    title: 'Receipt line item',
+    Component: PurchaseOrderReceiptLineItemStepper,
   },
 });
