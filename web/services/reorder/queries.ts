@@ -91,7 +91,11 @@ export async function upsertReorderPoints(
       ${_locationId} :: text[],
       ${min} :: int[],
       ${max} :: int[]
-         );
+    )
+    ON CONFLICT (shop, "locationId", "inventoryItemId")
+    DO UPDATE SET
+      min = EXCLUDED.min,
+      max = EXCLUDED.max
   `;
 }
 
