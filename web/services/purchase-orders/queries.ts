@@ -752,7 +752,7 @@ export async function getPurchaseOrderLineItemsForSerial({
   return lineItems.map(mapPurchaseOrderLineItem);
 }
 
-export async function getPurchaseOrderReceipt(id: number) {
+export async function getPurchaseOrderReceipt({ shop, name }: { shop: string; name: string }) {
   const [receipt] = await sql<{
     id: number;
     name: string;
@@ -762,10 +762,12 @@ export async function getPurchaseOrderReceipt(id: number) {
     updatedAt: Date;
     receivedAt: Date;
     status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
+    shop: string;
   }>`
     SELECT *
     FROM "PurchaseOrderReceipt"
-    WHERE id = ${id};
+    WHERE shop = ${shop}
+      AND name = ${name};
   `;
 
   return receipt;
@@ -781,6 +783,7 @@ export async function getPurchaseOrderReceipts(purchaseOrderId: number) {
     updatedAt: Date;
     receivedAt: Date;
     status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
+    shop: string;
   }>`
     SELECT *
     FROM "PurchaseOrderReceipt"
@@ -819,12 +822,14 @@ export async function getPurchaseOrderReceiptLineItems({
 }
 
 export async function insertPurchaseOrderReceipt({
+  shop,
   name,
   description,
   purchaseOrderId,
   receivedAt,
   status,
 }: {
+  shop: string;
   name: string;
   description: string;
   purchaseOrderId: number;
@@ -832,21 +837,20 @@ export async function insertPurchaseOrderReceipt({
   status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
 }) {
   return await sqlOne<{ id: number }>`
-    INSERT INTO "PurchaseOrderReceipt" (name, description, "purchaseOrderId", "receivedAt", status)
-    VALUES (${name}, ${description}, ${purchaseOrderId}, ${receivedAt}, ${status} :: "PurchaseOrderReceiptStatus")
+    INSERT INTO "PurchaseOrderReceipt" (shop, name, description, "purchaseOrderId", "receivedAt", status)
+    VALUES (${shop}, ${name}, ${description}, ${purchaseOrderId}, ${receivedAt},
+            ${status} :: "PurchaseOrderReceiptStatus")
     RETURNING id;
   `.then(row => row.id);
 }
 
 export async function updatePurchaseOrderReceipt({
-  name,
   description,
   purchaseOrderId,
   purchaseOrderReceiptId,
   receivedAt,
   status,
 }: {
-  name: string;
   description: string;
   purchaseOrderId: number;
   purchaseOrderReceiptId: number;
@@ -855,8 +859,7 @@ export async function updatePurchaseOrderReceipt({
 }) {
   return await sqlOne<{ id: number }>`
     UPDATE "PurchaseOrderReceipt"
-    SET name              = ${name},
-        description       = ${description},
+    SET description       = ${description},
         "purchaseOrderId" = ${purchaseOrderId},
         "receivedAt"      = ${receivedAt},
         status            = ${status} :: "PurchaseOrderReceiptStatus"

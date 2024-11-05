@@ -9,8 +9,8 @@ import {
   TextArea,
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
-import { CreatePurchaseOrder, DateTime, Int, Product } from '@web/schemas/generated/create-purchase-order.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { CreatePurchaseOrder, DateTime, Product } from '@web/schemas/generated/create-purchase-order.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
@@ -330,7 +330,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               <FormButton title={'Add product'} type={'primary'} onPress={addProductPrerequisitesDialog.show} />
               {!!createPurchaseOrder.name && !hasUnsavedChanges ? (
                 <NewPurchaseOrderReceiptButton
-                  name={createPurchaseOrder.name}
+                  purchaseOrderName={createPurchaseOrder.name}
                   disabled={hasUnsavedChanges}
                   props={{ title: 'Receive products' }}
                 />
@@ -391,7 +391,10 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
             disabled={purchaseOrderMutation.isPending}
             action={
               !!createPurchaseOrder.name && !hasUnsavedChanges ? (
-                <NewPurchaseOrderReceiptButton name={createPurchaseOrder.name} disabled={hasUnsavedChanges} />
+                <NewPurchaseOrderReceiptButton
+                  purchaseOrderName={createPurchaseOrder.name}
+                  disabled={hasUnsavedChanges}
+                />
               ) : (
                 <BaseNewPurchaseOrderReceiptButton disabled />
               )

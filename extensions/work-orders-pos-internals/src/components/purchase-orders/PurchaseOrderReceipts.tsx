@@ -53,7 +53,12 @@ export function PurchaseOrderReceipts({
         {purchaseOrderQuery.data?.receipts.map(
           receipt =>
             !!name && (
-              <ConfigurablePurchaseOrderReceiptCard disabled={disabled} name={name} key={receipt.id} id={receipt.id} />
+              <ConfigurablePurchaseOrderReceiptCard
+                disabled={disabled}
+                purchaseOrderName={name}
+                receiptName={receipt.name}
+                key={receipt.name}
+              />
             ),
         )}
       </Section>
@@ -66,11 +71,11 @@ export function BaseNewPurchaseOrderReceiptButton(props: Partial<FormButtonProps
 }
 
 export function NewPurchaseOrderReceiptButton({
-  name,
+  purchaseOrderName,
   disabled,
   props,
 }: {
-  name: string;
+  purchaseOrderName: string;
   disabled?: boolean;
   props?: Omit<Partial<FormButtonProps>, 'disabled' | 'onClick'>;
 }) {
@@ -80,7 +85,7 @@ export function NewPurchaseOrderReceiptButton({
     <BaseNewPurchaseOrderReceiptButton
       {...props}
       disabled={disabled}
-      onPress={() => router.push('PurchaseOrderReceipt', { name, id: null })}
+      onPress={() => router.push('PurchaseOrderReceipt', { purchaseOrderName, receiptName: null })}
     />
   );
 }

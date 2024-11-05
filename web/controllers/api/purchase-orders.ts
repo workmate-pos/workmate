@@ -78,28 +78,22 @@ export default class PurchaseOrdersController {
     });
   }
 
-  @Delete('/:name/receipts/:id')
+  @Delete('/:purchaseOrderName/receipts/:receiptName')
   @Permission('write_purchase_orders')
   @Authenticated()
   async deletePurchaseOrderReceipt(
-    req: Request<{ name: string; id: string }>,
+    req: Request<{ purchaseOrderName: string; receiptName: string }>,
     res: Response<DeletePurchaseOrderReceiptResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
-    const { name, id } = req.params;
+    const { purchaseOrderName, receiptName } = req.params;
 
-    const parsedId = z.coerce.number().int().safeParse(id);
-
-    if (!parsedId.success) {
-      throw new HttpError('Invalid receipt id', 400);
-    }
-
-    await deletePurchaseOrderReceipt(session, user, { name, id: parsedId.data });
+    await deletePurchaseOrderReceipt(session, user, { purchaseOrderName, receiptName });
 
     return res.json({
       purchaseOrder:
-        (await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds)) ??
+        (await getDetailedPurchaseOrder(session, purchaseOrderName, user.user.allowedLocationIds)) ??
         never('upsertReceipt would have thrown if not this doesnt exist'),
     });
   }

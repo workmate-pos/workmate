@@ -13,21 +13,21 @@ const renderPurchaseOrderReceiptCardSlot = (slot: PurchaseOrderReceiptCardSlot, 
   typeof slot === 'function' ? slot(receipt) : slot;
 
 export function PurchaseOrderReceiptCard({
-  name,
-  id,
+  purchaseOrderName,
+  receiptName,
   disabled,
   onClick,
   content,
 }: {
-  name: string;
-  id: number;
+  purchaseOrderName: string;
+  receiptName: string | null;
   disabled?: boolean;
   onClick?: () => void;
   content?: PurchaseOrderReceiptCardSlot;
 }) {
   const fetch = useAuthenticatedFetch();
 
-  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
+  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: purchaseOrderName });
 
   if (purchaseOrderQuery.isError) {
     return (
@@ -42,7 +42,7 @@ export function PurchaseOrderReceiptCard({
     return <Button title="" isLoading />;
   }
 
-  const receipt = purchaseOrderQuery.data.receipts.find(receipt => receipt.id === id);
+  const receipt = purchaseOrderQuery.data.receipts.find(receipt => receipt.name === receiptName);
 
   if (!receipt) {
     return <Banner title="Receipt not found" variant="error" visible hideAction></Banner>;
@@ -79,13 +79,13 @@ export function PurchaseOrderReceiptCard({
  * A purchase order receipt card that opens a modal when clicked.
  */
 export function ConfigurablePurchaseOrderReceiptCard({
-  name,
-  id,
+  purchaseOrderName,
+  receiptName,
   content,
   disabled,
 }: {
-  name: string;
-  id: number;
+  purchaseOrderName: string;
+  receiptName: string | null;
   right?: PurchaseOrderReceiptCardSlot;
   content?: PurchaseOrderReceiptCardSlot;
   disabled?: boolean;
@@ -94,11 +94,11 @@ export function ConfigurablePurchaseOrderReceiptCard({
 
   return (
     <PurchaseOrderReceiptCard
-      name={name}
-      id={id}
+      purchaseOrderName={purchaseOrderName}
+      receiptName={receiptName}
       content={content}
       disabled={disabled}
-      onClick={() => router.push('PurchaseOrderReceipt', { name, id })}
+      onClick={() => router.push('PurchaseOrderReceipt', { purchaseOrderName, receiptName })}
     />
   );
 }

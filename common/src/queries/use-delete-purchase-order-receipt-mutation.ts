@@ -12,9 +12,9 @@ export const useDeletePurchaseOrderReceiptMutation = ({ fetch }: { fetch: Fetch 
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ purchaseOrderName, id }: { id: number; purchaseOrderName: string }) => {
+    mutationFn: async ({ purchaseOrderName, receiptName }: { receiptName: string; purchaseOrderName: string }) => {
       const response = await fetch(
-        `/api/purchase-orders/${encodeURIComponent(purchaseOrderName)}/receipts/${encodeURIComponent(id)}`,
+        `/api/purchase-orders/${encodeURIComponent(purchaseOrderName)}/receipts/${encodeURIComponent(receiptName)}`,
         { method: 'DELETE' },
       );
 

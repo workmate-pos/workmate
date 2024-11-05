@@ -19,6 +19,7 @@ import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 import { getDetailedPurchaseOrder } from './get.js';
+import { getNewPurchaseOrderReceiptName } from '../id-formatting.js';
 
 export async function upsertReceipt(
   session: Session,
@@ -35,31 +36,38 @@ export async function upsertReceipt(
     throw new HttpError(`Purchase order with name ${upsertPurchaseOrderReceipt.name} not found`, 404);
   }
 
-  if (upsertPurchaseOrderReceipt.id) {
-    const existingReceipt = await getPurchaseOrderReceipt(upsertPurchaseOrderReceipt.id);
+  let purchaseOrderReceiptId: number | null = null;
+
+  if (upsertPurchaseOrderReceipt.name) {
+    const existingReceipt = await getPurchaseOrderReceipt({
+      shop: session.shop,
+      name: upsertPurchaseOrderReceipt.name,
+    });
 
     if (!existingReceipt) {
-      throw new HttpError(`Receipt with id ${upsertPurchaseOrderReceipt.id} not found`, 404);
+      throw new HttpError(`Receipt ${upsertPurchaseOrderReceipt.name} not found`, 404);
     }
 
     if (existingReceipt.status === 'COMPLETED' && upsertPurchaseOrderReceipt.lineItems.length > 0) {
       // client should send empty array if updating
       throw new HttpError("Completed receipts' line items cannot be changed", 400);
     }
+
+    purchaseOrderReceiptId = existingReceipt.id;
   }
 
   await unit(async () => {
-    const purchaseOrderReceiptId = !!upsertPurchaseOrderReceipt.id
+    purchaseOrderReceiptId = !!purchaseOrderReceiptId
       ? await updatePurchaseOrderReceipt({
-          name: upsertPurchaseOrderReceipt.name,
+          purchaseOrderReceiptId,
           description: upsertPurchaseOrderReceipt.description,
           purchaseOrderId: purchaseOrderId,
-          purchaseOrderReceiptId: upsertPurchaseOrderReceipt.id,
           receivedAt: new Date(upsertPurchaseOrderReceipt.receivedAt),
           status: upsertPurchaseOrderReceipt.status,
         })
       : await insertPurchaseOrderReceipt({
-          name: upsertPurchaseOrderReceipt.name,
+          shop: session.shop,
+          name: await getNewPurchaseOrderReceiptName(session.shop),
           description: upsertPurchaseOrderReceipt.description,
           purchaseOrderId: purchaseOrderId,
           receivedAt: new Date(upsertPurchaseOrderReceipt.receivedAt),
@@ -70,7 +78,6 @@ export async function upsertReceipt(
 
     for (const { uuid, quantity } of upsertPurchaseOrderReceipt.lineItems) {
       // TODO: How shoudl we handle statuses here? doesnt make snese to count archived
-      // TODO: Validate valid uuids
 
       const newAvailableQuantity =
         quantity +
@@ -131,7 +138,7 @@ async function adjustShopifyInventory(
   const changes: InventoryMoveQuantityChange[] = [];
 
   const ledgerDocumentUri = `workmate://purchase-order/${encodeURIComponent(purchaseOrder.name)}`;
-  const referenceDocumentUri = `${ledgerDocumentUri}/receipt/${receipt.id}`;
+  const referenceDocumentUri = `${ledgerDocumentUri}/receipt/${receipt.name}`;
 
   for (const [inventoryItemId, delta] of entries(deltasByInventoryItemId)) {
     changes.push({

@@ -7,15 +7,15 @@ import * as queries from './queries.js';
 export async function deletePurchaseOrderReceipt(
   session: Session,
   user: LocalsTeifiUser,
-  { name, id }: { name: string; id: number },
+  { purchaseOrderName, receiptName }: { purchaseOrderName: string; receiptName: string },
 ) {
-  const purchaseOrder = await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds);
+  const purchaseOrder = await getDetailedPurchaseOrder(session, purchaseOrderName, user.user.allowedLocationIds);
 
   if (!purchaseOrder) {
     throw new HttpError('Purchase order not found', 404);
   }
 
-  const receipt = purchaseOrder.receipts.find(receipt => receipt.id === id);
+  const receipt = purchaseOrder.receipts.find(receipt => receipt.name === receiptName);
 
   if (!receipt) {
     throw new HttpError('Receipt not found', 404);

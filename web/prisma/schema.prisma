@@ -414,6 +414,7 @@ enum PurchaseOrderReceiptStatus {
 model PurchaseOrderReceipt {
   id Int @id @default(autoincrement())
 
+  shop        String
   name        String
   description String
   status      PurchaseOrderReceiptStatus
@@ -427,6 +428,8 @@ model PurchaseOrderReceipt {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   lineItems PurchaseOrderReceiptLineItem[]
+
+  @@unique([shop, name])
 }
 
 model PurchaseOrderReceiptLineItem {
