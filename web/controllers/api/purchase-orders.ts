@@ -222,6 +222,10 @@ export default class PurchaseOrdersController {
       inventoryItemIds: [inventoryItemId],
       ...(locationId ? { locationIds: [locationId] } : {}),
     });
+    
+    if (!reorderPoint) {
+      throw new HttpError('Reorder point not found', 404);
+    }
 
     return res.json({ reorderPoint });
   }
