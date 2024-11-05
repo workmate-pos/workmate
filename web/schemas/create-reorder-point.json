@@ -10,12 +10,10 @@
     },
     "min": {
       "type": "number",
-      "minimum": 0,
       "description": "Minimum stock level before reordering"
     },
     "max": {
       "type": "number",
-      "minimum": 1,
       "description": "Maximum stock level to order up to"
     }
   },

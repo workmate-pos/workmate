@@ -7,6 +7,8 @@ import { assertGidOrNull } from '../../util/assertions.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { MergeUnion } from '../../util/types.js';
 
+export type ReorderPoint = Awaited<ReturnType<typeof getReorderPoints>>[number];
+
 export async function getReorderPoints({
   shop,
   locationIds,
@@ -89,7 +91,11 @@ export async function upsertReorderPoints(
       ${_locationId} :: text[],
       ${min} :: int[],
       ${max} :: int[]
-         );
+    )
+    ON CONFLICT (shop, "locationId", "inventoryItemId")
+    DO UPDATE SET
+      min = EXCLUDED.min,
+      max = EXCLUDED.max
   `;
 }
 
