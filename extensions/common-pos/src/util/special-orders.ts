@@ -30,8 +30,8 @@ export function getDetailedSpecialOrderBadges(specialOrder: DetailedSpecialOrder
       })),
     ...specialOrder.purchaseOrders.map<BadgeProps>(po => ({
       text: `${po.name} (${po.vendorName})`,
-      variant: po.availableQuantity >= po.quantity ? 'success' : 'warning',
-      status: po.availableQuantity >= po.quantity ? 'complete' : po.availableQuantity > 0 ? 'partial' : 'empty',
+      variant: po.availableQuantity >= po.orderedQuantity ? 'success' : 'warning',
+      status: po.availableQuantity >= po.orderedQuantity ? 'complete' : po.availableQuantity > 0 ? 'partial' : 'empty',
     })),
   ].filter(isNonNullable);
 }
@@ -103,9 +103,13 @@ export function getSpecialOrderLineItemBadges(
 
       return {
         text: [po.name, `${lineItemAvailableQuantity} / ${lineItemQuantity}`].join(' • '),
-        variant: lineItemAvailableQuantity >= po.quantity ? 'success' : 'warning',
+        variant: lineItemAvailableQuantity >= po.orderedQuantity ? 'success' : 'warning',
         status:
-          lineItemAvailableQuantity >= po.quantity ? 'complete' : lineItemAvailableQuantity > 0 ? 'partial' : 'empty',
+          lineItemAvailableQuantity >= po.orderedQuantity
+            ? 'complete'
+            : lineItemAvailableQuantity > 0
+              ? 'partial'
+              : 'empty',
       };
     }),
   ];

@@ -20,6 +20,8 @@ import { DetailedPurchaseOrder } from '@web/services/purchase-orders/types.js';
 import { CustomFieldsList } from '@work-orders/common-pos/components/CustomFieldsList.js';
 import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 
+// TODO: Display relevant receipts
+
 export function PurchaseOrderProductConfig({
   product: initialProduct,
   purchaseOrder,
@@ -34,7 +36,12 @@ export function PurchaseOrderProductConfig({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const savedProduct = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
-  const isImmutable = savedProduct && savedProduct.availableQuantity > 0;
+  const isImmutable =
+    savedProduct &&
+    purchaseOrder?.receipts
+      .flatMap(receipt => receipt.lineItems)
+      .map(lineItem => lineItem.uuid)
+      .includes(product.uuid);
 
   const fetch = useAuthenticatedFetch();
 
@@ -174,28 +181,6 @@ export function PurchaseOrderProductConfig({
               disabled={!!product.serialNumber}
               onValueChanged={(quantity: Int) => {
                 setProduct({ ...product, quantity });
-                setHasUnsavedChanges(true);
-              }}
-            />
-          </Stack>
-
-          <Stack direction="vertical" spacing={2}>
-            <Stack direction={'horizontal'} alignment={'center'}>
-              <Text variant="headingSmall" color="TextSubdued">
-                Available Quantity
-              </Text>
-            </Stack>
-            <Stack direction={'horizontal'} alignment={'center'}>
-              <Text variant="body" color="TextSubdued">
-                The quantity that has been delivered
-              </Text>
-            </Stack>
-            <Stepper
-              minimumValue={isImmutable ? savedProduct.availableQuantity : 0}
-              initialValue={product.availableQuantity}
-              value={product.availableQuantity}
-              onValueChanged={(availableQuantity: Int) => {
-                setProduct({ ...product, availableQuantity });
                 setHasUnsavedChanges(true);
               }}
             />

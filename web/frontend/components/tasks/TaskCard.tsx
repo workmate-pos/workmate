@@ -128,8 +128,9 @@ export const ConfigurableTaskCard = forwardRef<
     content?: TaskCardSlot;
     onOpenChange?: (open: boolean) => void;
     disabled?: boolean;
+    suggestedDeadlines?: Date[];
   }
->(({ taskId, right, content, onOpenChange, disabled }, ref) => {
+>(({ taskId, right, content, onOpenChange, disabled, suggestedDeadlines }, ref) => {
   const [shouldShowTaskModal, setShouldShowTaskModal] = useState(false);
 
   return (
@@ -153,6 +154,7 @@ export const ConfigurableTaskCard = forwardRef<
           onOpenChange?.(false);
         }}
         onSave={() => {}}
+        suggestedDeadlines={suggestedDeadlines}
         id={taskId}
       />
     </>

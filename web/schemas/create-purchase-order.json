@@ -92,11 +92,6 @@
             "$ref": "scalars.json#/definitions/Int",
             "minimum": 1
           },
-          "availableQuantity": {
-            "description": "The quantity of this product variant available in the inventory",
-            "$ref": "scalars.json#/definitions/Int",
-            "minimum": 0
-          },
           "unitCost": {
             "$ref": "scalars.json#/definitions/Money"
           },
@@ -112,7 +107,6 @@
           "productVariantId",
           "specialOrderLineItem",
           "quantity",
-          "availableQuantity",
           "unitCost",
           "customFields",
           "serialNumber"

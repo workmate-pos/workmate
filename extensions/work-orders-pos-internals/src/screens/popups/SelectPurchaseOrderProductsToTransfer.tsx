@@ -73,9 +73,16 @@ export function SelectPurchaseOrderProductsToTransfer({ name }: { name: string }
   const selectableItems = useMemo(
     () =>
       purchaseOrderQuery.data?.lineItems.map<SelectablePurchaseOrderLineItem>(
-        ({ uuid, productVariant, quantity, availableQuantity, stockTransferLineItems, shopifyOrderLineItem }) => {
+        ({ uuid, productVariant, quantity, stockTransferLineItems, shopifyOrderLineItem }) => {
           const transferredQuantity = sum(stockTransferLineItems.map(li => li.quantity));
           const selectedQuantity = Math.max(quantity - transferredQuantity, 0);
+
+          const availableQuantity =
+            purchaseOrderQuery.data?.receipts
+              .flatMap(receipt => receipt.lineItems)
+              .filter(hasPropertyValue('uuid', uuid))
+              .map(li => li.quantity)
+              .reduce((a, b) => a + b, 0) ?? 0;
 
           return {
             purchaseOrderAvailableQuantity: availableQuantity,

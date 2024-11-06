@@ -18,6 +18,8 @@ import { unreserveLineItem } from './sourcing/reserve.js';
 import { getProduct, softDeleteProducts } from './products/queries.js';
 import { softDeleteProductVariantsByProductIds } from './product-variants/queries.js';
 import { doesProductHaveSyncableMetafields } from './metafields/sync.js';
+import { getReorderPoints } from './reorder/queries.js';
+import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default {
   APP_UNINSTALLED: {
@@ -124,7 +126,18 @@ export default {
   },
 
   PRODUCTS_UPDATE: {
-    async handler(session, topic, shop, body: { admin_graphql_api_id: ID; variant_ids: { id: number }[] }) {
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: ID;
+        variant_ids: { id: number }[];
+        variants: {
+          inventory_item_id: number | null | undefined;
+        }[];
+      },
+    ) {
       const changed = await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
 
       if (changed) {
@@ -132,10 +145,18 @@ export default {
         return;
       }
 
-      const isCached = await getProduct(body.admin_graphql_api_id).then(product => product !== null);
-      const hasSyncableMetafields = await doesProductHaveSyncableMetafields(session, body.admin_graphql_api_id);
+      const [isCached, hasSyncableMetafields, hasReorderPoints] = await Promise.all([
+        getProduct(body.admin_graphql_api_id).then(product => product !== null),
+        doesProductHaveSyncableMetafields(session, body.admin_graphql_api_id),
+        getReorderPoints({
+          shop: session.shop,
+          inventoryItemIds: body.variants
+            .filter(hasNonNullableProperty('inventory_item_id'))
+            .map(({ inventory_item_id }) => createGid('InventoryItem', inventory_item_id)),
+        }).then(points => points.length > 0),
+      ]);
 
-      const shouldSync = isCached || hasSyncableMetafields;
+      const shouldSync = isCached || hasSyncableMetafields || hasReorderPoints;
 
       if (shouldSync) {
         await syncProducts(session, [body.admin_graphql_api_id]);

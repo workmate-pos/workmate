@@ -4,7 +4,7 @@ import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express
 import { getNewPurchaseOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
 import { getDetailedPurchaseOrder } from './get.js';
-import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
+import { InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { gql } from '../gql/gql.js';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -19,7 +19,7 @@ import {
 import { ensureProductVariantsExist } from '../product-variants/sync.js';
 import { CreatePurchaseOrder } from '../../schemas/generated/create-purchase-order.js';
 import { DetailedPurchaseOrder } from './types.js';
-import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ensureLocationsExist } from '../locations/sync.js';
 import { ensureStaffMembersExist } from '../staff-members/sync.js';
 import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
@@ -35,6 +35,7 @@ import {
   upsertPurchaseOrderLineItems,
   upsertPurchaseOrder,
   getPurchaseOrdersForSerial,
+  getPurchaseOrderLineItemsForSpecialOrders,
 } from './queries.js';
 import { getProducts } from '../products/queries.js';
 import { getSpecialOrderLineItemsByNameAndUuids, getSpecialOrdersByNames } from '../special-orders/queries.js';
@@ -43,6 +44,7 @@ import { getProductVariants } from '../product-variants/queries.js';
 import { getSerialsByProductVariantSerials, upsertSerials } from '../serials/queries.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
+import { syncInventoryQuantities } from '../inventory/sync.js';
 
 export async function upsertCreatePurchaseOrder(
   session: Session,
@@ -66,11 +68,13 @@ export async function upsertCreatePurchaseOrder(
       ? await getDetailedPurchaseOrder(session, createPurchaseOrder.name, user.user.allowedLocationIds)
       : null;
 
-    const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
+    if (createPurchaseOrder.name && !existingPurchaseOrder) {
+      throw new HttpError('Purchase order not found', 404);
+    }
 
     assertNoIllegalPurchaseOrderChanges(createPurchaseOrder, existingPurchaseOrder);
-    assertNoIllegalLineItems(createPurchaseOrder);
-    assertNoIllegalLineItemChanges(createPurchaseOrder, existingPurchaseOrder?.lineItems ?? []);
+    assertNoIllegalLineItems(createPurchaseOrder, existingPurchaseOrder);
+    assertNoIllegalLineItemChanges(createPurchaseOrder, existingPurchaseOrder);
 
     const productVariantIds = createPurchaseOrder.lineItems.map(({ productVariantId }) => productVariantId);
     const locationIds = [createPurchaseOrder.locationId].filter(isNonNullable);
@@ -83,6 +87,8 @@ export async function upsertCreatePurchaseOrder(
       assertAllSameVendor(createPurchaseOrder),
       assertValidSpecialOrderLineItems(shop, createPurchaseOrder, existingPurchaseOrder),
     ]);
+
+    const name = createPurchaseOrder.name ?? (await getNewPurchaseOrderName(shop));
 
     const { id: purchaseOrderId } = await upsertPurchaseOrder({
       ...createPurchaseOrder,
@@ -143,12 +149,30 @@ export async function upsertCreatePurchaseOrder(
 
     const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name, locationIds)) ?? never('We just made it');
 
-    await adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder);
-    await adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder);
+    // TODO: Does this work with receipts?? it better
+    return {
+      existingPurchaseOrder,
+      newPurchaseOrder,
+      name,
+    };
+  }).then(async ({ existingPurchaseOrder, newPurchaseOrder, name }) => {
+    await Promise.all([
+      adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder),
+      adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder),
+    ]);
 
     sendPurchaseOrderWebhook(session, name).catch(error => {
       sentryErr('Failed to send webhook', { error });
     });
+
+    const inventoryItemIds = unique([
+      ...(existingPurchaseOrder?.lineItems.map(li => li.productVariant.inventoryItemId) ?? []),
+      ...newPurchaseOrder.lineItems.map(li => li.productVariant.inventoryItemId),
+    ]);
+
+    // we need to sync inventory quantities manually because shopify does not fire webhooks any except available
+    // (and we need incoming quantity too for re-ordering)
+    await syncInventoryQuantities(session, inventoryItemIds);
 
     return { name };
   });
@@ -174,7 +198,10 @@ function assertNoIllegalPurchaseOrderChanges(
   }
 }
 
-function assertNoIllegalLineItems(createPurchaseOrder: CreatePurchaseOrder) {
+function assertNoIllegalLineItems(
+  createPurchaseOrder: CreatePurchaseOrder,
+  existingPurchaseOrder: DetailedPurchaseOrder | null,
+) {
   const uuids = createPurchaseOrder.lineItems.map(li => li.uuid);
 
   if (unique(uuids).length !== uuids.length) {
@@ -182,16 +209,19 @@ function assertNoIllegalLineItems(createPurchaseOrder: CreatePurchaseOrder) {
   }
 
   for (const lineItem of createPurchaseOrder.lineItems) {
-    if (lineItem.availableQuantity < 0) {
-      throw new HttpError('Available quantity cannot be negative', 400);
-    }
+    const availableQuantity =
+      existingPurchaseOrder?.receipts
+        ?.flatMap(receipt => receipt.lineItems)
+        .filter(hasPropertyValue('uuid', lineItem.uuid))
+        .map(li => li.quantity)
+        .reduce((a, b) => a + b, 0) ?? 0;
 
     if (lineItem.quantity < 0) {
       throw new HttpError('Quantity cannot be negative', 400);
     }
 
-    if (lineItem.availableQuantity > lineItem.quantity) {
-      throw new HttpError('Available quantity cannot be greater than quantity', 400);
+    if (lineItem.quantity < availableQuantity) {
+      throw new HttpError('Line Item quantity cannot be less than receipt quantity', 400);
     }
 
     if (BigDecimal.fromMoney(lineItem.unitCost).compare(BigDecimal.ZERO) < 0) {
@@ -208,37 +238,30 @@ function assertNoIllegalLineItems(createPurchaseOrder: CreatePurchaseOrder) {
  */
 function assertNoIllegalLineItemChanges(
   createPurchaseOrder: CreatePurchaseOrder,
-  oldLineItems: DetailedPurchaseOrder['lineItems'][number][],
+  existingPurchaseOrder: DetailedPurchaseOrder | null,
 ) {
-  for (const oldLineItem of oldLineItems) {
+  if (!existingPurchaseOrder) {
+    return;
+  }
+
+  for (const oldLineItem of existingPurchaseOrder.lineItems) {
+    const availableQuantity = existingPurchaseOrder.receipts
+      .flatMap(receipt => receipt.lineItems)
+      .filter(hasPropertyValue('uuid', oldLineItem.uuid))
+      .map(li => li.quantity)
+      .reduce((a, b) => a + b, 0);
+
     const newLineItem = createPurchaseOrder.lineItems.find(newLineItem => newLineItem.uuid === oldLineItem.uuid);
 
     if (!newLineItem) {
-      if (oldLineItem.availableQuantity > 0) {
-        throw new HttpError('Cannot delete (partially) received line items', 400);
+      if (availableQuantity > 0) {
+        throw new HttpError('Cannot delete received line items that are added to receipts', 400);
       }
 
       continue;
     }
 
-    // TODO: Maybe allow this again
-    if (newLineItem.availableQuantity < oldLineItem.availableQuantity) {
-      throw new HttpError('Cannot decrease available quantity', 400);
-    }
-
-    if (oldLineItem.availableQuantity > 0) {
-      if (!BigDecimal.fromMoney(newLineItem.unitCost).equals(BigDecimal.fromMoney(oldLineItem.unitCost))) {
-        throw new HttpError('Cannot change unit cost for (partially) received line items', 400);
-      }
-
-      if (newLineItem.quantity < oldLineItem.quantity) {
-        throw new HttpError('Cannot decrease quantity for (partially) received line items', 400);
-      }
-
-      if (newLineItem.productVariantId !== oldLineItem.productVariant.id) {
-        throw new HttpError('Cannot change product variant for (partially) received line items', 400);
-      }
-
+    if (availableQuantity > 0) {
       if (newLineItem.productVariantId !== oldLineItem.productVariant.id) {
         throw new HttpError('Cannot change product variant for (partially) received line items', 400);
       }
@@ -254,14 +277,15 @@ function assertNoIllegalLineItemChanges(
 }
 
 /**
- * Creates an inventory adjustment to reflect the change in inventory due to the purchase order.
+ * Adjusts `incoming` inventory quantity to reflect the purchase order.
+ * Note: we do not have to check received quantity - receipts will automatically reduce incoming and increase available.
  */
 async function adjustShopifyInventory(
   session: Session,
   oldPurchaseOrder: DetailedPurchaseOrder | null,
   newPurchaseOrder: DetailedPurchaseOrder,
 ) {
-  const deltasByLocationByInventoryItemId: Record<ID, Record<ID, Record<'incoming' | 'available', number>>> = {};
+  const deltasByLocationByInventoryItemId: Record<ID, Record<ID, number>> = {};
 
   const transfers = [
     {
@@ -282,41 +306,23 @@ async function adjustShopifyInventory(
     const deltasByInventoryItemId = (deltasByLocationByInventoryItemId[purchaseOrder.location.id] ??= {});
 
     for (const lineItem of purchaseOrder.lineItems) {
-      const { productVariant, availableQuantity, quantity } = lineItem;
+      const { productVariant, quantity } = lineItem;
       const { inventoryItemId } = productVariant;
-      assertGid(inventoryItemId);
 
-      const deltas = (deltasByInventoryItemId[inventoryItemId] ??= { incoming: 0, available: 0 });
-
-      const transitQuantity = quantity - availableQuantity;
-
-      if (transitQuantity) {
-        deltas.incoming += transitQuantity * factor;
-      }
-
-      if (availableQuantity) {
-        deltas.available += availableQuantity * factor;
-      }
+      deltasByInventoryItemId[inventoryItemId] = (deltasByInventoryItemId[inventoryItemId] ?? 0) + quantity * factor;
     }
   }
 
-  const availableChanges: InventoryChangeInput[] = [];
   const incomingChanges: InventoryChangeInput[] = [];
 
   const ledgerDocumentUri = `workmate://purchase-order/${encodeURIComponent(newPurchaseOrder.name)}`;
 
   for (const [locationId, deltasByInventoryItemId] of entries(deltasByLocationByInventoryItemId)) {
-    for (const [inventoryItemId, deltas] of entries(deltasByInventoryItemId)) {
-      availableChanges.push({
-        locationId,
-        inventoryItemId,
-        delta: deltas.available as Int,
-      });
-
+    for (const [inventoryItemId, delta] of entries(deltasByInventoryItemId)) {
       incomingChanges.push({
         locationId,
         inventoryItemId,
-        delta: deltas.incoming as Int,
+        delta,
         ledgerDocumentUri,
       });
     }
@@ -341,12 +347,12 @@ async function adjustShopifyInventory(
       );
     }
 
-    // TODO: use this once it releases: https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/inventorySetQuantities
-    //  -> current mutation is not atomic bcs its 2 mutations in 1
-    await gql.inventory.adjustIncomingAvailable.run(graphql, {
-      reason: 'other',
-      availableChanges,
-      incomingChanges,
+    await gql.inventory.adjust.run(graphql, {
+      input: {
+        reason: 'other',
+        name: 'incoming',
+        changes: incomingChanges,
+      },
     });
   } catch (error) {
     if (error instanceof GraphqlUserErrors) {
@@ -379,8 +385,11 @@ async function assertValidSpecialOrderLineItems(
   const lineItemsWithLink = createPurchaseOrder.lineItems.filter(hasNonNullableProperty('specialOrderLineItem'));
   const specialOrderNames = unique(lineItemsWithLink.map(li => li.specialOrderLineItem.name));
 
-  const [specialOrders, specialOrderLineItems] = await Promise.all([
-    getSpecialOrdersByNames(shop, specialOrderNames),
+  const [[specialOrders, specialOrderPurchaseOrderLineItems], specialOrderLineItems] = await Promise.all([
+    getSpecialOrdersByNames(shop, specialOrderNames).then(
+      async specialOrders =>
+        [specialOrders, await getPurchaseOrderLineItemsForSpecialOrders(specialOrders.map(spo => spo.id))] as const,
+    ),
     getSpecialOrderLineItemsByNameAndUuids(
       shop,
       lineItemsWithLink.map(lineItem => lineItem.specialOrderLineItem),
@@ -394,23 +403,26 @@ async function assertValidSpecialOrderLineItems(
   for (const lineItem of specialOrderLineItems) {
     const specialOrderName = specialOrders.find(hasPropertyValue('id', lineItem.specialOrderId))?.name ?? never('fk');
 
-    const createUsedQuantity = sum(
-      lineItemsWithLink
-        .filter(hasNestedPropertyValue('specialOrderLineItem.uuid', lineItem.uuid))
-        .filter(hasNestedPropertyValue('specialOrderLineItem.name', specialOrderName))
-        .map(lineItem => lineItem.quantity),
-    );
+    const createPurchaseOrderQuantity = lineItemsWithLink
+      .filter(hasNestedPropertyValue('specialOrderLineItem.uuid', lineItem.uuid))
+      .filter(hasNestedPropertyValue('specialOrderLineItem.name', specialOrderName))
+      .map(lineItem => lineItem.quantity)
+      .reduce((a, b) => a + b, 0);
 
-    const existingUsedQuantity = sum(
+    const existingPurchaseOrderQuantity =
       existingPurchaseOrder?.lineItems
         .filter(hasNestedPropertyValue('specialOrderLineItem.uuid', lineItem.uuid))
         .filter(hasNestedPropertyValue('specialOrderLineItem.name', specialOrderName))
-        .map(lineItem => lineItem.quantity) ?? [],
-    );
+        .map(lineItem => lineItem.quantity)
+        .reduce((a, b) => a + b, 0) ?? 0;
 
-    const usedQuantity = sum(lineItem.purchaseOrderLineItems.map(poli => poli.quantity));
+    const purchaseOrderQuantity = specialOrderPurchaseOrderLineItems
+      .filter(hasPropertyValue('specialOrderLineItemId', lineItem.id))
+      .map(poli => poli.quantity)
+      .reduce((a, b) => a + b, 0);
 
-    if (usedQuantity - existingUsedQuantity + createUsedQuantity > lineItem.quantity) {
+    // PO quantity must be LTE linked SPO quantity
+    if (purchaseOrderQuantity - existingPurchaseOrderQuantity + createPurchaseOrderQuantity > lineItem.quantity) {
       throw new HttpError('Cannot use more special order line item quantity than requested', 400);
     }
   }
