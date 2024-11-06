@@ -10,7 +10,10 @@ import {
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
 import { Dispatch, SetStateAction, useEffect, useReducer, useRef, useState } from 'react';
-import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
+import {
+  CalculateWorkOrderError,
+  useCalculatedDraftOrderQuery,
+} from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { useSaveWorkOrderMutation } from '@work-orders/common/queries/use-save-work-order-mutation.js';
 import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
@@ -63,6 +66,7 @@ import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -516,7 +520,7 @@ function WorkOrderItems({
 }) {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const fetch = useAuthenticatedFetch();
+  const fetch = useAuthenticatedFetch({ throwOnError: false });
 
   const calculatedDraftOrderQuery = useCalculatedDraftOrderQuery(
     { fetch, ...createWorkOrder },
@@ -786,13 +790,25 @@ function WorkOrderMoneySummary({
         <Text variant={'headingLarge'}>Summary</Text>
       </Stack>
 
-      {calculatedDraftOrderQuery.isError && (
+      {calculatedDraftOrderQuery.isError && !(calculatedDraftOrderQuery.error instanceof CalculateWorkOrderError) && (
         <Banner
           title={`Error calculating work order: ${extractErrorMessage(calculatedDraftOrderQuery.error)}`}
           variant={'error'}
           visible
         />
       )}
+
+      {calculatedDraftOrderQuery.isError &&
+        calculatedDraftOrderQuery.error instanceof CalculateWorkOrderError &&
+        calculatedDraftOrderQuery.error.errors.map(error => (
+          <Banner
+            key={error.field.join(', ')}
+            title={`Error calculating work order - ${sentenceCase(error.field.join('_').toLowerCase())}: ${error.message}`}
+            variant="error"
+            visible
+            hideAction
+          />
+        ))}
 
       {unique(calculatedDraftOrderQuery.data?.warnings ?? []).map(warning => (
         <Banner title={warning} variant={'alert'} visible />

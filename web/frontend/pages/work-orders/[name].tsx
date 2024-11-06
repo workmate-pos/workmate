@@ -45,7 +45,7 @@ import { WorkOrderPrintModal } from '@web/frontend/components/work-orders/modals
 import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { WorkOrderItemsCard } from '@web/frontend/components/work-orders/WorkOrderItemsCard.js';
 import { WorkOrderSummary } from '@web/frontend/components/work-orders/WorkOrderSummary.js';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CreateOrderModal } from '@web/frontend/components/work-orders/modals/CreateOrderModal.js';
 import { CompanySelectorModal } from '@web/frontend/components/work-orders/modals/CompanySelectorModal.js';

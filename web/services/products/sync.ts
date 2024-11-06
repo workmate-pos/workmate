@@ -6,6 +6,8 @@ import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-tool
 import { getProducts, upsertProducts } from './queries.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { removeObjectMetafields, upsertMetafields } from '../metafields/queries.js';
+import { getShopSettings } from '../settings/settings.js';
+import { getProductMetafieldsToSync } from '../metafields/sync.js';
 
 export async function ensureProductsExist(session: Session, productIds: ID[]) {
   if (productIds.length === 0) {
@@ -40,25 +42,30 @@ export async function syncProducts(session: Session, productIds: ID[]) {
   }
 
   const graphql = new Graphql(session);
-  const { nodes } = await gql.products.getManyProductsForDatabase.run(graphql, { ids: productIds });
-  const products = await Promise.all(
-    nodes
-      .filter(isNonNullable)
-      .filter(hasPropertyValue('__typename', 'Product'))
-      .map(async product => {
-        const metafields = await fetchAllPages(
-          graphql,
-          (graphql, variables) =>
-            gql.products.getProductMetafields.run(graphql, { ...variables, id: product.id, first: 25 }),
-          response => (response.product ?? never()).metafields,
-        );
 
-        return {
-          ...product,
-          metafields,
-        };
-      }),
-  );
+  const [metafieldsToIndex, products] = await Promise.all([
+    getProductMetafieldsToSync(session.shop),
+    gql.products.getManyProductsForDatabase.run(graphql, { ids: productIds }).then(response =>
+      Promise.all(
+        response.nodes
+          .filter(isNonNullable)
+          .filter(hasPropertyValue('__typename', 'Product'))
+          .map(async product => {
+            const metafields = await fetchAllPages(
+              graphql,
+              (graphql, variables) =>
+                gql.products.getProductMetafields.run(graphql, { ...variables, id: product.id, first: 25 }),
+              response => (response.product ?? never()).metafields,
+            );
+
+            return {
+              ...product,
+              metafields,
+            };
+          }),
+      ),
+    ),
+  ]);
 
   const errors: unknown[] = [];
 
@@ -73,13 +80,20 @@ export async function syncProducts(session: Session, productIds: ID[]) {
     upsertMetafields(
       session.shop,
       products.flatMap(product =>
-        product.metafields.map(metafield => ({
-          objectId: product.id,
-          metafieldId: metafield.id,
-          namespace: metafield.namespace,
-          key: metafield.key,
-          value: metafield.value,
-        })),
+        product.metafields
+          .filter(metafield =>
+            metafieldsToIndex.some(
+              metafieldToIndex =>
+                metafieldToIndex.key === metafield.key && metafieldToIndex.namespace === metafield.namespace,
+            ),
+          )
+          .map(metafield => ({
+            objectId: product.id,
+            metafieldId: metafield.id,
+            namespace: metafield.namespace,
+            key: metafield.key,
+            value: metafield.value,
+          })),
       ),
     ),
   ]);
