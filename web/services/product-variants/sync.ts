@@ -11,6 +11,7 @@ import { escapeTransaction } from '../db/client.js';
 import { getProductVariants, upsertProductVariants } from './queries.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { removeObjectMetafields, upsertMetafields } from '../metafields/queries.js';
+import { getProductVariantMetafieldsToSync } from '../metafields/sync.js';
 
 export async function ensureProductVariantsExist(session: Session, productVariantIds: ID[]) {
   if (productVariantIds.length === 0) {
@@ -59,25 +60,30 @@ export async function syncProductVariants(session: Session, productVariantIds: I
   }
 
   const graphql = new Graphql(session);
-  const { nodes } = await gql.products.getManyProductVariantsForDatabase.run(graphql, { ids: productVariantIds });
-  const productVariants = await Promise.all(
-    nodes
-      .filter(isNonNullable)
-      .filter(hasPropertyValue('__typename', 'ProductVariant'))
-      .map(async productVariant => {
-        const metafields = await fetchAllPages(
-          graphql,
-          (graphql, variables) =>
-            gql.products.getVariantMetafields.run(graphql, { ...variables, id: productVariant.id, first: 25 }),
-          response => (response.productVariant ?? never()).metafields,
-        );
+  const [metafieldsToIndex, productVariants] = await Promise.all([
+    getProductVariantMetafieldsToSync(session.shop),
+    gql.products.getManyProductVariantsForDatabase.run(graphql, { ids: productVariantIds }).then(response =>
+      Promise.all(
+        response.nodes
+          .filter(isNonNullable)
+          .filter(hasPropertyValue('__typename', 'ProductVariant'))
+          .map(async productVariant => {
+            const metafields = await fetchAllPages(
+              graphql,
+              (graphql, variables) =>
+                gql.products.getVariantMetafields.run(graphql, { ...variables, id: productVariant.id, first: 25 }),
+              response => (response.productVariant ?? never()).metafields,
+            );
 
-        return {
-          ...productVariant,
-          metafields,
-        };
-      }),
-  );
+            return {
+              ...productVariant,
+              metafields,
+            };
+          }),
+      ),
+    ),
+  ]);
+
   const productIds = unique(productVariants.map(({ product: { id } }) => id));
 
   const errors: unknown[] = [];
@@ -102,13 +108,20 @@ export async function syncProductVariants(session: Session, productVariantIds: I
       upsertMetafields(
         session.shop,
         productVariants.flatMap(productVariant =>
-          productVariant.metafields.map(metafield => ({
-            objectId: productVariant.id,
-            metafieldId: metafield.id,
-            namespace: metafield.namespace,
-            key: metafield.key,
-            value: metafield.value,
-          })),
+          productVariant.metafields
+            .filter(metafield =>
+              metafieldsToIndex.some(
+                metafieldToIndex =>
+                  metafieldToIndex.key === metafield.key && metafieldToIndex.namespace === metafield.namespace,
+              ),
+            )
+            .map(metafield => ({
+              objectId: productVariant.id,
+              metafieldId: metafield.id,
+              namespace: metafield.namespace,
+              key: metafield.key,
+              value: metafield.value,
+            })),
         ),
       ),
     ]);
