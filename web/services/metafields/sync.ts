@@ -150,3 +150,17 @@ export async function doesProductHaveSyncableMetafields(session: Session, produc
     response.product.variants.nodes.flatMap(variant => variant.metafields.nodes).some(isIndexedVariantMetafield)
   );
 }
+
+export async function getProductMetafieldsToSync(shop: string) {
+  const { scanner } = await getShopSettings(shop);
+
+  return scanner.variants.metafields.product.map(namespaceKey => {
+    const [namespace, key] = namespaceKey.split('.');
+
+    if (!namespace || !key) {
+      throw new Error('Invalid metafield');
+    }
+
+    return { namespace, key };
+  });
+}
