@@ -18,7 +18,7 @@ type PrintModalProps = PrintModalPropsBase &
         dueDateUtc: Date;
       }
     | {
-        type: 'purchase-order';
+        type: 'purchase-order' | 'cycle-count';
       }
   );
 
@@ -323,6 +323,8 @@ export function PrintModal({ name, open, onClose, setToastAction, ...props }: Pr
                 },
               },
             );
+          } else if (props.type === 'cycle-count') {
+            console.log('Cycle count printing not implemented');
           } else {
             return props.type satisfies never;
           }
