@@ -28,10 +28,10 @@ import {
   insertPurchaseOrderAssignedEmployees,
   insertPurchaseOrderCustomFields,
   insertPurchaseOrderLineItemCustomFields,
-  removePurchaseOrderAssignedEmployees,
-  removePurchaseOrderCustomFields,
-  removePurchaseOrderLineItemCustomFields,
-  removePurchaseOrderLineItemsByUuids,
+  deletePurchaseOrderAssignedEmployees,
+  deletePurchaseOrderCustomFields,
+  deletePurchaseOrderLineItemCustomFields,
+  deletePurchaseOrderLineItemsByUuids,
   upsertPurchaseOrderLineItems,
   upsertPurchaseOrder,
   getPurchaseOrdersForSerial,
@@ -117,10 +117,10 @@ export async function upsertCreatePurchaseOrder(
     const [specialOrderLineItems, serials] = await Promise.all([
       getSpecialOrderLineItemsByNameAndUuids(shop, specialOrderLineItemNameUuids),
       upsertSerials(shop, lineItemSerials).then(() => getSerialsByProductVariantSerials(shop, lineItemSerials)),
-      removePurchaseOrderLineItemsByUuids(purchaseOrderId, uuidsToRemove),
-      removePurchaseOrderCustomFields(purchaseOrderId),
-      removePurchaseOrderLineItemCustomFields(purchaseOrderId),
-      removePurchaseOrderAssignedEmployees(purchaseOrderId),
+      deletePurchaseOrderLineItemsByUuids(purchaseOrderId, uuidsToRemove),
+      deletePurchaseOrderCustomFields(purchaseOrderId),
+      deletePurchaseOrderLineItemCustomFields(purchaseOrderId),
+      deletePurchaseOrderAssignedEmployees(purchaseOrderId),
     ]);
 
     await assertNoIllegalSerials(shop, createPurchaseOrder, existingPurchaseOrder);

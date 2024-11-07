@@ -74,7 +74,7 @@ export async function upsertReceipt(
           status: upsertPurchaseOrderReceipt.status,
         });
 
-    await deletePurchaseOrderReceiptLineItems({ purchaseOrderReceiptId });
+    await deletePurchaseOrderReceiptLineItems({ purchaseOrderReceiptIds: [purchaseOrderReceiptId] });
 
     for (const { uuid, quantity } of upsertPurchaseOrderReceipt.lineItems) {
       // TODO: How shoudl we handle statuses here? doesnt make snese to count archived

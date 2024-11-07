@@ -286,7 +286,7 @@ export async function insertPurchaseOrderLineItemCustomFields(
     FROM UNNEST(${uuid} :: uuid[], ${key} :: text[], ${value} :: text[]);`;
 }
 
-export async function removePurchaseOrderLineItemCustomFields(purchaseOrderId: number) {
+export async function deletePurchaseOrderLineItemCustomFields(purchaseOrderId: number) {
   await sql`
     DELETE
     FROM "PurchaseOrderLineItemCustomField"
@@ -345,14 +345,14 @@ function mapPurchaseOrderAssignedEmployee(assignment: {
   }
 }
 
-export async function removePurchaseOrderLineItems(purchaseOrderId: number) {
+export async function deletePurchaseOrderLineItems(purchaseOrderId: number) {
   await sql`
     DELETE
     FROM "PurchaseOrderLineItem"
     WHERE "purchaseOrderId" = ${purchaseOrderId};`;
 }
 
-export async function removePurchaseOrderLineItemsByUuids(purchaseOrderId: number, uuids: string[]) {
+export async function deletePurchaseOrderLineItemsByUuids(purchaseOrderId: number, uuids: string[]) {
   await sql`
     DELETE
     FROM "PurchaseOrderLineItem"
@@ -360,14 +360,14 @@ export async function removePurchaseOrderLineItemsByUuids(purchaseOrderId: numbe
       AND uuid = ANY (${uuids} :: uuid[]);`;
 }
 
-export async function removePurchaseOrderCustomFields(purchaseOrderId: number) {
+export async function deletePurchaseOrderCustomFields(purchaseOrderId: number) {
   await sql`
     DELETE
     FROM "PurchaseOrderCustomField"
     WHERE "purchaseOrderId" = ${purchaseOrderId};`;
 }
 
-export async function removePurchaseOrderAssignedEmployees(purchaseOrderId: number) {
+export async function deletePurchaseOrderAssignedEmployees(purchaseOrderId: number) {
   await sql`
     DELETE
     FROM "PurchaseOrderEmployeeAssignment"
@@ -892,21 +892,37 @@ export async function insertPurchaseOrderReceiptLineItems(
 }
 
 export async function deletePurchaseOrderReceiptLineItems({
-  purchaseOrderReceiptId,
+  purchaseOrderReceiptIds,
 }: {
-  purchaseOrderReceiptId: number;
+  purchaseOrderReceiptIds: number[];
 }) {
+  if (purchaseOrderReceiptIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderReceiptLineItem"
-    WHERE "purchaseOrderReceiptId" = ${purchaseOrderReceiptId};
+    WHERE "purchaseOrderReceiptId" = ANY (${purchaseOrderReceiptIds});
   `;
 }
 
-export async function deletePurchaseOrderReceipt({ purchaseOrderReceiptId }: { purchaseOrderReceiptId: number }) {
+export async function deletePurchaseOrderReceipts({ purchaseOrderReceiptIds }: { purchaseOrderReceiptIds: number[] }) {
+  if (purchaseOrderReceiptIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderReceipt"
-    WHERE id = ${purchaseOrderReceiptId};
+    WHERE id = ANY (${purchaseOrderReceiptIds});
+  `;
+}
+
+export async function deletePurchaseOrder({ purchaseOrderId }: { purchaseOrderId: number }) {
+  await sql`
+    DELETE
+    FROM "PurchaseOrder"
+    WHERE id = ${purchaseOrderId};
   `;
 }

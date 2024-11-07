@@ -6,6 +6,7 @@ import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unit } from '../db/unit-of-work.js';
+import { MergeUnion } from '../../util/types.js';
 
 export type Task = ReturnType<typeof mapTask>;
 export type TaskAssignment = ReturnType<typeof mapTaskAssignment>;
@@ -383,11 +384,15 @@ export async function insertTaskPurchaseOrderLinks(taskId: number, shop: string,
   `;
 }
 
-export async function deleteTaskPurchaseOrderLinks(taskId: number) {
+export async function deleteTaskPurchaseOrderLinks({
+  taskId,
+  purchaseOrderId,
+}: MergeUnion<{ taskId: number } | { purchaseOrderId: number }>) {
   await sql`
     DELETE
     FROM "TaskPurchaseOrderLink"
-    WHERE "taskId" = ${taskId};
+    WHERE "taskId" = COALESCE(${taskId ?? null}, "taskId")
+      AND "purchaseOrderId" = COALESCE(${purchaseOrderId ?? null}, "purchaseOrderId");
   `;
 }
 
@@ -467,7 +472,7 @@ export async function deleteTaskLinks(taskId: number) {
   await unit(async () => {
     await Promise.all([
       deleteTaskWorkOrderLinks(taskId),
-      deleteTaskPurchaseOrderLinks(taskId),
+      deleteTaskPurchaseOrderLinks({ taskId }),
       deleteTaskSpecialOrderLinks(taskId),
       deleteTaskTransferOrderLinks(taskId),
       deleteTaskCycleCountLinks(taskId),
