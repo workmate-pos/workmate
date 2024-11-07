@@ -16,7 +16,8 @@ export type InventoryMutationInitiatorType =
   | 'UNKNOWN';
 
 export type InventoryMutation = Awaited<ReturnType<typeof getInventoryMutations>>['mutations'][number];
-export type InventoryMutationItem = Awaited<ReturnType<typeof getInventoryMutationItems>>[number];
+export type InventoryMutationItem = Awaited<ReturnType<typeof getInventoryMutationItemsForMutations>>[number];
+export type DetailedInventoryMutationItem = Awaited<ReturnType<typeof getInventoryMutationItems>>['items'][number];
 
 export async function insertInventoryMutation({
   shop,
@@ -47,7 +48,7 @@ export async function getInventoryMutations(
     initiator,
     type,
     inventoryItemId,
-    locationId,
+    locationIds,
     sortOrder = 'descending',
     sortMode = 'updatedAt',
     offset,
@@ -60,7 +61,7 @@ export async function getInventoryMutations(
     };
     type?: InventoryMutationType;
     inventoryItemId?: ID;
-    locationId?: ID;
+    locationIds: ID[];
     sortOrder?: 'ascending' | 'descending';
     sortMode?: 'createdAt' | 'updatedAt' | 'initiatorName' | 'initiatorType';
     offset?: number;
@@ -71,48 +72,58 @@ export async function getInventoryMutations(
     id: number;
     shop: string;
     type: 'MOVE' | 'SET' | 'ADJUST';
-    initiatorType: 'PURCHASE_ORDER' | 'STOCK_TRANSFER' | 'CYCLE_COUNT';
+    initiatorType:
+      | 'PURCHASE_ORDER'
+      | 'STOCK_TRANSFER'
+      | 'CYCLE_COUNT'
+      | 'WORK_ORDER'
+      | 'UNKNOWN'
+      | 'PURCHASE_ORDER_RECEIPT';
     initiatorName: string;
     createdAt: Date;
     updatedAt: Date;
   }>`
-    SELECT m.*
-    FROM "InventoryMutation" m
-    WHERE m.shop = ${shop}
-      AND m.type = COALESCE(${type ?? null} :: "InventoryMutationType", m.type)
-      AND m."initiatorName" ILIKE ${query ? `%${escapeLike(query)}%` : '%'}
-      AND m."initiatorType" =
-          COALESCE(${initiator?.type ?? null} :: "InventoryMutationInitiatorType", m."initiatorType")
-      AND (${(inventoryItemId as string | undefined) ?? null} :: text IS NULL OR
-           EXISTS (SELECT 1
-                   FROM "InventoryMutationItem" i
-                   WHERE i."inventoryMutationId" = m.id
-                     AND i."inventoryItemId" = ${(inventoryItemId as string | undefined) ?? null}))
-      AND (${(locationId as string | undefined) ?? null} :: text IS NULL OR
-           EXISTS (SELECT 1
-                   FROM "InventoryMutationItem" i
-                   WHERE i."inventoryMutationId" = m.id
-                     AND i."locationId" = ${(locationId as string | undefined) ?? null}))
-    ORDER BY CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'ascending' THEN m."createdAt" END ASC NULLS LAST,
-             CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'descending' THEN m."createdAt" END DESC NULLS LAST,
-             --
-             CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'ascending' THEN m."updatedAt" END ASC NULLS LAST,
-             CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'descending' THEN m."updatedAt" END DESC NULLS LAST,
-             --
-             CASE
-               WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'ascending'
-                 THEN m."initiatorName" END ASC NULLS LAST,
-             CASE
-               WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'descending'
-                 THEN m."initiatorName" END DESC NULLS LAST,
-             --
-             CASE
-               WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'ascending'
-                 THEN m."initiatorType" END ASC NULLS LAST,
-             CASE
-               WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'descending'
-                 THEN m."initiatorType" END DESC NULLS LAST
-    LIMIT ${limit + 1} OFFSET ${offset ?? null}
+      SELECT m.*
+      FROM "InventoryMutation" m
+      WHERE m.shop = ${shop}
+        AND m.type = COALESCE(${type ?? null} :: "InventoryMutationType", m.type)
+        AND m."initiatorName" ILIKE ${query ? `%${escapeLike(query)}%` : '%'}
+        AND m."initiatorName" = COALESCE(${initiator?.name ?? null}, m."initiatorName")
+        AND m."initiatorType" =
+            COALESCE(${initiator?.type ?? null} :: "InventoryMutationInitiatorType", m."initiatorType")
+        AND (${(inventoryItemId as string | undefined) ?? null} :: text IS NULL OR
+             EXISTS (SELECT 1
+                     FROM "InventoryMutationItem" i
+                     WHERE i."inventoryMutationId" = m.id
+                       AND i."inventoryItemId" = ${(inventoryItemId as string | undefined) ?? null}))
+        AND (EXISTS (SELECT 1
+                     FROM "InventoryMutationItem" i
+                     WHERE i."inventoryMutationId" = m.id
+                       AND i."locationId" = ANY (${locationIds as string[]})))
+      ORDER BY CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'ascending' THEN m."createdAt" END ASC NULLS LAST,
+               CASE
+                   WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'descending'
+                       THEN m."createdAt" END DESC NULLS LAST,
+               --
+               CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'ascending' THEN m."updatedAt" END ASC NULLS LAST,
+               CASE
+                   WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'descending'
+                       THEN m."updatedAt" END DESC NULLS LAST,
+               --
+               CASE
+                   WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'ascending'
+                       THEN m."initiatorName" END ASC NULLS LAST,
+               CASE
+                   WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'descending'
+                       THEN m."initiatorName" END DESC NULLS LAST,
+               --
+               CASE
+                   WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'ascending'
+                       THEN m."initiatorType" END ASC NULLS LAST,
+               CASE
+                   WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'descending'
+                       THEN m."initiatorType" END DESC NULLS LAST
+      LIMIT ${limit + 1} OFFSET ${offset ?? null}
   `;
 
   return {
@@ -121,7 +132,107 @@ export async function getInventoryMutations(
   };
 }
 
-export async function getInventoryMutationItems({ inventoryMutationIds }: { inventoryMutationIds: number[] }) {
+export async function getInventoryMutationItems(
+  shop: string,
+  {
+    query,
+    initiator,
+    type,
+    inventoryItemId,
+    locationIds,
+    sortOrder = 'descending',
+    sortMode = 'updatedAt',
+    offset,
+    limit,
+  }: {
+    query?: string;
+    initiator?: {
+      type: InventoryMutationInitiatorType;
+      name: string;
+    };
+    type?: InventoryMutationType;
+    inventoryItemId?: ID;
+    locationIds: ID[];
+    sortOrder?: 'ascending' | 'descending';
+    sortMode?: 'name' | 'createdAt' | 'updatedAt' | 'initiatorName' | 'initiatorType';
+    offset?: number;
+    limit: number;
+  },
+) {
+  const items = await sql<{
+    id: number;
+    inventoryMutationId: number;
+    inventoryItemId: string;
+    name: string;
+    locationId: string;
+    compareQuantity: number | null;
+    quantity: number | null;
+    delta: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+    initiatorName: string;
+    initiatorType:
+      | 'PURCHASE_ORDER'
+      | 'STOCK_TRANSFER'
+      | 'CYCLE_COUNT'
+      | 'WORK_ORDER'
+      | 'UNKNOWN'
+      | 'PURCHASE_ORDER_RECEIPT';
+    shop: string;
+    type: 'MOVE' | 'SET' | 'ADJUST';
+  }>`
+      WITH "DetailedInventoryMutationItem" AS (SELECT i.*, m."initiatorName", m."initiatorType", m.shop, m.type
+                                               FROM "InventoryMutationItem" i
+                                                        INNER JOIN "InventoryMutation" m ON i."inventoryMutationId" = m.id
+                                               LIMIT ${limit + 1} OFFSET ${offset ?? null})
+      SELECT *
+      FROM "DetailedInventoryMutationItem" i
+      WHERE i.shop = ${shop}
+        AND i.type = COALESCE(${type ?? null} :: "InventoryMutationType", i.type)
+        AND i."initiatorName" ILIKE ${query ? `%${escapeLike(query)}%` : '%'}
+        AND i."initiatorName" = COALESCE(${initiator?.name ?? null}, i."initiatorName")
+        AND i."initiatorType" =
+            COALESCE(${initiator?.type ?? null} :: "InventoryMutationInitiatorType", i."initiatorType")
+        AND i."inventoryItemId" = COALESCE(${inventoryItemId ?? null}, i."inventoryItemId")
+        AND i."locationId" = ANY (${locationIds as string[]})
+      ORDER BY CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'ascending' THEN i."createdAt" END ASC NULLS LAST,
+               CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'descending' THEN i."createdAt" END DESC NULLS LAST,
+               --
+               CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'ascending' THEN i."updatedAt" END ASC NULLS LAST,
+               CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'descending' THEN i."updatedAt" END DESC NULLS LAST,
+               --
+               CASE WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'ascending' THEN i."initiatorName" END ASC NULLS LAST,
+               CASE WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'descending' THEN i."initiatorName" END DESC NULLS LAST,
+               --
+               CASE WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'ascending' THEN i."initiatorType" END ASC NULLS LAST,
+               CASE WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'descending' THEN i."initiatorType" END DESC NULLS LAST
+      LIMIT ${limit + 1} OFFSET ${offset ?? null};
+  `;
+
+  return {
+    items: items.slice(0, limit).map(({ inventoryItemId, locationId, ...item }) => {
+      try {
+        assertGid(inventoryItemId);
+        assertGid(locationId);
+
+        return {
+          ...item,
+          inventoryItemId,
+          locationId,
+        };
+      } catch (e) {
+        throw new Error('Failed to parse inventory mutation item', { cause: e });
+      }
+    }),
+    hasNextPage: items.length > limit,
+  };
+}
+
+export async function getInventoryMutationItemsForMutations({
+  inventoryMutationIds,
+}: {
+  inventoryMutationIds: number[];
+}) {
   if (!inventoryMutationIds.length) {
     return [];
   }

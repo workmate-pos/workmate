@@ -41,7 +41,17 @@ export default class LineItemsController {
     await unit(() =>
       Promise.all(
         reservations.map(({ quantity, locationId, lineItemId }) =>
-          reserveLineItemQuantity(session, locationId, lineItemId, quantity),
+          reserveLineItemQuantity(
+            session,
+            // TODO: Add to reservation table
+            {
+              type: 'unknown',
+              name: 'unknown',
+            },
+            locationId,
+            lineItemId,
+            quantity,
+          ),
         ),
       ),
     );
