@@ -5,7 +5,7 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
-import { assertMoneyOrNull } from '../../util/assertions.js';
+import { assertGidOrNull, assertMoneyOrNull } from '../../util/assertions.js';
 
 export type StaffMember = ReturnType<typeof mapStaffMember>;
 export type StaffMemberLocation = ReturnType<typeof mapStaffMemberLocation>;
@@ -23,6 +23,7 @@ export async function getStaffMembers(shop: string, staffMemberIds: ID[]) {
     updatedAt: Date;
     email: string;
     role: string;
+    defaultLocationId: string | null;
   }>`
       SELECT *
       FROM "Employee"
@@ -44,17 +45,20 @@ export function mapStaffMember(staffMember: {
   updatedAt: Date;
   email: string;
   role: string;
+  defaultLocationId: string | null;
 }) {
-  const { staffMemberId, rate } = staffMember;
+  const { staffMemberId, rate, defaultLocationId } = staffMember;
 
   try {
     assertGid(staffMemberId);
     assertMoneyOrNull(rate);
+    assertGidOrNull(defaultLocationId);
 
     return {
       ...staffMember,
       rate,
       staffMemberId,
+      defaultLocationId,
     };
   } catch (error) {
     sentryErr(error, { staffMember });
@@ -75,6 +79,7 @@ export async function getStaffMembersPage(shop: string, { query }: { query?: str
     updatedAt: Date;
     email: string;
     role: string;
+    defaultLocationId: string | null;
   }>`
     SELECT *
     FROM "Employee"
@@ -98,13 +103,14 @@ export async function upsertStaffMembers(
     staffMemberId: ID;
     email: string;
     role: string;
+    defaultLocationId: ID | null;
   }[],
 ) {
   if (!isNonEmptyArray(staffMembers)) {
     return [];
   }
 
-  const { superuser, rate, name, isShopOwner, staffMemberId, email, role } = nest(staffMembers);
+  const { superuser, rate, name, isShopOwner, staffMemberId, email, role, defaultLocationId } = nest(staffMembers);
 
   const newStaffMembers = await sql<{
     staffMemberId: string;
@@ -118,8 +124,9 @@ export async function upsertStaffMembers(
     updatedAt: Date;
     email: string;
     role: string;
+    defaultLocationId: string | null;
   }>`
-      INSERT INTO "Employee" (shop, superuser, rate, name, "isShopOwner", "staffMemberId", email, role, permissions)
+      INSERT INTO "Employee" (shop, superuser, rate, name, "isShopOwner", "staffMemberId", email, role, defaultLocationId, permissions)
       SELECT ${shop}, *, NULL
       FROM UNNEST(
               ${superuser} :: boolean[],
@@ -128,7 +135,8 @@ export async function upsertStaffMembers(
               ${isShopOwner} :: boolean[],
               ${staffMemberId as string[]} :: text[],
               ${email} :: text[],
-              ${role} :: text[]
+              ${role} :: text[],
+              ${defaultLocationId as string[]} :: text[]
            )
       ON CONFLICT ("staffMemberId")
           DO UPDATE SET shop          = EXCLUDED."shop",
@@ -137,7 +145,8 @@ export async function upsertStaffMembers(
                         name          = EXCLUDED.name,
                         "isShopOwner" = EXCLUDED."isShopOwner",
                         email         = EXCLUDED.email,
-                        role          = EXCLUDED.role
+                        role          = EXCLUDED.role,
+                        defaultLocationId = EXCLUDED.defaultLocationId
       RETURNING *;
   `;
 
@@ -166,6 +175,7 @@ export async function getSuperusers(shop: string) {
     updatedAt: Date;
     email: string;
     role: string;
+    defaultLocationId: string | null;
   }>`
       SELECT *
       FROM "Employee"

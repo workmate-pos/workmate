@@ -27,6 +27,7 @@ export default async function migrate() {
       updatedAt: Date;
       email: string;
       role: string;
+      defaultLocationId: string | null;
     }>`
     SELECT *
     FROM "Employee"
@@ -77,6 +78,7 @@ export default async function migrate() {
             staffMemberId: staffMember.staffMemberId as ID,
             rate: staffMember.rate as Money | null,
             role,
+            defaultLocationId: staffMember.defaultLocationId as ID | null,
           };
         }),
       );

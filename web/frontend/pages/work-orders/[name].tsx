@@ -56,6 +56,7 @@ import { PaymentTermsSelectorModal } from '@web/frontend/components/work-orders/
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 import { LinkedTasks, NewLinkedTaskButton, BaseNewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 
 export default function () {
   return (
@@ -114,13 +115,19 @@ function WorkOrderLoader() {
     );
   }
 
+  // const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+  // const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
+
   let createWorkOrder;
 
   if (workOrderQuery.data?.workOrder) {
     createWorkOrder = workOrderToCreateWorkOrder(workOrderQuery.data.workOrder);
   } else {
     const { workOrders } = settingsQuery.data.settings;
-    createWorkOrder = defaultCreateWorkOrder({ status: workOrders.defaultStatus });
+    createWorkOrder = defaultCreateWorkOrder({
+      status: workOrders.defaultStatus,
+      locationId: null,
+    });
 
     createWorkOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,
