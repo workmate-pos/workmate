@@ -1,4 +1,5 @@
-import type { UnionToIntersection } from '@teifi-digital/shopify-app-toolbox/types';
+import type { Primitive, UnionToIntersection } from '@teifi-digital/shopify-app-toolbox/types';
+import { DateTime } from '../services/gql/queries/generated/schema.js';
 
 export type Permutations<T, O = T> = [T] extends [never]
   ? readonly []
@@ -29,3 +30,13 @@ export type RequireOneProperty<T> = {
  * Results in a new intersection where each type is a base type + optionally any property from other types.
  */
 export type MergeUnion<T> = Partial<UnionToIntersection<T>> & ([T] extends [infer U] ? U : never);
+
+export type NestedDateToDateTime<T> = T extends Primitive
+  ? T
+  : T extends Date
+    ? DateTime
+    : T extends (infer U)[]
+      ? NestedDateToDateTime<U>[]
+      : T extends {}
+        ? { [P in keyof T]: NestedDateToDateTime<T[P]> }
+        : T;

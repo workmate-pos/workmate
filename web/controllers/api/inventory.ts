@@ -1,8 +1,15 @@
 import { Authenticated, Get, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { Permission } from '../../decorators/permission.js';
 import { Request, Response } from 'express-serve-static-core';
-import { getInventoryMutations } from '../../services/inventory/queries.js';
+import {
+  getInventoryMutationItems,
+  getInventoryMutations,
+  InventoryMutation,
+  InventoryMutationItem,
+} from '../../services/inventory/queries.js';
 import { InventoryPaginationOptions } from '../../schemas/generated/inventory-pagination-options.js';
+import { NestedDateToDateTime } from '../../util/types.js';
+import { DateTime } from '../../services/gql/queries/generated/schema.js';
 
 @Authenticated()
 @Permission('none')
@@ -24,22 +31,28 @@ export default class InventoryController {
       limit: paginationOptions.limit ?? 100,
     });
 
+    const inventoryMutationIds = mutations.map(mutation => mutation.id);
+    const inventoryMutationItems = await getInventoryMutationItems({ inventoryMutationIds });
+
     return res.json({
-      mutations,
+      mutations: mutations.map(({ createdAt, updatedAt, ...mutation }) => ({
+        ...mutation,
+        createdAt: createdAt.toISOString() as DateTime,
+        updatedAt: updatedAt.toISOString() as DateTime,
+        items: inventoryMutationItems
+          .filter(item => item.inventoryMutationId === mutation.id)
+          .map(({ createdAt, updatedAt, ...item }) => ({
+            ...item,
+            createdAt: createdAt.toISOString() as DateTime,
+            updatedAt: updatedAt.toISOString() as DateTime,
+          })),
+      })),
       hasNextPage,
     });
   }
 }
 
 export type FetchInventoryMutationsResponse = {
-  mutations: {
-    id: number;
-    shop: string;
-    type: 'MOVE' | 'SET' | 'ADJUST';
-    initiatorType: 'PURCHASE_ORDER' | 'STOCK_TRANSFER' | 'CYCLE_COUNT';
-    initiatorName: string;
-    createdAt: Date;
-    updatedAt: Date;
-  }[];
+  mutations: NestedDateToDateTime<(InventoryMutation & { items: InventoryMutationItem[] })[]>;
   hasNextPage: boolean;
 };

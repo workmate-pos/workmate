@@ -836,12 +836,12 @@ export async function insertPurchaseOrderReceipt({
   receivedAt: Date;
   status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
 }) {
-  return await sqlOne<{ id: number }>`
+  return await sqlOne<{ id: number; name: string }>`
     INSERT INTO "PurchaseOrderReceipt" (shop, name, description, "purchaseOrderId", "receivedAt", status)
     VALUES (${shop}, ${name}, ${description}, ${purchaseOrderId}, ${receivedAt},
             ${status} :: "PurchaseOrderReceiptStatus")
-    RETURNING id;
-  `.then(row => row.id);
+    RETURNING id, name;
+  `.then(row => ({ id: row.id, name: row.name }));
 }
 
 export async function updatePurchaseOrderReceipt({
@@ -857,15 +857,15 @@ export async function updatePurchaseOrderReceipt({
   receivedAt: Date;
   status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
 }) {
-  return await sqlOne<{ id: number }>`
+  return await sqlOne<{ id: number; name: string }>`
     UPDATE "PurchaseOrderReceipt"
     SET description       = ${description},
         "purchaseOrderId" = ${purchaseOrderId},
         "receivedAt"      = ${receivedAt},
         status            = ${status} :: "PurchaseOrderReceiptStatus"
     WHERE id = ${purchaseOrderReceiptId}
-    RETURNING id;
-  `.then(row => row.id);
+    RETURNING id, name;
+  `.then(row => ({ id: row.id, name: row.name }));
 }
 
 export async function insertPurchaseOrderReceiptLineItems(

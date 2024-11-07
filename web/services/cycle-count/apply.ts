@@ -15,6 +15,7 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { mutateInventoryQuantities } from '../inventory/adjust.js';
 
 const COMPARE_QUANTITY_MISMATCH_ERROR_MESSAGE =
   'The compareQuantity argument no longer matches the persisted quantity.';
@@ -55,8 +56,6 @@ export async function applyCycleCountItems(session: Session, user: LocalsTeifiUs
       }
     }
 
-    const graphql = new Graphql(session);
-
     await createCycleCountItemApplications(
       cycleCount.id,
       user.staffMember.id,
@@ -68,21 +67,22 @@ export async function applyCycleCountItems(session: Session, user: LocalsTeifiUs
     );
 
     try {
-      await gql.inventory.setQuantities.run(graphql, {
-        input: {
-          ignoreCompareQuantity: false,
-          name: QUANTITY_NAME,
-          reason: 'cycle_count_available',
-          referenceDocumentUri: `workmate://cycle-count/${encodeURIComponent(cycleCount.name)}`,
-          quantities: itemApplications.map(({ originalQuantity, countQuantity, uuid }) => ({
-            compareQuantity: originalQuantity,
-            locationId: cycleCount.locationId,
-            quantity: countQuantity,
-            inventoryItemId:
-              items.find(hasPropertyValue('uuid', uuid))?.inventoryItemId ??
-              never('We already threw above if there was no associated item'),
-          })),
+      await mutateInventoryQuantities(session, {
+        type: 'set',
+        initiator: {
+          type: 'cycle-count',
+          name: cycleCount.name,
         },
+        name: 'available',
+        reason: 'cycle_count_available',
+        changes: itemApplications.map(({ originalQuantity, countQuantity, uuid }) => ({
+          locationId: cycleCount.locationId,
+          quantity: countQuantity,
+          compareQuantity: originalQuantity,
+          inventoryItemId:
+            items.find(hasPropertyValue('uuid', uuid))?.inventoryItemId ??
+            never('We already threw above if there was no associated item'),
+        })),
       });
     } catch (error) {
       if (
@@ -109,9 +109,6 @@ export type ApplyCycleCountPlan = {
     uuid: UUID;
   }[];
 };
-
-// TODO: Allow the user to set `on_hand` instead of `available`?
-const QUANTITY_NAME: 'available' | 'on_hand' = 'available';
 
 export async function getCycleCountApplyPlan(
   session: Session,
@@ -151,7 +148,7 @@ export async function getCycleCountApplyPlan(
     }
 
     const originalQuantity = inventoryItem.inventoryLevel?.quantities.find(
-      hasPropertyValue('name', QUANTITY_NAME),
+      hasPropertyValue('name', 'available'),
     )?.quantity;
 
     if (typeof originalQuantity !== 'number') {

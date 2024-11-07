@@ -14,22 +14,21 @@ import { Session } from '@shopify/shopify-api';
 import { DetailedPurchaseOrder } from './types.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { InventoryMoveQuantityChange } from '../gql/queries/generated/schema.js';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
-import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
-import { gql } from '../gql/gql.js';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { getDetailedPurchaseOrder } from './get.js';
 import { getNewPurchaseOrderReceiptName } from '../id-formatting.js';
+import { MoveInventoryQuantities, mutateInventoryQuantities } from '../inventory/adjust.js';
 
 export async function upsertReceipt(
   session: Session,
-  name: string,
+  purchaseOrderName: string,
   upsertPurchaseOrderReceipt: UpsertPurchaseOrderReceipt,
   locationIds: ID[] | null,
 ) {
   const [purchaseOrder, purchaseOrderId] = await Promise.all([
-    getDetailedPurchaseOrder(session, name, locationIds),
-    getPurchaseOrder({ shop: session.shop, name, locationIds }).then(po => po?.id),
+    getDetailedPurchaseOrder(session, purchaseOrderName, locationIds),
+    getPurchaseOrder({ shop: session.shop, name: purchaseOrderName, locationIds }).then(po => po?.id),
   ]);
 
   if (!purchaseOrder || !purchaseOrderId) {
@@ -57,7 +56,8 @@ export async function upsertReceipt(
   }
 
   await unit(async () => {
-    purchaseOrderReceiptId = !!purchaseOrderReceiptId
+    let name: string;
+    ({ id: purchaseOrderReceiptId, name } = !!purchaseOrderReceiptId
       ? await updatePurchaseOrderReceipt({
           purchaseOrderReceiptId,
           description: upsertPurchaseOrderReceipt.description,
@@ -72,7 +72,7 @@ export async function upsertReceipt(
           purchaseOrderId: purchaseOrderId,
           receivedAt: new Date(upsertPurchaseOrderReceipt.receivedAt),
           status: upsertPurchaseOrderReceipt.status,
-        });
+        }));
 
     await deletePurchaseOrderReceiptLineItems({ purchaseOrderReceiptId });
 
@@ -107,7 +107,7 @@ export async function upsertReceipt(
     );
 
     if (purchaseOrder) {
-      await adjustShopifyInventory(session, purchaseOrder, upsertPurchaseOrderReceipt);
+      await adjustShopifyInventory(session, purchaseOrder, { ...upsertPurchaseOrderReceipt, name });
     }
   });
 }
@@ -119,7 +119,7 @@ export async function upsertReceipt(
 async function adjustShopifyInventory(
   session: Session,
   purchaseOrder: DetailedPurchaseOrder,
-  receipt: UpsertPurchaseOrderReceipt,
+  receipt: UpsertPurchaseOrderReceipt & { name: string },
 ) {
   if (!purchaseOrder.location) {
     return;
@@ -135,37 +135,27 @@ async function adjustShopifyInventory(
       (deltasByInventoryItemId[lineItem.productVariant.inventoryItemId] ?? 0) + quantity;
   }
 
-  const changes: InventoryMoveQuantityChange[] = [];
-
-  const ledgerDocumentUri = `workmate://purchase-order/${encodeURIComponent(purchaseOrder.name)}`;
-  const referenceDocumentUri = `${ledgerDocumentUri}/receipt/${receipt.name}`;
+  const changes: MoveInventoryQuantities['changes'] = [];
 
   for (const [inventoryItemId, delta] of entries(deltasByInventoryItemId)) {
     changes.push({
-      from: {
-        name: 'incoming',
-        locationId: purchaseOrder.location.id,
-        ledgerDocumentUri,
-      },
-      to: {
-        name: 'available',
-        locationId: purchaseOrder.location.id,
-        // available does not support this
-        ledgerDocumentUri: null,
-      },
+      locationId: purchaseOrder.location.id,
       quantity: delta,
       inventoryItemId,
+      from: 'incoming',
+      to: 'available',
     });
   }
 
   try {
-    const graphql = new Graphql(session);
-    await gql.inventory.moveQuantities.run(graphql, {
-      input: {
-        reason: 'other',
-        changes,
-        referenceDocumentUri,
+    await mutateInventoryQuantities(session, {
+      type: 'move',
+      initiator: {
+        type: 'purchase-order-receipt',
+        name: receipt.name,
       },
+      reason: 'received',
+      changes,
     });
   } catch (error) {
     if (error instanceof GraphqlUserErrors) {

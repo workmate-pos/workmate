@@ -3,11 +3,17 @@ import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { unit } from '../db/unit-of-work.js';
 import { gql } from '../gql/gql.js';
+import { insertInventoryMutation, insertInventoryMutationItems, InventoryMutationInitiatorType } from './queries.js';
+import { escapeTransaction } from '../db/client.js';
 
 /**
  * Adjust inventory quantities on Shopify and log to the WorkMate Inventory Adjustment log.
  */
 export function mutateInventoryQuantities(session: Session, mutation: MutateInventoryQuantities) {
+  if (mutation.changes.length === 0) {
+    return;
+  }
+
   switch (mutation.type) {
     case 'move':
       return moveInventoryQuantities(session, mutation);
@@ -23,91 +29,160 @@ export function mutateInventoryQuantities(session: Session, mutation: MutateInve
   }
 }
 
+const MUTATION_INITIATOR_TYPE: Record<InventoryMutationInitiator['type'], InventoryMutationInitiatorType> = {
+  'purchase-order': 'PURCHASE_ORDER',
+  'purchase-order-receipt': 'PURCHASE_ORDER_RECEIPT',
+  'stock-transfer': 'STOCK_TRANSFER',
+  'cycle-count': 'CYCLE_COUNT',
+  'work-order': 'WORK_ORDER',
+  unknown: 'UNKNOWN',
+};
+
 async function moveInventoryQuantities(session: Session, mutation: MoveInventoryQuantities) {
   const { shop } = session;
   const graphql = new Graphql(session);
 
-  await unit(async () => {
-    // TODO: Record in own database
+  await escapeTransaction(() =>
+    unit(async () => {
+      const inventoryMutationId = await insertInventoryMutation({
+        shop,
+        type: 'MOVE',
+        initiator: { name: mutation.initiator.name, type: MUTATION_INITIATOR_TYPE[mutation.initiator.type] },
+      });
 
-    const documentUri = getInitiatorDocumentUri(mutation.initiator);
+      await insertInventoryMutationItems(
+        mutation.changes.flatMap(change => {
+          const base = {
+            inventoryMutationId,
+            inventoryItemId: change.inventoryItemId,
+            locationId: change.locationId,
+            delta: null,
+            compareQuantity: null,
+          };
 
-    await gql.inventory.moveQuantities.run(graphql, {
-      input: {
-        reason: mutation.reason,
-        referenceDocumentUri: documentUri,
-        changes: mutation.changes.map(({ from, to, inventoryItemId, quantity, locationId }) => ({
-          from: {
-            name: from,
-            locationId,
-            ledgerDocumentUri: from === 'available' ? undefined : documentUri,
-          },
-          to: {
-            name: to,
-            locationId,
-            ledgerDocumentUri: to === 'available' ? undefined : documentUri,
-          },
-          inventoryItemId,
-          quantity,
-        })),
-      },
-    });
-  });
+          return [
+            { ...base, quantityName: change.to, quantity: change.quantity },
+            { ...base, quantityName: change.from, quantity: -change.quantity },
+          ];
+        }),
+      );
+
+      const documentUri = getInitiatorDocumentUri(mutation.initiator, inventoryMutationId);
+
+      await gql.inventory.moveQuantities.run(graphql, {
+        input: {
+          reason: mutation.reason,
+          referenceDocumentUri: documentUri,
+          changes: mutation.changes.map(({ from, to, inventoryItemId, quantity, locationId }) => ({
+            from: {
+              name: from,
+              locationId,
+              ledgerDocumentUri: from === 'available' ? undefined : documentUri,
+            },
+            to: {
+              name: to,
+              locationId,
+              ledgerDocumentUri: to === 'available' ? undefined : documentUri,
+            },
+            inventoryItemId,
+            quantity,
+          })),
+        },
+      });
+    }),
+  );
 }
 
 async function setInventoryQuantities(session: Session, mutation: SetInventoryQuantities) {
   const { shop } = session;
   const graphql = new Graphql(session);
 
-  await unit(async () => {
-    // TODO: Record in own database
+  await escapeTransaction(() =>
+    unit(async () => {
+      const inventoryMutationId = await insertInventoryMutation({
+        shop,
+        type: 'SET',
+        initiator: { name: mutation.initiator.name, type: MUTATION_INITIATOR_TYPE[mutation.initiator.type] },
+      });
 
-    const documentUri = getInitiatorDocumentUri(mutation.initiator);
-
-    await gql.inventory.setQuantities.run(graphql, {
-      input: {
-        reason: mutation.reason,
-        name: mutation.name,
-        referenceDocumentUri: documentUri,
-        ignoreCompareQuantity: false,
-        quantities: mutation.changes.map(({ inventoryItemId, locationId, quantity, compareQuantity }) => ({
-          compareQuantity,
-          locationId,
-          quantity,
-          inventoryItemId,
+      await insertInventoryMutationItems(
+        mutation.changes.map(change => ({
+          inventoryMutationId,
+          inventoryItemId: change.inventoryItemId,
+          locationId: change.locationId,
+          delta: null,
+          compareQuantity: change.compareQuantity,
+          quantityName: mutation.name,
+          quantity: change.quantity,
         })),
-      },
-    });
-  });
+      );
+
+      const documentUri = getInitiatorDocumentUri(mutation.initiator, inventoryMutationId);
+
+      await gql.inventory.setQuantities.run(graphql, {
+        input: {
+          reason: mutation.reason,
+          name: mutation.name,
+          referenceDocumentUri: documentUri,
+          ignoreCompareQuantity: false,
+          quantities: mutation.changes.map(({ inventoryItemId, locationId, quantity, compareQuantity }) => ({
+            compareQuantity,
+            locationId,
+            quantity,
+            inventoryItemId,
+          })),
+        },
+      });
+    }),
+  );
 }
 
 async function adjustInventoryQuantities(session: Session, mutation: AdjustInventoryQuantities) {
   const { shop } = session;
   const graphql = new Graphql(session);
 
-  await unit(async () => {
-    // TODO: Record in own database
+  await escapeTransaction(() =>
+    unit(async () => {
+      const inventoryMutationId = await insertInventoryMutation({
+        shop,
+        type: 'ADJUST',
+        initiator: { name: mutation.initiator.name, type: MUTATION_INITIATOR_TYPE[mutation.initiator.type] },
+      });
 
-    const documentUri = getInitiatorDocumentUri(mutation.initiator);
-
-    await gql.inventory.adjust.run(graphql, {
-      input: {
-        reason: mutation.reason,
-        name: mutation.name,
-        referenceDocumentUri: documentUri,
-        changes: mutation.changes.map(({ inventoryItemId, locationId, delta }) => ({
-          locationId,
-          inventoryItemId,
-          delta,
-          ledgerDocumentUri: mutation.name === 'available' ? undefined : documentUri,
+      await insertInventoryMutationItems(
+        mutation.changes.map(change => ({
+          inventoryMutationId,
+          inventoryItemId: change.inventoryItemId,
+          locationId: change.locationId,
+          delta: change.delta,
+          compareQuantity: null,
+          quantityName: mutation.name,
+          quantity: null,
         })),
-      },
-    });
-  });
+      );
+
+      const documentUri = getInitiatorDocumentUri(mutation.initiator, inventoryMutationId);
+
+      await gql.inventory.adjust.run(graphql, {
+        input: {
+          reason: mutation.reason,
+          name: mutation.name,
+          referenceDocumentUri: documentUri,
+          changes: mutation.changes.map(({ inventoryItemId, locationId, delta }) => ({
+            locationId,
+            inventoryItemId,
+            delta,
+            ledgerDocumentUri: mutation.name === 'available' ? undefined : documentUri,
+          })),
+        },
+      });
+    }),
+  );
 }
 
-function getInitiatorDocumentUri(initiator: InventoryMutationInitiator) {
-  return `workmate://${encodeURIComponent(initiator.type)}/${encodeURIComponent(initiator.name)}`;
+function getInitiatorDocumentUri(initiator: InventoryMutationInitiator, mutationId: number) {
+  const searchParams = new URLSearchParams({ mutationId: String(mutationId) });
+  return `workmate://${encodeURIComponent(initiator.type)}/${encodeURIComponent(initiator.name)}?${searchParams.toString()}`;
 }
 
 /**
@@ -154,12 +229,24 @@ export type InventoryMutationInitiator =
       name: string;
     }
   | {
+      type: 'purchase-order-receipt';
+      name: string;
+    }
+  | {
       type: 'stock-transfer';
       name: string;
     }
   | {
       type: 'cycle-count';
       name: string;
+    }
+  | {
+      type: 'work-order';
+      name: string;
+    }
+  | {
+      type: 'unknown';
+      name: 'unknown';
     };
 
 /**
@@ -183,7 +270,7 @@ export type SetInventoryQuantities = {
   type: 'set';
   initiator: InventoryMutationInitiator;
   reason: InventoryMutationReason;
-  name: InventoryState;
+  name: InventoryState & ('available' | 'on_hand');
   changes: {
     locationId: ID;
     inventoryItemId: ID;
@@ -197,7 +284,7 @@ export type SetInventoryQuantities = {
   }[];
 };
 
-type AdjustInventoryQuantities = {
+export type AdjustInventoryQuantities = {
   type: 'adjust';
   initiator: InventoryMutationInitiator;
   reason: InventoryMutationReason;

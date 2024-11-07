@@ -1317,8 +1317,11 @@ enum InventoryMutationType {
 
 enum InventoryMutationInitiatorType {
   PURCHASE_ORDER
+  PURCHASE_ORDER_RECEIPT
   STOCK_TRANSFER
   CYCLE_COUNT
+  WORK_ORDER
+  UNKNOWN
 }
 
 model InventoryMutation {

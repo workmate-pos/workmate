@@ -1,11 +1,22 @@
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { escapeLike } from '../db/like.js';
 import { sql, sqlOne } from '../db/sql-tag.js';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 
 export type InventoryMutationType = 'MOVE' | 'SET' | 'ADJUST';
-export type InventoryMutationInitiatorType = 'PURCHASE_ORDER' | 'STOCK_TRANSFER' | 'CYCLE_COUNT';
+export type InventoryMutationInitiatorType =
+  | 'PURCHASE_ORDER'
+  | 'PURCHASE_ORDER_RECEIPT'
+  | 'STOCK_TRANSFER'
+  | 'CYCLE_COUNT'
+  | 'WORK_ORDER'
+  | 'UNKNOWN';
+
+export type InventoryMutation = Awaited<ReturnType<typeof getInventoryMutations>>['mutations'][number];
+export type InventoryMutationItem = Awaited<ReturnType<typeof getInventoryMutationItems>>[number];
 
 export async function insertInventoryMutation({
   shop,
@@ -14,7 +25,7 @@ export async function insertInventoryMutation({
 }: {
   shop: string;
   type: InventoryMutationType;
-  initiator: {
+  initiator?: {
     type: InventoryMutationInitiatorType;
     name: string;
   };
@@ -23,8 +34,8 @@ export async function insertInventoryMutation({
     INSERT INTO "InventoryMutation" (shop, type, "initiatorType", "initiatorName")
     VALUES (${shop},
             ${type} :: "InventoryMutationType",
-            ${initiator.type} :: "InventoryMutationInitiatorType",
-            ${initiator.name})
+            ${initiator?.type} :: "InventoryMutationInitiatorType",
+            ${initiator?.name})
     RETURNING id;
   `.then(row => row.id);
 }
@@ -38,7 +49,7 @@ export async function getInventoryMutations(
     inventoryItemId,
     locationId,
     sortOrder = 'descending',
-    sortMode = 'createdAt',
+    sortMode = 'updatedAt',
     offset,
     limit,
   }: {
@@ -88,11 +99,19 @@ export async function getInventoryMutations(
              CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'ascending' THEN m."updatedAt" END ASC NULLS LAST,
              CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'descending' THEN m."updatedAt" END DESC NULLS LAST,
              --
-             CASE WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'ascending' THEN m."initiatorName" END ASC NULLS LAST,
-             CASE WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'descending' THEN m."initiatorName" END DESC NULLS LAST,
+             CASE
+               WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'ascending'
+                 THEN m."initiatorName" END ASC NULLS LAST,
+             CASE
+               WHEN ${sortMode} = 'initiatorName' AND ${sortOrder} = 'descending'
+                 THEN m."initiatorName" END DESC NULLS LAST,
              --
-             CASE WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'ascending' THEN m."initiatorType" END ASC NULLS LAST,
-             CASE WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'descending' THEN m."initiatorType" END DESC NULLS LAST
+             CASE
+               WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'ascending'
+                 THEN m."initiatorType" END ASC NULLS LAST,
+             CASE
+               WHEN ${sortMode} = 'initiatorType' AND ${sortOrder} = 'descending'
+                 THEN m."initiatorType" END DESC NULLS LAST
     LIMIT ${limit + 1} OFFSET ${offset ?? null}
   `;
 
@@ -100,6 +119,46 @@ export async function getInventoryMutations(
     mutations: mutations.slice(0, limit),
     hasNextPage: mutations.length > limit,
   };
+}
+
+export async function getInventoryMutationItems({ inventoryMutationIds }: { inventoryMutationIds: number[] }) {
+  if (!inventoryMutationIds.length) {
+    return [];
+  }
+
+  return await sql<{
+    id: number;
+    inventoryMutationId: number;
+    inventoryItemId: string;
+    name: string;
+    locationId: string;
+    compareQuantity: number | null;
+    quantity: number | null;
+    delta: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+    SELECT *
+    FROM "InventoryMutationItem"
+    WHERE "inventoryMutationId" = ANY (${inventoryMutationIds})
+    ORDER BY "updatedAt" ASC;
+  `.then(items =>
+    items.map(({ inventoryItemId, locationId, ...item }) => {
+      try {
+        assertGid(inventoryItemId);
+        assertGid(locationId);
+
+        return {
+          ...item,
+          inventoryItemId,
+          locationId,
+        };
+      } catch (error) {
+        sentryErr(error, { item });
+        throw new HttpError('Failed to parse inventory mutation item', 500);
+      }
+    }),
+  );
 }
 
 export async function insertInventoryMutationItems(

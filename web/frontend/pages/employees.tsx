@@ -305,7 +305,7 @@ function Employees() {
             resourceName={{ singular: 'employee', plural: 'employees' }}
           >
             {!page &&
-              Array.from({ length: employeePageSize }).map((_, i) => (
+              Array.from({ length: employeePageSize }, (_, i) => (
                 <IndexTable.Row key={i} id={String(i)} selected={false} position={i}>
                   <IndexTable.Cell>
                     <SkeletonBodyText lines={1} />

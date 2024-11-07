@@ -3,13 +3,11 @@ import { CreateStockTransfer } from '../../schemas/generated/create-stock-transf
 import { validateCreateStockTransfer } from './validate.js';
 import { getNewTransferOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
-import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { Int, InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { gql } from '../gql/gql.js';
 import {
   getStockTransfer,
   getStockTransferLineItems,
@@ -22,6 +20,7 @@ import {
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
 import { httpError } from '../../util/http-error.js';
+import { AdjustInventoryQuantities, mutateInventoryQuantities } from '../inventory/adjust.js';
 
 export async function upsertCreateStockTransfer(
   session: Session,
@@ -141,38 +140,43 @@ async function adjustShopifyInventory(
     }
   }
 
-  const availableChanges: InventoryChangeInput[] = [];
-  const incomingChanges: InventoryChangeInput[] = [];
-
-  const ledgerDocumentUri = `workmate://stock-transfer/${encodeURIComponent(name)}`;
+  const availableChanges: AdjustInventoryQuantities['changes'] = [];
+  const incomingChanges: AdjustInventoryQuantities['changes'] = [];
 
   for (const [locationId, deltasByInventoryItem] of entries(deltaByLocationByInventoryItem)) {
     for (const [inventoryItemId, deltas] of entries(deltasByInventoryItem)) {
       availableChanges.push({
         locationId,
         inventoryItemId,
-        delta: deltas.available as Int,
+        delta: deltas.available,
       });
 
       incomingChanges.push({
         locationId,
         inventoryItemId,
-        delta: deltas.incoming as Int,
-        ledgerDocumentUri,
+        delta: deltas.incoming,
       });
     }
   }
 
-  const graphql = new Graphql(session);
-
   try {
-    // TODO: use this once it releases: https://shopify.dev/docs/api/admin-graphql/2024-07/mutations/inventorySetQuantities
-    //  -> current mutation is not atomic bcs its 2 mutations in 1
-    await gql.inventory.adjustIncomingAvailable.run(graphql, {
-      reason: 'other',
-      availableChanges,
-      incomingChanges,
-    });
+    // this cannot be done atomically currently because `setQuantities` only supports available/on_hand
+    await Promise.all([
+      mutateInventoryQuantities(session, {
+        type: 'adjust',
+        initiator: { type: 'stock-transfer', name },
+        reason: 'movement_updated',
+        name: 'available',
+        changes: availableChanges,
+      }),
+      mutateInventoryQuantities(session, {
+        type: 'adjust',
+        initiator: { type: 'stock-transfer', name },
+        reason: 'movement_updated',
+        name: 'incoming',
+        changes: incomingChanges,
+      }),
+    ]);
   } catch (error) {
     if (error instanceof GraphqlUserErrors) {
       sentryErr('Failed to adjust inventory', { userErrors: error.userErrors });
