@@ -19,13 +19,16 @@ import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { getDetailedPurchaseOrder } from './get.js';
 import { getNewPurchaseOrderReceiptName } from '../id-formatting.js';
 import { MoveInventoryQuantities, mutateInventoryQuantities } from '../inventory/adjust.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 export async function upsertReceipt(
   session: Session,
+  user: LocalsTeifiUser,
   purchaseOrderName: string,
   upsertPurchaseOrderReceipt: UpsertPurchaseOrderReceipt,
-  locationIds: ID[] | null,
 ) {
+  const locationIds = user.user.allowedLocationIds;
+
   const [purchaseOrder, purchaseOrderId] = await Promise.all([
     getDetailedPurchaseOrder(session, purchaseOrderName, locationIds),
     getPurchaseOrder({ shop: session.shop, name: purchaseOrderName, locationIds }).then(po => po?.id),
@@ -107,7 +110,7 @@ export async function upsertReceipt(
     );
 
     if (purchaseOrder) {
-      await adjustShopifyInventory(session, purchaseOrder, { ...upsertPurchaseOrderReceipt, name });
+      await adjustShopifyInventory(session, user, purchaseOrder, { ...upsertPurchaseOrderReceipt, name });
     }
   });
 }
@@ -118,6 +121,7 @@ export async function upsertReceipt(
  */
 async function adjustShopifyInventory(
   session: Session,
+  user: LocalsTeifiUser,
   purchaseOrder: DetailedPurchaseOrder,
   receipt: UpsertPurchaseOrderReceipt & { name: string },
 ) {
@@ -155,6 +159,7 @@ async function adjustShopifyInventory(
         name: receipt.name,
       },
       reason: 'received',
+      staffMemberId: user.staffMember.id,
       changes,
     });
   } catch (error) {

@@ -12,12 +12,14 @@ import { gql } from '../gql/gql.js';
 import { unit } from '../db/unit-of-work.js';
 import { isLineItemId } from '../../util/assertions.js';
 import { InventoryMutationInitiator, mutateInventoryQuantities } from '../inventory/adjust.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 /**
  * Moves inventory stock from "available" to "reserved" for a given line item.
  */
 export async function reserveLineItemQuantity(
   session: Session,
+  user: LocalsTeifiUser,
   initiator: InventoryMutationInitiator,
   locationId: ID,
   lineItemId: ID,
@@ -38,6 +40,7 @@ export async function reserveLineItemQuantity(
     type: 'move',
     reason: 'reservation_created',
     initiator,
+    staffMemberId: user.staffMember.id,
     changes: [
       {
         quantity,
@@ -110,6 +113,7 @@ async function revertShopifyReservationQuantities(
       name: 'unknown',
     },
     reason: 'reservation_deleted',
+    staffMemberId: null,
     changes: reservations.map(({ quantity, locationId }) => ({
       locationId,
       inventoryItemId,

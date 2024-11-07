@@ -68,6 +68,7 @@ export async function upsertCreateStockTransfer(
 
     await adjustShopifyInventory(
       session,
+      user,
       stockTransfer.name,
       getLocationIds(previousStockTransfer),
       getLocationIds(stockTransfer),
@@ -81,6 +82,7 @@ export async function upsertCreateStockTransfer(
 
 async function adjustShopifyInventory(
   session: Session,
+  user: LocalsTeifiUser,
   name: string,
   previousLocations: { from: ID | null; to: ID | null },
   currentLocations: { from: ID | null; to: ID | null },
@@ -167,6 +169,7 @@ async function adjustShopifyInventory(
         initiator: { type: 'stock-transfer', name },
         reason: 'movement_updated',
         name: 'available',
+        staffMemberId: user.staffMember.id,
         changes: availableChanges,
       }),
       mutateInventoryQuantities(session, {
@@ -174,6 +177,7 @@ async function adjustShopifyInventory(
         initiator: { type: 'stock-transfer', name },
         reason: 'movement_updated',
         name: 'incoming',
+        staffMemberId: user.staffMember.id,
         changes: incomingChanges,
       }),
     ]);

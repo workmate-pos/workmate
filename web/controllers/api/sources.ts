@@ -6,6 +6,7 @@ import { reserveLineItemQuantity } from '../../services/sourcing/reserve.js';
 import { ReserveInventoryForLineItems } from '../../schemas/generated/reserve-inventory-for-line-items.js';
 import { unit } from '../../services/db/unit-of-work.js';
 import { getLineItemSources } from '../../services/sourcing/line-item-sources.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 @Authenticated()
 export default class LineItemsController {
@@ -36,6 +37,7 @@ export default class LineItemsController {
     res: Response<ReserveInventoryForLineItemsResponse>,
   ) {
     const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
     const { reservations } = req.body;
 
     await unit(() =>
@@ -43,6 +45,7 @@ export default class LineItemsController {
         reservations.map(({ quantity, locationId, lineItemId }) =>
           reserveLineItemQuantity(
             session,
+            user,
             // TODO: Add to reservation table
             {
               type: 'unknown',

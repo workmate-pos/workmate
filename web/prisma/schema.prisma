@@ -1333,6 +1333,9 @@ model InventoryMutation {
   initiatorType InventoryMutationInitiatorType
   initiatorName String
 
+  // The staff member that initiated the mutation
+  staffMemberId String?
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
@@ -1355,10 +1358,10 @@ model InventoryMutationItem {
   compareQuantity Int?
 
   // type = set / move
-  quantity        Int?
+  quantity Int?
 
   // type = adjust
-  delta           Int?
+  delta Int?
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)

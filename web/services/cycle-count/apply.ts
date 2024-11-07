@@ -75,6 +75,7 @@ export async function applyCycleCountItems(session: Session, user: LocalsTeifiUs
         },
         name: 'available',
         reason: 'cycle_count_available',
+        staffMemberId: user.staffMember.id,
         changes: itemApplications.map(({ originalQuantity, countQuantity, uuid }) => ({
           locationId: cycleCount.locationId,
           quantity: countQuantity,

@@ -1,17 +1,23 @@
 import { Fetch } from './fetch.js';
 import { InventoryMutationItemsPaginationOptions } from '@web/schemas/generated/inventory-mutation-items-pagination-options.js';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 import { NestedDateTimeToDate } from '../types/NestedDateTimeToDate.js';
 import { FetchInventoryMutationItemsResponse } from '@web/controllers/api/inventory.js';
 
-export const useInventoryMutationItemsQuery = ({
-  fetch,
-  options = {},
-}: {
-  fetch: Fetch;
-  options?: Omit<InventoryMutationItemsPaginationOptions, 'offset'>;
-}) =>
+export const useInventoryMutationItemsQuery = (
+  {
+    fetch,
+    options = {},
+  }: {
+    fetch: Fetch;
+    options?: Omit<InventoryMutationItemsPaginationOptions, 'offset'>;
+  },
+  queryOptions?: {
+    keepPreviousData?: boolean;
+  },
+) =>
   useInfiniteQuery({
+    placeholderData: queryOptions?.keepPreviousData ? keepPreviousData : undefined,
     queryKey: ['inventory-mutation-items', options],
     queryFn: async ({ pageParam: offset }): Promise<NestedDateTimeToDate<FetchInventoryMutationItemsResponse>> => {
       const searchParams = new URLSearchParams(

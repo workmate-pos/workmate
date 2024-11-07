@@ -27,7 +27,18 @@
       "enum": ["ascending", "descending"]
     },
     "sortMode": {
-      "enum": ["createdAt", "updatedAt", "initiatorName", "initiatorType"]
+      "enum": [
+        "createdAt",
+        "updatedAt",
+        "initiatorName",
+        "initiatorType",
+        "locationId",
+        "staffMemberId",
+        "inventoryItemId",
+        "available",
+        "incoming",
+        "reserved"
+      ]
     },
     "initiatorType": {
       "enum": ["PURCHASE_ORDER", "PURCHASE_ORDER_RECEIPT", "STOCK_TRANSFER", "CYCLE_COUNT", "WORK_ORDER", "UNKNOWN"]

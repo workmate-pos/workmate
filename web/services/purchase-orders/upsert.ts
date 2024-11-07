@@ -157,7 +157,7 @@ export async function upsertCreatePurchaseOrder(
     };
   }).then(async ({ existingPurchaseOrder, newPurchaseOrder, name }) => {
     await Promise.all([
-      adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder),
+      adjustShopifyInventory(session, user, existingPurchaseOrder, newPurchaseOrder),
       adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder),
     ]);
 
@@ -282,6 +282,7 @@ function assertNoIllegalLineItemChanges(
  */
 async function adjustShopifyInventory(
   session: Session,
+  user: LocalsTeifiUser,
   oldPurchaseOrder: DetailedPurchaseOrder | null,
   newPurchaseOrder: DetailedPurchaseOrder,
 ) {
@@ -332,6 +333,7 @@ async function adjustShopifyInventory(
       reason: 'restock',
       name: 'incoming',
       changes: incomingChanges,
+      staffMemberId: user.staffMember.id,
     });
   } catch (error) {
     if (error instanceof GraphqlUserErrors) {

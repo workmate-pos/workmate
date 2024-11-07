@@ -48,6 +48,7 @@ async function moveInventoryQuantities(session: Session, mutation: MoveInventory
         shop,
         type: 'MOVE',
         initiator: { name: mutation.initiator.name, type: MUTATION_INITIATOR_TYPE[mutation.initiator.type] },
+        staffMemberId: mutation.staffMemberId,
       });
 
       await insertInventoryMutationItems(
@@ -103,6 +104,7 @@ async function setInventoryQuantities(session: Session, mutation: SetInventoryQu
         shop,
         type: 'SET',
         initiator: { name: mutation.initiator.name, type: MUTATION_INITIATOR_TYPE[mutation.initiator.type] },
+        staffMemberId: mutation.staffMemberId,
       });
 
       await insertInventoryMutationItems(
@@ -147,6 +149,7 @@ async function adjustInventoryQuantities(session: Session, mutation: AdjustInven
         shop,
         type: 'ADJUST',
         initiator: { name: mutation.initiator.name, type: MUTATION_INITIATOR_TYPE[mutation.initiator.type] },
+        staffMemberId: mutation.staffMemberId,
       });
 
       await insertInventoryMutationItems(
@@ -257,6 +260,7 @@ export type MoveInventoryQuantities = {
   type: 'move';
   initiator: InventoryMutationInitiator;
   reason: InventoryMutationReason;
+  staffMemberId: ID | null;
   changes: {
     locationId: ID;
     inventoryItemId: ID;
@@ -271,6 +275,7 @@ export type SetInventoryQuantities = {
   initiator: InventoryMutationInitiator;
   reason: InventoryMutationReason;
   name: InventoryState & ('available' | 'on_hand');
+  staffMemberId: ID | null;
   changes: {
     locationId: ID;
     inventoryItemId: ID;
@@ -289,6 +294,7 @@ export type AdjustInventoryQuantities = {
   initiator: InventoryMutationInitiator;
   reason: InventoryMutationReason;
   name: InventoryState;
+  staffMemberId: ID | null;
   changes: {
     inventoryItemId: ID;
     locationId: ID;
