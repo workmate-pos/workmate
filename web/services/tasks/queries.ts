@@ -366,11 +366,15 @@ export async function insertTaskWorkOrderLinks(taskId: number, shop: string, wor
   `;
 }
 
-export async function deleteTaskWorkOrderLinks(taskId: number) {
+export async function deleteTaskWorkOrderLinks({
+  taskId,
+  workOrderId,
+}: MergeUnion<{ taskId: number } | { workOrderId: number }>) {
   await sql`
     DELETE
     FROM "TaskWorkOrderLink"
-    WHERE "taskId" = ${taskId};
+    WHERE "taskId" = COALESCE(${taskId ?? null}, "taskId")
+      AND "workOrderId" = COALESCE(${workOrderId ?? null}, "workOrderId");
   `;
 }
 
@@ -471,7 +475,7 @@ export async function deleteTaskSerialLinks(taskId: number) {
 export async function deleteTaskLinks(taskId: number) {
   await unit(async () => {
     await Promise.all([
-      deleteTaskWorkOrderLinks(taskId),
+      deleteTaskWorkOrderLinks({ taskId }),
       deleteTaskPurchaseOrderLinks({ taskId }),
       deleteTaskSpecialOrderLinks(taskId),
       deleteTaskTransferOrderLinks(taskId),

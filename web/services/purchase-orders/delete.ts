@@ -6,6 +6,8 @@ import * as queries from './queries.js';
 import { unit } from '../db/unit-of-work.js';
 import { deleteTaskPurchaseOrderLinks } from '../tasks/queries.js';
 
+// TODO: Show individual delete button in purchase order/work order too OR reason for not being able to delete
+
 export async function deletePurchaseOrder(session: Session, user: LocalsTeifiUser, name: string) {
   await unit(async () => {
     const [purchaseOrder, purchaseOrderId] = await Promise.all([

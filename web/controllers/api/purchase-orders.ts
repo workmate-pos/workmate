@@ -74,7 +74,10 @@ export default class PurchaseOrdersController {
   @Permission('write_purchase_orders')
   @Authenticated()
   @BodySchema('bulk-delete-purchase-orders')
-  async bulkDeletePurchaseOrders(req: Request<unknown, unknown, BulkDeletePurchaseOrders>, res: Response) {
+  async bulkDeletePurchaseOrders(
+    req: Request<unknown, unknown, BulkDeletePurchaseOrders>,
+    res: Response<BulkDeletePurchaseOrdersResponse>,
+  ) {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const bulkDeletePurchaseOrders = req.body;

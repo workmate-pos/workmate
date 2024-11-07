@@ -22,10 +22,10 @@ import {
   getWorkOrderItems,
   insertWorkOrderCustomFields,
   insertWorkOrderItemCustomFields,
-  removeWorkOrderCharges,
-  removeWorkOrderCustomFields,
-  removeWorkOrderItemCustomFields,
-  removeWorkOrderItems,
+  deleteWorkOrderChargesByUuids,
+  deleteWorkOrderCustomFields,
+  deleteWorkOrderItemCustomFields,
+  deleteWorkOrderItemsByUuids,
   upsertWorkOrderCharges,
   upsertWorkOrderItems,
 } from './queries.js';
@@ -193,7 +193,7 @@ async function updateWorkOrder(
         getWorkOrderCharges(workOrderId),
       ]);
 
-      await Promise.all([removeWorkOrderCustomFields(workOrderId), removeWorkOrderItemCustomFields(workOrderId)]);
+      await Promise.all([deleteWorkOrderCustomFields(workOrderId), deleteWorkOrderItemCustomFields(workOrderId)]);
 
       await upsertItems(session, createWorkOrder, workOrderId, currentItems);
       await upsertCharges(session, createWorkOrder, workOrderId, currentCharges);
@@ -332,7 +332,7 @@ async function deleteItems(createWorkOrder: CreateWorkOrder, workOrderId: number
   const newItemUuids = new Set(createWorkOrder.items.map(item => item.uuid));
   const deletedItemUuids = currentItems.map(item => item.uuid as UUID).filter(uuid => !newItemUuids.has(uuid));
 
-  await removeWorkOrderItems(workOrderId, deletedItemUuids);
+  await deleteWorkOrderItemsByUuids(workOrderId, deletedItemUuids);
 }
 
 async function deleteCharges(
@@ -343,5 +343,5 @@ async function deleteCharges(
   const newChargeUuids = new Set(createWorkOrder.charges.map(charge => charge.uuid));
   const deletedChargeUuids = currentCharges.map(charge => charge.uuid).filter(uuid => !newChargeUuids.has(uuid));
 
-  await removeWorkOrderCharges(workOrderId, deletedChargeUuids);
+  await deleteWorkOrderChargesByUuids(workOrderId, deletedChargeUuids);
 }
