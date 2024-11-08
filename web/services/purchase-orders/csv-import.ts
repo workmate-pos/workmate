@@ -21,6 +21,7 @@ const CsvPurchaseOrderId = z
 
 const CsvPurchaseOrderInfo = z.object({
   ID: CsvPurchaseOrderId,
+  Type: z.enum(['NORMAL', 'DROPSHIP']),
   Status: z.string(),
   PlacedDate: zCsvNullable(zDateTime),
   LocationID: zNamespacedID('Location'),
@@ -112,6 +113,7 @@ export async function readPurchaseOrderCsvImport({
 
       createPurchaseOrders[data.ID] = {
         name: null,
+        type: data.Type,
         status: data.Status,
         placedDate: data.PlacedDate,
         locationId: data.LocationID,

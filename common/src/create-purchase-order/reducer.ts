@@ -6,28 +6,30 @@ import { uuid } from '@work-orders/common/util/uuid.js';
 
 export type CreatePurchaseOrderAction =
   | ({
-      type: 'setPartial';
+      action: 'setPartial';
     } & Partial<CreatePurchaseOrder>)
   | {
-      type: 'addProducts';
+      action: 'addProducts';
       products: Product[];
     }
   | {
-      type: 'updateProduct';
+      action: 'updateProduct';
       product: Product;
     }
   | ({
-      type: 'set';
+      action: 'set';
     } & CreatePurchaseOrder)
   | ({
-      type: 'setVendor';
+      action: 'setVendor';
     } & Pick<CreatePurchaseOrder, 'vendorName'>)
   | ({
-      type: 'setLocation';
+      action: 'setLocation';
     } & Pick<CreatePurchaseOrder, 'locationId'>);
 
 export type CreatePurchaseOrderDispatchProxy = {
-  [type in CreatePurchaseOrderAction['type']]: (args: Omit<CreatePurchaseOrderAction & { type: type }, 'type'>) => void;
+  [action in CreatePurchaseOrderAction['action']]: (
+    args: Omit<CreatePurchaseOrderAction & { action: action }, 'action'>,
+  ) => void;
 };
 
 export type UseCreatePurchaseOrderReactContext = {
@@ -49,9 +51,9 @@ export const useCreatePurchaseOrderReducer = (
 
   const proxy = useRef(
     new Proxy<CreatePurchaseOrderDispatchProxy>({} as CreatePurchaseOrderDispatchProxy, {
-      get: (target, prop) => (args: DiscriminatedUnionOmit<CreatePurchaseOrderAction, 'type'>) => {
+      get: (target, prop) => (args: DiscriminatedUnionOmit<CreatePurchaseOrderAction, 'action'>) => {
         setHasUnsavedChanges(true);
-        dispatchCreatePurchaseOrder({ type: prop, ...args } as CreatePurchaseOrderAction);
+        dispatchCreatePurchaseOrder({ action: prop, ...args } as CreatePurchaseOrderAction);
       },
     }),
   ).current;
@@ -61,19 +63,19 @@ export const useCreatePurchaseOrderReducer = (
 
 function createPurchaseOrderReducer(
   createPurchaseOrder: CreatePurchaseOrder,
-  action: CreatePurchaseOrderAction,
+  _action: CreatePurchaseOrderAction,
 ): CreatePurchaseOrder {
-  switch (action.type) {
+  switch (_action.action) {
     case 'setPartial':
     case 'setVendor':
     case 'setLocation':
     case 'set': {
-      const { type, ...partial } = action;
+      const { action, ...partial } = _action;
       const partialNotUndefined: Partial<CreatePurchaseOrder> = Object.fromEntries(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );
 
-      if (action.type === 'setVendor') {
+      if (_action.action === 'setVendor') {
         partialNotUndefined.lineItems = [];
       }
 
@@ -83,7 +85,7 @@ function createPurchaseOrderReducer(
     case 'addProducts': {
       return {
         ...createPurchaseOrder,
-        lineItems: fixLineItems([...createPurchaseOrder.lineItems, ...action.products]),
+        lineItems: fixLineItems([...createPurchaseOrder.lineItems, ..._action.products]),
       };
     }
 
@@ -92,14 +94,14 @@ function createPurchaseOrderReducer(
         ...createPurchaseOrder,
         lineItems: fixLineItems(
           createPurchaseOrder.lineItems.map(product =>
-            product.uuid === action.product.uuid ? action.product : product,
+            product.uuid === _action.product.uuid ? _action.product : product,
           ),
         ),
       };
     }
 
     default:
-      return action satisfies never;
+      return _action satisfies never;
   }
 }
 

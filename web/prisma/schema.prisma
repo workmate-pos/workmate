@@ -361,10 +361,18 @@ enum AppPlanInterval {
   ANNUAL
 }
 
+enum PurchaseOrderType {
+  // A typical purchase order.
+  NORMAL
+  // A purchase order for a drop ship. The only difference is that inventory is not tracked.
+  DROPSHIP
+}
+
 model PurchaseOrder {
   id Int @id @default(autoincrement())
 
   shop String
+  type PurchaseOrderType
 
   shipFrom String
   shipTo   String
