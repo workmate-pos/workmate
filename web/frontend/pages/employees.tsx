@@ -88,7 +88,7 @@ function Employees() {
     hash(employeeRoles) !== hash(lastSavedEmployeeRoles) ||
     hash(employeeSuperuser) !== hash(lastSavedEmployeeSuperuser) ||
     hash(employeeLocationIds) !== hash(lastSavedEmployeeLocationIds) ||
-    hash(employeeDefaultLocationId) !== hash(setLastSavedEmployeeDefaultLocationId);
+    hash(employeeDefaultLocationId) !== hash(lastSavedEmployeeDefaultLocationId);
 
   const employeePageSize = 50;
   const employeesQuery = useEmployeesQuery({
@@ -113,7 +113,7 @@ function Employees() {
         setLastSavedEmployeeRoles(employeeRoles);
         setLastSavedEmployeeSuperuser(employeeSuperuser);
         setLastSavedEmployeeLocationIds(employeeLocationIds);
-        setLastSavedEmployeeDefaultLocationId(lastSavedEmployeeDefaultLocationId);
+        setLastSavedEmployeeDefaultLocationId(employeeDefaultLocationId);
         setToastAction({ content: 'Saved employees!' });
       },
       onError() {
@@ -458,8 +458,6 @@ function Employees() {
                     }}
                     disabled={!canWriteEmployees}
                   />
-                  {employeeDefaultLocationId[employee.id]}
-                  {employee.defaultLocationId}
                 </IndexTable.Cell>
               </IndexTable.Row>
             ))}
