@@ -117,10 +117,10 @@ function CycleCounts() {
       <IndexTable
         headings={[
           { title: 'Name' },
+          { title: 'Items' },
           { title: 'Status' },
           { title: 'Location' },
           { title: 'Due Date' },
-          { title: 'Items' },
         ]}
         itemCount={cycleCounts?.pages[page]?.length ?? 0}
         loading={isLoading}
@@ -162,12 +162,12 @@ function CycleCounts() {
                 {count.name}
               </Text>
             </IndexTable.Cell>
+            <IndexTable.Cell>{count.items.length}</IndexTable.Cell>
             <IndexTable.Cell>
               <Badge progress={count.status === 'Draft' ? 'incomplete' : 'complete'}>{count.status}</Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>{count.locationId}</IndexTable.Cell>
             <IndexTable.Cell>{count.dueDate ? new Date(count.dueDate).toLocaleDateString() : '-'}</IndexTable.Cell>
-            <IndexTable.Cell>{count.items.length}</IndexTable.Cell>
           </IndexTable.Row>
         ))}
       </IndexTable>

@@ -98,12 +98,15 @@ export function CycleCountItemsCard({ createCycleCount, cycleCount, dispatch, di
                 >
                   <BlockStack gap="200">
                     <InlineStack gap="200" blockAlign="center">
+                      <Text as="p" variant="bodyMd" fontWeight="bold">
+                        {productName}
+                      </Text>
+                      {/* TODO: move this badge to the thumbnail */}
                       <Badge tone="info">{item.countQuantity.toString()}</Badge>
+                    </InlineStack>
+                    <InlineStack gap="200" blockAlign="center">
                       <Badge tone={applicationBadge.tone}>{applicationBadge.children}</Badge>
                     </InlineStack>
-                    <Text as="p" variant="bodyMd" fontWeight="bold">
-                      {productName}
-                    </Text>
                     {productVariant?.sku && (
                       <Text as="p" variant="bodyMd" tone="subdued">
                         SKU: {productVariant.sku}
