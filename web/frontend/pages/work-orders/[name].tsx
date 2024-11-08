@@ -126,8 +126,9 @@ function WorkOrderLoader() {
     const { workOrders } = settingsQuery.data.settings;
     createWorkOrder = defaultCreateWorkOrder({
       status: workOrders.defaultStatus,
-      locationId: defaultLocationId ?? null,
     });
+
+    createWorkOrder.locationId = defaultLocationId ?? null;
 
     createWorkOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,

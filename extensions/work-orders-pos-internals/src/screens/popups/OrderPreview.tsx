@@ -66,7 +66,6 @@ export function OrderPreview({
         initial: {
           ...defaultCreateWorkOrder({
             status: settingsQuery.data.settings.workOrders.defaultStatus,
-            locationId: null,
           }),
           customerId: order.customer?.id ?? null,
         },

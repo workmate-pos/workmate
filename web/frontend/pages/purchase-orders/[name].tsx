@@ -131,8 +131,9 @@ function PurchaseOrderLoader() {
     const { purchaseOrders } = settingsQuery.data.settings;
     createPurchaseOrder = defaultCreatePurchaseOrder({
       status: purchaseOrders.defaultStatus,
-      locationId: defaultLocationId ?? null,
     });
+
+    createPurchaseOrder.locationId = defaultLocationId ?? null;
 
     createPurchaseOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,

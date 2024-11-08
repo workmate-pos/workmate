@@ -334,7 +334,7 @@ function Employees() {
                     </IndexTable.Cell>
                   )}
                   <IndexTable.Cell>
-                    <Text as="p">Not set</Text>
+                    <Select label={'Default location'} labelHidden disabled />
                   </IndexTable.Cell>
                 </IndexTable.Row>
               ))}
@@ -440,7 +440,7 @@ function Employees() {
                 )}
                 <IndexTable.Cell>
                   <Select
-                    label="Default Location"
+                    label="Default location"
                     labelHidden
                     options={[
                       { label: 'Not set', value: '' },

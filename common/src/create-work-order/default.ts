@@ -1,10 +1,9 @@
-import { CreateWorkOrder, DateTime } from '@web/schemas/generated/create-work-order.js';
+import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { WIPCreateWorkOrder } from './reducer.js';
 import { WEEK_IN_MS } from '@work-orders/common/time/constants.js';
 
 export type CreateWorkOrderBase = {
   status: string;
-  locationId: CreateWorkOrder['locationId'] | null;
 };
 
 export const defaultCreateWorkOrder = (base: CreateWorkOrderBase): WIPCreateWorkOrder => ({
@@ -26,4 +25,5 @@ export const defaultCreateWorkOrder = (base: CreateWorkOrderBase): WIPCreateWork
   companyLocationId: null,
   paymentTerms: null,
   serial: null,
+  locationId: null,
 });

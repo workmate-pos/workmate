@@ -28,8 +28,7 @@ export async function getShopType(graphql: Graphql) {
 }
 
 export async function hasReadUsersScope(graphql: Graphql): Promise<boolean> {
-  return false;
-  // const shopType = await getShopType(graphql);
-  // if (shopType == null) return false;
-  // return ['ADVANCED_SHOPIFY', 'PARTNER_DEVELOPMENT', 'SHOPIFY_PLUS', 'SHOPIFY_PLUS_PARTNER_SANDBOX'].includes(shopType);
+  const shopType = await getShopType(graphql);
+  if (shopType == null) return false;
+  return ['ADVANCED_SHOPIFY', 'PARTNER_DEVELOPMENT', 'SHOPIFY_PLUS', 'SHOPIFY_PLUS_PARTNER_SANDBOX'].includes(shopType);
 }
