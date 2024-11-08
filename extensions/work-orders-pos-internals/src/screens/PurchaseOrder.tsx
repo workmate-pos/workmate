@@ -280,13 +280,31 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               onChange={(shipTo: string) => dispatch.setPartial({ shipTo })}
               disabled={purchaseOrderMutation.isPending}
             />
-            {!!selectedLocation?.address?.formatted &&
+            {createPurchaseOrder.type === 'NORMAL' &&
+              !!selectedLocation?.address?.formatted &&
               createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
                 <FormButton
                   title={'Use location address'}
                   onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
                 />
               )}
+            {createPurchaseOrder.type === 'DROPSHIP' && (
+              <FormButton
+                title={'Select customer address'}
+                onPress={() => {
+                  router.push('CustomerSelector', {
+                    onSelect: customer => {
+                      if (!customer.defaultAddress) {
+                        toast.show('This customer has no known address');
+                        return;
+                      }
+
+                      dispatch.setPartial({ shipTo: customer.defaultAddress.formatted.join('\n') });
+                    },
+                  });
+                }}
+              />
+            )}
           </ResponsiveGrid>
 
           <ResponsiveGrid columns={1}>

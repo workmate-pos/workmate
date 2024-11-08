@@ -2,6 +2,9 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 import { CreatePurchaseOrderDispatchProxy } from '@work-orders/common/create-purchase-order/reducer.js';
 import { BlockStack, Card, Text, TextField } from '@shopify/polaris';
 import { Location } from '@web/frontend/pages/purchase-orders/[name].js';
+import { CustomerSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomerSelectorModal.js';
+import { useToast } from '@teifi-digital/shopify-app-react';
+import { useState } from 'react';
 
 export function PurchaseOrderShippingCard({
   createPurchaseOrder,
@@ -14,6 +17,9 @@ export function PurchaseOrderShippingCard({
   disabled: boolean;
   selectedLocation: Location;
 }) {
+  const [toast, setToastAction] = useToast();
+  const [isCustomerSelectorModalOpen, setIsCustomerSelectorModalOpen] = useState(false);
+
   return (
     <Card>
       <BlockStack gap={'400'}>
@@ -29,6 +35,7 @@ export function PurchaseOrderShippingCard({
           multiline={3}
           disabled={disabled}
         />
+
         <TextField
           label={'Ship to'}
           autoComplete={'off'}
@@ -36,20 +43,42 @@ export function PurchaseOrderShippingCard({
           onChange={(value: string) => dispatch.setPartial({ shipTo: value })}
           multiline={3}
           labelAction={
-            !disabled &&
-            selectedLocation &&
-            createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n')
-              ? {
-                  content: 'Use location address',
-                  onAction() {
-                    dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') });
+            disabled
+              ? undefined
+              : {
+                  NORMAL:
+                    !selectedLocation || createPurchaseOrder.shipTo === selectedLocation.address.formatted.join('\n')
+                      ? undefined
+                      : {
+                          content: 'Use location address',
+                          onAction: () =>
+                            dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') }),
+                        },
+                  DROPSHIP: {
+                    content: 'Select customer address',
+                    onAction: () => setIsCustomerSelectorModalOpen(true),
                   },
-                }
-              : undefined
+                }[createPurchaseOrder.type]
           }
           disabled={disabled}
         />
       </BlockStack>
+
+      <CustomerSelectorModal
+        open={isCustomerSelectorModalOpen}
+        onClose={() => setIsCustomerSelectorModalOpen(false)}
+        onSelect={customer => {
+          if (!customer.defaultAddress) {
+            setToastAction({ content: 'This customer has no known address' });
+            return;
+          }
+
+          dispatch.setPartial({ shipTo: customer.defaultAddress.formatted.join('\n') });
+        }}
+        setToastAction={setToastAction}
+      />
+
+      {toast}
     </Card>
   );
 }
