@@ -82,6 +82,9 @@ function WorkOrderLoader() {
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'WORK_ORDER' });
 
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+  const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
+
   const app = useAppBridge();
   if (!name) {
     Redirect.create(app).dispatch(Redirect.Action.APP, '/work-orders');
@@ -115,9 +118,6 @@ function WorkOrderLoader() {
     );
   }
 
-  // const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
-  // const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
-
   let createWorkOrder;
 
   if (workOrderQuery.data?.workOrder) {
@@ -126,7 +126,7 @@ function WorkOrderLoader() {
     const { workOrders } = settingsQuery.data.settings;
     createWorkOrder = defaultCreateWorkOrder({
       status: workOrders.defaultStatus,
-      locationId: null,
+      locationId: defaultLocationId ?? null,
     });
 
     createWorkOrder.customFields = {
