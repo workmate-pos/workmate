@@ -126,7 +126,7 @@ export async function upsertStaffMembers(
     role: string;
     defaultLocationId: string | null;
   }>`
-      INSERT INTO "Employee" (shop, superuser, rate, name, "isShopOwner", "staffMemberId", email, role, defaultLocationId, permissions)
+      INSERT INTO "Employee" (shop, superuser, rate, name, "isShopOwner", "staffMemberId", email, role, "defaultLocationId", permissions)
       SELECT ${shop}, *, NULL
       FROM UNNEST(
               ${superuser} :: boolean[],
@@ -146,7 +146,7 @@ export async function upsertStaffMembers(
                         "isShopOwner" = EXCLUDED."isShopOwner",
                         email         = EXCLUDED.email,
                         role          = EXCLUDED.role,
-                        defaultLocationId = EXCLUDED.defaultLocationId
+                        "defaultLocationId" = EXCLUDED."defaultLocationId"
       RETURNING *;
   `;
 
