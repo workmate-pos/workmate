@@ -2,26 +2,75 @@ import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/que
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { Button, List, ListRow, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { useRouter } from '../routes.js';
 import { PaginationControls } from '@work-orders/common-pos/components/PaginationControls.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { BigDecimal, Decimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { useScreen } from '@teifi-digital/pos-tools/router';
 
 export function CycleCountProductSelector({ onSelect }: { onSelect: (productVariants: ProductVariant[]) => void }) {
   const { toast } = useApi<'pos.home.modal.render'>();
 
+  const selectProductVariants = (products: ProductVariant[]) => {
+    onSelect(products);
+    toast.show(`Added ${products.length} product${products.length === 1 ? '' : 's'} to cycle count`, {
+      duration: 1000,
+    });
+  };
+
   const [query, setQuery] = useDebouncedState('');
   const [vendorName, setVendorName] = useState<string>();
+  const [importVendorName, setImportVendorName] = useState<string>();
 
   const fetch = useAuthenticatedFetch();
 
-  const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
   const productStatusQuery = 'product_status:active';
+
+  const importVendorProductsQuery = importVendorName ? `vendor:"${escapeQuotationMarks(importVendorName)}"` : '';
+  const importVendorProductVariantsQuery = useProductVariantsQuery({
+    fetch,
+    params: {
+      first: 100,
+      query: [importVendorProductsQuery, productStatusQuery]
+        .filter(Boolean)
+        .map(q => `(${q})`)
+        .join(' AND '),
+    },
+    options: { enabled: !!importVendorName },
+  });
+
+  useEffect(() => {
+    if (!importVendorName) {
+      return;
+    }
+
+    if (importVendorProductVariantsQuery.isError) {
+      toast.show('Error importing vendor products');
+      setImportVendorName(undefined);
+      return;
+    }
+
+    if (!importVendorProductVariantsQuery.isFetching && !importVendorProductVariantsQuery.hasNextPage) {
+      selectProductVariants(importVendorProductVariantsQuery.data?.pages.flat() ?? []);
+      setImportVendorName(undefined);
+    } else if (importVendorProductVariantsQuery.hasNextPage) {
+      importVendorProductVariantsQuery.fetchNextPage();
+    }
+  }, [
+    importVendorName,
+    importVendorProductVariantsQuery.isFetching,
+    importVendorProductVariantsQuery.hasNextPage,
+    importVendorProductVariantsQuery.data,
+  ]);
+
+  const screen = useScreen();
+  screen.setIsLoading(importVendorProductVariantsQuery.isFetching);
+
+  const vendorQuery = vendorName ? `vendor:"${escapeQuotationMarks(vendorName)}"` : '';
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
@@ -32,13 +81,6 @@ export function CycleCountProductSelector({ onSelect }: { onSelect: (productVari
         .join(' AND '),
     },
   });
-
-  const selectProductVariants = (products: ProductVariant[]) => {
-    onSelect(products);
-    const productOrProducts = products.length === 1 ? 'product' : 'products';
-    const productCount = products.length === 1 ? '' : String(products.length);
-    toast.show(`Added ${productCount} ${productOrProducts} to cycle count`.trim(), { duration: 1000 });
-  };
 
   const router = useRouter();
 
@@ -63,7 +105,7 @@ export function CycleCountProductSelector({ onSelect }: { onSelect: (productVari
           title={'Import vendor products'}
           onPress={() =>
             router.push('VendorSelector', {
-              onSelect: (vendorName, productVariants) => selectProductVariants(productVariants),
+              onSelect: vendorName => setImportVendorName(vendorName),
             })
           }
         />
@@ -73,7 +115,6 @@ export function CycleCountProductSelector({ onSelect }: { onSelect: (productVari
           onPress={() =>
             router.push('VendorSelector', {
               onSelect: vendorName => setVendorName(vendorName),
-              loadProductVariants: false,
             })
           }
         />
@@ -136,12 +177,4 @@ function useProductVariantRows(
       rightSide: { showChevron: true },
     };
   });
-}
-
-function decimalToMoneyOrDefault(decimal: Decimal | null | undefined, defaultValue: Money) {
-  if (decimal === null || decimal === undefined) {
-    return defaultValue;
-  }
-
-  return BigDecimal.fromDecimal(decimal).toMoney();
 }
