@@ -14,9 +14,6 @@ import { useWorkOrderQuery } from '@work-orders/common/queries/use-work-order-qu
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
-import { SerialSelectorModal } from '@web/frontend/components/selectors/SerialSelectorModal.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 
@@ -70,12 +67,6 @@ export function WorkOrderGeneralCard({
   const workOrderQuery = useWorkOrderQuery({ fetch, name: createWorkOrder.name });
   const { workOrder } = workOrderQuery.data ?? {};
 
-  const serialProductVariantQuery = useProductVariantQuery({
-    fetch,
-    id: createWorkOrder.serial?.productVariantId ?? null,
-  });
-  const serialProductVariant = serialProductVariantQuery.data;
-
   const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
 
   const paymentTermsQueries = usePaymentTermsTemplatesQueries({
@@ -110,8 +101,6 @@ export function WorkOrderGeneralCard({
 
     return selectedTemplate.name;
   })();
-
-  const [isSerialSelectorOpen, setIsSerialSelectorOpen] = useState(false);
 
   return (
     <>
@@ -223,38 +212,6 @@ export function WorkOrderGeneralCard({
             onFocus={() => onCustomerSelectorClick()}
             disabled={disabled || hasOrder}
             readOnly
-          />
-
-          <SerialSelectorModal
-            open={isSerialSelectorOpen}
-            onClose={() => setIsSerialSelectorOpen(false)}
-            onSelect={serial =>
-              dispatch.setPartial({
-                serial: { productVariantId: serial.productVariant.id, serial: serial.serial },
-              })
-            }
-          />
-
-          <TextField
-            label={'Serial'}
-            disabled={disabled}
-            autoComplete="off"
-            value={
-              createWorkOrder.serial === null
-                ? ''
-                : serialProductVariantQuery.isLoading
-                  ? 'Loading...'
-                  : `${createWorkOrder.serial.serial} - ${getProductVariantName(serialProductVariant) ?? 'Unknown product'}`
-            }
-            onFocus={() => setIsSerialSelectorOpen(true)}
-            labelAction={
-              createWorkOrder.serial !== null && !disabled
-                ? {
-                    content: 'Remove',
-                    onAction: () => dispatch.setPartial({ serial: null }),
-                  }
-                : undefined
-            }
           />
 
           <TextField

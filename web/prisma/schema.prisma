@@ -43,9 +43,6 @@ model WorkOrder {
   note         String
   internalNote String
 
-  productVariantSerial   ProductVariantSerial? @relation(fields: [productVariantSerialId], references: [id])
-  productVariantSerialId Int?
-
   customer   Customer? @relation(fields: [customerId], references: [customerId])
   customerId String
 
@@ -99,6 +96,9 @@ model WorkOrderItem {
   // Can also be set to a draft order line item in case there has not been a check out for this line item yet.
   shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
   shopifyOrderLineItemId String?
+
+  productVariantSerial   ProductVariantSerial? @relation(fields: [productVariantSerialId], references: [id])
+  productVariantSerialId Int?
 
   data Json @db.JsonB
 
@@ -978,7 +978,7 @@ model ProductVariantSerial {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   purchaseOrderLineItems PurchaseOrderLineItem[]
-  workOrders             WorkOrder[]
+  workOrderItems         WorkOrderItem[]
   tasks                  TaskSerialLink[]
 
   @@unique([shop, productVariantId, serial])

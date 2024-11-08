@@ -27,24 +27,6 @@
         }
       ]
     },
-    "serial": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "object",
-          "properties": {
-            "serial": {
-              "type": "string"
-            },
-            "productVariantId": {
-              "$ref": "scalars.json#/definitions/ID"
-            }
-          },
-          "required": ["productVariantId", "serial"],
-          "additionalProperties": false
-        }
-      ]
-    },
     "dueDate": {
       "$ref": "scalars.json#/definitions/DateTime"
     },
@@ -145,6 +127,9 @@
               "quantity": {
                 "$ref": "scalars.json#/definitions/Int"
               },
+              "serial": {
+                "anyOf": [{ "const": null }, { "$ref": "#/definitions/serial" }]
+              },
               "absorbCharges": {
                 "type": "boolean"
               },
@@ -161,7 +146,7 @@
                 "$ref": "scalars.json#/definitions/ID"
               }
             },
-            "required": ["uuid", "quantity", "absorbCharges", "customFields", "type", "productVariantId"],
+            "required": ["uuid", "quantity", "serial", "absorbCharges", "customFields", "type", "productVariantId"],
             "additionalProperties": false
           },
           {
@@ -172,6 +157,9 @@
               },
               "quantity": {
                 "$ref": "scalars.json#/definitions/Int"
+              },
+              "serial": {
+                "anyOf": [{ "const": null }, { "$ref": "#/definitions/serial" }]
               },
               "absorbCharges": {
                 "type": "boolean"
@@ -193,7 +181,7 @@
                 "$ref": "scalars.json#/definitions/Money"
               }
             },
-            "required": ["uuid", "quantity", "absorbCharges", "customFields", "type", "name", "unitPrice"],
+            "required": ["uuid", "quantity", "serial", "absorbCharges", "customFields", "type", "name", "unitPrice"],
             "additionalProperties": false
           }
         ]
@@ -383,5 +371,20 @@
     "serial",
     "locationId"
   ],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "definitions": {
+    "serial": {
+      "type": "object",
+      "properties": {
+        "serial": {
+          "type": "string"
+        },
+        "productVariantId": {
+          "$ref": "scalars.json#/definitions/ID"
+        }
+      },
+      "required": ["productVariantId", "serial"],
+      "additionalProperties": false
+    }
+  }
 }

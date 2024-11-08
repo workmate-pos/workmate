@@ -84,6 +84,10 @@ function mapSerial(pvs: {
 }
 
 export async function getSerialsByIds(serialIds: number[]) {
+  if (serialIds.length === 0) {
+    return [];
+  }
+
   const serials = await sql<{
     id: number;
     shop: string;

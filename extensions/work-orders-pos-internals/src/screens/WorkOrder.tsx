@@ -48,10 +48,7 @@ import {
 } from '@work-orders/common/create-work-order/reducer.js';
 import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
 import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
-import {
-  useProductVariantQueries,
-  useProductVariantQuery,
-} from '@work-orders/common/queries/use-product-variant-query.js';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -296,12 +293,6 @@ function WorkOrderProperties({
   const locationQuery = useLocationQuery({ fetch, id: createWorkOrder.locationId });
   const location = locationQuery.data;
 
-  const serialProductVariantQuery = useProductVariantQuery({
-    fetch,
-    id: createWorkOrder.serial?.productVariantId ?? null,
-  });
-  const serialProductVariant = serialProductVariantQuery.data;
-
   // TODO: Make Previous Order and Previous Work Orders clickable to view history (wrap in selectable or make it a button?)
 
   const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
@@ -480,27 +471,6 @@ function WorkOrderProperties({
             : customerQuery.isLoading
               ? 'Loading...'
               : (customer?.displayName ?? 'Unknown customer')
-        }
-      />
-      <FormStringField
-        label={'Serial'}
-        onFocus={() =>
-          router.push('SerialSelector', {
-            onSelect: serial => {
-              dispatch.setPartial({
-                serial: { productVariantId: serial.productVariant.id, serial: serial.serial },
-              });
-            },
-            onClear: () => dispatch.setPartial({ serial: null }),
-          })
-        }
-        value={
-          createWorkOrder.serial === null
-            ? ''
-            : serialProductVariantQuery.isLoading
-              ? 'Loading...'
-              : `${createWorkOrder.serial.serial} - ` +
-                (getProductVariantName(serialProductVariant) ?? 'Unknown product')
         }
       />
     </ResponsiveGrid>
