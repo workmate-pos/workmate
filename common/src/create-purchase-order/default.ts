@@ -2,6 +2,7 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 
 type BaseCreatePurchaseOrder = {
   status: string;
+  locationId: CreatePurchaseOrder['locationId'] | null;
 };
 
 export const defaultCreatePurchaseOrder = (base: BaseCreatePurchaseOrder): CreatePurchaseOrder => ({
@@ -9,7 +10,6 @@ export const defaultCreatePurchaseOrder = (base: BaseCreatePurchaseOrder): Creat
   name: null,
   note: '',
   placedDate: null,
-  locationId: null,
   customFields: {},
   employeeAssignments: [],
   vendorName: null,

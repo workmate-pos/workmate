@@ -55,6 +55,7 @@ import {
   NewPurchaseOrderReceiptButton,
   PurchaseOrderReceipts,
 } from '@web/frontend/components/purchase-orders/PurchaseOrderReceipts.js';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 
 export default function () {
   return (
@@ -85,6 +86,9 @@ function PurchaseOrderLoader() {
 
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
+
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+  const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
 
   const app = useAppBridge();
   if (!name) {
@@ -125,7 +129,10 @@ function PurchaseOrderLoader() {
     createPurchaseOrder = createPurchaseOrderFromPurchaseOrder(purchaseOrderQuery.data);
   } else {
     const { purchaseOrders } = settingsQuery.data.settings;
-    createPurchaseOrder = defaultCreatePurchaseOrder({ status: purchaseOrders.defaultStatus });
+    createPurchaseOrder = defaultCreatePurchaseOrder({
+      status: purchaseOrders.defaultStatus,
+      locationId: defaultLocationId ?? null,
+    });
 
     createPurchaseOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,
