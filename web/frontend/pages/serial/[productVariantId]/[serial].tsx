@@ -6,6 +6,7 @@ import {
   Button,
   ButtonGroup,
   Card,
+  Checkbox,
   FormLayout,
   Frame,
   InlineStack,
@@ -16,7 +17,6 @@ import {
   Text,
   TextField,
   Thumbnail,
-  Tooltip,
 } from '@shopify/polaris';
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -36,7 +36,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 import { CreateSerial } from '@web/schemas/generated/create-serial.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { LinkedTasks, NewLinkedTaskButton, BaseNewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { LinkedTasks, NewLinkedTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function Serial() {
@@ -56,6 +56,7 @@ export default function Serial() {
   const setSerialNumber = getCreateSerialSetter(setCreateSerial, 'serial');
   const setLocationId = getCreateSerialSetter(setCreateSerial, 'locationId');
   const setNote = getCreateSerialSetter(setCreateSerial, 'note');
+  const setSold = getCreateSerialSetter(setCreateSerial, 'sold');
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -243,6 +244,14 @@ export default function Serial() {
                 onChange={setNote}
               />
 
+              <Checkbox
+                label="Sold"
+                disabled={disabled}
+                checked={createSerial.sold}
+                onChange={setSold}
+                helpText="If checked, the serial will not be accounted for in available inventory quantity."
+              />
+
               <ButtonGroup fullWidth>
                 <Button
                   disabled={disabled || isSerialNumberInUse || !createSerial.serial || serialQuery.isFetching}
@@ -276,7 +285,7 @@ export default function Serial() {
                     items={serial.history}
                     emptyState={
                       <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                        This serial does not have any associated orders.
+                        This serial does not have any associated orders
                       </Text>
                     }
                     renderItem={item => {
