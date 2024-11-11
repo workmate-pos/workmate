@@ -1,4 +1,4 @@
-import { Badge, BlockStack, Card, Text, TextField } from '@shopify/polaris';
+import { Badge, BlockStack, Card, Text, TextField, Select, InlineStack } from '@shopify/polaris';
 import { CreateCycleCount } from '@web/schemas/generated/create-cycle-count.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -27,22 +27,30 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
 
   const dueDateUtc = createCycleCount.dueDate ? new Date(createCycleCount.dueDate) : null;
 
+  const statusOptions = [
+    { label: 'Draft', value: 'draft' },
+    { label: 'In Progress', value: 'in-progress' },
+    { label: 'Completed', value: 'completed' },
+    { label: 'Cancelled', value: 'cancelled' },
+  ];
+
   return (
     <>
       <Card>
         <BlockStack gap="400">
-          <Text as="h2" variant="headingMd" fontWeight="bold">
-            General
-          </Text>
-
-          <TextField
-            label="Status"
-            autoComplete="off"
-            requiredIndicator
-            value={createCycleCount.status}
-            onChange={status => dispatch.setStatus({ status })}
-            disabled={disabled}
-          />
+          <InlineStack align="space-between" blockAlign="center">
+            <Text as="h2" variant="headingMd" fontWeight="bold">
+              General
+            </Text>
+            <Select
+              label="Status"
+              labelHidden
+              options={statusOptions}
+              value={createCycleCount.status}
+              onChange={status => dispatch.setStatus({ status })}
+              disabled={disabled}
+            />
+          </InlineStack>
 
           <TextField
             label="Location"
