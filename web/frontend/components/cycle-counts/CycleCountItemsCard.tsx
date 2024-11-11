@@ -28,9 +28,17 @@ interface Props {
   dispatch: CreateCycleCountDispatch;
   disabled: boolean;
   onAddProducts: () => void;
+  onScanProducts: () => void;
 }
 
-export function CycleCountItemsCard({ createCycleCount, cycleCount, dispatch, disabled, onAddProducts }: Props) {
+export function CycleCountItemsCard({
+  createCycleCount,
+  cycleCount,
+  dispatch,
+  disabled,
+  onAddProducts,
+  onScanProducts,
+}: Props) {
   const [toast, setToastAction] = useToast();
   const [selectedItem, setSelectedItem] = useState<CreateCycleCountItem | null>(null);
 
@@ -48,9 +56,14 @@ export function CycleCountItemsCard({ createCycleCount, cycleCount, dispatch, di
           <Text as="p" variant="bodyMd" tone="subdued">
             Add products to begin your cycle count
           </Text>
-          <Button onClick={onAddProducts} disabled={disabled}>
-            Add products
-          </Button>
+          <ButtonGroup fullWidth>
+            <Button onClick={onAddProducts} disabled={disabled}>
+              Add products
+            </Button>
+            <Button onClick={onScanProducts} disabled={disabled}>
+              Scan products
+            </Button>
+          </ButtonGroup>
         </BlockStack>
       </Card>
     );
@@ -124,9 +137,12 @@ export function CycleCountItemsCard({ createCycleCount, cycleCount, dispatch, di
 
           <div style={{ borderTop: '1px solid var(--p-border-subdued)' }}>
             <Box paddingBlockStart="400">
-              <ButtonGroup>
+              <ButtonGroup fullWidth>
                 <Button onClick={onAddProducts} disabled={disabled}>
                   Add products
+                </Button>
+                <Button onClick={onScanProducts} disabled={disabled}>
+                  Scan products
                 </Button>
               </ButtonGroup>
             </Box>

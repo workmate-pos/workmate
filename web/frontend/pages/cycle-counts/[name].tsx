@@ -23,6 +23,7 @@ import { defaultCreateCycleCount } from '@work-orders/common/create-cycle-count/
 import { useAllLocationsQuery } from '@work-orders/common/queries/use-all-locations-query.js';
 import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/ProductVariantSelectorModal.js';
 import type { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
+import { ScanProductModal } from '@web/frontend/components/cycle-counts/modals/ScanProductModal.js';
 
 export default function () {
   return (
@@ -117,6 +118,7 @@ function CycleCount({
 
   const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
 
   const cycleCountMutation = useCycleCountMutation(
     { fetch },
@@ -209,6 +211,7 @@ function CycleCount({
               dispatch={dispatch}
               disabled={cycleCountMutation.isPending}
               onAddProducts={() => setIsProductSelectorOpen(true)}
+              onScanProducts={() => setIsScanModalOpen(true)}
             />
           </Layout.Section>
 
@@ -246,6 +249,31 @@ function CycleCount({
           onClose={() => setIsProductSelectorOpen(false)}
           onSelect={handleProductSelection}
           filters={{ type: 'product' }}
+        />
+      )}
+
+      {isScanModalOpen && (
+        <ScanProductModal
+          open={isScanModalOpen}
+          onClose={() => setIsScanModalOpen(false)}
+          onProductScanned={item => {
+            dispatch.addProductVariants({
+              productVariants: [
+                {
+                  id: item.productVariantId,
+                  title: item.productVariantTitle,
+                  product: {
+                    title: item.productTitle,
+                  },
+                  inventoryItem: {
+                    id: item.inventoryItemId,
+                  },
+                },
+              ],
+            });
+          }}
+          disabled={cycleCountMutation.isPending}
+          setToastAction={setToastAction}
         />
       )}
 
