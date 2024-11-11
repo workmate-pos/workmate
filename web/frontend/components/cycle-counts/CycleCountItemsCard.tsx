@@ -1,4 +1,14 @@
-import { Badge, BlockStack, Card, InlineStack, ResourceItem, ResourceList, Text, Thumbnail } from '@shopify/polaris';
+import {
+  Badge,
+  BlockStack,
+  Card,
+  InlineStack,
+  ResourceItem,
+  ResourceList,
+  Text,
+  Thumbnail,
+  Box,
+} from '@shopify/polaris';
 import { CreateCycleCount, CreateCycleCountItem } from '@web/schemas/generated/create-cycle-count.js';
 import { DetailedCycleCount } from '@web/services/cycle-count/types.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -50,16 +60,9 @@ export function CycleCountItemsCard({ createCycleCount, cycleCount, dispatch, di
     <>
       <Card>
         <BlockStack gap="400">
-          <InlineStack align="space-between">
-            <Text as="h2" variant="headingMd" fontWeight="bold">
-              Products ({createCycleCount.items.length})
-            </Text>
-            <ButtonGroup>
-              <Button onClick={onAddProducts} disabled={disabled}>
-                Add products
-              </Button>
-            </ButtonGroup>
-          </InlineStack>
+          <Text as="h2" variant="headingMd" fontWeight="bold">
+            Products ({createCycleCount.items.length})
+          </Text>
 
           <ResourceList
             items={createCycleCount.items}
@@ -90,10 +93,13 @@ export function CycleCountItemsCard({ createCycleCount, cycleCount, dispatch, di
                   onClick={() => setSelectedItem(item)}
                   disabled={disabled}
                   media={
-                    <Thumbnail
-                      source={productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? ''}
-                      alt={productName ?? ''}
-                    />
+                    <InlineStack gap="200" blockAlign="center">
+                      <Badge tone="info">{item.countQuantity.toString()}</Badge>
+                      <Thumbnail
+                        source={productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? ''}
+                        alt={productName ?? ''}
+                      />
+                    </InlineStack>
                   }
                 >
                   <BlockStack gap="200">
@@ -101,8 +107,6 @@ export function CycleCountItemsCard({ createCycleCount, cycleCount, dispatch, di
                       <Text as="p" variant="bodyMd" fontWeight="bold">
                         {productName}
                       </Text>
-                      {/* TODO: move this badge to the thumbnail */}
-                      <Badge tone="info">{item.countQuantity.toString()}</Badge>
                     </InlineStack>
                     <InlineStack gap="200" blockAlign="center">
                       <Badge tone={applicationBadge.tone}>{applicationBadge.children}</Badge>
@@ -117,6 +121,16 @@ export function CycleCountItemsCard({ createCycleCount, cycleCount, dispatch, di
               );
             }}
           />
+
+          <div style={{ borderTop: '1px solid var(--p-border-subdued)' }}>
+            <Box paddingBlockStart="400">
+              <ButtonGroup>
+                <Button onClick={onAddProducts} disabled={disabled}>
+                  Add products
+                </Button>
+              </ButtonGroup>
+            </Box>
+          </div>
         </BlockStack>
       </Card>
 
