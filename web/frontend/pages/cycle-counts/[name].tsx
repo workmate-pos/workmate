@@ -141,6 +141,37 @@ function CycleCount({
     [dispatch],
   );
 
+  const handleSave = useCallback(() => {
+    if (!createCycleCount.locationId) {
+      setToastAction({ content: 'Location is required' });
+      return;
+    }
+
+    const cleanedItems = (createCycleCount.items || []).map(item => ({
+      uuid: item.uuid,
+      productVariantId: item.productVariantId,
+      inventoryItemId: item.inventoryItemId,
+      countQuantity: item.countQuantity,
+      productTitle: item.productTitle,
+      productVariantTitle: item.productVariantTitle,
+    }));
+
+    const payload: CreateCycleCount = {
+      name: createCycleCount.name,
+      status: createCycleCount.status || 'draft',
+      locationId: createCycleCount.locationId,
+      note: createCycleCount.note || '',
+      items: cleanedItems,
+      employeeAssignments: createCycleCount.employeeAssignments || [],
+      dueDate: createCycleCount.dueDate,
+      locked: createCycleCount.locked || false,
+    };
+
+    console.log('Cleaned payload:', JSON.stringify(payload, null, 2));
+
+    cycleCountMutation.mutate(payload);
+  }, [createCycleCount, cycleCountMutation, setToastAction]);
+
   return (
     <Box paddingBlockEnd={'1600'}>
       <TitleBar title={'Cycle counts'} />
@@ -150,7 +181,7 @@ function CycleCount({
         visible={hasUnsavedChanges}
         saveAction={{
           loading: cycleCountMutation.isPending,
-          onAction: () => cycleCountMutation.mutate(createCycleCount),
+          onAction: handleSave,
           disabled: cycleCountMutation.isPending,
         }}
         discardAction={{
