@@ -143,7 +143,7 @@ export function WorkOrderItemsCard({
         open={!!serialProductVariantId}
         filters={{
           sold: false,
-          locationId: workOrder?.locationId ?? undefined,
+          locationId: createWorkOrder?.locationId ?? undefined,
           productVariantId: serialProductVariantId,
         }}
         onClose={() => setSerialProductVariantId(undefined)}

@@ -249,7 +249,7 @@ export default function Serial() {
                 disabled={disabled}
                 checked={createSerial.sold}
                 onChange={setSold}
-                helpText="If checked, the serial will not be accounted for in available inventory quantity."
+                helpText="If checked, the serial will not be accounted for in available inventory quantity"
               />
 
               <ButtonGroup fullWidth>

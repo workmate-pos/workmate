@@ -27,6 +27,7 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { useSerialQuery } from '@work-orders/common/queries/use-serial-query.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { syncProductUsesSerialNumbersTag } from '@web/services/metafields/product-serial-numbers-metafield.js';
 
 export type ProductVariantSerialSelectorModalProps = {
   onSelect: (serial: string, productVariantId: ID) => void;
@@ -188,16 +189,17 @@ function SerialResourceItem({
 
   const labelText = productVariant ? (
     <Text as="p" variant="bodyMd" fontWeight="bold">
-      {getProductVariantName(productVariant) ?? 'Unknown product variant'}
+      {getProductVariantName(productVariant ?? serial?.productVariant) ?? 'Unknown product variant'}
     </Text>
   ) : (
     <SkeletonBodyText lines={1} />
   );
 
+  const sku = productVariant?.sku ?? serial?.productVariant.sku;
   const skuText = productVariant ? (
-    !!productVariant.sku && (
+    !!sku && (
       <Text as="p" variant="bodyMd" tone="subdued">
-        {productVariant.sku}
+        {sku}
       </Text>
     )
   ) : (
@@ -217,7 +219,6 @@ function SerialResourceItem({
     </Box>
   ) : (
     <Box>
-      {' '}
       <Badge tone="critical">Sold</Badge>
     </Box>
   );
