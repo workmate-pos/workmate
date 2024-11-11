@@ -36,6 +36,7 @@ export async function getSerial({
     locationId: string | null;
     createdAt: Date;
     updatedAt: Date;
+    sold: boolean;
   }>`
     SELECT *
     FROM "ProductVariantSerial" pvs
@@ -65,6 +66,7 @@ function mapSerial(pvs: {
   locationId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  sold: boolean;
 }) {
   const { productVariantId, locationId } = pvs;
 
@@ -97,6 +99,7 @@ export async function getSerialsByIds(serialIds: number[]) {
     locationId: string | null;
     createdAt: Date;
     updatedAt: Date;
+    sold: boolean;
   }>`
     SELECT *
     FROM "ProductVariantSerial"
@@ -125,6 +128,7 @@ export async function getSerialsByProductVariantSerials(
     locationId: string | null;
     createdAt: Date;
     updatedAt: Date;
+    sold: boolean;
   }>`
     SELECT *
     FROM "ProductVariantSerial" pvs
@@ -150,6 +154,7 @@ export async function getSerialsPage(
     sort = 'created-at',
     order = 'ascending',
     offset,
+    sold,
   }: SerialPaginationOptions,
   locationIds: ID[] | null,
 ) {
@@ -163,12 +168,14 @@ export async function getSerialsPage(
     FROM "ProductVariantSerial" pvs
            INNER JOIN "ProductVariant" pv ON pvs."productVariantId" = pv."productVariantId"
            INNER JOIN "Product" p ON pv."productId" = p."productId"
-           LEFT JOIN "WorkOrder" wo ON wo."productVariantSerialId" = pvs.id
+           LEFT JOIN "WorkOrderItem" woi ON woi."productVariantSerialId" = pvs.id
+           LEFT JOIN "WorkOrder" wo ON wo.id = woi."workOrderId"
            LEFT JOIN "Customer" c ON wo."customerId" = c."customerId"
            LEFT JOIN "Location" l ON pvs."locationId" = l."locationId"
     WHERE pvs.shop = ${shop}
       AND wo."customerId" IS NOT DISTINCT FROM COALESCE(${_customerId}, wo."customerId")
       AND pvs."locationId" IS NOT DISTINCT FROM COALESCE(${_locationId}, pvs."locationId")
+      AND pvs.sold = COALESCE(${sold ?? null}, pvs.sold)
       AND (
       pvs."locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY [pvs."locationId"]))
         OR pvs."locationId" IS NULL and ${locationIds as string[]} :: text[] IS NULL
@@ -213,28 +220,31 @@ export async function upsertSerials(
     productVariantId: ID;
     locationId: ID;
     note: string;
+    sold: boolean;
   }[],
 ) {
   if (!isNonEmptyArray(serials)) {
     return;
   }
 
-  const { serial, productVariantId, locationId, note } = nest(serials);
+  const { serial, productVariantId, locationId, note, sold } = nest(serials);
 
   await sql`
-    INSERT INTO "ProductVariantSerial" (shop, serial, "productVariantId", "locationId", note)
+    INSERT INTO "ProductVariantSerial" (shop, serial, "productVariantId", "locationId", note, sold)
     SELECT ${shop}, *
     FROM UNNEST(
       ${serial} :: text[],
       ${productVariantId as string[]} :: text[],
       ${locationId as string[]} :: text[],
-      ${note} :: text[]
+      ${note} :: text[],
+      ${sold} :: boolean[]
          )
     ON CONFLICT (shop, "productVariantId", serial)
       DO UPDATE SET shop               = EXCLUDED.shop,
                     "productVariantId" = EXCLUDED."productVariantId",
                     serial             = EXCLUDED.serial,
                     "locationId"       = EXCLUDED."locationId",
-                    note               = EXCLUDED.note
+                    note               = EXCLUDED.note,
+                    sold               = EXCLUDED.sold;
   `;
 }

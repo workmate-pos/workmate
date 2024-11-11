@@ -7,6 +7,7 @@ import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { string } from '@teifi-digital/shopify-app-toolbox';
 import { UseQueryData } from './react-query.js';
 import { useWorkOrderQuery } from './use-work-order-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export const useSaveWorkOrderMutation = (
   { fetch }: { fetch: Fetch },
@@ -30,23 +31,25 @@ export const useSaveWorkOrderMutation = (
       const workOrder: CreateWorkOrderResponse = await response.json();
       return workOrder;
     },
-    onSuccess(...args) {
+    async onSuccess(...args) {
       const [workOrder] = args;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['work-order-info'] }),
+        queryClient.invalidateQueries({ queryKey: ['serials'] }),
+        workOrder.items
+          .map(item => item.serial)
+          .filter(isNonNullable)
+          .map(serial =>
+            queryClient.invalidateQueries({ queryKey: ['serial', serial.productVariantId, serial.serial] }),
+          ),
+      ]);
 
       queryClient.setQueryData(['work-order', workOrder.name], { workOrder } satisfies UseQueryData<
         typeof useWorkOrderQuery
       >);
 
-      queryClient.invalidateQueries({ queryKey: ['work-order-info'] });
-
-      if (workOrder.serial) {
-        queryClient.invalidateQueries({ queryKey: ['serials'] });
-        queryClient.invalidateQueries({
-          queryKey: ['serial', workOrder.serial.productVariantId, workOrder.serial.serial],
-        });
-      }
-
-      options?.onSuccess?.(...args);
+      await options?.onSuccess?.(...args);
     },
   });
 };

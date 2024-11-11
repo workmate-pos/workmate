@@ -107,6 +107,7 @@ export async function upsertCreatePurchaseOrder(
         locationId: createPurchaseOrder.locationId ?? never('checked this above'),
         customerId: null,
         note: '',
+        sold: false,
       }))
       .filter(hasNonNullableProperty('serial'));
 

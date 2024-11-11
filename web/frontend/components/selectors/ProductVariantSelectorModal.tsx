@@ -1,9 +1,7 @@
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
-import { filters } from 'liquidjs';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
@@ -23,6 +21,8 @@ import {
 } from '@shopify/polaris';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { match } from 'ts-pattern';
+import { USES_SERIAL_NUMBERS_TAG } from '@work-orders/common/metafields/uses-serial-numbers.js';
 
 // TODO: More selectors just like this (same with pos)
 
@@ -31,7 +31,7 @@ export type ProductVariantSelectorModalProps = {
   open: boolean;
   onClose: () => void;
   filters?: {
-    type?: 'product' | 'service';
+    type?: 'product' | 'serial' | 'service';
     status?: ('draft' | 'active')[];
   };
 };
@@ -55,19 +55,23 @@ export function ProductVariantSelectorModal({ onSelect, filters, open, onClose }
       first: 50,
       query: [
         query,
-        status ? `product_status:${status.join(',')}` : null,
-        type === 'product'
-          ? Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
+        status ? `product_status:${status.join(',')}` : '',
+        match(type)
+          .with('product', () =>
+            Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
               .map(tag => `tag_not:"${escapeQuotationMarks(tag)}"`)
-              .join(' AND ')
-          : null,
-        type === 'service'
-          ? Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
+              .join(' AND '),
+          )
+          .with('service', () =>
+            Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
               .map(tag => `tag:"${escapeQuotationMarks(tag)}"`)
-              .join(' OR ')
-          : null,
+              .join(' OR '),
+          )
+          .with('serial', () => `tag:"${escapeQuotationMarks(USES_SERIAL_NUMBERS_TAG)}"`)
+          .with(undefined, () => '')
+          .exhaustive(),
       ]
-        .filter(isNonNullable)
+        .filter(x => !!x.trim())
         .map(q => `(${q})`)
         .join(' AND '),
     },

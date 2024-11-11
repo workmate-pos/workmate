@@ -128,6 +128,7 @@
                 "$ref": "scalars.json#/definitions/Int"
               },
               "serial": {
+                "description": "The serial being sold OR related to this product. If the serial has the same product variant id as the product it is considered being sold.",
                 "anyOf": [{ "const": null }, { "$ref": "#/definitions/serial" }]
               },
               "absorbCharges": {

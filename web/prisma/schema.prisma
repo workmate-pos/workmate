@@ -974,6 +974,9 @@ model ProductVariantSerial {
   locationId String?
   location   Location? @relation(fields: [locationId], references: [locationId])
 
+  // Whether this serial has been sold, i.e. whether it should be in the available inventory quantity or not.
+  sold Boolean
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 

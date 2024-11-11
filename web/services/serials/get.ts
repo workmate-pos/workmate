@@ -51,6 +51,7 @@ export async function getDetailedSerial(
   return {
     serial: serial.serial,
     note: serial.note,
+    sold: serial.sold,
     productVariant: {
       id: productVariant.productVariantId,
       title: productVariant.title,

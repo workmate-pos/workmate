@@ -29,6 +29,10 @@ import { AddProductModal } from '@web/frontend/components/shared-orders/modals/A
 import { groupBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
+import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/ProductVariantSelectorModal.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ProductVariantSerialSelectorModal } from '@web/frontend/components/selectors/ProductVariantSerialSelectorModal.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
 
 export function WorkOrderItemsCard({
   createWorkOrder,
@@ -45,7 +49,9 @@ export function WorkOrderItemsCard({
 }) {
   const [toast, setToastAction] = useToast();
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [isAddSerialModalOpen, setIsAddSerialModalOpen] = useState(false);
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
+  const [serialProductVariantId, setSerialProductVariantId] = useState<ID>();
   const [editItem, setEditItem] = useState<CreateWorkOrder['items'][number] | null>(null);
 
   return (
@@ -68,6 +74,9 @@ export function WorkOrderItemsCard({
         <ButtonGroup fullWidth>
           <Button onClick={() => setIsAddProductModalOpen(true)} disabled={disabled}>
             Add product
+          </Button>
+          <Button onClick={() => setIsAddSerialModalOpen(true)} disabled={disabled}>
+            Add serial
           </Button>
           <Button onClick={() => setIsAddServiceModalOpen(true)} disabled={disabled}>
             Add service
@@ -105,34 +114,67 @@ export function WorkOrderItemsCard({
         />
       )}
 
-      {isAddServiceModalOpen && (
-        <AddProductModal
-          outputType="WORK_ORDER"
-          productType="SERVICE"
-          open={isAddServiceModalOpen}
-          setToastAction={setToastAction}
-          onClose={() => setIsAddServiceModalOpen(false)}
-          onAdd={(items, charges) => {
-            const chargesByItem = groupBy(
-              charges.filter(hasNonNullableProperty('workOrderItemUuid')),
-              charge => charge.workOrderItemUuid,
-            );
+      <ProductVariantSelectorModal
+        onSelect={productVariant => setSerialProductVariantId(productVariant.id)}
+        open={isAddSerialModalOpen}
+        filters={{ type: 'serial', status: ['active'] }}
+        onClose={() => setIsAddSerialModalOpen(false)}
+      />
 
-            for (const charges of Object.values(chargesByItem)) {
-              const [charge = never()] = charges;
-              dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges });
-            }
+      <ProductVariantSerialSelectorModal
+        onSelect={(serial, productVariantId) => {
+          // TODO: Also add default charges
+          dispatch.addItems({
+            items: [
+              {
+                type: 'product',
+                uuid: uuid(),
+                quantity: 1,
+                serial: { serial, productVariantId },
+                absorbCharges: false,
+                // TODO: Default charges
+                customFields: {},
+                productVariantId,
+              },
+            ],
+          });
+          setSerialProductVariantId(undefined);
+        }}
+        open={!!serialProductVariantId}
+        filters={{
+          sold: false,
+          locationId: workOrder?.locationId ?? undefined,
+          productVariantId: serialProductVariantId,
+        }}
+        onClose={() => setSerialProductVariantId(undefined)}
+      />
 
-            dispatch.addItems({ items });
+      <AddProductModal
+        outputType="WORK_ORDER"
+        productType="SERVICE"
+        open={isAddServiceModalOpen}
+        setToastAction={setToastAction}
+        onClose={() => setIsAddServiceModalOpen(false)}
+        onAdd={(items, charges) => {
+          const chargesByItem = groupBy(
+            charges.filter(hasNonNullableProperty('workOrderItemUuid')),
+            charge => charge.workOrderItemUuid,
+          );
 
-            const [item] = items;
-            if (item) {
-              setIsAddServiceModalOpen(false);
-              setEditItem(item);
-            }
-          }}
-        />
-      )}
+          for (const charges of Object.values(chargesByItem)) {
+            const [charge = never()] = charges;
+            dispatch.updateItemCharges({ item: { uuid: charge.workOrderItemUuid }, charges });
+          }
+
+          dispatch.addItems({ items });
+
+          const [item] = items;
+          if (item) {
+            setIsAddServiceModalOpen(false);
+            setEditItem(item);
+          }
+        }}
+      />
 
       {toast}
     </Card>
@@ -227,7 +269,10 @@ function ProductsList({
               <BlockStack gap={'200'}>
                 <InlineStack align={'space-between'} blockAlign={'center'}>
                   <InlineStack gap={'400'}>
-                    {(!hasCharges || item.quantity > 1) && <Badge tone={'info'}>{item.quantity.toString()}</Badge>}
+                    {item.serial && <Badge tone={'info-strong'}>{item.serial.serial}</Badge>}
+                    {!item.serial && (!hasCharges || item.quantity > 1) && (
+                      <Badge tone={'info'}>{item.quantity.toString()}</Badge>
+                    )}
                     {hasCharges && <Badge tone={'magic'}>Has Additional Labour</Badge>}
                     {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
                   </InlineStack>

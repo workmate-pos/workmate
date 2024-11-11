@@ -19,7 +19,6 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useEffect, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -31,7 +30,7 @@ import { WorkOrderCsvUploadDropZoneModal } from '@web/frontend/components/work-o
 export default function () {
   return (
     <Frame>
-      <Page>
+      <Page fullWidth>
         <PermissionBoundary permissions={['read_work_orders', 'read_settings']}>
           <WorkOrders />
         </PermissionBoundary>

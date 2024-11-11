@@ -31,7 +31,7 @@ export const productServiceTypeMetafield: WithRequired<MetafieldDefinitionInput,
 };
 
 /**
- * Syncs the Service Type metafield with the product tags.
+ * Syncs the Service Type metafield with the product tags to make it searchable.
  * Returns whether the sync resulted in a change.
  */
 export async function syncProductServiceTypeTag(session: Session, productId: ID) {

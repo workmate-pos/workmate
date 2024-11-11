@@ -30,6 +30,7 @@ export async function upsertSerial(session: Session, user: LocalsTeifiUser, crea
       productVariantId: createSerial.productVariantId,
       locationId: createSerial.locationId,
       note: createSerial.note,
+      sold: false,
     },
   ]);
 }

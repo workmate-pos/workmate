@@ -1,7 +1,9 @@
 import { SerialPaginationOptions } from '@web/schemas/generated/serial-pagination-options.js';
 import { FetchSerialsResponse } from '@web/controllers/api/serials.js';
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery, UseInfiniteQueryOptions } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
+import { UseQueryData } from './react-query.js';
+import { useSerialQuery } from './use-serial-query.js';
 
 export const useSerialsQuery = ({
   fetch,
@@ -11,8 +13,10 @@ export const useSerialsQuery = ({
   fetch: Fetch;
   params: Omit<SerialPaginationOptions, 'offset'>;
   options?: { enabled?: boolean };
-}) =>
-  useInfiniteQuery({
+}) => {
+  const queryClient = useQueryClient();
+
+  return useInfiniteQuery({
     ...options,
     queryKey: ['serials', params],
     queryFn: async ({ pageParam: offset }) => {
@@ -30,6 +34,14 @@ export const useSerialsQuery = ({
       }
 
       const { serials, hasNextPage }: FetchSerialsResponse = await response.json();
+
+      for (const serial of serials) {
+        queryClient.setQueryData<UseQueryData<typeof useSerialQuery>>(
+          ['serial', serial.productVariant.id, serial.serial],
+          serial,
+        );
+      }
+
       return { serials, hasNextPage };
     },
     initialPageParam: 0,
@@ -42,3 +54,4 @@ export const useSerialsQuery = ({
       pageParams,
     }),
   });
+};
