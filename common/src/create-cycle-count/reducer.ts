@@ -106,12 +106,8 @@ export function useCreateCycleCountReducer(
   const [hasUnsavedChanges, setHasUnsavedChanges] = hooks.useState(false);
   const initialStateRef = hooks.useRef(initialState);
 
-  useEffect(() => {
-    const hasChanges =
-      JSON.stringify(state, Object.keys(state).sort()) !==
+  const hasUnsavedChanges = JSON.stringify(state, Object.keys(state).sort()) !==
       JSON.stringify(initialStateRef.current, Object.keys(initialStateRef.current).sort());
-    setHasUnsavedChanges(hasChanges);
-  }, [state]);
 
   return [
     state,
