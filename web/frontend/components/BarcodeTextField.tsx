@@ -14,15 +14,15 @@ import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fet
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
+import { useToast } from '@teifi-digital/shopify-app-react';
 
-interface Props {
+type Props = {
   onProductScanned: (product: ProductVariant) => void;
   disabled?: boolean;
-  setToastAction: ToastActionCallable;
-}
+};
 
-export function BarcodeTextField({ onProductScanned, disabled, setToastAction }: Props) {
+export function BarcodeTextField({ onProductScanned, disabled }: Props) {
+  const [toast, setToastAction] = useToast();
   const [barcode, setBarcode] = useState('');
   const [variantIdCount, setVariantIdCount] = useState<Record<string, number>>({});
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -30,12 +30,24 @@ export function BarcodeTextField({ onProductScanned, disabled, setToastAction }:
   const scanVariantsQuery = useScanVariantsQuery({ fetch, scanData: barcode });
 
   // Local subtitle function to format product details
-  const getProductSubtitle = (variant: (typeof variants)[0]): string => {
-    const details = [variant.sku && `SKU: ${variant.sku}`, variant.barcode && `Barcode: ${variant.barcode}`].filter(
-      Boolean,
-    );
+  const getProductSubtitle = (variant: ProductVariant) => {
+    const details = [
+      variant.sku && { label: 'SKU', value: variant.sku },
+      variant.barcode && { label: 'Barcode', value: variant.barcode },
+    ].filter(Boolean);
 
-    return details.join(' | ');
+    return (
+      <BlockStack gap="100">
+        {details.map(
+          detail =>
+            detail && (
+              <Text variant="bodySm" tone="subdued" as="span" key={detail.label}>
+                {`${detail.label}: ${detail.value}`}
+              </Text>
+            ),
+        )}
+      </BlockStack>
+    );
   };
 
   useEffect(() => {
@@ -116,7 +128,7 @@ export function BarcodeTextField({ onProductScanned, disabled, setToastAction }:
                   <InlineStack gap="200" blockAlign="center">
                     <Thumbnail
                       source={variant.image?.url ?? variant.product?.featuredImage?.url ?? ''}
-                      alt={getProductVariantName(variant) || 'Product'}
+                      alt={getProductVariantName(variant) ?? 'Product'}
                       size="small"
                     />
                   </InlineStack>
@@ -127,15 +139,14 @@ export function BarcodeTextField({ onProductScanned, disabled, setToastAction }:
                     {getProductVariantName(variant) ?? 'Unnamed Product'}
                     {(variantIdCount[variant.id] ?? 0) > 0 && ` (${variantIdCount[variant.id] ?? 0})`}
                   </Text>
-                  <Text variant="bodySm" tone="subdued" as="span">
-                    {getProductSubtitle(variant)}
-                  </Text>
+                  {getProductSubtitle(variant)}
                 </BlockStack>
               </ResourceItem>
             )}
           />
         </BlockStack>
       )}
+      {toast}
     </BlockStack>
   );
 }

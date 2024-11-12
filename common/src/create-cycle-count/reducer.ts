@@ -1,85 +1,68 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CreateCycleCount, DateTime } from '@web/schemas/generated/create-cycle-count.js';
-import { DetailedCycleCount } from '@web/services/cycle-count/types.js';
-import { Dispatch, useEffect, useReducer, useRef, useState } from 'react';
+import { useReducer, useRef, useState } from 'react';
 import { uuid } from '../util/uuid.js';
+import { DiscriminatedUnionOmit } from '../types/DiscriminatedUnionOmit.js';
 
-export type WIPCreateCycleCount = CreateCycleCount & {
-  name: string | null;
-};
-
-type Action =
-  | { type: 'SET'; payload: WIPCreateCycleCount }
-  | { type: 'SET_STATUS'; payload: { status: string } }
-  | { type: 'SET_LOCATION'; payload: { locationId: ID } }
-  | { type: 'SET_DUE_DATE'; payload: { dueDate: DateTime | null } }
-  | { type: 'SET_NOTE'; payload: { note: string } }
-  | { type: 'SET_ITEMS'; payload: { items: WIPCreateCycleCount['items'] } }
-  | { type: 'SET_EMPLOYEE_ASSIGNMENTS'; payload: { employeeAssignments: WIPCreateCycleCount['employeeAssignments'] } }
-  | { type: 'SET_LOCKED'; payload: { locked: boolean } }
+type CreateCycleCountAction =
+  | ({ type: 'set' } & CreateCycleCount)
+  | ({ type: 'setStatus' } & Pick<CreateCycleCount, 'status'>)
+  | ({ type: 'setLocation' } & Pick<CreateCycleCount, 'locationId'>)
+  | { type: 'setDueDate'; dueDate: DateTime | null }
+  | { type: 'setNote'; note: string }
+  | { type: 'setItems'; items: CreateCycleCount['items'] }
+  | { type: 'setEmployeeAssignments'; employeeAssignments: CreateCycleCount['employeeAssignments'] }
+  | { type: 'setLocked'; locked: boolean }
   | {
-      type: 'ADD_PRODUCT_VARIANTS';
-      payload: {
-        productVariants: Array<{
-          id: ID;
+      type: 'addProductVariants';
+      productVariants: Array<{
+        id: ID;
+        title: string;
+        product: {
           title: string;
-          product: {
-            title: string;
-          };
-          inventoryItem: {
-            id: ID;
-          };
-        }>;
-      };
+        };
+        inventoryItem: {
+          id: ID;
+        };
+      }>;
     };
 
-export type CreateCycleCountDispatch = {
-  set: (cycleCount: WIPCreateCycleCount | DetailedCycleCount) => void;
-  setStatus: (payload: { status: string }) => void;
-  setLocation: (payload: { locationId: ID }) => void;
-  setDueDate: (payload: { dueDate: DateTime | null }) => void;
-  setNote: (payload: { note: string }) => void;
-  setItems: (payload: { items: WIPCreateCycleCount['items'] }) => void;
-  setEmployeeAssignments: (payload: { employeeAssignments: WIPCreateCycleCount['employeeAssignments'] }) => void;
-  setLocked: (payload: { locked: boolean }) => void;
-  addProductVariants: (payload: {
-    productVariants: Array<{
-      id: ID;
-      title: string;
-      product: {
-        title: string;
-      };
-      inventoryItem: {
-        id: ID;
-      };
-    }>;
-  }) => void;
+export type CreateCycleCountDispatchProxy = {
+  [type in CreateCycleCountAction['type']]: (
+    args: DiscriminatedUnionOmit<CreateCycleCountAction & { type: type }, 'type'>,
+  ) => void;
 };
 
-function reducer(state: WIPCreateCycleCount, action: Action): WIPCreateCycleCount {
+export type UseCreateCycleCountReactContext = {
+  useRef: typeof useRef;
+  useState: typeof useState;
+  useReducer: typeof useReducer;
+};
+
+function reducer(state: CreateCycleCount, action: CreateCycleCountAction): CreateCycleCount {
   switch (action.type) {
-    case 'SET':
-      return action.payload;
-    case 'SET_STATUS':
-      return { ...state, status: action.payload.status };
-    case 'SET_LOCATION':
-      return { ...state, locationId: action.payload.locationId };
-    case 'SET_DUE_DATE':
-      return { ...state, dueDate: action.payload.dueDate };
-    case 'SET_NOTE':
-      return { ...state, note: action.payload.note };
-    case 'SET_ITEMS':
-      return { ...state, items: action.payload.items };
-    case 'SET_EMPLOYEE_ASSIGNMENTS':
-      return { ...state, employeeAssignments: action.payload.employeeAssignments };
-    case 'SET_LOCKED':
-      return { ...state, locked: action.payload.locked };
-    case 'ADD_PRODUCT_VARIANTS':
+    case 'set':
+      return action;
+    case 'setStatus':
+      return { ...state, status: action.status };
+    case 'setLocation':
+      return { ...state, locationId: action.locationId };
+    case 'setDueDate':
+      return { ...state, dueDate: action.dueDate };
+    case 'setNote':
+      return { ...state, note: action.note };
+    case 'setItems':
+      return { ...state, items: action.items };
+    case 'setEmployeeAssignments':
+      return { ...state, employeeAssignments: action.employeeAssignments };
+    case 'setLocked':
+      return { ...state, locked: action.locked };
+    case 'addProductVariants':
       return {
         ...state,
         items: [
           ...state.items,
-          ...action.payload.productVariants.map(variant => ({
+          ...action.productVariants.map(variant => ({
             uuid: uuid(),
             productVariantId: variant.id,
             inventoryItemId: variant.inventoryItem.id,
@@ -90,39 +73,25 @@ function reducer(state: WIPCreateCycleCount, action: Action): WIPCreateCycleCoun
         ],
       };
     default:
-      return state;
+      return action satisfies never;
   }
 }
 
 export function useCreateCycleCountReducer(
-  initialState: WIPCreateCycleCount,
-  hooks: {
-    useReducer: typeof useReducer;
-    useState: typeof useState;
-    useRef: typeof useRef;
-  },
-): [WIPCreateCycleCount, CreateCycleCountDispatch, boolean, Dispatch<boolean>] {
-  const [state, dispatch] = hooks.useReducer(reducer, initialState);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = hooks.useState(false);
-  const initialStateRef = hooks.useRef(initialState);
+  initialState: CreateCycleCount,
+  { useState, useRef, useReducer }: UseCreateCycleCountReactContext,
+) {
+  const [createCycleCount, dispatchCreateCycleCount] = useReducer(reducer, initialState);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const hasUnsavedChanges = JSON.stringify(state, Object.keys(state).sort()) !==
-      JSON.stringify(initialStateRef.current, Object.keys(initialStateRef.current).sort());
+  const proxy = useRef(
+    new Proxy<CreateCycleCountDispatchProxy>({} as CreateCycleCountDispatchProxy, {
+      get: (target, prop) => (args: DiscriminatedUnionOmit<CreateCycleCountAction, 'type'>) => {
+        setHasUnsavedChanges(true);
+        dispatchCreateCycleCount({ type: prop, ...args } as CreateCycleCountAction);
+      },
+    }),
+  ).current;
 
-  return [
-    state,
-    {
-      set: payload => dispatch({ type: 'SET', payload }),
-      setStatus: payload => dispatch({ type: 'SET_STATUS', payload }),
-      setLocation: payload => dispatch({ type: 'SET_LOCATION', payload }),
-      setDueDate: payload => dispatch({ type: 'SET_DUE_DATE', payload }),
-      setNote: payload => dispatch({ type: 'SET_NOTE', payload }),
-      setItems: payload => dispatch({ type: 'SET_ITEMS', payload }),
-      setEmployeeAssignments: payload => dispatch({ type: 'SET_EMPLOYEE_ASSIGNMENTS', payload }),
-      setLocked: payload => dispatch({ type: 'SET_LOCKED', payload }),
-      addProductVariants: payload => dispatch({ type: 'ADD_PRODUCT_VARIANTS', payload }),
-    },
-    hasUnsavedChanges,
-    setHasUnsavedChanges,
-  ];
+  return [createCycleCount, proxy, hasUnsavedChanges, setHasUnsavedChanges] as const;
 }

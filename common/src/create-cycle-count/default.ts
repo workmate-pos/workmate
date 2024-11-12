@@ -1,9 +1,9 @@
-import { WIPCreateCycleCount } from './reducer.js';
+import { CreateCycleCount } from '@web/schemas/generated/create-cycle-count.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 
-export const defaultCreateCycleCount = (locationId: ID): WIPCreateCycleCount => ({
+export const defaultCreateCycleCount = (locationId: ID, status: string): CreateCycleCount => ({
   name: null,
-  status: 'Draft',
+  status,
   items: [],
   locationId,
   note: '',

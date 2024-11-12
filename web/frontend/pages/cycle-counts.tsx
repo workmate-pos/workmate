@@ -20,12 +20,14 @@ import { Redirect } from '@shopify/app-bridge/actions';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export default function () {
   return (
     <Frame>
       <Page>
-        <PermissionBoundary permissions={['read_work_orders']}>
+        <PermissionBoundary permissions={['read_settings', 'cycle_count']}>
           <CycleCounts />
         </PermissionBoundary>
       </Page>
@@ -39,18 +41,13 @@ function CycleCounts() {
   const [status, setStatus] = useState<string>();
   const [locationId, setLocationId] = useState<ID>();
   const [employeeId, setEmployeeId] = useState<ID>();
-  const [page, setPage] = useState(0);
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
+  const settingsQuery = useSettingsQuery({ fetch });
 
-  const {
-    data: cycleCounts,
-    isLoading,
-    fetchNextPage,
-    isFetchingNextPage,
-  } = useCycleCountPageQuery({
+  const cycleCountQuery = useCycleCountPageQuery({
     fetch,
     filters: {
       query,
@@ -66,8 +63,9 @@ function CycleCounts() {
     Redirect.create(app).dispatch(Redirect.Action.APP, `/cycle-counts/${encodeURIComponent(cycleCountName)}`);
   };
 
-  const shouldFetchNextPage = cycleCounts && page === cycleCounts.pages.length - 2;
-  const hasNextPageLocal = !isFetchingNextPage && page < (cycleCounts?.pages.length ?? 0) - 1;
+  const [pageIndex, setPage] = useState(0);
+  const pagination = getInfiniteQueryPagination(0, setPage, cycleCountQuery);
+  const page = cycleCountQuery.data?.pages[pageIndex] ?? [];
 
   return (
     <>
@@ -86,7 +84,7 @@ function CycleCounts() {
         queryPlaceholder="Search cycle counts"
         onQueryChange={query => setQuery(query)}
         onQueryClear={() => setQuery('', true)}
-        tabs={[{ content: 'All', id: 'all' }]}
+        tabs={[]}
         selected={0}
         filters={[
           {
@@ -95,11 +93,12 @@ function CycleCounts() {
             filter: (
               <ChoiceList
                 title="Status"
-                choices={[
-                  { label: 'Draft', value: 'Draft' },
-                  { label: 'In Progress', value: 'InProgress' },
-                  { label: 'Complete', value: 'Complete' },
-                ]}
+                choices={
+                  settingsQuery.data?.settings.cycleCount.statuses.map(status => ({
+                    label: status,
+                    value: status,
+                  })) ?? []
+                }
                 selected={status ? [status] : []}
                 onChange={([selected]) => setStatus(selected)}
               />
@@ -122,8 +121,8 @@ function CycleCounts() {
           { title: 'Location' },
           { title: 'Due Date' },
         ]}
-        itemCount={cycleCounts?.pages[page]?.length ?? 0}
-        loading={isLoading}
+        itemCount={page.length}
+        loading={cycleCountQuery.isFetching}
         emptyState={
           <Card>
             <EmptyState
@@ -134,23 +133,18 @@ function CycleCounts() {
               }}
               image={emptyState}
             >
-              <p>Track and manage your inventory counts.</p>
+              <Text as="p">Track and manage your inventory counts.</Text>
             </EmptyState>
           </Card>
         }
         pagination={{
-          hasNext: hasNextPageLocal,
-          hasPrevious: page > 0,
-          onPrevious: () => setPage(page => page - 1),
-          onNext: () => {
-            if (shouldFetchNextPage) {
-              fetchNextPage();
-            }
-            setPage(page => page + 1);
-          },
+          hasNext: pagination.hasNextPage,
+          hasPrevious: pagination.hasPreviousPage,
+          onNext: () => pagination.next(),
+          onPrevious: () => pagination.previous(),
         }}
       >
-        {cycleCounts?.pages[page]?.map((count, index) => (
+        {page.map((count, index) => (
           <IndexTable.Row
             id={count.name}
             key={count.name}
@@ -164,7 +158,7 @@ function CycleCounts() {
             </IndexTable.Cell>
             <IndexTable.Cell>{count.items.length}</IndexTable.Cell>
             <IndexTable.Cell>
-              <Badge progress={count.status === 'Draft' ? 'incomplete' : 'complete'}>{count.status}</Badge>
+              <Badge tone="info">{count.status}</Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>{count.locationId}</IndexTable.Cell>
             <IndexTable.Cell>{count.dueDate ? new Date(count.dueDate).toLocaleDateString() : '-'}</IndexTable.Cell>

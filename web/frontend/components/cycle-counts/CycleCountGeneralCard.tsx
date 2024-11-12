@@ -8,13 +8,14 @@ import { CreateCycleCountDispatch } from '@work-orders/common/create-cycle-count
 import { useState } from 'react';
 import { DateModal } from '@web/frontend/components/shared-orders/modals/DateModal.js';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
-interface Props {
+type Props = {
   createCycleCount: CreateCycleCount;
   dispatch: CreateCycleCountDispatch;
   disabled: boolean;
   onLocationSelect: () => void;
-}
+};
 
 export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: Props) {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
@@ -23,16 +24,13 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
+  const settingsQuery = useSettingsQuery({ fetch });
+
   const locationQuery = useLocationQuery({ fetch, id: createCycleCount.locationId });
 
-  const dueDateUtc = createCycleCount.dueDate ? new Date(createCycleCount.dueDate) : null;
+  const dueDate = createCycleCount.dueDate ? new Date(createCycleCount.dueDate) : null;
 
-  const statusOptions = [
-    { label: 'Draft', value: 'draft' },
-    { label: 'In Progress', value: 'in-progress' },
-    { label: 'Completed', value: 'completed' },
-    { label: 'Cancelled', value: 'cancelled' },
-  ];
+  const statusOptions = settingsQuery.data.settings.cycleCount.statuses ?? [];
 
   return (
     <>
@@ -66,12 +64,12 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
           <TextField
             label="Due date"
             autoComplete="off"
-            value={dueDateUtc?.toLocaleDateString() ?? ''}
+            value={dueDate?.toLocaleDateString() ?? ''}
             onFocus={() => setIsDateModalOpen(true)}
             disabled={disabled}
             readOnly
             labelAction={
-              dueDateUtc
+              dueDate
                 ? {
                     content: 'Remove',
                     onAction: () => dispatch.setDueDate({ dueDate: null }),
@@ -97,7 +95,7 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
         open={isDateModalOpen}
         onClose={() => setIsDateModalOpen(false)}
         onUpdate={dueDate => dispatch.setDueDate({ dueDate: dueDate.toISOString() as DateTime })}
-        initialDate={dueDateUtc ?? new Date()}
+        initialDate={dueDate ?? new Date()}
         timezone={false}
       />
 

@@ -1,16 +1,7 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useCycleCountPageQuery } from '@work-orders/common/queries/use-cycle-count-page-query.js';
-import {
-  BadgeProps,
-  Banner,
-  Button,
-  List,
-  ListRow,
-  SegmentedControl,
-  Text,
-  useApi,
-} from '@shopify/ui-extensions-react/point-of-sale';
+import { BadgeProps, Banner, Button, List, ListRow, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -21,14 +12,14 @@ import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { CycleCountApplicationStatus, DetailedCycleCount } from '@web/services/cycle-count/types.js';
 import { getCreateCycleCountFromDetailedCycleCount } from '../create-cycle-count/get-create-cycle-count-from-detailed-cycle-count.js';
-import { getDefaultCreateCycleCount } from '../create-cycle-count/default.js';
+import { defaultCreateCycleCount } from '@work-orders/common/create-cycle-count/default.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { SortMode, SortOrder } from './Filters.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export const DEFAULT_SORT_MODE: SortMode = 'created-date';
 export const DEFAULT_SORT_ORDER: SortOrder = 'descending';
@@ -56,6 +47,9 @@ export function Entry() {
       sortOrder,
     },
   });
+
+  const settingsQuery = useSettingsQuery({ fetch });
+  const defaultStatus = settingsQuery.data?.settings.cycleCount.defaultStatus || 'Draft';
 
   const router = useRouter();
 
@@ -94,8 +88,9 @@ export function Entry() {
             type={'primary'}
             onPress={() =>
               router.push('CycleCount', {
-                initial: getDefaultCreateCycleCount(
+                initial: defaultCreateCycleCount(
                   createGid('Location', session.currentSession.locationId.toString()),
+                  defaultStatus,
                 ),
               })
             }

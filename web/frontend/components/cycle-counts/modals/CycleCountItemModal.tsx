@@ -1,34 +1,26 @@
-import { Modal, TextField, BlockStack, InlineStack, Badge, BadgeProps } from '@shopify/polaris';
+import { Modal, Text, BlockStack, InlineStack, Badge, BadgeProps } from '@shopify/polaris';
 import { CreateCycleCountItem } from '@web/schemas/generated/create-cycle-count.js';
 import { useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useProductVariantQuery } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
-import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
 import { CycleCountApplicationStatus } from '@web/services/cycle-count/types.js';
+import { useToast } from '@teifi-digital/shopify-app-react';
 
-interface Props {
+type Props = {
   open: boolean;
   onClose: () => void;
   item: CreateCycleCountItem;
   cycleCountName: string | null;
   onSave: (item: CreateCycleCountItem) => void;
-  setToastAction: ToastActionCallable;
   onRemove: () => void;
-}
+};
 
-export function CycleCountItemModal({
-  open,
-  onClose,
-  item: initialItem,
-  cycleCountName,
-  onSave,
-  onRemove,
-  setToastAction,
-}: Props) {
+export function CycleCountItemModal({ open, onClose, item: initialItem, cycleCountName, onSave, onRemove }: Props) {
+  const [toast, setToastAction] = useToast();
   const [item, setItem] = useState(initialItem);
 
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -107,9 +99,14 @@ export function CycleCountItemModal({
             autoComplete="off"
           />
 
-          {productVariant?.sku && <TextField label="SKU" value={productVariant.sku} readOnly autoComplete="off" />}
+          {productVariant?.sku && (
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {productVariant.sku}
+            </Text>
+          )}
         </BlockStack>
       </Modal.Section>
+      {toast}
     </Modal>
   );
 }

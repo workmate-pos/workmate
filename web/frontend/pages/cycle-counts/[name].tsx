@@ -11,7 +11,6 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { useCycleCountMutation } from '@work-orders/common/queries/use-cycle-count-mutation.js';
-import type { DetailedCycleCount } from '@web/services/cycle-count/types.js';
 import type { CreateCycleCount } from '@web/schemas/generated/create-cycle-count.js';
 import { useCreateCycleCountReducer } from '@work-orders/common/create-cycle-count/reducer.js';
 import { CycleCountGeneralCard } from '@web/frontend/components/cycle-counts/CycleCountGeneralCard.js';
@@ -47,6 +46,8 @@ function CycleCountLoader() {
   const cycleCountQuery = useCycleCountQuery({ fetch, name: name === 'new' ? null : name }, { staleTime: 0 });
   const settingsQuery = useSettingsQuery({ fetch });
   const locationsQuery = useAllLocationsQuery({ fetch });
+
+  const defaultStatus = settingsQuery.data?.settings.cycleCount.defaultStatus || 'Draft';
 
   const app = useAppBridge();
   if (!name) {
@@ -89,24 +90,18 @@ function CycleCountLoader() {
     if (!firstLocation) {
       throw new Error('No locations available');
     }
-    createCycleCount = defaultCreateCycleCount(firstLocation.id);
+    createCycleCount = defaultCreateCycleCount(firstLocation.id, defaultStatus);
   }
 
   return (
     <>
-      <CycleCount initialCreateCycleCount={createCycleCount} cycleCount={cycleCountQuery.data ?? null} />
+      <CycleCount initialCreateCycleCount={createCycleCount} />
       {toast}
     </>
   );
 }
 
-function CycleCount({
-  initialCreateCycleCount,
-  cycleCount,
-}: {
-  initialCreateCycleCount: CreateCycleCount;
-  cycleCount: DetailedCycleCount | null;
-}) {
+function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: CreateCycleCount }) {
   const app = useAppBridge();
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -143,37 +138,6 @@ function CycleCount({
     [dispatch],
   );
 
-  const handleSave = useCallback(() => {
-    if (!createCycleCount.locationId) {
-      setToastAction({ content: 'Location is required' });
-      return;
-    }
-
-    const cleanedItems = (createCycleCount.items || []).map(item => ({
-      uuid: item.uuid,
-      productVariantId: item.productVariantId,
-      inventoryItemId: item.inventoryItemId,
-      countQuantity: item.countQuantity,
-      productTitle: item.productTitle,
-      productVariantTitle: item.productVariantTitle,
-    }));
-
-    const payload: CreateCycleCount = {
-      name: createCycleCount.name,
-      status: createCycleCount.status || 'draft',
-      locationId: createCycleCount.locationId,
-      note: createCycleCount.note || '',
-      items: cleanedItems,
-      employeeAssignments: createCycleCount.employeeAssignments || [],
-      dueDate: createCycleCount.dueDate,
-      locked: createCycleCount.locked || false,
-    };
-
-    console.log('Cleaned payload:', JSON.stringify(payload, null, 2));
-
-    cycleCountMutation.mutate(payload);
-  }, [createCycleCount, cycleCountMutation, setToastAction]);
-
   return (
     <Box paddingBlockEnd={'1600'}>
       <TitleBar title={'Cycle counts'} />
@@ -183,7 +147,7 @@ function CycleCount({
         visible={hasUnsavedChanges}
         saveAction={{
           loading: cycleCountMutation.isPending,
-          onAction: handleSave,
+          onAction: () => cycleCountMutation.mutate(createCycleCount),
           disabled: cycleCountMutation.isPending,
         }}
         discardAction={{
@@ -207,7 +171,6 @@ function CycleCount({
           <Layout.Section>
             <CycleCountItemsCard
               createCycleCount={createCycleCount}
-              cycleCount={cycleCount}
               dispatch={dispatch}
               disabled={cycleCountMutation.isPending}
               onAddProducts={() => setIsProductSelectorOpen(true)}
@@ -273,7 +236,6 @@ function CycleCount({
             });
           }}
           disabled={cycleCountMutation.isPending}
-          setToastAction={setToastAction}
         />
       )}
 

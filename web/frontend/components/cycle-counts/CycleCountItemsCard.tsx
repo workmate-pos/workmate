@@ -10,7 +10,6 @@ import {
   Box,
 } from '@shopify/polaris';
 import { CreateCycleCount, CreateCycleCountItem } from '@web/schemas/generated/create-cycle-count.js';
-import { DetailedCycleCount } from '@web/services/cycle-count/types.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
@@ -21,28 +20,22 @@ import { useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { CycleCountItemModal, getCycleCountApplicationStateBadge } from './modals/CycleCountItemModal.js';
 import { ButtonGroup, Button } from '@shopify/polaris';
+import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
 
 interface Props {
   createCycleCount: CreateCycleCount;
-  cycleCount: DetailedCycleCount | null;
   dispatch: CreateCycleCountDispatch;
   disabled: boolean;
   onAddProducts: () => void;
   onScanProducts: () => void;
 }
 
-export function CycleCountItemsCard({
-  createCycleCount,
-  cycleCount,
-  dispatch,
-  disabled,
-  onAddProducts,
-  onScanProducts,
-}: Props) {
+export function CycleCountItemsCard({ createCycleCount, dispatch, disabled, onAddProducts, onScanProducts }: Props) {
   const [toast, setToastAction] = useToast();
   const [selectedItem, setSelectedItem] = useState<CreateCycleCountItem | null>(null);
 
   const fetch = useAuthenticatedFetch({ setToastAction });
+  const cycleCountQuery = useCycleCountQuery({ fetch, name: createCycleCount.name });
   const productVariantIds = unique(createCycleCount.items.map(item => item.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
@@ -83,7 +76,7 @@ export function CycleCountItemsCard({
             renderItem={item => {
               const productVariantQuery = productVariantQueries[item.productVariantId];
               const productVariant = productVariantQuery?.data;
-              const cycleCountItem = cycleCount?.items.find(hasPropertyValue('uuid', item.uuid));
+              const cycleCountItem = cycleCountQuery.data?.items.find(hasPropertyValue('uuid', item.uuid));
 
               const productName = getProductVariantName(
                 productVariant ?? {
@@ -165,8 +158,7 @@ export function CycleCountItemsCard({
               items: createCycleCount.items.filter(x => x.uuid !== selectedItem.uuid),
             });
           }}
-          cycleCountName={null}
-          setToastAction={setToastAction}
+          cycleCountName={createCycleCount.name}
         />
       )}
 
