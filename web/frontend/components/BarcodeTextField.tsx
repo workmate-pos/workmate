@@ -124,7 +124,7 @@ export function BarcodeTextField({ onProductScanned, disabled, setToastAction }:
               >
                 <BlockStack gap="200">
                   <Text variant="bodyMd" fontWeight="bold" as="span">
-                    {getProductVariantName(variant) || 'Unnamed Product'}
+                    {getProductVariantName(variant) ?? 'Unnamed Product'}
                     {(variantIdCount[variant.id] ?? 0) > 0 && ` (${variantIdCount[variant.id] ?? 0})`}
                   </Text>
                   <Text variant="bodySm" tone="subdued" as="span">
