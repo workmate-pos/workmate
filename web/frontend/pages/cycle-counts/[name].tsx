@@ -29,7 +29,7 @@ export default function () {
   return (
     <Frame>
       <Page>
-        <PermissionBoundary permissions={['read_settings']}>
+        <PermissionBoundary permissions={['read_settings', 'cycle_count']}>
           <CycleCountLoader />
         </PermissionBoundary>
       </Page>
