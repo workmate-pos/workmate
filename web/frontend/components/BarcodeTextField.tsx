@@ -25,6 +25,7 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
   const [toast, setToastAction] = useToast();
   const [barcode, setBarcode] = useState('');
   const [variantIdCount, setVariantIdCount] = useState<Record<string, number>>({});
+  const [error, setError] = useState<string | null>(null);
   const fetch = useAuthenticatedFetch({ setToastAction });
 
   const scanVariantsQuery = useScanVariantsQuery({ fetch, scanData: barcode });
@@ -55,9 +56,7 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
     if (scanVariantsQuery.isLoading) return;
 
     if (scanVariantsQuery.isError) {
-      setToastAction({
-        content: extractErrorMessage(scanVariantsQuery.error, 'Error finding product'),
-      });
+      setError(extractErrorMessage(scanVariantsQuery.error, 'Error finding product'));
       setBarcode('');
       return;
     }
@@ -65,7 +64,7 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
     const variants = scanVariantsQuery.data ?? [];
 
     if (variants.length === 0) {
-      setToastAction({ content: 'No products found' });
+      setError('No products found');
       setBarcode('');
       return;
     }
@@ -74,7 +73,7 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
       const variant = variants[0];
 
       if (variant === undefined) {
-        setToastAction({ content: 'No variant found' });
+        setError('No variant found');
         setBarcode('');
         return;
       }
@@ -82,10 +81,10 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
       handleProductSelect(variant);
       setBarcode('');
     }
-  }, [barcode, scanVariantsQuery.data, scanVariantsQuery.isError, scanVariantsQuery.error, setToastAction]);
+  }, [barcode, scanVariantsQuery.data, scanVariantsQuery.isError, scanVariantsQuery.error]);
 
   // Adjusted handleProductSelect function
-  const handleProductSelect = (variant: (typeof variants)[0]) => {
+  const handleProductSelect = (variant: ProductVariant) => {
     const name = getProductVariantName(variant) ?? 'Unknown product';
     setToastAction({ content: `Added ${name}` });
     onProductScanned(variant as ProductVariant);
@@ -96,10 +95,13 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
   };
 
   const variants = scanVariantsQuery.data ?? [];
-  const showMultipleProducts = variants.length > 1;
 
   return (
     <BlockStack gap="400">
+      {error && <Banner title={error} tone="critical" onDismiss={() => setError(null)} />}
+
+      {toast}
+
       <TextField
         label="Scan barcode"
         value={barcode}
@@ -115,9 +117,11 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
         autoFocus
       />
 
-      {showMultipleProducts && (
+      {variants.length > 0 && (
         <BlockStack gap="400">
-          <Banner title="Multiple products found. Select the one(s) you want to add." tone="warning" />
+          {variants.length > 1 && (
+            <Banner title="Multiple products found. Select the one(s) you want to add." tone="warning" />
+          )}
           <ResourceList
             items={variants}
             renderItem={variant => (
@@ -146,7 +150,6 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
           />
         </BlockStack>
       )}
-      {toast}
     </BlockStack>
   );
 }
