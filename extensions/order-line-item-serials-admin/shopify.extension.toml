@@ -1,0 +1,13 @@
+api_version = "2024-07"
+
+[[extensions]]
+# Change the merchant-facing name of the extension in locales/en.default.json
+name = "t:name"
+handle = "order-line-item-serials-admin"
+type = "ui_extension"
+
+
+# Only 1 target can be specified for each Admin action extension
+[[extensions.targeting]]
+module = "./src/ActionExtension.tsx"
+target = "admin.order-details.action.render"

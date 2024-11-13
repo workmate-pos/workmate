@@ -13,9 +13,15 @@ import { unit } from '../db/unit-of-work.js';
 import { compareMoney, subtractMoney, ZERO_MONEY } from '../../util/money.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { getWorkOrderDiscount } from '../work-orders/get.js';
-import { removeShopifyOrderLineItemsExceptIds } from '../orders/queries.js';
+import { getShopifyOrderLineItems, deleteShopifyOrderLineItemsByIds } from '../orders/queries.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { sql } from '../db/sql-tag.js';
+
+import {
+  deleteLineItemSerials,
+  getLineItemSerials,
+  getSerialLineItemIds,
+  updateSerialSoldState,
+} from '../serials/queries.js';
 
 export async function ensureShopifyOrdersExist(session: Session, orderIds: ID[]) {
   if (orderIds.length === 0) {
@@ -148,10 +154,12 @@ async function syncShopifyOrderLineItems(
     | { type: 'order'; order: gql.order.DatabaseShopifyOrderFragment.Result; isNewOrder: boolean }
     | { type: 'draft-order'; order: gql.draftOrder.DatabaseShopifyOrderFragment.Result },
 ) {
-  const lineItems =
+  const [lineItems, databaseLineItems] = await Promise.all([
     order.type === 'order'
-      ? await getOrderLineItems(session, order.order.id)
-      : await getDraftOrderLineItems(session, order.order.id);
+      ? getOrderLineItems(session, order.order.id)
+      : getDraftOrderLineItems(session, order.order.id),
+    getShopifyOrderLineItems(order.order.id),
+  ]);
 
   await ensureProductVariantsExist(
     session,
@@ -196,10 +204,11 @@ async function syncShopifyOrderLineItems(
     sentryErr(error, {});
   }
 
-  await removeShopifyOrderLineItemsExceptIds(
-    order.order.id,
-    lineItems.map(lineItem => lineItem.id),
-  );
+  const lineItemIdsToRemove = databaseLineItems
+    .filter(lineItem => !lineItems.some(hasPropertyValue('id', lineItem.lineItemId)))
+    .map(lineItem => lineItem.lineItemId);
+
+  await deleteOrderLineItems(session.shop, order.order.id, lineItemIdsToRemove);
 
   const workOrders = await db.shopifyOrder.getRelatedWorkOrdersByShopifyOrderId({ orderId: order.order.id });
 
@@ -275,4 +284,30 @@ async function getDraftOrderLineItems(session: Session, draftOrderId: ID) {
     ...lineItem,
     unfulfilledQuantity: lineItem.quantity,
   }));
+}
+
+/**
+ * Delete order line items and handle their serials
+ */
+async function deleteOrderLineItems(shop: string, orderId: ID, lineItemIds: ID[]) {
+  // 1) unlink all serials
+  // 2) if the serial is not linked to any other non-refunded line item, mark it as not-sold
+  const lineItemSerials = await getLineItemSerials(lineItemIds);
+  const serialLineItems = await getSerialLineItemIds(lineItemSerials, { sold: true });
+
+  const lineItemSerialsToMarkNotSold = lineItemSerials.filter(({ productVariantId, serial, lineItemId }) => {
+    const lineItemCount = serialLineItems
+      .filter(lineItem => lineItem.serial === serial)
+      .filter(lineItem => lineItem.productVariantId === productVariantId)
+      .filter(lineItem => lineItem.lineItemId !== lineItemId).length;
+
+    return lineItemCount === 0;
+  });
+
+  await updateSerialSoldState(
+    shop,
+    lineItemSerialsToMarkNotSold.map(lineItemSerial => ({ ...lineItemSerial, sold: false })),
+  );
+
+  await deleteShopifyOrderLineItemsByIds(orderId, lineItemIds);
 }

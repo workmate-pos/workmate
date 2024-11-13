@@ -201,8 +201,27 @@ model ShopifyOrderLineItem {
   workOrderItems        WorkOrderItem[]
   workOrderCharges      WorkOrderCharge[]
   specialOrderLineItems SpecialOrderLineItem[]
+  serials               ShopifyOrderLineItemProductVariantSerial[]
 
   @@index([orderId])
+}
+
+// Serials can be linked to SO line items through a admin block extension.
+// Linking this way will mark the serial as sold.
+model ShopifyOrderLineItemProductVariantSerial {
+  id Int @id @default(autoincrement())
+
+  lineItem   ShopifyOrderLineItem @relation(fields: [lineItemId], references: [lineItemId])
+  lineItemId String
+
+  productVariantSerial   ProductVariantSerial @relation(fields: [productVariantSerialId], references: [id])
+  productVariantSerialId Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([lineItemId])
+  @@index([productVariantSerialId])
 }
 
 // We track the source of line item quantity. Sources can be POs, TOs, or directly from inventory.
@@ -983,6 +1002,7 @@ model ProductVariantSerial {
   purchaseOrderLineItems PurchaseOrderLineItem[]
   workOrderItems         WorkOrderItem[]
   tasks                  TaskSerialLink[]
+  shopifyOrderLineItems  ShopifyOrderLineItemProductVariantSerial[]
 
   @@unique([shop, productVariantId, serial])
 }

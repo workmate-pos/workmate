@@ -133,7 +133,7 @@ function mapShopifyOrder<
   }
 }
 
-export async function removeShopifyOrderLineItemsExceptIds(orderId: ID, lineItemIds: ID[]) {
+export async function deleteShopifyOrderLineItemsByIds(orderId: ID, lineItemIds: ID[]) {
   const _orderId: string = orderId;
   const _lineItemIds: (string | null)[] = lineItemIds;
 
@@ -141,6 +141,56 @@ export async function removeShopifyOrderLineItemsExceptIds(orderId: ID, lineItem
     DELETE
     FROM "ShopifyOrderLineItem"
     WHERE "orderId" = ${_orderId}
-      AND "lineItemId" != ALL (${_lineItemIds} :: text[]);
+      AND "lineItemId" = ANY (${_lineItemIds} :: text[]);
   `;
+}
+
+export async function getShopifyOrder({ shop, id }: { shop: string; id: ID }) {
+  const [order] = await sql<{
+    orderId: string;
+    shop: string;
+    orderType: 'ORDER' | 'DRAFT_ORDER';
+    name: string;
+    customerId: string | null;
+    total: string;
+    outstanding: string;
+    fullyPaid: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    discount: string;
+    subtotal: string;
+  }>`
+    SELECT *
+    FROM "ShopifyOrder"
+    WHERE "orderId" = ${id as string}
+      AND "shop" = ${shop}
+  `;
+
+  if (!order) {
+    return null;
+  }
+
+  return mapShopifyOrder(order);
+}
+
+export async function getShopifyOrderLineItems(orderId: ID) {
+  const lineItems = await sql<{
+    lineItemId: string;
+    orderId: string;
+    productVariantId: string | null;
+    title: string;
+    quantity: number;
+    unfulfilledQuantity: number;
+    discountedUnitPrice: string;
+    unitPrice: string;
+    totalTax: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+    SELECT *
+    FROM "ShopifyOrderLineItem"
+    WHERE "orderId" = ${orderId as string};
+  `;
+
+  return lineItems.map(mapShopifyOrderLineItem);
 }

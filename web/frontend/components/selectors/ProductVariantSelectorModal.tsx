@@ -130,6 +130,7 @@ export function ProductVariantSelectorModal({ onSelect, filters, open, onClose }
                   <Text as="p" variant="bodyMd" fontWeight="bold">
                     {label}
                   </Text>
+                  z
                   <Text as="p" variant="bodyMd" tone="subdued">
                     {productVariant.sku}
                   </Text>
