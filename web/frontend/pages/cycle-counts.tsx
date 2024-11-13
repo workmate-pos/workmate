@@ -12,7 +12,7 @@ import {
 } from '@shopify/polaris';
 import { TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { useCycleCountPageQuery } from '@work-orders/common/queries/use-cycle-count-page-query.js';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
@@ -22,6 +22,9 @@ import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
+import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export default function () {
   return (
@@ -58,6 +61,20 @@ function CycleCounts() {
       sortOrder: 'descending',
     },
   });
+
+  const locationsQuery = useLocationsQuery({ fetch, params: { first: 50 } });
+  const locations = locationsQuery.data?.pages.flat() ?? [];
+
+  useEffect(() => {
+    if (!locationsQuery.isFetching && locationsQuery.hasNextPage) {
+      locationsQuery.fetchNextPage();
+    }
+  }, [locationsQuery.isFetching, locationsQuery.hasNextPage]);
+
+  const employeeQueries = useEmployeeQueries({ fetch, ids: [] });
+  const employees = Object.values(employeeQueries)
+    .map(query => query.data)
+    .filter(isNonNullable);
 
   const redirectToCycleCount = (cycleCountName: 'new' | string) => {
     Redirect.create(app).dispatch(Redirect.Action.APP, `/cycle-counts/${encodeURIComponent(cycleCountName)}`);
@@ -104,6 +121,36 @@ function CycleCounts() {
               />
             ),
           },
+          {
+            key: 'location',
+            label: 'Location',
+            filter: (
+              <ChoiceList
+                title="Location"
+                choices={locations.map(location => ({
+                  label: location.name,
+                  value: location.id,
+                }))}
+                selected={locationId ? [locationId] : []}
+                onChange={([selected]) => setLocationId(selected as ID)}
+              />
+            ),
+          },
+          {
+            key: 'employee',
+            label: 'Employee',
+            filter: (
+              <ChoiceList
+                title="Employee"
+                choices={employees.map(employee => ({
+                  label: employee.name,
+                  value: employee.id,
+                }))}
+                selected={employeeId ? [employeeId] : []}
+                onChange={([selected]) => setEmployeeId(selected as ID)}
+              />
+            ),
+          },
         ]}
         onClearAll={() => {
           setQuery('', true);
@@ -111,6 +158,29 @@ function CycleCounts() {
           setLocationId(undefined);
           setEmployeeId(undefined);
         }}
+        appliedFilters={[
+          status
+            ? {
+                key: 'status',
+                label: `Status is ${status}`,
+                onRemove: () => setStatus(undefined),
+              }
+            : null,
+          locationId
+            ? {
+                key: 'location',
+                label: `Location is ${locations.find(location => location.id === locationId)?.name ?? 'unknown'}`,
+                onRemove: () => setLocationId(undefined),
+              }
+            : null,
+          employeeId
+            ? {
+                key: 'employee',
+                label: `Employee is ${employees.find(employee => employee.id === employeeId)?.name ?? 'unknown'}`,
+                onRemove: () => setEmployeeId(undefined),
+              }
+            : null,
+        ].filter(isNonNullable)}
       />
 
       <IndexTable

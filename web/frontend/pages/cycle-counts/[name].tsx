@@ -23,6 +23,9 @@ import { useAllLocationsQuery } from '@work-orders/common/queries/use-all-locati
 import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/ProductVariantSelectorModal.js';
 import type { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { ScanProductModal } from '@web/frontend/components/cycle-counts/modals/ScanProductModal.js';
+import { CycleCountHistoryModal } from '../../components/cycle-counts/modals/CycleCountHistoryModal.js';
+import { PlanCycleCountModal } from '../../components/cycle-counts/modals/PlanCycleCountModal.js';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 
 export default function () {
   return (
@@ -106,6 +109,9 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+  const superuser = currentEmployeeQuery.data?.superuser ?? false;
+
   const [createCycleCount, dispatch, hasUnsavedChanges, setHasUnsavedChanges] = useCreateCycleCountReducer(
     initialCreateCycleCount,
     { useReducer, useState, useRef },
@@ -114,6 +120,8 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
   const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
   const [isProductSelectorOpen, setIsProductSelectorOpen] = useState(false);
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
 
   const cycleCountMutation = useCycleCountMutation(
     { fetch },
@@ -140,7 +148,26 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
 
   return (
     <Box paddingBlockEnd={'1600'}>
-      <TitleBar title={'Cycle counts'} />
+      <TitleBar
+        title={'Cycle counts'}
+        secondaryActions={[
+          {
+            content: 'View application history',
+            onAction: () => setIsHistoryModalOpen(true),
+            disabled: !createCycleCount.name,
+          },
+          {
+            content: 'Apply cycle count',
+            onAction: () => setIsPlanModalOpen(true),
+            disabled: !createCycleCount.name || createCycleCount.locked || createCycleCount.status === 'applied',
+          },
+          {
+            content: createCycleCount.locked ? 'Unlock' : 'Lock',
+            onAction: () => dispatch.setLocked({ locked: !createCycleCount.locked }),
+            disabled: createCycleCount.locked && !superuser,
+          },
+        ]}
+      />
 
       <ContextualSaveBar
         fullWidth
@@ -236,6 +263,22 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
             });
           }}
           disabled={cycleCountMutation.isPending}
+        />
+      )}
+
+      {isHistoryModalOpen && (
+        <CycleCountHistoryModal
+          open={isHistoryModalOpen}
+          onClose={() => setIsHistoryModalOpen(false)}
+          cycleCountName={createCycleCount.name}
+        />
+      )}
+
+      {isPlanModalOpen && (
+        <PlanCycleCountModal
+          open={isPlanModalOpen}
+          onClose={() => setIsPlanModalOpen(false)}
+          cycleCountName={createCycleCount.name}
         />
       )}
 
