@@ -9,6 +9,10 @@ import { useState } from 'react';
 import { DateModal } from '@web/frontend/components/shared-orders/modals/DateModal.js';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
+import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { MultiStaffMemberSelectorModal } from '../selectors/MultiStaffMemberSelectorModal.js';
 
 type Props = {
   createCycleCount: CreateCycleCount;
@@ -20,17 +24,29 @@ type Props = {
 export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: Props) {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [isLocationSelectorOpen, setIsLocationSelectorOpen] = useState(false);
+  const [isEmployeeSelectorOpen, setIsEmployeeSelectorOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
   const settingsQuery = useSettingsQuery({ fetch });
-
   const locationQuery = useLocationQuery({ fetch, id: createCycleCount.locationId });
 
-  const dueDate = createCycleCount.dueDate ? new Date(createCycleCount.dueDate) : null;
+  // Get employee information
+  const employeeIds = unique(createCycleCount.employeeAssignments.map(assignment => assignment.employeeId));
+  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
 
+  const dueDate = createCycleCount.dueDate ? new Date(createCycleCount.dueDate) : null;
   const statusOptions = settingsQuery.data?.settings.cycleCount.statuses ?? [];
+
+  // Get employee names for display
+  const employeeNames = employeeIds
+    .map(id => {
+      const query = employeeQueries[id];
+      if (query?.isLoading) return 'Loading...';
+      return query?.data?.name;
+    })
+    .filter(isNonNullable);
 
   return (
     <>
@@ -57,6 +73,15 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
             value={locationQuery.data?.name ?? ''}
             loading={!!createCycleCount.locationId && locationQuery.isLoading}
             onFocus={() => setIsLocationSelectorOpen(true)}
+            disabled={disabled}
+            readOnly
+          />
+
+          <TextField
+            label="Assigned employees"
+            autoComplete="off"
+            value={employeeNames.join(', ')}
+            onFocus={() => setIsEmployeeSelectorOpen(true)}
             disabled={disabled}
             readOnly
           />
@@ -103,6 +128,17 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
         open={isLocationSelectorOpen}
         onClose={() => setIsLocationSelectorOpen(false)}
         onSelect={locationId => dispatch.setLocation({ locationId })}
+      />
+
+      <MultiStaffMemberSelectorModal
+        open={isEmployeeSelectorOpen}
+        onClose={() => setIsEmployeeSelectorOpen(false)}
+        selected={createCycleCount.employeeAssignments.map(assignment => assignment.employeeId)}
+        onChange={employeeIds => {
+          dispatch.setEmployeeAssignments({
+            employeeAssignments: employeeIds.map(employeeId => ({ employeeId })),
+          });
+        }}
       />
 
       {toast}
