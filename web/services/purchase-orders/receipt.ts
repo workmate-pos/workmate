@@ -6,19 +6,15 @@ import {
   insertPurchaseOrderReceiptLineItems,
   updatePurchaseOrderReceipt,
 } from './queries.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { UpsertPurchaseOrderReceipt } from '../../schemas/generated/upsert-purchase-order-receipt.js';
 import { unit } from '../db/unit-of-work.js';
 import { Session } from '@shopify/shopify-api';
-import { DetailedPurchaseOrder } from './types.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { entries } from '@teifi-digital/shopify-app-toolbox/object';
-import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { getDetailedPurchaseOrder } from './get.js';
 import { getNewPurchaseOrderReceiptName } from '../id-formatting.js';
-import { MoveInventoryQuantities, mutateInventoryQuantities } from '../inventory/adjust.js';
+import { adjustPurchaseOrderShopifyInventory } from './upsert.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 export async function upsertReceipt(
@@ -109,65 +105,7 @@ export async function upsertReceipt(
       upsertPurchaseOrderReceipt.lineItems,
     );
 
-    if (purchaseOrder) {
-      await adjustShopifyInventory(session, user, purchaseOrder, { ...upsertPurchaseOrderReceipt, name });
-    }
+    const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name, locationIds)) ?? never('We just made it');
+    await adjustPurchaseOrderShopifyInventory(session, user, purchaseOrder, newPurchaseOrder);
   });
-}
-
-/**
- * Adjusts `available` inventory quantity to reflect the purchase order receipt.
- * Note: we do not have to check received quantity - receipts will automatically reduce incoming and increase available.
- */
-async function adjustShopifyInventory(
-  session: Session,
-  user: LocalsTeifiUser,
-  purchaseOrder: DetailedPurchaseOrder,
-  receipt: UpsertPurchaseOrderReceipt & { name: string },
-) {
-  if (!purchaseOrder.location) {
-    return;
-  }
-
-  const deltasByInventoryItemId: Record<ID, number> = {};
-
-  for (const { uuid, quantity } of receipt.lineItems) {
-    const lineItem = purchaseOrder.lineItems.find(hasPropertyValue('uuid', uuid)) ?? never('FK');
-
-    // delta can only be positive because we only support creating receipts, and no edits to quantities afterwards
-    deltasByInventoryItemId[lineItem.productVariant.inventoryItemId] =
-      (deltasByInventoryItemId[lineItem.productVariant.inventoryItemId] ?? 0) + quantity;
-  }
-
-  const changes: MoveInventoryQuantities['changes'] = [];
-
-  for (const [inventoryItemId, delta] of entries(deltasByInventoryItemId)) {
-    changes.push({
-      locationId: purchaseOrder.location.id,
-      quantity: delta,
-      inventoryItemId,
-      from: 'incoming',
-      to: 'available',
-    });
-  }
-
-  try {
-    await mutateInventoryQuantities(session, {
-      type: 'move',
-      initiator: {
-        type: 'purchase-order-receipt',
-        name: receipt.name,
-      },
-      reason: 'received',
-      staffMemberId: user.staffMember.id,
-      changes,
-    });
-  } catch (error) {
-    if (error instanceof GraphqlUserErrors) {
-      sentryErr('Failed to adjust inventory', { userErrors: error.userErrors });
-      throw new HttpError('Failed to adjust inventory', 500);
-    }
-
-    throw error;
-  }
 }

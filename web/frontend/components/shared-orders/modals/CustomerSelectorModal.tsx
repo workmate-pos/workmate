@@ -1,10 +1,9 @@
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
-import { useCustomersQuery } from '@work-orders/common/queries/use-customers-query.js';
+import { Customer, useCustomersQuery } from '@work-orders/common/queries/use-customers-query.js';
 import { Button, Filters, Modal, ResourceItem, ResourceList, Text } from '@shopify/polaris';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 
@@ -17,7 +16,7 @@ export function CustomerSelectorModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSelect: (customerId: ID) => void;
+  onSelect: (customer: Customer) => void;
   onSelectCompany?: () => void;
   setToastAction: ToastActionCallable;
 }) {
@@ -83,7 +82,7 @@ export function CustomerSelectorModal({
           <ResourceItem
             id={customer.id}
             onClick={() => {
-              onSelect(customer.id);
+              onSelect(customer);
               onClose();
             }}
           >

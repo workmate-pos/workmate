@@ -54,6 +54,8 @@ import {
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
 
+const PURCHASE_ORDER_TYPES: CreatePurchaseOrder['type'][] = ['NORMAL', 'DROPSHIP'];
+
 // TODO: A new screen to view linked orders/workorders
 // TODO: A way to link purchase order line items to draft SO line items
 // TODO: a way to create a transfer order from a purchase order - but make sure it is linked somehow
@@ -166,6 +168,28 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               <FormStringField label={'Purchase order ID'} disabled value={createPurchaseOrder.name} />
             )}
             <FormStringField
+              label={'Type'}
+              required
+              value={sentenceCase(createPurchaseOrder.type)}
+              onFocus={() =>
+                router.push('ListPopup', {
+                  title: 'Select type',
+                  selection: {
+                    type: 'select',
+                    items: PURCHASE_ORDER_TYPES.map(type => ({
+                      id: type,
+                      leftSide: {
+                        label: sentenceCase(type),
+                      },
+                    })),
+                    onSelect: type => dispatch.setPartial({ type: type as (typeof PURCHASE_ORDER_TYPES)[number] }),
+                  },
+                })
+              }
+              helpText="Dropship orders do not count towards your inventory quantities."
+            />
+
+            <FormStringField
               label={'Vendor'}
               onFocus={vendorSelectorWarningDialog.show}
               value={createPurchaseOrder.vendorName ?? ''}
@@ -256,13 +280,31 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               onChange={(shipTo: string) => dispatch.setPartial({ shipTo })}
               disabled={purchaseOrderMutation.isPending}
             />
-            {!!selectedLocation?.address?.formatted &&
+            {createPurchaseOrder.type === 'NORMAL' &&
+              !!selectedLocation?.address?.formatted &&
               createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
                 <FormButton
                   title={'Use location address'}
                   onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
                 />
               )}
+            {createPurchaseOrder.type === 'DROPSHIP' && (
+              <FormButton
+                title={'Select customer address'}
+                onPress={() => {
+                  router.push('CustomerSelector', {
+                    onSelect: customer => {
+                      if (!customer.defaultAddress) {
+                        toast.show('This customer has no known address');
+                        return;
+                      }
+
+                      dispatch.setPartial({ shipTo: customer.defaultAddress.formatted.join('\n') });
+                    },
+                  });
+                }}
+              />
+            )}
           </ResponsiveGrid>
 
           <ResponsiveGrid columns={1}>

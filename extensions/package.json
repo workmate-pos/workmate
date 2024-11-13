@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@teifi-digital/pos-tools": "^0.1.9",
-    "@teifi-digital/shopify-app-toolbox": "^0.0.72",
+    "@teifi-digital/shopify-app-toolbox": "^0.0.73",
     "ts-pattern": "^5.2.0"
   },
   "exports": {}

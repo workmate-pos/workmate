@@ -59,6 +59,7 @@ export async function getDetailedPurchaseOrder(
   // pos will instantly mark the data as stale so it will refetch any missing data
   return await awaitNested({
     name: purchaseOrder.name,
+    type: purchaseOrder.type,
     status: purchaseOrder.status,
     placedDate: purchaseOrder.placedDate ? (purchaseOrder.placedDate.toISOString() as DateTime) : null,
     location: getLocation(purchaseOrder.locationId),
