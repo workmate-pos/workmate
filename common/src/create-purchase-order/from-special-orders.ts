@@ -76,11 +76,10 @@ export function getCreatePurchaseOrderForSpecialOrders({
               uuid: lineItem.uuid,
             },
             quantity: remainingQuantity,
-            availableQuantity: 0,
             unitCost,
             customFields: lineItemCustomFields,
             serialNumber: null,
-          };
+          } satisfies CreatePurchaseOrder['lineItems'][number];
         })
         .filter(isNonNullable),
     ),
