@@ -32,9 +32,19 @@
             "items": {
               "$ref": "scalars.json#/definitions/ID"
             }
+          },
+          "defaultLocationId": {
+            "anyOf": [
+              {
+                "const": null
+              },
+              {
+                "$ref": "scalars.json#/definitions/ID"
+              }
+            ]
           }
         },
-        "required": ["staffMemberId", "rate", "superuser", "role", "locationIds"],
+        "required": ["staffMemberId", "rate", "superuser", "role", "locationIds", "defaultLocationId"],
         "additionalProperties": false
       }
     }

@@ -69,6 +69,7 @@ export const permissionHandler: DecoratorHandler<Permission | 'superuser' | 'non
           email,
           role: staffMember?.role ?? defaultRoleUuid,
           rate: staffMember?.rate ?? null,
+          defaultLocationId: staffMember?.defaultLocationId ?? null,
         },
       ]);
     }

@@ -240,6 +240,7 @@ model Employee {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   locations EmployeeLocation[]
+  defaultLocationId String?
 
   @@index([shop, staffMemberId])
 }
