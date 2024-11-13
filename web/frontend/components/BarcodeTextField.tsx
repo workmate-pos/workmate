@@ -61,7 +61,7 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
       return;
     }
 
-    const variants = scanVariantsQuery.data ?? [];
+    const variants = (scanVariantsQuery.data ?? []) satisfies ProductVariant[];
 
     if (variants.length === 0) {
       setError('No products found');
@@ -87,7 +87,7 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
   const handleProductSelect = (variant: ProductVariant) => {
     const name = getProductVariantName(variant) ?? 'Unknown product';
     setToastAction({ content: `Added ${name}` });
-    onProductScanned(variant as ProductVariant);
+    onProductScanned(variant);
     setVariantIdCount(current => ({
       ...current,
       [variant.id]: (current[variant.id] ?? 0) + 1,
