@@ -25,6 +25,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 export default function () {
   return (
@@ -71,7 +72,17 @@ function CycleCounts() {
     }
   }, [locationsQuery.isFetching, locationsQuery.hasNextPage]);
 
-  const employeeQueries = useEmployeeQueries({ fetch, ids: [] });
+  const [pageIndex, setPage] = useState(0);
+  const pagination = getInfiniteQueryPagination(0, setPage, cycleCountQuery);
+  const page = cycleCountQuery.data?.pages[pageIndex] ?? [];
+
+  // Get unique employee IDs from all cycle counts' employee assignments
+  const employeeIds = unique(
+    page.flatMap(cycleCount => cycleCount.employeeAssignments.map(assignment => assignment.employeeId)),
+  );
+
+  // Pass the collected IDs to useEmployeeQueries
+  const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
   const employees = Object.values(employeeQueries)
     .map(query => query.data)
     .filter(isNonNullable);
@@ -79,10 +90,6 @@ function CycleCounts() {
   const redirectToCycleCount = (cycleCountName: 'new' | string) => {
     Redirect.create(app).dispatch(Redirect.Action.APP, `/cycle-counts/${encodeURIComponent(cycleCountName)}`);
   };
-
-  const [pageIndex, setPage] = useState(0);
-  const pagination = getInfiniteQueryPagination(0, setPage, cycleCountQuery);
-  const page = cycleCountQuery.data?.pages[pageIndex] ?? [];
 
   return (
     <>

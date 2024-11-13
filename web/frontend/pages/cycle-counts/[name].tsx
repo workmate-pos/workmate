@@ -146,6 +146,26 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
     [dispatch],
   );
 
+  const cleanCreateCycleCount = (data: CreateCycleCount): CreateCycleCount => {
+    return {
+      name: data.name,
+      status: data.status,
+      locationId: data.locationId,
+      note: data.note,
+      dueDate: data.dueDate,
+      locked: data.locked,
+      employeeAssignments: data.employeeAssignments,
+      items: data.items.map(item => ({
+        uuid: item.uuid,
+        productVariantId: item.productVariantId,
+        inventoryItemId: item.inventoryItemId,
+        countQuantity: item.countQuantity,
+        productTitle: item.productTitle,
+        productVariantTitle: item.productVariantTitle,
+      })),
+    };
+  };
+
   return (
     <Box paddingBlockEnd={'1600'}>
       <TitleBar
@@ -174,7 +194,7 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
         visible={hasUnsavedChanges}
         saveAction={{
           loading: cycleCountMutation.isPending,
-          onAction: () => cycleCountMutation.mutate(createCycleCount),
+          onAction: () => cycleCountMutation.mutate(cleanCreateCycleCount(createCycleCount)),
           disabled: cycleCountMutation.isPending,
         }}
         discardAction={{
