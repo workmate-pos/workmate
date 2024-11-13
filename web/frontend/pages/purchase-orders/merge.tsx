@@ -1,6 +1,7 @@
 import { PermissionBoundary } from '@web/frontend/components/PermissionBoundary.js';
 import {
   Badge,
+  Box,
   EmptyState,
   Frame,
   IndexFilters,
@@ -107,7 +108,84 @@ function Merge() {
 
   return (
     <LegacyCard>
-      <TitleBar title="Merge special orders" />
+      <TitleBar
+        title="Merge special orders"
+        primaryAction={{
+          content: 'Merge',
+          disabled: selectedResources.length === 0 || !locationId || !vendorName || purchaseOrderMutation.isPending,
+          loading: purchaseOrderMutation.isPending,
+          onAction: () => {
+            if (!locationId || !vendorName) {
+              return;
+            }
+
+            const status = settingsQuery.data?.settings.purchaseOrders.defaultStatus;
+            const purchaseOrderCustomFields = purchaseOrderCustomFieldsPresetsQuery.data?.defaultCustomFields;
+            const lineItemCustomFields = lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields;
+
+            if (!status || !purchaseOrderCustomFields || !lineItemCustomFields) {
+              setToastAction({ content: 'Settings not loaded, please try again' });
+              return;
+            }
+
+            const location = locations.find(location => location.id === locationId);
+
+            if (!location) {
+              setToastAction({ content: 'Location not found' });
+              return;
+            }
+
+            const selectedSpecialOrders = selectedResources
+              .map(name => specialOrdersQuery.data?.pages.flat().find(specialOrder => specialOrder.name === name))
+              .filter(isNonNullable);
+
+            if (selectedSpecialOrders.length !== selectedResources.length) {
+              setToastAction({ content: 'Some special orders are missing, please try again' });
+              return;
+            }
+
+            const createPurchaseOrder = getCreatePurchaseOrderForSpecialOrders({
+              location,
+              vendorName,
+              status,
+              purchaseOrderCustomFields,
+              lineItemCustomFields,
+              productVariants: Object.fromEntries(
+                Object.values(productVariantQueries)
+                  .filter(hasNonNullableProperty('data'))
+                  .map(query => [query.data.id, query.data]),
+              ),
+              specialOrders: selectedSpecialOrders,
+            });
+
+            if (createPurchaseOrder.lineItems.length === 0) {
+              setToastAction({ content: 'Cannot merge special orders - no line items found' });
+              return;
+            }
+
+            setToastAction({ content: 'Merging special orders...' });
+            purchaseOrderMutation.mutate(createPurchaseOrder, {
+              onSuccess({ purchaseOrder }) {
+                setToastAction({ content: `Saved purchase order ${purchaseOrder.name}` });
+                Redirect.create(app).dispatch(
+                  Redirect.Action.APP,
+                  `/purchase-orders/${encodeURIComponent(purchaseOrder.name)}`,
+                );
+              },
+            });
+          },
+        }}
+      />
+
+      <Box paddingInline="600" paddingBlockStart="600" paddingBlockEnd="200">
+        <Text as="h2" variant="headingMd" fontWeight="bold">
+          Merge Special orders
+        </Text>
+        <Text as="p" variant="bodyMd">
+          Combine special orders into a single purchase order by selecting the location and vendor you want to create a
+          purchase order for.
+        </Text>
+      </Box>
 
       <IndexFilters
         mode={IndexFiltersMode.Default}
@@ -226,73 +304,6 @@ function Merge() {
         }}
         resourceName={{ singular: 'special order', plural: 'special orders' }}
         onSelectionChange={handleSelectionChange}
-        promotedBulkActions={[
-          {
-            id: 'merge',
-            content: 'Merge',
-            disabled: selectedResources.length === 0 || !locationId || !vendorName || purchaseOrderMutation.isPending,
-            onAction: () => {
-              if (!locationId || !vendorName) {
-                return;
-              }
-
-              const status = settingsQuery.data?.settings.purchaseOrders.defaultStatus;
-              const purchaseOrderCustomFields = purchaseOrderCustomFieldsPresetsQuery.data?.defaultCustomFields;
-              const lineItemCustomFields = lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields;
-
-              if (!status || !purchaseOrderCustomFields || !lineItemCustomFields) {
-                setToastAction({ content: 'Settings not loaded, please try again' });
-                return;
-              }
-
-              const location = locations.find(location => location.id === locationId);
-
-              if (!location) {
-                setToastAction({ content: 'Location not found' });
-                return;
-              }
-
-              const selectedSpecialOrders = selectedResources
-                .map(name => specialOrdersQuery.data?.pages.flat().find(specialOrder => specialOrder.name === name))
-                .filter(isNonNullable);
-
-              if (selectedSpecialOrders.length !== selectedResources.length) {
-                setToastAction({ content: 'Some special orders are missing, please try again' });
-                return;
-              }
-
-              const createPurchaseOrder = getCreatePurchaseOrderForSpecialOrders({
-                location,
-                vendorName,
-                status,
-                purchaseOrderCustomFields,
-                lineItemCustomFields,
-                productVariants: Object.fromEntries(
-                  Object.values(productVariantQueries)
-                    .filter(hasNonNullableProperty('data'))
-                    .map(query => [query.data.id, query.data]),
-                ),
-                specialOrders: selectedSpecialOrders,
-              });
-
-              if (createPurchaseOrder.lineItems.length === 0) {
-                setToastAction({ content: 'Cannot merge special orders - no line items found' });
-                return;
-              }
-
-              setToastAction({ content: 'Merging special orders...' });
-              purchaseOrderMutation.mutate(createPurchaseOrder, {
-                onSuccess({ purchaseOrder }) {
-                  setToastAction({ content: `Saved purchase order ${purchaseOrder.name}` });
-                  Redirect.create(app).dispatch(
-                    Redirect.Action.APP,
-                    `/purchase-orders/${encodeURIComponent(purchaseOrder.name)}`,
-                  );
-                },
-              });
-            },
-          },
-        ]}
       >
         {page.map((specialOrder, i) => (
           <IndexTable.Row
