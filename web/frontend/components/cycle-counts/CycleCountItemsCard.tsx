@@ -15,7 +15,7 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
-import { CreateCycleCountDispatch } from '@work-orders/common/create-cycle-count/reducer.js';
+import { CreateCycleCountDispatchProxy } from '@work-orders/common/create-cycle-count/reducer.js';
 import { useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { CycleCountItemModal, getCycleCountApplicationStateBadge } from './modals/CycleCountItemModal.js';
@@ -24,7 +24,7 @@ import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-
 
 interface Props {
   createCycleCount: CreateCycleCount;
-  dispatch: CreateCycleCountDispatch;
+  dispatch: CreateCycleCountDispatchProxy;
   disabled: boolean;
   onAddProducts: () => void;
   onScanProducts: () => void;

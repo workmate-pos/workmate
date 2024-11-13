@@ -4,7 +4,7 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
-import { CreateCycleCountDispatch } from '@work-orders/common/create-cycle-count/reducer.js';
+import { CreateCycleCountDispatchProxy } from '@work-orders/common/create-cycle-count/reducer.js';
 import { useState } from 'react';
 import { DateModal } from '@web/frontend/components/shared-orders/modals/DateModal.js';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
@@ -12,7 +12,7 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 
 type Props = {
   createCycleCount: CreateCycleCount;
-  dispatch: CreateCycleCountDispatch;
+  dispatch: CreateCycleCountDispatchProxy;
   disabled: boolean;
   onLocationSelect: () => void;
 };
@@ -30,7 +30,7 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
 
   const dueDate = createCycleCount.dueDate ? new Date(createCycleCount.dueDate) : null;
 
-  const statusOptions = settingsQuery.data.settings.cycleCount.statuses ?? [];
+  const statusOptions = settingsQuery.data?.settings.cycleCount.statuses ?? [];
 
   return (
     <>

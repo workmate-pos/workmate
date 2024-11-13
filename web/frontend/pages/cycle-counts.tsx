@@ -188,7 +188,9 @@ function CycleCounts() {
           { title: 'Name' },
           { title: 'Items' },
           { title: 'Status' },
+          { title: 'Application Status' },
           { title: 'Location' },
+          { title: 'Employees' },
           { title: 'Due Date' },
         ]}
         itemCount={page.length}
@@ -230,7 +232,16 @@ function CycleCounts() {
             <IndexTable.Cell>
               <Badge tone="info">{count.status}</Badge>
             </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Badge tone={count.applicationStatus === 'applied' ? 'success' : 'info'}>{count.applicationStatus}</Badge>
+            </IndexTable.Cell>
             <IndexTable.Cell>{count.locationId}</IndexTable.Cell>
+            <IndexTable.Cell>
+              {employees
+                .filter(employee => count.employeeAssignments.some(assignment => assignment.employeeId === employee.id))
+                .map(employee => employee.name)
+                .join(', ') || '-'}
+            </IndexTable.Cell>
             <IndexTable.Cell>{count.dueDate ? new Date(count.dueDate).toLocaleDateString() : '-'}</IndexTable.Cell>
           </IndexTable.Row>
         ))}

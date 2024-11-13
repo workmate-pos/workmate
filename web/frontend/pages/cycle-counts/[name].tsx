@@ -26,6 +26,7 @@ import { ScanProductModal } from '@web/frontend/components/cycle-counts/modals/S
 import { CycleCountHistoryModal } from '../../components/cycle-counts/modals/CycleCountHistoryModal.js';
 import { PlanCycleCountModal } from '../../components/cycle-counts/modals/PlanCycleCountModal.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
+import { MultiStaffMemberSelectorModal } from '../../components/selectors/MultiStaffMemberSelectorModal.js';
 
 export default function () {
   return (
@@ -122,6 +123,7 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
   const [isScanModalOpen, setIsScanModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [isEmployeeSelectorOpen, setIsEmployeeSelectorOpen] = useState(false);
 
   const cycleCountMutation = useCycleCountMutation(
     { fetch },
@@ -281,6 +283,17 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
           cycleCountName={createCycleCount.name}
         />
       )}
+
+      <MultiStaffMemberSelectorModal
+        open={isEmployeeSelectorOpen}
+        onClose={() => setIsEmployeeSelectorOpen(false)}
+        selected={createCycleCount.employeeAssignments.map(assignment => assignment.employeeId)}
+        onChange={employeeIds => {
+          dispatch.setEmployeeAssignments({
+            employeeAssignments: employeeIds.map(employeeId => ({ employeeId })),
+          });
+        }}
+      />
 
       {toast}
     </Box>
