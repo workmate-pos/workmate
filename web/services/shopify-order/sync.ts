@@ -304,10 +304,13 @@ async function deleteOrderLineItems(shop: string, orderId: ID, lineItemIds: ID[]
     return lineItemCount === 0;
   });
 
-  await updateSerialSoldState(
-    shop,
-    lineItemSerialsToMarkNotSold.map(lineItemSerial => ({ ...lineItemSerial, sold: false })),
-  );
+  await Promise.all([
+    deleteLineItemSerials(shop, lineItemIds),
+    updateSerialSoldState(
+      shop,
+      lineItemSerialsToMarkNotSold.map(lineItemSerial => ({ ...lineItemSerial, sold: false })),
+    ),
+  ]);
 
   await deleteShopifyOrderLineItemsByIds(orderId, lineItemIds);
 }
