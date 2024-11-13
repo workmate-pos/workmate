@@ -40,7 +40,7 @@ export function ProductVariantSelector({ useRouter, onSelect, onClear, filters }
       first: 50,
       query: [
         query,
-        status ? `product_status:${status.join(',')}` : '',
+        status.map(status => `product_status:${status}`).join(' OR ') ?? '',
         match(type)
           .with('product', () =>
             Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
