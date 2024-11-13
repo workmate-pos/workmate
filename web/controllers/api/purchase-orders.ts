@@ -82,7 +82,7 @@ export default class PurchaseOrdersController {
     const { name } = req.params;
     const receipt = req.body;
 
-    await upsertReceipt(session, name, receipt, user.user.allowedLocationIds);
+    await upsertReceipt(session, user, name, receipt);
 
     return res.json({
       purchaseOrder:

@@ -240,6 +240,7 @@ model Employee {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   locations EmployeeLocation[]
+  defaultLocationId String?
 
   @@index([shop, staffMemberId])
 }
@@ -1315,4 +1316,62 @@ model InventoryQuantity {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   @@unique([shop, locationId, inventoryItemId, name])
+}
+
+enum InventoryMutationType {
+  MOVE
+  SET
+  ADJUST
+}
+
+enum InventoryMutationInitiatorType {
+  PURCHASE_ORDER
+  PURCHASE_ORDER_RECEIPT
+  STOCK_TRANSFER
+  CYCLE_COUNT
+  WORK_ORDER
+  UNKNOWN
+}
+
+model InventoryMutation {
+  id Int @id @default(autoincrement())
+
+  shop String
+  type InventoryMutationType
+
+  initiatorType InventoryMutationInitiatorType
+  initiatorName String
+
+  // The staff member that initiated the mutation
+  staffMemberId String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  items InventoryMutationItem[]
+
+  @@index([shop])
+}
+
+model InventoryMutationItem {
+  id Int @id @default(autoincrement())
+
+  inventoryMutationId Int
+  inventoryMutation   InventoryMutation @relation(fields: [inventoryMutationId], references: [id])
+
+  inventoryItemId String
+  name            String
+  locationId      String
+
+  // type = set
+  compareQuantity Int?
+
+  // type = set / move
+  quantity Int?
+
+  // type = adjust
+  delta Int?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }

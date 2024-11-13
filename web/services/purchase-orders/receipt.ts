@@ -6,7 +6,6 @@ import {
   insertPurchaseOrderReceiptLineItems,
   updatePurchaseOrderReceipt,
 } from './queries.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { UpsertPurchaseOrderReceipt } from '../../schemas/generated/upsert-purchase-order-receipt.js';
 import { unit } from '../db/unit-of-work.js';
@@ -16,16 +15,19 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { getDetailedPurchaseOrder } from './get.js';
 import { getNewPurchaseOrderReceiptName } from '../id-formatting.js';
 import { adjustPurchaseOrderShopifyInventory } from './upsert.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 export async function upsertReceipt(
   session: Session,
-  name: string,
+  user: LocalsTeifiUser,
+  purchaseOrderName: string,
   upsertPurchaseOrderReceipt: UpsertPurchaseOrderReceipt,
-  locationIds: ID[] | null,
 ) {
+  const locationIds = user.user.allowedLocationIds;
+
   const [purchaseOrder, purchaseOrderId] = await Promise.all([
-    getDetailedPurchaseOrder(session, name, locationIds),
-    getPurchaseOrder({ shop: session.shop, name, locationIds }).then(po => po?.id),
+    getDetailedPurchaseOrder(session, purchaseOrderName, locationIds),
+    getPurchaseOrder({ shop: session.shop, name: purchaseOrderName, locationIds }).then(po => po?.id),
   ]);
 
   if (!purchaseOrder || !purchaseOrderId) {
@@ -53,7 +55,8 @@ export async function upsertReceipt(
   }
 
   await unit(async () => {
-    purchaseOrderReceiptId = !!purchaseOrderReceiptId
+    let name: string;
+    ({ id: purchaseOrderReceiptId, name } = !!purchaseOrderReceiptId
       ? await updatePurchaseOrderReceipt({
           purchaseOrderReceiptId,
           description: upsertPurchaseOrderReceipt.description,
@@ -68,7 +71,7 @@ export async function upsertReceipt(
           purchaseOrderId: purchaseOrderId,
           receivedAt: new Date(upsertPurchaseOrderReceipt.receivedAt),
           status: upsertPurchaseOrderReceipt.status,
-        });
+        }));
 
     await deletePurchaseOrderReceiptLineItems({ purchaseOrderReceiptId });
 
@@ -103,6 +106,6 @@ export async function upsertReceipt(
     );
 
     const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name, locationIds)) ?? never('We just made it');
-    await adjustPurchaseOrderShopifyInventory(session, purchaseOrder, newPurchaseOrder);
+    await adjustPurchaseOrderShopifyInventory(session, user, purchaseOrder, newPurchaseOrder);
   });
 }

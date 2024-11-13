@@ -1,7 +1,6 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getShopifyOrderLineItem } from '../orders/queries.js';
 import {
-  getShopifyOrderLineItemReservationsByIds,
   createOrIncrementShopifyOrderLineItemReservation,
   removeShopifyOrderLineItemReservation,
   getShopifyOrderLineItemReservations,
@@ -12,11 +11,20 @@ import { Session } from '@shopify/shopify-api';
 import { gql } from '../gql/gql.js';
 import { unit } from '../db/unit-of-work.js';
 import { isLineItemId } from '../../util/assertions.js';
+import { InventoryMutationInitiator, mutateInventoryQuantities } from '../inventory/adjust.js';
+import { LocalsTeifiUser } from '../../decorators/permission.js';
 
 /**
  * Moves inventory stock from "available" to "reserved" for a given line item.
  */
-export async function reserveLineItemQuantity(session: Session, locationId: ID, lineItemId: ID, quantity: number) {
+export async function reserveLineItemQuantity(
+  session: Session,
+  user: LocalsTeifiUser,
+  initiator: InventoryMutationInitiator,
+  locationId: ID,
+  lineItemId: ID,
+  quantity: number,
+) {
   if (isLineItemId(lineItemId)) {
     // only draft order line items can be reserved because order line items automatically put inventory in the 'committed' stage already
     return;
@@ -28,20 +36,20 @@ export async function reserveLineItemQuantity(session: Session, locationId: ID, 
     throw new HttpError('Line item must be a product', 404);
   }
 
-  const graphql = new Graphql(session);
-  await gql.inventory.moveQuantities.run(graphql, {
-    input: {
-      reason: 'other',
-      referenceDocumentUri: 'workmate://reserveLineItemQuantity',
-      changes: [
-        {
-          quantity: quantity,
-          inventoryItemId,
-          from: { name: 'available', locationId },
-          to: { name: 'reserved', locationId, ledgerDocumentUri: 'workmate://reserveLineItemQuantity' },
-        },
-      ],
-    },
+  await mutateInventoryQuantities(session, {
+    type: 'move',
+    reason: 'reservation_created',
+    initiator,
+    staffMemberId: user.staffMember.id,
+    changes: [
+      {
+        quantity,
+        inventoryItemId,
+        locationId,
+        from: 'available',
+        to: 'reserved',
+      },
+    ],
   });
 
   await createOrIncrementShopifyOrderLineItemReservation(lineItemId, locationId, quantity);
@@ -97,17 +105,21 @@ async function revertShopifyReservationQuantities(
     return;
   }
 
-  const graphql = new Graphql(session);
-  await gql.inventory.moveQuantities.run(graphql, {
-    input: {
-      reason: 'other',
-      referenceDocumentUri: 'workmate://unreserveLineItemAtLocation',
-      changes: reservations.map(({ locationId, quantity }) => ({
-        inventoryItemId,
-        quantity,
-        from: { name: 'reserved', locationId, ledgerDocumentUri: 'workmate://unreserveLineItemAtLocation' },
-        to: { name: 'available', locationId },
-      })),
+  await mutateInventoryQuantities(session, {
+    type: 'move',
+    initiator: {
+      // TODO: Add this to reservation table
+      type: 'unknown',
+      name: 'unknown',
     },
+    reason: 'reservation_deleted',
+    staffMemberId: null,
+    changes: reservations.map(({ quantity, locationId }) => ({
+      locationId,
+      inventoryItemId,
+      quantity,
+      from: 'reserved',
+      to: 'available',
+    })),
   });
 }

@@ -91,6 +91,7 @@ async function upsertGraphqlStaffMembers(
           email: staffMember.email,
           role: defaultRole,
           rate: null,
+          defaultLocationId: null,
         })),
     ),
 
@@ -104,7 +105,7 @@ async function upsertGraphqlStaffMembers(
           email,
         } = staffMembers.find(staffMember => staffMember.id === databaseStaffMember.staffMemberId) ?? never();
 
-        const { rate, superuser, role } = databaseStaffMember;
+        const { rate, superuser, role, defaultLocationId } = databaseStaffMember;
 
         return {
           shop,
@@ -115,6 +116,7 @@ async function upsertGraphqlStaffMembers(
           email,
           role,
           superuser: superuser || isShopOwner,
+          defaultLocationId,
         };
       }),
     ),

@@ -284,7 +284,7 @@ function useServiceRows(setToastAction: ToastActionCallable) {
 
   const isLoading = servicesQuery.isLoading || servicesQuery.isFetchingNextPage;
 
-  const loadingPage = Array.from({ length: pageSize }).map((_, i) => (
+  const loadingPage = Array.from({ length: pageSize }, (_, i) => (
     <IndexTable.Row key={i} id={String(i)} selected={false} position={i}>
       <IndexTable.Cell>
         <SkeletonBodyText lines={1} />
@@ -344,7 +344,7 @@ function useLabourRows(labourTab: LabourType, setToastAction: ToastActionCallabl
 
   const isLoading = labourQuery.isLoading || labourQuery.isFetchingNextPage;
 
-  const loadingPage = Array.from({ length: pageSize }).map((_, i) => (
+  const loadingPage = Array.from({ length: pageSize }, (_, i) => (
     <IndexTable.Row id={String(i)} position={i} disabled>
       <IndexTable.Cell>
         <SkeletonBodyText lines={1} />

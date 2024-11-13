@@ -109,7 +109,7 @@ export default class EmployeeController {
     return await unit(async () => {
       await upsertStaffMembers(
         session.shop,
-        req.body.employees.map(({ staffMemberId, rate, superuser, role }) => {
+        req.body.employees.map(({ staffMemberId, rate, superuser, role, defaultLocationId }) => {
           const staffMember = staffMemberById[staffMemberId];
 
           if (!staffMember) {
@@ -125,6 +125,7 @@ export default class EmployeeController {
             shop,
             rate,
             role,
+            defaultLocationId,
           };
         }),
       );
@@ -164,6 +165,7 @@ async function attachDatabaseEmployees(shop: string, staffMembers: gql.staffMemb
           role: defaultRole,
           rate: null,
           locationIds: [],
+          defaultLocationId: null,
         })),
     )),
   );
