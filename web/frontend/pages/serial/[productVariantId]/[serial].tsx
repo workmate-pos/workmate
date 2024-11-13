@@ -38,6 +38,7 @@ import { CreateSerial } from '@web/schemas/generated/create-serial.js';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { LinkedTasks, NewLinkedTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { Action } from '@shopify/app-bridge-core/actions/Navigation/Redirect/index.js';
 
 export default function Serial() {
   const routes = useParams<'productVariantId' | 'serial'>();
@@ -295,9 +296,9 @@ export default function Serial() {
                         return (
                           <ResourceItem url={`/purchase-orders/${encodeURIComponent(item.name)}`} id={id}>
                             <BlockStack gap={'400'}>
-                              <Box>
-                                <Badge tone="info">{item.name}</Badge>
-                              </Box>
+                              <Text as="p" variant="headingSm" fontWeight="bold">
+                                {item.name}
+                              </Text>
                               <BlockStack gap={'200'}>
                                 {item.location && (
                                   <Text as="p" variant="bodyMd" tone="subdued">
@@ -314,14 +315,48 @@ export default function Serial() {
                         return (
                           <ResourceItem url={`/work-orders/${encodeURIComponent(item.name)}`} id={id}>
                             <BlockStack gap={'400'}>
-                              <Box>
-                                <Badge tone="info">{item.name}</Badge>
-                              </Box>
+                              <Text as="p" variant="headingSm" fontWeight="bold">
+                                {item.name}
+                              </Text>
                               <BlockStack gap={'200'}>
+                                {item.location && (
+                                  <Text as="p" variant="bodyMd" tone="subdued">
+                                    {item.location?.name}
+                                  </Text>
+                                )}
                                 <Text as="p" variant="bodyMd" tone="subdued">
                                   {item.customer.displayName}
                                 </Text>
                               </BlockStack>
+                            </BlockStack>
+                          </ResourceItem>
+                        );
+                      }
+
+                      if (item.type === 'shopify-order') {
+                        return (
+                          <ResourceItem
+                            id={id}
+                            onClick={() =>
+                              Redirect.create(app).dispatch(
+                                Action.ADMIN_PATH,
+                                `/${
+                                  { ORDER: 'orders', DRAFT_ORDER: 'draft_orders' }[item.orderType]
+                                }/${parseGid(item.id).id}`,
+                              )
+                            }
+                          >
+                            <BlockStack gap={'400'}>
+                              <Text as="p" variant="headingSm" fontWeight="bold">
+                                {item.name}
+                              </Text>
+                              {item.customer && (
+                                <BlockStack gap={'200'}>
+                                  <Text as="p" variant="bodyMd" tone="subdued">
+                                    {item.customer.displayName}
+                                  </Text>
+                                </BlockStack>
+                              )}
                             </BlockStack>
                           </ResourceItem>
                         );

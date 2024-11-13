@@ -4,6 +4,7 @@ import { assertGidOrNull, assertMoneyOrNull } from '../../util/assertions.js';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { MergeUnion } from '../../util/types.js';
 
 export async function getShopifyOrderLineItem(id: ID) {
   const _id: string = id;
@@ -193,4 +194,48 @@ export async function getShopifyOrderLineItems(orderId: ID) {
   `;
 
   return lineItems.map(mapShopifyOrderLineItem);
+}
+
+// TODO: Should this have locationIds filter for franchise mode?
+export async function getShopifyOrdersForSerial({
+  shop,
+  serial,
+  id,
+  productVariantId,
+}: MergeUnion<
+  | { id: number }
+  | {
+      shop: string;
+      serial: string;
+      productVariantId: ID;
+    }
+>) {
+  const _productVariantId: string | null = productVariantId ?? null;
+
+  const shopifyOrders = await sql<{
+    orderId: string;
+    shop: string;
+    orderType: 'ORDER' | 'DRAFT_ORDER';
+    name: string;
+    customerId: string | null;
+    total: string;
+    outstanding: string;
+    fullyPaid: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    discount: string;
+    subtotal: string;
+  }>`
+    SELECT DISTINCT so.*
+    FROM "ProductVariantSerial" pvs
+           INNER JOIN "ShopifyOrderLineItemProductVariantSerial" lis ON lis."productVariantSerialId" = pvs.id
+           INNER JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = lis."lineItemId"
+           INNER JOIN "ShopifyOrder" so ON so."orderId" = soli."orderId"
+    WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
+      AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
+      AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+  `;
+
+  return shopifyOrders.map(mapShopifyOrder);
 }

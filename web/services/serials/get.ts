@@ -13,6 +13,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProduct } from '../products/queries.js';
 import { httpError } from '../../util/http-error.js';
+import { getShopifyOrdersForSerial } from '../orders/queries.js';
 
 export type DetailedSerial = NonNullable<Awaited<ReturnType<typeof getDetailedSerial>>>;
 
@@ -22,17 +23,18 @@ export async function getDetailedSerial(
     productVariantId: ID;
     serial: string;
   }>,
-  locationIds: ID[] | null,
+  allowedLocationIds: ID[] | null,
 ) {
-  const [serial, [productVariant, product], location, workOrders, purchaseOrders] = await Promise.all([
+  const [serial, [productVariant, product], location, workOrders, purchaseOrders, shopifyOrders] = await Promise.all([
     // TODO: Maybe just check location id afterwards? (for all except page)
-    getSerial({ ...filter, shop, locationIds }),
+    getSerial({ ...filter, shop, locationIds: allowedLocationIds }),
     getProductVariant(filter.productVariantId).then(
       async pv => [pv, pv ? await getProduct(pv.productId) : null] as const,
     ),
     getLocationForSerial({ ...filter, shop }),
-    getWorkOrdersForSerial({ ...filter, shop, locationIds }),
-    getPurchaseOrdersForSerial({ ...filter, shop, locationIds }),
+    getWorkOrdersForSerial({ ...filter, shop, locationIds: allowedLocationIds }),
+    getPurchaseOrdersForSerial({ ...filter, shop, locationIds: allowedLocationIds }),
+    getShopifyOrdersForSerial({ ...filter, shop }),
   ]);
 
   if (!serial) {
@@ -43,10 +45,17 @@ export async function getDetailedSerial(
     never('fk');
   }
 
-  const [workOrderCustomers, purchaseOrderLocations] = await Promise.all([
-    getCustomers(unique(workOrders.map(wo => wo.customerId))),
-    getLocations(unique(purchaseOrders.map(po => po.locationId).filter(isNonNullable))),
+  const customerIds = unique([
+    ...workOrders.map(wo => wo.customerId),
+    ...shopifyOrders.map(so => so.customerId).filter(isNonNullable),
   ]);
+
+  const locationIds = unique([
+    ...workOrders.map(wo => wo.locationId).filter(isNonNullable),
+    ...purchaseOrders.map(po => po.locationId).filter(isNonNullable),
+  ]);
+
+  const [customers, locations] = await Promise.all([getCustomers(customerIds), getLocations(locationIds)]);
 
   return {
     serial: serial.serial,
@@ -75,29 +84,28 @@ export async function getDetailedSerial(
     history: [
       ...purchaseOrders.map<SerialHistory>(po => {
         const location = po.locationId
-          ? (purchaseOrderLocations.find(hasPropertyValue('locationId', po.locationId)) ?? never('fk'))
+          ? (locations.find(hasPropertyValue('locationId', po.locationId)) ?? never('fk'))
           : null;
 
         return {
           type: 'purchase-order',
           name: po.name,
           status: po.status,
-          location: location
-            ? {
-                id: location.locationId,
-                name: location.name,
-              }
-            : null,
+          location: location ? { id: location.locationId, name: location.name } : null,
           date: po.createdAt.toISOString() as DateTime,
         };
       }),
       ...workOrders.map<SerialHistory>(wo => {
-        const customer = workOrderCustomers.find(hasPropertyValue('customerId', wo.customerId)) ?? never('fk');
+        const location = wo.locationId
+          ? (locations.find(hasPropertyValue('locationId', wo.locationId)) ?? never('fk'))
+          : null;
+        const customer = customers.find(hasPropertyValue('customerId', wo.customerId)) ?? never('fk');
 
         return {
           type: 'work-order',
           name: wo.name,
           status: wo.status,
+          location: location ? { id: location.locationId, name: location.name } : null,
           customer: {
             id: customer.customerId,
             displayName: customer.displayName,
@@ -105,6 +113,25 @@ export async function getDetailedSerial(
             email: customer.email,
           },
           date: wo.createdAt.toISOString() as DateTime,
+        };
+      }),
+      ...shopifyOrders.map<SerialHistory>(so => {
+        const customer = so.customerId ? customers.find(hasPropertyValue('customerId', so.customerId)) : null;
+
+        return {
+          type: 'shopify-order',
+          orderType: so.orderType,
+          id: so.orderId,
+          name: so.name,
+          customer: customer
+            ? {
+                id: customer.customerId,
+                displayName: customer.displayName,
+                phone: customer.phone,
+                email: customer.email,
+              }
+            : null,
+          date: so.createdAt.toISOString() as DateTime,
         };
       }),
     ].toSorted((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) satisfies SerialHistory[],
@@ -126,12 +153,29 @@ type SerialHistory =
       type: 'work-order';
       name: string;
       status: string;
+      location: {
+        id: ID;
+        name: string;
+      } | null;
       customer: {
         id: ID;
         displayName: string;
         phone: string | null;
         email: string | null;
       };
+      date: DateTime;
+    }
+  | {
+      type: 'shopify-order';
+      id: ID;
+      orderType: 'ORDER' | 'DRAFT_ORDER';
+      name: string;
+      customer: {
+        id: ID;
+        displayName: string;
+        phone: string | null;
+        email: string | null;
+      } | null;
       date: DateTime;
     };
 

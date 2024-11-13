@@ -151,22 +151,29 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
                       return;
                     }
 
+                    if (history.type === 'shopify-order') {
+                      toast.show(`You can view ${history.name} through the POS Orders page`);
+                      return;
+                    }
+
                     return history satisfies never;
                   },
                   leftSide: {
                     label: history.name,
                     subtitle: getSubtitle([new Date(history.date).toLocaleDateString()]),
                     badges: [
-                      { variant: 'highlight', text: history.status } as const,
+                      ...(history.type !== 'shopify-order'
+                        ? [{ variant: 'highlight', text: history.status } as const]
+                        : []),
 
-                      history.type === 'purchase-order' && history.location
+                      history.type !== 'shopify-order' && history.location
                         ? ({
                             variant: 'neutral',
                             text: history.location.name,
                           } as const)
                         : null,
 
-                      history.type === 'work-order'
+                      history.type !== 'purchase-order' && history.customer
                         ? ({
                             variant: 'neutral',
                             text: history.customer.displayName,

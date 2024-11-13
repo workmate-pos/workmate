@@ -10,4 +10,5 @@ export const getDefaultCreateSerial = (productVariantId: ID): WIPCreateSerial =>
   locationId: null,
   serial: null,
   note: '',
+  sold: false,
 });
