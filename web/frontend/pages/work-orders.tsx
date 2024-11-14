@@ -30,7 +30,7 @@ import { WorkOrderCsvUploadDropZoneModal } from '@web/frontend/components/work-o
 export default function () {
   return (
     <Frame>
-      <Page>
+      <Page fullWidth>
         <PermissionBoundary permissions={['read_work_orders', 'read_settings']}>
           <WorkOrders />
         </PermissionBoundary>

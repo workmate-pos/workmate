@@ -9,13 +9,15 @@ import { useState } from 'react';
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { match } from 'ts-pattern';
+import { USES_SERIAL_NUMBERS_TAG } from '@work-orders/common/metafields/uses-serial-numbers.js';
 
 export type ProductVariantSelectorProps = {
   onSelect: (productVariant: ProductVariant) => void;
   onClear?: () => void;
   useRouter: UseRouter;
   filters?: {
-    type?: 'product' | 'service';
+    type?: 'product' | 'serial' | 'service';
     status?: ('draft' | 'active')[];
   };
 };
@@ -38,19 +40,23 @@ export function ProductVariantSelector({ useRouter, onSelect, onClear, filters }
       first: 50,
       query: [
         query,
-        status ? `product_status:${status.join(',')}` : null,
-        type === 'product'
-          ? Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
+        status.map(status => `product_status:${status}`).join(' OR ') ?? '',
+        match(type)
+          .with('product', () =>
+            Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
               .map(tag => `tag_not:"${escapeQuotationMarks(tag)}"`)
-              .join(' AND ')
-          : null,
-        type === 'service'
-          ? Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
+              .join(' AND '),
+          )
+          .with('service', () =>
+            Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
               .map(tag => `tag:"${escapeQuotationMarks(tag)}"`)
-              .join(' OR ')
-          : null,
+              .join(' OR '),
+          )
+          .with('serial', () => `tag:"${escapeQuotationMarks(USES_SERIAL_NUMBERS_TAG)}"`)
+          .with(undefined, () => '')
+          .exhaustive(),
       ]
-        .filter(isNonNullable)
+        .filter(x => !!x.trim())
         .map(q => `(${q})`)
         .join(' AND '),
     },
@@ -65,14 +71,14 @@ export function ProductVariantSelector({ useRouter, onSelect, onClear, filters }
 
   return (
     <ListPopup
-      title="Select products"
+      title="Select product"
       query={{ query, setQuery }}
       resourceName={{ singular: 'product', plural: 'products' }}
       pagination={{
         page,
         onPageChange: setPage,
         onFetchNextPage: () => productVariantsQuery.fetchNextPage(),
-        hasNextPage: productVariantsQuery.hasNextPage ?? false,
+        hasNextPage: productVariantsQuery.hasNextPage,
         pageCount: productVariantsQuery.data?.pages?.length ?? 0,
       }}
       isLoadingMore={productVariantsQuery.isFetching}

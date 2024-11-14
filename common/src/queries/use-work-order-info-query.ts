@@ -23,7 +23,7 @@ export const useWorkOrderInfoQuery = (
     paymentStatus,
     overdueStatus,
     purchaseOrderStatus,
-    limit = 10,
+    limit = 50,
   }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset' | 'customFieldFilters' | 'afterDueDate' | 'beforeDueDate'> & {
     limit?: number;
     fetch: Fetch;

@@ -98,8 +98,9 @@ export function ItemConfig({
 
   const readonly = !!itemLineItem.order;
   const canAddLabour =
-    item.type === 'custom-item' ||
-    getProductServiceType(itemLineItem.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE;
+    !item.serial &&
+    (item.type === 'custom-item' ||
+      getProductServiceType(itemLineItem.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE);
 
   const isService = getProductServiceType(itemLineItem.variant?.product?.serviceType?.value) !== null;
 
@@ -156,19 +157,23 @@ export function ItemConfig({
               </>
             )}
 
-            <Text variant="body" color="TextSubdued">
-              Quantity
-            </Text>
-            <Stepper
-              disabled={readonly}
-              minimumValue={1}
-              initialValue={item.quantity}
-              onValueChanged={(value: Int) => {
-                setHasUnsavedChanges(true);
-                setItem({ ...item, quantity: value });
-              }}
-              value={item.quantity}
-            />
+            {!item.serial && (
+              <>
+                <Text variant="body" color="TextSubdued">
+                  Quantity
+                </Text>
+                <Stepper
+                  disabled={readonly}
+                  minimumValue={1}
+                  initialValue={item.quantity}
+                  onValueChanged={(value: Int) => {
+                    setHasUnsavedChanges(true);
+                    setItem({ ...item, quantity: value });
+                  }}
+                  value={item.quantity}
+                />
+              </>
+            )}
           </Stack>
           <Stack direction="vertical" spacing={2}>
             <Text variant="body" color="TextSubdued">

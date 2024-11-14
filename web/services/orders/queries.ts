@@ -4,6 +4,7 @@ import { assertGidOrNull, assertMoneyOrNull } from '../../util/assertions.js';
 import { assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { MergeUnion } from '../../util/types.js';
 
 export async function getShopifyOrderLineItem(id: ID) {
   const _id: string = id;
@@ -133,7 +134,7 @@ function mapShopifyOrder<
   }
 }
 
-export async function removeShopifyOrderLineItemsExceptIds(orderId: ID, lineItemIds: ID[]) {
+export async function deleteShopifyOrderLineItemsByIds(orderId: ID, lineItemIds: ID[]) {
   const _orderId: string = orderId;
   const _lineItemIds: (string | null)[] = lineItemIds;
 
@@ -141,6 +142,100 @@ export async function removeShopifyOrderLineItemsExceptIds(orderId: ID, lineItem
     DELETE
     FROM "ShopifyOrderLineItem"
     WHERE "orderId" = ${_orderId}
-      AND "lineItemId" != ALL (${_lineItemIds} :: text[]);
+      AND "lineItemId" = ANY (${_lineItemIds} :: text[]);
   `;
+}
+
+export async function getShopifyOrder({ shop, id }: { shop: string; id: ID }) {
+  const [order] = await sql<{
+    orderId: string;
+    shop: string;
+    orderType: 'ORDER' | 'DRAFT_ORDER';
+    name: string;
+    customerId: string | null;
+    total: string;
+    outstanding: string;
+    fullyPaid: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    discount: string;
+    subtotal: string;
+  }>`
+    SELECT *
+    FROM "ShopifyOrder"
+    WHERE "orderId" = ${id as string}
+      AND "shop" = ${shop}
+  `;
+
+  if (!order) {
+    return null;
+  }
+
+  return mapShopifyOrder(order);
+}
+
+export async function getShopifyOrderLineItems(orderId: ID) {
+  const lineItems = await sql<{
+    lineItemId: string;
+    orderId: string;
+    productVariantId: string | null;
+    title: string;
+    quantity: number;
+    unfulfilledQuantity: number;
+    discountedUnitPrice: string;
+    unitPrice: string;
+    totalTax: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+    SELECT *
+    FROM "ShopifyOrderLineItem"
+    WHERE "orderId" = ${orderId as string};
+  `;
+
+  return lineItems.map(mapShopifyOrderLineItem);
+}
+
+// TODO: Should this have locationIds filter for franchise mode?
+export async function getShopifyOrdersForSerial({
+  shop,
+  serial,
+  id,
+  productVariantId,
+}: MergeUnion<
+  | { id: number }
+  | {
+      shop: string;
+      serial: string;
+      productVariantId: ID;
+    }
+>) {
+  const _productVariantId: string | null = productVariantId ?? null;
+
+  const shopifyOrders = await sql<{
+    orderId: string;
+    shop: string;
+    orderType: 'ORDER' | 'DRAFT_ORDER';
+    name: string;
+    customerId: string | null;
+    total: string;
+    outstanding: string;
+    fullyPaid: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    discount: string;
+    subtotal: string;
+  }>`
+    SELECT DISTINCT so.*
+    FROM "ProductVariantSerial" pvs
+           INNER JOIN "ShopifyOrderLineItemProductVariantSerial" lis ON lis."productVariantSerialId" = pvs.id
+           INNER JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = lis."lineItemId"
+           INNER JOIN "ShopifyOrder" so ON so."orderId" = soli."orderId"
+    WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
+      AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
+      AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)
+      AND pvs.shop = COALESCE(${shop ?? null}, pvs.shop);
+  `;
+
+  return shopifyOrders.map(mapShopifyOrder);
 }

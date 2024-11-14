@@ -17,7 +17,7 @@
     "limit": {
       "$ref": "scalars.json#/definitions/Int",
       "minimum": 1,
-      "maximum": 25
+      "maximum": 100
     },
     "offset": {
       "$ref": "scalars.json#/definitions/Int",
@@ -30,6 +30,9 @@
     "order": {
       "title": "serial-sort-order",
       "enum": ["ascending", "descending"]
+    },
+    "sold": {
+      "type": "boolean"
     }
   },
   "additionalProperties": false,

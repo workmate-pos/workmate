@@ -117,6 +117,7 @@ export function ServiceSelector({
                     absorbCharges: product.serviceType === QUANTITY_ADJUSTING_SERVICE,
                     customFields: customFieldsPresetsQuery.data.defaultCustomFields,
                     quantity: product.quantity,
+                    serial: null,
                   },
                   charges: [],
                 }),
@@ -230,6 +231,7 @@ function useProductVariantRows(
               quantity: 1 as Int,
               absorbCharges: type === QUANTITY_ADJUSTING_SERVICE,
               customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+              serial: null,
             },
             charges: defaultCharges.map<CreateWorkOrderCharge>(charge => ({
               ...charge,
