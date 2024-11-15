@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { SetOrderLineItemSerials } from '@web/schemas/generated/set-order-line-item-serials.js';
 import { SetOrderLineItemSerialsResponse } from '@web/controllers/api/order.js';
 import { UseQueryData } from './react-query.js';
@@ -11,7 +11,7 @@ export const useOrderLineItemSerialsMutation = ({ fetch }: { fetch: Fetch }) => 
 
   return useMutation({
     mutationFn: async ({ id, ...body }: { id: ID } & SetOrderLineItemSerials) => {
-      const response = await fetch(`/api/order/${encodeURIComponent(id)}/line-items/serials`, {
+      const response = await fetch(`/api/order/${encodeURIComponent(parseGid(id).id)}/line-items/serials`, {
         method: 'POST',
         body: JSON.stringify(body),
         headers: { 'Content-Type': 'application/json' },

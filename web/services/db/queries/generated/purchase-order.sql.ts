@@ -1,6 +1,8 @@
 /** Types generated for queries found in "services/db/queries/purchase-order.sql" */
 import { PreparedQuery } from '@pgtyped/runtime';
 
+export type PurchaseOrderType = 'DROPSHIP' | 'NORMAL';
+
 export type NumberOrString = number | string;
 
 export type stringArray = (string)[];
@@ -149,6 +151,7 @@ export interface IGetLinkedPurchaseOrdersByShopifyOrderIdsResult {
   shop: string;
   status: string;
   tax: string | null;
+  type: PurchaseOrderType;
   updatedAt: Date;
   vendorName: string | null;
 }
