@@ -25,6 +25,9 @@
       "items": {
         "type": "string"
       }
+    },
+    "type": {
+      "enum": ["NORMAL", "DROPSHIP"]
     }
   },
   "required": ["limit", "offset"],
