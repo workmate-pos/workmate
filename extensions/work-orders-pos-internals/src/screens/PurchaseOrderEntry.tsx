@@ -2,7 +2,6 @@ import { Button, List, ListRow, Stack, Text, useApi } from '@shopify/ui-extensio
 import { useState } from 'react';
 import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-purchase-order-info-page-query.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useRouter } from '../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -18,6 +17,7 @@ import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function PurchaseOrderEntry() {
   const [query, setQuery] = useDebouncedState('');
@@ -196,6 +196,10 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
         {
           text: purchaseOrder.status,
           variant: 'highlight',
+        },
+        {
+          text: sentenceCase(purchaseOrder.type),
+          variant: 'neutral',
         },
       ],
     },
