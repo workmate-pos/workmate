@@ -1,7 +1,7 @@
 import { sentryErr, WebhookHandlers } from '@teifi-digital/shopify-app-express/services';
 import { db } from './db/db.js';
 import { AppPlanName } from './db/queries/generated/app-plan.sql.js';
-import { AppSubscriptionStatus } from './gql/queries/generated/schema.js';
+import { AppSubscriptionStatus, DateTime } from './gql/queries/generated/schema.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { syncLocationsIfExists } from './locations/sync.js';
 import { syncCustomersIfExists } from './customer/sync.js';
@@ -10,7 +10,11 @@ import { syncProductVariants } from './product-variants/sync.js';
 import { syncShopifyOrders, syncShopifyOrdersIfExists } from './shopify-order/sync.js';
 import { syncWorkOrders } from './work-orders/sync.js';
 import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
-import { syncProductServiceTypeTag } from './metafields/product-service-type-metafield.js';
+import {
+  productServiceTypeMetafield,
+  syncProductServiceTypeTag,
+  syncProductServiceTypeTagWithServiceType,
+} from './metafields/product-service-type-metafield.js';
 import { cleanManyOrphanedDraftOrders, cleanOrphanedDraftOrders } from './work-orders/clean-orphaned-draft-orders.js';
 import { unit } from './db/unit-of-work.js';
 import { getWorkOrder } from './work-orders/queries.js';
@@ -18,6 +22,8 @@ import { unreserveLineItem } from './sourcing/reserve.js';
 import { getProduct, softDeleteProducts } from './products/queries.js';
 import { softDeleteProductVariantsByProductIds } from './product-variants/queries.js';
 import { doesProductHaveSyncableMetafields } from './metafields/sync.js';
+import { resolveNamespace } from './app/index.js';
+import { parseProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -124,8 +130,51 @@ export default {
   },
 
   PRODUCTS_UPDATE: {
-    async handler(session, topic, shop, body: { admin_graphql_api_id: ID; variant_ids: { id: number }[] }) {
-      const changed = await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
+    async handler(
+      session,
+      topic,
+      shop,
+      body: {
+        admin_graphql_api_id: ID;
+        variant_ids: { id: number }[];
+        // this is a string of comma separated tags. that obviously breaks when the tag contains commas but whatever
+        tags: string;
+        metafields: {
+          id: number;
+          namespace: string;
+          key: string;
+          value: unknown;
+          description: string | null;
+          owner_id: number;
+          created_at: DateTime;
+          updated_at: DateTime;
+          owner_resource: string;
+          type: string;
+          admin_graphql_api_id: ID;
+        }[];
+      },
+    ) {
+      const getMetafield = ({ namespace, key }: { namespace: string; key: string }) =>
+        Promise.all(
+          body.metafields.map(
+            async metafield =>
+              [
+                metafield,
+                metafield.key === key && metafield.namespace === (await resolveNamespace(session, namespace)),
+              ] as const,
+          ),
+        ).then(x => x.find(([, isProductServiceType]) => isProductServiceType)?.[0]);
+
+      const serviceTypeMetafield = await getMetafield(productServiceTypeMetafield);
+
+      const tags = body.tags.split(', ');
+
+      const changed = await syncProductServiceTypeTagWithServiceType(
+        session,
+        body.admin_graphql_api_id,
+        tags,
+        serviceTypeMetafield?.value ? parseProductServiceType(String(serviceTypeMetafield?.value)) : null,
+      );
 
       if (changed) {
         // wait for the next webhook before syncing to save some query cost
