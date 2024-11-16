@@ -7,6 +7,7 @@ import { gql } from '../gql/gql.js';
 import {
   AVAILABLE_PRODUCT_SERVICE_TYPES,
   parseProductServiceType,
+  ProductServiceType,
   SERVICE_METAFIELD_VALUE_TAG_NAME,
 } from '@work-orders/common/metafields/product-service-type.js';
 
@@ -44,15 +45,27 @@ export async function syncProductServiceTypeTag(session: Session, productId: ID)
   }
 
   const serviceType = product.serviceType ? parseProductServiceType(product.serviceType.value) : null;
+
+  return await syncProductServiceTypeTagWithServiceType(session, productId, product.tags, serviceType);
+}
+
+export async function syncProductServiceTypeTagWithServiceType(
+  session: Session,
+  productId: ID,
+  tags: string[],
+  serviceType: ProductServiceType | null,
+) {
   const serviceTypeTag = serviceType ? SERVICE_METAFIELD_VALUE_TAG_NAME[serviceType] : null;
 
-  const removeTags = product.tags.filter(
+  const removeTags = tags.filter(
     tag => tag !== serviceTypeTag && Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME).some(t => tag === t),
   );
 
-  const addTags = serviceTypeTag && !product.tags.some(tag => tag === serviceTypeTag) ? [serviceTypeTag] : [];
+  const addTags = serviceTypeTag && !tags.some(tag => tag === serviceTypeTag) ? [serviceTypeTag] : [];
 
   if (removeTags.length > 0 || addTags.length > 0) {
+    const graphql = new Graphql(session);
+    console.log('add remove', addTags, removeTags);
     await gql.tags.removeAndAddTags.run(graphql, {
       id: productId,
       removeTags,
