@@ -258,7 +258,7 @@ model Employee {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  locations EmployeeLocation[]
+  locations         EmployeeLocation[]
   defaultLocationId String?
 
   @@index([shop, staffMemberId])
@@ -400,7 +400,9 @@ model PurchaseOrder {
   location   Location? @relation(fields: [locationId], references: [locationId])
   locationId String?
 
-  vendorName String?
+  // optional for backwards compatibility (vendors were optional), but required in practice
+  supplierId Int?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
 
   note       String
   /// The date the purchase order was placed.
@@ -1397,4 +1399,36 @@ model InventoryMutationItem {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model Supplier {
+  id Int @id @default(autoincrement())
+
+  shop String
+  name String
+
+  // TODO: Capture other data, eg shipping data
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  suppliers      ProductVariantSupplier[]
+  purchaseOrders PurchaseOrder[]
+
+  @@unique([shop, name])
+}
+
+model ProductVariantSupplier {
+  id Int @id @default(autoincrement())
+
+  productVariantId String
+
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  supplierId Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([productVariantId, supplierId])
+  @@index([supplierId])
 }

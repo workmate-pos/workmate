@@ -55,6 +55,11 @@ export async function upsertCreatePurchaseOrder(
     throw new HttpError('Location is required', 400);
   }
 
+  if (!createPurchaseOrder.supplierId) {
+    throw new HttpError('Supplier is required', 400);
+  }
+
+  const { supplierId } = createPurchaseOrder;
   const { shop } = session;
 
   await assertLocationsPermitted({
@@ -94,6 +99,7 @@ export async function upsertCreatePurchaseOrder(
       ...createPurchaseOrder,
       shop,
       name,
+      supplierId,
     });
 
     const specialOrderLineItemNameUuids = createPurchaseOrder.lineItems
@@ -188,8 +194,8 @@ function assertNoIllegalPurchaseOrderChanges(
   }
 
   if (
-    existingPurchaseOrder.vendorName !== null &&
-    createPurchaseOrder.vendorName !== existingPurchaseOrder.vendorName
+    existingPurchaseOrder.supplier?.id !== undefined &&
+    createPurchaseOrder.supplierId !== existingPurchaseOrder.supplier.id
   ) {
     throw new HttpError('Vendor name cannot be changed', 400);
   }

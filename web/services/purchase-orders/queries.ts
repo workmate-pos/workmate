@@ -32,7 +32,7 @@ export async function getPurchaseOrder(
     shipFrom: string;
     shipTo: string;
     note: string;
-    vendorName: string | null;
+    supplierId: number | null;
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
@@ -71,11 +71,11 @@ export async function getPurchaseOrdersByIds(purchaseOrderIds: number[]) {
     shipFrom: string;
     shipTo: string;
     note: string;
-    vendorName: string | null;
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
+    supplierId: number | null;
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -98,7 +98,7 @@ function mapPurchaseOrder(purchaseOrder: {
   shipFrom: string;
   shipTo: string;
   note: string;
-  vendorName: string | null;
+  supplierId: number | null;
   createdAt: Date;
   updatedAt: Date;
   placedDate: Date | null;
@@ -132,7 +132,6 @@ export async function upsertPurchaseOrder({
   name,
   shop,
   status,
-  vendorName,
   shipFrom,
   shipTo,
   note,
@@ -144,6 +143,7 @@ export async function upsertPurchaseOrder({
   paid,
   locationId,
   type,
+  supplierId,
 }: {
   shop: string;
   locationId: ID | null;
@@ -157,9 +157,9 @@ export async function upsertPurchaseOrder({
   shipFrom: string;
   shipTo: string;
   note: string;
-  vendorName: string | null;
   placedDate: DateTime | null;
   type: PurchaseOrderType;
+  supplierId: number;
 }) {
   const _locationId: string | null = locationId;
   const _discount: string | null = discount;
@@ -171,7 +171,7 @@ export async function upsertPurchaseOrder({
 
   return await sqlOne<{ id: number }>`
     INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
-                                 "shipTo", note, "vendorName", "placedDate", type)
+                                 "shipTo", note, "supplierId", "placedDate", type)
     VALUES (${shop},
             ${_locationId},
             ${_discount},
@@ -184,10 +184,9 @@ export async function upsertPurchaseOrder({
             ${shipFrom},
             ${shipTo},
             ${note},
-            ${vendorName},
+            ${supplierId},
             ${_placedDate} :: timestamptz,
-            ${type} :: "PurchaseOrderType"
-           )
+            ${type} :: "PurchaseOrderType")
     ON CONFLICT (shop, name) DO UPDATE
       SET "locationId" = EXCLUDED."locationId",
           "discount"   = EXCLUDED."discount",
@@ -199,7 +198,7 @@ export async function upsertPurchaseOrder({
           "shipFrom"   = EXCLUDED."shipFrom",
           "shipTo"     = EXCLUDED."shipTo",
           "note"       = EXCLUDED."note",
-          "vendorName" = EXCLUDED."vendorName",
+          "supplierId" = EXCLUDED."supplierId",
           "placedDate" = EXCLUDED."placedDate"
     RETURNING id;`;
 }
@@ -529,11 +528,11 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
     shipFrom: string;
     shipTo: string;
     note: string;
-    vendorName: string | null;
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
+    supplierId: number | null;
   }>`
     SELECT DISTINCT po.*
     FROM "PurchaseOrder" po
@@ -645,27 +644,18 @@ export async function getPurchaseOrderReceiptLineItemsByShopifyOrderLineItemIds(
   `;
 }
 
-export async function getPurchaseOrderCount(shop: string, filters: MergeUnion<{ vendor: string }>) {
-  const { count } = await sqlOne<{ count: number }>`
-    SELECT COUNT(*) :: int AS count
-    FROM "PurchaseOrder"
-    WHERE "shop" = COALESCE(${shop ?? null}, "shop")
-      AND "vendorName" = COALESCE(${filters?.vendor ?? null}, "vendorName");
+export async function getPurchaseOrderCountBySupplier(shop: string, supplierIds?: number[]) {
+  const counts = await sql<{ id: number; name: string; count: number }>`
+    SELECT s.id, s.name, COUNT(*) :: int AS count
+    FROM "Supplier" s
+           LEFT JOIN "PurchaseOrder" po ON po."supplierId" = s.id
+    WHERE s."shop" = COALESCE(${shop ?? null}, s."shop")
+      AND ${supplierIds!} :: int[] IS NULL
+       OR po."supplierId" = ANY (${supplierIds!} :: int[])
+    GROUP BY s.id;
   `;
 
-  return count;
-}
-
-export async function getPurchaseOrderCountByVendor(shop: string) {
-  const counts = await sql<{ vendorName: string; count: number }>`
-    SELECT "vendorName", COUNT(*) :: int AS count
-    FROM "PurchaseOrder"
-    WHERE "shop" = COALESCE(${shop ?? null}, "shop")
-      AND "vendorName" IS NOT NULL
-    GROUP BY "vendorName";
-  `;
-
-  return Object.fromEntries(counts.map(({ vendorName, count }) => [vendorName, count]));
+  return counts;
 }
 
 export async function getPurchaseOrdersForSerial({
@@ -700,11 +690,11 @@ export async function getPurchaseOrdersForSerial({
     shipFrom: string;
     shipTo: string;
     note: string;
-    vendorName: string | null;
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
+    supplierId: number | null;
   }>`
     SELECT DISTINCT po.*
     FROM "ProductVariantSerial" pvs

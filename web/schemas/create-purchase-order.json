@@ -20,14 +20,8 @@
         }
       ]
     },
-    "vendorName": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+    "supplierId": {
+      "type": "integer"
     },
     "shipFrom": {
       "type": "string"
