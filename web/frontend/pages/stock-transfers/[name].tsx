@@ -44,7 +44,7 @@ function StockTransferLoader() {
   const fetch = useAuthenticatedFetch({ setToastAction });
 
   const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
-  const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
+  const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId ?? null;
 
   const stockTransferQuery = useStockTransferQuery({ fetch, name }, { enabled: name !== 'new', staleTime: 0 });
   const settingsQuery = useSettingsQuery({ fetch });
@@ -83,15 +83,17 @@ function StockTransferLoader() {
   }
 
   let initial: WIPCreateStockTransfer;
-  if (name === 'new') {
+  if (name !== 'new') {
+    if (!stockTransferQuery.data) {
+      return <Loading />;
+    }
+    initial = stockTransferQuery.data;
+  } else {
     initial = {
       ...defaultCreateStockTransfer,
-      // Set default location based on type
       fromLocationId: type === 'outgoing' ? defaultLocationId : null,
       toLocationId: type === 'incoming' ? defaultLocationId : null,
     };
-  } else {
-    initial = stockTransferQuery.data;
   }
 
   return (

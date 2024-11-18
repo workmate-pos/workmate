@@ -21,6 +21,7 @@ import { useStockTransferPageQuery } from '@work-orders/common/queries/use-stock
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 
 export default function () {
   return (
@@ -51,6 +52,9 @@ function StockTransfers() {
   const [pageIndex, setPage] = useState(0);
   const pagination = getInfiniteQueryPagination(pageIndex, setPage, stockTransferQuery);
   const page = stockTransferQuery.data?.pages[pageIndex];
+
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+  const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
 
   const redirectToStockTransfer = (type: 'incoming' | 'outgoing' | string) => {
     if (type === 'incoming' || type === 'outgoing') {
@@ -149,7 +153,7 @@ function StockTransfers() {
                   {lineItem.productTitle}
                 </Text>
               </IndexTable.Cell>
-              <IndexTable.Cell>{page.toLocationId === locationId ? 'Incoming' : 'Outgoing'}</IndexTable.Cell>
+              <IndexTable.Cell>{defaultLocationId === page.toLocationId ? 'Incoming' : 'Outgoing'}</IndexTable.Cell>
               <IndexTable.Cell>
                 {entries(statusCount)
                   .filter(([, quantity]) => quantity > 0)
