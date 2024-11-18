@@ -28,6 +28,10 @@ export default function App() {
                     destination: '/purchase-orders',
                   },
                   {
+                    label: 'Stock Transfers',
+                    destination: '/stock-transfers',
+                  },
+                  {
                     label: 'Special orders',
                     destination: '/special-orders',
                   },
