@@ -21,7 +21,7 @@ import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { InventoryMutationType } from '@web/services/inventory/queries.js';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { NonEmptyArray, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useInventoryItemQueries } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useInventoryMutationItemsQuery } from '@work-orders/common/queries/use-inventory-mutation-items-query.js';
@@ -74,10 +74,9 @@ function InventoryLog() {
     { keepPreviousData: true },
   );
 
-  // TODO: Sort
   type HeadingId = { id?: InventoryMutationItemsPaginationOptions['sortMode'] };
 
-  const headings: [IndexTableHeading & HeadingId, ...(IndexTableHeading & HeadingId)[]] = [
+  const headings: NonEmptyArray<IndexTableHeading & HeadingId> = [
     {
       title: 'Date',
       id: 'updatedAt',

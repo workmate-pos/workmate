@@ -34,6 +34,7 @@ const permissions: typeof AllPermissions = [
   'read_special_orders',
   'write_special_orders',
   'manage_schedules',
+  'write_suppliers',
 ];
 
 export function RolesSettings({

@@ -1,31 +1,34 @@
-import { Authenticated, Delete, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import {
-  deleteSupplier,
-  getSupplier,
-  getSuppliers,
-  Supplier,
-  upsertSupplier,
-} from '../../services/suppliers/queries.js';
+  Authenticated,
+  BodySchema,
+  Delete,
+  Get,
+  Post,
+  QuerySchema,
+} from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
 import { SupplierPaginationOptions } from '../../schemas/generated/supplier-pagination-options.js';
 import { Session } from '@shopify/shopify-api';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { z } from 'zod';
 import { CreateSupplier } from '../../schemas/generated/create-supplier.js';
-import { getPurchaseOrderCountBySupplier } from '../../services/purchase-orders/queries.js';
 import { NestedDateToDateTime } from '../../util/types.js';
 import { DateTime } from '../../services/gql/queries/generated/schema.js';
-
-// TODO: Handle vendors - probably best to auto-create them? also def auto create them in migration
+import { Permission } from '../../decorators/permission.js';
+import { upsertSupplier } from '../../services/suppliers/upsert.js';
+import { unit } from '../../services/db/unit-of-work.js';
+import { DetailedSupplier, getDetailedSupplier, getDetailedSuppliers } from '../../services/suppliers/get.js';
+import { never } from '@teifi-digital/shopify-app-toolbox/util';
+import { deleteSupplier } from '../../services/suppliers/delete.js';
 
 @Authenticated()
 export default class SuppliersController {
   @Get('/:id')
   async fetchSupplier(req: Request<{ id: string }>, res: Response<FetchSupplierResponse>) {
-    const { shop }: Session = res.locals.shopify.session;
+    const session: Session = res.locals.shopify.session;
     const id = parseId(req.params.id);
 
-    const supplier = await getSupplier(shop, { id });
+    const supplier = await getDetailedSupplier(session, id);
 
     if (!supplier) {
       throw new HttpError('Supplier not found', 404);
@@ -40,10 +43,10 @@ export default class SuppliersController {
     req: Request<unknown, unknown, unknown, SupplierPaginationOptions>,
     res: Response<FetchSuppliersResponse>,
   ) {
-    const { shop } = res.locals.shopify.session;
+    const session: Session = res.locals.shopify.session;
     const paginationOptions = req.query;
 
-    const { suppliers, hasNextPage } = await getSuppliers(shop, paginationOptions);
+    const { suppliers, hasNextPage } = await getDetailedSuppliers(session, paginationOptions);
 
     return res.json({
       suppliers: suppliers.map(mapSupplier),
@@ -52,54 +55,39 @@ export default class SuppliersController {
   }
 
   @Post('/')
+  @Permission('write_suppliers')
+  @BodySchema('create-supplier')
   async createSupplier(req: Request<unknown, unknown, CreateSupplier>, res: Response<UpsertSupplierResponse>) {
-    const { shop } = res.locals.shopify.session;
-    const { name } = req.body;
+    const session: Session = res.locals.shopify.session;
 
-    const existingSupplier = await getSupplier(shop, { name });
-
-    if (existingSupplier) {
-      throw new HttpError('Supplier name taken', 400);
-    }
-
-    const supplier = await upsertSupplier(shop, { name });
+    const supplier = await unit(async () => {
+      const id = await upsertSupplier(session, null, req.body);
+      return await getDetailedSupplier(session, id).then(supplier => supplier ?? never());
+    });
 
     return res.json(mapSupplier(supplier));
   }
 
   @Post('/:id')
-  async updateSupplier(req: Request<{ id: string }, unknown, Supplier>, res: Response<UpsertSupplierResponse>) {
-    const { shop } = res.locals.shopify.session;
-    const { name } = req.body;
+  @Permission('write_suppliers')
+  @BodySchema('create-supplier')
+  async updateSupplier(req: Request<{ id: string }, unknown, CreateSupplier>, res: Response<UpsertSupplierResponse>) {
+    const session = res.locals.shopify.session;
     const id = parseId(req.params.id);
 
-    const existingSupplier = await getSupplier(shop, { id });
-
-    if (!existingSupplier) {
-      throw new HttpError('Supplier not found', 404);
-    }
-
-    if (existingSupplier.name !== name) {
-      if (await getSupplier(shop, { name })) {
-        throw new HttpError('Supplier name taken', 400);
-      }
-    }
-
-    const supplier = await upsertSupplier(shop, { name });
+    const supplier = await unit(async () => {
+      await upsertSupplier(session, id, req.body);
+      return await getDetailedSupplier(session, id).then(supplier => supplier ?? never());
+    });
 
     return res.json(mapSupplier(supplier));
   }
 
   @Delete('/:id')
+  @Permission('write_suppliers')
   async deleteSupplier(req: Request<{ id: string }>, res: Response) {
     const { shop }: Session = res.locals.shopify.session;
     const id = parseId(req.params.id);
-
-    const purchaseOrderCount = await getPurchaseOrderCountBySupplier(shop, [id]);
-
-    if (purchaseOrderCount.some(x => x.id === id && x.count > 0)) {
-      throw new HttpError('Cannot delete a supplier that is used in purchase orders', 400);
-    }
 
     await deleteSupplier(shop, id);
 
@@ -107,17 +95,8 @@ export default class SuppliersController {
   }
 }
 
-export type FetchSupplierResponse = NestedDateToDateTime<Supplier>;
-
-export type UpsertSupplierResponse = NestedDateToDateTime<Supplier>;
-
-export type FetchSuppliersResponse = {
-  suppliers: NestedDateToDateTime<Supplier>[];
-  hasNextPage: boolean;
-};
-
 function parseId(id: string) {
-  const parsed = z.number().int().positive().safeParse(id);
+  const parsed = z.coerce.number().int().positive().safeParse(id);
 
   if (!parsed.success) {
     throw new HttpError('Invalid supplier id', 400);
@@ -126,10 +105,20 @@ function parseId(id: string) {
   return parsed.data;
 }
 
-function mapSupplier(supplier: Supplier): NestedDateToDateTime<Supplier> {
+function mapSupplier(supplier: DetailedSupplier): NestedDateToDateTime<DetailedSupplier> {
   return {
     ...supplier,
     createdAt: supplier.createdAt.toISOString() as DateTime,
     updatedAt: supplier.updatedAt.toISOString() as DateTime,
+    lastUsedAt: supplier.lastUsedAt.toISOString() as DateTime,
   };
 }
+
+export type FetchSupplierResponse = NestedDateToDateTime<DetailedSupplier>;
+
+export type UpsertSupplierResponse = NestedDateToDateTime<DetailedSupplier>;
+
+export type FetchSuppliersResponse = {
+  suppliers: NestedDateToDateTime<DetailedSupplier>[];
+  hasNextPage: boolean;
+};

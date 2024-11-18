@@ -44,6 +44,7 @@ export function VendorSelectorModal({
             onClearAll={() => setQuery('')}
           />
         }
+        loading={vendorsQuery.isLoading}
         renderItem={vendor => (
           <ResourceItem
             id={vendor.name}
@@ -70,7 +71,6 @@ export function VendorSelectorModal({
             ))}
           </ResourceItem>
         )}
-        loading={vendorsQuery.isLoading}
       />
     </Modal>
   );

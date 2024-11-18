@@ -29,9 +29,10 @@ import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { TitleBar, useAppBridge } from '@shopify/app-bridge-react';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { getCreatePurchaseOrderForSpecialOrders } from '@work-orders/common/create-purchase-order/from-special-orders.js';
+import { useSuppliersQuery } from '@work-orders/common/queries/use-suppliers-query.js';
 
 export default function () {
   return (
@@ -50,10 +51,11 @@ function Merge() {
 
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
   const [locationId, setLocationId] = useState<ID>();
-  const [vendorName, setVendorName] = useState<string>();
+  const [supplierId, setSupplierId] = useState<number>();
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
+
   const vendorsQuery = useVendorsQuery({
     fetch,
     filters: {
@@ -61,13 +63,35 @@ function Merge() {
       specialOrderLineItemOrderState: 'not-fully-ordered',
     },
   });
+
+  const suppliersQuery = useSuppliersQuery({
+    fetch,
+    params: {
+      limit: 100,
+      vendor: vendorsQuery.data?.flat().map(vendor => vendor.name) ?? [],
+    },
+  });
+
+  console.log('vendors', vendorsQuery.data);
+  console.log('suppliers', suppliersQuery.data);
+
+  useEffect(() => {
+    if (!suppliersQuery.isFetching && suppliersQuery.hasNextPage) {
+      suppliersQuery.fetchNextPage();
+    }
+  }, [suppliersQuery.isFetching, suppliersQuery.hasNextPage]);
+
+  const suppliers = suppliersQuery.data?.pages.flatMap(page => page.suppliers) ?? [];
+
   const locationsQuery = useLocationsQuery({ fetch, params: {} });
   const specialOrdersQuery = useSpecialOrdersQuery({
     fetch,
     params: {
       query,
       locationId,
-      lineItemVendorName: vendorName,
+      lineItemVendorName: suppliers
+        .filter(supplier => supplier.id === supplierId)
+        .flatMap(supplier => supplier.vendors),
       lineItemOrderState: 'not-fully-ordered',
       limit: 25,
     },
@@ -93,7 +117,6 @@ function Merge() {
   }, [locationsQuery.isFetching, locationsQuery.hasNextPage]);
 
   const locations = locationsQuery.data?.pages.flat() ?? [];
-  const vendors = vendorsQuery.data ?? [];
 
   const [pageIndex, setPageIndex] = useState(0);
   const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, specialOrdersQuery);
@@ -112,10 +135,10 @@ function Merge() {
         title="Merge special orders"
         primaryAction={{
           content: 'Merge',
-          disabled: selectedResources.length === 0 || !locationId || !vendorName || purchaseOrderMutation.isPending,
+          disabled: selectedResources.length === 0 || !locationId || !supplierId || purchaseOrderMutation.isPending,
           loading: purchaseOrderMutation.isPending,
           onAction: () => {
-            if (!locationId || !vendorName) {
+            if (!locationId || !supplierId) {
               return;
             }
 
@@ -146,7 +169,7 @@ function Merge() {
 
             const createPurchaseOrder = getCreatePurchaseOrderForSpecialOrders({
               location,
-              vendorName,
+              supplierId,
               status,
               purchaseOrderCustomFields,
               lineItemCustomFields,
@@ -233,22 +256,22 @@ function Merge() {
         tabs={[
           {
             id: 'All',
-            content: 'All vendors',
+            content: 'All suppliers',
             onAction: () => {
-              setVendorName(undefined);
+              setSupplierId(undefined);
               clearSelection();
             },
           },
-          ...vendors.map(vendor => ({
-            id: vendor.name,
-            content: vendor.name,
+          ...suppliers.map(supplier => ({
+            id: String(supplier.id),
+            content: supplier.name,
             onAction: () => {
-              setVendorName(vendor.name);
+              setSupplierId(supplier.id);
               clearSelection();
             },
           })),
         ]}
-        selected={vendors.findIndex(vendor => vendor.name === vendorName) + 1}
+        selected={suppliers.findIndex(supplier => supplier.id === supplierId) + 1}
       />
 
       <IndexFilters
@@ -260,7 +283,7 @@ function Merge() {
         onClearAll={() => {
           setQuery('', true);
           setLocationId(undefined);
-          setVendorName(undefined);
+          setSupplierId(undefined);
         }}
         queryValue={optimisticQuery}
         queryPlaceholder={'Search special orders'}
@@ -280,7 +303,7 @@ function Merge() {
           { title: 'SO #' },
           { title: 'WO #' },
         ]}
-        selectable={!!locationId && !!vendorName}
+        selectable={!!locationId && !!supplierId}
         selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
         itemCount={sum(specialOrdersQuery.data?.pages.flatMap(page => page.length) ?? [])}
         loading={

@@ -1,25 +1,61 @@
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { sql, sqlOne } from '../db/sql-tag.js';
 import { isNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { nest } from '../../util/db.js';
 import { MergeUnion } from '../../util/types.js';
 import { SupplierPaginationOptions } from '../../schemas/generated/supplier-pagination-options.js';
+import { sentryErr } from '@teifi-digital/shopify-app-express/services';
+import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { escapeLike } from '../db/like.js';
 
 export type Supplier = NonNullable<Awaited<ReturnType<typeof getSupplier>>>;
 
 export async function getSupplier(shop: string, { id, name }: MergeUnion<{ id: number } | { name: string }>) {
-  const [supplier] = await sql<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
-    SELECT *
-    FROM "Supplier"
-    WHERE shop = ${shop}
-      AND id = ${id}
-      AND name = ${name};
+  const [supplier] = await sql<{
+    id: number;
+    shop: string;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+    lastUsedAt: Date | null;
+  }>`
+    SELECT s.*, GREATEST(MAX(po."createdAt"), s."updatedAt") AS "lastUsedAt"
+    FROM "Supplier" s
+           LEFT JOIN "PurchaseOrder" po ON po."supplierId" = s.id
+    WHERE s.shop = ${shop}
+      AND s.id = COALESCE(${id ?? null}, s.id)
+      AND s.name = COALESCE(${name ?? null}, s.name)
+    GROUP BY s.id;
   `;
   if (!supplier) {
     return null;
   }
 
   return supplier;
+}
+
+export async function deleteSupplierVendors(supplierId: number) {
+  await sql`
+    DELETE
+    FROM "SupplierVendor" sv
+    WHERE sv."supplierId" = ${supplierId}
+  `;
+}
+
+export async function insertSupplierVendors(supplierId: number, vendors: string[]) {
+  await sql`
+    INSERT INTO "SupplierVendor" ("supplierId", "vendor")
+    SELECT ${supplierId}, *
+    FROM UNNEST(${vendors} :: text[])
+  `;
+}
+
+export async function insertSupplierProductVariants(supplierId: number, productVariantIds: ID[]) {
+  await sql`
+    INSERT INTO "SupplierProductVariant" ("supplierId", "productVariantId")
+    SELECT ${supplierId}, *
+    FROM UNNEST(${productVariantIds as string[]} :: text[])
+  `;
 }
 
 export async function getSuppliers(
@@ -31,41 +67,48 @@ export async function getSuppliers(
     sortOrder = 'descending',
     limit,
     productVariantId,
+    vendor,
   }: SupplierPaginationOptions,
 ) {
-  const _productVariantId: string | null = productVariantId ?? null;
+  const _productVariantId: string[] | null = productVariantId?.length ? productVariantId : null;
+  const _vendor: string[] | null = vendor?.length ? vendor : null;
+  const _query = query ? escapeLike(query) : null;
 
-  const suppliers = await sql<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
-    SELECT s.*
+  const suppliers = await sql<{ id: number }>`
+    SELECT s.id
     FROM "Supplier" s
            LEFT JOIN "PurchaseOrder" po ON po."supplierId" = s.id
+           LEFT JOIN "SupplierVendor" sv ON sv."supplierId" = s.id
+           LEFT JOIN "SupplierProductVariant" spv ON spv."supplierId" = s.id
     WHERE s.shop = ${shop}
       AND (
-      s.name ILIKE COALESCE(${query ?? null}, '%') OR
-      po.name ILIKE COALESCE(${query ?? null}, '%')
+      s.name ILIKE COALESCE(${_query}, '%') OR
+      po.name ILIKE COALESCE(${_query}, '%') OR
+      sv.vendor ILIKE COALESCE(${_query}, '%')
       )
-      AND (${_productVariantId} :: text IS NULL OR EXISTS(SELECT 1
-                                                          FROM "ProductVariantSupplier" pv
-                                                          WHERE pv."supplierId" = s.id
-                                                            AND pv."productVariantId" = ${_productVariantId}))
+      AND (${_productVariantId!} :: text[] IS NULL OR spv."productVariantId" = ANY (${_productVariantId!} :: text[]))
+      AND (${_vendor!} :: text[] IS NULL OR sv.vendor = ANY (${_vendor!}))
 
     GROUP BY s.id
 
-    ORDER BY CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'ascending' THEN s."createdAt" END ASC NULLS LAST,
-             CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'descending' THEN s."createdAt" END DESC NULLS LAST,
+    ORDER BY CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'ascending' THEN s."createdAt" END ASC,
+             CASE WHEN ${sortMode} = 'createdAt' AND ${sortOrder} = 'descending' THEN s."createdAt" END DESC,
              --
-             CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'ascending' THEN s."updatedAt" END ASC NULLS LAST,
-             CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'descending' THEN s."updatedAt" END DESC NULLS LAST,
+             CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'ascending' THEN s."updatedAt" END ASC,
+             CASE WHEN ${sortMode} = 'updatedAt' AND ${sortOrder} = 'descending' THEN s."updatedAt" END DESC,
              --
-             CASE WHEN ${sortMode} = 'name' AND ${sortOrder} = 'ascending' THEN s.name END ASC NULLS LAST,
-             CASE WHEN ${sortMode} = 'name' AND ${sortOrder} = 'descending' THEN s.name END DESC NULLS LAST,
+             CASE WHEN ${sortMode} = 'name' AND ${sortOrder} = 'ascending' THEN s.name END ASC,
+             CASE WHEN ${sortMode} = 'name' AND ${sortOrder} = 'descending' THEN s.name END DESC,
              --
              CASE
                WHEN ${sortMode} = 'relevant' AND ${sortOrder} = 'ascending'
-                 THEN GREATEST(MAX(po."createdAt"), MAX(s."updatedAt")) END ASC NULLS LAST,
+                 THEN GREATEST(MAX(po."createdAt"), s."updatedAt") END ASC,
              CASE
                WHEN ${sortMode} = 'relevant' AND ${sortOrder} = 'descending'
-                 THEN GREATEST(MAX(po."createdAt"), MAX(s."updatedAt")) END DESC NULLS LAST
+                 THEN GREATEST(MAX(po."createdAt"), s."updatedAt") END DESC,
+             -- Tie breaker
+             CASE WHEN ${sortOrder} = 'ascending' THEN s.name END ASC,
+             CASE WHEN ${sortOrder} = 'descending' THEN s.name END DESC
 
     LIMIT ${limit + 1} OFFSET ${offset ?? null}
   `;
@@ -76,87 +119,7 @@ export async function getSuppliers(
   };
 }
 
-export async function getSupplierIds(shop: string, names: string[]) {
-  if (!names.length) {
-    return [];
-  }
-
-  return await sql<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
-    SELECT *
-    FROM "Supplier"
-    WHERE shop = ${shop}
-      AND name = ANY (${names} :: text[]);
-  `;
-}
-
-export async function insertSuppliers(
-  shop: string,
-  suppliers: {
-    name: string;
-  }[],
-) {
-  if (!isNonEmptyArray(suppliers)) {
-    return [];
-  }
-
-  const { name } = nest(suppliers);
-
-  return await sql<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
-    INSERT INTO "Supplier" (shop, name)
-    SELECT ${shop}, *
-    FROM UNNEST(
-      ${name} :: text[]
-         )
-    RETURNING *;
-  `;
-}
-
-/**
- * Update suppliers. May return fewer than the number of inputted suppliers in case one was not found.
- */
-export async function updateSuppliers(
-  shop: string,
-  suppliers: {
-    name: string;
-  }[],
-) {
-  if (!isNonEmptyArray(suppliers)) {
-    return [];
-  }
-
-  const { name } = nest(suppliers);
-
-  return await sql<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
-    UPDATE "Supplier" s
-    SET name = supplier.name
-    FROM UNNEST(
-           ${name} :: text[]
-         ) supplier(name)
-    WHERE s.name = supplier.name
-    RETURNING *;
-  `;
-}
-
-export async function deleteSuppliers(shop: string, suppliers: string[]) {
-  if (suppliers.length === 0) {
-    return;
-  }
-
-  await sql`
-    WITH "SuppliersToDelete" AS (SELECT id
-                                 FROM "Supplier"
-                                 WHERE shop = ${shop}
-                                   AND name = ANY (${suppliers} :: text[])),
-         "UnlinkVariants" AS (
-           DELETE FROM "ProductVariantSupplier"
-             WHERE "supplierId" IN (SELECT id FROM "SuppliersToDelete"))
-    DELETE
-    FROM "Supplier"
-    WHERE id IN (SELECT * FROM "SuppliersToDelete")
-  `;
-}
-
-export async function upsertProductVariantSuppliers(
+export async function upsertSupplierProductVariants(
   productVariantSuppliers: {
     productVariantId: ID;
     supplierId: number;
@@ -170,7 +133,7 @@ export async function upsertProductVariantSuppliers(
   const _productVariantId: string[] = productVariantId;
 
   await sql`
-    INSERT INTO "ProductVariantSupplier" ("productVariantId", "supplierId")
+    INSERT INTO "SupplierProductVariant" ("productVariantId", "supplierId")
     SELECT *
     FROM UNNEST(
       ${_productVariantId} :: text[],
@@ -179,40 +142,30 @@ export async function upsertProductVariantSuppliers(
   `;
 }
 
-export async function deleteProductVariantSuppliers(
-  productVariantSuppliers: {
-    productVariantId: ID;
-    supplierId: number;
-  }[],
-) {
-  if (!isNonEmptyArray(productVariantSuppliers)) {
-    return;
-  }
-
-  const { productVariantId, supplierId } = nest(productVariantSuppliers);
-  const _productVariantId: string[] = productVariantId;
-
+export async function deleteSupplierProductVariants(supplierId: number) {
   await sql`
     DELETE
-    FROM "ProductVariantSupplier"
-    WHERE ("productVariantId", "supplierId") IN (SELECT *
-                                                 FROM UNNEST(
-                                                   ${_productVariantId} :: text[],
-                                                   ${supplierId} :: int[]
-                                                      ))
+    FROM "SupplierProductVariant"
+    WHERE "supplierId" = ${supplierId};
   `;
 }
 
-export async function upsertSupplier(shop: string, { id, name }: { id?: number; name: string }) {
-  const supplier = await sqlOne<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
-    INSERT INTO "Supplier" (id, shop, name)
-    VALUES (${id ?? null}, ${shop}, ${name})
-    ON CONFLICT (shop, name) DO UPDATE SET shop = ${shop},
-                                           name = ${name}
+export async function insertSupplier(shop: string, { name }: { name: string }) {
+  return await sqlOne<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
+    INSERT INTO "Supplier" (shop, name)
+    VALUES (${shop}, ${name})
     RETURNING *;
   `;
+}
 
-  return supplier;
+export async function updateSupplier(shop: string, { id, name }: { id: number; name: string }) {
+  return await sqlOne<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
+    UPDATE "Supplier"
+    SET shop = ${shop},
+        name = ${name}
+    WHERE id = ${id}
+    RETURNING *;
+  `;
 }
 
 export async function deleteSupplier(shop: string, id: number) {
@@ -222,4 +175,50 @@ export async function deleteSupplier(shop: string, id: number) {
     WHERE shop = ${shop}
       AND id = ${id};
   `;
+}
+
+export async function getSupplierVendors(supplierId: number) {
+  return await sql<{ id: number; supplierId: number; vendor: string; createdAt: Date; updatedAt: Date }>`
+    SELECT *
+    FROM "SupplierVendor"
+    WHERE "supplierId" = ${supplierId};
+  `;
+}
+
+export async function getSupplierProductVariants(supplierId: number) {
+  const supplierProductVariants = await sql<{
+    id: number;
+    supplierId: number;
+    productVariantId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+    SELECT *
+    FROM "SupplierProductVariant"
+    WHERE "supplierId" = ${supplierId};
+  `;
+
+  return supplierProductVariants.map(mapSupplierProductVariants);
+}
+
+function mapSupplierProductVariants(supplierProductVariants: {
+  id: number;
+  supplierId: number;
+  productVariantId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}) {
+  const { productVariantId } = supplierProductVariants;
+
+  try {
+    assertGid(productVariantId);
+
+    return {
+      ...supplierProductVariants,
+      productVariantId,
+    };
+  } catch (error) {
+    sentryErr(error, { supplierProductVariants });
+    throw new HttpError('Unable to parse supplier product variant', 500);
+  }
 }

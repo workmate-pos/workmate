@@ -42,6 +42,10 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { ReorderPointCsvUploadDropZoneModal } from '@web/frontend/components/reorder-points/ReorderPointCsvUploadDropZoneModal.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query.js';
+import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 
 const PAGE_SIZE = 50;
 
@@ -379,6 +383,8 @@ function BulkCreatePurchaseOrdersModal({
     return {
       purchaseOrders: [...vendors].map(vendorName => ({
         name: null,
+        type: 'NORMAL',
+        supplierId: null,
         vendorName,
         status,
         note,
@@ -495,44 +501,7 @@ function BulkCreatePurchaseOrdersModal({
           <Modal.Section>
             <BlockStack gap="200">
               {bulkCreatePurchaseOrders.purchaseOrders.map(purchaseOrder => (
-                <BlockStack gap="200">
-                  <Text as="h2" variant="headingMd" fontWeight="bold">
-                    {purchaseOrder.vendorName}
-                  </Text>
-
-                  <ResourceList
-                    items={purchaseOrder.lineItems}
-                    renderItem={lineItem => {
-                      const productVariantQuery = productVariantQueries[lineItem.productVariantId];
-                      const productVariant = productVariantQuery?.data;
-                      const imageUrl = productVariant?.image?.url ?? productVariant?.product.featuredImage?.url;
-                      const name = getProductVariantName(productVariant) ?? 'Unknown product';
-
-                      return (
-                        <ResourceItem id={lineItem.uuid} onClick={() => {}}>
-                          <InlineStack gap="200" align="space-between" blockAlign="center">
-                            <InlineStack gap="400">
-                              {imageUrl && <Thumbnail source={imageUrl} alt={name} />}
-                              {!imageUrl && <SkeletonThumbnail />}
-                              <BlockStack gap="050">
-                                <Text as="p" variant="bodyMd" fontWeight="bold">
-                                  {name}
-                                </Text>
-                                <Text as="p" variant="bodyMd" tone="subdued">
-                                  {productVariant?.sku}
-                                </Text>
-                              </BlockStack>
-                            </InlineStack>
-                            <Text as="p" variant="bodyMd">
-                              {lineItem.quantity}
-                            </Text>
-                          </InlineStack>
-                        </ResourceItem>
-                      );
-                    }}
-                    resourceName={{ singular: 'line item', plural: 'line items' }}
-                  />
-                </BlockStack>
+                <PurchaseOrderPreview key={purchaseOrder.name} purchaseOrder={purchaseOrder} />
               ))}
             </BlockStack>
           </Modal.Section>
@@ -541,5 +510,64 @@ function BulkCreatePurchaseOrdersModal({
 
       {toast}
     </>
+  );
+}
+
+function PurchaseOrderPreview({ purchaseOrder }: { purchaseOrder: CreatePurchaseOrder }) {
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+
+  const productVariantIds = unique(purchaseOrder.lineItems.map(li => li.productVariantId));
+
+  const supplierQuery = useSupplierQuery({ fetch, id: purchaseOrder.supplierId });
+  const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
+
+  return (
+    <BlockStack gap="200">
+      <Text as="h2" variant="headingMd" fontWeight="bold">
+        {supplierQuery.isLoading && <SkeletonBodyText lines={1} />}
+        {supplierQuery.isError && (
+          <Text as="p" tone="critical">
+            {extractErrorMessage(supplierQuery.error, 'Error loading supplier')}
+          </Text>
+        )}
+        {supplierQuery.data?.name}
+      </Text>
+
+      <ResourceList
+        items={purchaseOrder.lineItems}
+        renderItem={lineItem => {
+          const productVariantQuery = productVariantQueries[lineItem.productVariantId];
+          const productVariant = productVariantQuery?.data;
+          const imageUrl = productVariant?.image?.url ?? productVariant?.product.featuredImage?.url;
+          const name = getProductVariantName(productVariant) ?? 'Unknown product';
+
+          return (
+            <ResourceItem id={lineItem.uuid} onClick={() => {}}>
+              <InlineStack gap="200" align="space-between" blockAlign="center">
+                <InlineStack gap="400">
+                  {imageUrl && <Thumbnail source={imageUrl} alt={name} />}
+                  {!imageUrl && <SkeletonThumbnail />}
+                  <BlockStack gap="050">
+                    <Text as="p" variant="bodyMd" fontWeight="bold">
+                      {name}
+                    </Text>
+                    <Text as="p" variant="bodyMd" tone="subdued">
+                      {productVariant?.sku}
+                    </Text>
+                  </BlockStack>
+                </InlineStack>
+                <Text as="p" variant="bodyMd">
+                  {lineItem.quantity}
+                </Text>
+              </InlineStack>
+            </ResourceItem>
+          );
+        }}
+        resourceName={{ singular: 'line item', plural: 'line items' }}
+      />
+
+      {toast}
+    </BlockStack>
   );
 }

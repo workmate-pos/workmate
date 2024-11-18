@@ -5,8 +5,20 @@
     "name": {
       "type": "string",
       "minLength": 1
+    },
+    "vendors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "productVariantIds": {
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/ID"
+      }
     }
   },
-  "required": ["name"],
+  "required": ["name", "vendors", "productVariantIds"],
   "additionalProperties": false
 }

@@ -29,7 +29,7 @@ export function getDetailedSpecialOrderBadges(specialOrder: DetailedSpecialOrder
         variant: 'highlight',
       })),
     ...specialOrder.purchaseOrders.map<BadgeProps>(po => ({
-      text: `${po.name} (${po.vendorName})`,
+      text: `${po.name}`,
       variant: po.availableQuantity >= po.orderedQuantity ? 'success' : 'warning',
       status: po.availableQuantity >= po.orderedQuantity ? 'complete' : po.availableQuantity > 0 ? 'partial' : 'empty',
     })),

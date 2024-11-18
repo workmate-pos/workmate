@@ -39,6 +39,7 @@ export function LocationSelectorModal({
           items={locations}
           resourceName={{ singular: 'location', plural: 'locations' }}
           resolveItemId={location => location.name}
+          flushFilters
           filterControl={
             <Filters
               filters={[]}

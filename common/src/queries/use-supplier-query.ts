@@ -3,6 +3,7 @@ import { Fetch } from './fetch.js';
 import { FetchSupplierResponse } from '@web/controllers/api/suppliers.js';
 import { NestedDateToDateTime } from '@web/util/types.js';
 import { Supplier } from '@web/services/suppliers/queries.js';
+import { DetailedSupplier } from '@web/services/suppliers/get.js';
 
 export const useSupplierQuery = ({ fetch, id }: { fetch: Fetch; id: number | null }) =>
   useQuery({
@@ -22,10 +23,11 @@ export const useSupplierQuery = ({ fetch, id }: { fetch: Fetch; id: number | nul
           },
   });
 
-export function mapSupplier(supplier: NestedDateToDateTime<Supplier>): Supplier {
+export function mapSupplier(supplier: NestedDateToDateTime<DetailedSupplier>): DetailedSupplier {
   return {
     ...supplier,
     createdAt: new Date(supplier.createdAt),
     updatedAt: new Date(supplier.updatedAt),
+    lastUsedAt: new Date(supplier.lastUsedAt),
   };
 }

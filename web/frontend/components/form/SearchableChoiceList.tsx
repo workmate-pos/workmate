@@ -22,7 +22,7 @@ export function SearchableChoiceList({
   resourceName = { singular: 'choice', plural: 'choices' },
   disabled,
 }: {
-  title: string;
+  title?: string;
   limit?: number;
   searchable?: boolean;
   choices: SearchableChoiceListChoice[];
@@ -67,9 +67,11 @@ export function SearchableChoiceList({
 
   return (
     <BlockStack gap="200">
-      <Text as="h2" variant="headingMd" fontWeight="bold">
-        {title}
-      </Text>
+      {title && (
+        <Text as="h2" variant="headingMd" fontWeight="bold">
+          {title}
+        </Text>
+      )}
 
       {searchable && (
         <TextField

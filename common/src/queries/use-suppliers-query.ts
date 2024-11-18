@@ -21,7 +21,14 @@ export const useSuppliersQuery = ({
 
       for (const [key, value] of Object.entries({ ...params, offset })) {
         if (value === undefined) continue;
-        searchParams.set(key, String(value));
+
+        if (Array.isArray(value)) {
+          for (const x of value) {
+            searchParams.append(key, String(x));
+          }
+        } else {
+          searchParams.set(key, String(value));
+        }
       }
 
       const response = await fetch(`/api/suppliers?${searchParams.toString()}`);

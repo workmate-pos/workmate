@@ -21,7 +21,16 @@
       "enum": ["createdAt", "updatedAt", "name", "relevant"]
     },
     "productVariantId": {
-      "$ref": "scalars.json#/definitions/ID"
+      "type": "array",
+      "items": {
+        "$ref": "scalars.json#/definitions/ID"
+      }
+    },
+    "vendor": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": ["limit", "offset"],

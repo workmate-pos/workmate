@@ -20,7 +20,14 @@ export const useSpecialOrdersQuery = ({
 
       for (const [key, value] of Object.entries({ ...params, offset })) {
         if (value === undefined) continue;
-        searchParams.set(key, String(value));
+
+        if (Array.isArray(value)) {
+          for (const x of value) {
+            searchParams.append(key, String(x));
+          }
+        } else {
+          searchParams.set(key, String(value));
+        }
       }
 
       const response = await fetch(`/api/special-orders?${searchParams}`);
@@ -35,7 +42,7 @@ export const useSpecialOrdersQuery = ({
     initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => {
       if (!lastPage.hasNextPage) return undefined;
-      return pages.flat(1).length;
+      return pages.flatMap(page => page.specialOrders).length;
     },
     select: ({ pages, pageParams }) => ({
       pages: pages.map(page => page.specialOrders),

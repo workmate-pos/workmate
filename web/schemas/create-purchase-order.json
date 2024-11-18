@@ -21,7 +21,7 @@
       ]
     },
     "supplierId": {
-      "type": "integer"
+      "anyOf": [{ "const": null }, { "type": "integer" }]
     },
     "shipFrom": {
       "type": "string"
@@ -136,7 +136,7 @@
     "status",
     "placedDate",
     "locationId",
-    "vendorName",
+    "supplierId",
     "shipFrom",
     "shipTo",
     "note",

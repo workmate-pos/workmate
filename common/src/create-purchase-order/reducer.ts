@@ -20,8 +20,8 @@ export type CreatePurchaseOrderAction =
       action: 'set';
     } & CreatePurchaseOrder)
   | ({
-      action: 'setVendor';
-    } & Pick<CreatePurchaseOrder, 'vendorName'>)
+      action: 'setSupplier';
+    } & Pick<CreatePurchaseOrder, 'supplierId'>)
   | ({
       action: 'setLocation';
     } & Pick<CreatePurchaseOrder, 'locationId'>);
@@ -67,7 +67,7 @@ function createPurchaseOrderReducer(
 ): CreatePurchaseOrder {
   switch (_action.action) {
     case 'setPartial':
-    case 'setVendor':
+    case 'setSupplier':
     case 'setLocation':
     case 'set': {
       const { action, ...partial } = _action;
@@ -75,7 +75,7 @@ function createPurchaseOrderReducer(
         Object.entries(partial).filter(([, value]) => value !== undefined),
       );
 
-      if (_action.action === 'setVendor') {
+      if (_action.action === 'setSupplier') {
         partialNotUndefined.lineItems = [];
       }
 

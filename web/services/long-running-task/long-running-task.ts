@@ -39,3 +39,24 @@ export async function runLongRunningTask<T>(
     await removeLongRunningTask(name);
   }
 }
+
+/**
+ * Class to get a fake progress bar.
+ */
+export class FakeProgress {
+  private static PROGRESS_MAX = 0.95;
+  /**
+   * x value at which the progress bar is at the PROGRESS_MAX.
+   */
+  private static PROGRESS_MAX_INTERCEPT = Math.log(1 / (1 - FakeProgress.PROGRESS_MAX));
+
+  private readonly start = new Date();
+
+  constructor(private readonly estimatedTimeMs: number) {}
+
+  getProgress() {
+    const elapsedMs = new Date().getTime() - this.start.getTime();
+    const elapsedRatio = Math.min(1, elapsedMs / this.estimatedTimeMs);
+    return 1 - 1 / Math.exp(elapsedRatio * FakeProgress.PROGRESS_MAX_INTERCEPT);
+  }
+}

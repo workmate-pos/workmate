@@ -1050,6 +1050,8 @@ model LongRunningTask {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([name])
 }
 
 // Employees can mark themselves as available or unavailable for datetime ranges
@@ -1412,23 +1414,41 @@ model Supplier {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  suppliers      ProductVariantSupplier[]
+  suppliers      SupplierProductVariant[]
   purchaseOrders PurchaseOrder[]
+  vendors        SupplierVendor[]
 
   @@unique([shop, name])
 }
 
-model ProductVariantSupplier {
+// Suppliers can be linked to vendors. Such a link means that the supplier can supply any product belonging to the vendor.
+model SupplierVendor {
   id Int @id @default(autoincrement())
 
-  productVariantId String
-
-  supplier   Supplier @relation(fields: [supplierId], references: [id])
   supplierId Int
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+
+  // Shopify vendor name
+  vendor String
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  @@index([productVariantId, supplierId])
-  @@index([supplierId])
+  @@unique([supplierId, vendor])
+}
+
+// Suppliers can be linked to product variants. Such a link means that the supplier can supply the product variant.
+model SupplierProductVariant {
+  id Int @id @default(autoincrement())
+
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  supplierId Int
+
+  productVariantId String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([productVariantId])
+  @@index([supplierId, productVariantId])
 }
