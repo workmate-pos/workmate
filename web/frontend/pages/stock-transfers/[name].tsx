@@ -26,7 +26,7 @@ export default function () {
   return (
     <Frame>
       <Page>
-        <PermissionBoundary permissions={['read_stock_transfers', 'read_settings']}>
+        <PermissionBoundary permissions={['read_stock_transfers', 'write_stock_transfers', 'read_settings']}>
           <StockTransferLoader />
         </PermissionBoundary>
       </Page>

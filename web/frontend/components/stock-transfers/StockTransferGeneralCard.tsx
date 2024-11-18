@@ -7,11 +7,11 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState } from 'react';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 
-interface Props {
+type Props = {
   createStockTransfer: WIPCreateStockTransfer;
   dispatch: CreateStockTransferDispatchProxy;
   disabled?: boolean;
-}
+};
 
 export function StockTransferGeneralCard({ createStockTransfer, dispatch, disabled }: Props) {
   const [toast, setToastAction] = useToast();

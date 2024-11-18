@@ -14,14 +14,14 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { useStockTransferPageQuery } from '@work-orders/common/queries/use-stock-transfer-page-query.js';
 import { entries } from '@teifi-digital/shopify-app-toolbox/object';
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
-import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
-import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
+import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
+import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 
 export default function () {
   return (
@@ -39,6 +39,7 @@ function StockTransfers() {
   const app = useAppBridge();
   const [query, setQuery, internalQuery] = useDebouncedState('');
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
+  const [page, setPage] = useState(0);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -49,12 +50,19 @@ function StockTransfers() {
     limit: 25,
   });
 
-  const [pageIndex, setPage] = useState(0);
-  const pagination = getInfiniteQueryPagination(pageIndex, setPage, stockTransferQuery);
-  const page = stockTransferQuery.data?.pages[pageIndex];
+  useEffect(() => {
+    if (stockTransferQuery.data?.pages.length === 1) {
+      stockTransferQuery.fetchNextPage();
+    }
+  }, [stockTransferQuery.data?.pages.length]);
 
-  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
-  const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
+  const stockTransfers = stockTransferQuery.data?.pages ?? [];
+
+  const fromLocationIds = unique(stockTransfers.map(transfer => transfer.fromLocationId).filter(Boolean));
+  const toLocationIds = unique(stockTransfers.map(transfer => transfer.toLocationId).filter(Boolean));
+
+  const fromLocationQueries = useLocationQueries({ fetch, ids: fromLocationIds });
+  const toLocationQueries = useLocationQueries({ fetch, ids: toLocationIds });
 
   const redirectToStockTransfer = (type: 'incoming' | 'outgoing' | string) => {
     if (type === 'incoming' || type === 'outgoing') {
@@ -63,6 +71,9 @@ function StockTransfers() {
       Redirect.create(app).dispatch(Redirect.Action.APP, `/stock-transfers/${encodeURIComponent(type)}`);
     }
   };
+
+  const shouldFetchNextPage = stockTransferQuery.data && page === stockTransferQuery.data.pages.length - 2;
+  const hasNextPage = !stockTransferQuery.isFetching && page < (stockTransferQuery.data?.pages.length ?? 0) - 1;
 
   if (stockTransferQuery.isLoading) {
     return <Loading />;
@@ -101,14 +112,13 @@ function StockTransfers() {
       <IndexTable
         headings={[
           { title: 'Transfer #' },
-          { title: 'Direction' },
           { title: 'Status' },
           { title: 'From location' },
           { title: 'To location' },
           { title: 'Items' },
         ]}
-        itemCount={page?.lineItems?.length ?? 0}
-        loading={stockTransferQuery.isFetching}
+        itemCount={stockTransfers.length}
+        loading={stockTransferQuery.isFetchingNextPage}
         emptyState={
           <Card>
             <EmptyState
@@ -124,36 +134,45 @@ function StockTransfers() {
           </Card>
         }
         pagination={{
-          hasNext: pagination.hasNextPage,
-          hasPrevious: pagination.hasPreviousPage,
-          onNext: () => pagination.next(),
-          onPrevious: () => pagination.previous(),
+          hasNext: hasNextPage,
+          hasPrevious: page > 0,
+          onPrevious: () => setPage(page => page - 1),
+          onNext: () => {
+            if (shouldFetchNextPage) {
+              stockTransferQuery.fetchNextPage();
+            }
+            setPage(page => page + 1);
+          },
         }}
       >
-        {page?.lineItems?.map((lineItem, i) => {
-          const statusCount: Record<StockTransferLineItemStatus, number> = {
-            IN_TRANSIT: 0,
-            PENDING: 0,
-            RECEIVED: 0,
-            REJECTED: 0,
-          };
-
-          // Single line item status count
-          statusCount[lineItem.status] += lineItem.quantity;
+        {stockTransfers.map((stockTransfer, i) => {
+          const statusCount = stockTransfer.lineItems.reduce(
+            (acc, item) => {
+              if (item?.status && item?.quantity) {
+                acc[item.status] += item.quantity;
+              }
+              return acc;
+            },
+            {
+              IN_TRANSIT: 0,
+              PENDING: 0,
+              RECEIVED: 0,
+              REJECTED: 0,
+            } satisfies Record<StockTransferLineItemStatus, number>,
+          );
 
           return (
             <IndexTable.Row
-              key={lineItem.uuid}
-              id={lineItem.uuid}
+              key={stockTransfer.name}
+              id={stockTransfer.name}
               position={i}
-              onClick={() => redirectToStockTransfer(lineItem.uuid)}
+              onClick={() => redirectToStockTransfer(stockTransfer.name)}
             >
               <IndexTable.Cell>
                 <Text as="p" fontWeight="bold" variant="bodyMd">
-                  {lineItem.productTitle}
+                  {stockTransfer.name}
                 </Text>
               </IndexTable.Cell>
-              <IndexTable.Cell>{defaultLocationId === page.toLocationId ? 'Incoming' : 'Outgoing'}</IndexTable.Cell>
               <IndexTable.Cell>
                 {entries(statusCount)
                   .filter(([, quantity]) => quantity > 0)
@@ -163,9 +182,13 @@ function StockTransfers() {
                     </Badge>
                   ))}
               </IndexTable.Cell>
-              <IndexTable.Cell>{page.fromLocationId}</IndexTable.Cell>
-              <IndexTable.Cell>{page.toLocationId}</IndexTable.Cell>
-              <IndexTable.Cell>{lineItem.quantity}</IndexTable.Cell>
+              <IndexTable.Cell>
+                {fromLocationQueries[stockTransfer.fromLocationId]?.data?.name ?? stockTransfer.fromLocationId}
+              </IndexTable.Cell>
+              <IndexTable.Cell>
+                {toLocationQueries[stockTransfer.toLocationId]?.data?.name ?? stockTransfer.toLocationId}
+              </IndexTable.Cell>
+              <IndexTable.Cell>{stockTransfer.lineItems.length}</IndexTable.Cell>
             </IndexTable.Row>
           );
         })}
