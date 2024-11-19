@@ -15,7 +15,7 @@ type CreateCycleCountAction =
   | { type: 'setLocked'; locked: boolean }
   | {
       type: 'addProductVariants';
-      productVariants: Array<{
+      productVariants: {
         id: ID;
         title: string;
         product: {
@@ -24,7 +24,7 @@ type CreateCycleCountAction =
         inventoryItem: {
           id: ID;
         };
-      }>;
+      }[];
     };
 
 export type CreateCycleCountDispatchProxy = {
