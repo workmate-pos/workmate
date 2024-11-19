@@ -7,6 +7,7 @@ import {
   Banner,
   Thumbnail,
   InlineStack,
+  SkeletonThumbnail,
 } from '@shopify/polaris';
 import { useEffect, useState } from 'react';
 import { useScanVariantsQuery } from '@work-orders/common/queries/use-scan-variants-query.js';
@@ -130,11 +131,15 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
                 onClick={() => handleProductSelect(variant)}
                 media={
                   <InlineStack gap="200" blockAlign="center">
-                    <Thumbnail
-                      source={variant.image?.url ?? variant.product?.featuredImage?.url ?? ''}
-                      alt={getProductVariantName(variant) ?? 'Product'}
-                      size="small"
-                    />
+                    {variant.product?.featuredImage?.url ? (
+                      <Thumbnail
+                        source={variant.image?.url ?? variant.product?.featuredImage?.url ?? ''}
+                        alt={getProductVariantName(variant) ?? 'Product'}
+                        size="small"
+                      />
+                    ) : (
+                      <SkeletonThumbnail />
+                    )}
                   </InlineStack>
                 }
               >
