@@ -26,16 +26,9 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
   const [toast, setToastAction] = useToast();
   const [barcode, setBarcode] = useState('');
   const [variantIdCount, setVariantIdCount] = useState<Record<string, number>>({});
-
   const fetch = useAuthenticatedFetch({ setToastAction });
 
   const scanVariantsQuery = useScanVariantsQuery({ fetch, scanData: barcode });
-
-  const error = scanVariantsQuery.isError
-    ? extractErrorMessage(scanVariantsQuery.error, 'Error finding product')
-    : !scanVariantsQuery.data?.length
-      ? 'No products found'
-      : null;
 
   // Local subtitle function to format product details
   const getProductSubtitle = (variant: ProductVariant) => {
@@ -59,36 +52,17 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
   };
 
   useEffect(() => {
-    if (!barcode) return;
-    if (scanVariantsQuery.isLoading) return;
-
-    if (scanVariantsQuery.isError) {
-      setError(extractErrorMessage(scanVariantsQuery.error, 'Error finding product'));
-      setBarcode('');
-      return;
-    }
+    if (!barcode || scanVariantsQuery.isLoading) return;
 
     const variants = (scanVariantsQuery.data ?? []) satisfies ProductVariant[];
 
-    if (variants.length === 0) {
-      setError('No products found');
-      setBarcode('');
-      return;
-    }
-
     if (variants.length === 1) {
       const variant = variants[0];
-
-      if (variant === undefined) {
-        setError('No variant found');
-        setBarcode('');
-        return;
+      if (variant) {
+        handleProductSelect(variant);
       }
-
-      handleProductSelect(variant);
-      setBarcode('');
     }
-  }, [barcode, scanVariantsQuery.data, scanVariantsQuery.isError, scanVariantsQuery.error]);
+  }, [barcode, scanVariantsQuery.data, scanVariantsQuery.isLoading]);
 
   // Adjusted handleProductSelect function
   const handleProductSelect = (variant: ProductVariant) => {
@@ -105,7 +79,17 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
 
   return (
     <BlockStack gap="400">
-      {error && <Banner title={error} tone="critical" onDismiss={() => setError(null)} />}
+      {scanVariantsQuery.isError && (
+        <Banner
+          title={extractErrorMessage(scanVariantsQuery.error, 'Error finding product')}
+          tone="critical"
+          action={{ content: 'Try again', onAction: () => scanVariantsQuery.refetch() }}
+        />
+      )}
+
+      {barcode && variants.length === 0 && !scanVariantsQuery.isLoading && (
+        <Banner title="No products found" tone="warning" onDismiss={() => setBarcode('')} />
+      )}
 
       {toast}
 
