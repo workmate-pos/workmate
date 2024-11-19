@@ -39,107 +39,93 @@ export function CycleCountItemsCard({ createCycleCount, dispatch, disabled, onAd
   const productVariantIds = unique(createCycleCount.items.map(item => item.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  if (createCycleCount.items.length === 0) {
-    return (
-      <Card>
-        <BlockStack gap="400" align="center">
-          <Text as="h2" variant="headingMd" fontWeight="bold">
-            No products added
-          </Text>
-          <Text as="p" variant="bodyMd" tone="subdued">
-            Add products to begin your cycle count
-          </Text>
-          <ButtonGroup fullWidth>
-            <Button onClick={onAddProducts} disabled={disabled}>
-              Add products
-            </Button>
-            <Button onClick={onScanProducts} disabled={disabled}>
-              Scan products
-            </Button>
-          </ButtonGroup>
-        </BlockStack>
-      </Card>
-    );
-  }
-
   return (
     <>
       <Card>
         <BlockStack gap="400">
           <Text as="h2" variant="headingMd" fontWeight="bold">
-            Products ({createCycleCount.items.length})
+            Products
           </Text>
 
-          <ResourceList
-            items={createCycleCount.items}
-            resourceName={{ singular: 'product', plural: 'products' }}
-            renderItem={item => {
-              const productVariantQuery = productVariantQueries[item.productVariantId];
-              const productVariant = productVariantQuery?.data;
-              const cycleCountItem = cycleCountQuery.data?.items.find(hasPropertyValue('uuid', item.uuid));
+          {createCycleCount.items.length > 0 ? (
+            <ResourceList
+              items={createCycleCount.items}
+              resourceName={{ singular: 'product', plural: 'products' }}
+              renderItem={item => {
+                const productVariantQuery = productVariantQueries[item.productVariantId];
+                const productVariant = productVariantQuery?.data;
+                const cycleCountItem = cycleCountQuery.data?.items.find(hasPropertyValue('uuid', item.uuid));
 
-              const productName = getProductVariantName(
-                productVariant ?? {
-                  title: item.productVariantTitle,
-                  product: { title: item.productTitle, hasOnlyDefaultVariant: false },
-                },
-              );
+                const productName = getProductVariantName(
+                  productVariant ?? {
+                    title: item.productVariantTitle,
+                    product: { title: item.productTitle, hasOnlyDefaultVariant: false },
+                  },
+                );
 
-              const applicationBadge = getCycleCountApplicationStateBadge(
-                cycleCountItem?.applicationStatus ?? 'not-applied',
-                {
-                  appliedQuantity: cycleCountItem?.applications.at(-1)?.appliedQuantity ?? 0,
-                  countQuantity: item.countQuantity,
-                },
-              );
+                const applicationBadge = getCycleCountApplicationStateBadge(
+                  cycleCountItem?.applicationStatus ?? 'not-applied',
+                  {
+                    appliedQuantity: cycleCountItem?.applications.at(-1)?.appliedQuantity ?? 0,
+                    countQuantity: item.countQuantity,
+                  },
+                );
 
-              return (
-                <ResourceItem
-                  id={item.uuid}
-                  onClick={() => setSelectedItem(item)}
-                  disabled={disabled}
-                  media={
-                    <InlineStack gap="200" blockAlign="center">
-                      <Badge tone="info">{item.countQuantity.toString()}</Badge>
-                      <Thumbnail
-                        source={productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? ''}
-                        alt={productName ?? ''}
-                      />
-                    </InlineStack>
-                  }
-                >
-                  <BlockStack gap="200">
-                    <InlineStack gap="200" blockAlign="center">
-                      <Text as="p" variant="bodyMd" fontWeight="bold">
-                        {productName}
-                      </Text>
-                    </InlineStack>
-                    <InlineStack gap="200" blockAlign="center">
-                      <Badge tone={applicationBadge.tone}>{applicationBadge.children}</Badge>
-                    </InlineStack>
-                    {productVariant?.sku && (
-                      <Text as="p" variant="bodyMd" tone="subdued">
-                        SKU: {productVariant.sku}
-                      </Text>
-                    )}
-                  </BlockStack>
-                </ResourceItem>
-              );
-            }}
-          />
+                return (
+                  <ResourceItem
+                    id={item.uuid}
+                    onClick={() => setSelectedItem(item)}
+                    disabled={disabled}
+                    media={
+                      <InlineStack gap="200" blockAlign="center">
+                        <Badge tone="info">{item.countQuantity.toString()}</Badge>
+                        <Thumbnail
+                          source={productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? ''}
+                          alt={productName ?? ''}
+                        />
+                      </InlineStack>
+                    }
+                  >
+                    <BlockStack gap="200">
+                      <InlineStack gap="200" blockAlign="center">
+                        <Text as="p" variant="bodyMd" fontWeight="bold">
+                          {productName}
+                        </Text>
+                      </InlineStack>
+                      <InlineStack gap="200" blockAlign="center">
+                        <Badge tone={applicationBadge.tone}>{applicationBadge.children}</Badge>
+                      </InlineStack>
+                      {productVariant?.sku && (
+                        <Text as="p" variant="bodyMd" tone="subdued">
+                          {productVariant.sku}
+                        </Text>
+                      )}
+                    </BlockStack>
+                  </ResourceItem>
+                );
+              }}
+            />
+          ) : (
+            <>
+              <Text as="h2" variant="headingMd" fontWeight="bold">
+                No products added
+              </Text>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                Add products to begin your cycle count
+              </Text>
+            </>
+          )}
 
-          <div style={{ borderTop: '1px solid var(--p-border-subdued)' }}>
-            <Box paddingBlockStart="400">
-              <ButtonGroup fullWidth>
-                <Button onClick={onAddProducts} disabled={disabled}>
-                  Add products
-                </Button>
-                <Button onClick={onScanProducts} disabled={disabled}>
-                  Scan products
-                </Button>
-              </ButtonGroup>
-            </Box>
-          </div>
+          <Box paddingBlockStart="400">
+            <ButtonGroup fullWidth>
+              <Button onClick={onAddProducts} disabled={disabled}>
+                Add products
+              </Button>
+              <Button onClick={onScanProducts} disabled={disabled}>
+                Scan products
+              </Button>
+            </ButtonGroup>
+          </Box>
         </BlockStack>
       </Card>
 
