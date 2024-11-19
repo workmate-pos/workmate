@@ -31,7 +31,7 @@ import { useBulkDeletePurchaseOrderMutation } from '@work-orders/common/queries/
 export default function () {
   return (
     <Frame>
-      <Page>
+      <Page fullWidth>
         <PermissionBoundary permissions={['read_purchase_orders']}>
           <PurchaseOrders />
         </PermissionBoundary>

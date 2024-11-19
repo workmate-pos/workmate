@@ -113,6 +113,10 @@ fragment ProductFragment on Product {
     id
     value
   }
+  hasSerialNumbers: metafield(namespace: "$app", key: "serial-numbers") {
+    id
+    jsonValue
+  }
 }
 
 query getProductVariantComponents($id: ID!) {

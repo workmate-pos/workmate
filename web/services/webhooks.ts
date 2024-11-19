@@ -20,6 +20,7 @@ import { softDeleteProductVariantsByProductIds } from './product-variants/querie
 import { doesProductHaveSyncableMetafields } from './metafields/sync.js';
 import { getReorderPoints } from './reorder/queries.js';
 import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
+import { syncProductUsesSerialNumbersTag } from './metafields/product-serial-numbers-metafield.js';
 
 export default {
   APP_UNINSTALLED: {
@@ -138,7 +139,10 @@ export default {
         }[];
       },
     ) {
-      const changed = await syncProductServiceTypeTag(session, body.admin_graphql_api_id);
+      const changed = await Promise.all([
+        syncProductServiceTypeTag(session, body.admin_graphql_api_id),
+        syncProductUsesSerialNumbersTag(session, body.admin_graphql_api_id),
+      ]).then(results => results.some(changed => changed));
 
       if (changed) {
         // wait for the next webhook before syncing to save some query cost

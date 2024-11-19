@@ -56,6 +56,7 @@ import { PaymentTermsSelectorModal } from '@web/frontend/components/work-orders/
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
 import { LinkedTasks, NewLinkedTaskButton, BaseNewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 
 export default function () {
   return (
@@ -80,6 +81,9 @@ function WorkOrderLoader() {
 
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'WORK_ORDER' });
+
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+  const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
 
   const app = useAppBridge();
   if (!name) {
@@ -120,7 +124,11 @@ function WorkOrderLoader() {
     createWorkOrder = workOrderToCreateWorkOrder(workOrderQuery.data.workOrder);
   } else {
     const { workOrders } = settingsQuery.data.settings;
-    createWorkOrder = defaultCreateWorkOrder({ status: workOrders.defaultStatus });
+    createWorkOrder = defaultCreateWorkOrder({
+      status: workOrders.defaultStatus,
+    });
+
+    createWorkOrder.locationId = defaultLocationId ?? null;
 
     createWorkOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,
@@ -330,7 +338,7 @@ function WorkOrder({
         <CustomerSelectorModal
           open={isCustomerSelectorModalOpen}
           onClose={() => setIsCustomerSelectorModalOpen(false)}
-          onSelect={customerId => dispatch.setCustomer({ customerId })}
+          onSelect={customer => dispatch.setCustomer({ customerId: customer.id })}
           onSelectCompany={() => setIsCompanySelectorModalOpen(true)}
           setToastAction={setToastAction}
         />

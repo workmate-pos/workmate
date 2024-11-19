@@ -11,6 +11,7 @@ import { DateTime } from '../gql/queries/generated/schema.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type PurchaseOrder = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>;
+export type PurchaseOrderType = 'NORMAL' | 'DROPSHIP';
 
 export async function getPurchaseOrder(
   filters: MergeUnion<{ id: number } | { shop: string; name: string; locationIds: ID[] | null }>,
@@ -35,6 +36,7 @@ export async function getPurchaseOrder(
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
+    type: 'NORMAL' | 'DROPSHIP';
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -73,6 +75,7 @@ export async function getPurchaseOrdersByIds(purchaseOrderIds: number[]) {
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
+    type: 'NORMAL' | 'DROPSHIP';
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -99,6 +102,7 @@ function mapPurchaseOrder(purchaseOrder: {
   createdAt: Date;
   updatedAt: Date;
   placedDate: Date | null;
+  type: PurchaseOrderType;
 }) {
   try {
     const { locationId, discount, tax, shipping, deposited, paid } = purchaseOrder;
@@ -139,6 +143,7 @@ export async function upsertPurchaseOrder({
   placedDate,
   paid,
   locationId,
+  type,
 }: {
   shop: string;
   locationId: ID | null;
@@ -154,6 +159,7 @@ export async function upsertPurchaseOrder({
   note: string;
   vendorName: string | null;
   placedDate: DateTime | null;
+  type: PurchaseOrderType;
 }) {
   const _locationId: string | null = locationId;
   const _discount: string | null = discount;
@@ -165,7 +171,7 @@ export async function upsertPurchaseOrder({
 
   return await sqlOne<{ id: number }>`
     INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
-                                 "shipTo", note, "vendorName", "placedDate")
+                                 "shipTo", note, "vendorName", "placedDate", type)
     VALUES (${shop},
             ${_locationId},
             ${_discount},
@@ -179,7 +185,9 @@ export async function upsertPurchaseOrder({
             ${shipTo},
             ${note},
             ${vendorName},
-            ${_placedDate} :: timestamptz)
+            ${_placedDate} :: timestamptz,
+            ${type} :: "PurchaseOrderType"
+           )
     ON CONFLICT (shop, name) DO UPDATE
       SET "locationId" = EXCLUDED."locationId",
           "discount"   = EXCLUDED."discount",
@@ -545,6 +553,7 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
+    type: 'NORMAL' | 'DROPSHIP';
   }>`
     SELECT DISTINCT po.*
     FROM "PurchaseOrder" po
@@ -715,6 +724,7 @@ export async function getPurchaseOrdersForSerial({
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
+    type: 'NORMAL' | 'DROPSHIP';
   }>`
     SELECT DISTINCT po.*
     FROM "ProductVariantSerial" pvs
@@ -856,12 +866,12 @@ export async function insertPurchaseOrderReceipt({
   receivedAt: Date;
   status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
 }) {
-  return await sqlOne<{ id: number }>`
+  return await sqlOne<{ id: number; name: string }>`
     INSERT INTO "PurchaseOrderReceipt" (shop, name, description, "purchaseOrderId", "receivedAt", status)
     VALUES (${shop}, ${name}, ${description}, ${purchaseOrderId}, ${receivedAt},
             ${status} :: "PurchaseOrderReceiptStatus")
-    RETURNING id;
-  `.then(row => row.id);
+    RETURNING id, name;
+  `.then(row => ({ id: row.id, name: row.name }));
 }
 
 export async function updatePurchaseOrderReceipt({
@@ -877,15 +887,15 @@ export async function updatePurchaseOrderReceipt({
   receivedAt: Date;
   status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
 }) {
-  return await sqlOne<{ id: number }>`
+  return await sqlOne<{ id: number; name: string }>`
     UPDATE "PurchaseOrderReceipt"
     SET description       = ${description},
         "purchaseOrderId" = ${purchaseOrderId},
         "receivedAt"      = ${receivedAt},
         status            = ${status} :: "PurchaseOrderReceiptStatus"
     WHERE id = ${purchaseOrderReceiptId}
-    RETURNING id;
-  `.then(row => row.id);
+    RETURNING id, name;
+  `.then(row => ({ id: row.id, name: row.name }));
 }
 
 export async function insertPurchaseOrderReceiptLineItems(

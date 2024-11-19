@@ -146,63 +146,65 @@ export function ListPopup<ID extends string = string>({
           />
         )}
 
-        {paginationControls}
+        <Stack direction={'vertical'} spacing={1}>
+          {paginationControls}
 
-        <List
-          imageDisplayStrategy={imageDisplayStrategy}
-          data={selection.items.map<ListRow>(item => ({
-            id: item.id,
-            leftSide: item.leftSide,
-            rightSide: {
-              showChevron: selection.type === 'select' && !item.disabled,
-              toggleSwitch:
-                selection.type !== 'multi-select'
-                  ? undefined
-                  : { value: selectedIds.includes(item.id), disabled: item.disabled },
-            },
-            onPress: async () => {
-              if (item.disabled) {
-                return;
-              }
+          <List
+            imageDisplayStrategy={imageDisplayStrategy}
+            data={selection.items.map<ListRow>(item => ({
+              id: item.id,
+              leftSide: item.leftSide,
+              rightSide: {
+                showChevron: selection.type === 'select' && !item.disabled,
+                toggleSwitch:
+                  selection.type !== 'multi-select'
+                    ? undefined
+                    : { value: selectedIds.includes(item.id), disabled: item.disabled },
+              },
+              onPress: async () => {
+                if (item.disabled) {
+                  return;
+                }
 
-              if (selection.type === 'select') {
-                await router.popCurrent();
-                selection.onSelect(item.id);
-              } else if (selection.type === 'multi-select') {
-                const newSelectedIds = selectedIds.includes(item.id)
-                  ? selectedIds.filter(id => id !== item.id)
-                  : [...selectedIds, item.id];
+                if (selection.type === 'select') {
+                  await router.popCurrent();
+                  selection.onSelect(item.id);
+                } else if (selection.type === 'multi-select') {
+                  const newSelectedIds = selectedIds.includes(item.id)
+                    ? selectedIds.filter(id => id !== item.id)
+                    : [...selectedIds, item.id];
 
-                setSelectedIds(newSelectedIds);
-                selection.onSelect?.(newSelectedIds);
-              } else {
-                return selection satisfies never;
-              }
-            },
-          }))}
-          onEndReached={onEndReached}
-          isLoadingMore={isLoadingMore}
-        />
+                  setSelectedIds(newSelectedIds);
+                  selection.onSelect?.(newSelectedIds);
+                } else {
+                  return selection satisfies never;
+                }
+              },
+            }))}
+            onEndReached={onEndReached}
+            isLoadingMore={isLoadingMore}
+          />
 
-        {selection.items.length === 0 &&
-          !isLoadingMore &&
-          (emptyState ?? (
+          {selection.items.length === 0 &&
+            !isLoadingMore &&
+            (emptyState ?? (
+              <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+                <Text color="TextSubdued" variant="body">
+                  No {resourceName.plural} found
+                </Text>
+              </Stack>
+            ))}
+
+          {isLoadingMore && (
             <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
               <Text color="TextSubdued" variant="body">
-                No {resourceName.plural} found
+                Loading {resourceName.plural}...
               </Text>
             </Stack>
-          ))}
+          )}
 
-        {isLoadingMore && (
-          <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
-            <Text color="TextSubdued" variant="body">
-              Loading {resourceName.plural}...
-            </Text>
-          </Stack>
-        )}
-
-        {paginationControls}
+          {paginationControls}
+        </Stack>
 
         {children}
 

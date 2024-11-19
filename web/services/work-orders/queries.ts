@@ -36,7 +36,6 @@ export async function getWorkOrder(
     companyContactId: string | null;
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
-    productVariantSerialId: number | null;
     locationId: string | null;
   }>`
     SELECT *
@@ -77,7 +76,6 @@ function mapWorkOrder<
     companyContactId: string | null;
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
-    productVariantSerialId: number | null;
     locationId: string | null;
   },
 >(workOrder: T) {
@@ -166,6 +164,7 @@ export async function getWorkOrderItems(workOrderId: number) {
     data: unknown;
     createdAt: Date;
     updatedAt: Date;
+    productVariantSerialId: number | null;
   }>`
     SELECT *
     FROM "WorkOrderItem"
@@ -184,6 +183,7 @@ function mapWorkOrderItem(item: {
   workOrderId: number;
   uuid: UUID;
   shopifyOrderLineItemId: string | null;
+  productVariantSerialId: number | null;
   data: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -225,6 +225,7 @@ export async function getWorkOrderItemsByUuids({ workOrderId, uuids }: { workOrd
     data: unknown;
     createdAt: Date;
     updatedAt: Date;
+    productVariantSerialId: number | null;
   }>`
     SELECT *
     FROM "WorkOrderItem"
@@ -269,6 +270,7 @@ export async function upsertWorkOrderItems(
     workOrderId: number;
     uuid: UUID;
     shopifyOrderLineItemId: ID | null;
+    productVariantSerialId: number | null;
     data: WorkOrderItemData;
   }[],
 ) {
@@ -276,15 +278,17 @@ export async function upsertWorkOrderItems(
     return;
   }
 
-  const { shopifyOrderLineItemId, workOrderId, uuid, data } = nest(items);
+  const { shopifyOrderLineItemId, workOrderId, uuid, data, productVariantSerialId } = nest(items);
 
   await sql`
-    INSERT INTO "WorkOrderItem" ("workOrderId", uuid, "shopifyOrderLineItemId", data)
+    INSERT INTO "WorkOrderItem" ("workOrderId", uuid, "shopifyOrderLineItemId", data, "productVariantSerialId")
     SELECT *
     FROM UNNEST(${workOrderId} :: int[],
                 ${uuid} :: uuid[],
                 ${shopifyOrderLineItemId as string[]} :: text[],
-                ${data.map(data => JSON.stringify(data))} :: jsonb[])
+                ${data.map(data => JSON.stringify(data))} :: jsonb[],
+                ${productVariantSerialId as number[]} :: int[]
+         )
     ON CONFLICT ("workOrderId", uuid)
       DO UPDATE SET "shopifyOrderLineItemId" = EXCLUDED."shopifyOrderLineItemId",
                     data                     = EXCLUDED.data;`;
@@ -496,7 +500,6 @@ export async function getWorkOrdersForSpecialOrder(specialOrderId: number) {
     companyContactId: string | null;
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
-    productVariantSerialId: number | null;
     locationId: string | null;
     orderIds: string[] | null;
   }>`
@@ -554,12 +557,12 @@ export async function getWorkOrdersForSerial({
     companyContactId: string | null;
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
-    productVariantSerialId: number | null;
     locationId: string | null;
   }>`
     SELECT wo.*
     FROM "ProductVariantSerial" pvs
-           INNER JOIN "WorkOrder" wo ON wo."productVariantSerialId" = pvs.id
+           INNER JOIN "WorkOrderItem" woi ON woi."productVariantSerialId" = pvs.id
+           INNER JOIN "WorkOrder" wo ON wo.id = woi."workOrderId"
     WHERE pvs.id = COALESCE(${id ?? null}, pvs.id)
       AND pvs."productVariantId" = COALESCE(${_productVariantId}, pvs."productVariantId")
       AND pvs.serial = COALESCE(${serial ?? null}, pvs.serial)

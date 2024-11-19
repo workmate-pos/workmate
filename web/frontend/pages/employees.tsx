@@ -73,17 +73,22 @@ function Employees() {
   const [lastSavedEmployeeRoles, setLastSavedEmployeeRoles] = useState<Record<ID, string>>({});
   const [lastSavedEmployeeSuperuser, setLastSavedEmployeeSuperuser] = useState<Record<ID, boolean>>({});
   const [lastSavedEmployeeLocationIds, setLastSavedEmployeeLocationIds] = useState<Record<ID, ID[]>>({});
+  const [lastSavedEmployeeDefaultLocationId, setLastSavedEmployeeDefaultLocationId] = useState<Record<ID, ID | null>>(
+    {},
+  );
 
   const [employeeRates, setEmployeeRates] = useState<Record<ID, Money | null>>({});
   const [employeeRoles, setEmployeeRoles] = useState<Record<ID, string>>({});
   const [employeeSuperuser, setEmployeeSuperuser] = useState<Record<ID, boolean>>({});
   const [employeeLocationIds, setEmployeeLocationIds] = useState<Record<ID, ID[]>>({});
+  const [employeeDefaultLocationId, setEmployeeDefaultLocationId] = useState<Record<ID, ID | null>>({});
 
   const hasUnsavedChanges =
     hash(employeeRates) !== hash(lastSavedEmployeeRates) ||
     hash(employeeRoles) !== hash(lastSavedEmployeeRoles) ||
     hash(employeeSuperuser) !== hash(lastSavedEmployeeSuperuser) ||
-    hash(employeeLocationIds) !== hash(lastSavedEmployeeLocationIds);
+    hash(employeeLocationIds) !== hash(lastSavedEmployeeLocationIds) ||
+    hash(employeeDefaultLocationId) !== hash(lastSavedEmployeeDefaultLocationId);
 
   const employeePageSize = 50;
   const employeesQuery = useEmployeesQuery({
@@ -108,6 +113,7 @@ function Employees() {
         setLastSavedEmployeeRoles(employeeRoles);
         setLastSavedEmployeeSuperuser(employeeSuperuser);
         setLastSavedEmployeeLocationIds(employeeLocationIds);
+        setLastSavedEmployeeDefaultLocationId(employeeDefaultLocationId);
         setToastAction({ content: 'Saved employees!' });
       },
       onError() {
@@ -134,6 +140,7 @@ function Employees() {
               ...Object.keys(employeeRoles),
               ...Object.keys(employeeSuperuser),
               ...Object.keys(employeeLocationIds),
+              ...Object.keys(lastSavedEmployeeDefaultLocationId),
             ]);
 
             const relevantEmployees = employeesQuery.data?.pages
@@ -156,6 +163,7 @@ function Employees() {
                       : employee.rate,
                 superuser: employeeSuperuser[employee.id] ?? employee.superuser,
                 locationIds: employeeLocationIds[employee.id] ?? employee.locationIds,
+                defaultLocationId: lastSavedEmployeeDefaultLocationId[employee.id] ?? employee.defaultLocationId,
               })),
             });
           },
@@ -168,6 +176,7 @@ function Employees() {
             setEmployeeRoles(lastSavedEmployeeRoles);
             setEmployeeSuperuser(lastSavedEmployeeSuperuser);
             setEmployeeLocationIds(lastSavedEmployeeLocationIds);
+            setEmployeeDefaultLocationId(lastSavedEmployeeDefaultLocationId);
           },
         }}
       />
@@ -291,6 +300,7 @@ function Employees() {
               { title: 'Hourly rate' },
               { title: 'Role' },
               ...(shouldShowLocations ? [{ title: 'Locations' }] : []),
+              { title: 'Default Location' },
             ]}
             itemCount={employeesQuery.isLoading ? employeePageSize : (page?.length ?? 0)}
             loading={employeesQuery.isLoading || settingsQuery.isLoading}
@@ -305,7 +315,7 @@ function Employees() {
             resourceName={{ singular: 'employee', plural: 'employees' }}
           >
             {!page &&
-              Array.from({ length: employeePageSize }).map((_, i) => (
+              Array.from({ length: employeePageSize }, (_, i) => (
                 <IndexTable.Row key={i} id={String(i)} selected={false} position={i}>
                   <IndexTable.Cell>
                     <SkeletonBodyText lines={1} />
@@ -323,6 +333,9 @@ function Employees() {
                       </Button>
                     </IndexTable.Cell>
                   )}
+                  <IndexTable.Cell>
+                    <Select label={'Default location'} labelHidden disabled />
+                  </IndexTable.Cell>
                 </IndexTable.Row>
               ))}
 
@@ -425,6 +438,27 @@ function Employees() {
                     </InlineStack>
                   </IndexTable.Cell>
                 )}
+                <IndexTable.Cell>
+                  <Select
+                    label="Default location"
+                    labelHidden
+                    options={[
+                      { label: 'Not set', value: '' },
+                      ...(locationsQuery.data?.pages.flat().map(location => ({
+                        label: location.name,
+                        value: location.id,
+                      })) ?? []),
+                    ]}
+                    value={employeeDefaultLocationId[employee.id] ?? employee.defaultLocationId ?? ''}
+                    onChange={value => {
+                      setEmployeeDefaultLocationId(prev => ({
+                        ...prev,
+                        [employee.id]: value || null,
+                      }));
+                    }}
+                    disabled={!canWriteEmployees}
+                  />
+                </IndexTable.Cell>
               </IndexTable.Row>
             ))}
           </IndexTable>

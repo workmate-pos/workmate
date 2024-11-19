@@ -20,7 +20,7 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
@@ -33,7 +33,7 @@ import { useBulkDeleteWorkOrderMutation } from '@work-orders/common/queries/use-
 export default function () {
   return (
     <Frame>
-      <Page>
+      <Page fullWidth>
         <PermissionBoundary permissions={['read_work_orders', 'read_settings']}>
           <WorkOrders />
         </PermissionBoundary>

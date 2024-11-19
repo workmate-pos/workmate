@@ -39,7 +39,7 @@ import { useLocationQuery } from '@work-orders/common/queries/use-location-query
 export default function () {
   return (
     <Frame>
-      <Page>
+      <Page fullWidth>
         <PermissionBoundary permissions={['read_special_orders']}>
           <SpecialOrders />
         </PermissionBoundary>

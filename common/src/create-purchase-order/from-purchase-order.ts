@@ -3,6 +3,7 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 
 export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: DetailedPurchaseOrder): CreatePurchaseOrder {
   return {
+    type: purchaseOrder.type,
     lineItems: purchaseOrder.lineItems.map(lineItem => ({
       uuid: lineItem.uuid,
       specialOrderLineItem: lineItem.specialOrderLineItem

@@ -129,11 +129,11 @@ export function SpecialOrderGeneralCard({
         <CustomerSelectorModal
           open={isCustomerSelectorOpen}
           onClose={() => setIsCustomerSelectorOpen(false)}
-          onSelect={customerId => {
+          onSelect={customer => {
             setCompanyId(null);
             setCompanyContactId(null);
             setCompanyLocationId(null);
-            setCustomerId(customerId);
+            setCustomerId(customer.id);
           }}
           setToastAction={setToastAction}
         />
