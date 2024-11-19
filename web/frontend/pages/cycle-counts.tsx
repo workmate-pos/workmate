@@ -26,6 +26,8 @@ import { useLocationsQuery } from '@work-orders/common/queries/use-locations-que
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export default function () {
   return (
@@ -80,6 +82,10 @@ function CycleCounts() {
   const employeeIds = unique(
     page.flatMap(cycleCount => cycleCount.employeeAssignments.map(assignment => assignment.employeeId)),
   );
+
+  // Get location IDs
+  const locationIds = unique(page.flatMap(cycleCount => cycleCount.locationId));
+  const locationQueries = useLocationQueries({ fetch, ids: locationIds });
 
   // Pass the collected IDs to useEmployeeQueries
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
@@ -237,19 +243,21 @@ function CycleCounts() {
             </IndexTable.Cell>
             <IndexTable.Cell>{count.items.length}</IndexTable.Cell>
             <IndexTable.Cell>
-              <Badge tone="info">{count.status}</Badge>
+              <Badge tone="info">{sentenceCase(count.status)}</Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              <Badge tone={count.applicationStatus === 'applied' ? 'success' : 'info'}>{count.applicationStatus}</Badge>
+              <Badge tone={count.applicationStatus === 'applied' ? 'success' : 'info'}>
+                {sentenceCase(count.applicationStatus)}
+              </Badge>
             </IndexTable.Cell>
-            <IndexTable.Cell>{count.locationId}</IndexTable.Cell>
+            <IndexTable.Cell>{locationQueries[count.locationId]?.data?.name ?? count.locationId}</IndexTable.Cell>
             <IndexTable.Cell>
               {employees
                 .filter(employee => count.employeeAssignments.some(assignment => assignment.employeeId === employee.id))
                 .map(employee => employee.name)
-                .join(', ') || '-'}
+                .join(', ')}
             </IndexTable.Cell>
-            <IndexTable.Cell>{count.dueDate ? new Date(count.dueDate).toLocaleDateString() : '-'}</IndexTable.Cell>
+            <IndexTable.Cell>{count.dueDate ? new Date(count.dueDate).toLocaleDateString() : ''}</IndexTable.Cell>
           </IndexTable.Row>
         ))}
       </IndexTable>
