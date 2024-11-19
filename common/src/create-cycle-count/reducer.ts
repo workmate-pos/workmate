@@ -57,21 +57,25 @@ function reducer(state: CreateCycleCount, action: CreateCycleCountAction): Creat
       return { ...state, employeeAssignments: action.employeeAssignments };
     case 'setLocked':
       return { ...state, locked: action.locked };
-    case 'addProductVariants':
+    case 'addProductVariants': {
+      const knownProductVariantIds = new Set(state.items.map(item => item.productVariantId));
+
+      const newItems = action.productVariants
+        .filter(variant => !knownProductVariantIds.has(variant.id))
+        .map(variant => ({
+          uuid: uuid(),
+          productVariantId: variant.id,
+          inventoryItemId: variant.inventoryItem.id,
+          countQuantity: 0,
+          productTitle: variant.product.title,
+          productVariantTitle: variant.title,
+        }));
+
       return {
         ...state,
-        items: [
-          ...state.items,
-          ...action.productVariants.map(variant => ({
-            uuid: uuid(),
-            productVariantId: variant.id,
-            inventoryItemId: variant.inventoryItem.id,
-            countQuantity: 0,
-            productTitle: variant.product.title,
-            productVariantTitle: variant.title,
-          })),
-        ],
+        items: [...state.items, ...newItems],
       };
+    }
     default:
       return action satisfies never;
   }
