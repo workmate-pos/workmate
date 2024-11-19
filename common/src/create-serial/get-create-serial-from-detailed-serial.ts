@@ -7,5 +7,6 @@ export function getCreateSerialFromDetailedSerial(detailedSerial: DetailedSerial
     serial: detailedSerial.serial,
     note: detailedSerial.note,
     locationId: detailedSerial.location?.id ?? null,
+    sold: detailedSerial.sold,
   };
 }

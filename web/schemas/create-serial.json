@@ -14,8 +14,11 @@
     },
     "note": {
       "type": "string"
+    },
+    "sold": {
+      "type": "boolean"
     }
   },
-  "required": ["serial", "productVariantId", "locationId", "note"],
+  "required": ["serial", "productVariantId", "locationId", "note", "sold"],
   "additionalProperties": false
 }

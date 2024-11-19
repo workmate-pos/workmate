@@ -216,6 +216,10 @@ function shouldMergeItems(
     return false;
   }
 
+  if (a.serial?.serial !== b.serial?.serial || a.serial?.productVariantId !== b.serial?.productVariantId) {
+    return false;
+  }
+
   const itemHasCharges = (item: { type: 'product' | 'custom-item'; uuid: string }) =>
     charges.some(charge => charge.workOrderItemUuid === item.uuid);
 

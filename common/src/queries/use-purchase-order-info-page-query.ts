@@ -33,7 +33,7 @@ export const usePurchaseOrderInfoPageQuery = (
       const searchParams = new URLSearchParams();
 
       const { customFieldFilters, ...qs } = params;
-      for (const [key, value] of Object.entries({ ...qs, offset, limit: 10 })) {
+      for (const [key, value] of Object.entries({ ...qs, offset, limit: 50 })) {
         if (value === undefined) continue;
         searchParams.set(key, String(value));
       }
