@@ -199,7 +199,6 @@ function CycleCounts() {
       <IndexTable
         headings={[
           { title: 'Name' },
-          { title: 'Items' },
           { title: 'Status' },
           { title: 'Application Status' },
           { title: 'Location' },
@@ -241,7 +240,6 @@ function CycleCounts() {
                 {count.name}
               </Text>
             </IndexTable.Cell>
-            <IndexTable.Cell>{count.items.length}</IndexTable.Cell>
             <IndexTable.Cell>
               <Badge tone="info">{sentenceCase(count.status)}</Badge>
             </IndexTable.Cell>
