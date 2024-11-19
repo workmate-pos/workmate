@@ -2,7 +2,7 @@ import { Modal, ResourceList, Text, BlockStack, Badge, ResourceItem } from '@sho
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState, useEffect } from 'react';
@@ -39,10 +39,10 @@ export function PlanCycleCountModal({ open, onClose, cycleCountName }: Props) {
   }, [planCycleCountQuery.data]);
 
   const plan = planCycleCountQuery.data;
-  if (!plan || !cycleCountQuery.data) return null;
-
-  const productVariantIds = cycleCountQuery.data.items.map(item => item.productVariantId);
+  const productVariantIds = cycleCountQuery.data?.items.map(item => item.productVariantId) ?? [];
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
+
+  if (!plan || !cycleCountQuery.data) return null;
 
   return (
     <Modal
@@ -108,7 +108,7 @@ export function PlanCycleCountModal({ open, onClose, cycleCountName }: Props) {
                 countQuantity,
               };
             })
-            .filter((item): item is NonNullable<typeof item> => item !== null)}
+            .filter(isNonNullable)}
           renderItem={({ id, label, delta, sign, tone, countQuantity }) => (
             <ResourceItem
               id={id}
