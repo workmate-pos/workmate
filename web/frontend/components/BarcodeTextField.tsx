@@ -26,10 +26,16 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
   const [toast, setToastAction] = useToast();
   const [barcode, setBarcode] = useState('');
   const [variantIdCount, setVariantIdCount] = useState<Record<string, number>>({});
-  const [error, setError] = useState<string | null>(null);
+
   const fetch = useAuthenticatedFetch({ setToastAction });
 
   const scanVariantsQuery = useScanVariantsQuery({ fetch, scanData: barcode });
+
+  const error = scanVariantsQuery.isError
+    ? extractErrorMessage(scanVariantsQuery.error, 'Error finding product')
+    : !scanVariantsQuery.data?.length
+      ? 'No products found'
+      : null;
 
   // Local subtitle function to format product details
   const getProductSubtitle = (variant: ProductVariant) => {
@@ -138,7 +144,7 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
                         size="small"
                       />
                     ) : (
-                      <SkeletonThumbnail />
+                      <SkeletonThumbnail size="small" />
                     )}
                   </InlineStack>
                 }

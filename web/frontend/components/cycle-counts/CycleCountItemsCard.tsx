@@ -8,6 +8,7 @@ import {
   Text,
   Thumbnail,
   Box,
+  SkeletonThumbnail,
 } from '@shopify/polaris';
 import { CreateCycleCount, CreateCycleCountItem } from '@web/schemas/generated/create-cycle-count.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -18,9 +19,10 @@ import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { CreateCycleCountDispatchProxy } from '@work-orders/common/create-cycle-count/reducer.js';
 import { useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { CycleCountItemModal, getCycleCountApplicationStateBadge } from './modals/CycleCountItemModal.js';
+import { CycleCountItemModal } from './modals/CycleCountItemModal.js';
 import { ButtonGroup, Button } from '@shopify/polaris';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
+import { getCycleCountApplicationStateBadge } from '@work-orders/common/create-cycle-count/get-cycle-count-application-state-badge.js';
 
 interface Props {
   createCycleCount: CreateCycleCount;
@@ -56,12 +58,8 @@ export function CycleCountItemsCard({ createCycleCount, dispatch, disabled, onAd
                 const productVariant = productVariantQuery?.data;
                 const cycleCountItem = cycleCountQuery.data?.items.find(hasPropertyValue('uuid', item.uuid));
 
-                const productName = getProductVariantName(
-                  productVariant ?? {
-                    title: item.productVariantTitle,
-                    product: { title: item.productTitle, hasOnlyDefaultVariant: false },
-                  },
-                );
+                const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
+                const label = getProductVariantName(productVariant) ?? 'Unknown product';
 
                 const applicationBadge = getCycleCountApplicationStateBadge(
                   cycleCountItem?.applicationStatus ?? 'not-applied',
@@ -79,17 +77,14 @@ export function CycleCountItemsCard({ createCycleCount, dispatch, disabled, onAd
                     media={
                       <InlineStack gap="200" blockAlign="center">
                         <Badge tone="info">{item.countQuantity.toString()}</Badge>
-                        <Thumbnail
-                          source={productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url ?? ''}
-                          alt={productName ?? ''}
-                        />
+                        {imageUrl ? <Thumbnail source={imageUrl} alt={label} /> : <SkeletonThumbnail />}
                       </InlineStack>
                     }
                   >
                     <BlockStack gap="200">
                       <InlineStack gap="200" blockAlign="center">
                         <Text as="p" variant="bodyMd" fontWeight="bold">
-                          {productName}
+                          {label}
                         </Text>
                       </InlineStack>
                       <InlineStack gap="200" blockAlign="center">

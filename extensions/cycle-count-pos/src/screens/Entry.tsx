@@ -1,7 +1,16 @@
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useCycleCountPageQuery } from '@work-orders/common/queries/use-cycle-count-page-query.js';
-import { BadgeProps, Banner, Button, List, ListRow, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
+import {
+  BadgeProps,
+  Banner,
+  Button,
+  List,
+  ListRow,
+  Stack,
+  Text,
+  useApi,
+} from '@shopify/ui-extensions-react/point-of-sale';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
@@ -48,9 +57,6 @@ export function Entry() {
     },
   });
 
-  const settingsQuery = useSettingsQuery({ fetch });
-  const defaultStatus = settingsQuery.data?.settings.cycleCount.defaultStatus || 'Draft';
-
   const router = useRouter();
 
   const [selectedCycleCountName, setSelectedCycleCountName] = useState<string>();
@@ -70,6 +76,24 @@ export function Entry() {
   }, [selectedCycleCountQuery.data, selectedCycleCountQuery.isFetching]);
 
   const rows = useListRows(cycleCountPageQuery.data?.pages.flat() ?? [], setSelectedCycleCountName);
+
+  const settingsQuery = useSettingsQuery({ fetch });
+
+  if (settingsQuery.isError) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(settingsQuery.error, 'An error occurred while loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (!settingsQuery.data) {
+    return null;
+  }
+
+  const defaultStatus = settingsQuery.data.settings.cycleCount.defaultStatus;
 
   return (
     <ResponsiveStack direction={'vertical'} spacing={2}>

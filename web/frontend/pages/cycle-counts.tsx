@@ -12,7 +12,7 @@ import {
 } from '@shopify/polaris';
 import { TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { useCycleCountPageQuery } from '@work-orders/common/queries/use-cycle-count-page-query.js';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
@@ -22,17 +22,16 @@ import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
-import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
-import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { useAllLocationsQuery } from '@work-orders/common/queries/use-all-locations-query.js';
 
 export default function () {
   return (
     <Frame>
-      <Page>
+      <Page fullWidth>
         <PermissionBoundary permissions={['read_settings', 'cycle_count']}>
           <CycleCounts />
         </PermissionBoundary>
@@ -65,14 +64,7 @@ function CycleCounts() {
     },
   });
 
-  const locationsQuery = useLocationsQuery({ fetch, params: { first: 50 } });
-  const locations = locationsQuery.data?.pages.flat() ?? [];
-
-  useEffect(() => {
-    if (!locationsQuery.isFetching && locationsQuery.hasNextPage) {
-      locationsQuery.fetchNextPage();
-    }
-  }, [locationsQuery.isFetching, locationsQuery.hasNextPage]);
+  const locationsQuery = useAllLocationsQuery({ fetch });
 
   const [pageIndex, setPage] = useState(0);
   const pagination = getInfiniteQueryPagination(0, setPage, cycleCountQuery);
@@ -82,10 +74,6 @@ function CycleCounts() {
   const employeeIds = unique(
     page.flatMap(cycleCount => cycleCount.employeeAssignments.map(assignment => assignment.employeeId)),
   );
-
-  // Get location IDs
-  const locationIds = unique(page.flatMap(cycleCount => cycleCount.locationId));
-  const locationQueries = useLocationQueries({ fetch, ids: locationIds });
 
   // Pass the collected IDs to useEmployeeQueries
   const employeeQueries = useEmployeeQueries({ fetch, ids: employeeIds });
@@ -140,10 +128,12 @@ function CycleCounts() {
             filter: (
               <ChoiceList
                 title="Location"
-                choices={locations.map(location => ({
-                  label: location.name,
-                  value: location.id,
-                }))}
+                choices={
+                  locationsQuery.data?.map(location => ({
+                    label: location.name,
+                    value: location.id,
+                  })) ?? []
+                }
                 selected={locationId ? [locationId] : []}
                 onChange={([selected]) => setLocationId(selected as ID)}
               />
@@ -182,7 +172,7 @@ function CycleCounts() {
           locationId
             ? {
                 key: 'location',
-                label: `Location is ${locations.find(location => location.id === locationId)?.name ?? 'unknown'}`,
+                label: `Location is ${locationsQuery.data?.find(location => location.id === locationId)?.name ?? 'unknown'}`,
                 onRemove: () => setLocationId(undefined),
               }
             : null,
@@ -248,7 +238,9 @@ function CycleCounts() {
                 {sentenceCase(count.applicationStatus)}
               </Badge>
             </IndexTable.Cell>
-            <IndexTable.Cell>{locationQueries[count.locationId]?.data?.name ?? count.locationId}</IndexTable.Cell>
+            <IndexTable.Cell>
+              {locationsQuery.data?.find(location => location.id === count.locationId)?.name ?? count.locationId}
+            </IndexTable.Cell>
             <IndexTable.Cell>
               {employees
                 .filter(employee => count.employeeAssignments.some(assignment => assignment.employeeId === employee.id))

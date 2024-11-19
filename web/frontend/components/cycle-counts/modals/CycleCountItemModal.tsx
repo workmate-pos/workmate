@@ -1,4 +1,4 @@
-import { Modal, Text, BlockStack, InlineStack, Badge, BadgeProps } from '@shopify/polaris';
+import { Modal, Text, BlockStack, InlineStack, Badge } from '@shopify/polaris';
 import { CreateCycleCountItem } from '@web/schemas/generated/create-cycle-count.js';
 import { useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -7,8 +7,8 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { IntegerField } from '@web/frontend/components/IntegerField.js';
-import { CycleCountApplicationStatus } from '@web/services/cycle-count/types.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
+import { getCycleCountApplicationStateBadge } from '@work-orders/common/create-cycle-count/get-cycle-count-application-state-badge.js';
 
 type Props = {
   open: boolean;
@@ -33,23 +33,7 @@ export function CycleCountItemModal({ open, onClose, item: initialItem, cycleCou
     hasPropertyValue<{ uuid: string }, 'uuid', string>('uuid', item.uuid),
   );
 
-  const productName = getProductVariantName(
-    productVariant &&
-      'title' in productVariant &&
-      typeof productVariant.title === 'string' &&
-      'product' in productVariant
-      ? {
-          title: productVariant.title,
-          product: {
-            title: 'product' in productVariant ? productVariant.product.title : item.productTitle,
-            hasOnlyDefaultVariant: 'product' in productVariant ? productVariant.product.hasOnlyDefaultVariant : false,
-          },
-        }
-      : {
-          title: item.productVariantTitle,
-          product: { title: item.productTitle, hasOnlyDefaultVariant: false },
-        },
-  );
+  const productName = getProductVariantName(productVariant);
 
   const applicationBadge = getCycleCountApplicationStateBadge(cycleCountItem?.applicationStatus ?? 'not-applied', {
     appliedQuantity: cycleCountItem?.applications.at(-1)?.appliedQuantity ?? 0,
@@ -109,34 +93,4 @@ export function CycleCountItemModal({ open, onClose, item: initialItem, cycleCou
       {toast}
     </Modal>
   );
-}
-
-export function getCycleCountApplicationStateBadge(
-  applicationStatus: CycleCountApplicationStatus,
-  quantities?: {
-    countQuantity: number;
-    appliedQuantity: number;
-  },
-): BadgeProps {
-  const changed = quantities?.appliedQuantity !== quantities?.countQuantity;
-
-  if (applicationStatus === 'not-applied') {
-    return { children: 'Not applied', tone: 'warning', progress: 'incomplete' };
-  }
-
-  if (applicationStatus === 'partially-applied' || (applicationStatus === 'applied' && changed)) {
-    let text = 'Partially applied';
-
-    if (quantities) {
-      text += ` (${quantities.appliedQuantity})`;
-    }
-
-    return { children: text, tone: 'warning', progress: 'partiallyComplete' };
-  }
-
-  if (applicationStatus === 'applied') {
-    return { children: 'Applied', tone: 'success', progress: 'complete' };
-  }
-
-  return applicationStatus satisfies never;
 }

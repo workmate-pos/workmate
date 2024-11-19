@@ -40,19 +40,17 @@ export default function () {
 }
 
 function CycleCountLoader() {
+  const app = useAppBridge();
   const location = useLocation();
   const name = decodeURIComponent(location.pathname.split('/').pop() ?? '');
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
-  const cycleCountQuery = useCycleCountQuery({ fetch, name: name === 'new' ? null : name }, { staleTime: 0 });
+  const cycleCountQuery = useCycleCountQuery({ fetch, name: name === 'new' ? null : name });
   const settingsQuery = useSettingsQuery({ fetch });
   const locationsQuery = useAllLocationsQuery({ fetch });
 
-  const defaultStatus = settingsQuery.data?.settings.cycleCount.defaultStatus || 'Draft';
-
-  const app = useAppBridge();
   if (!name) {
     Redirect.create(app).dispatch(Redirect.Action.APP, '/cycle-counts');
     return null;
@@ -85,7 +83,9 @@ function CycleCountLoader() {
     );
   }
 
-  let createCycleCount;
+  const defaultStatus = settingsQuery.data.settings.cycleCount.defaultStatus;
+
+  let createCycleCount: CreateCycleCount;
   if (cycleCountQuery.data) {
     createCycleCount = cycleCountQuery.data;
   } else {
@@ -146,26 +146,6 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
     [dispatch],
   );
 
-  const cleanCreateCycleCount = (data: CreateCycleCount): CreateCycleCount => {
-    return {
-      name: data.name,
-      status: data.status,
-      locationId: data.locationId,
-      note: data.note,
-      dueDate: data.dueDate,
-      locked: data.locked,
-      employeeAssignments: data.employeeAssignments,
-      items: data.items.map(item => ({
-        uuid: item.uuid,
-        productVariantId: item.productVariantId,
-        inventoryItemId: item.inventoryItemId,
-        countQuantity: item.countQuantity,
-        productTitle: item.productTitle,
-        productVariantTitle: item.productVariantTitle,
-      })),
-    };
-  };
-
   return (
     <Box paddingBlockEnd={'1600'}>
       <TitleBar
@@ -194,7 +174,7 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
         visible={hasUnsavedChanges}
         saveAction={{
           loading: cycleCountMutation.isPending,
-          onAction: () => cycleCountMutation.mutate(cleanCreateCycleCount(createCycleCount)),
+          onAction: () => cycleCountMutation.mutate(createCycleCount),
           disabled: cycleCountMutation.isPending,
         }}
         discardAction={{

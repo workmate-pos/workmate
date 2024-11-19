@@ -1,4 +1,4 @@
-import { Modal, ResourceList, Text, BlockStack, Badge, ResourceItem, Avatar } from '@shopify/polaris';
+import { Modal, ResourceList, Text, BlockStack, Thumbnail, ResourceItem, SkeletonThumbnail } from '@shopify/polaris';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-query.js';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
@@ -7,7 +7,6 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
-import { Tone } from '@shopify/polaris/build/ts/src/components/Badge/types.js';
 
 type Props = {
   open: boolean;
@@ -75,38 +74,26 @@ export function CycleCountHistoryModal({ open, onClose, cycleCountName }: Props)
                       if (!item) return null;
 
                       const productVariant = productVariantQueries[item.productVariantId]?.data;
-                      const label =
-                        getProductVariantName(
-                          productVariant ?? {
-                            title: item.productVariantTitle,
-                            product: {
-                              title: item.productTitle,
-                              hasOnlyDefaultVariant: false,
-                            },
-                          },
-                        ) ?? 'Unknown product';
+                      const label = getProductVariantName(productVariant) ?? 'Unknown product';
+                      const imageUrl = productVariant?.image?.url;
 
                       const delta = application.appliedQuantity - application.originalQuantity;
                       const sign = delta === 0 ? '=' : delta > 0 ? '+' : '-';
-                      const tone: Tone = delta === 0 ? 'info' : delta > 0 ? 'success' : 'critical';
 
                       return {
                         id: `${item.uuid}-${application.appliedAt}`,
-                        item,
+                        imageUrl,
                         application,
                         label,
                         delta,
                         sign,
-                        tone,
                       };
                     })
                     .filter(isNonNullable)}
-                  renderItem={({ id, item, application, label, delta, sign, tone }) => (
+                  renderItem={({ id, imageUrl, application, label, delta, sign }) => (
                     <ResourceItem
                       id={id}
-                      media={
-                        <Avatar size="md" source={productVariantQueries[item.productVariantId]?.data?.image?.url} />
-                      }
+                      media={imageUrl ? <Thumbnail source={imageUrl} alt={label} /> : <SkeletonThumbnail />}
                       onClick={() => {}}
                     >
                       <BlockStack gap="200">
@@ -114,7 +101,9 @@ export function CycleCountHistoryModal({ open, onClose, cycleCountName }: Props)
                           {label}
                         </Text>
                         <BlockStack gap="200">
-                          <Badge tone={tone}>{`${sign}${Math.abs(delta)} (${application.appliedQuantity})`}</Badge>
+                          <Text as="span" tone={delta === 0 ? 'subdued' : delta > 0 ? 'success' : 'critical'}>
+                            {`${sign}${Math.abs(delta)} (${application.appliedQuantity})`}
+                          </Text>
                         </BlockStack>
                       </BlockStack>
                     </ResourceItem>
