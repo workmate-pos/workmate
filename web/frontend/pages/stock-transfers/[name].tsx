@@ -26,7 +26,7 @@ export default function () {
   return (
     <Frame>
       <Page>
-        <PermissionBoundary permissions={['read_stock_transfers', 'write_stock_transfers', 'read_settings']}>
+        <PermissionBoundary permissions={['read_stock_transfers', 'read_settings']}>
           <StockTransferLoader />
         </PermissionBoundary>
       </Page>
@@ -46,7 +46,7 @@ function StockTransferLoader() {
   const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
   const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId ?? null;
 
-  const stockTransferQuery = useStockTransferQuery({ fetch, name }, { enabled: name !== 'new', staleTime: 0 });
+  const stockTransferQuery = useStockTransferQuery({ fetch, name }, { enabled: name !== 'new' });
   const settingsQuery = useSettingsQuery({ fetch });
 
   const app = useAppBridge();
