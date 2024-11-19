@@ -32,9 +32,9 @@ import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { CreateWorkOrder } from '@web/schemas/generated/create-work-order.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { productVariantDefaultChargeToCreateWorkOrderCharge } from '@work-orders/common/create-work-order/product-variant-default-charges.js';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { useAppBridge, useNavigate } from '@shopify/app-bridge-react';
+import { useAppBridge } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
@@ -128,8 +128,6 @@ export function AddProductModal({
     }
   }, [productVariantsQuery.data?.pages]);
 
-  const navigate = useNavigate();
-
   const allProductVariants =
     productVariantsQuery.data?.pages
       ?.flat()
@@ -190,10 +188,11 @@ export function AddProductModal({
             loading: productVariantsQuery.isRefetching,
           },
           outputType === 'PURCHASE_ORDER'
-            ?{
-            content: 'Import special order',
-            onAction: () => setIsSpecialOrderModalOpen(true),
-          }: null,
+            ? {
+                content: 'Import special order',
+                onAction: () => setIsSpecialOrderModalOpen(true),
+              }
+            : null,
           productType === 'SERVICE'
             ? {
                 content: 'Create service',
@@ -219,6 +218,7 @@ export function AddProductModal({
                         uuid: uuid(),
                         name: 'Unnamed product',
                         unitPrice: BigDecimal.ONE.toMoney(),
+                        serial: null,
                       },
                     ],
                     [],
@@ -347,6 +347,7 @@ export function AddProductModal({
                         absorbCharges:
                           getProductServiceType(pv.productVariant.product.serviceType?.value) ===
                           QUANTITY_ADJUSTING_SERVICE,
+                        serial: null,
                       } as const;
                     });
 

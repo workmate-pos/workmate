@@ -4,7 +4,6 @@ import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express
 import { getNewPurchaseOrderName } from '../id-formatting.js';
 import { unit } from '../db/unit-of-work.js';
 import { getDetailedPurchaseOrder } from './get.js';
-import { InventoryChangeInput } from '../gql/queries/generated/schema.js';
 import { gql } from '../gql/gql.js';
 import { Graphql, sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -45,6 +44,7 @@ import { getSerialsByProductVariantSerials, upsertSerials } from '../serials/que
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
 import { syncInventoryQuantities } from '../inventory/sync.js';
+import { AdjustInventoryQuantities, mutateInventoryQuantities } from '../inventory/adjust.js';
 
 export async function upsertCreatePurchaseOrder(
   session: Session,
@@ -107,6 +107,7 @@ export async function upsertCreatePurchaseOrder(
         locationId: createPurchaseOrder.locationId ?? never('checked this above'),
         customerId: null,
         note: '',
+        sold: false,
       }))
       .filter(hasNonNullableProperty('serial'));
 
@@ -157,7 +158,7 @@ export async function upsertCreatePurchaseOrder(
     };
   }).then(async ({ existingPurchaseOrder, newPurchaseOrder, name }) => {
     await Promise.all([
-      adjustShopifyInventory(session, existingPurchaseOrder, newPurchaseOrder),
+      adjustPurchaseOrderShopifyInventory(session, user, existingPurchaseOrder, newPurchaseOrder),
       adjustShopifyInventoryItemCosts(session, existingPurchaseOrder, newPurchaseOrder),
     ]);
 
@@ -277,24 +278,28 @@ function assertNoIllegalLineItemChanges(
 }
 
 /**
- * Adjusts `incoming` inventory quantity to reflect the purchase order.
- * Note: we do not have to check received quantity - receipts will automatically reduce incoming and increase available.
+ * Adjusts `incoming` and `available` inventory quantity to reflect the purchase order.
+ * Also updates `receipt` quantitiesto reflect the work order type (e.g. DROPSHIP should not be counted).
  */
-async function adjustShopifyInventory(
+export async function adjustPurchaseOrderShopifyInventory(
   session: Session,
+  user: LocalsTeifiUser,
   oldPurchaseOrder: DetailedPurchaseOrder | null,
   newPurchaseOrder: DetailedPurchaseOrder,
 ) {
-  const deltasByLocationByInventoryItemId: Record<ID, Record<ID, number>> = {};
+  const deltasByLocationByInventoryItemId: Record<'available' | 'incoming', Record<ID, Record<ID, number>>> = {
+    available: {},
+    incoming: {},
+  };
 
   const transfers = [
     {
       purchaseOrder: oldPurchaseOrder,
-      factor: -1,
+      factor: -1 * (oldPurchaseOrder?.type === 'DROPSHIP' ? 0 : 1),
     },
     {
       purchaseOrder: newPurchaseOrder,
-      factor: 1,
+      factor: 1 * (newPurchaseOrder?.type === 'DROPSHIP' ? 0 : 1),
     },
   ].filter(hasNonNullableProperty('purchaseOrder'));
 
@@ -303,57 +308,75 @@ async function adjustShopifyInventory(
       continue;
     }
 
-    const deltasByInventoryItemId = (deltasByLocationByInventoryItemId[purchaseOrder.location.id] ??= {});
+    const incomingDeltasByInventoryItemId = (deltasByLocationByInventoryItemId.incoming[purchaseOrder.location.id] ??=
+      {});
 
     for (const lineItem of purchaseOrder.lineItems) {
       const { productVariant, quantity } = lineItem;
       const { inventoryItemId } = productVariant;
 
-      deltasByInventoryItemId[inventoryItemId] = (deltasByInventoryItemId[inventoryItemId] ?? 0) + quantity * factor;
+      incomingDeltasByInventoryItemId[inventoryItemId] =
+        (incomingDeltasByInventoryItemId[inventoryItemId] ?? 0) + quantity * factor;
+    }
+
+    const availableDeltasByInventoryItemId = (deltasByLocationByInventoryItemId.available[purchaseOrder.location.id] ??=
+      {});
+
+    for (const receipt of purchaseOrder.receipts) {
+      if (receipt.status !== 'COMPLETED') {
+        continue;
+      }
+
+      for (const { uuid, quantity } of receipt.lineItems) {
+        const purchaseOrderLineItem = purchaseOrder.lineItems.find(lineItem => lineItem.uuid === uuid);
+
+        // TODO: Ensure this is asserted when changing a PO
+        if (!purchaseOrderLineItem) {
+          sentryErr('Receipt line item not found', { receipt, uuid, purchaseOrder });
+          continue;
+        }
+
+        availableDeltasByInventoryItemId[purchaseOrderLineItem.productVariant.inventoryItemId] =
+          (availableDeltasByInventoryItemId[purchaseOrderLineItem.productVariant.inventoryItemId] ?? 0) +
+          quantity * factor;
+      }
     }
   }
 
-  const incomingChanges: InventoryChangeInput[] = [];
+  const incomingChanges: AdjustInventoryQuantities['changes'] = [];
+  const availableChanges: AdjustInventoryQuantities['changes'] = [];
 
-  const ledgerDocumentUri = `workmate://purchase-order/${encodeURIComponent(newPurchaseOrder.name)}`;
-
-  for (const [locationId, deltasByInventoryItemId] of entries(deltasByLocationByInventoryItemId)) {
-    for (const [inventoryItemId, delta] of entries(deltasByInventoryItemId)) {
-      incomingChanges.push({
-        locationId,
-        inventoryItemId,
-        delta,
-        ledgerDocumentUri,
-      });
+  for (const type of ['incoming', 'available'] as const) {
+    for (const [locationId, deltasByInventoryItemId] of entries(deltasByLocationByInventoryItemId[type])) {
+      for (const [inventoryItemId, delta] of entries(deltasByInventoryItemId)) {
+        ({ incoming: incomingChanges, available: availableChanges })[type].push({
+          locationId,
+          inventoryItemId,
+          delta,
+        });
+      }
     }
   }
-
-  const graphql = new Graphql(session);
 
   try {
-    // TODO: Do the same for stock transfers?
-    if (newPurchaseOrder.location) {
-      // Ensure all inventory items are being tracked
-
-      const locationId = newPurchaseOrder.location.id;
-      const inventoryItemIds = unique(
-        newPurchaseOrder.lineItems.map(lineItem => lineItem.productVariant.inventoryItemId),
-      );
-
-      await Promise.all(
-        inventoryItemIds.map(inventoryItemId =>
-          gql.inventory.activateItems.run(graphql, { locationId, inventoryItemId }),
-        ),
-      );
-    }
-
-    await gql.inventory.adjust.run(graphql, {
-      input: {
-        reason: 'other',
+    await Promise.all([
+      mutateInventoryQuantities(session, {
+        type: 'adjust',
+        initiator: { type: 'purchase-order', name: newPurchaseOrder.name },
+        reason: 'restock',
         name: 'incoming',
         changes: incomingChanges,
-      },
-    });
+        staffMemberId: user.staffMember.id,
+      }),
+      mutateInventoryQuantities(session, {
+        type: 'adjust',
+        initiator: { type: 'purchase-order', name: newPurchaseOrder.name },
+        reason: 'restock',
+        name: 'available',
+        changes: availableChanges,
+        staffMemberId: user.staffMember.id,
+      }),
+    ]);
   } catch (error) {
     if (error instanceof GraphqlUserErrors) {
       sentryErr('Failed to adjust inventory', { userErrors: error.userErrors });

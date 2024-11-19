@@ -260,7 +260,7 @@ function Reorder() {
         })}
 
         {!reorderPlanQuery.data &&
-          Array.from({ length: PAGE_SIZE }).map((_, i) => (
+          Array.from({ length: PAGE_SIZE }, (_, i) => (
             <IndexTable.Row key={i} id={String(i)} selected={false} position={i}>
               <IndexTable.Cell>
                 <SkeletonThumbnail size="small" />

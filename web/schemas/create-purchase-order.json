@@ -132,6 +132,9 @@
         "required": ["employeeId"],
         "additionalProperties": false
       }
+    },
+    "type": {
+      "enum": ["NORMAL", "DROPSHIP"]
     }
   },
   "required": [
@@ -150,7 +153,8 @@
     "paid",
     "lineItems",
     "customFields",
-    "employeeAssignments"
+    "employeeAssignments",
+    "type"
   ],
   "additionalProperties": false
 }

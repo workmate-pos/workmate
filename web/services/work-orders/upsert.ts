@@ -7,7 +7,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { validateCreateWorkOrder } from './validate.js';
 import { syncWorkOrder } from './sync.js';
-import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { IGetItemsResult } from '../db/queries/generated/work-order.sql.js';
 import { cleanOrphanedDraftOrders } from './clean-orphaned-draft-orders.js';
 import { ensureCustomersExist } from '../customer/sync.js';
@@ -33,7 +33,6 @@ import { match, P } from 'ts-pattern';
 import { identity } from '@teifi-digital/shopify-app-toolbox/functional';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { getSerial } from '../serials/queries.js';
-import { httpError } from '../../util/http-error.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertLocationsPermitted } from '../franchises/assert-locations-permitted.js';
 
@@ -83,11 +82,6 @@ async function createNewWorkOrder(
 ) {
   return await unit(async () => {
     await ensureRequiredDatabaseDataExists(session, createWorkOrder);
-    const serial = createWorkOrder.serial
-      ? await getSerial({ ...createWorkOrder.serial, shop: session.shop, locationIds }).then(
-          serial => serial ?? httpError('Serial not found', 400),
-        )
-      : null;
 
     const [workOrder = never()] = await db.workOrder.upsert({
       shop: session.shop,
@@ -105,11 +99,10 @@ async function createNewWorkOrder(
       discountType: createWorkOrder.discount?.type,
       paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
       paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
-      productVariantSerialId: serial?.id,
       locationId: createWorkOrder.locationId,
     });
 
-    await upsertItems(session, createWorkOrder, workOrder.id, []);
+    await upsertItems(session, createWorkOrder, workOrder.id, [], locationIds);
     await upsertCharges(session, createWorkOrder, workOrder.id, []);
 
     await Promise.all([
@@ -161,11 +154,6 @@ async function updateWorkOrder(
       // nothing illegal, so we can upsert and delete items/charges safely
 
       await ensureRequiredDatabaseDataExists(session, createWorkOrder);
-      const serial = createWorkOrder.serial
-        ? await getSerial({ ...createWorkOrder.serial, shop: session.shop, locationIds }).then(
-            serial => serial ?? httpError('Serial not found', 400),
-          )
-        : null;
 
       await db.workOrder.upsert({
         name: workOrder.name,
@@ -184,7 +172,6 @@ async function updateWorkOrder(
         discountType: createWorkOrder.discount?.type,
         paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
         paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
-        productVariantSerialId: serial?.id,
         locationId: createWorkOrder.locationId,
       });
 
@@ -195,7 +182,7 @@ async function updateWorkOrder(
 
       await Promise.all([removeWorkOrderCustomFields(workOrderId), removeWorkOrderItemCustomFields(workOrderId)]);
 
-      await upsertItems(session, createWorkOrder, workOrderId, currentItems);
+      await upsertItems(session, createWorkOrder, workOrderId, currentItems, locationIds);
       await upsertCharges(session, createWorkOrder, workOrderId, currentCharges);
 
       await deleteCharges(createWorkOrder, workOrderId, currentCharges);
@@ -233,6 +220,7 @@ async function upsertItems(
   createWorkOrder: CreateWorkOrder,
   workOrderId: number,
   currentItems: Awaited<ReturnType<typeof getWorkOrderItems>>,
+  locationIds: ID[] | null,
 ) {
   const itemsByUuid = Object.fromEntries(currentItems.map(item => [item.uuid, item]));
 
@@ -243,14 +231,46 @@ async function upsertItems(
   const productItems = createWorkOrder.items.filter(hasPropertyValue('type', 'product'));
   const customItems = createWorkOrder.items.filter(hasPropertyValue('type', 'custom-item'));
 
-  await ensureProductVariantsExist(session, unique(productItems.map(item => item.productVariantId)));
+  const [serials] = await Promise.all([
+    Promise.all(
+      [...productItems, ...customItems]
+        .map(item => item.serial)
+        .filter(isNonNullable)
+        .map(serial =>
+          getSerial({
+            shop: session.shop,
+            serial: serial.serial,
+            productVariantId: serial.productVariantId,
+            locationIds,
+          }),
+        ),
+    ),
+    ensureProductVariantsExist(session, unique(productItems.map(item => item.productVariantId))),
+  ]);
+
+  if (serials.includes(null)) {
+    throw new HttpError('Serial not found', 400);
+  }
+
+  const getProductVariantSerialId = (serial: CreateWorkOrder['items'][number]['serial']) => {
+    if (!serial) {
+      return null;
+    }
+
+    return (
+      serials
+        .filter(hasNestedPropertyValue('serial', serial.serial))
+        .find(hasPropertyValue('productVariantId', serial.productVariantId))?.id ?? null
+    );
+  };
 
   await Promise.all([
     upsertWorkOrderItems(
-      productItems.map(({ productVariantId, absorbCharges, quantity, uuid }) => ({
+      productItems.map(({ productVariantId, absorbCharges, quantity, uuid, serial }) => ({
         shopifyOrderLineItemId: itemsByUuid[uuid]?.shopifyOrderLineItemId ?? null,
         workOrderId,
         uuid,
+        productVariantSerialId: getProductVariantSerialId(serial),
         data: {
           type: 'product',
           absorbCharges,
@@ -260,10 +280,11 @@ async function upsertItems(
       })),
     ),
     upsertWorkOrderItems(
-      customItems.map(({ name, unitPrice, absorbCharges, quantity, uuid }) => ({
+      customItems.map(({ name, unitPrice, absorbCharges, quantity, uuid, serial }) => ({
         shopifyOrderLineItemId: itemsByUuid[uuid]?.shopifyOrderLineItemId ?? null,
         workOrderId,
         uuid,
+        productVariantSerialId: getProductVariantSerialId(serial),
         data: {
           type: 'custom-item',
           absorbCharges,

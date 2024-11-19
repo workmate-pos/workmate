@@ -186,6 +186,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
 
               const createPurchaseOrder: CreatePurchaseOrder = {
                 name: null,
+                type: 'NORMAL',
                 status,
                 placedDate: null,
                 locationId,

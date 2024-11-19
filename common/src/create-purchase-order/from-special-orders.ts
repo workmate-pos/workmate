@@ -28,6 +28,7 @@ export function getCreatePurchaseOrderForSpecialOrders({
   // TODO: Filter out line items that are already ordered
   return {
     name: null,
+    type: 'NORMAL',
     status,
     placedDate: null,
     locationId: location.id,
@@ -76,11 +77,10 @@ export function getCreatePurchaseOrderForSpecialOrders({
               uuid: lineItem.uuid,
             },
             quantity: remainingQuantity,
-            availableQuantity: 0,
             unitCost,
             customFields: lineItemCustomFields,
             serialNumber: null,
-          };
+          } satisfies CreatePurchaseOrder['lineItems'][number];
         })
         .filter(isNonNullable),
     ),

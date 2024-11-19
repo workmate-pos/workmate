@@ -142,6 +142,7 @@ export function ProductSelector({
                       productVariantId: product.productVariantId,
                       absorbCharges: false,
                       customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+                      serial: null,
                     },
                   ],
                   [],
@@ -164,6 +165,7 @@ export function ProductSelector({
                   uuid: uuid(),
                   name: 'Unnamed product',
                   unitPrice: BigDecimal.ONE.toMoney(),
+                  serial: null,
                 },
               ],
               [],
@@ -325,6 +327,7 @@ function useProductVariantRows(
             quantity: pv.quantity,
             customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             absorbCharges: false,
+            serial: null,
           } as const;
         });
         onSelect(items, charges);

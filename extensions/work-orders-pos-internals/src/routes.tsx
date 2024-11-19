@@ -104,6 +104,10 @@ import {
   ProductVariantSelector,
   ProductVariantSelectorProps,
 } from '@work-orders/common-pos/screens/selector/ProductVariantSelector.js';
+import {
+  ProductVariantSerialSelector,
+  ProductVariantSerialSelectorProps,
+} from '@work-orders/common-pos/screens/selector/ProductVariantSerialSelector.js';
 import { WorkOrderLoader } from './screens/work-orders/WorkOrderLoader.js';
 import { PurchaseOrderLoader } from './screens/purchase-orders/PurchaseOrderLoader.js';
 import { SerialSelector, SerialSelectorProps } from '@work-orders/common-pos/screens/selector/SerialSelector.js';
@@ -458,6 +462,12 @@ export const { Router, useRouter } = createRouter({
     title: 'Product selector',
     Component: (props: Omit<ProductVariantSelectorProps, 'useRouter'>) => (
       <ProductVariantSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  ProductVariantSerialSelector: {
+    title: 'Serial selector',
+    Component: (props: Omit<ProductVariantSerialSelectorProps, 'useRouter'>) => (
+      <ProductVariantSerialSelector {...props} useRouter={useRouter} />
     ),
   },
   SerialSelector: {

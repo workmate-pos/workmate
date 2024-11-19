@@ -52,6 +52,10 @@ export default function App() {
                     destination: '/employees',
                   },
                   {
+                    label: 'Inventory log',
+                    destination: '/inventory-log',
+                  },
+                  {
                     label: 'Settings',
                     destination: '/settings',
                   },

@@ -7,6 +7,7 @@ type BaseCreatePurchaseOrder = {
 export const defaultCreatePurchaseOrder = (base: BaseCreatePurchaseOrder): CreatePurchaseOrder => ({
   ...base,
   name: null,
+  type: 'NORMAL',
   note: '',
   placedDate: null,
   locationId: null,

@@ -48,21 +48,19 @@ import {
 } from '@work-orders/common/create-work-order/reducer.js';
 import { useCompanyQuery } from '@work-orders/common/queries/use-company-query.js';
 import { useCompanyLocationQuery } from '@work-orders/common/queries/use-company-location-query.js';
-import {
-  useProductVariantQueries,
-  useProductVariantQuery,
-} from '@work-orders/common/queries/use-product-variant-query.js';
+import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { usePaymentTermsTemplatesQueries } from '@work-orders/common/queries/use-payment-terms-templates-query.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { paymentTermTypes } from '@work-orders/common/util/payment-terms-types.js';
 import { CustomField } from '@work-orders/common-pos/components/CustomField.js';
-import { UUID } from '@work-orders/common/util/uuid.js';
+import { uuid, UUID } from '@work-orders/common/util/uuid.js';
 import { useStorePropertiesQuery } from '@work-orders/common/queries/use-store-properties-query.js';
 import { SHOPIFY_B2B_PLANS } from '@work-orders/common/util/shopify-plans.js';
 import { getTotalPriceForCharges } from '@work-orders/common/create-work-order/charges.js';
 import { LinkedTasks } from '@work-orders/common-pos/components/LinkedTasks.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 
 export type WorkOrderProps = {
   initial: WIPCreateWorkOrder;
@@ -296,12 +294,6 @@ function WorkOrderProperties({
   const locationQuery = useLocationQuery({ fetch, id: createWorkOrder.locationId });
   const location = locationQuery.data;
 
-  const serialProductVariantQuery = useProductVariantQuery({
-    fetch,
-    id: createWorkOrder.serial?.productVariantId ?? null,
-  });
-  const serialProductVariant = serialProductVariantQuery.data;
-
   // TODO: Make Previous Order and Previous Work Orders clickable to view history (wrap in selectable or make it a button?)
 
   const hasOrder = workOrder?.orders.some(order => order.type === 'ORDER') ?? false;
@@ -482,27 +474,6 @@ function WorkOrderProperties({
               : (customer?.displayName ?? 'Unknown customer')
         }
       />
-      <FormStringField
-        label={'Serial'}
-        onFocus={() =>
-          router.push('SerialSelector', {
-            onSelect: serial => {
-              dispatch.setPartial({
-                serial: { productVariantId: serial.productVariant.id, serial: serial.serial },
-              });
-            },
-            onClear: () => dispatch.setPartial({ serial: null }),
-          })
-        }
-        value={
-          createWorkOrder.serial === null
-            ? ''
-            : serialProductVariantQuery.isLoading
-              ? 'Loading...'
-              : `${createWorkOrder.serial.serial} - ` +
-                (getProductVariantName(serialProductVariant) ?? 'Unknown product')
-        }
-      />
     </ResponsiveGrid>
   );
 }
@@ -566,7 +537,7 @@ function WorkOrderItems({
         <FormButton
           title="Add product"
           type="primary"
-          action={'button'}
+          action="button"
           onPress={() =>
             router.push('ProductSelector', {
               onSelect: ({ items, charges }) => {
@@ -596,9 +567,45 @@ function WorkOrderItems({
         />
 
         <FormButton
+          title="Add serial"
+          type="primary"
+          action="button"
+          onPress={() =>
+            router.push('ProductVariantSelector', {
+              filters: { type: 'serial', status: ['active'] },
+              onSelect: productVariant =>
+                router.push('ProductVariantSerialSelector', {
+                  filters: {
+                    sold: false,
+                    locationId: createWorkOrder?.locationId ?? undefined,
+                    productVariantId: productVariant.id,
+                  },
+                  onSelect: (serial, productVariantId) => {
+                    // TODO: Also add default charges
+                    dispatch.addItems({
+                      items: [
+                        {
+                          type: 'product',
+                          uuid: uuid(),
+                          quantity: 1,
+                          serial: { serial, productVariantId },
+                          absorbCharges: false,
+                          // TODO: Default charges
+                          customFields: {},
+                          productVariantId,
+                        },
+                      ],
+                    });
+                  },
+                }),
+            })
+          }
+        />
+
+        <FormButton
           title="Add service"
           type="primary"
-          action={'button'}
+          action="button"
           onPress={() =>
             router.push('ServiceSelector', {
               createWorkOrder,
@@ -984,10 +991,10 @@ function useItemRows(
         id: item.uuid,
         leftSide: {
           label,
-          subtitle: sku ? [sku] : undefined,
+          subtitle: getSubtitle([item.serial?.serial, sku]),
           image: {
             source: imageUrl,
-            badge: !isMutableService ? item.quantity : undefined,
+            badge: !item.serial && !isMutableService ? item.quantity : undefined,
           },
           badges: [
             ...orderNames.map<BadgeProps>(orderName => ({ text: orderName, variant: 'highlight' })),

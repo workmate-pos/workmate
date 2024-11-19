@@ -12,12 +12,11 @@ import {
   DetailedWorkOrderItem,
   WorkOrderOrder,
   WorkOrderPaymentTerms,
-  WorkOrderSerial,
 } from './types.js';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
 import { assertDecimal, assertMoney } from '@teifi-digital/shopify-app-toolbox/big-decimal';
-import { indexBy, indexByMap, sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { indexBy, indexByMap, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import {
   hasNestedPropertyValue,
   hasNonNullableProperty,
@@ -50,8 +49,7 @@ import {
 import { getShopifyOrderLineItemReservationsByIds } from '../sourcing/queries.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { getSpecialOrderLineItemsByShopifyOrderLineItemIds, getSpecialOrdersByIds } from '../special-orders/queries.js';
-import { getSerial } from '../serials/queries.js';
-import { LocalsTeifiUser } from '../../decorators/permission.js';
+import { getSerialsByIds } from '../serials/queries.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { gql } from '../gql/gql.js';
 
@@ -84,7 +82,6 @@ export async function getDetailedWorkOrder(
     customFields: getWorkOrderCustomFieldsRecord(workOrder.id),
     discount: getWorkOrderDiscount(workOrder),
     paymentTerms: getWorkOrderPaymentTerms(workOrder),
-    serial: getWorkOrderSerial(workOrder),
     locationId: workOrder.locationId,
   });
 }
@@ -137,6 +134,7 @@ async function getDetailedWorkOrderItems(
     specialOrderLineItems,
     purchaseOrderLineItems,
     purchaseOrderReceiptLineItems,
+    serials,
   ] = await Promise.all([
     !!locationId
       ? gql.inventoryItems.getManyWithLocationInventoryLevelByProductVariantIds.run(graphql, {
@@ -152,6 +150,7 @@ async function getDetailedWorkOrderItems(
     getSpecialOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
     getPurchaseOrderLineItemsByShopifyOrderLineItemIds(lineItemIds),
     getPurchaseOrderReceiptLineItemsByShopifyOrderLineItemIds(lineItemIds),
+    getSerialsByIds(items.map(item => item.productVariantSerialId).filter(isNonNullable)),
   ]);
 
   const transferOrderIds = unique(transferOrderLineItems.map(lineItem => lineItem.stockTransferId));
@@ -215,6 +214,10 @@ async function getDetailedWorkOrderItems(
       shopifyOrderLineItem: item.shopifyOrderLineItemId
         ? (lineItemById[item.shopifyOrderLineItemId] ?? never('fk'))
         : null,
+      serial:
+        item.productVariantSerialId === null
+          ? null
+          : (serials.find(serial => serial.id === item.productVariantSerialId) ?? never('fk')),
       purchaseOrders: itemPurchaseOrders.map(po => ({
         name: po.name,
         items: itemPurchaseOrderLineItems.filter(hasPropertyValue('purchaseOrderId', po.id)).map(li => {
@@ -432,21 +435,4 @@ export async function getWorkOrderInfoPage(
   return await Promise.all(
     page.map(workOrder => getDetailedWorkOrder(session, workOrder.name, locationIds).then(wo => wo ?? never())),
   );
-}
-
-export async function getWorkOrderSerial(
-  workOrder: Pick<WorkOrder, 'productVariantSerialId'>,
-): Promise<WorkOrderSerial | null> {
-  if (!workOrder.productVariantSerialId) return null;
-
-  const pvs = await getSerial({ id: workOrder.productVariantSerialId });
-  const { productVariantId, serial, locationId } = pvs ?? never('fk');
-
-  // TODO: Warnings on front end in case data doesnt match, e.g. customer and pvs customer
-
-  return {
-    productVariantId,
-    serial,
-    locationId,
-  };
 }

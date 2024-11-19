@@ -6,6 +6,7 @@ import {
   Divider,
   InlineGrid,
   InlineStack,
+  Select,
   SkeletonBodyText,
   Text,
   TextField,
@@ -17,9 +18,12 @@ import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.j
 import { useState } from 'react';
 import { DateModal } from '@web/frontend/components/shared-orders/modals/DateModal.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
+
+const PURCHASE_ORDER_TYPES: CreatePurchaseOrder['type'][] = ['NORMAL', 'DROPSHIP'];
 
 export function PurchaseOrderGeneralCard({
   createPurchaseOrder,
@@ -55,6 +59,20 @@ export function PurchaseOrderGeneralCard({
           <Text as={'h2'} variant={'headingMd'} fontWeight={'bold'}>
             General
           </Text>
+
+          <Select
+            label="Type"
+            helpText="Dropship orders do not count towards your inventory quantities."
+            value={createPurchaseOrder.type}
+            placeholder="Select a type"
+            requiredIndicator
+            options={PURCHASE_ORDER_TYPES.map(type => ({
+              label: sentenceCase(type),
+              value: type,
+            }))}
+            onChange={(value: (typeof PURCHASE_ORDER_TYPES)[number]) => dispatch.setPartial({ type: value })}
+            disabled={disabled}
+          />
 
           <TextField
             label={'Vendor'}

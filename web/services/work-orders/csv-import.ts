@@ -42,9 +42,6 @@ const CsvWorkOrderInfo = z.object({
 
   DiscountType: zCsvNullable(z.union([z.literal('FIXED_AMOUNT'), z.literal('PERCENTAGE')])),
   DiscountAmount: zCsvNullable(z.union([zMoney, zDecimal])),
-
-  SerialNumber: zCsvNullable(z.string()),
-  SerialProductVariantID: zCsvNullable(zNamespacedID('ProductVariant')),
 });
 
 const CsvWorkOrderInfoPaymentTerms = z
@@ -106,6 +103,9 @@ const CsvWorkOrderLineItem = z.object({
   ProductVariantID: zCsvNullable(zNamespacedID('ProductVariant')),
   Name: zCsvNullable(z.string().min(1)),
   UnitPrice: zCsvNullable(zMoney),
+
+  SerialNumber: zCsvNullable(z.string()),
+  SerialProductVariantID: zCsvNullable(zNamespacedID('ProductVariant')),
 });
 
 const CsvWorkOrderLineItemProduct = z.object({
@@ -220,7 +220,6 @@ export async function readWorkOrderCsvImport({
 
       const paymentTerms = CsvWorkOrderInfoPaymentTerms.safeParse(data);
       const discount = CsvWorkOrderInfoDiscount.safeParse(data);
-      const serial = CsvWorkOrderInfoSerial.safeParse(data);
 
       if (!paymentTerms.success) {
         throw new HttpError(`Invalid payment terms for work order ${data.ID}`, 400);
@@ -228,10 +227,6 @@ export async function readWorkOrderCsvImport({
 
       if (!discount.success) {
         throw new HttpError(`Invalid discount for work order ${data.ID}`, 400);
-      }
-
-      if (!serial.success) {
-        throw new HttpError(`Invalid serial for work order ${data.ID}`, 400);
       }
 
       createWorkOrders[data.ID] = {
@@ -252,11 +247,6 @@ export async function readWorkOrderCsvImport({
               date: paymentTerms.data.PaymentTermsDate,
             }
           : null,
-        serial: match(serial.data)
-          .returnType<CreateWorkOrder['serial']>()
-          .with({ SerialNumber: null, SerialProductVariantID: null }, () => null)
-          .with({ SerialNumber: P.select('serial'), SerialProductVariantID: P.select('productVariantId') }, identity)
-          .exhaustive(),
         discount: match(discount.data)
           .returnType<CreateWorkOrder['discount']>()
           .with({ DiscountType: P.select('type', 'FIXED_AMOUNT'), DiscountAmount: P.select('value') }, identity)
@@ -282,11 +272,25 @@ export async function readWorkOrderCsvImport({
         throw new HttpError(`Duplicate line item id ${data.LineItemID} for work order ${data.WorkOrderID}`, 400);
       }
 
+      const serial = CsvWorkOrderInfoSerial.safeParse(data);
+
+      if (!serial.success) {
+        throw new HttpError(
+          `Invalid serial for line item id ${data.LineItemID} for work order ${data.WorkOrderID}`,
+          400,
+        );
+      }
+
       const base = {
         uuid: uuid(),
         quantity: data.Quantity,
         customFields: {},
         absorbCharges: data.AbsorbCharges,
+        serial: match(serial.data)
+          .returnType<CreateWorkOrder['items'][number]['serial']>()
+          .with({ SerialNumber: null, SerialProductVariantID: null }, () => null)
+          .with({ SerialNumber: P.select('serial'), SerialProductVariantID: P.select('productVariantId') }, identity)
+          .exhaustive(),
       } satisfies Partial<CreateWorkOrder['items'][number]>;
 
       const product = CsvWorkOrderLineItemProduct.safeParse(data);
