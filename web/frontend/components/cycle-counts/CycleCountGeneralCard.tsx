@@ -1,4 +1,4 @@
-import { Badge, BlockStack, Card, Text, TextField, Select, InlineStack } from '@shopify/polaris';
+import { BlockStack, Card, Text, TextField, Select, InlineStack, Banner } from '@shopify/polaris';
 import { CreateCycleCount } from '@web/schemas/generated/create-cycle-count.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -48,8 +48,12 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
     })
     .filter(isNonNullable);
 
+  const isDisabled = disabled || createCycleCount.locked;
+
   return (
     <>
+      {createCycleCount.locked && <Banner tone="warning">This cycle count is locked</Banner>}
+
       <Card>
         <BlockStack gap="400">
           <InlineStack align="space-between" blockAlign="center">
@@ -62,7 +66,7 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
               options={statusOptions}
               value={createCycleCount.status}
               onChange={status => dispatch.setStatus({ status })}
-              disabled={disabled}
+              disabled={isDisabled}
             />
           </InlineStack>
 
@@ -73,7 +77,7 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
             value={locationQuery.data?.name ?? ''}
             loading={!!createCycleCount.locationId && locationQuery.isLoading}
             onFocus={() => setIsLocationSelectorOpen(true)}
-            disabled={disabled}
+            disabled={isDisabled}
             readOnly
           />
 
@@ -82,7 +86,7 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
             autoComplete="off"
             value={employeeNames.join(', ')}
             onFocus={() => setIsEmployeeSelectorOpen(true)}
-            disabled={disabled}
+            disabled={isDisabled}
             readOnly
           />
 
@@ -91,10 +95,10 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
             autoComplete="off"
             value={dueDate?.toLocaleDateString() ?? ''}
             onFocus={() => setIsDateModalOpen(true)}
-            disabled={disabled}
+            disabled={isDisabled}
             readOnly
             labelAction={
-              dueDate
+              dueDate && !isDisabled
                 ? {
                     content: 'Remove',
                     onAction: () => dispatch.setDueDate({ dueDate: null }),
@@ -108,11 +112,9 @@ export function CycleCountGeneralCard({ createCycleCount, dispatch, disabled }: 
             autoComplete="off"
             value={createCycleCount.note ?? ''}
             onChange={note => dispatch.setNote({ note })}
-            disabled={disabled}
+            disabled={isDisabled}
             multiline={3}
           />
-
-          {createCycleCount.locked && <Badge tone="warning">This cycle count is locked</Badge>}
         </BlockStack>
       </Card>
 
