@@ -58,22 +58,34 @@ function reducer(state: CreateCycleCount, action: CreateCycleCountAction): Creat
     case 'setLocked':
       return { ...state, locked: action.locked };
     case 'addProductVariants': {
-      const knownProductVariantIds = new Set(state.items.map(item => item.productVariantId));
+      const existingItemsMap = new Map(state.items.map(item => [item.productVariantId, item]));
 
-      const newItems = action.productVariants
-        .filter(variant => !knownProductVariantIds.has(variant.id))
-        .map(variant => ({
-          uuid: uuid(),
-          productVariantId: variant.id,
-          inventoryItemId: variant.inventoryItem.id,
-          countQuantity: 0,
-          productTitle: variant.product.title,
-          productVariantTitle: variant.title,
-        }));
+      const updatedItems = [...state.items];
+
+      action.productVariants.forEach(variant => {
+        const existingItem = existingItemsMap.get(variant.id);
+
+        if (existingItem) {
+          const itemIndex = updatedItems.findIndex(item => item.productVariantId === variant.id);
+          updatedItems[itemIndex] = {
+            ...existingItem,
+            countQuantity: existingItem.countQuantity + 1,
+          };
+        } else {
+          updatedItems.push({
+            uuid: uuid(),
+            productVariantId: variant.id,
+            inventoryItemId: variant.inventoryItem.id,
+            countQuantity: 0,
+            productTitle: variant.product.title,
+            productVariantTitle: variant.title,
+          });
+        }
+      });
 
       return {
         ...state,
-        items: [...state.items, ...newItems],
+        items: updatedItems,
       };
     }
     default:
