@@ -368,13 +368,16 @@ export async function insertTaskWorkOrderLinks(taskId: number, shop: string, wor
 
 export async function deleteTaskWorkOrderLinks({
   taskId,
-  workOrderId,
-}: MergeUnion<{ taskId: number } | { workOrderId: number }>) {
+  workOrderIds,
+}: MergeUnion<{ taskId: number } | { workOrderIds: number[] }>) {
   await sql`
     DELETE
     FROM "TaskWorkOrderLink"
     WHERE "taskId" = COALESCE(${taskId ?? null}, "taskId")
-      AND "workOrderId" = COALESCE(${workOrderId ?? null}, "workOrderId");
+      AND (
+      ${workOrderIds!} :: int[] IS NULL
+        OR "workOrderId" = ANY (${workOrderIds!} :: int[])
+      )
   `;
 }
 
@@ -390,13 +393,16 @@ export async function insertTaskPurchaseOrderLinks(taskId: number, shop: string,
 
 export async function deleteTaskPurchaseOrderLinks({
   taskId,
-  purchaseOrderId,
-}: MergeUnion<{ taskId: number } | { purchaseOrderId: number }>) {
+  purchaseOrderIds,
+}: MergeUnion<{ taskId: number } | { purchaseOrderIds: number[] }>) {
   await sql`
     DELETE
     FROM "TaskPurchaseOrderLink"
     WHERE "taskId" = COALESCE(${taskId ?? null}, "taskId")
-      AND "purchaseOrderId" = COALESCE(${purchaseOrderId ?? null}, "purchaseOrderId");
+      AND (
+      ${purchaseOrderIds!} :: int[] IS NULL OR
+      "purchaseOrderId" = ANY (${purchaseOrderIds!} :: int[])
+      );
   `;
 }
 

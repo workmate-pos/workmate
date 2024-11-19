@@ -193,7 +193,10 @@ async function updateWorkOrder(
         getWorkOrderCharges(workOrderId),
       ]);
 
-      await Promise.all([deleteWorkOrderCustomFields(workOrderId), deleteWorkOrderItemCustomFields(workOrderId)]);
+      await Promise.all([
+        deleteWorkOrderCustomFields({ workOrderIds: [workOrderId] }),
+        deleteWorkOrderItemCustomFields({ workOrderIds: [workOrderId] }),
+      ]);
 
       await upsertItems(session, createWorkOrder, workOrderId, currentItems);
       await upsertCharges(session, createWorkOrder, workOrderId, currentCharges);

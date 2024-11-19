@@ -36,8 +36,7 @@ import { transaction } from '../../services/db/transaction.js';
 import * as Sentry from '@sentry/node';
 import { z } from 'zod';
 import { BulkDeleteWorkOrders } from '../../schemas/generated/bulk-delete-work-orders.js';
-import { sentryErr } from '@teifi-digital/shopify-app-express/services';
-import { deleteWorkOrder } from '../../services/work-orders/delete.js';
+import { deleteWorkOrders } from '../../services/work-orders/delete.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -84,33 +83,28 @@ export default class WorkOrderController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const bulkDeleteWorkOrders = req.body;
 
-    const workOrders = await Promise.all(
-      bulkDeleteWorkOrders.workOrders.map(({ name }) =>
-        deleteWorkOrder(session, user, name).then(
-          () => ({ type: 'success', workOrder: { name } }) as const,
-          error => ({ type: 'error', error }) as const,
-        ),
-      ),
+    const result = await deleteWorkOrders(
+      session,
+      user,
+      bulkDeleteWorkOrders.workOrders.map(wo => wo.name),
     );
 
     return res.status(200).json({
-      workOrders: workOrders.map((result, i) => {
-        if (result.type === 'success') {
-          return result;
-        }
+      workOrders: bulkDeleteWorkOrders.workOrders.map(({ name }) => {
+        const errors = result.filter(([_name]) => _name === name).map(([, error]) => error);
 
-        if (result.error instanceof HttpError) {
+        if (!errors.length) {
           return {
-            type: 'error',
-            error: result.error.message,
+            type: 'success',
+            workOrder: { name },
           };
         }
 
-        sentryErr(result.error, { name: bulkDeleteWorkOrders.workOrders[i]?.name });
+        const [error = never()] = errors;
 
         return {
           type: 'error',
-          error: 'Internal server error',
+          error: error.message,
         };
       }),
     });
@@ -124,7 +118,11 @@ export default class WorkOrderController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    await deleteWorkOrder(session, user, name);
+    const [[, error] = []] = await deleteWorkOrders(session, user, [name]);
+
+    if (error) {
+      throw error;
+    }
 
     return res.json({ success: true });
   }

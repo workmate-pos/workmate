@@ -319,18 +319,26 @@ export async function upsertWorkOrderCharges(
                     data                     = EXCLUDED.data;`;
 }
 
-export async function deleteWorkOrderCustomFields(workOrderId: number) {
+export async function deleteWorkOrderCustomFields({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "WorkOrderCustomField"
-    WHERE "workOrderId" = ${workOrderId};`;
+    WHERE "workOrderId" = ANY (${workOrderIds});`;
 }
 
-export async function deleteWorkOrderItemCustomFields(workOrderId: number) {
+export async function deleteWorkOrderItemCustomFields({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "WorkOrderItemCustomField"
-    WHERE "workOrderId" = ${workOrderId};`;
+    WHERE "workOrderId" = ANY (${workOrderIds});`;
 }
 
 export async function insertWorkOrderCustomFields(workOrderId: number, customFields: Record<string, string>) {
@@ -372,11 +380,15 @@ export async function deleteWorkOrderItemsByUuids(workOrderId: number, uuids: st
       AND uuid = ANY (${uuids} :: uuid[]);`;
 }
 
-export async function deleteWorkOrderItems(workOrderId: number) {
+export async function deleteWorkOrderItems({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "WorkOrderItem"
-    WHERE "workOrderId" = ${workOrderId};`;
+    WHERE "workOrderId" = ANY (${workOrderIds});`;
 }
 
 export async function deleteWorkOrderChargesByUuids(workOrderId: number, uuids: string[]) {
@@ -391,11 +403,15 @@ export async function deleteWorkOrderChargesByUuids(workOrderId: number, uuids: 
       AND uuid = ANY (${uuids} :: uuid[]);`;
 }
 
-export async function deleteWorkOrderCharges(workOrderId: number) {
+export async function deleteWorkOrderCharges({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "WorkOrderCharge"
-    WHERE "workOrderId" = ${workOrderId};`;
+    WHERE "workOrderId" = ANY (${workOrderIds});`;
 }
 
 export async function setWorkOrderItemShopifyOrderLineItemIds(
@@ -557,10 +573,14 @@ export async function getWorkOrdersForSerial({
   return workOrders.map(mapWorkOrder);
 }
 
-export async function deleteWorkOrder({ workOrderId }: { workOrderId: number }) {
+export async function deleteWorkOrders({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "WorkOrder"
-    WHERE id = ${workOrderId};
+    WHERE id = ANY (${workOrderIds});
   `;
 }

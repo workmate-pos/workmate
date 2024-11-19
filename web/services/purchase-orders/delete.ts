@@ -5,45 +5,62 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import * as queries from './queries.js';
 import { unit } from '../db/unit-of-work.js';
 import { deleteTaskPurchaseOrderLinks } from '../tasks/queries.js';
+import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
+import { zip } from '@teifi-digital/shopify-app-toolbox/iteration';
 
 // TODO: Show individual delete button in purchase order/work order too OR reason for not being able to delete
 
-export async function deletePurchaseOrder(session: Session, user: LocalsTeifiUser, name: string) {
-  await unit(async () => {
-    const [purchaseOrder, purchaseOrderId] = await Promise.all([
-      getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds),
-      queries
-        .getPurchaseOrder({ shop: session.shop, name, locationIds: user.user.allowedLocationIds })
-        .then(po => po?.id),
-    ]);
+export async function deletePurchaseOrders(session: Session, user: LocalsTeifiUser, names: string[]) {
+  if (!names.length) {
+    return [];
+  }
 
-    if (!purchaseOrder || purchaseOrderId === undefined) {
-      throw new HttpError('Purchase order not found', 404);
+  return await unit(async () => {
+    const { purchaseOrders, ids } = await awaitNested({
+      purchaseOrders: names.map(name => getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds)),
+      ids: names.map(name =>
+        queries
+          .getPurchaseOrder({ shop: session.shop, name, locationIds: user.user.allowedLocationIds })
+          .then(po => po?.id),
+      ),
+    });
+
+    const errors: [name: string, error: HttpError][] = [];
+    const purchaseOrderIds: number[] = [];
+    const purchaseOrderReceiptIds: number[] = [];
+
+    for (const [[purchaseOrder, purchaseOrderId], name] of zip(zip(purchaseOrders, ids), names)) {
+      if (!purchaseOrder || purchaseOrderId === undefined) {
+        errors.push([name, new HttpError(`Purchase order ${name} not found`, 404)]);
+        continue;
+      }
+
+      if (purchaseOrder.receipts.some(receipt => receipt.status === 'COMPLETED')) {
+        errors.push([name, new HttpError(`Cannot delete ${name}, as it has completed receipts`, 400)]);
+        continue;
+      }
+
+      purchaseOrderIds.push(purchaseOrderId);
+      purchaseOrderReceiptIds.push(...purchaseOrder.receipts.map(receipt => receipt.id));
     }
-
-    if (purchaseOrder.receipts.some(receipt => receipt.status === 'COMPLETED')) {
-      throw new HttpError(`Cannot delete ${name}, as it has completed receipts`);
-    }
-
-    const purchaseOrderReceiptIds = purchaseOrder.receipts.map(receipt => receipt.id);
 
     await Promise.all([
       queries
         .deletePurchaseOrderReceiptLineItems({ purchaseOrderReceiptIds })
         .then(() => queries.deletePurchaseOrderReceipts({ purchaseOrderReceiptIds })),
 
-      queries.deletePurchaseOrderCustomFields(purchaseOrderId),
-
       queries
-        .deletePurchaseOrderLineItemCustomFields(purchaseOrderId)
-        .then(() => queries.deletePurchaseOrderLineItems(purchaseOrderId)),
+        .deletePurchaseOrderLineItemCustomFields({ purchaseOrderIds })
+        .then(() => queries.deletePurchaseOrderLineItems({ purchaseOrderIds })),
 
-      queries.deletePurchaseOrderAssignedEmployees(purchaseOrderId),
-
-      deleteTaskPurchaseOrderLinks({ purchaseOrderId }),
+      queries.deletePurchaseOrderCustomFields({ purchaseOrderIds }),
+      queries.deletePurchaseOrderAssignedEmployees({ purchaseOrderIds }),
+      deleteTaskPurchaseOrderLinks({ purchaseOrderIds }),
     ]);
 
-    await queries.deletePurchaseOrder({ purchaseOrderId });
+    await queries.deletePurchaseOrders({ purchaseOrderIds });
+
+    return errors;
   });
 }
 

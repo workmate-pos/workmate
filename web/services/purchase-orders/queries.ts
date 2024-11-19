@@ -286,11 +286,15 @@ export async function insertPurchaseOrderLineItemCustomFields(
     FROM UNNEST(${uuid} :: uuid[], ${key} :: text[], ${value} :: text[]);`;
 }
 
-export async function deletePurchaseOrderLineItemCustomFields(purchaseOrderId: number) {
+export async function deletePurchaseOrderLineItemCustomFields({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItemCustomField"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
 export async function getPurchaseOrderLineItemCustomFields(purchaseOrderId: number) {
@@ -345,14 +349,22 @@ function mapPurchaseOrderAssignedEmployee(assignment: {
   }
 }
 
-export async function deletePurchaseOrderLineItems(purchaseOrderId: number) {
+export async function deletePurchaseOrderLineItems({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItem"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
 export async function deletePurchaseOrderLineItemsByUuids(purchaseOrderId: number, uuids: string[]) {
+  if (uuids.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItem"
@@ -360,18 +372,26 @@ export async function deletePurchaseOrderLineItemsByUuids(purchaseOrderId: numbe
       AND uuid = ANY (${uuids} :: uuid[]);`;
 }
 
-export async function deletePurchaseOrderCustomFields(purchaseOrderId: number) {
+export async function deletePurchaseOrderCustomFields({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderCustomField"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
-export async function deletePurchaseOrderAssignedEmployees(purchaseOrderId: number) {
+export async function deletePurchaseOrderAssignedEmployees({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderEmployeeAssignment"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
 export async function upsertPurchaseOrderLineItems(
@@ -919,10 +939,14 @@ export async function deletePurchaseOrderReceipts({ purchaseOrderReceiptIds }: {
   `;
 }
 
-export async function deletePurchaseOrder({ purchaseOrderId }: { purchaseOrderId: number }) {
+export async function deletePurchaseOrders({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrder"
-    WHERE id = ${purchaseOrderId};
+    WHERE id = ANY (${purchaseOrderIds});
   `;
 }

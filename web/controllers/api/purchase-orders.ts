@@ -33,7 +33,7 @@ import * as Sentry from '@sentry/node';
 import { z } from 'zod';
 import { UpsertPurchaseOrderReceipt } from '../../schemas/generated/upsert-purchase-order-receipt.js';
 import { upsertReceipt } from '../../services/purchase-orders/receipt.js';
-import { deletePurchaseOrder, deletePurchaseOrderReceipt } from '../../services/purchase-orders/delete.js';
+import { deletePurchaseOrderReceipt, deletePurchaseOrders } from '../../services/purchase-orders/delete.js';
 import { PlanReorder } from '../../schemas/generated/plan-reorder.js';
 import { getReorderQuantities } from '../../services/reorder/plan.js';
 import { BulkCreatePurchaseOrders } from '../../schemas/generated/bulk-create-purchase-orders.js';
@@ -82,33 +82,28 @@ export default class PurchaseOrdersController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const bulkDeletePurchaseOrders = req.body;
 
-    const purchaseOrders = await Promise.all(
-      bulkDeletePurchaseOrders.purchaseOrders.map(({ name }) =>
-        deletePurchaseOrder(session, user, name).then(
-          () => ({ type: 'success', purchaseOrder: { name } }) as const,
-          error => ({ type: 'error', error }) as const,
-        ),
-      ),
+    const result = await deletePurchaseOrders(
+      session,
+      user,
+      bulkDeletePurchaseOrders.purchaseOrders.map(po => po.name),
     );
 
     return res.status(200).json({
-      purchaseOrders: purchaseOrders.map((result, i) => {
-        if (result.type === 'success') {
-          return result;
-        }
+      purchaseOrders: bulkDeletePurchaseOrders.purchaseOrders.map(({ name }) => {
+        const errors = result.filter(([_name]) => _name === name).map(([, error]) => error);
 
-        if (result.error instanceof HttpError) {
+        if (!errors.length) {
           return {
-            type: 'error',
-            error: result.error.message,
+            type: 'success',
+            purchaseOrder: { name },
           };
         }
 
-        sentryErr(result.error, { name: bulkDeletePurchaseOrders.purchaseOrders[i]?.name });
+        const [error = never()] = errors;
 
         return {
           type: 'error',
-          error: 'Internal server error',
+          error: error.message,
         };
       }),
     });
@@ -122,7 +117,11 @@ export default class PurchaseOrdersController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const { name } = req.params;
 
-    await deletePurchaseOrder(session, user, name);
+    const [[, error] = []] = await deletePurchaseOrders(session, user, [name]);
+
+    if (error) {
+      throw error;
+    }
 
     return res.json({ success: true });
   }

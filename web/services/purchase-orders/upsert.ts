@@ -118,9 +118,9 @@ export async function upsertCreatePurchaseOrder(
       getSpecialOrderLineItemsByNameAndUuids(shop, specialOrderLineItemNameUuids),
       upsertSerials(shop, lineItemSerials).then(() => getSerialsByProductVariantSerials(shop, lineItemSerials)),
       deletePurchaseOrderLineItemsByUuids(purchaseOrderId, uuidsToRemove),
-      deletePurchaseOrderCustomFields(purchaseOrderId),
-      deletePurchaseOrderLineItemCustomFields(purchaseOrderId),
-      deletePurchaseOrderAssignedEmployees(purchaseOrderId),
+      deletePurchaseOrderCustomFields({ purchaseOrderIds: [purchaseOrderId] }),
+      deletePurchaseOrderLineItemCustomFields({ purchaseOrderIds: [purchaseOrderId] }),
+      deletePurchaseOrderAssignedEmployees({ purchaseOrderIds: [purchaseOrderId] }),
     ]);
 
     await assertNoIllegalSerials(shop, createPurchaseOrder, existingPurchaseOrder);
