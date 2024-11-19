@@ -122,6 +122,18 @@ export function PlanCycleCountModal({ open, onClose, cycleCountName }: Props) {
         </Modal.Section>
       )}
 
+      {applyCycleCountMutation.isError && (
+        <Modal.Section>
+          <Banner
+            title={extractErrorMessage(
+              applyCycleCountMutation.error,
+              'Something went wrong while applying cycle count',
+            )}
+            tone="critical"
+          />
+        </Modal.Section>
+      )}
+
       {plan && cycleCountQuery.data && (
         <Modal.Section>
           <ResourceList
