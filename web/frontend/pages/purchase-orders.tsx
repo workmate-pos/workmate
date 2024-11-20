@@ -1,6 +1,7 @@
 import {
   Badge,
   Card,
+  ChoiceList,
   EmptyState,
   Frame,
   IndexFilters,
@@ -25,6 +26,7 @@ import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { PurchaseOrderCsvUploadDropZoneModal } from '@web/frontend/components/purchase-orders/PurchaseOrderCsvUploadDropZoneModal.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useBulkDeletePurchaseOrderMutation } from '@work-orders/common/queries/use-bulk-delete-purchase-order-mutation.js';
 
@@ -43,6 +45,10 @@ export default function () {
 function PurchaseOrders() {
   const app = useAppBridge();
 
+  const [query, setQuery, internalQuery] = useDebouncedState('');
+  const [page, setPage] = useState(0);
+  const [status, setStatus] = useState<string>();
+  const [type, setType] = useState<'NORMAL' | 'DROPSHIP'>();
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
   const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
@@ -54,6 +60,8 @@ function PurchaseOrders() {
     fetch,
     query,
     customFieldFilters: [],
+    status,
+    type,
   });
 
   const [pageIndex, setPageIndex] = useState(0);
@@ -106,8 +114,62 @@ function PurchaseOrders() {
       <IndexFilters
         mode={mode}
         setMode={setMode}
-        filters={[]}
-        appliedFilters={[]}
+        filters={[
+          {
+            key: 'status',
+            label: 'Status',
+            pinned: true,
+            shortcut: true,
+            disabled: !settingsQuery.data,
+            filter: (
+              <ChoiceList
+                title="Status"
+                choices={
+                  settingsQuery.data?.settings.purchaseOrders.statuses.map(status => ({
+                    label: status,
+                    value: status,
+                  })) ?? []
+                }
+                onChange={([status]) => setStatus(status)}
+                selected={status ? [status] : []}
+              />
+            ),
+          },
+          {
+            key: 'type',
+            label: 'Type',
+            pinned: true,
+            shortcut: true,
+            filter: (
+              <ChoiceList
+                title="Type"
+                choices={[
+                  {
+                    label: 'Normal',
+                    value: 'NORMAL',
+                  },
+                  {
+                    label: 'Dropship',
+                    value: 'DROPSHIP',
+                  },
+                ]}
+                onChange={([type]) => setType(type as 'NORMAL' | 'DROPSHIP')}
+                selected={type ? [type] : []}
+              />
+            ),
+          },
+        ]}
+        appliedFilters={[
+          ...(status
+            ? [
+                {
+                  key: 'status',
+                  label: `Status is ${status}`,
+                  onRemove: () => setStatus(undefined),
+                },
+              ]
+            : []),
+        ]}
         onQueryChange={query => setQuery(query)}
         onQueryClear={() => setQuery('', true)}
         queryValue={optimisticQuery}
@@ -125,6 +187,7 @@ function PurchaseOrders() {
         headings={[
           { title: 'Purchase order' },
           { title: 'Status' },
+          { title: 'Type' },
           { title: 'Location' },
           { title: 'Customer' },
           { title: 'SPO #' },
@@ -178,6 +241,9 @@ function PurchaseOrders() {
             </IndexTable.Cell>
             <IndexTable.Cell>
               <Badge tone={'info'}>{purchaseOrder.status}</Badge>
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              <Badge>{sentenceCase(purchaseOrder.type)}</Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>
               <Text as={'p'} variant="bodyMd">

@@ -120,6 +120,7 @@ export async function getPurchaseOrderInfoPage(
     offset: paginationOptions.offset,
     // the first filter is always skipped by the sql to ensure we can run this query without running into the empty record error
     requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
+    type: paginationOptions.type,
     shop,
     locationIds,
   });
