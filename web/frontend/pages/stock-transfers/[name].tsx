@@ -38,7 +38,7 @@ function StockTransferLoader() {
   const location = useLocation();
   const name = decodeURIComponent(location.pathname.split('/').pop() ?? '');
   const searchParams = new URLSearchParams(location.search);
-  const type = searchParams.get('type') as 'incoming' | 'outgoing' | null;
+  const type = searchParams.get('type');
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });

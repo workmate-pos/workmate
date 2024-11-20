@@ -72,14 +72,12 @@ export function StockTransferLineItemsCard({ createStockTransfer, dispatch, disa
         </BlockStack>
       </Card>
 
-      {isAddItemsModalOpen && (
-        <AddStockTransferItemsModal
-          open={isAddItemsModalOpen}
-          onClose={() => setIsAddItemsModalOpen(false)}
-          createStockTransfer={createStockTransfer}
-          dispatch={dispatch}
-        />
-      )}
+      <AddStockTransferItemsModal
+        open={isAddItemsModalOpen}
+        onClose={() => setIsAddItemsModalOpen(false)}
+        createStockTransfer={createStockTransfer}
+        dispatch={dispatch}
+      />
 
       {toast}
     </>

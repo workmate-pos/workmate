@@ -59,9 +59,5 @@ export const useStockTransferPageQuery = ({
       if (lastPage.length === 0) return undefined;
       return pages.flat(1).length;
     },
-    select: ({ pages, pageParams }) => ({
-      pages: pages.flat(1),
-      pageParams,
-    }),
   });
 };
