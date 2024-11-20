@@ -198,7 +198,7 @@ export default {
         ),
       ]).then(results => results.some(changed => changed));
 
-      if (changed) {
+      if (changed.some(changed => changed)) {
         // wait for the next webhook before syncing to save some query cost
         return;
       }

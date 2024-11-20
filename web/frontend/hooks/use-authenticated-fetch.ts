@@ -5,6 +5,7 @@ import {
 import { ReauthOptions } from '@teifi-digital/shopify-app-react/hooks/useAuthenticatedFetch.js';
 import { Fetch } from '@work-orders/common/queries/fetch.js';
 
+// TODO: When moving to trpc, use custom authenticated fetch with custom error handling
 export const useAuthenticatedFetch = ({
   setToastAction,
   reauthOptions = { redirect: false },

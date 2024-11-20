@@ -72,6 +72,5 @@ export async function syncProductServiceTypeTagWithServiceType(
     });
     return true;
   }
-
   return false;
 }

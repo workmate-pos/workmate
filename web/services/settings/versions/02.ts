@@ -81,6 +81,7 @@ export const ShopSettings02 = z.object({
 
   scanner: z
     .object({
+      // TODO: Fix this - idk why its named variants but its a bad name (it does NOT refer to product variants)
       variants: z
         .object({
           barcode: z.boolean(),
