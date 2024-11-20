@@ -65,7 +65,6 @@ export async function syncProductServiceTypeTagWithServiceType(
 
   if (removeTags.length > 0 || addTags.length > 0) {
     const graphql = new Graphql(session);
-    console.log('add remove', addTags, removeTags);
     await gql.tags.removeAndAddTags.run(graphql, {
       id: productId,
       removeTags,
