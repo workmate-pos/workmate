@@ -239,7 +239,7 @@ function CycleCounts() {
               </Badge>
             </IndexTable.Cell>
             <IndexTable.Cell>
-              {locationsQuery.data?.find(location => location.id === count.locationId)?.name ?? count.locationId}
+              {locationsQuery.data?.find(location => location.id === count.locationId)?.name}
             </IndexTable.Cell>
             <IndexTable.Cell>
               {employees
