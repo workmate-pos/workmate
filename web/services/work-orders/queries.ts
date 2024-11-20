@@ -323,18 +323,26 @@ export async function upsertWorkOrderCharges(
                     data                     = EXCLUDED.data;`;
 }
 
-export async function removeWorkOrderCustomFields(workOrderId: number) {
+export async function deleteWorkOrderCustomFields({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "WorkOrderCustomField"
-    WHERE "workOrderId" = ${workOrderId};`;
+    WHERE "workOrderId" = ANY (${workOrderIds});`;
 }
 
-export async function removeWorkOrderItemCustomFields(workOrderId: number) {
+export async function deleteWorkOrderItemCustomFields({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "WorkOrderItemCustomField"
-    WHERE "workOrderId" = ${workOrderId};`;
+    WHERE "workOrderId" = ANY (${workOrderIds});`;
 }
 
 export async function insertWorkOrderCustomFields(workOrderId: number, customFields: Record<string, string>) {
@@ -364,7 +372,7 @@ export async function insertWorkOrderItemCustomFields(
     FROM UNNEST(${uuid} :: uuid[], ${key} :: text[], ${value} :: text[]);`;
 }
 
-export async function removeWorkOrderItems(workOrderId: number, uuids: string[]) {
+export async function deleteWorkOrderItemsByUuids(workOrderId: number, uuids: string[]) {
   if (uuids.length === 0) {
     return;
   }
@@ -376,7 +384,18 @@ export async function removeWorkOrderItems(workOrderId: number, uuids: string[])
       AND uuid = ANY (${uuids} :: uuid[]);`;
 }
 
-export async function removeWorkOrderCharges(workOrderId: number, uuids: string[]) {
+export async function deleteWorkOrderItems({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
+  await sql`
+    DELETE
+    FROM "WorkOrderItem"
+    WHERE "workOrderId" = ANY (${workOrderIds});`;
+}
+
+export async function deleteWorkOrderChargesByUuids(workOrderId: number, uuids: string[]) {
   if (uuids.length === 0) {
     return;
   }
@@ -386,6 +405,17 @@ export async function removeWorkOrderCharges(workOrderId: number, uuids: string[
     FROM "WorkOrderCharge"
     WHERE "workOrderId" = ${workOrderId}
       AND uuid = ANY (${uuids} :: uuid[]);`;
+}
+
+export async function deleteWorkOrderCharges({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
+  await sql`
+    DELETE
+    FROM "WorkOrderCharge"
+    WHERE "workOrderId" = ANY (${workOrderIds});`;
 }
 
 export async function setWorkOrderItemShopifyOrderLineItemIds(
@@ -544,4 +574,16 @@ export async function getWorkOrdersForSerial({
   `;
 
   return workOrders.map(mapWorkOrder);
+}
+
+export async function deleteWorkOrders({ workOrderIds }: { workOrderIds: number[] }) {
+  if (workOrderIds.length === 0) {
+    return;
+  }
+
+  await sql`
+    DELETE
+    FROM "WorkOrder"
+    WHERE id = ANY (${workOrderIds});
+  `;
 }
