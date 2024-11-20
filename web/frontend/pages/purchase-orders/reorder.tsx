@@ -379,6 +379,7 @@ function BulkCreatePurchaseOrdersModal({
     return {
       purchaseOrders: [...vendors].map(vendorName => ({
         name: null,
+        type: 'NORMAL',
         vendorName,
         status,
         note,

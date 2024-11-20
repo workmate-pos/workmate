@@ -45,8 +45,6 @@ export default function () {
 function PurchaseOrders() {
   const app = useAppBridge();
 
-  const [query, setQuery, internalQuery] = useDebouncedState('');
-  const [page, setPage] = useState(0);
   const [status, setStatus] = useState<string>();
   const [type, setType] = useState<'NORMAL' | 'DROPSHIP'>();
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
