@@ -42,6 +42,10 @@ async function moveInventoryQuantities(session: Session, mutation: MoveInventory
   const { shop } = session;
   const graphql = new Graphql(session);
 
+  if (mutation.changes.length === 0 || mutation.changes.every(change => change.quantity === 0)) {
+    return;
+  }
+
   await escapeTransaction(() =>
     unit(async () => {
       const inventoryMutationId = await insertInventoryMutation({
@@ -52,20 +56,22 @@ async function moveInventoryQuantities(session: Session, mutation: MoveInventory
       });
 
       await insertInventoryMutationItems(
-        mutation.changes.flatMap(change => {
-          const base = {
-            inventoryMutationId,
-            inventoryItemId: change.inventoryItemId,
-            locationId: change.locationId,
-            delta: null,
-            compareQuantity: null,
-          };
+        mutation.changes
+          .flatMap(change => {
+            const base = {
+              inventoryMutationId,
+              inventoryItemId: change.inventoryItemId,
+              locationId: change.locationId,
+              delta: null,
+              compareQuantity: null,
+            };
 
-          return [
-            { ...base, quantityName: change.to, quantity: change.quantity },
-            { ...base, quantityName: change.from, quantity: -change.quantity },
-          ];
-        }),
+            return [
+              { ...base, quantityName: change.to, quantity: change.quantity },
+              { ...base, quantityName: change.from, quantity: -change.quantity },
+            ];
+          })
+          .filter(change => change.quantity !== 0),
       );
 
       const documentUri = getInitiatorDocumentUri(mutation.initiator, inventoryMutationId);
@@ -97,6 +103,10 @@ async function moveInventoryQuantities(session: Session, mutation: MoveInventory
 async function setInventoryQuantities(session: Session, mutation: SetInventoryQuantities) {
   const { shop } = session;
   const graphql = new Graphql(session);
+
+  if (mutation.changes.length === 0) {
+    return;
+  }
 
   await escapeTransaction(() =>
     unit(async () => {
@@ -143,6 +153,10 @@ async function adjustInventoryQuantities(session: Session, mutation: AdjustInven
   const { shop } = session;
   const graphql = new Graphql(session);
 
+  if (!mutation.changes.length || mutation.changes.every(change => change.delta === 0)) {
+    return;
+  }
+
   await escapeTransaction(() =>
     unit(async () => {
       const inventoryMutationId = await insertInventoryMutation({
@@ -171,12 +185,14 @@ async function adjustInventoryQuantities(session: Session, mutation: AdjustInven
           reason: mutation.reason,
           name: mutation.name,
           referenceDocumentUri: documentUri,
-          changes: mutation.changes.map(({ inventoryItemId, locationId, delta }) => ({
-            locationId,
-            inventoryItemId,
-            delta,
-            ledgerDocumentUri: mutation.name === 'available' ? undefined : documentUri,
-          })),
+          changes: mutation.changes
+            .map(({ inventoryItemId, locationId, delta }) => ({
+              locationId,
+              inventoryItemId,
+              delta,
+              ledgerDocumentUri: mutation.name === 'available' ? undefined : documentUri,
+            }))
+            .filter(change => change.delta !== 0),
         },
       });
     }),
