@@ -33,7 +33,7 @@ import * as Sentry from '@sentry/node';
 import { z } from 'zod';
 import { UpsertPurchaseOrderReceipt } from '../../schemas/generated/upsert-purchase-order-receipt.js';
 import { upsertReceipt } from '../../services/purchase-orders/receipt.js';
-import { deletePurchaseOrderReceipt } from '../../services/purchase-orders/delete.js';
+import { deletePurchaseOrderReceipt, deletePurchaseOrders } from '../../services/purchase-orders/delete.js';
 import { PlanReorder } from '../../schemas/generated/plan-reorder.js';
 import { getReorderQuantities } from '../../services/reorder/plan.js';
 import { BulkCreatePurchaseOrders } from '../../schemas/generated/bulk-create-purchase-orders.js';
@@ -47,6 +47,7 @@ import { getReorderPoints, ReorderPoint, upsertReorderPoints } from '../../servi
 import { ReorderPoints } from '../../schemas/generated/reorder-points.js';
 import { CreateReorderPoint } from '../../schemas/generated/create-reorder-point.js';
 import { syncInventoryQuantities } from '../../services/inventory/sync.js';
+import { BulkDeletePurchaseOrders } from '../../schemas/generated/bulk-delete-purchase-orders.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -67,6 +68,62 @@ export default class PurchaseOrdersController {
     );
 
     return res.json({ purchaseOrder });
+  }
+
+  @Delete('/bulk')
+  @Permission('write_purchase_orders')
+  @Authenticated()
+  @BodySchema('bulk-delete-purchase-orders')
+  async bulkDeletePurchaseOrders(
+    req: Request<unknown, unknown, BulkDeletePurchaseOrders>,
+    res: Response<BulkDeletePurchaseOrdersResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const bulkDeletePurchaseOrders = req.body;
+
+    const result = await deletePurchaseOrders(
+      session,
+      user,
+      bulkDeletePurchaseOrders.purchaseOrders.map(po => po.name),
+    );
+
+    return res.status(200).json({
+      purchaseOrders: bulkDeletePurchaseOrders.purchaseOrders.map(({ name }) => {
+        const errors = result.filter(([_name]) => _name === name).map(([, error]) => error);
+
+        if (!errors.length) {
+          return {
+            type: 'success',
+            purchaseOrder: { name },
+          };
+        }
+
+        const [error = never()] = errors;
+
+        return {
+          type: 'error',
+          error: error.message,
+        };
+      }),
+    });
+  }
+
+  @Delete('/:name')
+  @Permission('write_purchase_orders')
+  @Authenticated()
+  async deletePurchaseOrder(req: Request<{ name: string }, unknown, unknown>, res: Response) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { name } = req.params;
+
+    const [[, error] = []] = await deletePurchaseOrders(session, user, [name]);
+
+    if (error) {
+      throw error;
+    }
+
+    return res.json({ success: true });
   }
 
   @Post('/:name/receipts')
@@ -334,10 +391,7 @@ export default class PurchaseOrdersController {
       ),
     );
 
-    const errorCount = purchaseOrders.filter(purchaseOrder => purchaseOrder.type === 'error').length;
-    const status = errorCount === purchaseOrders.length ? 500 : errorCount > 0 ? 207 : 200;
-
-    return res.status(status).json({
+    return res.status(200).json({
       purchaseOrders: purchaseOrders.map((result, i) => {
         if (result.type === 'success') {
           return result;
@@ -482,6 +536,21 @@ export type PlanReorderResponse = {
 }[];
 
 export type BulkCreatePurchaseOrdersResponse = {
+  purchaseOrders: (
+    | {
+        type: 'success';
+        purchaseOrder: {
+          name: string;
+        };
+      }
+    | {
+        type: 'error';
+        error: string;
+      }
+  )[];
+};
+
+export type BulkDeletePurchaseOrdersResponse = {
   purchaseOrders: (
     | {
         type: 'success';

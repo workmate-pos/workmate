@@ -108,9 +108,7 @@ function SpecialOrders() {
   const settingsQuery = useSettingsQuery({ fetch });
 
   const { allResourcesSelected, clearSelection, selectedResources, removeSelectedResources, handleSelectionChange } =
-    useIndexResourceState(specialOrders, {
-      resourceIDResolver: specialOrder => specialOrder.name,
-    });
+    useIndexResourceState(specialOrders, { resourceIDResolver: specialOrder => specialOrder.name });
 
   const mergeBulkAction = useMergeSpecialOrdersBulkAction(specialOrders, setToastAction, vendorName, locationId);
 
@@ -280,7 +278,7 @@ function SpecialOrders() {
             setPage(page => page + 1);
           },
         }}
-        selectable={true}
+        selectable
         selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
         onSelectionChange={handleSelectionChange}
         promotedBulkActions={[mergeBulkAction]}
