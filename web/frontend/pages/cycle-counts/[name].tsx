@@ -141,7 +141,7 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
 
   const handleProductSelection = useCallback(
     (productVariant: ProductVariant) => {
-      dispatch.addProductVariants({ productVariants: [productVariant] });
+      dispatch.addProductVariant({ productVariant });
     },
     [dispatch],
   );
@@ -247,19 +247,17 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
           open={isScanModalOpen}
           onClose={() => setIsScanModalOpen(false)}
           onProductScanned={item => {
-            dispatch.addProductVariants({
-              productVariants: [
-                {
-                  id: item.productVariantId,
-                  title: item.productVariantTitle,
-                  product: {
-                    title: item.productTitle,
-                  },
-                  inventoryItem: {
-                    id: item.inventoryItemId,
-                  },
+            dispatch.addProductVariant({
+              productVariant: {
+                id: item.productVariantId,
+                title: item.productVariantTitle,
+                product: {
+                  title: item.productTitle,
                 },
-              ],
+                inventoryItem: {
+                  id: item.inventoryItemId,
+                },
+              },
             });
           }}
           disabled={cycleCountMutation.isPending}

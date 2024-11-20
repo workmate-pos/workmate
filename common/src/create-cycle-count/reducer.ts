@@ -1,5 +1,5 @@
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { CreateCycleCount, DateTime } from '@web/schemas/generated/create-cycle-count.js';
+import { CreateCycleCount, CreateCycleCountItem, DateTime } from '@web/schemas/generated/create-cycle-count.js';
 import { useReducer, useRef, useState } from 'react';
 import { uuid } from '../util/uuid.js';
 import { DiscriminatedUnionOmit } from '../types/DiscriminatedUnionOmit.js';
@@ -14,7 +14,7 @@ type CreateCycleCountAction =
   | { type: 'setEmployeeAssignments'; employeeAssignments: CreateCycleCount['employeeAssignments'] }
   | { type: 'setLocked'; locked: boolean }
   | {
-      type: 'addProductVariants';
+      type: 'importProductVariants';
       productVariants: {
         id: ID;
         title: string;
@@ -25,6 +25,19 @@ type CreateCycleCountAction =
           id: ID;
         };
       }[];
+    }
+  | {
+      type: 'addProductVariant';
+      productVariant: {
+        id: ID;
+        title: string;
+        product: {
+          title: string;
+        };
+        inventoryItem: {
+          id: ID;
+        };
+      };
     };
 
 export type CreateCycleCountDispatchProxy = {
@@ -57,22 +70,14 @@ function reducer(state: CreateCycleCount, action: CreateCycleCountAction): Creat
       return { ...state, employeeAssignments: action.employeeAssignments };
     case 'setLocked':
       return { ...state, locked: action.locked };
-    case 'addProductVariants': {
+    case 'importProductVariants': {
       const existingItemsMap = new Map(state.items.map(item => [item.productVariantId, item]));
 
-      const updatedItems = [...state.items];
+      const newItems = [...state.items];
 
       action.productVariants.forEach(variant => {
-        const existingItem = existingItemsMap.get(variant.id);
-
-        if (existingItem) {
-          const itemIndex = updatedItems.findIndex(item => item.productVariantId === variant.id);
-          updatedItems[itemIndex] = {
-            ...existingItem,
-            countQuantity: existingItem.countQuantity + 1,
-          };
-        } else {
-          updatedItems.push({
+        if (!existingItemsMap.has(variant.id)) {
+          newItems.push({
             uuid: uuid(),
             productVariantId: variant.id,
             inventoryItemId: variant.inventoryItem.id,
@@ -82,6 +87,42 @@ function reducer(state: CreateCycleCount, action: CreateCycleCountAction): Creat
           });
         }
       });
+
+      return {
+        ...state,
+        items: newItems,
+      };
+    }
+    case 'addProductVariant': {
+      const existingItemIndex = state.items.findIndex(item => item.productVariantId === action.productVariant.id);
+
+      let updatedItems: CreateCycleCountItem[];
+
+      if (existingItemIndex >= 0) {
+        // Variant exists, increase countQuantity by 1
+        updatedItems = [...state.items];
+        const existingItem = updatedItems[existingItemIndex];
+
+        if (existingItem) {
+          updatedItems[existingItemIndex] = {
+            ...existingItem,
+            countQuantity: existingItem.countQuantity + 1,
+          };
+        }
+      } else {
+        // Variant does not exist, add it with countQuantity: 1
+        updatedItems = [
+          ...state.items,
+          {
+            uuid: uuid(),
+            productVariantId: action.productVariant.id,
+            inventoryItemId: action.productVariant.inventoryItem.id,
+            countQuantity: 1,
+            productTitle: action.productVariant.product.title,
+            productVariantTitle: action.productVariant.title,
+          },
+        ];
+      }
 
       return {
         ...state,
