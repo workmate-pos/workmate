@@ -48,7 +48,7 @@ function StockTransfers() {
   const stockTransferQuery = useStockTransferPageQuery({
     fetch,
     query,
-    limit: 1,
+    limit: 50,
   });
 
   const redirectToStockTransfer = (type: 'incoming' | 'outgoing' | string) => {
