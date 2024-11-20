@@ -1,16 +1,19 @@
-import { Banner, BlockStack, Button, ButtonGroup, InlineGrid, Tooltip } from '@shopify/polaris';
+import { Banner, BlockStack, Button, ButtonGroup, InlineGrid, List, Tooltip } from '@shopify/polaris';
 import { MoneyField } from '@web/frontend/components/MoneyField.js';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useCurrencyFormatter } from '@work-orders/common/hooks/use-currency-formatter.js';
-import { pick } from '@teifi-digital/shopify-app-toolbox/object';
-import { useCalculatedDraftOrderQuery } from '@work-orders/common/queries/use-calculated-draft-order-query.js';
+import {
+  CalculateWorkOrderError,
+  useCalculatedDraftOrderQuery,
+} from '@work-orders/common/queries/use-calculated-draft-order-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useState } from 'react';
 import { WorkOrderSourcingModal } from '@web/frontend/components/work-orders/modals/WorkOrderSourcingModal.js';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export function WorkOrderSummary({
   createWorkOrder,
@@ -50,7 +53,7 @@ export function WorkOrderSummary({
   return (
     <>
       <BlockStack gap={'400'}>
-        {calculatedDraftOrderQuery.isError && (
+        {calculatedDraftOrderQuery.isError && !(calculatedDraftOrderQuery.error instanceof CalculateWorkOrderError) && (
           <Banner
             title="Error calculating work order"
             tone="warning"
@@ -62,6 +65,18 @@ export function WorkOrderSummary({
             }}
           >
             {extractErrorMessage(calculatedDraftOrderQuery.error, 'Unknown error')}
+          </Banner>
+        )}
+
+        {calculatedDraftOrderQuery.isError && calculatedDraftOrderQuery.error instanceof CalculateWorkOrderError && (
+          <Banner title="Errors calculating work order price" tone="critical">
+            <List type="bullet">
+              {calculatedDraftOrderQuery.error.errors.map(error => (
+                <List.Item key={error.field.join(', ')}>
+                  {sentenceCase(error.field.join(' '))}: {error.message}
+                </List.Item>
+              ))}
+            </List>
           </Banner>
         )}
 

@@ -2,7 +2,7 @@ import { Session } from '@shopify/shopify-api';
 import { CalculateWorkOrder } from '../../schemas/generated/calculate-work-order.js';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { fetchAllPages, gql } from '../gql/gql.js';
-import { HttpError } from '@teifi-digital/shopify-app-express/errors';
+import { GraphqlUserErrors, HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { getChargeUnitPrice, getUuidsFromCustomAttributes } from '@work-orders/work-order-shopify-order';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { db } from '../db/db.js';
@@ -375,7 +375,13 @@ async function getCalculatedDraftOrderInfo(session: Session, calculateWorkOrder:
 
   const graphql = new Graphql(session);
 
-  const result = await gql.calculate.draftOrderCalculate.run(graphql, { input: draftOrderInput });
+  const result = await gql.calculate.draftOrderCalculate.run(graphql, { input: draftOrderInput }).catch(error => {
+    if (error instanceof GraphqlUserErrors) {
+      throw new HttpError('Error calculating prices', 400, { errors: error.userErrors });
+    }
+
+    throw error;
+  });
   if (!result.draftOrderCalculate?.calculatedDraftOrder) {
     throw new HttpError('Calculation failed', 400);
   }

@@ -268,7 +268,7 @@ function assertNoIllegalLineItemChanges(
       }
 
       if (
-        newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.name ||
+        newLineItem.specialOrderLineItem?.name !== oldLineItem.specialOrderLineItem?.name ||
         newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.uuid
       ) {
         throw new HttpError('Cannot change linked special order line item for (partially) received line items', 400);
