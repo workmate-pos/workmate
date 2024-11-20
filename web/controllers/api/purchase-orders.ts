@@ -48,6 +48,7 @@ import { ReorderPoints } from '../../schemas/generated/reorder-points.js';
 import { CreateReorderPoint } from '../../schemas/generated/create-reorder-point.js';
 import { syncInventoryQuantities } from '../../services/inventory/sync.js';
 import { BulkDeletePurchaseOrders } from '../../schemas/generated/bulk-delete-purchase-orders.js';
+import { unit } from '../../services/db/unit-of-work.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -62,12 +63,14 @@ export default class PurchaseOrdersController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const createPurchaseOrder = req.body;
 
-    const { name } = await upsertCreatePurchaseOrder(session, user, createPurchaseOrder);
-    const purchaseOrder = await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds).then(
-      po => po ?? never('We just made it XD'),
-    );
+    return await unit(async () => {
+      const { name } = await upsertCreatePurchaseOrder(session, user, createPurchaseOrder);
+      const purchaseOrder = await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds).then(
+        po => po ?? never('We just made it XD'),
+      );
 
-    return res.json({ purchaseOrder });
+      return res.json({ purchaseOrder });
+    });
   }
 
   @Delete('/bulk')
