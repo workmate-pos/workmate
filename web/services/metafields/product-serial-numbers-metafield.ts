@@ -33,12 +33,24 @@ export async function syncProductUsesSerialNumbersTag(session: Session, productI
   }
 
   const hasSerialNumbers = product.hasSerialNumbers?.jsonValue === true;
-  const hasSerialNumbersTag = product.tags.some(tag => tag === USES_SERIAL_NUMBERS_TAG);
 
-  const removeTags = !hasSerialNumbers && hasSerialNumbersTag ? [USES_SERIAL_NUMBERS_TAG] : [];
-  const addTags = hasSerialNumbers && !hasSerialNumbersTag ? [USES_SERIAL_NUMBERS_TAG] : [];
+  return await setProductUsesSerialNumbersTag(session, productId, product.tags, hasSerialNumbers);
+}
+
+export async function setProductUsesSerialNumbersTag(
+  session: Session,
+  productId: ID,
+  tags: string[],
+  usesSerialNumbers: boolean,
+) {
+  const hasSerialNumbersTag = tags.includes(USES_SERIAL_NUMBERS_TAG);
+
+  const removeTags = !usesSerialNumbers && hasSerialNumbersTag ? [USES_SERIAL_NUMBERS_TAG] : [];
+  const addTags = usesSerialNumbers && !hasSerialNumbersTag ? [USES_SERIAL_NUMBERS_TAG] : [];
 
   if (removeTags.length > 0 || addTags.length > 0) {
+    const graphql = new Graphql(session);
+    console.log('add remove', addTags, removeTags);
     await gql.tags.removeAndAddTags.run(graphql, {
       id: productId,
       removeTags,
