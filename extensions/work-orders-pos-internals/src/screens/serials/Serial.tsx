@@ -30,6 +30,7 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
   const setSerialNumber = getCreateSerialSetter(setCreateSerial, 'serial');
   const setLocationId = getCreateSerialSetter(setCreateSerial, 'locationId');
   const setNote = getCreateSerialSetter(setCreateSerial, 'note');
+  const setSold = getCreateSerialSetter(setCreateSerial, 'sold');
 
   const fetch = useAuthenticatedFetch();
   const productVariantQuery = useProductVariantQuery({ fetch, id: createSerial.productVariantId });
@@ -120,6 +121,17 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
           />
 
           <FormStringField type={'area'} label={'Note'} value={createSerial.note} onChange={setNote} />
+
+          <ResponsiveStack direction={'vertical'} spacing={0.5}>
+            <FormButton
+              type="plain"
+              title={createSerial.sold ? 'Serial is sold' : 'Serial is not sold'}
+              onPress={() => setSold(sold => !sold)}
+            />
+            <Text color={'TextSubdued'} variant={'body'}>
+              Sold serial will not be accounted for in available inventory quantity
+            </Text>
+          </ResponsiveStack>
         </ResponsiveGrid>
 
         <List
@@ -139,22 +151,29 @@ export function Serial({ initial }: { initial: WIPCreateSerial }) {
                       return;
                     }
 
+                    if (history.type === 'shopify-order') {
+                      toast.show(`You can view ${history.name} through the POS Orders page`);
+                      return;
+                    }
+
                     return history satisfies never;
                   },
                   leftSide: {
                     label: history.name,
                     subtitle: getSubtitle([new Date(history.date).toLocaleDateString()]),
                     badges: [
-                      { variant: 'highlight', text: history.status } as const,
+                      ...(history.type !== 'shopify-order'
+                        ? [{ variant: 'highlight', text: history.status } as const]
+                        : []),
 
-                      history.type === 'purchase-order' && history.location
+                      history.type !== 'shopify-order' && history.location
                         ? ({
                             variant: 'neutral',
                             text: history.location.name,
                           } as const)
                         : null,
 
-                      history.type === 'work-order'
+                      history.type !== 'purchase-order' && history.customer
                         ? ({
                             variant: 'neutral',
                             text: history.customer.displayName,

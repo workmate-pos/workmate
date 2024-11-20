@@ -19,12 +19,6 @@ export function workOrderToCreateWorkOrder(workOrder: DetailedWorkOrder): Create
     companyContactId: workOrder.companyContactId,
     paymentTerms: workOrder.paymentTerms,
     locationId: workOrder.locationId,
-    serial: workOrder.serial
-      ? {
-          productVariantId: workOrder.serial.productVariantId,
-          serial: workOrder.serial.serial,
-        }
-      : null,
   };
 }
 
@@ -37,6 +31,7 @@ function mapItem(item: DetailedWorkOrder['items'][number]): CreateWorkOrder['ite
       uuid: item.uuid,
       absorbCharges: item.absorbCharges,
       customFields: item.customFields,
+      serial: item.serial ? { productVariantId: item.serial.productVariantId, serial: item.serial.serial } : null,
     };
   }
 
@@ -49,6 +44,7 @@ function mapItem(item: DetailedWorkOrder['items'][number]): CreateWorkOrder['ite
       customFields: item.customFields,
       name: item.name,
       unitPrice: item.unitPrice,
+      serial: item.serial ? { productVariantId: item.serial.productVariantId, serial: item.serial.serial } : null,
     };
   }
 

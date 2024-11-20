@@ -12,6 +12,7 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import archiver from 'archiver';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { getSchemaCsvTemplate } from '../csv/csv-template.js';
 
 const CsvPurchaseOrderId = z
   .string()
@@ -20,6 +21,7 @@ const CsvPurchaseOrderId = z
 
 const CsvPurchaseOrderInfo = z.object({
   ID: CsvPurchaseOrderId,
+  Type: z.enum(['NORMAL', 'DROPSHIP']),
   Status: z.string(),
   PlacedDate: zCsvNullable(zDateTime),
   LocationID: zNamespacedID('Location'),
@@ -45,7 +47,8 @@ const CsvPurchaseOrderLineItem = z.object({
   ProductVariantID: zNamespacedID('ProductVariant'),
   Quantity: z.coerce.number().int(),
   UnitCost: zMoney,
-  AvailableQuantity: z.coerce.number().int(),
+  // TODO: Add Receipt.csv
+  // AvailableQuantity: z.coerce.number().int(),
   SerialNumber: zCsvNullable(z.string()),
 });
 
@@ -78,7 +81,7 @@ const FILE_SCHEMA = {
 export type PurchaseOrderImportFileName = keyof typeof FILE_SCHEMA;
 
 function isPurchaseOrderImportFileName(value: unknown): value is PurchaseOrderImportFileName {
-  return Object.keys(FILE_SCHEMA).includes(value as PurchaseOrderImportFileName);
+  return Object.keys(FILE_SCHEMA).includes(value as string);
 }
 
 export async function readPurchaseOrderCsvImport({
@@ -110,6 +113,7 @@ export async function readPurchaseOrderCsvImport({
 
       createPurchaseOrders[data.ID] = {
         name: null,
+        type: data.Type,
         status: data.Status,
         placedDate: data.PlacedDate,
         locationId: data.LocationID,
@@ -151,7 +155,7 @@ export async function readPurchaseOrderCsvImport({
         specialOrderLineItem: null,
         productVariantId: data.ProductVariantID,
         unitCost: data.UnitCost,
-        availableQuantity: data.AvailableQuantity,
+        // availableQuantity: data.AvailableQuantity,
         customFields: Object.create(null),
         serialNumber: data.SerialNumber,
       });
@@ -317,12 +321,4 @@ export async function getPurchaseOrderCsvTemplatesZip() {
 
   purchaseOrderCsvTemplatesArchive = await archiveOutput;
   return purchaseOrderCsvTemplatesArchive;
-}
-
-type FileSchema = (typeof FILE_SCHEMA)[PurchaseOrderImportFileName];
-
-function getSchemaCsvTemplate(schema: FileSchema) {
-  const headers = Object.keys(schema.shape);
-  const emptyLine = Array.from({ length: headers.length }, () => '');
-  return [headers, emptyLine].map(cells => cells.join(',')).join('\n');
 }

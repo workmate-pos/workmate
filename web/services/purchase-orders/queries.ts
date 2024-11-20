@@ -11,8 +11,8 @@ import { DateTime } from '../gql/queries/generated/schema.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
 
 export type PurchaseOrder = NonNullable<Awaited<ReturnType<typeof getPurchaseOrder>>>;
+export type PurchaseOrderType = 'NORMAL' | 'DROPSHIP';
 
-// TODO: Require location id from now on
 export async function getPurchaseOrder(
   filters: MergeUnion<{ id: number } | { shop: string; name: string; locationIds: ID[] | null }>,
 ) {
@@ -36,6 +36,7 @@ export async function getPurchaseOrder(
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
+    type: 'NORMAL' | 'DROPSHIP';
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -74,6 +75,7 @@ export async function getPurchaseOrdersByIds(purchaseOrderIds: number[]) {
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
+    type: 'NORMAL' | 'DROPSHIP';
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -100,6 +102,7 @@ function mapPurchaseOrder(purchaseOrder: {
   createdAt: Date;
   updatedAt: Date;
   placedDate: Date | null;
+  type: PurchaseOrderType;
 }) {
   try {
     const { locationId, discount, tax, shipping, deposited, paid } = purchaseOrder;
@@ -140,6 +143,7 @@ export async function upsertPurchaseOrder({
   placedDate,
   paid,
   locationId,
+  type,
 }: {
   shop: string;
   locationId: ID | null;
@@ -155,6 +159,7 @@ export async function upsertPurchaseOrder({
   note: string;
   vendorName: string | null;
   placedDate: DateTime | null;
+  type: PurchaseOrderType;
 }) {
   const _locationId: string | null = locationId;
   const _discount: string | null = discount;
@@ -166,7 +171,7 @@ export async function upsertPurchaseOrder({
 
   return await sqlOne<{ id: number }>`
     INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
-                                 "shipTo", note, "vendorName", "placedDate")
+                                 "shipTo", note, "vendorName", "placedDate", type)
     VALUES (${shop},
             ${_locationId},
             ${_discount},
@@ -180,7 +185,9 @@ export async function upsertPurchaseOrder({
             ${shipTo},
             ${note},
             ${vendorName},
-            ${_placedDate} :: timestamptz)
+            ${_placedDate} :: timestamptz,
+            ${type} :: "PurchaseOrderType"
+           )
     ON CONFLICT (shop, name) DO UPDATE
       SET "locationId" = EXCLUDED."locationId",
           "discount"   = EXCLUDED."discount",
@@ -202,7 +209,6 @@ export async function getPurchaseOrderLineItems(purchaseOrderId: number) {
     purchaseOrderId: number;
     productVariantId: string;
     quantity: number;
-    availableQuantity: number;
     unitCost: string;
     createdAt: Date;
     updatedAt: Date;
@@ -222,7 +228,6 @@ function mapPurchaseOrderLineItem<
     purchaseOrderId: number;
     productVariantId: string;
     quantity: number;
-    availableQuantity: number;
     unitCost: string;
     createdAt: Date;
     updatedAt: Date;
@@ -289,11 +294,15 @@ export async function insertPurchaseOrderLineItemCustomFields(
     FROM UNNEST(${uuid} :: uuid[], ${key} :: text[], ${value} :: text[]);`;
 }
 
-export async function removePurchaseOrderLineItemCustomFields(purchaseOrderId: number) {
+export async function deletePurchaseOrderLineItemCustomFields({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItemCustomField"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
 export async function getPurchaseOrderLineItemCustomFields(purchaseOrderId: number) {
@@ -348,14 +357,22 @@ function mapPurchaseOrderAssignedEmployee(assignment: {
   }
 }
 
-export async function removePurchaseOrderLineItems(purchaseOrderId: number) {
+export async function deletePurchaseOrderLineItems({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItem"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
-export async function removePurchaseOrderLineItemsByUuids(purchaseOrderId: number, uuids: string[]) {
+export async function deletePurchaseOrderLineItemsByUuids(purchaseOrderId: number, uuids: string[]) {
+  if (uuids.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItem"
@@ -363,18 +380,26 @@ export async function removePurchaseOrderLineItemsByUuids(purchaseOrderId: numbe
       AND uuid = ANY (${uuids} :: uuid[]);`;
 }
 
-export async function removePurchaseOrderCustomFields(purchaseOrderId: number) {
+export async function deletePurchaseOrderCustomFields({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderCustomField"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
-export async function removePurchaseOrderAssignedEmployees(purchaseOrderId: number) {
+export async function deletePurchaseOrderAssignedEmployees({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderEmployeeAssignment"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
 export async function upsertPurchaseOrderLineItems(
@@ -382,7 +407,6 @@ export async function upsertPurchaseOrderLineItems(
   lineItems: {
     productVariantId: ID;
     quantity: number;
-    availableQuantity: number;
     unitCost: Money;
     uuid: UUID;
     specialOrderLineItemId: number | null;
@@ -393,26 +417,18 @@ export async function upsertPurchaseOrderLineItems(
     return;
   }
 
-  const {
-    unitCost,
-    quantity,
-    availableQuantity,
-    productVariantId,
-    uuid,
-    specialOrderLineItemId,
-    productVariantSerialId,
-  } = nest(lineItems);
+  const { unitCost, quantity, productVariantId, uuid, specialOrderLineItemId, productVariantSerialId } =
+    nest(lineItems);
   const _productVariantId: string[] = productVariantId;
   const _unitCost: string[] = unitCost;
 
   await sql`
-    INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", quantity, "availableQuantity",
+    INSERT INTO "PurchaseOrderLineItem" ("purchaseOrderId", "productVariantId", quantity,
                                          "unitCost", uuid, "specialOrderLineItemId", "productVariantSerialId")
     SELECT ${purchaseOrderId}, *
     FROM UNNEST(
       ${_productVariantId} :: text[],
       ${quantity} :: int[],
-      ${availableQuantity} :: int[],
       ${_unitCost} :: text[],
       ${uuid} :: uuid[],
       ${specialOrderLineItemId} :: int[],
@@ -421,7 +437,6 @@ export async function upsertPurchaseOrderLineItems(
     ON CONFLICT ("purchaseOrderId", uuid)
       DO UPDATE SET "productVariantId"       = EXCLUDED."productVariantId",
                     quantity                 = EXCLUDED.quantity,
-                    "availableQuantity"      = EXCLUDED."availableQuantity",
                     "unitCost"               = EXCLUDED."unitCost",
                     "specialOrderLineItemId" = EXCLUDED."specialOrderLineItemId",
                     "productVariantSerialId" = EXCLUDED."productVariantSerialId";
@@ -458,7 +473,6 @@ export async function getPurchaseOrderLineItemsByNameAndUuid(
     purchaseOrderId: number;
     productVariantId: string;
     quantity: number;
-    availableQuantity: number;
     unitCost: string;
     createdAt: Date;
     updatedAt: Date;
@@ -499,7 +513,6 @@ export async function getPurchaseOrderLineItemsByIdAndUuid(
     purchaseOrderId: number;
     productVariantId: string;
     quantity: number;
-    availableQuantity: number;
     unitCost: string;
     createdAt: Date;
     updatedAt: Date;
@@ -540,6 +553,7 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
+    type: 'NORMAL' | 'DROPSHIP';
   }>`
     SELECT DISTINCT po.*
     FROM "PurchaseOrder" po
@@ -549,6 +563,106 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
   `;
 
   return purchaseOrders.map(mapPurchaseOrder);
+}
+
+export async function getPurchaseOrderLineItemsForSpecialOrders(specialOrderIds: number[]) {
+  if (specialOrderIds.length === 0) {
+    return [];
+  }
+
+  const lineItems = await sql<{
+    purchaseOrderId: number;
+    productVariantId: string;
+    quantity: number;
+    unitCost: string;
+    createdAt: Date;
+    updatedAt: Date;
+    uuid: UUID;
+    specialOrderLineItemId: number | null;
+    productVariantSerialId: number | null;
+  }>`
+    SELECT poli.*
+    FROM "PurchaseOrderLineItem" poli
+           INNER JOIN "SpecialOrderLineItem" soli ON poli."specialOrderLineItemId" = soli.id
+    WHERE soli."specialOrderId" = ANY (${specialOrderIds} :: int[]);
+  `;
+
+  return lineItems.map(mapPurchaseOrderLineItem);
+}
+
+export async function getPurchaseOrderReceiptLineItemsForSpecialOrder(specialOrderId: number) {
+  const lineItems = await sql<{
+    id: number;
+    quantity: number;
+    purchaseOrderReceiptId: number;
+    purchaseOrderId: number;
+    lineItemUuid: UUID;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+    SELECT porli.*
+    FROM "PurchaseOrderReceiptLineItem" porli
+           INNER JOIN "PurchaseOrderLineItem" poli
+                      ON poli."purchaseOrderId" = porli."purchaseOrderId" AND poli.uuid = porli."lineItemUuid"
+           INNER JOIN "SpecialOrderLineItem" soli ON poli."specialOrderLineItemId" = soli.id
+    WHERE soli."specialOrderId" = ${specialOrderId};
+  `;
+
+  return lineItems;
+}
+
+export async function getPurchaseOrderLineItemsByShopifyOrderLineItemIds(shopifyOrderLineItemIds: ID[]) {
+  if (!isNonEmptyArray(shopifyOrderLineItemIds)) {
+    return [];
+  }
+
+  const _shopifyOrderLineItemIds: string[] = shopifyOrderLineItemIds;
+
+  const lineItems = await sql<{
+    purchaseOrderId: number;
+    productVariantId: string;
+    quantity: number;
+    unitCost: string;
+    createdAt: Date;
+    updatedAt: Date;
+    uuid: UUID;
+    specialOrderLineItemId: number | null;
+    productVariantSerialId: number | null;
+  }>`
+    SELECT poli.*
+    FROM "PurchaseOrderLineItem" poli
+           INNER JOIN "SpecialOrderLineItem" spoli ON poli."specialOrderLineItemId" = spoli.id
+           LEFT JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = spoli."shopifyOrderLineItemId"
+    WHERE "shopifyOrderLineItemId" = ANY (${_shopifyOrderLineItemIds});
+  `;
+
+  return lineItems.map(mapPurchaseOrderLineItem);
+}
+
+export async function getPurchaseOrderReceiptLineItemsByShopifyOrderLineItemIds(shopifyOrderLineItemIds: ID[]) {
+  if (!isNonEmptyArray(shopifyOrderLineItemIds)) {
+    return [];
+  }
+
+  const _shopifyOrderLineItemIds: string[] = shopifyOrderLineItemIds;
+
+  return await sql<{
+    id: number;
+    quantity: number;
+    purchaseOrderReceiptId: number;
+    purchaseOrderId: number;
+    lineItemUuid: UUID;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+    SELECT porli.*
+    FROM "PurchaseOrderReceiptLineItem" porli
+           INNER JOIN "PurchaseOrderLineItem" poli
+                      ON poli."purchaseOrderId" = porli."purchaseOrderId" AND poli.uuid = porli."lineItemUuid"
+           INNER JOIN "SpecialOrderLineItem" spoli ON poli."specialOrderLineItemId" = spoli.id
+           LEFT JOIN "ShopifyOrderLineItem" soli ON soli."lineItemId" = spoli."shopifyOrderLineItemId"
+    WHERE "shopifyOrderLineItemId" = ANY (${_shopifyOrderLineItemIds});
+  `;
 }
 
 export async function getPurchaseOrderCount(shop: string, filters: MergeUnion<{ vendor: string }>) {
@@ -610,6 +724,7 @@ export async function getPurchaseOrdersForSerial({
     createdAt: Date;
     updatedAt: Date;
     placedDate: Date | null;
+    type: 'NORMAL' | 'DROPSHIP';
   }>`
     SELECT DISTINCT po.*
     FROM "ProductVariantSerial" pvs
@@ -647,7 +762,6 @@ export async function getPurchaseOrderLineItemsForSerial({
     purchaseOrderId: number;
     productVariantId: string;
     quantity: number;
-    availableQuantity: number;
     unitCost: string;
     createdAt: Date;
     updatedAt: Date;
@@ -666,4 +780,183 @@ export async function getPurchaseOrderLineItemsForSerial({
   `;
 
   return lineItems.map(mapPurchaseOrderLineItem);
+}
+
+export async function getPurchaseOrderReceipt({ shop, name }: { shop: string; name: string }) {
+  const [receipt] = await sql<{
+    id: number;
+    name: string;
+    description: string;
+    purchaseOrderId: number;
+    createdAt: Date;
+    updatedAt: Date;
+    receivedAt: Date;
+    status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
+    shop: string;
+  }>`
+    SELECT *
+    FROM "PurchaseOrderReceipt"
+    WHERE shop = ${shop}
+      AND name = ${name};
+  `;
+
+  return receipt;
+}
+
+export async function getPurchaseOrderReceipts(purchaseOrderId: number) {
+  const receipts = await sql<{
+    id: number;
+    name: string;
+    description: string;
+    purchaseOrderId: number;
+    createdAt: Date;
+    updatedAt: Date;
+    receivedAt: Date;
+    status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
+    shop: string;
+  }>`
+    SELECT *
+    FROM "PurchaseOrderReceipt"
+    WHERE "purchaseOrderId" = ${purchaseOrderId}
+    ORDER BY "createdAt";
+  `;
+
+  return receipts;
+}
+
+export async function getPurchaseOrderReceiptLineItems({
+  purchaseOrderId,
+  purchaseOrderReceiptId,
+}: MergeUnion<
+  | { purchaseOrderId: number }
+  | {
+      purchaseOrderReceiptId: number;
+    }
+>) {
+  const receiptLineItems = await sql<{
+    id: number;
+    quantity: number;
+    purchaseOrderReceiptId: number;
+    purchaseOrderId: number;
+    lineItemUuid: UUID;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+    SELECT *
+    FROM "PurchaseOrderReceiptLineItem"
+    WHERE "purchaseOrderId" = COALESCE(${purchaseOrderId ?? null}, "purchaseOrderId")
+      AND "purchaseOrderReceiptId" = COALESCE(${purchaseOrderReceiptId ?? null}, "purchaseOrderReceiptId");
+  `;
+
+  return receiptLineItems;
+}
+
+export async function insertPurchaseOrderReceipt({
+  shop,
+  name,
+  description,
+  purchaseOrderId,
+  receivedAt,
+  status,
+}: {
+  shop: string;
+  name: string;
+  description: string;
+  purchaseOrderId: number;
+  receivedAt: Date;
+  status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
+}) {
+  return await sqlOne<{ id: number; name: string }>`
+    INSERT INTO "PurchaseOrderReceipt" (shop, name, description, "purchaseOrderId", "receivedAt", status)
+    VALUES (${shop}, ${name}, ${description}, ${purchaseOrderId}, ${receivedAt},
+            ${status} :: "PurchaseOrderReceiptStatus")
+    RETURNING id, name;
+  `.then(row => ({ id: row.id, name: row.name }));
+}
+
+export async function updatePurchaseOrderReceipt({
+  description,
+  purchaseOrderId,
+  purchaseOrderReceiptId,
+  receivedAt,
+  status,
+}: {
+  description: string;
+  purchaseOrderId: number;
+  purchaseOrderReceiptId: number;
+  receivedAt: Date;
+  status: 'DRAFT' | 'ARCHIVED' | 'COMPLETED';
+}) {
+  return await sqlOne<{ id: number; name: string }>`
+    UPDATE "PurchaseOrderReceipt"
+    SET description       = ${description},
+        "purchaseOrderId" = ${purchaseOrderId},
+        "receivedAt"      = ${receivedAt},
+        status            = ${status} :: "PurchaseOrderReceiptStatus"
+    WHERE id = ${purchaseOrderReceiptId}
+    RETURNING id, name;
+  `.then(row => ({ id: row.id, name: row.name }));
+}
+
+export async function insertPurchaseOrderReceiptLineItems(
+  { purchaseOrderId, purchaseOrderReceiptId }: { purchaseOrderReceiptId: number; purchaseOrderId: number },
+  lineItems: {
+    uuid: UUID;
+    quantity: number;
+  }[],
+) {
+  if (!isNonEmptyArray(lineItems)) {
+    return;
+  }
+
+  const { uuid, quantity } = nest(lineItems);
+
+  await sql`
+    INSERT INTO "PurchaseOrderReceiptLineItem" ("purchaseOrderReceiptId", "purchaseOrderId", "lineItemUuid", quantity)
+    SELECT ${purchaseOrderReceiptId}, ${purchaseOrderId}, *
+    FROM UNNEST(
+      ${uuid} :: uuid[],
+      ${quantity} :: int[]
+         );
+  `;
+}
+
+export async function deletePurchaseOrderReceiptLineItems({
+  purchaseOrderReceiptIds,
+}: {
+  purchaseOrderReceiptIds: number[];
+}) {
+  if (purchaseOrderReceiptIds.length === 0) {
+    return;
+  }
+
+  await sql`
+    DELETE
+    FROM "PurchaseOrderReceiptLineItem"
+    WHERE "purchaseOrderReceiptId" = ANY (${purchaseOrderReceiptIds});
+  `;
+}
+
+export async function deletePurchaseOrderReceipts({ purchaseOrderReceiptIds }: { purchaseOrderReceiptIds: number[] }) {
+  if (purchaseOrderReceiptIds.length === 0) {
+    return;
+  }
+
+  await sql`
+    DELETE
+    FROM "PurchaseOrderReceipt"
+    WHERE id = ANY (${purchaseOrderReceiptIds});
+  `;
+}
+
+export async function deletePurchaseOrders({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
+  await sql`
+    DELETE
+    FROM "PurchaseOrder"
+    WHERE id = ANY (${purchaseOrderIds});
+  `;
 }

@@ -28,6 +28,7 @@ import { getWorkOrder, getWorkOrderCharges, getWorkOrderItems } from './queries.
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { LocalsTeifiUser } from '../../decorators/permission.js';
 import { httpError } from '../../util/http-error.js';
+import { getSerialsByIds } from '../serials/queries.js';
 
 type CalculateWorkOrderResult = {
   outstanding: Money;
@@ -273,13 +274,23 @@ async function getExistingOrderInfo(session: Session, name: string) {
 
   const lineItemIds = new Set<ID>();
 
+  const itemSerials = await getSerialsByIds(
+    databaseItems.map(item => item.productVariantSerialId).filter(isNonNullable),
+  );
+
   const items = databaseItems
     .filter(item => isLineItemId(item.shopifyOrderLineItemId))
-    .map(({ data, uuid, shopifyOrderLineItemId }) => ({
-      ...data,
-      uuid,
-      shopifyOrderLineItemId,
-    }));
+    .map(({ data, uuid, shopifyOrderLineItemId, productVariantSerialId }) => {
+      const serial =
+        productVariantSerialId === null ? null : itemSerials.find(serial => serial.id === productVariantSerialId);
+
+      return {
+        ...data,
+        uuid,
+        shopifyOrderLineItemId,
+        serial: !serial ? null : { serial: serial.serial, productVariantId: serial.productVariantId },
+      };
+    });
 
   const charges = databaseCharges
     .filter(charge => isLineItemId(charge.shopifyOrderLineItemId))

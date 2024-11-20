@@ -43,9 +43,6 @@ model WorkOrder {
   note         String
   internalNote String
 
-  productVariantSerial   ProductVariantSerial? @relation(fields: [productVariantSerialId], references: [id])
-  productVariantSerialId Int?
-
   customer   Customer? @relation(fields: [customerId], references: [customerId])
   customerId String
 
@@ -99,6 +96,9 @@ model WorkOrderItem {
   // Can also be set to a draft order line item in case there has not been a check out for this line item yet.
   shopifyOrderLineItem   ShopifyOrderLineItem? @relation(fields: [shopifyOrderLineItemId], references: [lineItemId], onDelete: SetNull)
   shopifyOrderLineItemId String?
+
+  productVariantSerial   ProductVariantSerial? @relation(fields: [productVariantSerialId], references: [id])
+  productVariantSerialId Int?
 
   data Json @db.JsonB
 
@@ -201,8 +201,27 @@ model ShopifyOrderLineItem {
   workOrderItems        WorkOrderItem[]
   workOrderCharges      WorkOrderCharge[]
   specialOrderLineItems SpecialOrderLineItem[]
+  serials               ShopifyOrderLineItemProductVariantSerial[]
 
   @@index([orderId])
+}
+
+// Serials can be linked to SO line items through a admin block extension.
+// Linking this way will mark the serial as sold.
+model ShopifyOrderLineItemProductVariantSerial {
+  id Int @id @default(autoincrement())
+
+  lineItem   ShopifyOrderLineItem @relation(fields: [lineItemId], references: [lineItemId])
+  lineItemId String
+
+  productVariantSerial   ProductVariantSerial @relation(fields: [productVariantSerialId], references: [id])
+  productVariantSerialId Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([lineItemId])
+  @@index([productVariantSerialId])
 }
 
 // We track the source of line item quantity. Sources can be POs, TOs, or directly from inventory.
@@ -240,6 +259,7 @@ model Employee {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   locations EmployeeLocation[]
+  defaultLocationId String?
 
   @@index([shop, staffMemberId])
 }
@@ -361,10 +381,18 @@ enum AppPlanInterval {
   ANNUAL
 }
 
+enum PurchaseOrderType {
+  // A typical purchase order.
+  NORMAL
+  // A purchase order for a drop ship. The only difference is that inventory is not tracked.
+  DROPSHIP
+}
+
 model PurchaseOrder {
   id Int @id @default(autoincrement())
 
   shop String
+  type PurchaseOrderType
 
   shipFrom String
   shipTo   String
@@ -396,8 +424,58 @@ model PurchaseOrder {
   updatedAt                         DateTime                           @default(now()) @db.Timestamptz(3)
   purchaseOrderLineItemCustomFields PurchaseOrderLineItemCustomField[]
   tasks                             TaskPurchaseOrderLink[]
+  receiptLineItems                  PurchaseOrderReceiptLineItem[]
+  receipts                          PurchaseOrderReceipt[]
 
   @@unique([shop, name])
+}
+
+enum PurchaseOrderReceiptStatus {
+  DRAFT
+  ARCHIVED
+  COMPLETED
+}
+
+// A receipt is a collection of line items that have arrived, e.g. a shipment.
+// They are immutable after creation.
+// All quantities are added as "available" inventory in Shopify once added to a receipt.
+model PurchaseOrderReceipt {
+  id Int @id @default(autoincrement())
+
+  shop        String
+  name        String
+  description String
+  status      PurchaseOrderReceiptStatus
+
+  purchaseOrderId Int
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+
+  receivedAt DateTime @db.Timestamptz(3)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  lineItems PurchaseOrderReceiptLineItem[]
+
+  @@unique([shop, name])
+}
+
+model PurchaseOrderReceiptLineItem {
+  id Int @id @default(autoincrement())
+
+  quantity Int
+
+  purchaseOrderReceipt   PurchaseOrderReceipt @relation(fields: [purchaseOrderReceiptId], references: [id])
+  purchaseOrderReceiptId Int
+
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id])
+  purchaseOrderId Int
+
+  lineItemUuid String                @db.Uuid
+  lineItem     PurchaseOrderLineItem @relation(fields: [purchaseOrderId, lineItemUuid], references: [purchaseOrderId, uuid])
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }
 
 // TODO: Add serial PK to all tables like this instead of composite PK (remove all @relation with more than 1 field)
@@ -416,15 +494,14 @@ model PurchaseOrderLineItem {
   productVariantSerial   ProductVariantSerial? @relation(fields: [productVariantSerialId], references: [id])
   productVariantSerialId Int?
 
-  unitCost          String
-  quantity          Int
-  /// Quantity that has been added to Shopify as available inventory
-  availableQuantity Int
+  unitCost String
+  quantity Int
 
   createdAt              DateTime                           @default(now()) @db.Timestamptz(3)
   updatedAt              DateTime                           @default(now()) @db.Timestamptz(3)
   customFields           PurchaseOrderLineItemCustomField[]
   stockTransferLineItems StockTransferLineItem[]
+  receiptLineItems       PurchaseOrderReceiptLineItem[]
 
   @@id([purchaseOrderId, uuid])
   @@index([purchaseOrderId])
@@ -925,12 +1002,16 @@ model ProductVariantSerial {
   locationId String?
   location   Location? @relation(fields: [locationId], references: [locationId])
 
+  // Whether this serial has been sold, i.e. whether it should be in the available inventory quantity or not.
+  sold Boolean
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   purchaseOrderLineItems PurchaseOrderLineItem[]
-  workOrders             WorkOrder[]
+  workOrderItems         WorkOrderItem[]
   tasks                  TaskSerialLink[]
+  shopifyOrderLineItems  ShopifyOrderLineItemProductVariantSerial[]
 
   @@unique([shop, productVariantId, serial])
 }
@@ -1083,7 +1164,7 @@ model Task {
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
   assignments    TaskAssignment[]
-  scheduleEvents  ScheduleEventTask[]
+  scheduleEvents ScheduleEventTask[]
   workOrders     TaskWorkOrderLink[]
   purchaseOrders TaskPurchaseOrderLink[]
   specialOrders  TaskSpecialOrderLink[]
@@ -1220,4 +1301,100 @@ model Schedule {
   @@index([shop, id])
   @@index([shop, locationId])
   @@index([shop, publishedAt])
+}
+
+model ReorderPoint {
+  id Int @id @default(autoincrement())
+
+  shop            String
+  inventoryItemId String
+
+  // The location to which the reorder point applies
+  // If null, the reorder point applies to all locations that do not have an explicit reorder point
+  locationId String?
+
+  // This product variant will be reordered if its available quantity is less than this value.
+  min Int
+  // Re-orders will order up to this quantity.
+  max Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([shop, locationId, inventoryItemId])
+}
+
+model InventoryQuantity {
+  id Int @id @default(autoincrement())
+
+  shop            String
+  inventoryItemId String
+  locationId      String
+
+  // the name of the quantity (currently we only support 'available' because that's all that webhooks support)
+  name     String
+  quantity Int
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([shop, locationId, inventoryItemId, name])
+}
+
+enum InventoryMutationType {
+  MOVE
+  SET
+  ADJUST
+}
+
+enum InventoryMutationInitiatorType {
+  PURCHASE_ORDER
+  PURCHASE_ORDER_RECEIPT
+  STOCK_TRANSFER
+  CYCLE_COUNT
+  WORK_ORDER
+  UNKNOWN
+}
+
+model InventoryMutation {
+  id Int @id @default(autoincrement())
+
+  shop String
+  type InventoryMutationType
+
+  initiatorType InventoryMutationInitiatorType
+  initiatorName String
+
+  // The staff member that initiated the mutation
+  staffMemberId String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  items InventoryMutationItem[]
+
+  @@index([shop])
+}
+
+model InventoryMutationItem {
+  id Int @id @default(autoincrement())
+
+  inventoryMutationId Int
+  inventoryMutation   InventoryMutation @relation(fields: [inventoryMutationId], references: [id])
+
+  inventoryItemId String
+  name            String
+  locationId      String
+
+  // type = set
+  compareQuantity Int?
+
+  // type = set / move
+  quantity Int?
+
+  // type = adjust
+  delta Int?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
 }

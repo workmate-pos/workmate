@@ -22,6 +22,13 @@ import { unreserveLineItem } from './sourcing/reserve.js';
 import { getProduct, softDeleteProducts } from './products/queries.js';
 import { softDeleteProductVariantsByProductIds } from './product-variants/queries.js';
 import { doesProductHaveSyncableMetafields } from './metafields/sync.js';
+import { getReorderPoints } from './reorder/queries.js';
+import { hasNonNullableProperty } from '@teifi-digital/shopify-app-toolbox/guards';
+import {
+  productSerialNumbersMetafield,
+  setProductUsesSerialNumbersTag,
+  syncProductUsesSerialNumbersTag,
+} from './metafields/product-serial-numbers-metafield.js';
 import { resolveNamespace } from './app/index.js';
 import { parseProductServiceType } from '@work-orders/common/metafields/product-service-type.js';
 
@@ -130,6 +137,9 @@ export default {
   },
 
   PRODUCTS_UPDATE: {
+    init: {
+      metafieldNamespaces: ['$app'],
+    },
     async handler(
       session,
       topic,
@@ -139,6 +149,9 @@ export default {
         variant_ids: { id: number }[];
         // this is a string of comma separated tags. that obviously breaks when the tag contains commas but whatever
         tags: string;
+        variants: {
+          inventory_item_id: number | null | undefined;
+        }[];
         metafields: {
           id: number;
           namespace: string;
@@ -166,25 +179,42 @@ export default {
         ).then(x => x.find(([, isProductServiceType]) => isProductServiceType)?.[0]);
 
       const serviceTypeMetafield = await getMetafield(productServiceTypeMetafield);
+      const usesSerialNumbersMetafield = await getMetafield(productSerialNumbersMetafield);
 
       const tags = body.tags.split(', ');
 
-      const changed = await syncProductServiceTypeTagWithServiceType(
-        session,
-        body.admin_graphql_api_id,
-        tags,
-        serviceTypeMetafield?.value ? parseProductServiceType(String(serviceTypeMetafield?.value)) : null,
-      );
+      const changed = await Promise.all([
+        syncProductServiceTypeTagWithServiceType(
+          session,
+          body.admin_graphql_api_id,
+          tags,
+          serviceTypeMetafield?.value ? parseProductServiceType(String(serviceTypeMetafield?.value)) : null,
+        ),
+        setProductUsesSerialNumbersTag(
+          session,
+          body.admin_graphql_api_id,
+          tags,
+          Boolean(usesSerialNumbersMetafield?.value ?? false),
+        ),
+      ]).then(results => results.some(changed => changed));
 
       if (changed) {
         // wait for the next webhook before syncing to save some query cost
         return;
       }
 
-      const isCached = await getProduct(body.admin_graphql_api_id).then(product => product !== null);
-      const hasSyncableMetafields = await doesProductHaveSyncableMetafields(session, body.admin_graphql_api_id);
+      const [isCached, hasSyncableMetafields, hasReorderPoints] = await Promise.all([
+        getProduct(body.admin_graphql_api_id).then(product => product !== null),
+        doesProductHaveSyncableMetafields(session, body.admin_graphql_api_id),
+        getReorderPoints({
+          shop: session.shop,
+          inventoryItemIds: body.variants
+            .filter(hasNonNullableProperty('inventory_item_id'))
+            .map(({ inventory_item_id }) => createGid('InventoryItem', inventory_item_id)),
+        }).then(points => points.length > 0),
+      ]);
 
-      const shouldSync = isCached || hasSyncableMetafields;
+      const shouldSync = isCached || hasSyncableMetafields || hasReorderPoints;
 
       if (shouldSync) {
         await syncProducts(session, [body.admin_graphql_api_id]);

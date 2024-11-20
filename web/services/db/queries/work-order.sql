@@ -6,15 +6,14 @@ INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId
                          "discountAmount",
                          "discountType",
                          "paymentTermsTemplateId",
-                         "paymentFixedDueDate", "productVariantSerialId", "locationId")
+                         "paymentFixedDueDate", "locationId")
 VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId,
         :derivedFromOrderId, :note!,
         :internalNote!,
         :discountAmount,
         :discountType,
         :paymentTermsTemplateId,
-        :paymentFixedDueDate,
-        :productVariantSerialId, :locationId!)
+        :paymentFixedDueDate, :locationId!)
 ON CONFLICT ("shop", "name") DO UPDATE SET status                   = EXCLUDED.status,
                                            "dueDate"                = EXCLUDED."dueDate",
                                            "customerId"             = EXCLUDED."customerId",
@@ -28,7 +27,6 @@ ON CONFLICT ("shop", "name") DO UPDATE SET status                   = EXCLUDED.s
                                            "discountType"           = EXCLUDED."discountType",
                                            "paymentTermsTemplateId" = EXCLUDED."paymentTermsTemplateId",
                                            "paymentFixedDueDate"    = EXCLUDED."paymentFixedDueDate",
-                                           "productVariantSerialId" = EXCLUDED."productVariantSerialId",
                                            "locationId"             = EXCLUDED."locationId"
 RETURNING *;
 
@@ -96,7 +94,7 @@ HAVING (
           NOT :partiallyPaid!) AND
          (COALESCE(BOOL_AND(so."fullyPaid"), FALSE) OR NOT :fullyPaid!)
          ) != :inverseOrderConditions!
-   AND ((SUM(poli."availableQuantity") IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled
+   AND ((SUM((SELECT r.quantity FROM "PurchaseOrderReceiptLineItem" r WHERE r."purchaseOrderId" = poli."purchaseOrderId" AND r."lineItemUuid" = poli.uuid)) IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled
   OR :purchaseOrdersFulfilled IS NULL)
 ORDER BY wo.id DESC
 LIMIT :limit! OFFSET :offset;

@@ -11,6 +11,7 @@ import { escapeTransaction } from '../db/client.js';
 import { getProductVariants, upsertProductVariants } from './queries.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { removeObjectMetafields, upsertMetafields } from '../metafields/queries.js';
+import { syncInventoryQuantities } from '../inventory/sync.js';
 import { getProductVariantMetafieldsToSync } from '../metafields/sync.js';
 
 export async function ensureProductVariantsExist(session: Session, productVariantIds: ID[]) {
@@ -84,7 +85,8 @@ export async function syncProductVariants(session: Session, productVariantIds: I
     ),
   ]);
 
-  const productIds = unique(productVariants.map(({ product: { id } }) => id));
+  const productIds = unique(productVariants.map(pv => pv.product.id));
+  const inventoryItemIds = productVariants.map(pv => pv.inventoryItem.id);
 
   const errors: unknown[] = [];
 
@@ -124,6 +126,8 @@ export async function syncProductVariants(session: Session, productVariantIds: I
             })),
         ),
       ),
+
+      syncInventoryQuantities(session, inventoryItemIds).catch(error => errors.push(error)),
     ]);
   });
 

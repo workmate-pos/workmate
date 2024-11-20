@@ -25,6 +25,7 @@ export async function validateCreateWorkOrder(
   assertPositiveItemQuantities(createWorkOrder);
   assertValidChargeItemUuids(createWorkOrder);
   assertValidCompanyDetails(createWorkOrder);
+  assertValidSerials(createWorkOrder);
 
   const workOrder = createWorkOrder.name
     ? ((await getWorkOrder({
@@ -127,6 +128,34 @@ function assertValidCompanyDetails(
   if (companyFields.some(value => value === null)) {
     if (!companyFields.every(value => value === null)) {
       throw new HttpError('All company fields must be set', 400);
+    }
+  }
+}
+
+function assertValidSerials(createWorkOrder: Pick<CreateWorkOrder, 'items'>) {
+  for (const item of createWorkOrder.items) {
+    if (!item.serial) {
+      continue;
+    }
+
+    // both cases will be allowed in the future to be able to link products to some serial.
+    // for instance, you may want to link spare parts to a car vin, etc
+
+    switch (item.type) {
+      case 'product': {
+        if (item.serial.productVariantId !== item.productVariantId) {
+          throw new HttpError('Serial product variant ID does not match product variant ID', 400);
+        }
+
+        break;
+      }
+
+      case 'custom-item': {
+        throw new HttpError('Custom items cannot have serial numbers', 400);
+      }
+
+      default:
+        return item satisfies never;
     }
   }
 }

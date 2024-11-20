@@ -2,7 +2,7 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { DetailedWorkOrder } from '@web/services/work-orders/types.js';
-import { hasNonNullableProperty, hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNonNullableProperty, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import {
   getWorkOrderItemSourcedCount,
   useWorkOrderQueries,
@@ -23,6 +23,7 @@ import {
   Thumbnail,
 } from '@shopify/polaris';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 
 /**
  * List of unsourced items with an adjustable quantity.
@@ -55,8 +56,14 @@ export function UnsourcedItemList({
     () =>
       !workOrderQuery.data?.workOrder
         ? []
-        : getUnsourcedWorkOrderItems(workOrderQuery.data.workOrder, { includeAvailable }),
-    [workOrderQuery.data],
+        : getUnsourcedWorkOrderItems(
+            workOrderQuery.data.workOrder,
+            { includeAvailable },
+            Object.values(productVariantQueries)
+              .map(query => query.data)
+              .filter(isNonNullable),
+          ),
+    [workOrderQuery.data, productVariantQueries],
   );
 
   const [itemQuantities, _setItemQuantities] = useState<Record<UUID, number>>({});
@@ -189,12 +196,16 @@ export type UnsourcedWorkOrderItem = {
 export function getUnsourcedWorkOrderItems(
   workOrder: DetailedWorkOrder,
   { includeAvailable }: { includeAvailable: boolean },
+  productVariants: ProductVariant[],
 ): UnsourcedWorkOrderItem[] {
   return (
     workOrder.items
       .filter(hasPropertyValue('type', 'product'))
       // very important that this is set bcs the TO/PO line item will not be linked to the WO item in any way
       .filter(hasNonNullableProperty('shopifyOrderLineItem'))
+      .filter(
+        item => productVariants.find(variant => variant.id === item.productVariantId)?.product.serviceType === null,
+      )
       .map(
         ({
           uuid,

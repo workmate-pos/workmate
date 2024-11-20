@@ -6,6 +6,7 @@ import {
   Button,
   ButtonGroup,
   Card,
+  Checkbox,
   FormLayout,
   Frame,
   InlineStack,
@@ -16,7 +17,6 @@ import {
   Text,
   TextField,
   Thumbnail,
-  Tooltip,
 } from '@shopify/polaris';
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -36,8 +36,9 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
 import { CreateSerial } from '@web/schemas/generated/create-serial.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { LinkedTasks, NewLinkedTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { Action } from '@shopify/app-bridge-core/actions/Navigation/Redirect/index.js';
 
 export default function Serial() {
   const routes = useParams<'productVariantId' | 'serial'>();
@@ -56,6 +57,7 @@ export default function Serial() {
   const setSerialNumber = getCreateSerialSetter(setCreateSerial, 'serial');
   const setLocationId = getCreateSerialSetter(setCreateSerial, 'locationId');
   const setNote = getCreateSerialSetter(setCreateSerial, 'note');
+  const setSold = getCreateSerialSetter(setCreateSerial, 'sold');
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -243,6 +245,14 @@ export default function Serial() {
                 onChange={setNote}
               />
 
+              <Checkbox
+                label="Sold"
+                disabled={disabled}
+                checked={createSerial.sold}
+                onChange={setSold}
+                helpText="If checked, the serial will not be accounted for in available inventory quantity"
+              />
+
               <ButtonGroup fullWidth>
                 <Button
                   disabled={disabled || isSerialNumberInUse || !createSerial.serial || serialQuery.isFetching}
@@ -259,7 +269,12 @@ export default function Serial() {
                 <LinkedTasks
                   links={{ serials: [serial.serial] }}
                   disabled={serialMutation.isPending}
-                  action={<NewLinkedTaskButton links={{ serials: [serial.serial] }} />}
+                  action={tasks => (
+                    <NewLinkedTaskButton
+                      links={{ serials: [serial.serial] }}
+                      suggestedDeadlines={tasks.map(task => task.deadline).filter(isNonNullable)}
+                    />
+                  )}
                 />
 
                 <BlockStack gap={'200'}>
@@ -271,7 +286,7 @@ export default function Serial() {
                     items={serial.history}
                     emptyState={
                       <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                        This serial does not have any associated orders.
+                        This serial does not have any associated orders
                       </Text>
                     }
                     renderItem={item => {
@@ -281,9 +296,9 @@ export default function Serial() {
                         return (
                           <ResourceItem url={`/purchase-orders/${encodeURIComponent(item.name)}`} id={id}>
                             <BlockStack gap={'400'}>
-                              <Box>
-                                <Badge tone="info">{item.name}</Badge>
-                              </Box>
+                              <Text as="p" variant="headingSm" fontWeight="bold">
+                                {item.name}
+                              </Text>
                               <BlockStack gap={'200'}>
                                 {item.location && (
                                   <Text as="p" variant="bodyMd" tone="subdued">
@@ -300,14 +315,48 @@ export default function Serial() {
                         return (
                           <ResourceItem url={`/work-orders/${encodeURIComponent(item.name)}`} id={id}>
                             <BlockStack gap={'400'}>
-                              <Box>
-                                <Badge tone="info">{item.name}</Badge>
-                              </Box>
+                              <Text as="p" variant="headingSm" fontWeight="bold">
+                                {item.name}
+                              </Text>
                               <BlockStack gap={'200'}>
+                                {item.location && (
+                                  <Text as="p" variant="bodyMd" tone="subdued">
+                                    {item.location?.name}
+                                  </Text>
+                                )}
                                 <Text as="p" variant="bodyMd" tone="subdued">
                                   {item.customer.displayName}
                                 </Text>
                               </BlockStack>
+                            </BlockStack>
+                          </ResourceItem>
+                        );
+                      }
+
+                      if (item.type === 'shopify-order') {
+                        return (
+                          <ResourceItem
+                            id={id}
+                            onClick={() =>
+                              Redirect.create(app).dispatch(
+                                Action.ADMIN_PATH,
+                                `/${
+                                  { ORDER: 'orders', DRAFT_ORDER: 'draft_orders' }[item.orderType]
+                                }/${parseGid(item.id).id}`,
+                              )
+                            }
+                          >
+                            <BlockStack gap={'400'}>
+                              <Text as="p" variant="headingSm" fontWeight="bold">
+                                {item.name}
+                              </Text>
+                              {item.customer && (
+                                <BlockStack gap={'200'}>
+                                  <Text as="p" variant="bodyMd" tone="subdued">
+                                    {item.customer.displayName}
+                                  </Text>
+                                </BlockStack>
+                              )}
                             </BlockStack>
                           </ResourceItem>
                         );

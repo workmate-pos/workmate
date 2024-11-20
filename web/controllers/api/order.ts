@@ -1,14 +1,26 @@
 import type { Request, Response } from 'express-serve-static-core';
 import type { Session } from '@shopify/shopify-api';
-import { Authenticated, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
+import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
 import { PaginationOptions } from '../../schemas/generated/pagination-options.js';
 import { getOrder, getOrderPage, getOrderLineItems } from '../../services/orders/get.js';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID, isGid, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { WORK_ORDER_CUSTOM_ATTRIBUTE_NAME } from '@work-orders/work-order-shopify-order';
 import { getWorkOrder } from '../../services/work-orders/queries.js';
 import { cleanOrphanedDraftOrders } from '../../services/work-orders/clean-orphaned-draft-orders.js';
-import { syncShopifyOrders } from '../../services/shopify-order/sync.js';
+import { ensureShopifyOrdersExist, syncShopifyOrders } from '../../services/shopify-order/sync.js';
+import { getShopifyOrder, getShopifyOrderLineItem, getShopifyOrderLineItems } from '../../services/orders/queries.js';
+import {
+  deleteLineItemSerials,
+  getLineItemSerials,
+  getOrderLineItemSerials,
+  getSerialLineItemIds,
+  getSerialsByIds,
+  insertLineItemSerials,
+} from '../../services/serials/queries.js';
+import { SetOrderLineItemSerials } from '../../schemas/generated/set-order-line-item-serials.js';
+import { unit } from '../../services/db/unit-of-work.js';
+import { httpError } from '../../util/http-error.js';
 
 @Authenticated()
 export default class OrderController {
@@ -80,6 +92,101 @@ export default class OrderController {
 
     return res.json({ success: true });
   }
+
+  @Get('/:id/line-items/serials')
+  async fetchOrderLineItemSerials(req: Request<{ id: string }>, res: Response<FetchOrderLineItemSerialsResponse>) {
+    const { shop }: Session = res.locals.shopify.session;
+    const { id } = req.params;
+
+    const order = await getShopifyOrder({ shop, id: createGid('Order', id) });
+
+    if (!order) {
+      throw new HttpError('Order not found', 404);
+    }
+
+    const lineItemSerials = await getOrderLineItemSerials(order.orderId);
+
+    return res.json(lineItemSerials);
+  }
+
+  @Post('/:id/line-items/serials')
+  @BodySchema('set-order-line-item-serials')
+  async setOrderLineItemSerials(
+    req: Request<{ id: string }, unknown, SetOrderLineItemSerials>,
+    res: Response<SetOrderLineItemSerialsResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const { id } = req.params;
+    const { lineItemSerials } = req.body;
+
+    const gid = createGid('Order', id);
+    await ensureShopifyOrdersExist(session, [gid]);
+
+    const [order, lineItems] = await Promise.all([
+      getShopifyOrder({ shop: session.shop, id: gid }),
+      getShopifyOrderLineItems(gid),
+    ]);
+
+    if (!order) {
+      throw new HttpError('Order not found', 404);
+    }
+
+    const productVariantSerials: Record<ID, Set<string>> = {};
+
+    for (const { lineItemId, serial } of lineItemSerials) {
+      const lineItem =
+        lineItems.find(lineItem => lineItem.lineItemId === lineItemId) ?? httpError('Line item not found', 400);
+      const productVariantId = lineItem.productVariantId;
+
+      if (!productVariantId) {
+        throw new HttpError(`${lineItem.title} cannot be assigned a serial`, 400);
+      }
+
+      if (productVariantSerials[productVariantId]?.has(serial)) {
+        throw new HttpError(`Cannot assign serial ${serial} more than once`, 400);
+      }
+
+      productVariantSerials[productVariantId] ??= new Set();
+      productVariantSerials[productVariantId].add(serial);
+    }
+
+    return await unit(async () => {
+      await deleteLineItemSerials(
+        session.shop,
+        lineItems.map(({ lineItemId }) => lineItemId),
+      );
+
+      // ensure that we do not assign sold serials to multiple non-returned line items
+      // in case the serial is returned, `sold` will be set to false again
+      // TODO: Support return flow
+      // TODO: Automatically mark serials as sold based on order and return flow
+      const serialLineItemIds = await getSerialLineItemIds(
+        lineItemSerials.map(({ serial, lineItemId }) => {
+          const lineItem =
+            lineItems.find(lineItem => lineItem.lineItemId === lineItemId) ?? httpError('Line item not found', 400);
+
+          if (!lineItem.productVariantId) {
+            throw new HttpError(`${lineItem.title} cannot be assigned a serial`, 400);
+          }
+
+          return { serial, productVariantId: lineItem.productVariantId };
+        }),
+        { sold: true },
+      );
+
+      // TODO: Ensure that serials are not duplicate
+
+      if (serialLineItemIds.length) {
+        throw new HttpError(`Serials are already in use (${serialLineItemIds.map(({ serial }) => serial).join(', ')})`);
+      }
+
+      await insertLineItemSerials(session.shop, lineItemSerials);
+
+      const newLineItemSerials = await getOrderLineItemSerials(order.orderId);
+
+      return res.json(newLineItemSerials);
+    });
+  }
 }
 
 export type FetchOrdersResponse = Awaited<ReturnType<typeof getOrderPage>>;
@@ -89,3 +196,7 @@ export type FetchOrderResponse = Awaited<ReturnType<typeof getOrder>>;
 export type FetchOrderLineItemsResponse = NonNullable<Awaited<ReturnType<typeof getOrderLineItems>>>;
 
 export type SyncOrderResponse = { success: true };
+
+export type FetchOrderLineItemSerialsResponse = { lineItemId: ID; serial: string }[];
+
+export type SetOrderLineItemSerialsResponse = FetchOrderLineItemSerialsResponse;

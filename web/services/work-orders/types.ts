@@ -23,7 +23,6 @@ export type DetailedWorkOrder = {
   companyLocationId: ID | null;
   companyContactId: ID | null;
   paymentTerms: WorkOrderPaymentTerms | null;
-  serial: WorkOrderSerial | null;
   locationId: ID | null;
 };
 
@@ -59,6 +58,7 @@ export type DetailedWorkOrderItem = {
   reservations: LineItemReservation[];
   specialOrders: WorkOrderSpecialOrder[];
   availableInventoryQuantity: number;
+  serial: WorkOrderSerial | null;
 } & (
   | {
       type: 'product';

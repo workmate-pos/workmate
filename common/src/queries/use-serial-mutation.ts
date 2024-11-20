@@ -23,9 +23,11 @@ export const useSerialMutation = ({ fetch }: { fetch: Fetch }) => {
       const serial: CreateSerialResponse = await response.json();
       return serial;
     },
-    onSuccess(serial) {
-      queryClient.invalidateQueries({ queryKey: ['serials'] });
-      queryClient.invalidateQueries({ queryKey: ['serial', serial satisfies UseQueryData<typeof useSerialQuery>] });
+    async onSuccess(serial) {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['serials'] }),
+        queryClient.invalidateQueries({ queryKey: ['serial', serial satisfies UseQueryData<typeof useSerialQuery>] }),
+      ]);
     },
   });
 };

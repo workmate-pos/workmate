@@ -10,6 +10,8 @@ import {
   FormLayout,
   InlineStack,
   Modal,
+  Popover,
+  Select,
   Spinner,
   Text,
   TextField,
@@ -17,7 +19,7 @@ import {
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useEffect, useState } from 'react';
 import { useTaskMutation } from '@work-orders/common/queries/use-task-mutation.js';
-import { DateTimeField } from '@web/frontend/components/form/DateTimeField.js';
+import { DateTimeField, DateTimePicker } from '@web/frontend/components/form/DateTimeField.js';
 import { SearchableChoiceList } from '@web/frontend/components/form/SearchableChoiceList.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { PlusMinor } from '@shopify/polaris-icons';
@@ -26,9 +28,10 @@ import { MultiStaffMemberSelectorModal } from '@web/frontend/components/selector
 import { useScheduleEventsQuery } from '@work-orders/common/queries/use-schedule-events-query.js';
 import { YEAR_IN_MS } from '@work-orders/common/time/constants.js';
 import humanizeDuration from 'humanize-duration';
-import { unique } from '@teifi-digital/shopify-app-toolbox/array';
+import { unique, uniqueBy } from '@teifi-digital/shopify-app-toolbox/array';
 import { useScheduleEventQuery } from '@work-orders/common/queries/use-schedule-event-query.js';
 import { Task } from '@web/services/tasks/queries.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 const LOAD_DATE = new Date();
 
@@ -42,6 +45,7 @@ export function TaskModal({
   editable = true,
   onSave,
   initial,
+  suggestedDeadlines = [],
 }: {
   open: boolean;
   onClose: () => void;
@@ -61,6 +65,13 @@ export function TaskModal({
     staffMemberIds?: ID[];
     links?: DetailedTask['links'];
   };
+
+  /**
+   * Deadlines that will show up in a dropdown for easy access.
+   * The user can still select a custom deadline.
+   * Useful for quick access to deadlines common to a work order/purchase order/etc
+   */
+  suggestedDeadlines?: Date[];
 }) {
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -84,7 +95,7 @@ export function TaskModal({
   const [done, setDone] = useState(false);
   const [estimatedTimeMinutes, setEstimatedTimeMinutes] = useState<number>();
   const [staffMemberIds, setStaffMemberIds] = useState<ID[]>([]);
-  // TODO: Display
+  // TODO: Component that displays links - use slot to add section
   const [links, setLinks] = useState<DetailedTask['links']>({
     workOrders: [],
     purchaseOrders: [],
@@ -94,7 +105,11 @@ export function TaskModal({
     serials: [],
   });
 
+  const [shouldShowDatePopup, setShouldShowDatePopup] = useState(false);
+
   useEffect(() => {
+    setShouldShowDatePopup(false);
+
     if (taskQuery.data) {
       setName(taskQuery.data.name);
       setDescription(taskQuery.data.description);
@@ -149,7 +164,7 @@ export function TaskModal({
   return (
     <>
       <Modal
-        open={open}
+        open={open && !shouldShowStaffMemberSelector}
         title={title}
         onClose={onClose}
         loading={taskQuery.isLoading || taskScheduleEventsQuery.isLoading}
@@ -210,13 +225,70 @@ export function TaskModal({
               onChange={setDescription}
             />
 
-            <DateTimeField
-              label="Deadline"
-              value={deadline}
-              onChange={setDeadline}
-              readOnly={!editable}
-              labelAction={!deadline ? undefined : { content: 'Clear', onAction: () => setDeadline(undefined) }}
-            />
+            {!suggestedDeadlines.length && (
+              <DateTimeField
+                label="Deadline"
+                value={deadline}
+                onChange={setDeadline}
+                readOnly={!editable}
+                labelAction={!deadline ? undefined : { content: 'Clear', onAction: () => setDeadline(undefined) }}
+              />
+            )}
+
+            {!!suggestedDeadlines.length && (
+              <>
+                <Popover
+                  active={shouldShowDatePopup}
+                  onClose={() => setShouldShowDatePopup(false)}
+                  preferredPosition="below"
+                  preferredAlignment="left"
+                  activator={
+                    <Select
+                      label="Deadline"
+                      value={deadline?.toISOString()}
+                      onChange={selected => {
+                        setShouldShowDatePopup(false);
+
+                        if (selected === '') {
+                          setDeadline(undefined);
+                          return;
+                        }
+
+                        if (selected === 'custom') {
+                          setShouldShowDatePopup(true);
+                          return;
+                        }
+
+                        setDeadline(new Date(selected));
+                      }}
+                      disabled={!editable}
+                      options={[
+                        { label: 'None', value: '' },
+                        ...uniqueBy([deadline, ...suggestedDeadlines].filter(isNonNullable), date =>
+                          date.toLocaleString(),
+                        )
+                          .toSorted((a, b) => a.getTime() - b.getTime())
+                          .map(date => ({
+                            label: date.toLocaleString(),
+                            value: date.toISOString(),
+                          })),
+                        {
+                          label: 'Custom',
+                          value: 'custom',
+                        },
+                      ]}
+                    />
+                  }
+                >
+                  <DateTimePicker
+                    value={deadline}
+                    onChange={setDeadline}
+                    readOnly={!editable}
+                    onClose={() => setShouldShowDatePopup(false)}
+                  />
+                </Popover>
+              </>
+            )}
 
             <TextField
               label="Time Required (minutes)"

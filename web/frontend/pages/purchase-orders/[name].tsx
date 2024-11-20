@@ -43,14 +43,19 @@ import { PurchaseOrderEmployeesCard } from '@web/frontend/components/purchase-or
 import { PurchaseOrderProductsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderProductsCard.js';
 import { PurchaseOrderSummary } from '@web/frontend/components/purchase-orders/PurchaseOrderSummary.js';
 import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
-import { Int } from '@web/schemas/generated/create-product.js';
 import type { DetailedPurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
 import { EditCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/EditCustomFieldPresetModal.js';
 import { CustomFieldValuesSelectorModal } from '@web/frontend/components/shared-orders/modals/CustomFieldValuesSelectorModal.js';
-import { LinkedTasks, NewLinkedTaskButton, NewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
+import { LinkedTasks, NewLinkedTaskButton, BaseNewTaskButton } from '@web/frontend/components/tasks/LinkedTasks.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import {
+  BaseNewPurchaseOrderReceiptButton,
+  NewPurchaseOrderReceiptButton,
+  PurchaseOrderReceipts,
+} from '@web/frontend/components/purchase-orders/PurchaseOrderReceipts.js';
+import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
 
 export default function () {
   return (
@@ -81,6 +86,9 @@ function PurchaseOrderLoader() {
 
   const settingsQuery = useSettingsQuery({ fetch });
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
+
+  const currentEmployeeQuery = useCurrentEmployeeQuery({ fetch });
+  const defaultLocationId = currentEmployeeQuery.data?.defaultLocationId;
 
   const app = useAppBridge();
   if (!name) {
@@ -121,7 +129,11 @@ function PurchaseOrderLoader() {
     createPurchaseOrder = createPurchaseOrderFromPurchaseOrder(purchaseOrderQuery.data);
   } else {
     const { purchaseOrders } = settingsQuery.data.settings;
-    createPurchaseOrder = defaultCreatePurchaseOrder({ status: purchaseOrders.defaultStatus });
+    createPurchaseOrder = defaultCreatePurchaseOrder({
+      status: purchaseOrders.defaultStatus,
+    });
+
+    createPurchaseOrder.locationId = defaultLocationId ?? null;
 
     createPurchaseOrder.customFields = {
       ...customFieldsPresetsQuery.data.defaultCustomFields,
@@ -301,37 +313,57 @@ function PurchaseOrder({
 
                 setIsAddProductModalOpen(true);
               }}
-              onMarkAllAsNotReceivedClick={() => {
-                for (const product of createPurchaseOrder.lineItems) {
-                  const savedLineItem = purchaseOrder?.lineItems.find(li => li.uuid === product.uuid);
-                  const minimumAvailableQuantity = savedLineItem?.availableQuantity ?? (0 as Int);
-                  dispatch.updateProduct({
-                    product: {
-                      ...product,
-                      availableQuantity: minimumAvailableQuantity as Int,
-                    },
-                  });
-                }
-              }}
-              onMarkAllAsReceivedClick={() => {
-                for (const product of createPurchaseOrder.lineItems) {
-                  dispatch.updateProduct({ product: { ...product, availableQuantity: product.quantity } });
-                }
-              }}
+              action={
+                !!createPurchaseOrder.name && !hasUnsavedChanges ? (
+                  <NewPurchaseOrderReceiptButton
+                    purchaseOrderName={createPurchaseOrder.name}
+                    disabled={hasUnsavedChanges}
+                    props={{ icon: undefined, children: 'Receive products' }}
+                  />
+                ) : (
+                  <Tooltip content="You must save your purchase order before you can receive products.">
+                    <BaseNewPurchaseOrderReceiptButton disabled icon={undefined} children={'Receive products'} />
+                  </Tooltip>
+                )
+              }
             />
           </Layout.Section>
 
-          <Layout.Section variant="oneThird">
+          <Layout.Section variant="oneHalf">
+            <Card>
+              <PurchaseOrderReceipts
+                disabled={purchaseOrderMutation.isPending || hasUnsavedChanges || !createPurchaseOrder.name}
+                purchaseOrderName={createPurchaseOrder.name}
+                action={
+                  !!createPurchaseOrder.name && !hasUnsavedChanges ? (
+                    <NewPurchaseOrderReceiptButton
+                      purchaseOrderName={createPurchaseOrder.name}
+                      disabled={hasUnsavedChanges}
+                    />
+                  ) : (
+                    <Tooltip content="You must save your purchase order before you can add receipts.">
+                      <BaseNewPurchaseOrderReceiptButton disabled />
+                    </Tooltip>
+                  )
+                }
+              />
+            </Card>
+          </Layout.Section>
+
+          <Layout.Section variant="oneHalf">
             <Card>
               <LinkedTasks
                 links={{ purchaseOrders: [createPurchaseOrder.name].filter(isNonNullable) }}
-                disabled={purchaseOrderMutation.isPending}
-                action={
+                disabled={purchaseOrderMutation.isPending || !createPurchaseOrder.name}
+                action={tasks =>
                   !!createPurchaseOrder.name ? (
-                    <NewLinkedTaskButton links={{ purchaseOrders: [createPurchaseOrder.name] }} />
+                    <NewLinkedTaskButton
+                      links={{ purchaseOrders: [createPurchaseOrder.name] }}
+                      suggestedDeadlines={tasks.map(task => task.deadline).filter(isNonNullable)}
+                    />
                   ) : (
                     <Tooltip content={'You must save your purchase order before you can create tasks'}>
-                      <NewTaskButton disabled />
+                      <BaseNewTaskButton disabled />
                     </Tooltip>
                   )
                 }

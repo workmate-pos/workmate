@@ -112,8 +112,9 @@ export function WorkOrderItemModal({
   const isServiceItem = getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== null;
   const canRemoveLabour = !isServiceItem;
   const canAddLabour =
-    item.type === 'custom-item' ||
-    getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE;
+    !item.serial &&
+    (item.type === 'custom-item' ||
+      getProductServiceType(itemLineItem?.variant?.product?.serviceType?.value) !== FIXED_PRICE_SERVICE);
 
   const shouldShowCharges = initialCharges.length > 0 || isServiceItem || forceShowCharges;
 
@@ -220,7 +221,7 @@ export function WorkOrderItemModal({
           </Modal.Section>
         )}
 
-        {!shouldShowCharges && (
+        {!shouldShowCharges && !item.serial && (
           <Modal.Section>
             <BlockStack gap={'400'}>
               <IntegerField

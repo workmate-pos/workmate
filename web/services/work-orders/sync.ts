@@ -1,13 +1,13 @@
 import { Session } from '@shopify/shopify-api';
 import { db } from '../db/db.js';
 import { gql } from '../gql/gql.js';
-import { assertGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { assertGid, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import {
   getCustomAttributeArrayFromObject,
   getWorkOrderOrderCustomAttributes,
 } from '@work-orders/work-order-shopify-order';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasNestedPropertyValue, hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { syncShopifyOrders } from '../shopify-order/sync.js';
 import { assertGidOrNull } from '../../util/assertions.js';
 import { getDraftOrderInputForExistingWorkOrder } from './draft-order.js';
@@ -78,20 +78,24 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
   const linkedOrders = await db.shopifyOrder.getLinkedOrdersByWorkOrderId({ workOrderId });
 
   if (shouldSync) {
-    const linkedDraftOrders = linkedOrders.filter(hasPropertyValue('orderType', 'DRAFT_ORDER'));
+    const linkedDraftOrders = await gql.draftOrder.getManyForDatabase
+      .run(graphql, {
+        ids: linkedOrders
+          .filter(hasPropertyValue('orderType', 'DRAFT_ORDER'))
+          .map(order => order.orderId)
+          .filter(isGid),
+      })
+      .then(orders => orders.nodes.filter(hasNestedPropertyValue('__typename', 'DraftOrder')));
 
-    const deleteDraftOrderIds = linkedDraftOrders.map(order => {
-      assertGid(order.orderId);
-      return order.orderId;
-    });
+    const draftOrdersToDelete = linkedDraftOrders.map(order => order.id);
 
     if (!!input.lineItems?.length) {
       const updateDraftOrder = linkedDraftOrders[0];
-      const updateDraftOrderId = updateDraftOrder?.orderId ?? null;
+      const updateDraftOrderId = updateDraftOrder?.id ?? null;
       assertGidOrNull(updateDraftOrderId);
 
       if (updateDraftOrderId) {
-        deleteDraftOrderIds.splice(deleteDraftOrderIds.indexOf(updateDraftOrderId), 1);
+        draftOrdersToDelete.splice(draftOrdersToDelete.indexOf(updateDraftOrderId), 1);
       }
 
       const { result } = updateDraftOrderId
@@ -105,8 +109,8 @@ export async function syncWorkOrder(session: Session, workOrderId: number, optio
       await syncShopifyOrders(session, [result.draftOrder.id]);
     }
 
-    if (deleteDraftOrderIds.length > 0) {
-      await gql.draftOrder.removeMany.run(graphql, { ids: deleteDraftOrderIds });
+    if (draftOrdersToDelete.length > 0) {
+      await gql.draftOrder.removeMany.run(graphql, { ids: draftOrdersToDelete });
     }
   }
 
