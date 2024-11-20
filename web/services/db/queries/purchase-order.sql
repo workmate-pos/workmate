@@ -19,6 +19,7 @@ FROM "PurchaseOrder" po
        LEFT JOIN "WorkOrderItem" woi ON soli."lineItemId" = woi."shopifyOrderLineItemId"
        LEFT JOIN "WorkOrder" wo ON woi."workOrderId" = wo."id"
 WHERE po.shop = :shop!
+  AND po.type = COALESCE(:type, po.type)
   AND po.status ILIKE COALESCE(:status, po.status)
   AND c."customerId" IS NOT DISTINCT FROM COALESCE(:customerId, c."customerId")
   AND (

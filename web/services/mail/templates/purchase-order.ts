@@ -58,6 +58,7 @@ export type PurchaseOrderLineItemTemplateData = {
   unitCost: string;
   quantity: number;
   totalCost: string;
+  customFields: Record<string, string>;
 };
 
 export async function getPurchaseOrderTemplateData(
@@ -112,6 +113,7 @@ export async function getPurchaseOrderTemplateData(
         quantity: lineItem.quantity,
         unitCost: lineItem.unitCost,
         totalCost,
+        customFields: lineItem.customFields,
       };
     }),
   };
