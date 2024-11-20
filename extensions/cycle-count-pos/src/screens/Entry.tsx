@@ -62,8 +62,10 @@ export function Entry() {
   const [selectedCycleCountName, setSelectedCycleCountName] = useState<string>();
   const selectedCycleCountQuery = useCycleCountQuery({ fetch, name: selectedCycleCountName ?? null }, { staleTime: 0 });
 
+  const settingsQuery = useSettingsQuery({ fetch });
+
   const screen = useScreen();
-  screen.setIsLoading(selectedCycleCountQuery.isFetching);
+  screen.setIsLoading(selectedCycleCountQuery.isFetching || settingsQuery.isLoading);
 
   const { session } = useApi<'pos.home.modal.render'>();
 
@@ -76,8 +78,6 @@ export function Entry() {
   }, [selectedCycleCountQuery.data, selectedCycleCountQuery.isFetching]);
 
   const rows = useListRows(cycleCountPageQuery.data?.pages.flat() ?? [], setSelectedCycleCountName);
-
-  const settingsQuery = useSettingsQuery({ fetch });
 
   if (settingsQuery.isError) {
     return (
