@@ -105,7 +105,8 @@ export async function upsertReceipt(
       upsertPurchaseOrderReceipt.lineItems,
     );
 
-    const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name, locationIds)) ?? never('We just made it');
+    const newPurchaseOrder =
+      (await getDetailedPurchaseOrder(session, purchaseOrderName, locationIds)) ?? never('We just made it');
     await adjustPurchaseOrderShopifyInventory(session, user, purchaseOrder, newPurchaseOrder);
   });
 }
