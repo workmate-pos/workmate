@@ -40,7 +40,7 @@ export const useWorkOrdersUploadCsvMutation = (
       }
     },
     onSuccess() {
-      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order'] });
       queryClient.invalidateQueries({ queryKey: ['work-order-info'] });
       onSuccess?.();
     },

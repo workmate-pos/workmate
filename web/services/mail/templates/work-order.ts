@@ -150,6 +150,7 @@ export async function getWorkOrderTemplateData(
           description: lineItem?.variant?.product?.description ?? '',
           totalPrice: round(totalPrice),
           unitPrice: round(unitPrice),
+          customFields: item.customFields,
         };
       }),
     charges: workOrder.charges.filter(hasPropertyValue('workOrderItemUuid', null)).map(getChargeTemplateData),
@@ -214,6 +215,7 @@ type WorkOrderTemplateItem = {
    */
   fullyPaid: boolean;
   charges: WorkOrderTemplateCharge[];
+  customFields: Record<string, string>;
 };
 
 type WorkOrderTemplateCharge = {

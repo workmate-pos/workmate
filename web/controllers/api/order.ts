@@ -98,17 +98,7 @@ export default class OrderController {
     const { shop }: Session = res.locals.shopify.session;
     const { id } = req.params;
 
-    if (!isGid(id)) {
-      throw new HttpError('Invalid order ID', 400);
-    }
-
-    const { objectName } = parseGid(id);
-
-    if (objectName !== 'Order' && objectName !== 'DraftOrder') {
-      throw new HttpError('Invalid order ID', 400);
-    }
-
-    const order = await getShopifyOrder({ shop, id });
+    const order = await getShopifyOrder({ shop, id: createGid('Order', id) });
 
     if (!order) {
       throw new HttpError('Order not found', 404);
@@ -129,21 +119,12 @@ export default class OrderController {
     const { id } = req.params;
     const { lineItemSerials } = req.body;
 
-    if (!isGid(id)) {
-      throw new HttpError('Invalid order ID', 400);
-    }
-
-    const { objectName } = parseGid(id);
-
-    if (objectName !== 'Order' && objectName !== 'DraftOrder') {
-      throw new HttpError('Invalid order ID', 400);
-    }
-
-    await ensureShopifyOrdersExist(session, [id]);
+    const gid = createGid('Order', id);
+    await ensureShopifyOrdersExist(session, [gid]);
 
     const [order, lineItems] = await Promise.all([
-      getShopifyOrder({ shop: session.shop, id }),
-      getShopifyOrderLineItems(id),
+      getShopifyOrder({ shop: session.shop, id: gid }),
+      getShopifyOrderLineItems(gid),
     ]);
 
     if (!order) {

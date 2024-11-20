@@ -226,14 +226,40 @@ export async function deleteSchedules(
 
   const { id, shop } = nest(schedules);
 
-  await sql`
-    DELETE
-    FROM "Schedule"
-    WHERE (id, shop) IN (SELECT *
-                         FROM UNNEST(
-                           ${id} :: int[],
-                           ${shop} :: text[]
-                              ))
+  await sql<{ success: boolean }>`
+    WITH "SchedulesToDelete" AS (SELECT *
+                                 FROM "Schedule"
+                                 WHERE (id, shop) IN (SELECT *
+                                                      FROM UNNEST(
+                                                        ${id} :: int[],
+                                                        ${shop} :: text[]
+                                                           ))),
+         "ScheduleEventsToDelete" AS (SELECT *
+                                      FROM "ScheduleEvent"
+                                      WHERE "scheduleId" IN (SELECT id
+                                                             FROM "SchedulesToDelete")),
+         "DeleteScheduleEventAssignments" AS (
+           DELETE
+             FROM "ScheduleEventAssignment"
+               WHERE "scheduleEventId" IN (SELECT id
+                                           FROM "ScheduleEventsToDelete")),
+         "DeleteScheduleEventTasks" AS (
+           DELETE
+             FROM "ScheduleEventTask"
+               WHERE "scheduleEventId" IN (SELECT id
+                                           FROM "ScheduleEventsToDelete")),
+         "DeleteScheduleEvents" AS (
+           DELETE
+             FROM "ScheduleEvent"
+               WHERE id IN (SELECT id
+                            FROM "ScheduleEventsToDelete")),
+         "DeleteSchedules" AS (
+           DELETE
+             FROM "Schedule"
+               WHERE id IN (SELECT id
+                            FROM "SchedulesToDelete"))
+    SELECT TRUE AS success;
+
   `;
 }
 

@@ -19,7 +19,6 @@ export function useTransferOrderLocationItems(
   toLocationId: ID,
   items: { productVariantId: ID; quantity: number; shopifyOrderLineItem: { id: ID; orderId: ID } }[],
 ) {
-  console.log(items);
   const productVariantIds = unique(items.map(item => item.productVariantId));
 
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });

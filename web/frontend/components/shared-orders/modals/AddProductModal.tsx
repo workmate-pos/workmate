@@ -348,7 +348,7 @@ export function AddProductModal({
                           getProductServiceType(pv.productVariant.product.serviceType?.value) ===
                           QUANTITY_ADJUSTING_SERVICE,
                         serial: null,
-                      } as const;
+                      } as const satisfies CreateWorkOrder['items'][number];
                     });
 
                     onAdd(items, charges);
@@ -366,10 +366,9 @@ export function AddProductModal({
                             .toMoney(),
                           productVariantId: pv.productVariant.id,
                           quantity: pv.quantity,
-                          availableQuantity: 0 as Int,
                           customFields: customFieldsPresetsQuery.data.defaultCustomFields,
                           serialNumber: null,
-                        } as const;
+                        } as const satisfies CreatePurchaseOrder['lineItems'][number];
                       }),
                     );
                   } else {
