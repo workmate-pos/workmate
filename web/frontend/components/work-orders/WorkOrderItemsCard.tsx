@@ -117,7 +117,7 @@ export function WorkOrderItemsCard({
       <ProductVariantSelectorModal
         onSelect={productVariant => setSerialProductVariantId(productVariant.id)}
         open={isAddSerialModalOpen}
-        filters={{ type: 'serial', status: ['active'] }}
+        filters={{ type: ['serial'], status: ['active'] }}
         onClose={() => setIsAddSerialModalOpen(false)}
       />
 

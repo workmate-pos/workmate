@@ -65,7 +65,7 @@ export default function Serials() {
         <ProductVariantSelectorModal
           onSelect={pv => redirectToSerial(pv.id, 'new')}
           open={isProductSelectorOpen}
-          filters={{ type: 'serial' }}
+          filters={{ type: ['serial'] }}
           onClose={() => setIsProductSelectorOpen(false)}
         />
 
