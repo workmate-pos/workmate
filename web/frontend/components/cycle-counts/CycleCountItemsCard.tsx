@@ -28,11 +28,11 @@ interface Props {
   createCycleCount: CreateCycleCount;
   dispatch: CreateCycleCountDispatchProxy;
   disabled: boolean;
-  onAddProducts: () => void;
+  onImportProducts: () => void;
   onScanProducts: () => void;
 }
 
-export function CycleCountItemsCard({ createCycleCount, dispatch, disabled, onAddProducts, onScanProducts }: Props) {
+export function CycleCountItemsCard({ createCycleCount, dispatch, disabled, onImportProducts, onScanProducts }: Props) {
   const [toast, setToastAction] = useToast();
   const [selectedItem, setSelectedItem] = useState<CreateCycleCountItem | null>(null);
 
@@ -102,19 +102,16 @@ export function CycleCountItemsCard({ createCycleCount, dispatch, disabled, onAd
             />
           ) : (
             <>
-              <Text as="h2" variant="headingMd" fontWeight="bold">
-                No products added
-              </Text>
               <Text as="p" variant="bodyMd" tone="subdued">
-                Add products to begin your cycle count
+                No products added. Add products to begin your cycle count
               </Text>
             </>
           )}
 
           <Box paddingBlockStart="400">
             <ButtonGroup fullWidth>
-              <Button onClick={onAddProducts} disabled={disabled}>
-                Add products
+              <Button onClick={onImportProducts} disabled={disabled}>
+                Import products
               </Button>
               <Button onClick={onScanProducts} disabled={disabled}>
                 Scan products

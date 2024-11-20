@@ -106,6 +106,7 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
         }}
         helpText="Scan a barcode or type it manually"
         autoFocus
+        loading={scanVariantsQuery.isLoading}
       />
 
       {variants.length > 0 && (

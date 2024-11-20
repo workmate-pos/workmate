@@ -33,14 +33,14 @@ export default function () {
     <Frame>
       <Page fullWidth>
         <PermissionBoundary permissions={['read_settings', 'cycle_count']}>
-          <CycleCounts />
+          <CycleCount />
         </PermissionBoundary>
       </Page>
     </Frame>
   );
 }
 
-function CycleCounts() {
+function CycleCount() {
   const app = useAppBridge();
   const [query, setQuery, internalQuery] = useDebouncedState('');
   const [status, setStatus] = useState<string>();
@@ -82,7 +82,7 @@ function CycleCounts() {
     .filter(isNonNullable);
 
   const redirectToCycleCount = (cycleCountName: 'new' | string) => {
-    Redirect.create(app).dispatch(Redirect.Action.APP, `/cycle-counts/${encodeURIComponent(cycleCountName)}`);
+    Redirect.create(app).dispatch(Redirect.Action.APP, `/cycle-count/${encodeURIComponent(cycleCountName)}`);
   };
 
   return (

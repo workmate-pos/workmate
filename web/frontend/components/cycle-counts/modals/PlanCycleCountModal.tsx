@@ -38,105 +38,118 @@ export function PlanCycleCountModal({ open, onClose, cycleCountName }: Props) {
 
   const isLoading = [
     cycleCountQuery.isLoading,
-    planCycleCountQuery.isLoading,
+    planCycleCountQuery.isFetching,
     Object.values(productVariantQueries).some(query => query.isLoading),
   ].includes(true);
 
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title="Apply Cycle Count"
-      loading={isLoading}
-      primaryAction={{
-        content: 'Apply Selected',
-        disabled: !plan || selectedUuids.length === 0,
-        loading: applyCycleCountMutation.isPending,
-        onAction: () => {
-          if (!cycleCountName || !plan) return;
-          applyCycleCountMutation.mutate(
-            {
-              cycleCountName,
-              itemApplications: plan.itemApplications.filter(item => selectedUuids.includes(item.uuid)),
-            },
-            {
-              onSuccess: () => {
-                setToastAction({ content: 'Successfully applied cycle count' });
-                onClose();
+    <>
+      <Modal
+        open={open}
+        onClose={onClose}
+        title="Apply cycle count"
+        loading={isLoading}
+        primaryAction={{
+          content: 'Apply selected',
+          disabled: !plan || selectedUuids.length === 0,
+          loading: applyCycleCountMutation.isPending,
+          onAction: () => {
+            if (!cycleCountName || !plan) return;
+            applyCycleCountMutation.mutate(
+              {
+                cycleCountName,
+                itemApplications: plan.itemApplications.filter(item => selectedUuids.includes(item.uuid)),
               },
-              onError: () => {
-                setToastAction({
-                  content: 'Failed to apply cycle count',
-                });
+              {
+                onSuccess: () => {
+                  setToastAction({ content: 'Successfully applied cycle count' });
+                  onClose();
+                },
+                onError: () => {
+                  setToastAction({
+                    content: 'Failed to apply cycle count',
+                  });
+                },
               },
-            },
-          );
-        },
-      }}
-    >
-      {cycleCountQuery.isError && (
-        <Modal.Section>
-          <Banner
-            title="Error loading cycle count"
-            tone="critical"
-            action={{
-              content: 'Retry',
-              onAction: () => cycleCountQuery.refetch(),
-            }}
-          >
-            {extractErrorMessage(cycleCountQuery.error, 'An error occurred while loading cycle count')}
-          </Banner>
-        </Modal.Section>
-      )}
+            );
+          },
+        }}
+      >
+        {cycleCountQuery.isError && (
+          <Modal.Section>
+            <Banner
+              title="Error loading cycle count"
+              tone="critical"
+              action={{
+                content: 'Retry',
+                onAction: () => cycleCountQuery.refetch(),
+              }}
+            >
+              {extractErrorMessage(cycleCountQuery.error, 'An error occurred while loading cycle count')}
+            </Banner>
+          </Modal.Section>
+        )}
 
-      {planCycleCountQuery.isError && (
-        <Modal.Section>
-          <Banner
-            title="Error loading cycle count plan"
-            tone="critical"
-            action={{
-              content: 'Retry',
-              onAction: () => planCycleCountQuery.refetch(),
-            }}
-          >
-            {extractErrorMessage(planCycleCountQuery.error, 'An error occurred while loading cycle count plan')}
-          </Banner>
-        </Modal.Section>
-      )}
+        {planCycleCountQuery.isError && (
+          <Modal.Section>
+            <Banner
+              title="Error loading cycle count plan"
+              tone="critical"
+              action={{
+                content: 'Retry',
+                onAction: () => planCycleCountQuery.refetch(),
+              }}
+            >
+              {extractErrorMessage(planCycleCountQuery.error, 'An error occurred while loading cycle count plan')}
+            </Banner>
+          </Modal.Section>
+        )}
 
-      {Object.values(productVariantQueries).some(query => query.isError) && (
-        <Modal.Section>
-          <Banner
-            title="Error loading products"
-            tone="critical"
-            action={{
-              content: 'Retry',
-              onAction: () => Object.values(productVariantQueries).forEach(query => query.refetch()),
-            }}
-          >
-            {extractErrorMessage(
-              Object.values(productVariantQueries).find(query => query.isError)?.error,
-              'An error occurred while loading products',
-            )}
-          </Banner>
-        </Modal.Section>
-      )}
+        {Object.values(productVariantQueries).some(query => query.isError) && (
+          <Modal.Section>
+            <Banner
+              title="Error loading products"
+              tone="critical"
+              action={{
+                content: 'Retry',
+                onAction: () => Object.values(productVariantQueries).forEach(query => query.refetch()),
+              }}
+            >
+              {extractErrorMessage(
+                Object.values(productVariantQueries).find(query => query.isError)?.error,
+                'An error occurred while loading products',
+              )}
+            </Banner>
+          </Modal.Section>
+        )}
 
-      {applyCycleCountMutation.isError && (
-        <Modal.Section>
-          <Banner
-            title={extractErrorMessage(
-              applyCycleCountMutation.error,
-              'Something went wrong while applying cycle count',
-            )}
-            tone="critical"
-          />
-        </Modal.Section>
-      )}
+        {applyCycleCountMutation.isError && (
+          <Modal.Section>
+            <Banner title={'Error applying cycle count'} tone="critical">
+              {extractErrorMessage(applyCycleCountMutation.error, 'Something went wrong while applying cycle count')}
+            </Banner>
+          </Modal.Section>
+        )}
 
-      {plan && cycleCountQuery.data && (
-        <Modal.Section>
+        {plan && plan.itemApplications.length === 0 && (
+          <Modal.Section>
+            <Text as="p" variant="bodyMd" tone="subdued">
+              No items to apply
+            </Text>
+          </Modal.Section>
+        )}
+
+        {plan && cycleCountQuery.data && (
           <ResourceList
+            selectable
+            selectedItems={selectedUuids}
+            resolveItemId={item => item.uuid}
+            idForItem={item => item.uuid}
+            onSelectionChange={selectedUuids =>
+              selectedUuids === 'All'
+                ? setSelectedUuids(cycleCountQuery.data?.items.map(item => item.uuid) ?? [])
+                : setSelectedUuids(selectedUuids)
+            }
             items={plan.itemApplications
               .map(({ uuid, countQuantity, originalQuantity }) => {
                 const item = cycleCountQuery.data?.items.find(hasPropertyValue('uuid', uuid));
@@ -158,7 +171,7 @@ export function PlanCycleCountModal({ open, onClose, cycleCountName }: Props) {
                 const sign = delta === 0 ? '=' : delta > 0 ? '+' : '-';
 
                 return {
-                  id: uuid,
+                  uuid,
                   item,
                   label,
                   delta,
@@ -167,19 +180,20 @@ export function PlanCycleCountModal({ open, onClose, cycleCountName }: Props) {
                 };
               })
               .filter(isNonNullable)}
-            renderItem={({ id, label, delta, sign, countQuantity }) => (
+            renderItem={({ uuid, label, delta, sign, countQuantity }) => (
               <ResourceItem
-                id={id}
-                onClick={() => {
+                id={uuid}
+                onClick={() =>
                   setSelectedUuids(current => {
-                    if (current.includes(id)) {
-                      return current.filter(x => x !== id);
+                    if (current.includes(uuid)) {
+                      return current.filter(x => x !== uuid);
                     }
-                    return [...current, id];
-                  });
-                }}
+
+                    return [...current, uuid];
+                  })
+                }
               >
-                <BlockStack gap="200">
+                <BlockStack gap="050">
                   <Text variant="bodyMd" fontWeight="bold" as="span">
                     {label}
                   </Text>
@@ -192,9 +206,10 @@ export function PlanCycleCountModal({ open, onClose, cycleCountName }: Props) {
               </ResourceItem>
             )}
           />
-        </Modal.Section>
-      )}
+        )}
+      </Modal>
+
       {toast}
-    </Modal>
+    </>
   );
 }

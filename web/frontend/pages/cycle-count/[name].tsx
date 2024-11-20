@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { ContextualSaveBar, Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useReducer, useRef, useState, useCallback } from 'react';
+import { useReducer, useRef, useState } from 'react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { BlockStack, Box, Card, EmptyState, Frame, Layout, Page, Text, Tooltip } from '@shopify/polaris';
@@ -21,7 +21,6 @@ import { LocationSelectorModal } from '@web/frontend/components/shared-orders/mo
 import { defaultCreateCycleCount } from '@work-orders/common/create-cycle-count/default.js';
 import { useAllLocationsQuery } from '@work-orders/common/queries/use-all-locations-query.js';
 import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/ProductVariantSelectorModal.js';
-import type { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
 import { ScanProductModal } from '@web/frontend/components/cycle-counts/modals/ScanProductModal.js';
 import { CycleCountHistoryModal } from '../../components/cycle-counts/modals/CycleCountHistoryModal.js';
 import { PlanCycleCountModal } from '../../components/cycle-counts/modals/PlanCycleCountModal.js';
@@ -52,7 +51,7 @@ function CycleCountLoader() {
   const locationsQuery = useAllLocationsQuery({ fetch });
 
   if (!name) {
-    Redirect.create(app).dispatch(Redirect.Action.APP, '/cycle-counts');
+    Redirect.create(app).dispatch(Redirect.Action.APP, '/cycle-count');
     return null;
   }
 
@@ -133,17 +132,10 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
         setHasUnsavedChanges(false);
         Redirect.create(app).dispatch(
           Redirect.Action.APP,
-          `/cycle-counts/${encodeURIComponent(updatedCycleCount.name)}`,
+          `/cycle-count/${encodeURIComponent(updatedCycleCount.name)}`,
         );
       },
     },
-  );
-
-  const handleProductSelection = useCallback(
-    (productVariant: ProductVariant) => {
-      dispatch.addProductVariants({ productVariants: [productVariant] });
-    },
-    [dispatch],
   );
 
   return (
@@ -159,7 +151,11 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
           {
             content: 'Apply cycle count',
             onAction: () => setIsPlanModalOpen(true),
-            disabled: !createCycleCount.name || createCycleCount.locked || createCycleCount.status === 'applied',
+            disabled:
+              hasUnsavedChanges ||
+              !createCycleCount.name ||
+              createCycleCount.locked ||
+              createCycleCount.status === 'applied',
           },
           {
             content: createCycleCount.locked ? 'Unlock' : 'Lock',
@@ -200,7 +196,7 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
               createCycleCount={createCycleCount}
               dispatch={dispatch}
               disabled={cycleCountMutation.isPending}
-              onAddProducts={() => setIsProductSelectorOpen(true)}
+              onImportProducts={() => setIsProductSelectorOpen(true)}
               onScanProducts={() => setIsScanModalOpen(true)}
             />
           </Layout.Section>
@@ -225,22 +221,18 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
         </Layout>
       </BlockStack>
 
-      {isLocationSelectorOpen && (
-        <LocationSelectorModal
-          open={isLocationSelectorOpen}
-          onClose={() => setIsLocationSelectorOpen(false)}
-          onSelect={locationId => dispatch.setLocation({ locationId })}
-        />
-      )}
+      <LocationSelectorModal
+        open={isLocationSelectorOpen}
+        onClose={() => setIsLocationSelectorOpen(false)}
+        onSelect={locationId => dispatch.setLocation({ locationId })}
+      />
 
-      {isProductSelectorOpen && (
-        <ProductVariantSelectorModal
-          open={isProductSelectorOpen}
-          onClose={() => setIsProductSelectorOpen(false)}
-          onSelect={handleProductSelection}
-          filters={{ type: 'product' }}
-        />
-      )}
+      <ProductVariantSelectorModal
+        open={isProductSelectorOpen}
+        onClose={() => setIsProductSelectorOpen(false)}
+        onSelect={productVariant => dispatch.importProductVariants({ productVariants: [productVariant] })}
+        filters={{ type: ['product', 'serial'] }}
+      />
 
       {isScanModalOpen && (
         <ScanProductModal
@@ -266,21 +258,17 @@ function CycleCount({ initialCreateCycleCount }: { initialCreateCycleCount: Crea
         />
       )}
 
-      {isHistoryModalOpen && (
-        <CycleCountHistoryModal
-          open={isHistoryModalOpen}
-          onClose={() => setIsHistoryModalOpen(false)}
-          cycleCountName={createCycleCount.name}
-        />
-      )}
+      <CycleCountHistoryModal
+        open={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        cycleCountName={createCycleCount.name}
+      />
 
-      {isPlanModalOpen && (
-        <PlanCycleCountModal
-          open={isPlanModalOpen}
-          onClose={() => setIsPlanModalOpen(false)}
-          cycleCountName={createCycleCount.name}
-        />
-      )}
+      <PlanCycleCountModal
+        open={isPlanModalOpen}
+        onClose={() => setIsPlanModalOpen(false)}
+        cycleCountName={createCycleCount.name}
+      />
 
       {toast}
     </Box>
