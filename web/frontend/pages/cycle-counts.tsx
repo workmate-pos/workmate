@@ -67,7 +67,7 @@ function CycleCounts() {
   const locationsQuery = useAllLocationsQuery({ fetch });
 
   const [pageIndex, setPage] = useState(0);
-  const pagination = getInfiniteQueryPagination(0, setPage, cycleCountQuery);
+  const pagination = getInfiniteQueryPagination(pageIndex, setPage, cycleCountQuery);
   const page = cycleCountQuery.data?.pages[pageIndex] ?? [];
 
   // Get unique employee IDs from all cycle counts' employee assignments
