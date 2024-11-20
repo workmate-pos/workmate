@@ -8,8 +8,10 @@ import {
   IndexFiltersMode,
   IndexTable,
   InlineStack,
+  Modal,
   Page,
   Text,
+  useIndexResourceState,
 } from '@shopify/polaris';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
@@ -19,12 +21,14 @@ import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-p
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { PurchaseOrderCsvUploadDropZoneModal } from '@web/frontend/components/purchase-orders/PurchaseOrderCsvUploadDropZoneModal.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
+import { useBulkDeletePurchaseOrderMutation } from '@work-orders/common/queries/use-bulk-delete-purchase-order-mutation.js';
 
 export default function () {
   return (
@@ -45,6 +49,7 @@ function PurchaseOrders() {
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState<string>();
   const [type, setType] = useState<'NORMAL' | 'DROPSHIP'>();
+  const [query, setQuery, optimisticQuery] = useDebouncedState('');
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
   const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
 
@@ -58,19 +63,21 @@ function PurchaseOrders() {
     status,
     type,
   });
-  const purchaseOrders = purchaseOrderInfoQuery.data?.pages?.[page] ?? [];
 
-  useEffect(() => {
-    if (purchaseOrderInfoQuery.data?.pages.length === 1) {
-      purchaseOrderInfoQuery.fetchNextPage();
-    }
-  }, [purchaseOrderInfoQuery.data?.pages.length]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, purchaseOrderInfoQuery);
 
-  useEffect(() => {
-    purchaseOrderInfoQuery.fetchNextPage();
-  }, []);
+  const allPurchaseOrders = purchaseOrderInfoQuery.data?.pages?.flat() ?? [];
+  const purchaseOrders = purchaseOrderInfoQuery.data?.pages?.[pageIndex] ?? [];
 
   const settingsQuery = useSettingsQuery({ fetch });
+
+  const { selectedResources, clearSelection, handleSelectionChange, allResourcesSelected } = useIndexResourceState(
+    allPurchaseOrders,
+    { resourceIDResolver: purchaseOrder => purchaseOrder.name },
+  );
+
+  const [shouldShowBulkDeleteModal, setShouldShowBulkDeleteModal] = useState(false);
 
   if (settingsQuery.isLoading) {
     return <Loading />;
@@ -79,9 +86,6 @@ function PurchaseOrders() {
   const redirectToPurchaseOrder = (purchaseOrderName: 'new' | string) => {
     Redirect.create(app).dispatch(Redirect.Action.APP, `/purchase-orders/${encodeURIComponent(purchaseOrderName)}`);
   };
-
-  const shouldFetchNextPage = purchaseOrderInfoQuery.data && page === purchaseOrderInfoQuery.data.pages.length - 2;
-  const hasNextPage = !purchaseOrderInfoQuery.isFetching && page < (purchaseOrderInfoQuery.data?.pages.length ?? 0) - 1;
 
   return (
     <>
@@ -168,12 +172,17 @@ function PurchaseOrders() {
         ]}
         onQueryChange={query => setQuery(query)}
         onQueryClear={() => setQuery('', true)}
-        queryValue={internalQuery}
-        onClearAll={() => setQuery('', true)}
-        tabs={[{ content: 'All', id: 'all' }]}
+        queryValue={optimisticQuery}
+        onClearAll={() => {
+          setQuery('', true);
+          clearSelection();
+        }}
+        tabs={[]}
         canCreateNewView={false}
+        loading={purchaseOrderInfoQuery.isFetching}
         selected={0}
       />
+
       <IndexTable
         headings={[
           { title: 'Purchase order' },
@@ -185,8 +194,8 @@ function PurchaseOrders() {
           { title: 'SO #' },
           { title: 'WO #' },
         ]}
-        itemCount={purchaseOrders.length}
-        loading={purchaseOrderInfoQuery.isLoading}
+        itemCount={allPurchaseOrders.length}
+        loading={purchaseOrderInfoQuery.isFetching}
         emptyState={
           <Card>
             <EmptyState
@@ -202,23 +211,27 @@ function PurchaseOrders() {
           </Card>
         }
         pagination={{
-          hasNext: hasNextPage,
-          hasPrevious: page > 0,
-          onPrevious: () => setPage(page => page - 1),
-          onNext: () => {
-            if (shouldFetchNextPage) {
-              purchaseOrderInfoQuery.fetchNextPage();
-            }
-
-            setPage(page => page + 1);
-          },
+          hasNext: pagination.hasNextPage,
+          hasPrevious: pagination.hasPreviousPage,
+          onPrevious: () => pagination.previous(),
+          onNext: () => pagination.next(),
         }}
+        selectable
+        selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
+        onSelectionChange={handleSelectionChange}
+        promotedBulkActions={[
+          {
+            content: 'Delete',
+            onAction: () => setShouldShowBulkDeleteModal(true),
+          },
+        ]}
       >
         {purchaseOrders.map((purchaseOrder, i) => (
           <IndexTable.Row
             key={purchaseOrder.name}
             id={purchaseOrder.name}
             position={i}
+            selected={allResourcesSelected || selectedResources.includes(purchaseOrder.name)}
             onClick={() => redirectToPurchaseOrder(purchaseOrder.name)}
           >
             <IndexTable.Cell>
@@ -278,6 +291,74 @@ function PurchaseOrders() {
         open={isCsvUploadDropZoneModalOpen}
         onClose={() => setIsCsvUploadDropZoneModalOpen(false)}
       />
+
+      <BulkDeletePurchaseOrdersModal
+        open={shouldShowBulkDeleteModal}
+        onClose={() => setShouldShowBulkDeleteModal(false)}
+        onDelete={() => clearSelection()}
+        names={selectedResources}
+      />
+
+      {toast}
+    </>
+  );
+}
+
+function BulkDeletePurchaseOrdersModal({
+  open,
+  onClose,
+  onDelete,
+  names,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+  names: string[];
+}) {
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+
+  const bulkDeletePurchaseOrderMutation = useBulkDeletePurchaseOrderMutation({ fetch });
+
+  return (
+    <>
+      <Modal
+        open={open}
+        title={'Delete purchase orders'}
+        onClose={onClose}
+        primaryAction={{
+          content: `Delete ${names.length} purchase order${names.length === 1 ? '' : 's'}`,
+          destructive: true,
+          loading: bulkDeletePurchaseOrderMutation.isPending,
+          onAction: () => {
+            bulkDeletePurchaseOrderMutation.mutate(
+              { purchaseOrders: names.map(name => ({ name })) },
+              {
+                onSuccess(result) {
+                  const successCount = result.purchaseOrders.filter(result => result.type === 'success').length;
+                  const errorCount = result.purchaseOrders.filter(result => result.type === 'error').length;
+
+                  setToastAction({
+                    content: `Deleted ${successCount} / ${result.purchaseOrders.length} purchase order${successCount === 1 ? '' : 's'}${errorCount > 0 ? ` (${errorCount} cannot be deleted)` : ''}`,
+                  });
+
+                  onDelete();
+                  onClose();
+                },
+              },
+            );
+          },
+        }}
+      >
+        <Modal.Section>
+          <Text as="p" variant="bodyMd" fontWeight="bold">
+            Are you sure you want to delete the selected purchase orders?
+          </Text>
+          <Text as="p" variant="bodyMd" tone="critical">
+            This action cannot be undone.
+          </Text>
+        </Modal.Section>
+      </Modal>
 
       {toast}
     </>

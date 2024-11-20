@@ -1,5 +1,12 @@
 import { Session } from '@shopify/shopify-api';
-import { Authenticated, BodySchema, Get, Post, QuerySchema } from '@teifi-digital/shopify-app-express/decorators';
+import {
+  Authenticated,
+  BodySchema,
+  Delete,
+  Get,
+  Post,
+  QuerySchema,
+} from '@teifi-digital/shopify-app-express/decorators';
 import { Request, Response } from 'express-serve-static-core';
 import type { WorkOrderPaginationOptions } from '../../schemas/generated/work-order-pagination-options.js';
 import type { CreateWorkOrder } from '../../schemas/generated/create-work-order.js';
@@ -28,6 +35,8 @@ import { getWorkOrderCsvTemplatesZip, readWorkOrderCsvImport } from '../../servi
 import { transaction } from '../../services/db/transaction.js';
 import * as Sentry from '@sentry/node';
 import { z } from 'zod';
+import { BulkDeleteWorkOrders } from '../../schemas/generated/bulk-delete-work-orders.js';
+import { deleteWorkOrders } from '../../services/work-orders/delete.js';
 
 export default class WorkOrderController {
   @Post('/calculate-draft-order')
@@ -60,6 +69,62 @@ export default class WorkOrderController {
     const workOrder = await getDetailedWorkOrder(session, name, user.user.allowedLocationIds);
 
     return res.json(workOrder ?? never());
+  }
+
+  @Delete('/bulk')
+  @Permission('write_work_orders')
+  @Authenticated()
+  @BodySchema('bulk-delete-work-orders')
+  async bulkDeleteWorkOrders(
+    req: Request<unknown, unknown, BulkDeleteWorkOrders>,
+    res: Response<BulkDeleteWorkOrdersResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const bulkDeleteWorkOrders = req.body;
+
+    const result = await deleteWorkOrders(
+      session,
+      user,
+      bulkDeleteWorkOrders.workOrders.map(wo => wo.name),
+    );
+
+    return res.status(200).json({
+      workOrders: bulkDeleteWorkOrders.workOrders.map(({ name }) => {
+        const errors = result.filter(([_name]) => _name === name).map(([, error]) => error);
+
+        if (!errors.length) {
+          return {
+            type: 'success',
+            workOrder: { name },
+          };
+        }
+
+        const [error = never()] = errors;
+
+        return {
+          type: 'error',
+          error: error.message,
+        };
+      }),
+    });
+  }
+
+  @Delete('/:name')
+  @Permission('write_work_orders')
+  @Authenticated()
+  async deleteWorkOrder(req: Request<{ name: string }, unknown, unknown>, res: Response) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { name } = req.params;
+
+    const [[, error] = []] = await deleteWorkOrders(session, user, [name]);
+
+    if (error) {
+      throw error;
+    }
+
+    return res.json({ success: true });
   }
 
   @Post('/create-order')
@@ -255,3 +320,18 @@ export type CreateWorkOrderOrderResponse = {
 };
 
 export type PlanWorkOrderOrderResponse = DraftOrderInput;
+
+export type BulkDeleteWorkOrdersResponse = {
+  workOrders: (
+    | {
+        type: 'success';
+        workOrder: {
+          name: string;
+        };
+      }
+    | {
+        type: 'error';
+        error: string;
+      }
+  )[];
+};
