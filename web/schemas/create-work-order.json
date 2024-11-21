@@ -369,7 +369,6 @@
     "companyLocationId",
     "companyContactId",
     "paymentTerms",
-    "serial",
     "locationId"
   ],
   "additionalProperties": false,
