@@ -1,13 +1,14 @@
-import { Modal, BlockStack, Select, TextField, Button, Text } from '@shopify/polaris';
+import { Modal, BlockStack, Select, TextField, Text, InlineStack, DataTable } from '@shopify/polaris';
 import { CreateStockTransferDispatchProxy } from '@work-orders/common/create-stock-transfer/reducer.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 type Props = {
   open: boolean;
@@ -29,6 +30,10 @@ export function StockTransferLineItemConfigModal({
   const [toast, setToastAction] = useToast();
   const [updatedLineItem, setUpdatedLineItem] = useState<StockTransferLineItem | null>(lineItem);
   const fetch = useAuthenticatedFetch({ setToastAction });
+
+  useEffect(() => {
+    setUpdatedLineItem(lineItem);
+  }, [lineItem]);
 
   const fromLocationQuery = useLocationQuery({ fetch, id: fromLocationId });
   const toLocationQuery = useLocationQuery({ fetch, id: toLocationId });
@@ -53,9 +58,6 @@ export function StockTransferLineItemConfigModal({
     onClose();
   };
 
-  const availableQuantity =
-    fromInventoryItemQuery.data?.inventoryLevel?.quantities.find(q => q.name === 'available')?.quantity ?? 0;
-
   return (
     <>
       <Modal
@@ -68,22 +70,42 @@ export function StockTransferLineItemConfigModal({
             hasOnlyDefaultVariant: true,
           },
         })}
+        primaryAction={{
+          content: 'Save',
+          onAction: handleSave,
+        }}
+        secondaryActions={[
+          { content: 'Cancel', onAction: onClose },
+          { content: 'Remove', onAction: handleRemove, destructive: true },
+        ]}
       >
+        {fromLocationQuery.data && toLocationQuery.data && (
+          <Modal.Section>
+            <Text as="h3" fontWeight="semibold">
+              {`From ${fromLocationQuery.data.name} to ${toLocationQuery.data.name}`}
+            </Text>
+          </Modal.Section>
+        )}
+        {fromLocationQuery.data && fromInventoryItemQuery.data?.inventoryLevel && (
+          <Modal.Section>
+            <InlineStack align="center">
+              <Text as="h3" fontWeight="semibold">
+                Current stock at {fromLocationQuery.data?.name}
+              </Text>
+            </InlineStack>
+            <DataTable
+              columnContentTypes={['text', 'numeric']}
+              headings={['Status', 'Quantity']}
+              rows={fromInventoryItemQuery.data?.inventoryLevel?.quantities.map(({ name, quantity }) => [
+                sentenceCase(name),
+                quantity,
+              ])}
+            />
+          </Modal.Section>
+        )}
+
         <Modal.Section>
           <BlockStack gap="400">
-            <BlockStack gap="400">
-              <Text variant="bodyMd" as="span">
-                From: {fromLocationQuery.data?.name}
-              </Text>
-              <Text variant="bodyMd" as="span">
-                Available: {availableQuantity}
-              </Text>
-            </BlockStack>
-
-            <Text variant="bodyMd" as="span">
-              To: {toLocationQuery.data?.name}
-            </Text>
-
             <TextField
               label="Quantity"
               type="number"
@@ -102,10 +124,9 @@ export function StockTransferLineItemConfigModal({
               label="Status"
               options={[
                 { label: 'Pending', value: 'PENDING' },
-                { label: 'Ready', value: 'READY' },
                 { label: 'In Transit', value: 'IN_TRANSIT' },
-                { label: 'Completed', value: 'COMPLETED' },
-                { label: 'Cancelled', value: 'CANCELLED' },
+                { label: 'Received', value: 'RECEIVED' },
+                { label: 'Rejected', value: 'REJECTED' },
               ]}
               value={updatedLineItem.status}
               onChange={value => {
@@ -114,15 +135,6 @@ export function StockTransferLineItemConfigModal({
                 );
               }}
             />
-
-            <BlockStack gap="400">
-              <Button tone="critical" onClick={handleRemove}>
-                Remove
-              </Button>
-              <Button variant="primary" onClick={handleSave}>
-                Save
-              </Button>
-            </BlockStack>
           </BlockStack>
         </Modal.Section>
       </Modal>

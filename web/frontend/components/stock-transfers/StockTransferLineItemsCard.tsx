@@ -122,7 +122,6 @@ export function StockTransferLineItemsCard({ createStockTransfer, dispatch, disa
         dispatch={dispatch}
       />
 
-      {selectedLineItem?.productTitle}
       <StockTransferLineItemConfigModal
         open={selectedLineItem !== null}
         onClose={() => setSelectedLineItem(null)}
