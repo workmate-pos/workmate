@@ -36,8 +36,23 @@ fragment CustomerFragment on Customer {
   email
   phone
   defaultAddress {
-    formatted
+    ...CustomerAddressFragment
   }
+}
+
+fragment CustomerAddressFragment on MailingAddress {
+  formatted
+  address1
+  address2
+  city
+  countryCode
+  firstName
+  lastName
+  phone
+  zip
+  id
+  country
+  province
 }
 
 fragment DatabaseCustomerFragment on Customer {

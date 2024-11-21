@@ -2,7 +2,7 @@ import {
   DateTime,
   DraftOrderInput,
   Int,
-  PaymentTerms,
+  MailingAddressInput,
   PaymentTermsInput,
   PaymentTermsType,
   PurchasingEntityInput,
@@ -19,7 +19,7 @@ import { Graphql } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertGidOrNull, isLineItemId } from '../../util/assertions.js';
 import { getWorkOrderDiscount, getWorkOrderPaymentTerms } from './get.js';
-import { getMailingAddressInputsForCompanyLocation } from '../draft-orders/util.js';
+import { getMailingAddressInput, getMailingAddressInputsForCompanyLocation } from '../draft-orders/util.js';
 import { Session } from '@shopify/shopify-api';
 import { gql } from '../gql/gql.js';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -235,9 +235,17 @@ export async function getDraftOrderInputForWorkOrder(
   );
 
   const graphql = new Graphql(session);
-  const [{ workOrders }, { billingAddress, shippingAddress }, response] = await Promise.all([
+  const [{ workOrders }, { billingAddress = null, shippingAddress = null } = {}, response] = await Promise.all([
     getShopSettings(session.shop),
-    getMailingAddressInputsForCompanyLocation(session, companyLocationId),
+    companyLocationId
+      ? getMailingAddressInputsForCompanyLocation(session, companyLocationId)
+      : customerId
+        ? gql.customer.get
+            .run(graphql, { id: customerId })
+            .then(customer => getMailingAddressInput(customer.customer?.defaultAddress))
+            .then(address => ({ billingAddress: address, shippingAddress: address }))
+        : undefined,
+
     gql.products.getMany.run(graphql, { ids: absorbingProductVariantIds }),
   ]);
 
@@ -310,7 +318,7 @@ export async function getDraftOrderInputForWorkOrder(
     appliedDiscount: discount ? { value: Number(discount.value), valueType: discount.type } : null,
     paymentTerms,
     reserveInventoryUntil: null,
-  };
+  } satisfies DraftOrderInput;
 }
 
 async function getPaymentTerms(
