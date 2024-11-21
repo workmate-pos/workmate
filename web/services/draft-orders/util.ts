@@ -3,9 +3,12 @@ import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 import { Session } from '@shopify/shopify-api';
 import { Graphql } from '@teifi-digital/shopify-app-express/services';
+import { CountryCode, MailingAddressInput } from '../gql/queries/generated/schema.js';
 
-export function getMailingAddressInput(companyAddress: gql.companies.CompanyAddressFragment.Result | null) {
-  if (!companyAddress) {
+export function getMailingAddressInput(
+  address: gql.companies.CompanyAddressFragment.Result | gql.customer.CustomerAddressFragment.Result | null | undefined,
+): MailingAddressInput | null {
+  if (!address) {
     return null;
   }
 
@@ -20,12 +23,15 @@ export function getMailingAddressInput(companyAddress: gql.companies.CompanyAddr
     companyName: company,
     address1,
     city,
-  } = companyAddress;
+  } = {
+    companyName: null,
+    ...address,
+  };
 
   return {
     zip,
     provinceCode,
-    countryCode,
+    countryCode: countryCode as CountryCode,
     phone,
     address2,
     lastName,
