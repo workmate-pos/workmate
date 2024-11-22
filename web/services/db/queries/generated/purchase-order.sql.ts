@@ -151,6 +151,7 @@ export interface IGetLinkedPurchaseOrdersByShopifyOrderIdsResult {
   shipping: string | null;
   shipTo: string;
   shop: string;
+  staffMemberId: string | null;
   status: string;
   tax: string | null;
   type: PurchaseOrderType;

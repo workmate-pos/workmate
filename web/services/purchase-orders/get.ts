@@ -60,6 +60,7 @@ export async function getDetailedPurchaseOrder(
   return await awaitNested({
     name: purchaseOrder.name,
     type: purchaseOrder.type,
+    staffMemberId: purchaseOrder.staffMemberId,
     status: purchaseOrder.status,
     placedDate: purchaseOrder.placedDate ? (purchaseOrder.placedDate.toISOString() as DateTime) : null,
     location: getLocation(purchaseOrder.locationId),
