@@ -28,19 +28,29 @@ export function Scanner() {
 
   const [variantIdCount, setVariantIdCount] = useState<Record<ID, number>>({});
   const [lastScannedData, setLastScannedData] = useState<string | null>(null);
+  const [lastScanTime, setLastScanTime] = useState<number>(0);
 
   useEffect(() => {
-    if (scannerData.data !== lastScannedData) {
-      setVariantIdCount({});
-      setLastScannedData(scannerData.data ?? null);
+    const currentTime = Date.now();
+    // Minimum delay in milliseconds between scans
+    const minDelay = 500;
+
+    if (scannerData.data) {
+      if (scannerData.data !== lastScannedData || currentTime - lastScanTime > minDelay) {
+        handleScan();
+        setLastScannedData(scannerData.data);
+        setLastScanTime(currentTime);
+      } else if (scannerData.data === lastScannedData) {
+        // Handle repeated scans of the same barcode
+        handleScan();
+        setLastScanTime(currentTime);
+      }
     }
-  }, [scannerData.data]);
+  }, [scannerData]);
 
-  useEffect(() => {
+  const handleScan = () => {
     if (scanVariantsQuery.isSuccess && scanVariantsQuery.data.length === 1) {
-      // If we find just one variant we can just add it immediately
       const variant = scanVariantsQuery.data[0]!;
-
       const currentCount = variantIdCount[variant.id] ?? 0;
       const newCount = currentCount + 1;
 
@@ -48,9 +58,10 @@ export function Scanner() {
       toast.show(`Added ${getProductVariantName(variant) ?? 'unknown product'} (Qty: ${newCount})!`, {
         duration: 1000,
       });
+
       setVariantIdCount(current => ({ ...current, [variant.id]: newCount }));
     }
-  }, [scanVariantsQuery.data, scannerData.data]);
+  };
 
   const shouldShowCamera = scannerSources.length === 1 && scannerSources.includes('camera');
 
