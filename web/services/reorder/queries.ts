@@ -145,7 +145,7 @@ export async function getReorderQuantities(shop: string, locationId: ID) {
     availableQuantity: number;
     incomingQuantity: number;
   }>`
-    SELECT p.vendor,
+    SELECT DISTINCT p.vendor,
            rp."inventoryItemId",
            pv."productVariantId",
            rp.max,
