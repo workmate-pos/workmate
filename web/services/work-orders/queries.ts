@@ -37,6 +37,7 @@ export async function getWorkOrder(
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
     locationId: string | null;
+    staffMemberId: string | null;
   }>`
     SELECT *
     FROM "WorkOrder"
@@ -77,6 +78,7 @@ function mapWorkOrder<
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
     locationId: string | null;
+    staffMemberId: string | null;
   },
 >(workOrder: T) {
   const {
@@ -87,6 +89,7 @@ function mapWorkOrder<
     companyContactId,
     paymentTermsTemplateId,
     locationId,
+    staffMemberId,
   } = workOrder;
 
   try {
@@ -97,6 +100,7 @@ function mapWorkOrder<
     assertGidOrNull(companyContactId);
     assertGidOrNull(paymentTermsTemplateId);
     assertGidOrNull(locationId);
+    assertGidOrNull(staffMemberId);
 
     return {
       ...workOrder,
@@ -107,6 +111,7 @@ function mapWorkOrder<
       companyContactId,
       paymentTermsTemplateId,
       locationId,
+      staffMemberId,
     };
   } catch (error) {
     sentryErr(error, { workOrder });
@@ -501,6 +506,7 @@ export async function getWorkOrdersForSpecialOrder(specialOrderId: number) {
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
     locationId: string | null;
+    staffMemberId: string | null;
     orderIds: string[] | null;
   }>`
     SELECT DISTINCT wo.*, array_agg(DISTINCT soli."orderId") AS "orderIds"
@@ -558,6 +564,7 @@ export async function getWorkOrdersForSerial({
     paymentFixedDueDate: Date | null;
     paymentTermsTemplateId: string | null;
     locationId: string | null;
+    staffMemberId: string | null;
   }>`
     SELECT wo.*
     FROM "ProductVariantSerial" pvs
