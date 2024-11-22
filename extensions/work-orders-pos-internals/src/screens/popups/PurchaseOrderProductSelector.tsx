@@ -137,10 +137,13 @@ export function PurchaseOrderProductSelector({
               onCreate: product => {
                 selectProducts([
                   {
-                    ...product,
                     uuid: uuid(),
                     customFields: customFieldsPresetsQuery.data.defaultCustomFields,
                     serialNumber: null,
+                    productVariantId: product.productVariantId,
+                    quantity: product.quantity,
+                    unitCost: product.unitCost,
+                    specialOrderLineItem: product.specialOrderLineItem,
                   },
                 ]);
                 router.popCurrent();

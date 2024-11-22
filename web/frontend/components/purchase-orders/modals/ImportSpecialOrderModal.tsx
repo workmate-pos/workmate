@@ -157,9 +157,8 @@ export function ImportSpecialOrderModal({
               : BigDecimal.ZERO.toMoney(),
             customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             productVariantId: lineItem.productVariantId,
-            availableQuantity: 0,
             serialNumber: null,
-          };
+          } satisfies CreatePurchaseOrder['lineItems'][number];
         })
         .filter(isNonNullable),
     );
