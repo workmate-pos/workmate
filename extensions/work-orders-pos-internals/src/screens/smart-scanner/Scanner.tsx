@@ -38,7 +38,7 @@ export function Scanner() {
     if (scannerData.data) {
       if (scannerData.data !== lastScannedData || currentTime - lastScanTime > minDelay) {
         handleScan();
-        setLastScannedData(scannerData.data);
+        setLastScannedData(scannerData.data ?? null);
         setLastScanTime(currentTime);
       } else if (scannerData.data === lastScannedData) {
         // Handle repeated scans of the same barcode
@@ -50,6 +50,7 @@ export function Scanner() {
 
   const handleScan = () => {
     if (scanVariantsQuery.isSuccess && scanVariantsQuery.data.length === 1) {
+      // If we find just one variant we can just add it immediately
       const variant = scanVariantsQuery.data[0]!;
       const currentCount = variantIdCount[variant.id] ?? 0;
       const newCount = currentCount + 1;
