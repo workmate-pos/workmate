@@ -152,7 +152,7 @@ export default {
         variants: {
           inventory_item_id: number | null | undefined;
         }[];
-        metafields: {
+        metafields?: {
           id: number;
           namespace: string;
           key: string;
@@ -169,13 +169,13 @@ export default {
     ) {
       const getMetafield = ({ namespace, key }: { namespace: string; key: string }) =>
         Promise.all(
-          body.metafields.map(
+          body.metafields?.map(
             async metafield =>
               [
                 metafield,
                 metafield.key === key && metafield.namespace === (await resolveNamespace(session, namespace)),
               ] as const,
-          ),
+          ) ?? [],
         ).then(x => x.find(([, isProductServiceType]) => isProductServiceType)?.[0]);
 
       const serviceTypeMetafield = await getMetafield(productServiceTypeMetafield);
@@ -205,7 +205,8 @@ export default {
 
       const [isCached, hasSyncableMetafields, hasReorderPoints] = await Promise.all([
         getProduct(body.admin_graphql_api_id).then(product => product !== null),
-        doesProductHaveSyncableMetafields(session, body.admin_graphql_api_id),
+        false,
+        // doesProductHaveSyncableMetafields(session, body.admin_graphql_api_id),
         getReorderPoints({
           shop: session.shop,
           inventoryItemIds: body.variants
