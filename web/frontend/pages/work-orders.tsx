@@ -1,5 +1,7 @@
 import {
   Badge,
+  Box,
+  Button,
   Card,
   EmptyState,
   Frame,
@@ -20,15 +22,18 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { WorkOrderCsvUploadDropZoneModal } from '@web/frontend/components/work-orders/WorkOrderCsvUploadDropZoneModal.js';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useBulkDeleteWorkOrderMutation } from '@work-orders/common/queries/use-bulk-delete-work-order-mutation.js';
+import { useEmployeeQueries, useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { StaffMemberSelectorModal } from '@web/frontend/components/selectors/StaffMemberSelectorModal.js';
 
 export default function () {
   return (
@@ -46,8 +51,11 @@ function WorkOrders() {
   const app = useAppBridge();
 
   const [query, setQuery, internalQuery] = useDebouncedState('');
+  const [staffMemberId, setStaffMemberId] = useState<ID>();
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
+
   const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
+  const [isStaffMemberSelectorModalOpen, setIsStaffMemberSelectorModalOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -56,6 +64,7 @@ function WorkOrders() {
     fetch,
     query,
     customFieldFilters: [],
+    staffMemberId,
   });
 
   const [pageIndex, setPageIndex] = useState(0);
@@ -66,6 +75,11 @@ function WorkOrders() {
 
   const customerIds = unique(workOrders.map(workOrder => workOrder.customerId));
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
+
+  const staffMemberIds = unique(workOrders.map(workOrder => workOrder.staffMemberId).filter(isNonNullable));
+  const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
+
+  const staffMemberQuery = useEmployeeQuery({ fetch, id: staffMemberId ?? null });
 
   const settingsQuery = useSettingsQuery({ fetch });
 
@@ -103,8 +117,34 @@ function WorkOrders() {
       <IndexFilters
         mode={mode}
         setMode={setMode}
-        filters={[]}
-        appliedFilters={[]}
+        filters={[
+          {
+            key: 'staff-member',
+            label: 'Staff member',
+            filter: (
+              <Box paddingBlock="200">
+                <InlineStack align="center" blockAlign="center">
+                  <Button variant="plain" onClick={() => setIsStaffMemberSelectorModalOpen(true)}>
+                    Select staff member
+                  </Button>
+                </InlineStack>
+              </Box>
+            ),
+            shortcut: true,
+            pinned: true,
+          },
+        ]}
+        appliedFilters={[
+          ...(!staffMemberId
+            ? []
+            : [
+                {
+                  key: 'staff-member',
+                  label: staffMemberQuery.data?.name ?? 'Unknown staff member',
+                  onRemove: () => setStaffMemberId(undefined),
+                },
+              ]),
+        ]}
         onQueryChange={query => setQuery(query)}
         onQueryClear={() => setQuery('', true)}
         queryValue={internalQuery}
@@ -122,6 +162,7 @@ function WorkOrders() {
           { title: 'Work order' },
           { title: 'Status' },
           { title: 'Customer' },
+          { title: 'Staff member' },
           { title: 'SO #' },
           { title: 'SPO #' },
           { title: 'PO #' },
@@ -192,6 +233,25 @@ function WorkOrders() {
               })()}
             </IndexTable.Cell>
             <IndexTable.Cell>
+              {(() => {
+                if (!workOrder.staffMemberId) {
+                  return null;
+                }
+
+                const staffMemberQuery = staffMemberQueries[workOrder.staffMemberId];
+
+                if (!staffMemberQuery) {
+                  return null;
+                }
+
+                if (staffMemberQuery.isLoading) {
+                  return <SkeletonBodyText lines={1} />;
+                }
+
+                return staffMemberQuery.data?.name;
+              })()}
+            </IndexTable.Cell>
+            <IndexTable.Cell>
               <InlineStack gap="100">
                 {workOrder.orders
                   .filter(hasPropertyValue('type', 'ORDER'))
@@ -243,6 +303,12 @@ function WorkOrders() {
         onClose={() => setShouldShowBulkDeleteModal(false)}
         onDelete={() => clearSelection()}
         names={selectedResources}
+      />
+
+      <StaffMemberSelectorModal
+        open={isStaffMemberSelectorModalOpen}
+        onClose={() => setIsStaffMemberSelectorModalOpen(false)}
+        onSelect={staffMember => setStaffMemberId(staffMember.id)}
       />
 
       {toast}

@@ -15,19 +15,22 @@ import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-s
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
-import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { createGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
+import { useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
 
 export function PurchaseOrderEntry() {
   const [query, setQuery] = useDebouncedState('');
   const [customFieldFilters, setCustomFieldFilters] = useState<CustomFieldFilter[]>([]);
+  const [staffMemberId, setStaffMemberId] = useState<ID>();
 
   const fetch = useAuthenticatedFetch();
   const purchaseOrderInfoQuery = usePurchaseOrderInfoPageQuery({
     fetch,
     query,
     customFieldFilters,
+    staffMemberId,
   });
   const purchaseOrders = purchaseOrderInfoQuery.data?.pages?.flat(1) ?? [];
 
@@ -35,6 +38,8 @@ export function PurchaseOrderEntry() {
   const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
 
   const purchaseOrderRows = usePurchaseOrderRows(purchaseOrders);
+
+  const staffMemberQuery = useEmployeeQuery({ fetch, id: staffMemberId ?? null });
 
   const screen = useScreen();
 
@@ -121,6 +126,7 @@ export function PurchaseOrderEntry() {
       >
         <Button
           title={'Filter custom fields'}
+          type="plain"
           onPress={() =>
             router.push('CustomFieldFilterConfig', {
               onSave: setCustomFieldFilters,
@@ -128,10 +134,20 @@ export function PurchaseOrderEntry() {
             })
           }
         />
+        <Button
+          title="Filter staff member"
+          type="plain"
+          onPress={() =>
+            router.push('EmployeeSelector', {
+              onClear: () => setStaffMemberId(undefined),
+              onSelect: employee => setStaffMemberId(employee.id),
+            })
+          }
+        />
       </ResponsiveStack>
 
       <ResponsiveStack direction={'vertical'} spacing={1} paddingVertical={'ExtraSmall'}>
-        {customFieldFilters.length > 0 && (
+        {(customFieldFilters.length > 0 || !!staffMemberId) && (
           <>
             <Text variant="body" color="TextSubdued">
               Active filters:
@@ -141,6 +157,11 @@ export function PurchaseOrderEntry() {
                 • {getCustomFieldFilterText(filter)}
               </Text>
             ))}
+            {!!staffMemberId && (
+              <Text variant="body" color="TextSubdued">
+                • Staff member is {staffMemberQuery.data?.name ?? 'unknown'}
+              </Text>
+            )}
           </>
         )}
       </ResponsiveStack>
@@ -210,16 +231,10 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
 }
 
 function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
-  const possibilities = [
+  return getSubtitle([
     purchaseOrder.vendorName,
     purchaseOrder.location?.name,
     purchaseOrder.linkedOrders.map(order => order.name).join(', ') || undefined,
     purchaseOrder.linkedCustomers.map(customer => customer.displayName).join(', ') || undefined,
-  ].filter(isNonNullable);
-
-  if (possibilities.length === 0) {
-    return undefined;
-  }
-
-  return possibilities.slice(0, 3) as [string] | [string, string] | [string, string, string];
+  ]);
 }
