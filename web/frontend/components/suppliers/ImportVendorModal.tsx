@@ -159,7 +159,7 @@ function ImportVendorDetailsModal({ name, open, onClose }: { name: string; open:
           disabled: !supplierName,
           onAction: () => {
             supplierMutation.mutate(
-              { id: null, name: supplierName, vendors: [name], productVariantIds: [] },
+              { id: null, name: supplierName, address: '', vendors: [name], productVariantIds: [] },
               {
                 onSuccess() {
                   setToastAction({ content: 'Created supplier!' });

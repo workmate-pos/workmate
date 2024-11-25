@@ -26,7 +26,7 @@ import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useLocationsQuery } from '@work-orders/common/queries/use-locations-query.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
-import { useInfinitePagination } from '@web/frontend/hooks/pagination.js';
+import { useInfinitePagination } from '@work-orders/common/util/pagination.js';
 
 export default function () {
   return (

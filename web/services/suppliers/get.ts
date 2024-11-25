@@ -22,6 +22,7 @@ export async function getDetailedSupplier(session: Session, id: number) {
   return {
     id: supplier.id,
     name: supplier.name,
+    address: supplier.address,
     vendors: vendors.map(vendor => vendor.vendor),
     productVariantIds: productVariants.map(row => row.productVariantId),
     createdAt: supplier.createdAt,

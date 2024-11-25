@@ -6,6 +6,9 @@
       "type": "string",
       "minLength": 1
     },
+    "address": {
+      "type": "string"
+    },
     "vendors": {
       "type": "array",
       "items": {
@@ -19,6 +22,6 @@
       }
     }
   },
-  "required": ["name", "vendors", "productVariantIds"],
+  "required": ["name", "address", "vendors", "productVariantIds"],
   "additionalProperties": false
 }

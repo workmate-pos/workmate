@@ -6,6 +6,10 @@
     ".": {
       "default": "./dist/index.js",
       "types": "./src/index.tsx"
+    },
+    "./screens/*": {
+      "default": "./dist/screens/*",
+      "types": "./src/screens/*"
     }
   },
   "version": "1.0.0",

@@ -2,9 +2,9 @@ import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEffect, useState } from 'react';
-import { useStaticPagination } from '@web/frontend/hooks/pagination.js';
 import { Filters, Modal } from '@shopify/polaris';
 import { VendorResourceList } from '@web/frontend/components/VendorResourceList.js';
+import { useStaticPagination } from '@work-orders/common/util/pagination.js';
 
 const PAGE_SIZE = 50;
 

@@ -37,7 +37,7 @@ export function ProductVariantResourceList({
   productVariantIds,
   onClick,
   render = productVariant => <ProductVariantResourceItemContent productVariant={productVariant} />,
-  emptyState,
+  emptyState = <ProductVariantResourceListEmptyState verb="found" />,
   selectable,
   selectedItems,
   filterControl,
@@ -51,7 +51,7 @@ export function ProductVariantResourceList({
       resolveItemId={productVariantId => productVariantId}
       idForItem={productVariantId => productVariantId}
       resourceName={{ singular: 'product variant', plural: 'product variants' }}
-      emptyState={emptyState ?? <ProductVariantResourceListEmptyState verb="found" />}
+      emptyState={emptyState}
       filterControl={filterControl}
       pagination={pagination}
       selectable={selectable}

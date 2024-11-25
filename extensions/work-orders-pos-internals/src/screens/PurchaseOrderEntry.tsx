@@ -2,7 +2,6 @@ import { Button, List, ListRow, Stack, Text, useApi } from '@shopify/ui-extensio
 import { useState } from 'react';
 import { usePurchaseOrderInfoPageQuery } from '@work-orders/common/queries/use-purchase-order-info-page-query.js';
 import { PurchaseOrderInfo } from '@web/services/purchase-orders/types.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useRouter } from '../routes.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
@@ -207,7 +206,7 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
 
 function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
   const possibilities = [
-    purchaseOrder.vendorName,
+    purchaseOrder.supplier?.name,
     purchaseOrder.location?.name,
     purchaseOrder.linkedOrders.map(order => order.name).join(', ') || undefined,
     purchaseOrder.linkedCustomers.map(customer => customer.displayName).join(', ') || undefined,

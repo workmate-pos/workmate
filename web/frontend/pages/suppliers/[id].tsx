@@ -29,15 +29,23 @@ import {
 import { MinusMinor, PlusMinor } from '@shopify/polaris-icons';
 import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/ProductVariantSelectorModal.js';
 import { useSupplierMutation } from '@work-orders/common/queries/use-supplier-mutation.js';
-import { useStaticPagination } from '@web/frontend/hooks/pagination.js';
 import {
   VendorResourceItemContent,
   VendorResourceList,
   VendorResourceListEmptyState,
 } from '@web/frontend/components/VendorResourceList.js';
 import { VendorSelectorModal } from '@web/frontend/components/selectors/VendorSelectorModal.js';
+import { DetailedSupplier } from '@web/services/suppliers/get.js';
+import { useStaticPagination } from '@work-orders/common/util/pagination.js';
 
-const defaultCreateSupplier: CreateSupplier = { name: '', vendors: [], productVariantIds: [] };
+const defaultCreateSupplier: CreateSupplier = { name: '', address: '', vendors: [], productVariantIds: [] };
+const getCreateSupplierFromDetailedSupplier = (supplier: DetailedSupplier): CreateSupplier => ({
+  ...defaultCreateSupplier,
+  name: supplier.name,
+  address: supplier.address ?? '',
+  vendors: supplier.vendors,
+  productVariantIds: supplier.productVariantIds,
+});
 
 // page size used for vendors and product variants
 const PAGE_SIZE = 10;
@@ -59,22 +67,24 @@ export default function Supplier() {
     supplierMutation.mutate(
       { ...createSupplier, id: supplierId },
       {
-        onSuccess() {
+        onSuccess(result) {
           setToastAction({ content: 'Saved supplier' });
+
+          const createSupplier: CreateSupplier = getCreateSupplierFromDetailedSupplier(result);
+          setLastSavedSupplier(createSupplier);
+          setCreateSupplier(createSupplier);
         },
       },
     );
 
-  const hasUnsavedChanges = lastSavedSupplier.name !== createSupplier.name;
+  const hasUnsavedChanges =
+    JSON.stringify(lastSavedSupplier, Object.keys(lastSavedSupplier).sort()) !==
+    JSON.stringify(createSupplier, Object.keys(createSupplier).sort());
 
   useEffect(() => {
-    if (!hasUnsavedChanges) {
-      const createSupplier: CreateSupplier = {
-        ...defaultCreateSupplier,
-        name: supplierQuery.data?.name ?? '',
-        vendors: supplierQuery.data?.vendors ?? [],
-        productVariantIds: supplierQuery.data?.productVariantIds ?? [],
-      };
+    if (!hasUnsavedChanges && !!supplierQuery.data) {
+      const createSupplier: CreateSupplier = getCreateSupplierFromDetailedSupplier(supplierQuery.data);
+
       setLastSavedSupplier(createSupplier);
       setCreateSupplier(createSupplier);
     }
@@ -155,6 +165,14 @@ export default function Supplier() {
               value={createSupplier.name}
               onChange={name => setCreateSupplier({ ...createSupplier, name })}
               requiredIndicator
+            />
+
+            <TextField
+              label="Address"
+              autoComplete="off"
+              value={createSupplier.address}
+              onChange={address => setCreateSupplier({ ...createSupplier, address })}
+              multiline={3}
             />
           </BlockStack>
 
@@ -307,7 +325,7 @@ export default function Supplier() {
 function Shell({ title, children, toast }: { title?: string; children: ReactNode; toast: ReactNode }) {
   return (
     <Frame>
-      <Page fullWidth>
+      <Page>
         <TitleBar title={title || 'Supplier'} />
 
         {children}

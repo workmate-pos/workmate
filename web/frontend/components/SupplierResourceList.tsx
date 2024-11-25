@@ -36,7 +36,7 @@ export function SupplierResourceList({
       items={unique([...supplierIds, ...(selectedItems ?? [])]).map(supplierId => ({ supplierId }))}
       resolveItemId={({ supplierId }) => String(supplierId)}
       idForItem={({ supplierId }) => String(supplierId)}
-      resourceName={{ singular: 'product variant', plural: 'product variants' }}
+      resourceName={{ singular: 'supplier', plural: 'suppliers' }}
       emptyState={emptyState ?? <SupplierResourceListEmptyState verb="found" />}
       filterControl={filterControl}
       pagination={pagination}
@@ -86,7 +86,7 @@ function SupplierResourceItem({
       {supplierQuery.isLoading && <SkeletonBodyText lines={1} />}
       {supplierQuery.isError && (
         <Text as="p" tone="critical">
-          {extractErrorMessage(supplierQuery.error, 'An error occurred while loading product')}
+          {extractErrorMessage(supplierQuery.error, 'An error occurred while loading supplier')}
         </Text>
       )}
 
@@ -122,7 +122,7 @@ export function SupplierResourceListEmptyState({ verb, children }: { verb: strin
     <Box paddingBlock="400">
       <BlockStack gap="200" inlineAlign="center">
         <Text as="p" variant="bodyMd" tone="subdued">
-          No product variants {verb}
+          No suppliers {verb}
         </Text>
 
         {children}

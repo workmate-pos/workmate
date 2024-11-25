@@ -17,6 +17,7 @@ export async function getSupplier(shop: string, { id, name }: MergeUnion<{ id: n
     name: string;
     createdAt: Date;
     updatedAt: Date;
+    address: string | null;
     lastUsedAt: Date | null;
   }>`
     SELECT s.*, GREATEST(MAX(po."createdAt"), s."updatedAt") AS "lastUsedAt"
@@ -150,19 +151,37 @@ export async function deleteSupplierProductVariants(supplierId: number) {
   `;
 }
 
-export async function insertSupplier(shop: string, { name }: { name: string }) {
-  return await sqlOne<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
-    INSERT INTO "Supplier" (shop, name)
-    VALUES (${shop}, ${name})
+export async function insertSupplier(shop: string, { name, address }: { name: string; address?: string }) {
+  return await sqlOne<{
+    id: number;
+    shop: string;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+    address: string | null;
+  }>`
+    INSERT INTO "Supplier" (shop, name, address)
+    VALUES (${shop}, ${name}, ${address?.trim() || null})
     RETURNING *;
   `;
 }
 
-export async function updateSupplier(shop: string, { id, name }: { id: number; name: string }) {
-  return await sqlOne<{ id: number; shop: string; name: string; createdAt: Date; updatedAt: Date }>`
+export async function updateSupplier(
+  shop: string,
+  { id, name, address }: { id: number; name: string; address?: string },
+) {
+  return await sqlOne<{
+    id: number;
+    shop: string;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+    address: string | null;
+  }>`
     UPDATE "Supplier"
-    SET shop = ${shop},
-        name = ${name}
+    SET shop    = ${shop},
+        name    = ${name},
+        address = ${address?.trim() || null}
     WHERE id = ${id}
     RETURNING *;
   `;

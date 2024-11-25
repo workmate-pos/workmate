@@ -2,7 +2,7 @@ import { StatusSelector } from './screens/popups/StatusSelector.js';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { Entry } from './screens/Entry.js';
 import { ProductSelector } from './screens/popups/ProductSelector.js';
-import { createRouter } from '@teifi-digital/pos-tools/router';
+import { createModalRouter } from '@teifi-digital/pos-tools/router';
 import { OrderPreview } from './screens/popups/OrderPreview.js';
 import { WorkOrderSaved } from './screens/popups/WorkOrderSaved.js';
 import { ServiceSelector } from './screens/popups/ServiceSelector.js';
@@ -56,7 +56,6 @@ import { PurchaseOrderEntry } from './screens/PurchaseOrderEntry.js';
 import { PurchaseOrder } from './screens/PurchaseOrder.js';
 import { PurchaseOrderVendorSelector } from './screens/popups/PurchaseOrderVendorSelector.js';
 import { PurchaseOrderEmployeeSelector } from './screens/popups/PurchaseOrderEmployeeSelector.js';
-import { PurchaseOrderProductSelector } from './screens/popups/PurchaseOrderProductSelector.js';
 import { PurchaseOrderProductConfig } from './screens/popups/PurchaseOrderProductConfig.js';
 import { PurchaseOrderPrintOverview } from './screens/PurchaseOrderPrintOverview.js';
 import { PurchaseOrderOrderSelector } from './screens/popups/PurchaseOrderOrderSelector.js';
@@ -120,10 +119,11 @@ import { EventInfo, EventInfoProps } from '@work-orders/common-pos/screens/event
 import { Permission } from '@web/services/permissions/permissions.js';
 import { PurchaseOrderReceipt } from './screens/purchase-orders/PurchaseOrderReceipt.js';
 import { PurchaseOrderReceiptLineItemStepper } from './screens/purchase-orders/PurchaseOrderReceiptLineItemStepper.js';
+import { SupplierSelector, SupplierSelectorProps } from '@work-orders/common-pos/screens/selector/SupplierSelector.js';
 
 const requiredPermissions: Permission[] = ['read_settings', 'read_work_orders', 'read_employees'];
 
-export const { Router, useRouter } = createRouter({
+export const { RouterProvider, Modals, useRouter, getComponent } = createModalRouter({
   Entry: {
     title: 'Work orders',
     Component: () => (
@@ -383,10 +383,6 @@ export const { Router, useRouter } = createRouter({
     // TODO: permission boundary here?
     Component: PurchaseOrderEmployeeSelector,
   },
-  PurchaseOrderProductSelector: {
-    title: 'Select product',
-    Component: PurchaseOrderProductSelector,
-  },
   PurchaseOrderProductConfig: {
     title: 'Product config',
     Component: PurchaseOrderProductConfig,
@@ -507,5 +503,12 @@ export const { Router, useRouter } = createRouter({
   PurchaseOrderReceiptLineItemStepper: {
     title: 'Receipt line item',
     Component: PurchaseOrderReceiptLineItemStepper,
+  },
+
+  SupplierSelector: {
+    title: 'Select supplier',
+    Component: (props: Omit<SupplierSelectorProps, 'useRouter'>) => (
+      <SupplierSelector {...props} useRouter={useRouter} />
+    ),
   },
 });

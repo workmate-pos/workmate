@@ -19,7 +19,7 @@ import {
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { FormStringField } from '@teifi-digital/pos-tools/components/form/FormStringField.js';
 import { useRouter } from '../../routes.js';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';

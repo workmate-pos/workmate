@@ -55,7 +55,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
     params: {
       query,
       locationId,
-      lineItemVendorName: vendorName,
+      lineItemVendorName: [vendorName].filter(isNonNullable),
       lineItemOrderState: 'not-fully-ordered',
       limit: 25,
     },
@@ -187,10 +187,11 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
               const createPurchaseOrder: CreatePurchaseOrder = {
                 name: null,
                 type: 'NORMAL',
+                // TODO: Fix this
+                supplierId: null,
                 status,
                 placedDate: null,
                 locationId,
-                vendorName,
                 shipFrom: '',
                 shipTo: location?.address?.formatted.join('\n') ?? '',
                 note: '',

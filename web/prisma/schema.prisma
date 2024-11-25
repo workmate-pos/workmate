@@ -1406,8 +1406,9 @@ model InventoryMutationItem {
 model Supplier {
   id Int @id @default(autoincrement())
 
-  shop String
-  name String
+  shop    String
+  name    String
+  address String?
 
   // TODO: Capture other data, eg shipping data
 

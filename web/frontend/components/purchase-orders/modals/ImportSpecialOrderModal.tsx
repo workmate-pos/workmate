@@ -31,16 +31,12 @@ import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query
 export function ImportSpecialOrderModal({
   open,
   onClose,
-  locationId,
-  supplierId,
   createPurchaseOrder,
   onSelect,
 }: {
   open: boolean;
   onClose: () => void;
-  locationId: ID;
-  supplierId: number;
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'name' | 'lineItems'>;
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'name' | 'lineItems' | 'locationId' | 'supplierId'>;
   onSelect: (lineItems: CreatePurchaseOrder['lineItems']) => void;
 }) {
   const [selectedSpecialOrder, setSelectedSpecialOrder] = useState<DetailedSpecialOrder>();
@@ -53,14 +49,14 @@ export function ImportSpecialOrderModal({
   const productVariantIds = unique(createPurchaseOrder.lineItems.map(li => li.productVariantId).filter(isNonNullable));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
-  const supplierQuery = useSupplierQuery({ fetch, id: supplierId });
+  const supplierQuery = useSupplierQuery({ fetch, id: createPurchaseOrder.supplierId ?? null });
   const vendors = supplierQuery.data?.vendors ?? [];
 
   const specialOrdersQuery = useSpecialOrdersQuery({
     fetch,
     params: {
       query,
-      locationId,
+      locationId: createPurchaseOrder.locationId ?? undefined,
       lineItemOrderState: 'not-fully-ordered',
       lineItemVendorName: vendors,
       limit: 25,

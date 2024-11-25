@@ -13,7 +13,7 @@ import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export async function upsertSupplier(session: Session, id: number | null, createSupplier: CreateSupplier) {
   const { shop } = session;
-  const { name, vendors, productVariantIds } = createSupplier;
+  const { name, address, vendors, productVariantIds } = createSupplier;
 
   const existingSupplier = await getSupplier(shop, { name });
 
@@ -22,7 +22,7 @@ export async function upsertSupplier(session: Session, id: number | null, create
       throw new HttpError('Supplier name taken', 400);
     }
 
-    const supplier = await insertSupplier(shop, { name });
+    const supplier = await insertSupplier(shop, { name, address });
     id = supplier.id;
   } else {
     if (!existingSupplier) {
@@ -38,7 +38,7 @@ export async function upsertSupplier(session: Session, id: number | null, create
   }
 
   await Promise.all([
-    updateSupplier(shop, { id, name }),
+    updateSupplier(shop, { id, name, address }),
     deleteSupplierVendors(id).then(() => insertSupplierVendors(id, vendors)),
     deleteSupplierProductVariants(id).then(() => insertSupplierProductVariants(id, productVariantIds)),
   ]);

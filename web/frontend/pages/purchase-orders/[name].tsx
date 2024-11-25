@@ -199,24 +199,6 @@ function PurchaseOrder({
 
   const lineItemCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
-  const selectedLocationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
-  const selectedLocation = selectedLocationQuery.data;
-
-  // Default "Ship to" to selected location's address
-  useEffect(() => {
-    if (!selectedLocation) return;
-    if (createPurchaseOrder.shipTo) return;
-    dispatch.setPartial({ shipTo: selectedLocation.address?.formatted?.join('\n') ?? null });
-  }, [selectedLocation]);
-
-  // Default "Ship from" to vendor's default address
-  // TODO: Use supplier address
-  // useEffect(() => {
-  //   if (!vendorCustomer) return;
-  //   if (createPurchaseOrder.shipFrom) return;
-  //   dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress?.formatted?.join('\n') });
-  // }, [vendorCustomer]);
-
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
   const [isCustomFieldPresetsModalOpen, setIsCustomFieldPresetsModalOpen] = useState(false);
@@ -274,8 +256,6 @@ function PurchaseOrder({
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isPending}
-            selectedLocation={selectedLocation}
-            isLoadingLocation={selectedLocationQuery.isLoading}
             onVendorSelectorClick={() => setIsSupplierSelectorModalOpen(true)}
             onLocationSelectorClick={() => setIsLocationSelectorModalOpen(true)}
           />
@@ -284,7 +264,6 @@ function PurchaseOrder({
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isPending}
-            selectedLocation={selectedLocation}
           />
 
           <PurchaseOrderEmployeesCard
@@ -473,8 +452,8 @@ function PurchaseOrder({
         <SupplierSelectorModal
           open={isSupplierSelectorModalOpen}
           onClose={() => setIsSupplierSelectorModalOpen(false)}
-          onSelect={supplierId => {
-            dispatch.setSupplier({ supplierId });
+          onSelect={supplier => {
+            dispatch.setSupplier({ supplierId: supplier.id });
             setIsSupplierSelectorModalOpen(false);
           }}
         />
@@ -552,6 +531,12 @@ function PurchaseOrder({
             ],
           });
         }}
+        secondaryActions={[
+          {
+            content: 'Import special order',
+            onAction: () => setIsSpecialOrderModalOpen(true),
+          },
+        ]}
       />
 
       {createPurchaseOrder.locationId && createPurchaseOrder.supplierId && (

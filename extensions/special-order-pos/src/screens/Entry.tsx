@@ -1,4 +1,4 @@
-import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { useEffect, useState } from 'react';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
@@ -7,7 +7,7 @@ import { useSpecialOrderQuery } from '@work-orders/common/queries/use-special-or
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useRouter } from '../routes.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
-import { Banner, Button, List, ListRow, ScrollView, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
+import { Banner, Button, List, ListRow, ScrollView, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
@@ -18,7 +18,7 @@ import {
   getDetailedSpecialOrderSubtitle,
 } from '@work-orders/common-pos/util/special-orders.js';
 import { getCreateSpecialOrderFromDetailedSpecialOrder } from '@work-orders/common/create-special-order/get-create-special-order-from-detailed-special-order.js';
-import { defaultCreateSpecialOrder } from '@work-orders/common/create-special-order/default.js';
+import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 
 export function Entry() {
   const [query, setQuery] = useDebouncedState('');
@@ -39,7 +39,7 @@ export function Entry() {
       limit: 25,
       customerId,
       locationId,
-      lineItemVendorName: vendorName,
+      lineItemVendorName: [vendorName].filter(isNonNullable),
       orderState,
       purchaseOrderState,
     },
@@ -64,7 +64,6 @@ export function Entry() {
 
   const router = useRouter();
 
-  const { session } = useApi<'pos.home.modal.render'>();
   const rows = useListRows(specialOrdersQuery.data?.pages.flat() ?? [], setSelectedSpecialOrderName);
 
   return (
@@ -88,23 +87,6 @@ export function Entry() {
           <ResponsiveStack direction={'horizontal'} sm={{ alignment: 'center', paddingVertical: 'Small' }}>
             <Text variant="headingLarge">Special Orders</Text>
           </ResponsiveStack>
-
-          {false && (
-            <ResponsiveStack direction={'horizontal'} sm={{ direction: 'vertical' }}>
-              <Button
-                title={'New special order'}
-                type={'primary'}
-                onPress={() =>
-                  router.push('SpecialOrder', {
-                    initial: {
-                      ...defaultCreateSpecialOrder,
-                      locationId: createGid('Location', session.currentSession.locationId),
-                    },
-                  })
-                }
-              />
-            </ResponsiveStack>
-          )}
         </ResponsiveStack>
 
         <ResponsiveStack direction={'horizontal'} alignment={'center'} flex={1} paddingHorizontal={'HalfPoint'}>

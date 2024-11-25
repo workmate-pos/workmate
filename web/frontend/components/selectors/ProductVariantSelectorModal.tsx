@@ -11,10 +11,10 @@ import {
   ProductVariantResourceList,
   ProductVariantResourceListProps,
 } from '@web/frontend/components/ProductVariantResourceList.js';
-import { useInfinitePagination } from '@web/frontend/hooks/pagination.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ReactNode, useEffect } from 'react';
 import type { ComplexAction } from '@shopify/polaris/build/ts/src/types.js';
+import { useInfinitePagination } from '@work-orders/common/util/pagination.js';
 
 // TODO: More selectors just like this (same with pos)
 
@@ -137,6 +137,7 @@ export function ProductVariantSelectorModal({
               onClearAll={() => setQuery('', true)}
             />
           }
+          render={render}
           onClick={productVariantId => {
             const productVariant = page?.find(productVariant => productVariant.id === productVariantId);
 
@@ -151,7 +152,6 @@ export function ProductVariantSelectorModal({
               onClose();
             }
           }}
-          render={render}
         />
       </Modal>
 

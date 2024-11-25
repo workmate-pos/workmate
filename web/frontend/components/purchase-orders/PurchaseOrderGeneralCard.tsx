@@ -1,7 +1,6 @@
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { CreatePurchaseOrderDispatchProxy } from '@work-orders/common/create-purchase-order/reducer.js';
 import { BlockStack, Card, Select, Text, TextField } from '@shopify/polaris';
-import type { Location } from '@web/frontend/pages/purchase-orders/[name].js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useState } from 'react';
@@ -9,6 +8,7 @@ import { DateModal } from '@web/frontend/components/shared-orders/modals/DateMod
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -18,25 +18,25 @@ const PURCHASE_ORDER_TYPES: CreatePurchaseOrder['type'][] = ['NORMAL', 'DROPSHIP
 export function PurchaseOrderGeneralCard({
   createPurchaseOrder,
   dispatch,
-  selectedLocation,
   disabled,
   onVendorSelectorClick,
   onLocationSelectorClick,
-  isLoadingLocation,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
   dispatch: CreatePurchaseOrderDispatchProxy;
-  selectedLocation: Location;
   disabled: boolean;
   onVendorSelectorClick: () => void;
   onLocationSelectorClick: () => void;
-  isLoadingLocation: boolean;
 }) {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
+
   const supplierQuery = useSupplierQuery({ fetch, id: createPurchaseOrder.supplierId });
+
+  const locationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
+  const location = locationQuery.data;
 
   const placedDate = createPurchaseOrder.placedDate ? new Date(createPurchaseOrder.placedDate) : null;
 
@@ -77,12 +77,12 @@ export function PurchaseOrderGeneralCard({
             label={'Location'}
             requiredIndicator
             autoComplete={'off'}
-            loading={isLoadingLocation}
+            loading={locationQuery.isLoading}
             value={
-              isLoadingLocation
+              locationQuery.isLoading
                 ? ''
                 : createPurchaseOrder.locationId
-                  ? (selectedLocation?.name ?? 'Unknown location')
+                  ? (location?.name ?? 'Unknown location')
                   : ''
             }
             onFocus={() => onLocationSelectorClick()}

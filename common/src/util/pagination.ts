@@ -5,11 +5,7 @@ import { useCallback, useMemo, useState } from 'react';
  * Returns an object that can be used for paginating complete lists.
  * To paginate infinite lists, see {@link useInfinitePagination}.
  */
-export function useStaticPagination<T>(
-  collection: T[],
-  pageSize: number,
-  initialPageIndex: number = 0,
-): ResourceListPaginationProps & { page: T[]; reset: () => void } {
+export function useStaticPagination<T>(collection: T[], pageSize: number, initialPageIndex: number = 0) {
   const [pageIndex, setPageIndex] = useState(initialPageIndex);
 
   const page = useMemo(
@@ -29,7 +25,7 @@ export function useStaticPagination<T>(
     hasPrevious,
     hasNext,
     reset,
-  };
+  } satisfies ResourceListPaginationProps & { page: T[]; reset: () => void };
 }
 
 /**
@@ -47,10 +43,7 @@ export function useInfinitePagination<T>(
     onNext: () => void;
   },
   initialPageIndex: number = 0,
-): ResourceListPaginationProps & {
-  page: T | undefined;
-  reset: () => void;
-} {
+) {
   const [pageIndex, setPageIndex] = useState(initialPageIndex);
 
   const page = useMemo(() => pages[pageIndex], [pages, pageIndex]);
@@ -73,5 +66,5 @@ export function useInfinitePagination<T>(
     hasPrevious,
     hasNext,
     reset,
-  };
+  } satisfies ResourceListPaginationProps & { page: T | undefined; reset: () => void };
 }

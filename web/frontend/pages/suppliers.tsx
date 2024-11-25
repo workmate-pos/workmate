@@ -217,7 +217,7 @@ function NewSupplierModal({ open, onClose }: { open: boolean; onClose: () => voi
           loading: supplierMutation.isPending,
           onAction: () =>
             supplierMutation.mutate(
-              { id: null, name, vendors, productVariantIds: [] },
+              { id: null, name, address: '', vendors, productVariantIds: [] },
               {
                 onSuccess(supplier) {
                   setToastAction({ content: 'Supplier created!' });

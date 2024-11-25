@@ -1,16 +1,17 @@
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useEffect } from 'react';
-import { useInfinitePagination } from '@web/frontend/hooks/pagination.js';
 import { Filters, Modal } from '@shopify/polaris';
 import { SupplierResourceList } from '@web/frontend/components/SupplierResourceList.js';
 import { useSuppliersQuery } from '@work-orders/common/queries/use-suppliers-query.js';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
+import { useInfinitePagination } from '@work-orders/common/util/pagination.js';
+import { DetailedSupplier } from '@web/services/suppliers/get.js';
 
 const PAGE_SIZE = 50;
 
 export type SupplierSelectorModalProps = {
-  onSelect: (supplierId: number) => void;
+  onSelect: (supplier: DetailedSupplier) => void;
   open: boolean;
   onClose: () => void;
   selectedSuppliers?: number[];
@@ -66,7 +67,16 @@ export function SupplierSelectorModal({
               onClearAll={() => setQuery('', true)}
             />
           }
-          onClick={supplier => onSelect(supplier)}
+          onClick={supplierId => {
+            const supplier = page?.suppliers.find(supplier => supplier.id === supplierId);
+
+            if (!supplier) {
+              console.error('Could not find supplier', supplierId);
+              return;
+            }
+
+            onSelect(supplier);
+          }}
         />
       </Modal>
 
