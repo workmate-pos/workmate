@@ -49,6 +49,10 @@
     "purchaseOrderStatus": {
       "title": "purchase-order-status",
       "enum": ["fulfilled", "pending"]
+    },
+    "staffMemberId": {
+      "description": "The staff member id of the employee who created the work order",
+      "$ref": "scalars.json#/definitions/ID"
     }
   },
   "required": ["limit", "offset"],
