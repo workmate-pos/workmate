@@ -1,7 +1,6 @@
 import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import {
   Badge,
-  Banner,
   BlockStack,
   Box,
   Button,
@@ -34,7 +33,6 @@ import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ProductVariantSerialSelectorModal } from '@web/frontend/components/selectors/ProductVariantSerialSelectorModal.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
-import { ScanProductModal } from '@web/frontend/components/cycle-counts/modals/ScanProductModal.js';
 
 export function WorkOrderItemsCard({
   createWorkOrder,
@@ -51,7 +49,6 @@ export function WorkOrderItemsCard({
 }) {
   const [toast, setToastAction] = useToast();
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
-  const [isScanProductModalOpen, setIsScanProductModalOpen] = useState(false);
   const [isAddSerialModalOpen, setIsAddSerialModalOpen] = useState(false);
   const [isAddServiceModalOpen, setIsAddServiceModalOpen] = useState(false);
   const [serialProductVariantId, setSerialProductVariantId] = useState<ID>();
@@ -78,9 +75,6 @@ export function WorkOrderItemsCard({
         <ButtonGroup fullWidth>
           <Button onClick={() => setIsAddProductModalOpen(true)} disabled={disabled}>
             Add product
-          </Button>
-          <Button onClick={() => setIsScanProductModalOpen(true)} disabled={disabled}>
-            Scan Product
           </Button>
           <Button onClick={() => setIsAddSerialModalOpen(true)} disabled={disabled}>
             Add serial
@@ -117,16 +111,6 @@ export function WorkOrderItemsCard({
             if (customItem) {
               setEditItem(customItem);
             }
-          }}
-        />
-      )}
-
-      {isScanProductModalOpen && (
-        <ScanProductModal
-          open={isScanProductModalOpen}
-          onClose={() => setIsScanProductModalOpen(false)}
-          onProductScanned={item => {
-            dispatch.addItems({ items: [item] });
           }}
         />
       )}
