@@ -83,6 +83,7 @@ export async function getDetailedWorkOrder(
     discount: getWorkOrderDiscount(workOrder),
     paymentTerms: getWorkOrderPaymentTerms(workOrder),
     locationId: workOrder.locationId,
+    staffMemberId: workOrder.staffMemberId,
   });
 }
 
@@ -424,6 +425,7 @@ export async function getWorkOrderInfoPage(
     requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
     afterDueDate: paginationOptions.afterDueDate,
     beforeDueDate: paginationOptions.beforeDueDate,
+    staffMemberId: paginationOptions.staffMemberId,
     purchaseOrdersFulfilled,
     inverseOrderConditions,
     unpaid: paginationOptions.paymentStatus === 'unpaid',

@@ -5,7 +5,7 @@ import type {
 } from '@web/schemas/generated/work-order-pagination-options.js';
 import type { FetchWorkOrderInfoPageResponse } from '@web/controllers/api/work-order.js';
 import { Fetch } from './fetch.js';
-import { useInfiniteQuery, UseInfiniteQueryOptions, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, UseInfiniteQueryOptions } from '@tanstack/react-query';
 import { WorkOrderInfo } from '@web/services/work-orders/types.js';
 import { ID } from '@web/schemas/generated/ids.js';
 import { CustomFieldFilter } from '@web/services/custom-field-filters.js';
@@ -23,6 +23,7 @@ export const useWorkOrderInfoQuery = (
     paymentStatus,
     overdueStatus,
     purchaseOrderStatus,
+    staffMemberId,
     limit = 50,
   }: Omit<WorkOrderPaginationOptions, 'limit' | 'offset' | 'customFieldFilters' | 'afterDueDate' | 'beforeDueDate'> & {
     limit?: number;
@@ -47,13 +48,12 @@ export const useWorkOrderInfoQuery = (
           paymentStatus: PaymentStatus | undefined;
           overdueStatus: OverdueStatus | undefined;
           purchaseOrderStatus: PurchaseOrderStatus | undefined;
+          staffMemberId: ID | undefined;
         }
     )[]
   >,
-) => {
-  const queryClient = useQueryClient();
-
-  return useInfiniteQuery({
+) =>
+  useInfiniteQuery({
     ...options,
     queryKey: [
       'work-order-info',
@@ -67,6 +67,7 @@ export const useWorkOrderInfoQuery = (
         paymentStatus,
         overdueStatus,
         purchaseOrderStatus,
+        staffMemberId,
       },
     ],
     queryFn: async ({ pageParam: offset }) => {
@@ -80,6 +81,7 @@ export const useWorkOrderInfoQuery = (
       if (customerId) searchParams.set('customerId', customerId);
       if (paymentStatus) searchParams.set('paymentStatus', paymentStatus);
       if (purchaseOrderStatus) searchParams.set('purchaseOrderStatus', purchaseOrderStatus);
+      if (staffMemberId) searchParams.set('staffMemberId', staffMemberId);
 
       const now = new Date();
       if (overdueStatus === 'OVERDUE') {
@@ -121,4 +123,3 @@ export const useWorkOrderInfoQuery = (
       pageParams,
     }),
   });
-};

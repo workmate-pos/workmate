@@ -61,6 +61,7 @@ export function StaffMemberSelectorModal({ open, onClose, onSelect }: StaffMembe
               onClearAll={() => setQuery('', true)}
             />
           }
+          flushFilters
           emptyState={
             <Card>
               <EmptyState heading={'Staff Members'} image={emptyState}>
