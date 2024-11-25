@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
-import { useApi, AdminBlock, BlockStack, Button, Text, NumberField, Select } from '@shopify/ui-extensions-react/admin';
+import {
+  AdminBlock,
+  BlockStack,
+  Button,
+  Text,
+  NumberField,
+  Select,
+  InlineStack,
+  useApi,
+} from '@shopify/ui-extensions-react/admin';
 import { useReorderPointQuery } from '@work-orders/common/queries/use-reorder-point-query.js';
 import { useReorderPointMutation } from '@work-orders/common/queries/use-reorder-point-mutation.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { useInventoryItem } from '../hooks/useInventoryItem.js';
 import { useLocationOptions } from '../hooks/useLocationOptions.js';
-import { TARGET } from '../BlockExtension.js';
+import { useDeleteReorderPointMutation } from '@work-orders/common/queries/use-delete-reorder-point-mutation.js';
 
 interface FormValues {
   min: number;
@@ -14,11 +23,14 @@ interface FormValues {
   locationId?: ID;
 }
 
-export function ReorderPointForm() {
-  const { data } = useApi(TARGET);
-  const variantId = data.selected[0]?.id as ID;
-
-  const { inventoryItemId, isLoading: isLoadingInventory } = useInventoryItem(variantId);
+export function ReorderPointForm({
+  api,
+  productVariantId,
+}: {
+  api: ReturnType<typeof useApi<'admin.product-variant-details.block.render' | 'admin.product-details.block.render'>>;
+  productVariantId: ID;
+}) {
+  const { inventoryItemId, isLoading: isLoadingInventory } = useInventoryItem(api, productVariantId);
   const { options: locationOptions, isLoading: isLoadingLocations, error: locationError } = useLocationOptions();
 
   const [formValues, setFormValues] = useState<FormValues>({
@@ -31,46 +43,42 @@ export function ReorderPointForm() {
     data: reorderPoint,
     isLoading: isLoadingReorderPoints,
     error: reorderPointError,
-  } = useReorderPointQuery(
-    {
-      fetch,
-      inventoryItemId: inventoryItemId!,
-      locationId: formValues.locationId,
-    },
-    { enabled: !!inventoryItemId },
-  );
+  } = useReorderPointQuery({
+    fetch,
+    inventoryItemId: inventoryItemId ?? null,
+    locationId: formValues.locationId ?? null,
+  });
 
-  const mutation = useReorderPointMutation({ fetch });
+  const reorderPointMutation = useReorderPointMutation({ fetch });
+  const deleteReorderPointMutation = useDeleteReorderPointMutation({ fetch });
 
   useEffect(() => {
     if (reorderPoint) {
-      setFormValues({
+      setFormValues(current => ({
+        ...current,
         min: reorderPoint.min,
         max: reorderPoint.max,
-        locationId: reorderPoint.locationId ?? undefined,
-      });
+      }));
     } else {
-      setFormValues({
+      setFormValues(current => ({
+        ...current,
         min: 0,
         max: 0,
-        locationId: undefined,
-      });
+      }));
     }
   }, [reorderPoint]);
 
   const handleSubmit = () => {
     if (!validateForm()) return;
+    if (!inventoryItemId) return;
 
-    try {
-      mutation.mutate({
-        inventoryItemId: inventoryItemId!,
-        locationId: formValues.locationId,
-        min: formValues.min,
-        max: formValues.max,
-      });
-    } catch (error) {
-      console.error('Failed to save reorder point:', error);
-    }
+    deleteReorderPointMutation.reset();
+    reorderPointMutation.mutate({
+      inventoryItemId,
+      locationId: formValues.locationId,
+      min: formValues.min,
+      max: formValues.max,
+    });
   };
 
   const validateForm = (): boolean => {
@@ -97,28 +105,66 @@ export function ReorderPointForm() {
           value={formValues.locationId ?? ''}
           onChange={(value: ID) => setFormValues(prev => ({ ...prev, locationId: value || undefined }))}
           options={locationOptions}
-          disabled={mutation.isPending}
+          disabled={reorderPointMutation.isPending}
         />
 
         <NumberField
           label="Minimum Stock Level"
           value={formValues.min}
           onChange={(value: number | string) => setFormValues(prev => ({ ...prev, min: Number(value) }))}
-          disabled={mutation.isPending}
+          disabled={reorderPointMutation.isPending}
         />
 
         <NumberField
           label="Maximum Stock Level"
           value={formValues.max}
           onChange={(value: number | string) => setFormValues(prev => ({ ...prev, max: Number(value) }))}
-          disabled={mutation.isPending}
+          disabled={reorderPointMutation.isPending}
         />
 
-        <Button onPress={handleSubmit} disabled={!validateForm() || mutation.isPending}>
-          {mutation.isPending ? 'Saving...' : 'Save Configuration'}
-        </Button>
+        <InlineStack gap="base">
+          <Button
+            onPress={handleSubmit}
+            disabled={
+              !validateForm() ||
+              !inventoryItemId ||
+              reorderPointMutation.isPending ||
+              deleteReorderPointMutation.isPending
+            }
+          >
+            {reorderPointMutation.isPending ? 'Saving...' : 'Save'}
+          </Button>
+          <Button
+            tone="critical"
+            onPress={() => {
+              if (!inventoryItemId) return;
 
-        {mutation.isError && <Text>{extractErrorMessage(mutation.error, 'Failed to save reorder point')}</Text>}
+              reorderPointMutation.reset();
+              deleteReorderPointMutation.mutate({
+                inventoryItemId: inventoryItemId,
+                locationId: formValues.locationId ?? null,
+              });
+            }}
+            disabled={
+              !reorderPoint ||
+              !inventoryItemId ||
+              deleteReorderPointMutation.isPending ||
+              reorderPointMutation.isPending
+            }
+          >
+            {deleteReorderPointMutation.isPending ? 'Deleting...' : 'Delete'}
+          </Button>
+        </InlineStack>
+
+        {reorderPointMutation.isError && (
+          <Text>{extractErrorMessage(reorderPointMutation.error, 'Failed to save reorder point')}</Text>
+        )}
+        {reorderPointMutation.isSuccess && <Text>Saved reorder point!</Text>}
+
+        {deleteReorderPointMutation.isError && (
+          <Text>{extractErrorMessage(deleteReorderPointMutation.error, 'Failed to delete reorder point')}</Text>
+        )}
+        {deleteReorderPointMutation.isSuccess && <Text>Deleted reorder point!</Text>}
       </BlockStack>
     </AdminBlock>
   );
