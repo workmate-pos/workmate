@@ -9,11 +9,13 @@ import {
   ResourceList,
   Text,
   Thumbnail,
+  Button,
+  Box,
 } from '@shopify/polaris';
 import { ToastActionCallable } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
+import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { useEffect, useState } from 'react';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { CreatePurchaseOrder, Int } from '@web/schemas/generated/create-purchase-order.js';
@@ -38,6 +40,7 @@ import { useAppBridge } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
 import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
+import { BarcodeTextField } from '../../BarcodeTextField.js';
 
 type AddProductModalProps = AddProductModalPropsBase &
   (
@@ -94,6 +97,8 @@ export function AddProductModal({
 }: AddProductModalProps) {
   const [page, setPage] = useState(0);
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
+  const [isScanningMode, setIsScanningMode] = useState(false);
+  const [isSpecialOrderModalOpen, setIsSpecialOrderModalOpen] = useState(false);
 
   const app = useAppBridge();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -158,7 +163,55 @@ export function AddProductModal({
 
   const shouldShowPrice = companyLocationId === null;
 
-  const [isSpecialOrderModalOpen, setIsSpecialOrderModalOpen] = useState(false);
+  const handleProductSelect = (product: ProductVariant) => {
+    if (!customFieldsPresetsQuery.data) {
+      setToastAction({ content: 'Loading default custom fields... Try again momentarily' });
+      return;
+    }
+
+    if (outputType === 'WORK_ORDER') {
+      const charges: CreateWorkOrder['charges'][number][] = [];
+      const itemUuid = uuid();
+
+      for (const charge of product.defaultCharges ?? []) {
+        const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
+        charges.push({
+          ...defaultCharge,
+          uuid: uuid(),
+          workOrderItemUuid: itemUuid,
+        });
+      }
+
+      onAdd(
+        [
+          {
+            type: 'product',
+            uuid: itemUuid,
+            productVariantId: product.id,
+            quantity: 1 as Int,
+            customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+            absorbCharges: getProductServiceType(product.product.serviceType?.value) === QUANTITY_ADJUSTING_SERVICE,
+            serial: null,
+          },
+        ],
+        charges,
+      );
+    } else if (outputType === 'PURCHASE_ORDER') {
+      onAdd([
+        {
+          uuid: uuid(),
+          specialOrderLineItem: null,
+          unitCost: BigDecimal.ZERO.toMoney(),
+          productVariantId: product.id,
+          quantity: 1 as Int,
+          customFields: customFieldsPresetsQuery.data.defaultCustomFields,
+          serialNumber: null,
+        },
+      ]);
+    }
+
+    setToastAction({ content: `Added ${getProductVariantName(product) ?? 'unknown product'}` });
+  };
 
   return (
     <>
@@ -241,181 +294,146 @@ export function AddProductModal({
           </Modal.Section>
         )}
 
-        <ResourceList
-          filterControl={
-            <Filters
-              filters={[]}
-              queryPlaceholder={`Search ${thing}s`}
-              queryValue={optimisticQuery}
-              onQueryChange={setQuery}
-              onQueryClear={() => setQuery('', true)}
-              onClearAll={() => setQuery('', true)}
-            />
-          }
-          items={productVariants}
-          resolveItemId={item => item.id}
-          renderItem={productVariant => {
-            const name = getProductVariantName(productVariant) ?? `Unknown ${thing}`;
-            const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
-
-            // the product variants to add. will be more than 1 if this PV is a bundle
-            const productVariants = productVariant.requiresComponents
-              ? productVariant.productVariantComponents
-              : [{ productVariant, quantity: 1 as Int }];
-
-            const availableQuantity = Math.min(
-              0,
-              ...productVariants.map(pv => {
-                const inventoryItem = inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data;
-                return (
-                  inventoryItem?.inventoryLevel?.quantities?.find(quantity => quantity.name === 'available')
-                    ?.quantity ?? 0
-                );
-              }),
-            );
-
-            const isLoading =
-              outputType === 'PURCHASE_ORDER' &&
-              productVariants.some(pv => !inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data);
-
-            const totalPrice = (() => {
-              if (outputType === 'WORK_ORDER') {
-                return BigDecimal.sum(
-                  ...productVariants.map(pv => {
-                    return BigDecimal.fromMoney(pv.productVariant.price).multiply(
-                      BigDecimal.fromString(pv.quantity.toFixed(0)),
-                    );
-                  }),
-                  ...productVariants.map(pv => {
-                    return BigDecimal.fromMoney(
-                      getTotalPriceForCharges(
-                        pv.productVariant.defaultCharges?.map(productVariantDefaultChargeToCreateWorkOrderCharge),
-                      ),
-                    );
-                  }),
-                ).toMoney();
-              } else if (outputType === 'PURCHASE_ORDER') {
-                return BigDecimal.sum(
-                  ...productVariants.map(pv => {
-                    const unitCost = inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
-                    return BigDecimal.fromString(unitCost ?? '0.00').round(2);
-                  }),
-                ).toMoney();
-              } else {
-                return outputType satisfies never;
-              }
-            })();
-
-            return (
-              <ResourceItem
-                id={productVariant.id}
+        {isScanningMode && (
+          <Modal.Section flush>
+            <Box padding="200">
+              <BarcodeTextField
                 disabled={isLoading}
-                onClick={() => {
-                  if (isLoading) {
-                    return;
-                  }
+                onProductScanned={handleProductSelect}
+                showHelpText={false}
+                showFieldLabel={false}
+                showActionButton
+                actionButtonLabel="Scanner"
+                onActionButtonClick={() => setIsScanningMode(!isScanningMode)}
+              />
+            </Box>
+          </Modal.Section>
+        )}
 
-                  if (!productVariants.length) {
-                    return;
-                  }
-
-                  if (!customFieldsPresetsQuery.data) {
-                    setToastAction({ content: 'Loading default custom fields... Try again momentarily' });
-                    return;
-                  }
-
-                  if (outputType === 'WORK_ORDER') {
-                    const charges: CreateWorkOrder['charges'][number][] = [];
-                    const items = productVariants.map(pv => {
-                      const itemUuid = uuid();
-
-                      for (const charge of pv.productVariant.defaultCharges) {
-                        const defaultCharge = productVariantDefaultChargeToCreateWorkOrderCharge(charge);
-                        charges.push({
-                          ...defaultCharge,
-                          uuid: uuid(),
-                          workOrderItemUuid: itemUuid,
-                        });
-                      }
-
-                      return {
-                        type: 'product',
-                        uuid: itemUuid,
-                        productVariantId: pv.productVariant.id,
-                        quantity: pv.quantity,
-                        customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                        absorbCharges:
-                          getProductServiceType(pv.productVariant.product.serviceType?.value) ===
-                          QUANTITY_ADJUSTING_SERVICE,
-                        serial: null,
-                      } as const satisfies CreateWorkOrder['items'][number];
-                    });
-
-                    onAdd(items, charges);
-                  } else if (outputType === 'PURCHASE_ORDER') {
-                    onAdd(
-                      productVariants.map(pv => {
-                        const unitCost =
-                          inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
-
-                        return {
-                          uuid: uuid(),
-                          specialOrderLineItem: null,
-                          unitCost: BigDecimal.fromString(unitCost ?? '0.00')
-                            .round(2)
-                            .toMoney(),
-                          productVariantId: pv.productVariant.id,
-                          quantity: pv.quantity,
-                          customFields: customFieldsPresetsQuery.data.defaultCustomFields,
-                          serialNumber: null,
-                        } as const satisfies CreatePurchaseOrder['lineItems'][number];
-                      }),
-                    );
-                  } else {
-                    return outputType satisfies never;
-                  }
-
-                  const thingMaybePlural = productVariants.length > 1 ? `${thing}s` : `${thing}`;
-                  setToastAction({ content: `Added ${thingMaybePlural}` });
-                }}
-                name={name}
+        {!isScanningMode && (
+          <ResourceList
+            items={productVariants}
+            resolveItemId={item => item.id}
+            filterControl={
+              <Filters
+                filters={[]}
+                queryPlaceholder={`Search ${thing}s`}
+                queryValue={optimisticQuery}
+                onQueryChange={setQuery}
+                onQueryClear={() => setQuery('', true)}
+                onClearAll={() => setQuery('', true)}
               >
-                <BlockStack gap={'200'}>
-                  <InlineStack align={'space-between'} blockAlign={'center'}>
-                    <InlineStack gap={'400'}>
-                      {outputType === 'PURCHASE_ORDER' && (
-                        <Badge tone="info-strong">{String(availableQuantity ?? '?')}</Badge>
-                      )}
-                      {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
-                    </InlineStack>
-                    <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                      {shouldShowPrice && currencyFormatter(totalPrice)}
-                    </Text>
-                  </InlineStack>
-                  <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
-                    {name}
-                  </Text>
-                  <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
-                    {productVariant.sku}
-                  </Text>
-                </BlockStack>
-              </ResourceItem>
-            );
-          }}
-          loading={isLoading}
-          pagination={{
-            hasNext: hasNextPage,
-            hasPrevious: page > 0,
-            onPrevious: () => setPage(page => page - 1),
-            onNext: () => {
-              if (isLastAvailablePage) {
-                productVariantsQuery.fetchNextPage();
-              }
+                <Button onClick={() => setIsScanningMode(!isScanningMode)}>Search</Button>
+              </Filters>
+            }
+            flushFilters
+            renderItem={productVariant => {
+              const name = getProductVariantName(productVariant) ?? `Unknown ${thing}`;
+              const imageUrl = productVariant?.image?.url ?? productVariant?.product?.featuredImage?.url;
 
-              setPage(page => page + 1);
-            },
-          }}
-        />
+              // the product variants to add. will be more than 1 if this PV is a bundle
+              const productVariants = productVariant.requiresComponents
+                ? productVariant.productVariantComponents
+                : [{ productVariant, quantity: 1 as Int }];
+
+              const availableQuantity = Math.min(
+                0,
+                ...productVariants.map(pv => {
+                  const inventoryItem = inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data;
+                  return (
+                    inventoryItem?.inventoryLevel?.quantities?.find(quantity => quantity.name === 'available')
+                      ?.quantity ?? 0
+                  );
+                }),
+              );
+
+              const isLoading =
+                outputType === 'PURCHASE_ORDER' &&
+                productVariants.some(pv => !inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data);
+
+              const totalPrice = (() => {
+                if (outputType === 'WORK_ORDER') {
+                  return BigDecimal.sum(
+                    ...productVariants.map(pv => {
+                      return BigDecimal.fromMoney(pv.productVariant.price).multiply(
+                        BigDecimal.fromString(pv.quantity.toFixed(0)),
+                      );
+                    }),
+                    ...productVariants.map(pv => {
+                      return BigDecimal.fromMoney(
+                        getTotalPriceForCharges(
+                          pv.productVariant.defaultCharges?.map(productVariantDefaultChargeToCreateWorkOrderCharge),
+                        ),
+                      );
+                    }),
+                  ).toMoney();
+                } else if (outputType === 'PURCHASE_ORDER') {
+                  return BigDecimal.sum(
+                    ...productVariants.map(pv => {
+                      const unitCost = inventoryItemQueries[pv.productVariant.inventoryItem.id]?.data?.unitCost?.amount;
+                      return BigDecimal.fromString(unitCost ?? '0.00').round(2);
+                    }),
+                  ).toMoney();
+                } else {
+                  return outputType satisfies never;
+                }
+              })();
+
+              return (
+                <ResourceItem
+                  id={productVariant.id}
+                  disabled={isLoading}
+                  onClick={() => {
+                    if (isLoading) {
+                      return;
+                    }
+
+                    if (!productVariants.length) {
+                      return;
+                    }
+
+                    handleProductSelect(productVariant);
+                    onClose();
+                  }}
+                  name={name}
+                >
+                  <BlockStack gap={'200'}>
+                    <InlineStack align={'space-between'} blockAlign={'center'}>
+                      <InlineStack gap={'400'}>
+                        {outputType === 'PURCHASE_ORDER' && (
+                          <Badge tone="info-strong">{String(availableQuantity ?? '?')}</Badge>
+                        )}
+                        {imageUrl && <Thumbnail alt={name} source={imageUrl} />}
+                      </InlineStack>
+                      <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+                        {shouldShowPrice && currencyFormatter(totalPrice)}
+                      </Text>
+                    </InlineStack>
+                    <Text as={'p'} variant={'bodyMd'} fontWeight={'bold'}>
+                      {name}
+                    </Text>
+                    <Text as={'p'} variant={'bodyMd'} tone={'subdued'}>
+                      {productVariant.sku}
+                    </Text>
+                  </BlockStack>
+                </ResourceItem>
+              );
+            }}
+            loading={isLoading}
+            pagination={{
+              hasNext: hasNextPage,
+              hasPrevious: page > 0,
+              onPrevious: () => setPage(page => page - 1),
+              onNext: () => {
+                if (isLastAvailablePage) {
+                  productVariantsQuery.fetchNextPage();
+                }
+
+                setPage(page => page + 1);
+              },
+            }}
+          />
+        )}
       </Modal>
     </>
   );

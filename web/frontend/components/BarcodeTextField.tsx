@@ -8,6 +8,9 @@ import {
   Thumbnail,
   InlineStack,
   SkeletonThumbnail,
+  Button,
+  Box,
+  Icon,
 } from '@shopify/polaris';
 import { useEffect, useState } from 'react';
 import { useScanVariantsQuery } from '@work-orders/common/queries/use-scan-variants-query.js';
@@ -16,13 +19,27 @@ import { ProductVariant } from '@work-orders/common/queries/use-product-variants
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
+import { SearchMinor } from '@shopify/polaris-icons';
 
 type Props = {
   onProductScanned: (product: ProductVariant) => void;
+  onActionButtonClick?: () => void;
+  showFieldLabel?: boolean;
+  showHelpText?: boolean;
+  showActionButton?: boolean;
+  actionButtonLabel?: string;
   disabled?: boolean;
 };
 
-export function BarcodeTextField({ onProductScanned, disabled }: Props) {
+export function BarcodeTextField({
+  onProductScanned,
+  onActionButtonClick,
+  showFieldLabel,
+  showHelpText,
+  showActionButton,
+  actionButtonLabel,
+  disabled,
+}: Props) {
   const [toast, setToastAction] = useToast();
   const [barcode, setBarcode] = useState('');
   const [variantIdCount, setVariantIdCount] = useState<Record<string, number>>({});
@@ -94,17 +111,26 @@ export function BarcodeTextField({ onProductScanned, disabled }: Props) {
       {toast}
 
       <TextField
-        label="Scan barcode"
+        label={showFieldLabel ? 'Scan barcode' : ''}
         value={barcode}
         onChange={setBarcode}
         disabled={disabled}
+        prefix={<Icon source={SearchMinor} />}
+        connectedRight={
+          showActionButton && (
+            <Box paddingInlineStart="200">
+              <Button onClick={onActionButtonClick}>{actionButtonLabel}</Button>
+            </Box>
+          )
+        }
+        size="slim"
         autoComplete="off"
         clearButton
         onClearButtonClick={() => {
           setBarcode('');
           setVariantIdCount({});
         }}
-        helpText="Scan a barcode or type it manually"
+        helpText={showHelpText ? 'Scan a barcode or type it manually' : ''}
         autoFocus
         loading={scanVariantsQuery.isLoading}
       />
