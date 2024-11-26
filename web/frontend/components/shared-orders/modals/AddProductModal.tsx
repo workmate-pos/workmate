@@ -303,7 +303,7 @@ export function AddProductModal({
                 showHelpText={false}
                 showFieldLabel={false}
                 showActionButton
-                actionButtonLabel="Scanner"
+                actionButtonLabel="Search"
                 onActionButtonClick={() => setIsScanningMode(!isScanningMode)}
               />
             </Box>
@@ -323,7 +323,9 @@ export function AddProductModal({
                 onQueryClear={() => setQuery('', true)}
                 onClearAll={() => setQuery('', true)}
               >
-                <Button onClick={() => setIsScanningMode(!isScanningMode)}>Search</Button>
+                <Button variant="plain" onClick={() => setIsScanningMode(!isScanningMode)}>
+                  Scan
+                </Button>
               </Filters>
             }
             flushFilters

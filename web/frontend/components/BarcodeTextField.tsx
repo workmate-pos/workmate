@@ -119,7 +119,9 @@ export function BarcodeTextField({
         connectedRight={
           showActionButton && (
             <Box paddingInlineStart="200">
-              <Button onClick={onActionButtonClick}>{actionButtonLabel}</Button>
+              <Button variant="plain" onClick={onActionButtonClick}>
+                {actionButtonLabel}
+              </Button>
             </Box>
           )
         }
@@ -130,6 +132,7 @@ export function BarcodeTextField({
           setBarcode('');
           setVariantIdCount({});
         }}
+        placeholder="Scan product"
         helpText={showHelpText ? 'Scan a barcode or type it manually' : ''}
         autoFocus
         loading={scanVariantsQuery.isLoading}
