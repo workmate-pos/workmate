@@ -189,7 +189,8 @@ export async function getSerialsPage(
       c."displayName" ILIKE COALESCE(${_query}, c."displayName") OR
       c.phone ILIKE COALESCE(${_query}, c.phone) OR
       c.email ILIKE COALESCE(${_query}, c.email) OR
-      l.name ILIKE COALESCE(${_query}, l.name)
+      l.name ILIKE COALESCE(${_query}, l.name) OR
+      pvs.serial ILIKE COALESCE(${_query}, pvs.serial)
       )
     GROUP BY pvs.id, pvs."createdAt", pvs."updatedAt", pvs.serial, p.title
     ORDER BY CASE WHEN ${order} = 'ascending' AND ${sort} = 'created-at' THEN pvs."createdAt" END ASC NULLS LAST,

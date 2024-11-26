@@ -7,10 +7,11 @@ import {
   InlineStack,
   Image,
   Heading,
-  Select,
   Button,
   Divider,
   ProgressIndicator,
+  TextField,
+  ChoiceList,
 } from '@shopify/ui-extensions-react/admin';
 import { QueryClient, QueryClientProvider, skipToken, useQuery } from '@tanstack/react-query';
 import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -264,8 +265,11 @@ function LineItemSerialInput({
   orderId: ID;
   lineItemId: ID;
   selectedSerials: Record<ID, Record<number, string>>;
-  onSelect: (index: number, value: string | undefined) => void;
+  onSelect: (index: number, value: string | string[]) => void;
 }) {
+  // search state
+  const [searchQuery, setSearchQuery] = useState<string>('');
+
   const orderQuery = useOrderQuery(orderId);
   const order = orderQuery.data;
   const lineItem = order?.lineItems.nodes.find(lineItem => lineItem.id === lineItemId);
@@ -278,6 +282,7 @@ function LineItemSerialInput({
       limit: 100,
       sort: 'product-name',
       order: 'ascending',
+      query: searchQuery === '' ? undefined : searchQuery,
     },
     options: {
       enabled: !!lineItem?.variant?.id,
@@ -303,54 +308,74 @@ function LineItemSerialInput({
   );
 
   return (
-    <InlineStack inlineAlignment="space-between" blockAlignment="center" gap="base">
-      <InlineStack gap="base" blockAlignment="center">
-        {!!lineItem.product?.featuredMedia?.preview?.image?.url && (
-          <Image
-            alt={lineItem.product.featuredMedia.alt ?? lineItem.name}
-            source={lineItem.product.featuredMedia.preview.image.url}
-          />
-        )}
-        <BlockStack>
-          <Heading>{lineItem.name}</Heading>
-          {!!lineItem.sku && <Text>SKU: {lineItem.sku}</Text>}
-        </BlockStack>
+    <BlockStack gap="base">
+      <InlineStack inlineAlignment="space-between" blockAlignment="center" gap="base">
+        <InlineStack gap="base" blockAlignment="center">
+          {!!lineItem.product?.featuredMedia?.preview?.image?.url && (
+            <Image
+              alt={lineItem.product.featuredMedia.alt ?? lineItem.name}
+              source={lineItem.product.featuredMedia.preview.image.url}
+            />
+          )}
+          <BlockStack>
+            <Heading>{lineItem.name}</Heading>
+            {!!lineItem.sku && <Text>SKU: {lineItem.sku}</Text>}
+          </BlockStack>
+        </InlineStack>
+
+        <TextField label="" value={searchQuery} onChange={setSearchQuery} placeholder="Enter serial number to search" />
       </InlineStack>
-      {/*TODO: In mutation , assert that serial number is not used multiple times*/}
-      <BlockStack>
-        {Array.from({ length: lineItem.quantity }).map((_, i) => (
-          <Select
-            key={selectedSerials[lineItemId]?.[i] ?? i}
-            label=""
-            onChange={serial => onSelect(i, serial || undefined)}
-            value={selectedSerials[lineItemId]?.[i] ?? ''}
-            options={[
-              {
-                label: 'No serial number',
-                value: '',
-              },
-              ...(selectedSerials[lineItemId]?.[i]
-                ? [
-                    {
-                      label: selectedSerials[lineItemId][i],
-                      value: selectedSerials[lineItemId][i],
-                    },
-                  ]
-                : []),
+
+      <BlockStack inlineAlignment="end" blockAlignment="end">
+        {Object.keys(selectedSerials[lineItemId] ?? {}).length > 0 || serials.length > 0 ? (
+          <ChoiceList
+            name={`serials-${lineItemId}`}
+            value={Object.values(selectedSerials[lineItemId] ?? {})}
+            onChange={selectedValues => {
+              const values = Array.isArray(selectedValues) ? selectedValues : [selectedValues];
+              const newSerials: Record<number, string> = {};
+              values.forEach((serial, index) => {
+                if (index < lineItem.quantity) {
+                  newSerials[index] = serial;
+                }
+              });
+
+              // Update all indices at once
+              Object.entries(newSerials).forEach(([index, serial]) => {
+                onSelect(Number(index), serial);
+              });
+            }}
+            choices={[
+              // Show selected serials first
+              ...Object.values(selectedSerials[lineItemId] ?? {}).map(serial => ({
+                id: serial,
+                label: serial,
+                checked: true,
+              })),
+              // Show search results, excluding already selected serials
               ...serials
-                .filter(serial => serial.serial !== selectedSerials[lineItemId]?.[i])
+                .filter(serial => !Object.values(selectedSerials[lineItemId] ?? {}).includes(serial.serial))
                 .map(serial => ({
+                  id: serial.serial,
                   label: serial.serial,
-                  value: serial.serial,
-                  disabled:
-                    selectedSerials[lineItemId]?.[i] !== serial.serial &&
-                    productVariantUsedSerials.includes(serial.serial),
+                  checked: false,
+                  disabled: productVariantUsedSerials.includes(serial.serial),
                 })),
             ]}
+            multiple
           />
-        ))}
+        ) : (
+          !serialsQuery.isFetching && <Text appearance="subdued">No serial numbers found</Text>
+        )}
+
+        {serialsQuery.isFetching && <ProgressIndicator size="small-200" />}
+        {lineItem.quantity > 0 && (
+          <Text>
+            Select {lineItem.quantity} serial number{lineItem.quantity > 1 ? 's' : ''}
+          </Text>
+        )}
       </BlockStack>
-    </InlineStack>
+    </BlockStack>
   );
 }
 
