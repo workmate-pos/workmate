@@ -29,6 +29,7 @@ type Props = {
   showActionButton?: boolean;
   actionButtonLabel?: string;
   disabled?: boolean;
+  emptyState?: React.ReactNode;
 };
 
 export function BarcodeTextField({
@@ -39,6 +40,7 @@ export function BarcodeTextField({
   showActionButton,
   actionButtonLabel,
   disabled,
+  emptyState,
 }: Props) {
   const [toast, setToastAction] = useToast();
   const [barcode, setBarcode] = useState('');
@@ -175,6 +177,7 @@ export function BarcodeTextField({
           />
         </BlockStack>
       )}
+      {variants.length === 0 && emptyState}
     </BlockStack>
   );
 }

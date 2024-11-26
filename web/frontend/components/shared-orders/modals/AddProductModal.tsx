@@ -3,6 +3,7 @@ import {
   Badge,
   BlockStack,
   Filters,
+  Icon,
   InlineStack,
   Modal,
   ResourceItem,
@@ -41,6 +42,7 @@ import { Redirect } from '@shopify/app-bridge/actions';
 import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
 import { BarcodeTextField } from '../../BarcodeTextField.js';
+import { SearchMajor } from '@shopify/polaris-icons';
 
 type AddProductModalProps = AddProductModalPropsBase &
   (
@@ -305,6 +307,19 @@ export function AddProductModal({
                 showActionButton
                 actionButtonLabel="Search"
                 onActionButtonClick={() => setIsScanningMode(!isScanningMode)}
+                emptyState={
+                  <BlockStack gap="200" align="center">
+                    <Icon source={SearchMajor} />
+                    <BlockStack gap="050" align="center">
+                      <Text variant="headingMd" as="h2" alignment="center">
+                        Scan a barcode
+                      </Text>
+                      <Text variant="bodyMd" tone="subdued" as="p" alignment="center">
+                        Use a barcode scanner or enter a barcode manually
+                      </Text>
+                    </BlockStack>
+                  </BlockStack>
+                }
               />
             </Box>
           </Modal.Section>
