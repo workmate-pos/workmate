@@ -48,6 +48,10 @@ export default function App() {
                     destination: '/services-and-labour',
                   },
                   {
+                    label: 'Cycle count',
+                    destination: '/cycle-count',
+                  },
+                  {
                     label: 'Employees',
                     destination: '/employees',
                   },

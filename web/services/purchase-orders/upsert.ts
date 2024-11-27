@@ -94,6 +94,7 @@ export async function upsertCreatePurchaseOrder(
       ...createPurchaseOrder,
       shop,
       name,
+      staffMemberId: existingPurchaseOrder?.staffMemberId ?? user.staffMember.id,
     });
 
     const specialOrderLineItemNameUuids = createPurchaseOrder.lineItems

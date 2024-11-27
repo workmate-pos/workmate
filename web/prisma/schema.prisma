@@ -66,6 +66,9 @@ model WorkOrder {
   // Either an absolute amount, or a percentage (range 0-100)
   discountAmount String?
 
+  // whoever created it
+  staffMemberId String?
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
@@ -258,7 +261,7 @@ model Employee {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  locations EmployeeLocation[]
+  locations         EmployeeLocation[]
   defaultLocationId String?
 
   @@index([shop, staffMemberId])
@@ -411,6 +414,9 @@ model PurchaseOrder {
   shipping  String?
   deposited String?
   paid      String?
+
+  // whoever created the PO
+  staffMemberId String?
 
   /// Shop specific name
   name   String

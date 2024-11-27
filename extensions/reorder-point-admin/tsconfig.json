@@ -13,6 +13,7 @@
     "paths": {
       "@web/*": ["../../web/*"]
     },
+    "declaration": true,
     "sourceMap": true,
     "noUncheckedIndexedAccess": true,
     "typeRoots": ["./node_modules/@types", "../node_modules/@types"]

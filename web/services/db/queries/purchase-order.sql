@@ -26,6 +26,7 @@ WHERE po.shop = :shop!
   po."locationId" = ANY (COALESCE(:locationIds, ARRAY [po."locationId"]))
     OR (wo."locationId" IS NULL AND :locationIds :: text[] IS NULL)
   )
+  AND po."staffMemberId" IS NOT DISTINCT FROM COALESCE(:staffMemberId, po."staffMemberId")
   AND (
   po.name ILIKE COALESCE(:query, '%')
     OR po.note ILIKE COALESCE(:query, '%')

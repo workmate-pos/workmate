@@ -11,7 +11,7 @@ import { useCustomerQuery } from '@work-orders/common/queries/use-customer-query
 import { getCustomFieldFilterText } from '@work-orders/common-pos/screens/custom-fields/CustomFieldFilterConfig.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 
 export type WorkOrderFiltersObj = {
   status?: string;
@@ -21,6 +21,7 @@ export type WorkOrderFiltersObj = {
   overdueStatus?: OverdueStatus;
   purchaseOrderStatus?: PurchaseOrderStatus;
   customFieldFilters: CustomFieldFilter[];
+  staffMemberId?: ID;
 };
 
 export function WorkOrderFilters({
@@ -45,8 +46,16 @@ export function WorkOrderFilters({
     onChange(newFilters);
   };
 
-  const { status, paymentStatus, purchaseOrderStatus, overdueStatus, employeeIds, customFieldFilters, customerId } =
-    filters;
+  const {
+    status,
+    paymentStatus,
+    purchaseOrderStatus,
+    overdueStatus,
+    employeeIds,
+    customFieldFilters,
+    customerId,
+    staffMemberId,
+  } = filters;
 
   const router = useRouter();
 
@@ -95,6 +104,16 @@ export function WorkOrderFilters({
           onPress={() =>
             router.push('CustomerSelector', {
               onSelect: customer => setFilters(f => ({ ...f, customerId: customer.id })),
+            })
+          }
+        />
+        <Button
+          title={'Filter staff member'}
+          type={'plain'}
+          onPress={() =>
+            router.push('EmployeeSelector', {
+              onClear: () => setFilters(f => ({ ...f, staffMemberId: undefined })),
+              onSelect: employee => setFilters(f => ({ ...f, staffMemberId: employee.id })),
             })
           }
         />
@@ -152,6 +171,13 @@ export function WorkOrderFilters({
           <Selectable onPress={() => setFilters(f => ({ ...f, customerId: undefined }))}>
             <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
               <Text color={'TextCritical'}>Clear customer</Text>
+            </Stack>
+          </Selectable>
+        )}
+        {staffMemberId && (
+          <Selectable onPress={() => setFilters(f => ({ ...f, staffMemberId: undefined }))}>
+            <Stack direction="horizontal" spacing={2} alignment={'center'} paddingVertical={'ExtraLarge'}>
+              <Text color={'TextCritical'}>Clear staff member</Text>
             </Stack>
           </Selectable>
         )}

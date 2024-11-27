@@ -1,13 +1,15 @@
 import { Fetch } from './fetch.js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { CreateReorderPointResponse } from '@web/controllers/api/purchase-orders.js';
+import { CreateReorderPoint } from '@web/schemas/generated/create-reorder-point.js';
+import { UseQueryData } from './react-query.js';
+import { useReorderPointQuery } from './use-reorder-point-query.js';
 
 export const useReorderPointMutation = ({ fetch }: { fetch: Fetch }) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { inventoryItemId: ID; locationId?: ID; min: number; max: number }) => {
+    mutationFn: async (params: CreateReorderPoint) => {
       const response = await fetch('/api/purchase-orders/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -21,16 +23,15 @@ export const useReorderPointMutation = ({ fetch }: { fetch: Fetch }) => {
       const data: CreateReorderPointResponse = await response.json();
       return data;
     },
-    onSuccess: async (data, variables) => {
-      // Invalidate relevant queries
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ['reorder-point', variables.inventoryItemId, variables.locationId],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ['reorder-points'],
-        }),
-      ]);
+    onSuccess: async data => {
+      await queryClient.invalidateQueries({
+        queryKey: ['reorder-points'],
+      });
+
+      queryClient.setQueryData<UseQueryData<typeof useReorderPointQuery>>(
+        ['reorder-point', data.reorderPoint.inventoryItemId, data.reorderPoint.locationId],
+        data.reorderPoint,
+      );
     },
   });
 };

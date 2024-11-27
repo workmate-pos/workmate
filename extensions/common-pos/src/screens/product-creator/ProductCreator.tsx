@@ -25,7 +25,6 @@ export type CreatedProduct = {
   shopifyOrderLineItem: null;
   specialOrderLineItem: null;
   productVariantId: ID;
-  availableQuantity: Int;
   quantity: Int;
   unitCost: Money;
   serviceType: typeof FIXED_PRICE_SERVICE | typeof QUANTITY_ADJUSTING_SERVICE | null;
@@ -66,11 +65,10 @@ export function ProductCreator({ initialProduct, onCreate, useRouter, service = 
           shopifyOrderLineItem: null,
           specialOrderLineItem: null,
           productVariantId: product.variant.id,
-          availableQuantity: 0 as Int,
           quantity,
           unitCost,
           serviceType: getProductServiceType(product.variant.product.serviceType?.value),
-        });
+        } satisfies CreatedProduct);
       },
     },
   );

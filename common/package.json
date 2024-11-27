@@ -55,6 +55,10 @@
     "./time/*": {
       "default": "./dist/time/*",
       "types": "./src/time/*"
+    },
+    "./create-cycle-count/*": {
+      "default": "./dist/create-cycle-count/*",
+      "types": "./src/create-cycle-count/*"
     }
   },
   "scripts": {

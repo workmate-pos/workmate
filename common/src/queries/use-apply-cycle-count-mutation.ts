@@ -29,12 +29,16 @@ export const useApplyCycleCountMutation = (
       const result: ApplyCycleCountResponse = await response.json();
       return result;
     },
-    onSuccess(...args) {
-      queryClient.invalidateQueries({ queryKey: ['inventory-item'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory-items'] });
-      queryClient.invalidateQueries({ queryKey: ['cycle-count-page'] });
-
+    async onSuccess(...args) {
       const [result] = args;
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['inventory-item'] }),
+        queryClient.invalidateQueries({ queryKey: ['inventory-items'] }),
+        queryClient.invalidateQueries({ queryKey: ['cycle-count-page'] }),
+        queryClient.invalidateQueries({ queryKey: ['cycle-count-plan', result.name] }),
+      ]);
+
       queryClient.setQueryData(['cycle-count', result.name], result satisfies UseQueryData<typeof useCycleCountQuery>);
 
       for (const [queryKey, data] of queryClient.getQueriesData<UseQueryData<typeof useCycleCountPageQuery>>({

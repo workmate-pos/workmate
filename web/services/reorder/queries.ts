@@ -13,7 +13,8 @@ export async function getReorderPoints({
   shop,
   locationIds,
   inventoryItemIds,
-}: { shop: string } & MergeUnion<{ locationIds: ID[] } | { inventoryItemIds: ID[] }>) {
+  locationId,
+}: { shop: string } & MergeUnion<{ locationIds: ID[] } | { locationId: ID | null } | { inventoryItemIds: ID[] }>) {
   const _locationIds: string[] | null = locationIds ?? null;
   const _inventoryItemIds: string[] | null = inventoryItemIds ?? null;
 
@@ -34,7 +35,7 @@ export async function getReorderPoints({
            "locationId" = ANY (${_locationIds!} :: text[]))
       AND (${_inventoryItemIds!} :: text[] IS NULL OR
            "inventoryItemId" = ANY (${_inventoryItemIds!} :: text[]))
-  `;
+  `.then(result => result.filter(row => locationId === undefined || row.locationId === locationId));
 
   return result.map(mapReorderPoint);
 }
@@ -92,7 +93,7 @@ export async function upsertReorderPoints(
       ${min} :: int[],
       ${max} :: int[]
     )
-    ON CONFLICT (shop, "locationId", "inventoryItemId")
+    ON CONFLICT (shop, COALESCE("locationId", ''), "inventoryItemId")
     DO UPDATE SET
       min = EXCLUDED.min,
       max = EXCLUDED.max
