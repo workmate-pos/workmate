@@ -4,7 +4,6 @@ import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { Liquid } from 'liquidjs';
 import { awaitNested } from '@teifi-digital/shopify-app-toolbox/promise';
-import { getVendors } from '../../vendors/get.js';
 import { Session } from '@shopify/shopify-api';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { ShopSettings } from '../../settings/schema.js';
@@ -33,13 +32,9 @@ export type PurchaseOrderTemplateData = {
   shipFrom: string | null;
   shipTo: string | null;
   locationName: string | null;
-  /**
-   * TODO: Remove in the future
-   */
-  vendorName: string | null;
-  vendor: {
+  supplier: {
+    id: number;
     name: string;
-    metafields: Record<string, string>;
   } | null;
   note: string;
   discount: string | null;
@@ -69,10 +64,7 @@ export async function getPurchaseOrderTemplateData(
 ): Promise<PurchaseOrderTemplateData> {
   const { shop } = session;
 
-  const [purchaseOrder, vendors] = await Promise.all([
-    getDetailedPurchaseOrder({ shop }, purchaseOrderName, user.user.allowedLocationIds),
-    getVendors(session),
-  ]);
+  const purchaseOrder = await getDetailedPurchaseOrder({ shop }, purchaseOrderName, user.user.allowedLocationIds);
 
   if (!purchaseOrder) {
     throw new HttpError('Purchase order not found', 404);
@@ -84,17 +76,12 @@ export async function getPurchaseOrderTemplateData(
     shipFrom: purchaseOrder.shipFrom,
     shipTo: purchaseOrder.shipTo,
     locationName: purchaseOrder.location?.name ?? null,
-    vendorName: purchaseOrder.vendorName,
-    vendor: purchaseOrder.vendorName
-      ? {
-          name: purchaseOrder.vendorName,
-          metafields: Object.fromEntries(
-            vendors
-              .find(vendor => vendor.name === purchaseOrder.vendorName)
-              ?.customer?.metafields?.nodes?.map(({ namespace, key, value }) => [`${namespace}.${key}`, value]) ?? [],
-          ),
-        }
-      : null,
+    supplier: !purchaseOrder.supplier
+      ? null
+      : {
+          id: purchaseOrder.supplier.id,
+          name: purchaseOrder.supplier.name,
+        },
     note: purchaseOrder.note,
     discount: purchaseOrder.discount,
     tax: purchaseOrder.tax,

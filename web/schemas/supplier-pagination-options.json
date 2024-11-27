@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "limit": {
+      "$ref": "scalars.json#/definitions/Int",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "offset": {
+      "$ref": "scalars.json#/definitions/Int",
+      "minimum": 0
+    },
+    "query": {
+      "type": "string"
+    },
+    "sortOrder": {
+      "enum": ["ascending", "descending"]
+    },
+    "sortMode": {
+      "enum": ["createdAt", "updatedAt", "name", "relevant"]
+    },
+    "vendor": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["limit", "offset"],
+  "additionalProperties": false
+}

@@ -36,7 +36,6 @@ import {
   getPurchaseOrdersForSerial,
   getPurchaseOrderLineItemsForSpecialOrders,
 } from './queries.js';
-import { getProducts } from '../products/queries.js';
 import { getSpecialOrderLineItemsByNameAndUuids, getSpecialOrdersByNames } from '../special-orders/queries.js';
 import { httpError } from '../../util/http-error.js';
 import { getProductVariants } from '../product-variants/queries.js';
@@ -55,6 +54,11 @@ export async function upsertCreatePurchaseOrder(
     throw new HttpError('Location is required', 400);
   }
 
+  if (!createPurchaseOrder.supplierId) {
+    throw new HttpError('Supplier is required', 400);
+  }
+
+  const { supplierId } = createPurchaseOrder;
   const { shop } = session;
 
   await assertLocationsPermitted({
@@ -84,7 +88,6 @@ export async function upsertCreatePurchaseOrder(
       ensureProductVariantsExist(session, productVariantIds),
       ensureLocationsExist(session, locationIds),
       ensureStaffMembersExist(session, employeeIds),
-      assertAllSameVendor(createPurchaseOrder),
       assertValidSpecialOrderLineItems(shop, createPurchaseOrder, existingPurchaseOrder),
     ]);
 
@@ -94,6 +97,7 @@ export async function upsertCreatePurchaseOrder(
       ...createPurchaseOrder,
       shop,
       name,
+      supplierId,
       staffMemberId: existingPurchaseOrder?.staffMemberId ?? user.staffMember.id,
     });
 
@@ -189,8 +193,8 @@ function assertNoIllegalPurchaseOrderChanges(
   }
 
   if (
-    existingPurchaseOrder.vendorName !== null &&
-    createPurchaseOrder.vendorName !== existingPurchaseOrder.vendorName
+    existingPurchaseOrder.supplier?.id !== undefined &&
+    createPurchaseOrder.supplierId !== existingPurchaseOrder.supplier.id
   ) {
     throw new HttpError('Vendor name cannot be changed', 400);
   }
@@ -385,19 +389,6 @@ export async function adjustPurchaseOrderShopifyInventory(
     }
 
     throw error;
-  }
-}
-
-async function assertAllSameVendor(createPurchaseOrder: CreatePurchaseOrder) {
-  const productVariantIds = unique(createPurchaseOrder.lineItems.map(li => li.productVariantId));
-  const productVariants = await getProductVariants(productVariantIds);
-  const productIds = unique(productVariants.map(pv => pv.productId));
-  const products = await getProducts(productIds);
-
-  const vendors = products.map(pv => pv.vendor);
-
-  if (unique(vendors).length > 1) {
-    throw new HttpError('All products must have the same vendor', 400);
   }
 }
 

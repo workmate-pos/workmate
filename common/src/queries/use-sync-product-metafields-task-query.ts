@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { useMutation, useQuery, UseQueryOptions } from '@tanstack/react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import { FetchTaskResponse } from '@web/controllers/api/long-running-tasks.js';
 
 export const useSyncProductMetafieldsTaskQuery = (

@@ -264,14 +264,14 @@ export async function updateSerialSoldState(
   await sql`
     UPDATE "ProductVariantSerial" pvs
     SET "sold" = x.sold
-      FROM UNNEST(
+    FROM UNNEST(
       ${serial} :: text[],
       ${_productVariantId} :: text[],
       ${sold} :: boolean[]
       ) AS x(serial, "productVariantId", sold)
     WHERE pvs.shop = ${shop}
-      AND pvs."serial" = x."serial"
-      AND pvs."productVariantId" = x."productVariantId";
+    AND pvs."serial" = x."serial"
+    AND pvs."productVariantId" = x."productVariantId";
   `;
 }
 

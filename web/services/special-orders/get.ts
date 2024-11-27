@@ -105,7 +105,7 @@ export async function getDetailedSpecialOrder({ shop }: Session, name: string, l
       return {
         name: po.name,
         status: po.status,
-        vendorName: po.vendorName,
+        supplierId: po.supplierId,
         orderedQuantity,
         availableQuantity,
       };

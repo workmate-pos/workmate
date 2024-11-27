@@ -1,24 +1,14 @@
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { CreatePurchaseOrderDispatchProxy } from '@work-orders/common/create-purchase-order/reducer.js';
-import {
-  BlockStack,
-  Card,
-  Divider,
-  InlineGrid,
-  InlineStack,
-  Select,
-  SkeletonBodyText,
-  Text,
-  TextField,
-} from '@shopify/polaris';
-import type { Location } from '@web/frontend/pages/purchase-orders/[name].js';
+import { BlockStack, Card, Select, Text, TextField } from '@shopify/polaris';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useState } from 'react';
 import { DateModal } from '@web/frontend/components/shared-orders/modals/DateModal.js';
 import { DateTime } from '@web/schemas/generated/create-work-order.js';
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query.js';
+import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -28,27 +18,25 @@ const PURCHASE_ORDER_TYPES: CreatePurchaseOrder['type'][] = ['NORMAL', 'DROPSHIP
 export function PurchaseOrderGeneralCard({
   createPurchaseOrder,
   dispatch,
-  selectedLocation,
   disabled,
   onVendorSelectorClick,
   onLocationSelectorClick,
-  isLoadingLocation,
 }: {
   createPurchaseOrder: CreatePurchaseOrder;
   dispatch: CreatePurchaseOrderDispatchProxy;
-  selectedLocation: Location;
   disabled: boolean;
   onVendorSelectorClick: () => void;
   onLocationSelectorClick: () => void;
-  isLoadingLocation: boolean;
 }) {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
-  const vendorQuery = useVendorsQuery({ fetch });
 
-  const vendor = vendorQuery.data?.find(vendor => vendor.name === createPurchaseOrder.vendorName);
+  const supplierQuery = useSupplierQuery({ fetch, id: createPurchaseOrder.supplierId });
+
+  const locationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
+  const location = locationQuery.data;
 
   const placedDate = createPurchaseOrder.placedDate ? new Date(createPurchaseOrder.placedDate) : null;
 
@@ -75,51 +63,26 @@ export function PurchaseOrderGeneralCard({
           />
 
           <TextField
-            label={'Vendor'}
+            label="Supplier"
             autoComplete={'off'}
             requiredIndicator
-            value={createPurchaseOrder.vendorName ?? ''}
+            value={supplierQuery.data?.name}
+            loading={supplierQuery.isLoading}
             onFocus={() => onVendorSelectorClick()}
-            disabled={disabled || (!!createPurchaseOrder.name && createPurchaseOrder.vendorName !== null)}
+            disabled={disabled || (!!createPurchaseOrder.name && createPurchaseOrder.supplierId !== null)}
             readOnly
           />
-
-          {!!createPurchaseOrder.vendorName && vendorQuery.isLoading && <SkeletonBodyText />}
-          {vendor?.customer && vendor.customer.metafields.nodes.length > 0 && (
-            <>
-              <BlockStack gap={'200'}>
-                <InlineStack gap={'200'}>
-                  <Text as={'p'} variant={'bodyMd'} fontWeight={'semibold'} tone={'subdued'}>
-                    Vendor Metafields
-                  </Text>
-                </InlineStack>
-
-                <InlineGrid gap={'200'} columns={3}>
-                  {vendor.customer.metafields.nodes.map(({ definition, namespace, key, value }) => (
-                    <TextField
-                      key={`${namespace}.${key}`}
-                      label={definition?.name ?? `${namespace}.${key}`}
-                      autoComplete="off"
-                      readOnly
-                      value={value}
-                    />
-                  ))}
-                </InlineGrid>
-              </BlockStack>
-              <Divider />
-            </>
-          )}
 
           <TextField
             label={'Location'}
             requiredIndicator
             autoComplete={'off'}
-            loading={isLoadingLocation}
+            loading={locationQuery.isLoading}
             value={
-              isLoadingLocation
+              locationQuery.isLoading
                 ? ''
                 : createPurchaseOrder.locationId
-                  ? (selectedLocation?.name ?? 'Unknown location')
+                  ? (location?.name ?? 'Unknown location')
                   : ''
             }
             onFocus={() => onLocationSelectorClick()}

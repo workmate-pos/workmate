@@ -107,6 +107,10 @@ function PurchaseOrders() {
         title="Purchase orders"
         secondaryActions={[
           {
+            content: 'Suppliers',
+            onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/suppliers'),
+          },
+          {
             content: 'Re-order',
             onAction: () => redirectToPurchaseOrder('reorder'),
           },

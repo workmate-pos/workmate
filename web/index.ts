@@ -1,4 +1,5 @@
 import 'dotenv/config';
+
 import { createServer, createShopifyApp, ShopifyAppConfig } from '@teifi-digital/shopify-app-express';
 import webhookHandlers from './services/webhooks.js';
 import { resolve } from 'path';

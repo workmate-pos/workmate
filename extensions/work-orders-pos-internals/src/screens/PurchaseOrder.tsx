@@ -1,5 +1,7 @@
 import {
+  Badge,
   Banner,
+  Button,
   DateField,
   List,
   ListRow,
@@ -17,7 +19,7 @@ import { getProductVariantName } from '@work-orders/common/util/product-variant-
 import { useEffect, useState, useReducer, useRef } from 'react';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
-import { BigDecimal } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { BigDecimal, Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
 import { useRouter } from '../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';
@@ -29,7 +31,6 @@ import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
 import { useDialog } from '@teifi-digital/pos-tools/providers/DialogProvider.js';
 import { FormMoneyField } from '@teifi-digital/pos-tools/components/form/FormMoneyField.js';
-import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
@@ -50,6 +51,15 @@ import {
   NewPurchaseOrderReceiptButton,
   PurchaseOrderReceipts,
 } from '../components/purchase-orders/PurchaseOrderReceipts.js';
+import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query.js';
+import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
+import { uuid } from '@work-orders/common/util/uuid.js';
+import { ProductVariantListItemContent } from '@work-orders/common-pos/screens/list/ProductVariantList.js';
+import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ProductVariantSelector } from '@work-orders/common-pos/screens/selector/ProductVariantSelector.js';
+import { ImportSpecialOrderLineItemsButton } from '../components/ImportSpecialOrderLineItemsButton.js';
+import { Modal } from '@teifi-digital/pos-tools/router';
 
 const TODAY_DATE = new Date();
 TODAY_DATE.setHours(0, 0, 0, 0);
@@ -71,6 +81,8 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
   const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: createPurchaseOrder.name });
   const purchaseOrder = purchaseOrderQuery.data;
 
+  const lineItemCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
   const { toast } = useApi<'pos.home.modal.render'>();
 
   const router = useRouter();
@@ -80,8 +92,12 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
 
   screen.addOverrideNavigateBack(unsavedChangesDialog.show);
 
-  const vendorSelectorWarningDialog = useVendorChangeWarningDialog(createPurchaseOrder, dispatch);
-  const addProductPrerequisitesDialog = useAddProductPrerequisitesDialog(createPurchaseOrder, dispatch);
+  const [isProductVariantSelectorModalOpen, setIsProductVariantSelectorModalOpen] = useState(false);
+
+  const supplierSelectorWarningDialog = useSupplierChangeWarningDialog(createPurchaseOrder, dispatch);
+  const addProductPrerequisitesDialog = useAddProductPrerequisitesDialog(createPurchaseOrder, dispatch, () =>
+    setIsProductVariantSelectorModalOpen(true),
+  );
 
   const purchaseOrderMutation = usePurchaseOrderMutation(
     { fetch },
@@ -95,25 +111,25 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
     },
   );
 
-  const selectedLocationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
-  const selectedLocation = selectedLocationQuery.data;
+  const locationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
+  const location = locationQuery.data;
+
+  const supplierQuery = useSupplierQuery({ fetch, id: createPurchaseOrder.supplierId });
+  const supplier = supplierQuery.data;
 
   // Default "Ship to" to selected location's address
   useEffect(() => {
-    if (!selectedLocation) return;
+    if (!location) return;
     if (createPurchaseOrder.shipTo) return;
-    dispatch.setPartial({ shipTo: selectedLocation.address?.formatted?.join('\n') ?? null });
-  }, [selectedLocation]);
+    dispatch.setPartial({ shipTo: location.address?.formatted?.join('\n') ?? null });
+  }, [location]);
 
-  const vendorsQuery = useVendorsQuery({ fetch });
-  const vendorCustomer = vendorsQuery?.data?.find(vendor => vendor.name === createPurchaseOrder.vendorName)?.customer;
-
-  // Default "Ship from" to vendor's default address
+  // Default "Ship from" to supplier's default address
   useEffect(() => {
-    if (!vendorCustomer) return;
+    if (!supplier?.address) return;
     if (createPurchaseOrder.shipFrom) return;
-    dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress?.formatted?.join('\n') });
-  }, [vendorCustomer]);
+    dispatch.setPartial({ shipFrom: supplier.address });
+  }, [supplier]);
 
   const assignedEmployeeIds = createPurchaseOrder.employeeAssignments.map(({ employeeId }) => employeeId);
   const employeeQueries = useEmployeeQueries({ fetch, ids: assignedEmployeeIds });
@@ -190,24 +206,14 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
             />
 
             <FormStringField
-              label={'Vendor'}
-              onFocus={vendorSelectorWarningDialog.show}
-              value={createPurchaseOrder.vendorName ?? ''}
+              label="Supplier"
+              onFocus={supplierSelectorWarningDialog.show}
+              value={supplierQuery.data?.name ?? ''}
               disabled={
-                vendorSelectorWarningDialog.isVisible ||
-                (!!createPurchaseOrder.name && createPurchaseOrder.vendorName !== null)
+                supplierSelectorWarningDialog.isVisible ||
+                (!!createPurchaseOrder.name && createPurchaseOrder.supplierId !== null)
               }
             />
-
-            {vendorCustomer?.metafields &&
-              vendorCustomer.metafields.nodes.length > 0 &&
-              vendorCustomer.metafields.nodes.map(({ definition, namespace, key, value }) => (
-                <FormStringField
-                  label={(definition?.name ?? `${namespace}.${key}`) + ' (metafield)'}
-                  value={value}
-                  disabled
-                />
-              ))}
 
             <FormStringField
               label={'Location'}
@@ -218,7 +224,7 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               }}
               required
               disabled={!!createPurchaseOrder.name && createPurchaseOrder.locationId !== null}
-              value={selectedLocation?.name ?? ''}
+              value={location?.name ?? ''}
             />
             <FormStringField
               label={'Status'}
@@ -262,17 +268,15 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               value={createPurchaseOrder.shipFrom ?? ''}
               onChange={(shipFrom: string) => dispatch.setPartial({ shipFrom })}
             />
-            {!!vendorCustomer?.defaultAddress?.formatted &&
-              createPurchaseOrder.shipFrom !== vendorCustomer.defaultAddress.formatted.join('\n') && (
-                <FormButton
-                  title={'Use vendor address'}
-                  onPress={() => {
-                    if (!vendorCustomer.defaultAddress) return;
-                    dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress.formatted.join('\n') });
-                  }}
-                />
-              )}
+
+            {!!supplierQuery.data?.address && createPurchaseOrder.shipFrom !== supplierQuery.data.address && (
+              <FormButton
+                title={'Use supplier address'}
+                onPress={() => dispatch.setPartial({ shipFrom: supplierQuery.data.address ?? '' })}
+              />
+            )}
           </ResponsiveGrid>
+
           <ResponsiveGrid columns={1}>
             <TextArea
               label={'Ship to'}
@@ -280,14 +284,16 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
               onChange={(shipTo: string) => dispatch.setPartial({ shipTo })}
               disabled={purchaseOrderMutation.isPending}
             />
+
             {createPurchaseOrder.type === 'NORMAL' &&
-              !!selectedLocation?.address?.formatted &&
-              createPurchaseOrder.shipTo !== selectedLocation.address.formatted.join('\n') && (
+              !!location?.address?.formatted &&
+              createPurchaseOrder.shipTo !== location.address.formatted.join('\n') && (
                 <FormButton
                   title={'Use location address'}
-                  onPress={() => dispatch.setPartial({ shipTo: selectedLocation.address.formatted.join('\n') })}
+                  onPress={() => dispatch.setPartial({ shipTo: location.address.formatted.join('\n') })}
                 />
               )}
+
             {createPurchaseOrder.type === 'DROPSHIP' && (
               <FormButton
                 title={'Select customer address'}
@@ -508,6 +514,76 @@ export function PurchaseOrder({ initial }: { initial: CreatePurchaseOrder }) {
             </Stack>
           ))}
       </ResponsiveStack>
+
+      <Modal
+        open={isProductVariantSelectorModalOpen}
+        onClose={() => setIsProductVariantSelectorModalOpen(false)}
+        title="Select product"
+      >
+        <ProductVariantSelector
+          useRouter={useRouter}
+          filters={{
+            type: ['product', 'serial'],
+            status: ['active'],
+            locationId: [createPurchaseOrder.locationId].filter(isNonNullable),
+            vendor: supplierQuery.data?.vendors,
+          }}
+          onSelect={productVariant => {
+            toast.show(`Added ${getProductVariantName(productVariant)}`);
+            dispatch.addProducts({
+              products: [
+                {
+                  uuid: uuid(),
+                  specialOrderLineItem: null,
+                  unitCost: (productVariant.inventoryItem.unitCost?.amount as Money | undefined) ?? ('0.00' as Money),
+                  productVariantId: productVariant.id,
+                  quantity: 1,
+                  customFields: lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields ?? {},
+                  serialNumber: null,
+                },
+              ],
+            });
+          }}
+          closeOnSelect={false}
+          header={
+            <ProductVariantSelectorHeader
+              createPurchaseOrder={createPurchaseOrder}
+              onSelect={products => {
+                toast.show(`Added ${products.length} product${products.length === 1 ? '' : 's'}`);
+                dispatch.addProducts({ products });
+              }}
+            />
+          }
+          render={productVariant => {
+            const purchaseOrderQuantity = createPurchaseOrder.lineItems
+              .filter(lineItem => lineItem.productVariantId === productVariant.id)
+              .map(lineItem => lineItem.quantity)
+              .reduce((a, b) => a + b, 0);
+
+            const purchaseOrderReceiptQuantity =
+              purchaseOrderQuery.data?.receipts
+                .filter(receipt => receipt.status === 'COMPLETED')
+                .flatMap(receipt => receipt.lineItems)
+                .map(lineItem => lineItem.quantity)
+                .reduce((a, b) => a + b, 0) ?? 0;
+
+            const unsavedProductVariantQuantity = purchaseOrderQuantity - purchaseOrderReceiptQuantity;
+
+            return (
+              <ProductVariantListItemContent
+                productVariant={productVariant}
+                right={
+                  <InventoryItemAvailableQuantityBadge
+                    inventoryItemId={productVariant.inventoryItem.id}
+                    locationId={createPurchaseOrder.locationId}
+                    delta={unsavedProductVariantQuantity}
+                  />
+                }
+              />
+            );
+          }}
+        />
+      </Modal>
     </Form>
   );
 }
@@ -525,7 +601,6 @@ function useProductRows(
   const fetch = useAuthenticatedFetch();
   const router = useRouter();
 
-  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name });
   const productVariantIds = unique(lineItems.map(product => product.productVariantId));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
@@ -601,14 +676,14 @@ function useProductRows(
   });
 }
 
-const useVendorChangeWarningDialog = (
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'vendorName' | 'lineItems'>,
+const useSupplierChangeWarningDialog = (
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'supplierId' | 'lineItems'>,
   dispatch: CreatePurchaseOrderDispatchProxy,
 ) => {
   const dialog = useDialog();
   const router = useRouter();
 
-  const showDialog = createPurchaseOrder.vendorName !== null && createPurchaseOrder.lineItems.length > 0;
+  const showDialog = createPurchaseOrder.supplierId !== null && createPurchaseOrder.lineItems.length > 0;
 
   return {
     ...dialog,
@@ -616,15 +691,15 @@ const useVendorChangeWarningDialog = (
       dialog.show({
         showDialog,
         onAction: () => {
-          router.push('PurchaseOrderVendorSelector', {
-            onSelect: vendorDetails => dispatch.setVendor(vendorDetails),
+          router.push('SupplierSelector', {
+            onSelect: supplier => dispatch.setSupplier({ supplierId: supplier.id }),
           });
         },
         props: {
-          title: 'Vendor already set',
+          title: 'Supplier already set',
           type: 'alert',
-          content: 'Are you certain you want to change the vendor? This will clear the products.',
-          actionText: 'Change vendor',
+          content: 'Are you certain you want to change the supplier? This will clear the products.',
+          actionText: 'Change supplier',
           showSecondaryAction: true,
           secondaryActionText: 'Cancel',
         },
@@ -634,46 +709,61 @@ const useVendorChangeWarningDialog = (
 };
 
 const useAddProductPrerequisitesDialog = (
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'name' | 'lineItems' | 'locationId' | 'vendorName'>,
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'name' | 'lineItems' | 'locationId' | 'supplierId'>,
   dispatch: CreatePurchaseOrderDispatchProxy,
+  openProductVariantSelector: () => void,
 ) => {
   const dialog = useDialog();
   const { toast } = useApi<'pos.home.modal.render'>();
   const router = useRouter();
 
-  const hasVendor = createPurchaseOrder.vendorName !== null;
+  const hasSupplier = createPurchaseOrder.supplierId !== null;
   const hasLocation = createPurchaseOrder.locationId !== null;
 
-  const showDialog = !hasVendor || !hasLocation;
+  const fetch = useAuthenticatedFetch();
+  const supplierQuery = useSupplierQuery({ fetch, id: createPurchaseOrder.supplierId });
+  const lineItemCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const showDialog = !hasSupplier || !hasLocation;
   const onAction = () => {
-    if (!hasVendor) {
-      router.push('PurchaseOrderVendorSelector', {
-        onSelect: vendorDetails => dispatch.setVendor(vendorDetails),
+    if (!hasSupplier) {
+      router.push('SupplierSelector', {
+        onSelect: supplier => dispatch.setSupplier({ supplierId: supplier.id }),
       });
-    } else if (!hasLocation) {
+      return;
+    }
+
+    if (!hasLocation) {
       router.push('LocationSelector', {
         onSelect: location => dispatch.setLocation({ locationId: location.id }),
       });
-    } else {
-      if (!createPurchaseOrder.locationId) {
-        toast.show('Location id not set');
-        return;
-      }
-
-      if (!createPurchaseOrder.vendorName) {
-        toast.show('Vendor name not set');
-        return;
-      }
-
-      router.push('PurchaseOrderProductSelector', {
-        filters: { vendorName: createPurchaseOrder.vendorName, locationId: createPurchaseOrder.locationId },
-        onSelect: product => dispatch.addProducts({ products: [product] }),
-        createPurchaseOrder,
-      });
+      return;
     }
+
+    if (!createPurchaseOrder.locationId) {
+      toast.show('Location id not set');
+      return;
+    }
+
+    if (!createPurchaseOrder.supplierId) {
+      toast.show('Supplier not set');
+      return;
+    }
+
+    if (!supplierQuery.data) {
+      toast.show('Loading supplier... Try again momentarily');
+      return;
+    }
+
+    if (!lineItemCustomFieldsPresetsQuery.data) {
+      toast.show('Loading default custom fields... Try again momentarily');
+      return;
+    }
+
+    openProductVariantSelector();
   };
 
-  const subject = !hasVendor ? 'vendor' : 'location';
+  const subject = !hasSupplier ? 'supplier' : 'location';
   const title = sentenceCase(`Select ${subject}`);
   const content = `You must select a ${subject} before adding products to the purchase order.`;
 
@@ -714,5 +804,86 @@ function CreatePurchaseOrderMoneyField<const Field extends CreatePurchaseOrderMo
       value={createPurchaseOrder[field]}
       onChange={value => dispatch.setPartial({ [field]: value })}
     />
+  );
+}
+
+function InventoryItemAvailableQuantityBadge({
+  inventoryItemId,
+  locationId,
+  delta = 0,
+}: {
+  inventoryItemId: ID;
+  locationId: ID | null;
+  /**
+   * Optional delta to change the available quantity by.
+   * Can be used to account for unsaved changes
+   */
+  delta?: number;
+}) {
+  const fetch = useAuthenticatedFetch();
+
+  const inventoryItemQuery = useInventoryItemQuery({ fetch, id: inventoryItemId, locationId });
+  const availableQuantity = inventoryItemQuery.data?.inventoryLevel?.quantities.find(
+    q => q.name === 'available',
+  )?.quantity;
+  const adjustedAvailableQuantity = availableQuantity !== undefined ? availableQuantity + delta : undefined;
+
+  // 🤠
+  const nbsp = '\u00A0';
+
+  if (adjustedAvailableQuantity == undefined) {
+    return null;
+  }
+
+  return (
+    <Badge
+      variant={adjustedAvailableQuantity > 0 ? 'success' : 'warning'}
+      text={`${adjustedAvailableQuantity}${nbsp}available`}
+    />
+  );
+}
+
+function ProductVariantSelectorHeader({
+  createPurchaseOrder,
+  onSelect,
+}: {
+  createPurchaseOrder: CreatePurchaseOrder;
+  onSelect: (products: Product[]) => void;
+}) {
+  const { toast } = useApi<'pos.home.modal.render'>();
+  const router = useRouter();
+
+  const fetch = useAuthenticatedFetch();
+  const customFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  return (
+    <ResponsiveStack direction="horizontal" flexChildren sm={{ direction: 'vertical' }} flex={1}>
+      <ImportSpecialOrderLineItemsButton onSelect={onSelect} createPurchaseOrder={createPurchaseOrder} />
+
+      <Button
+        title={'New product'}
+        onPress={() => {
+          if (!createPurchaseOrder.locationId) {
+            toast.show('Location id not set');
+            return;
+          }
+
+          router.push('ProductCreator', {
+            initialProduct: {},
+            onCreate: product => {
+              onSelect([
+                {
+                  ...product,
+                  uuid: uuid(),
+                  customFields: customFieldsPresetsQuery.data?.defaultCustomFields ?? {},
+                  serialNumber: null,
+                },
+              ]);
+              router.popCurrent();
+            },
+          });
+        }}
+      />
+    </ResponsiveStack>
   );
 }

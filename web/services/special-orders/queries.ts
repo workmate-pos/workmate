@@ -303,7 +303,7 @@ export async function getSpecialOrdersPage(
   const _purchaseOrderState: string | null = purchaseOrderState ?? null;
   const _orderState: string | null = orderState ?? null;
   const _query: string | null = query ?? null;
-  const _lineItemVendorName: string | null = lineItemVendorName ?? null;
+  const _lineItemVendorName: string[] | null = lineItemVendorName?.length ? lineItemVendorName : null;
 
   const specialOrders = await sql<{ id: number; name: string }>`
     SELECT DISTINCT spo.id, spo.name
@@ -315,7 +315,7 @@ export async function getSpecialOrdersPage(
       AND spo."locationId" = COALESCE(${_locationId}, spo."locationId")
       AND spo."customerId" = COALESCE(${_customerId}, spo."customerId")
       AND spo.note ILIKE COALESCE(${_query}, '%')
-      AND p.vendor = COALESCE(${_lineItemVendorName}, p.vendor)
+      AND (${_lineItemVendorName!} :: text[] IS NULL OR p.vendor = ANY (${_lineItemVendorName!} :: text[]))
       AND spo."locationId" = ANY (COALESCE(${locationIds as string[]}, ARRAY ["locationId"]))
       AND (
       CASE ${_lineItemOrderState}
@@ -341,7 +341,10 @@ export async function getSpecialOrdersPage(
       AND (WITH "NotFullyReceivedPurchaseOrderLineItems" AS (SELECT poli."purchaseOrderId", poli.uuid
                                                              FROM "SpecialOrderLineItem" spoli
                                                                     INNER JOIN "PurchaseOrderLineItem" poli ON poli."specialOrderLineItemId" = spoli.id
-                                                             INNER JOIN "PurchaseOrderReceiptLineItem" porli ON poli.uuid = porli."lineItemUuid" AND poli."purchaseOrderId" = porli."purchaseOrderId"
+                                                                    INNER JOIN "PurchaseOrderReceiptLineItem" porli
+                                                                               ON poli.uuid = porli."lineItemUuid" AND
+                                                                                  poli."purchaseOrderId" =
+                                                                                  porli."purchaseOrderId"
                                                              GROUP BY spoli.id, poli."purchaseOrderId", poli.uuid
                                                              HAVING SUM(porli.quantity) < poli.quantity)
            SELECT CASE ${_purchaseOrderState}

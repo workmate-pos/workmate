@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { ContextualSaveBar, Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useReducer, useRef, useState } from 'react';
 import { useCreatePurchaseOrderReducer } from '@work-orders/common/create-purchase-order/reducer.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
@@ -26,13 +26,11 @@ import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-orde
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { usePurchaseOrderMutation } from '@work-orders/common/queries/use-purchase-order-mutation.js';
 import { useLocationQuery } from '@work-orders/common/queries/use-location-query.js';
-import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { defaultCreatePurchaseOrder } from '@work-orders/common/create-purchase-order/default.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { PurchaseOrderPrintModal } from '@web/frontend/components/purchase-orders/modals/PurchaseOrderPrintModal.js';
 import { LocationSelectorModal } from '@web/frontend/components/shared-orders/modals/LocationSelectorModal.js';
-import { VendorSelectorModal } from '@web/frontend/components/shared-orders/modals/VendorSelectorModal.js';
 import { AddEmployeeModal } from '@web/frontend/components/shared-orders/modals/AddEmployeeModal.js';
 import { CustomFieldPresetsModal } from '@web/frontend/components/shared-orders/modals/CustomFieldPresetsModal.js';
 import { SaveCustomFieldPresetModal } from '@web/frontend/components/shared-orders/modals/SaveCustomFieldPresetModal.js';
@@ -42,7 +40,6 @@ import { PurchaseOrderShippingCard } from '@web/frontend/components/purchase-ord
 import { PurchaseOrderEmployeesCard } from '@web/frontend/components/purchase-orders/PurchaseOrderEmployeesCard.js';
 import { PurchaseOrderProductsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderProductsCard.js';
 import { PurchaseOrderSummary } from '@web/frontend/components/purchase-orders/PurchaseOrderSummary.js';
-import { AddProductModal } from '@web/frontend/components/shared-orders/modals/AddProductModal.js';
 import type { DetailedPurchaseOrder as PurchaseOrderType } from '@web/services/purchase-orders/types.js';
 import { useCustomFieldsPresetsQuery } from '@work-orders/common/queries/use-custom-fields-presets-query.js';
 import { PurchaseOrderCustomFieldsCard } from '@web/frontend/components/purchase-orders/PurchaseOrderCustomFieldsCard.js';
@@ -56,6 +53,15 @@ import {
   PurchaseOrderReceipts,
 } from '@web/frontend/components/purchase-orders/PurchaseOrderReceipts.js';
 import { useCurrentEmployeeQuery } from '@work-orders/common/queries/use-current-employee-query.js';
+import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/ProductVariantSelectorModal.js';
+import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query.js';
+import { Money } from '@teifi-digital/shopify-app-toolbox/big-decimal';
+import { uuid } from '@work-orders/common/util/uuid.js';
+import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
+import { SupplierSelectorModal } from '@web/frontend/components/selectors/SupplierSelectorModal.js';
+import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { ProductVariantResourceItemContent } from '@web/frontend/components/ProductVariantResourceList.js';
+import { InventoryItemAvailableQuantityBadge } from '@web/frontend/components/InventoryItemQuantityBadge.js';
 
 export default function () {
   return (
@@ -168,6 +174,7 @@ function PurchaseOrder({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
 
+  const purchaseOrderQuery = usePurchaseOrderQuery({ fetch, name: createPurchaseOrder.name });
   const purchaseOrderMutation = usePurchaseOrderMutation(
     { fetch },
     {
@@ -185,36 +192,20 @@ function PurchaseOrder({
   );
 
   const settingsQuery = useSettingsQuery({ fetch });
+  const supplierQuery = useSupplierQuery({ fetch, id: createPurchaseOrder.supplierId });
 
-  const selectedLocationQuery = useLocationQuery({ fetch, id: createPurchaseOrder.locationId });
-  const selectedLocation = selectedLocationQuery.data;
-
-  // Default "Ship to" to selected location's address
-  useEffect(() => {
-    if (!selectedLocation) return;
-    if (createPurchaseOrder.shipTo) return;
-    dispatch.setPartial({ shipTo: selectedLocation.address?.formatted?.join('\n') ?? null });
-  }, [selectedLocation]);
-
-  const vendorsQuery = useVendorsQuery({ fetch });
-  const vendorCustomer = vendorsQuery?.data?.find(vendor => vendor.name === createPurchaseOrder.vendorName)?.customer;
-
-  // Default "Ship from" to vendor's default address
-  useEffect(() => {
-    if (!vendorCustomer) return;
-    if (createPurchaseOrder.shipFrom) return;
-    dispatch.setPartial({ shipFrom: vendorCustomer.defaultAddress?.formatted?.join('\n') });
-  }, [vendorCustomer]);
+  const lineItemCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
 
   const [isNewCustomFieldModalOpen, setIsNewCustomFieldModalOpen] = useState(false);
   const [isSaveCustomFieldPresetModalOpen, setIsSaveCustomFieldPresetModalOpen] = useState(false);
   const [isCustomFieldPresetsModalOpen, setIsCustomFieldPresetsModalOpen] = useState(false);
   const [isFieldValuesModalOpen, setIsFieldValuesModalOpen] = useState(false);
   const [isAddEmployeeModalOpen, setIsAddEmployeeModalOpen] = useState(false);
-  const [isVendorSelectorModalOpen, setIsVendorSelectorModalOpen] = useState(false);
+  const [isSupplierSelectorModalOpen, setIsSupplierSelectorModalOpen] = useState(false);
   const [isLocationSelectorModalOpen, setIsLocationSelectorModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [isProductVariantSelectorOpen, setIsProductVariantSelectorOpen] = useState(false);
+  const [isSpecialOrderModalOpen, setIsSpecialOrderModalOpen] = useState(false);
   const [customFieldPresetNameToEdit, setCustomFieldPresetNameToEdit] = useState<string>();
 
   if (!settingsQuery.data) {
@@ -262,9 +253,7 @@ function PurchaseOrder({
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isPending}
-            selectedLocation={selectedLocation}
-            isLoadingLocation={selectedLocationQuery.isLoading}
-            onVendorSelectorClick={() => setIsVendorSelectorModalOpen(true)}
+            onVendorSelectorClick={() => setIsSupplierSelectorModalOpen(true)}
             onLocationSelectorClick={() => setIsLocationSelectorModalOpen(true)}
           />
 
@@ -272,7 +261,6 @@ function PurchaseOrder({
             createPurchaseOrder={createPurchaseOrder}
             dispatch={dispatch}
             disabled={purchaseOrderMutation.isPending}
-            selectedLocation={selectedLocation}
           />
 
           <PurchaseOrderEmployeesCard
@@ -306,12 +294,12 @@ function PurchaseOrder({
                   return;
                 }
 
-                if (!createPurchaseOrder.vendorName) {
-                  setToastAction({ content: 'You must select a vendor to add products' });
+                if (!createPurchaseOrder.supplierId) {
+                  setToastAction({ content: 'You must select a supplier to add products' });
                   return;
                 }
 
-                setIsAddProductModalOpen(true);
+                setIsProductVariantSelectorOpen(true);
               }}
               action={
                 !!createPurchaseOrder.name && !hasUnsavedChanges ? (
@@ -457,12 +445,14 @@ function PurchaseOrder({
         />
       )}
 
-      {isVendorSelectorModalOpen && (
-        <VendorSelectorModal
-          open={isVendorSelectorModalOpen}
-          onClose={() => setIsVendorSelectorModalOpen(false)}
-          onSelect={vendorName => dispatch.setVendor({ vendorName })}
-          setToastAction={setToastAction}
+      {isSupplierSelectorModalOpen && (
+        <SupplierSelectorModal
+          open={isSupplierSelectorModalOpen}
+          onClose={() => setIsSupplierSelectorModalOpen(false)}
+          onSelect={supplier => {
+            dispatch.setSupplier({ supplierId: supplier.id });
+            setIsSupplierSelectorModalOpen(false);
+          }}
         />
       )}
 
@@ -483,17 +473,78 @@ function PurchaseOrder({
         />
       )}
 
-      {isAddProductModalOpen && createPurchaseOrder.locationId && createPurchaseOrder.vendorName && (
-        <AddProductModal
-          outputType="PURCHASE_ORDER"
-          productType="PRODUCT"
+      <ProductVariantSelectorModal
+        open={isProductVariantSelectorOpen && !isSpecialOrderModalOpen}
+        onClose={() => setIsProductVariantSelectorOpen(false)}
+        filters={{
+          type: ['product', 'serial'],
+          status: ['active'],
+          locationId: [createPurchaseOrder.locationId].filter(isNonNullable),
+          vendor: supplierQuery.data?.vendors,
+        }}
+        closeOnSelect={false}
+        render={productVariant => {
+          const purchaseOrderQuantity = createPurchaseOrder.lineItems
+            .filter(lineItem => lineItem.productVariantId === productVariant.id)
+            .map(lineItem => lineItem.quantity)
+            .reduce((a, b) => a + b, 0);
+
+          const purchaseOrderReceiptQuantity =
+            purchaseOrderQuery.data?.receipts
+              .filter(receipt => receipt.status === 'COMPLETED')
+              .flatMap(receipt => receipt.lineItems)
+              .map(lineItem => lineItem.quantity)
+              .reduce((a, b) => a + b, 0) ?? 0;
+
+          const unsavedProductVariantQuantity = purchaseOrderQuantity - purchaseOrderReceiptQuantity;
+
+          return (
+            <ProductVariantResourceItemContent
+              productVariant={productVariant}
+              right={
+                <InventoryItemAvailableQuantityBadge
+                  inventoryItemId={productVariant.inventoryItem.id}
+                  locationId={createPurchaseOrder.locationId}
+                  delta={unsavedProductVariantQuantity}
+                />
+              }
+            />
+          );
+        }}
+        onSelect={productVariant => {
+          setToastAction({ content: `Added ${getProductVariantName(productVariant)}` });
+
+          dispatch.addProducts({
+            products: [
+              {
+                uuid: uuid(),
+                specialOrderLineItem: null,
+                unitCost: (productVariant.inventoryItem.unitCost?.amount as Money | undefined) ?? ('0.00' as Money),
+                productVariantId: productVariant.id,
+                quantity: 1,
+                customFields: lineItemCustomFieldsPresetsQuery.data?.defaultCustomFields ?? {},
+                serialNumber: null,
+              },
+            ],
+          });
+        }}
+        secondaryActions={[
+          {
+            content: 'Import special order',
+            onAction: () => setIsSpecialOrderModalOpen(true),
+          },
+        ]}
+      />
+
+      {createPurchaseOrder.locationId && createPurchaseOrder.supplierId && (
+        <ImportSpecialOrderModal
+          open={isSpecialOrderModalOpen}
+          onClose={() => setIsSpecialOrderModalOpen(false)}
           createPurchaseOrder={createPurchaseOrder}
-          open={isAddProductModalOpen}
-          locationId={createPurchaseOrder.locationId}
-          vendorName={createPurchaseOrder.vendorName}
-          setToastAction={setToastAction}
-          onClose={() => setIsAddProductModalOpen(false)}
-          onAdd={products => dispatch.addProducts({ products })}
+          onSelect={products => {
+            dispatch.addProducts({ products });
+            setToastAction({ content: 'Special order imported' });
+          }}
         />
       )}
 

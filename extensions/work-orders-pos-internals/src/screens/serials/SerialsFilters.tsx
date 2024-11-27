@@ -78,7 +78,7 @@ export function SerialsFilters({
             onPress={() =>
               router.push('ProductVariantSelector', {
                 onSelect: productVariant => setProductVariantId(productVariant.id),
-                onClear: () => setProductVariantId(undefined),
+                header: <Button title="Clear" onPress={() => setProductVariantId(undefined)} type="plain" />,
               })
             }
           />

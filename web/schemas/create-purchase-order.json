@@ -20,14 +20,8 @@
         }
       ]
     },
-    "vendorName": {
-      "anyOf": [
-        { "const": null },
-        {
-          "type": "string",
-          "minLength": 1
-        }
-      ]
+    "supplierId": {
+      "anyOf": [{ "const": null }, { "type": "integer" }]
     },
     "shipFrom": {
       "type": "string"
@@ -142,7 +136,7 @@
     "status",
     "placedDate",
     "locationId",
-    "vendorName",
+    "supplierId",
     "shipFrom",
     "shipTo",
     "note",

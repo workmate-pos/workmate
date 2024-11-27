@@ -12,7 +12,7 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { ControlledSearchBar } from '@teifi-digital/pos-tools/components/ControlledSearchBar.js';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { getSubtitle } from '@work-orders/common-pos/util/subtitle.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { useProductVariantQueries } from '@work-orders/common/queries/use-product-variant-query.js';
@@ -96,7 +96,7 @@ export function SerialsList() {
               type={'primary'}
               onPress={() =>
                 router.push('ProductVariantSelector', {
-                  filters: { type: 'product' },
+                  filters: { type: ['serial'] },
                   onSelect: productVariant =>
                     router.push('Serial', {
                       initial: {

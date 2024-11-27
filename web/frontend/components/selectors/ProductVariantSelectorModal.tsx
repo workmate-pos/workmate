@@ -2,45 +2,43 @@ import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/que
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
-import { ReactNode, useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
-import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
-import {
-  BlockStack,
-  Card,
-  EmptyState,
-  InlineStack,
-  LegacyFilters,
-  Modal,
-  ResourceItem,
-  ResourceList,
-  SkeletonThumbnail,
-  Text,
-  Thumbnail,
-} from '@shopify/polaris';
-import { emptyState } from '@web/frontend/assets/index.js';
-import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
+import { Filters, Modal } from '@shopify/polaris';
 import { match } from 'ts-pattern';
 import { USES_SERIAL_NUMBERS_TAG } from '@work-orders/common/metafields/uses-serial-numbers.js';
+import {
+  ProductVariantResourceList,
+  ProductVariantResourceListProps,
+} from '@web/frontend/components/ProductVariantResourceList.js';
 import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ReactNode, useEffect } from 'react';
+import type { ComplexAction } from '@shopify/polaris/build/ts/src/types.js';
+import { useInfinitePagination } from '@work-orders/common/util/pagination.js';
 
 // TODO: More selectors just like this (same with pos)
 
 export type ProductVariantSelectorModalProps = {
+  header?: ReactNode;
   onSelect: (productVariant: ProductVariant) => void;
   open: boolean;
   onClose: () => void;
   filters?: {
     type?: ('product' | 'serial' | 'service')[];
     status?: ('draft' | 'active')[];
-    locationId?: ID;
+    vendor?: string[];
+    locationId?: ID[];
   };
-  renderItem?: (productVariant: ProductVariant) => ReactNode;
   /**
-   * TODO: Remove this in the future - default should be false
+   * Optional list of selected product variant ids.
+   * If provided, the modal will
    */
+  selectedProductVariantIds?: ID[];
+  onSelectedProductVariantIdsChange?: (productVariantIds: ID[]) => void;
+  // TODO: Remove this and just handle it in onSelect
   closeOnSelect?: boolean;
+  secondaryActions?: ComplexAction[];
+  render?: ProductVariantResourceListProps['render'];
 };
 
 const defaultFilters = {
@@ -48,14 +46,18 @@ const defaultFilters = {
 } as const satisfies ProductVariantSelectorModalProps['filters'];
 
 export function ProductVariantSelectorModal({
+  header,
   onSelect,
   filters,
   open,
   onClose,
-  renderItem = productVariant => <ProductVariantSelectorItemContent productVariant={productVariant} />,
+  selectedProductVariantIds,
+  onSelectedProductVariantIdsChange,
   closeOnSelect = true,
+  secondaryActions,
+  render,
 }: ProductVariantSelectorModalProps) {
-  const { status, type, locationId } = {
+  const { status, type, vendor, locationId } = {
     ...defaultFilters,
     ...filters,
   };
@@ -63,6 +65,7 @@ export function ProductVariantSelectorModal({
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
+
   const productVariantsQuery = useProductVariantsQuery({
     fetch,
     params: {
@@ -70,7 +73,8 @@ export function ProductVariantSelectorModal({
       query: [
         query,
         status.map(status => `product_status:${status}`).join(' OR ') ?? '',
-        locationId ? `location_id:${parseGid(locationId).id}` : '',
+        vendor?.map(vendor => `vendor:"${escapeQuotationMarks(vendor)}"`).join(' OR ') ?? '',
+        locationId?.map(locationId => `location_id:${parseGid(locationId).id}`).join(' OR ') ?? '',
         type
           ?.map(type =>
             match(type)
@@ -95,87 +99,63 @@ export function ProductVariantSelectorModal({
     },
   });
 
-  const [pageIndex, setPageIndex] = useState(0);
-  const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, productVariantsQuery);
-  const page = productVariantsQuery.data?.pages[pageIndex] ?? [];
+  const { page, reset, ...pagination } = useInfinitePagination({
+    pages: productVariantsQuery.data?.pages ?? [],
+    hasNext: productVariantsQuery.hasNextPage,
+    onNext: productVariantsQuery.fetchNextPage,
+  });
+
+  useEffect(() => {
+    reset();
+  }, [query]);
 
   return (
-    <Modal open={open} title={'Product variants'} onClose={onClose}>
-      <ResourceList
-        items={page}
-        resourceName={{ singular: 'product variant', plural: 'product variants' }}
-        loading={productVariantsQuery.isFetching}
-        pagination={{
-          hasNext: pagination.hasNextPage,
-          hasPrevious: pagination.hasPreviousPage,
-          onNext: pagination.next,
-          onPrevious: pagination.previous,
-        }}
-        emptyState={
-          <Card>
-            <EmptyState image={emptyState} heading={'Product variants'}>
-              <Text as={'p'} variant={'bodyMd'}>
-                No product variants found
-              </Text>
-            </EmptyState>
-          </Card>
-        }
-        filterControl={
-          <LegacyFilters
-            queryValue={optimisticQuery}
-            filters={[]}
-            onQueryChange={query => setQuery(query, !query)}
-            onQueryClear={() => setQuery('', true)}
-            onClearAll={() => setQuery('', true)}
-          />
-        }
-        renderItem={productVariant => (
-          <ResourceItem
-            id={productVariant.id}
-            onClick={() => {
-              onSelect(productVariant);
-              if (closeOnSelect) {
-                onClose();
-              }
-            }}
-            verticalAlignment="center"
-          >
-            {renderItem(productVariant)}
-          </ResourceItem>
-        )}
-      />
+    <>
+      <Modal
+        open={open}
+        title={'Product variants'}
+        onClose={onClose}
+        loading={productVariantsQuery.isFetchingNextPage}
+        secondaryActions={secondaryActions}
+      >
+        {header}
+
+        <ProductVariantResourceList
+          selectable={selectedProductVariantIds !== undefined}
+          selectedItems={selectedProductVariantIds}
+          onSelectionChange={onSelectedProductVariantIdsChange}
+          productVariantIds={page?.map(productVariant => productVariant.id) ?? []}
+          loading={productVariantsQuery.isFetching}
+          pagination={pagination}
+          filterControl={
+            <Filters
+              queryPlaceholder="Search product variants"
+              queryValue={optimisticQuery}
+              filters={[]}
+              onQueryChange={query => setQuery(query, !query)}
+              onQueryClear={() => setQuery('', true)}
+              onClearAll={() => setQuery('', true)}
+            />
+          }
+          render={render}
+          onClick={productVariantId => {
+            const productVariant = page?.find(productVariant => productVariant.id === productVariantId);
+
+            if (!productVariant) {
+              console.error('Could not find product variant', productVariantId);
+              return;
+            }
+
+            onSelect(productVariant);
+
+            if (closeOnSelect) {
+              onClose();
+            }
+          }}
+        />
+      </Modal>
 
       {toast}
-    </Modal>
-  );
-}
-
-export function ProductVariantSelectorItemContent({
-  productVariant,
-  right,
-}: {
-  productVariant: ProductVariant;
-  right?: ReactNode;
-}) {
-  const imageUrl = productVariant.image?.url ?? productVariant.product.featuredImage?.url;
-  const label = getProductVariantName(productVariant) ?? 'Unknown product variant';
-
-  return (
-    <InlineStack gap="200" wrap={false} align="space-between">
-      <InlineStack gap="400" wrap={false}>
-        {imageUrl && <Thumbnail source={imageUrl} alt={label} />}
-        {!imageUrl && <SkeletonThumbnail />}
-        <BlockStack gap={'050'}>
-          <Text as="p" variant="bodyMd" fontWeight="bold">
-            {label}
-          </Text>
-          <Text as="p" variant="bodyMd" tone="subdued">
-            {productVariant.sku}
-          </Text>
-        </BlockStack>
-      </InlineStack>
-
-      {right}
-    </InlineStack>
+    </>
   );
 }

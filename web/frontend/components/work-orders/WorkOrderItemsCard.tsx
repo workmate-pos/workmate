@@ -88,7 +88,6 @@ export function WorkOrderItemsCard({
 
       {isAddProductModalOpen && (
         <AddProductModal
-          outputType="WORK_ORDER"
           companyLocationId={createWorkOrder.companyLocationId}
           productType="PRODUCT"
           open={isAddProductModalOpen}
@@ -152,7 +151,6 @@ export function WorkOrderItemsCard({
       />
 
       <AddProductModal
-        outputType="WORK_ORDER"
         productType="SERVICE"
         open={isAddServiceModalOpen}
         setToastAction={setToastAction}

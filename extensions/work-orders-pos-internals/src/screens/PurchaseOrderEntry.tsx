@@ -232,7 +232,7 @@ function usePurchaseOrderRows(purchaseOrders: PurchaseOrderInfo[]) {
 
 function getPurchaseOrderSubtitle(purchaseOrder: PurchaseOrderInfo) {
   return getSubtitle([
-    purchaseOrder.vendorName,
+    purchaseOrder.supplier?.name,
     purchaseOrder.location?.name,
     purchaseOrder.linkedOrders.map(order => order.name).join(', ') || undefined,
     purchaseOrder.linkedCustomers.map(customer => customer.displayName).join(', ') || undefined,

@@ -1,4 +1,4 @@
-import { createRouter } from '@teifi-digital/pos-tools/router';
+import { createModalRouter } from '@teifi-digital/pos-tools/router';
 import { FC } from 'react';
 
 export type Route<P extends object> = {
@@ -7,9 +7,9 @@ export type Route<P extends object> = {
 };
 
 export type Router<Routes extends Record<string, Route<any>> = {}> = ReturnType<
-  ReturnType<typeof createRouter<Routes>>['useRouter']
+  ReturnType<typeof createModalRouter<Routes>>['useRouter']
 >;
 
 export type UseRouter<Routes extends Record<string, Route<any>> = {}> = ReturnType<
-  typeof createRouter<Routes>
+  typeof createModalRouter<Routes>
 >['useRouter'];
