@@ -1,7 +1,7 @@
 import { useLocation } from 'react-router-dom';
 import { ContextualSaveBar, Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { useReducer, useRef, useState } from 'react';
 import { useCreatePurchaseOrderReducer } from '@work-orders/common/create-purchase-order/reducer.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
@@ -544,8 +544,6 @@ function PurchaseOrder({
           open={isSpecialOrderModalOpen}
           onClose={() => setIsSpecialOrderModalOpen(false)}
           createPurchaseOrder={createPurchaseOrder}
-          locationId={createPurchaseOrder.locationId}
-          supplierId={createPurchaseOrder.supplierId}
           onSelect={products => {
             dispatch.addProducts({ products });
             setToastAction({ content: 'Special order imported' });

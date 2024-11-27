@@ -1,7 +1,7 @@
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { List, ListRow, ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/point-of-sale';
 import { ID } from '@web/schemas/generated/ids.js';
-import { CreateStockTransferDispatchProxy } from '../../create-stock-transfer/reducer.js';
+import { CreateStockTransferDispatchProxy } from '@work-orders/common/create-stock-transfer/reducer.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/queries/use-product-variants-query.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';

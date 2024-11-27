@@ -73,7 +73,7 @@ export async function upsertReceipt(
           status: upsertPurchaseOrderReceipt.status,
         }));
 
-    await deletePurchaseOrderReceiptLineItems({ purchaseOrderReceiptId });
+    await deletePurchaseOrderReceiptLineItems({ purchaseOrderReceiptIds: [purchaseOrderReceiptId] });
 
     for (const { uuid, quantity } of upsertPurchaseOrderReceipt.lineItems) {
       // TODO: How shoudl we handle statuses here? doesnt make snese to count archived
@@ -105,7 +105,8 @@ export async function upsertReceipt(
       upsertPurchaseOrderReceipt.lineItems,
     );
 
-    const newPurchaseOrder = (await getDetailedPurchaseOrder(session, name, locationIds)) ?? never('We just made it');
+    const newPurchaseOrder =
+      (await getDetailedPurchaseOrder(session, purchaseOrderName, locationIds)) ?? never('We just made it');
     await adjustPurchaseOrderShopifyInventory(session, user, purchaseOrder, newPurchaseOrder);
   });
 }

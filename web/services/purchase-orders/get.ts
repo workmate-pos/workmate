@@ -61,6 +61,7 @@ export async function getDetailedPurchaseOrder(
   return await awaitNested({
     name: purchaseOrder.name,
     type: purchaseOrder.type,
+    staffMemberId: purchaseOrder.staffMemberId,
     status: purchaseOrder.status,
     placedDate: purchaseOrder.placedDate ? (purchaseOrder.placedDate.toISOString() as DateTime) : null,
     location: getLocation(purchaseOrder.locationId),
@@ -122,6 +123,7 @@ export async function getPurchaseOrderInfoPage(
     // the first filter is always skipped by the sql to ensure we can run this query without running into the empty record error
     requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
     type: paginationOptions.type,
+    staffMemberId: paginationOptions.staffMemberId,
     shop,
     locationIds,
   });

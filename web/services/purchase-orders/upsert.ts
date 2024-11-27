@@ -27,10 +27,10 @@ import {
   insertPurchaseOrderAssignedEmployees,
   insertPurchaseOrderCustomFields,
   insertPurchaseOrderLineItemCustomFields,
-  removePurchaseOrderAssignedEmployees,
-  removePurchaseOrderCustomFields,
-  removePurchaseOrderLineItemCustomFields,
-  removePurchaseOrderLineItemsByUuids,
+  deletePurchaseOrderAssignedEmployees,
+  deletePurchaseOrderCustomFields,
+  deletePurchaseOrderLineItemCustomFields,
+  deletePurchaseOrderLineItemsByUuids,
   upsertPurchaseOrderLineItems,
   upsertPurchaseOrder,
   getPurchaseOrdersForSerial,
@@ -98,6 +98,7 @@ export async function upsertCreatePurchaseOrder(
       shop,
       name,
       supplierId,
+      staffMemberId: existingPurchaseOrder?.staffMemberId ?? user.staffMember.id,
     });
 
     const specialOrderLineItemNameUuids = createPurchaseOrder.lineItems
@@ -122,10 +123,10 @@ export async function upsertCreatePurchaseOrder(
     const [specialOrderLineItems, serials] = await Promise.all([
       getSpecialOrderLineItemsByNameAndUuids(shop, specialOrderLineItemNameUuids),
       upsertSerials(shop, lineItemSerials).then(() => getSerialsByProductVariantSerials(shop, lineItemSerials)),
-      removePurchaseOrderLineItemsByUuids(purchaseOrderId, uuidsToRemove),
-      removePurchaseOrderCustomFields(purchaseOrderId),
-      removePurchaseOrderLineItemCustomFields(purchaseOrderId),
-      removePurchaseOrderAssignedEmployees(purchaseOrderId),
+      deletePurchaseOrderLineItemsByUuids(purchaseOrderId, uuidsToRemove),
+      deletePurchaseOrderCustomFields({ purchaseOrderIds: [purchaseOrderId] }),
+      deletePurchaseOrderLineItemCustomFields({ purchaseOrderIds: [purchaseOrderId] }),
+      deletePurchaseOrderAssignedEmployees({ purchaseOrderIds: [purchaseOrderId] }),
     ]);
 
     await assertNoIllegalSerials(shop, createPurchaseOrder, existingPurchaseOrder);
@@ -272,7 +273,7 @@ function assertNoIllegalLineItemChanges(
       }
 
       if (
-        newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.name ||
+        newLineItem.specialOrderLineItem?.name !== oldLineItem.specialOrderLineItem?.name ||
         newLineItem.specialOrderLineItem?.uuid !== oldLineItem.specialOrderLineItem?.uuid
       ) {
         throw new HttpError('Cannot change linked special order line item for (partially) received line items', 400);

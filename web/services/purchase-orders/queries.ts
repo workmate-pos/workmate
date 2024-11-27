@@ -37,6 +37,7 @@ export async function getPurchaseOrder(
     updatedAt: Date;
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
+    staffMemberId: string | null;
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -76,6 +77,7 @@ export async function getPurchaseOrdersByIds(purchaseOrderIds: number[]) {
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
     supplierId: number | null;
+    staffMemberId: string | null;
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -103,15 +105,17 @@ function mapPurchaseOrder(purchaseOrder: {
   updatedAt: Date;
   placedDate: Date | null;
   type: PurchaseOrderType;
+  staffMemberId: string | null;
 }) {
   try {
-    const { locationId, discount, tax, shipping, deposited, paid } = purchaseOrder;
+    const { locationId, discount, tax, shipping, deposited, paid, staffMemberId } = purchaseOrder;
     assertGidOrNull(locationId);
     assertMoneyOrNull(discount);
     assertMoneyOrNull(tax);
     assertMoneyOrNull(shipping);
     assertMoneyOrNull(deposited);
     assertMoneyOrNull(paid);
+    assertGidOrNull(staffMemberId);
 
     return {
       ...purchaseOrder,
@@ -121,6 +125,7 @@ function mapPurchaseOrder(purchaseOrder: {
       shipping,
       deposited,
       paid,
+      staffMemberId,
     };
   } catch (error) {
     sentryErr(error, { purchaseOrder });
@@ -143,6 +148,7 @@ export async function upsertPurchaseOrder({
   paid,
   locationId,
   type,
+  staffMemberId,
   supplierId,
 }: {
   shop: string;
@@ -160,6 +166,7 @@ export async function upsertPurchaseOrder({
   placedDate: DateTime | null;
   type: PurchaseOrderType;
   supplierId: number;
+  staffMemberId: ID;
 }) {
   const _locationId: string | null = locationId;
   const _discount: string | null = discount;
@@ -168,10 +175,11 @@ export async function upsertPurchaseOrder({
   const _deposited: string | null = deposited;
   const _paid: string | null = paid;
   const _placedDate: string | null = placedDate;
+  const _staffMemberId: string = staffMemberId;
 
   return await sqlOne<{ id: number }>`
     INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
-                                 "shipTo", note, "supplierId", "placedDate", type)
+                                 "shipTo", note, "supplierId", "placedDate", type, "staffMemberId")
     VALUES (${shop},
             ${_locationId},
             ${_discount},
@@ -186,20 +194,22 @@ export async function upsertPurchaseOrder({
             ${note},
             ${supplierId},
             ${_placedDate} :: timestamptz,
-            ${type} :: "PurchaseOrderType")
+            ${type} :: "PurchaseOrderType",
+            ${_staffMemberId} :: text)
     ON CONFLICT (shop, name) DO UPDATE
-      SET "locationId" = EXCLUDED."locationId",
-          "discount"   = EXCLUDED."discount",
-          "tax"        = EXCLUDED."tax",
-          "shipping"   = EXCLUDED."shipping",
-          "deposited"  = EXCLUDED."deposited",
-          "paid"       = EXCLUDED."paid",
-          "status"     = EXCLUDED."status",
-          "shipFrom"   = EXCLUDED."shipFrom",
-          "shipTo"     = EXCLUDED."shipTo",
-          "note"       = EXCLUDED."note",
-          "supplierId" = EXCLUDED."supplierId",
-          "placedDate" = EXCLUDED."placedDate"
+      SET "locationId"    = EXCLUDED."locationId",
+          "discount"      = EXCLUDED."discount",
+          "tax"           = EXCLUDED."tax",
+          "shipping"      = EXCLUDED."shipping",
+          "deposited"     = EXCLUDED."deposited",
+          "paid"          = EXCLUDED."paid",
+          "status"        = EXCLUDED."status",
+          "shipFrom"      = EXCLUDED."shipFrom",
+          "shipTo"        = EXCLUDED."shipTo",
+          "note"          = EXCLUDED."note",
+          "supplierId"    = EXCLUDED."supplierId",
+          "placedDate"    = EXCLUDED."placedDate",
+          "staffMemberId" = EXCLUDED."staffMemberId"
     RETURNING id;`;
 }
 
@@ -293,11 +303,15 @@ export async function insertPurchaseOrderLineItemCustomFields(
     FROM UNNEST(${uuid} :: uuid[], ${key} :: text[], ${value} :: text[]);`;
 }
 
-export async function removePurchaseOrderLineItemCustomFields(purchaseOrderId: number) {
+export async function deletePurchaseOrderLineItemCustomFields({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItemCustomField"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
 export async function getPurchaseOrderLineItemCustomFields(purchaseOrderId: number) {
@@ -352,14 +366,22 @@ function mapPurchaseOrderAssignedEmployee(assignment: {
   }
 }
 
-export async function removePurchaseOrderLineItems(purchaseOrderId: number) {
+export async function deletePurchaseOrderLineItems({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItem"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
-export async function removePurchaseOrderLineItemsByUuids(purchaseOrderId: number, uuids: string[]) {
+export async function deletePurchaseOrderLineItemsByUuids(purchaseOrderId: number, uuids: string[]) {
+  if (uuids.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderLineItem"
@@ -367,18 +389,26 @@ export async function removePurchaseOrderLineItemsByUuids(purchaseOrderId: numbe
       AND uuid = ANY (${uuids} :: uuid[]);`;
 }
 
-export async function removePurchaseOrderCustomFields(purchaseOrderId: number) {
+export async function deletePurchaseOrderCustomFields({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderCustomField"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
-export async function removePurchaseOrderAssignedEmployees(purchaseOrderId: number) {
+export async function deletePurchaseOrderAssignedEmployees({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderEmployeeAssignment"
-    WHERE "purchaseOrderId" = ${purchaseOrderId};`;
+    WHERE "purchaseOrderId" = ANY (${purchaseOrderIds});`;
 }
 
 export async function upsertPurchaseOrderLineItems(
@@ -533,6 +563,7 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
     supplierId: number | null;
+    staffMemberId: string | null;
   }>`
     SELECT DISTINCT po.*
     FROM "PurchaseOrder" po
@@ -695,6 +726,7 @@ export async function getPurchaseOrdersForSerial({
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
     supplierId: number | null;
+    staffMemberId: string | null;
   }>`
     SELECT DISTINCT po.*
     FROM "ProductVariantSerial" pvs
@@ -892,21 +924,41 @@ export async function insertPurchaseOrderReceiptLineItems(
 }
 
 export async function deletePurchaseOrderReceiptLineItems({
-  purchaseOrderReceiptId,
+  purchaseOrderReceiptIds,
 }: {
-  purchaseOrderReceiptId: number;
+  purchaseOrderReceiptIds: number[];
 }) {
+  if (purchaseOrderReceiptIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderReceiptLineItem"
-    WHERE "purchaseOrderReceiptId" = ${purchaseOrderReceiptId};
+    WHERE "purchaseOrderReceiptId" = ANY (${purchaseOrderReceiptIds});
   `;
 }
 
-export async function deletePurchaseOrderReceipt({ purchaseOrderReceiptId }: { purchaseOrderReceiptId: number }) {
+export async function deletePurchaseOrderReceipts({ purchaseOrderReceiptIds }: { purchaseOrderReceiptIds: number[] }) {
+  if (purchaseOrderReceiptIds.length === 0) {
+    return;
+  }
+
   await sql`
     DELETE
     FROM "PurchaseOrderReceipt"
-    WHERE id = ${purchaseOrderReceiptId};
+    WHERE id = ANY (${purchaseOrderReceiptIds});
+  `;
+}
+
+export async function deletePurchaseOrders({ purchaseOrderIds }: { purchaseOrderIds: number[] }) {
+  if (purchaseOrderIds.length === 0) {
+    return;
+  }
+
+  await sql`
+    DELETE
+    FROM "PurchaseOrder"
+    WHERE id = ANY (${purchaseOrderIds});
   `;
 }

@@ -28,19 +28,16 @@ export async function syncProductOrVariantMetafields(session: Session, type: 'pr
     const gidObjectType = type === 'product' ? 'Product' : 'ProductVariant';
     const metafieldOwnerType = type === 'product' ? 'PRODUCT' : 'PRODUCTVARIANT';
 
-    const [currentMetafields, { scanner }] = await Promise.all([
+    const [currentMetafields, metafieldsToIndex] = await Promise.all([
       getShopMetafields(shop, `gid://shopify/${gidObjectType}/%`),
-      getShopSettings(session.shop),
+      getMetafieldsToSync(shop, type),
     ]);
 
-    if (scanner.variants.metafields[type].length === 0) {
+    if (metafieldsToIndex.length === 0) {
       return;
     }
 
-    const query = scanner.variants.metafields[type]
-      .map(metafield => metafield.split('.') as [string, string])
-      .map(([namespace, key]) => `(namespace:${namespace} AND key:${key})`)
-      .join(' OR ');
+    const query = metafieldsToIndex.map(({ namespace, key }) => `(namespace:${namespace} AND key:${key})`).join(' OR ');
 
     const metafieldDefinitions = await fetchAllPages(
       graphql,
@@ -149,4 +146,26 @@ export async function doesProductHaveSyncableMetafields(session: Session, produc
     response.product.metafields.nodes.some(isIndexedProductMetafield) ||
     response.product.variants.nodes.flatMap(variant => variant.metafields.nodes).some(isIndexedVariantMetafield)
   );
+}
+
+async function getMetafieldsToSync(shop: string, type: 'product' | 'variant') {
+  const { scanner } = await getShopSettings(shop);
+
+  return scanner.variants.metafields[type].map(namespaceKey => {
+    const [namespace, key] = namespaceKey.split('.');
+
+    if (!namespace || !key) {
+      throw new Error('Invalid metafield');
+    }
+
+    return { namespace, key };
+  });
+}
+
+export async function getProductMetafieldsToSync(shop: string) {
+  return getMetafieldsToSync(shop, 'product');
+}
+
+export async function getProductVariantMetafieldsToSync(shop: string) {
+  return getMetafieldsToSync(shop, 'variant');
 }

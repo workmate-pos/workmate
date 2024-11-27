@@ -1,6 +1,7 @@
 import {
   Badge,
   Box,
+  Button,
   Card,
   EmptyState,
   Frame,
@@ -8,9 +9,11 @@ import {
   IndexFiltersMode,
   IndexTable,
   InlineStack,
+  Modal,
   Page,
   SkeletonBodyText,
   Text,
+  useIndexResourceState,
 } from '@shopify/polaris';
 import { PermissionBoundary } from '../components/PermissionBoundary.js';
 import { Loading, TitleBar, useAppBridge } from '@shopify/app-bridge-react';
@@ -19,13 +22,18 @@ import { useAuthenticatedFetch } from '../hooks/use-authenticated-fetch.js';
 import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { Redirect } from '@shopify/app-bridge/actions';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useDebouncedState } from '../hooks/use-debounced-state.js';
-import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
+import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useWorkOrderInfoQuery } from '@work-orders/common/queries/use-work-order-info-query.js';
 import { useCustomerQueries } from '@work-orders/common/queries/use-customer-query.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { WorkOrderCsvUploadDropZoneModal } from '@web/frontend/components/work-orders/WorkOrderCsvUploadDropZoneModal.js';
+import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
+import { useBulkDeleteWorkOrderMutation } from '@work-orders/common/queries/use-bulk-delete-work-order-mutation.js';
+import { useEmployeeQueries, useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { StaffMemberSelectorModal } from '@web/frontend/components/selectors/StaffMemberSelectorModal.js';
 
 export default function () {
   return (
@@ -43,9 +51,11 @@ function WorkOrders() {
   const app = useAppBridge();
 
   const [query, setQuery, internalQuery] = useDebouncedState('');
-  const [page, setPage] = useState(0);
+  const [staffMemberId, setStaffMemberId] = useState<ID>();
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
+
   const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
+  const [isStaffMemberSelectorModalOpen, setIsStaffMemberSelectorModalOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -54,19 +64,31 @@ function WorkOrders() {
     fetch,
     query,
     customFieldFilters: [],
+    staffMemberId,
   });
-  const workOrders = workOrderInfoQuery.data?.pages?.[page] ?? [];
 
-  useEffect(() => {
-    if (workOrderInfoQuery.data?.pages.length === 1) {
-      workOrderInfoQuery.fetchNextPage();
-    }
-  }, [workOrderInfoQuery.data?.pages.length]);
+  const [pageIndex, setPageIndex] = useState(0);
+  const pagination = getInfiniteQueryPagination(pageIndex, setPageIndex, workOrderInfoQuery);
+
+  const allWorkOrders = workOrderInfoQuery.data?.pages?.flat() ?? [];
+  const workOrders = workOrderInfoQuery.data?.pages?.[pageIndex] ?? [];
 
   const customerIds = unique(workOrders.map(workOrder => workOrder.customerId));
   const customerQueries = useCustomerQueries({ fetch, ids: customerIds });
 
+  const staffMemberIds = unique(workOrders.map(workOrder => workOrder.staffMemberId).filter(isNonNullable));
+  const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
+
+  const staffMemberQuery = useEmployeeQuery({ fetch, id: staffMemberId ?? null });
+
   const settingsQuery = useSettingsQuery({ fetch });
+
+  const { selectedResources, clearSelection, handleSelectionChange, allResourcesSelected } = useIndexResourceState(
+    allWorkOrders,
+    { resourceIDResolver: workOrder => workOrder.name },
+  );
+
+  const [shouldShowBulkDeleteModal, setShouldShowBulkDeleteModal] = useState(false);
 
   if (settingsQuery.isLoading) {
     return <Loading />;
@@ -75,9 +97,6 @@ function WorkOrders() {
   const redirectToWorkOrder = (workOrderName: 'new' | string) => {
     Redirect.create(app).dispatch(Redirect.Action.APP, `/work-orders/${encodeURIComponent(workOrderName)}`);
   };
-
-  const shouldFetchNextPage = workOrderInfoQuery.data && page === workOrderInfoQuery.data.pages.length - 2;
-  const hasNextPage = !workOrderInfoQuery.isFetching && page < (workOrderInfoQuery.data?.pages.length ?? 0) - 1;
 
   return (
     <>
@@ -98,26 +117,57 @@ function WorkOrders() {
       <IndexFilters
         mode={mode}
         setMode={setMode}
-        filters={[]}
-        appliedFilters={[]}
+        filters={[
+          {
+            key: 'staff-member',
+            label: 'Staff member',
+            filter: (
+              <Box paddingBlock="200">
+                <InlineStack align="center" blockAlign="center">
+                  <Button variant="plain" onClick={() => setIsStaffMemberSelectorModalOpen(true)}>
+                    Select staff member
+                  </Button>
+                </InlineStack>
+              </Box>
+            ),
+            shortcut: true,
+            pinned: true,
+          },
+        ]}
+        appliedFilters={[
+          ...(!staffMemberId
+            ? []
+            : [
+                {
+                  key: 'staff-member',
+                  label: staffMemberQuery.data?.name ?? 'Unknown staff member',
+                  onRemove: () => setStaffMemberId(undefined),
+                },
+              ]),
+        ]}
         onQueryChange={query => setQuery(query)}
         onQueryClear={() => setQuery('', true)}
         queryValue={internalQuery}
-        onClearAll={() => setQuery('', true)}
+        onClearAll={() => {
+          setQuery('', true);
+          clearSelection();
+        }}
         tabs={[{ content: 'All', id: 'all' }]}
         canCreateNewView={false}
         selected={0}
       />
+
       <IndexTable
         headings={[
           { title: 'Work order' },
           { title: 'Status' },
           { title: 'Customer' },
+          { title: 'Staff member' },
           { title: 'SO #' },
           { title: 'SPO #' },
           { title: 'PO #' },
         ]}
-        itemCount={workOrders.length}
+        itemCount={allWorkOrders.length}
         loading={workOrderInfoQuery.isFetchingNextPage}
         emptyState={
           !workOrderInfoQuery.isFetchingNextPage && (
@@ -136,23 +186,27 @@ function WorkOrders() {
           )
         }
         pagination={{
-          hasNext: hasNextPage,
-          hasPrevious: page > 0,
-          onPrevious: () => setPage(page => page - 1),
-          onNext: () => {
-            if (shouldFetchNextPage) {
-              workOrderInfoQuery.fetchNextPage();
-            }
-
-            setPage(page => page + 1);
-          },
+          hasNext: pagination.hasNextPage,
+          hasPrevious: pagination.hasPreviousPage,
+          onPrevious: () => pagination.previous(),
+          onNext: () => pagination.next(),
         }}
+        selectable
+        selectedItemsCount={allResourcesSelected ? 'All' : selectedResources.length}
+        onSelectionChange={handleSelectionChange}
+        promotedBulkActions={[
+          {
+            content: 'Delete',
+            onAction: () => setShouldShowBulkDeleteModal(true),
+          },
+        ]}
       >
         {workOrders.map((workOrder, i) => (
           <IndexTable.Row
             key={workOrder.name}
             id={workOrder.name}
             position={i}
+            selected={allResourcesSelected || selectedResources.includes(workOrder.name)}
             onClick={() => redirectToWorkOrder(workOrder.name)}
           >
             <IndexTable.Cell>
@@ -176,6 +230,25 @@ function WorkOrders() {
                 }
 
                 return customerQuery.data?.displayName;
+              })()}
+            </IndexTable.Cell>
+            <IndexTable.Cell>
+              {(() => {
+                if (!workOrder.staffMemberId) {
+                  return null;
+                }
+
+                const staffMemberQuery = staffMemberQueries[workOrder.staffMemberId];
+
+                if (!staffMemberQuery) {
+                  return null;
+                }
+
+                if (staffMemberQuery.isLoading) {
+                  return <SkeletonBodyText lines={1} />;
+                }
+
+                return staffMemberQuery.data?.name;
               })()}
             </IndexTable.Cell>
             <IndexTable.Cell>
@@ -224,6 +297,80 @@ function WorkOrders() {
         open={isCsvUploadDropZoneModalOpen}
         onClose={() => setIsCsvUploadDropZoneModalOpen(false)}
       />
+
+      <BulkDeleteWorkOrdersModal
+        open={shouldShowBulkDeleteModal}
+        onClose={() => setShouldShowBulkDeleteModal(false)}
+        onDelete={() => clearSelection()}
+        names={selectedResources}
+      />
+
+      <StaffMemberSelectorModal
+        open={isStaffMemberSelectorModalOpen}
+        onClose={() => setIsStaffMemberSelectorModalOpen(false)}
+        onSelect={staffMember => setStaffMemberId(staffMember.id)}
+      />
+
+      {toast}
+    </>
+  );
+}
+
+function BulkDeleteWorkOrdersModal({
+  open,
+  onClose,
+  onDelete,
+  names,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+  names: string[];
+}) {
+  const [toast, setToastAction] = useToast();
+  const fetch = useAuthenticatedFetch({ setToastAction });
+
+  const bulkDeleteWorkOrderMutation = useBulkDeleteWorkOrderMutation({ fetch });
+
+  return (
+    <>
+      <Modal
+        open={open}
+        title={'Delete work orders'}
+        onClose={onClose}
+        primaryAction={{
+          content: `Delete ${names.length} work order${names.length === 1 ? '' : 's'}`,
+          destructive: true,
+          loading: bulkDeleteWorkOrderMutation.isPending,
+          onAction: () => {
+            bulkDeleteWorkOrderMutation.mutate(
+              { workOrders: names.map(name => ({ name })) },
+              {
+                onSuccess(result) {
+                  const successCount = result.workOrders.filter(result => result.type === 'success').length;
+                  const errorCount = result.workOrders.filter(result => result.type === 'error').length;
+
+                  setToastAction({
+                    content: `Deleted ${successCount} / ${result.workOrders.length} work order${successCount === 1 ? '' : 's'}${errorCount > 0 ? ` (${errorCount} cannot be deleted)` : ''}`,
+                  });
+
+                  onDelete();
+                  onClose();
+                },
+              },
+            );
+          },
+        }}
+      >
+        <Modal.Section>
+          <Text as="p" variant="bodyMd" fontWeight="bold">
+            Are you sure you want to delete the selected work orders?
+          </Text>
+          <Text as="p" variant="bodyMd" tone="critical">
+            This action cannot be undone.
+          </Text>
+        </Modal.Section>
+      </Modal>
 
       {toast}
     </>

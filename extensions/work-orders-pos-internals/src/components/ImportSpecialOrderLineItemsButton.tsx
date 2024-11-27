@@ -127,9 +127,8 @@ export function ImportSpecialOrderLineItemsButton({
               : BigDecimal.ZERO.toMoney(),
             customFields: customFieldsPresetsQuery.data.defaultCustomFields,
             productVariantId: lineItem.productVariantId,
-            availableQuantity: 0,
             serialNumber: null,
-          };
+          } satisfies Product;
         })
         .filter(isNonNullable),
     );

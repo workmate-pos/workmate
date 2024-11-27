@@ -33,7 +33,7 @@ import * as Sentry from '@sentry/node';
 import { z } from 'zod';
 import { UpsertPurchaseOrderReceipt } from '../../schemas/generated/upsert-purchase-order-receipt.js';
 import { upsertReceipt } from '../../services/purchase-orders/receipt.js';
-import { deletePurchaseOrderReceipt } from '../../services/purchase-orders/delete.js';
+import { deletePurchaseOrderReceipt, deletePurchaseOrders } from '../../services/purchase-orders/delete.js';
 import { PlanReorder } from '../../schemas/generated/plan-reorder.js';
 import { getReorderQuantities } from '../../services/reorder/plan.js';
 import { BulkCreatePurchaseOrders } from '../../schemas/generated/bulk-create-purchase-orders.js';
@@ -41,12 +41,19 @@ import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { getReorderPointCsvTemplatesZip, readReorderPointCsvImport } from '../../services/reorder/csv-import.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getLocations } from '../../services/locations/get.js';
-import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
-import { getReorderPoints, ReorderPoint, upsertReorderPoints } from '../../services/reorder/queries.js';
+import {
+  deleteReorderPoints,
+  getReorderPoints,
+  ReorderPoint,
+  upsertReorderPoints,
+} from '../../services/reorder/queries.js';
 import { ReorderPoints } from '../../schemas/generated/reorder-points.js';
 import { CreateReorderPoint } from '../../schemas/generated/create-reorder-point.js';
 import { syncInventoryQuantities } from '../../services/inventory/sync.js';
+import { BulkDeletePurchaseOrders } from '../../schemas/generated/bulk-delete-purchase-orders.js';
+import { unit } from '../../services/db/unit-of-work.js';
 
 export default class PurchaseOrdersController {
   @Post('/')
@@ -61,12 +68,70 @@ export default class PurchaseOrdersController {
     const user: LocalsTeifiUser = res.locals.teifi.user;
     const createPurchaseOrder = req.body;
 
-    const { name } = await upsertCreatePurchaseOrder(session, user, createPurchaseOrder);
-    const purchaseOrder = await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds).then(
-      po => po ?? never('We just made it XD'),
+    return await unit(async () => {
+      const { name } = await upsertCreatePurchaseOrder(session, user, createPurchaseOrder);
+      const purchaseOrder = await getDetailedPurchaseOrder(session, name, user.user.allowedLocationIds).then(
+        po => po ?? never('We just made it XD'),
+      );
+
+      return res.json({ purchaseOrder });
+    });
+  }
+
+  @Delete('/bulk')
+  @Permission('write_purchase_orders')
+  @Authenticated()
+  @BodySchema('bulk-delete-purchase-orders')
+  async bulkDeletePurchaseOrders(
+    req: Request<unknown, unknown, BulkDeletePurchaseOrders>,
+    res: Response<BulkDeletePurchaseOrdersResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const bulkDeletePurchaseOrders = req.body;
+
+    const result = await deletePurchaseOrders(
+      session,
+      user,
+      bulkDeletePurchaseOrders.purchaseOrders.map(po => po.name),
     );
 
-    return res.json({ purchaseOrder });
+    return res.status(200).json({
+      purchaseOrders: bulkDeletePurchaseOrders.purchaseOrders.map(({ name }) => {
+        const errors = result.filter(([_name]) => _name === name).map(([, error]) => error);
+
+        if (!errors.length) {
+          return {
+            type: 'success',
+            purchaseOrder: { name },
+          };
+        }
+
+        const [error = never()] = errors;
+
+        return {
+          type: 'error',
+          error: error.message,
+        };
+      }),
+    });
+  }
+
+  @Delete('/:name')
+  @Permission('write_purchase_orders')
+  @Authenticated()
+  async deletePurchaseOrder(req: Request<{ name: string }, unknown, unknown>, res: Response) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { name } = req.params;
+
+    const [[, error] = []] = await deletePurchaseOrders(session, user, [name]);
+
+    if (error) {
+      throw error;
+    }
+
+    return res.json({ success: true });
   }
 
   @Post('/:name/receipts')
@@ -259,7 +324,7 @@ export default class PurchaseOrdersController {
     ]);
 
     for (const { min, max } of createReorderPoints) {
-      if (max <= min) {
+      if (max < min) {
         throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
       }
     }
@@ -334,10 +399,7 @@ export default class PurchaseOrdersController {
       ),
     );
 
-    const errorCount = purchaseOrders.filter(purchaseOrder => purchaseOrder.type === 'error').length;
-    const status = errorCount === purchaseOrders.length ? 500 : errorCount > 0 ? 207 : 200;
-
-    return res.status(status).json({
+    return res.status(200).json({
       purchaseOrders: purchaseOrders.map((result, i) => {
         if (result.type === 'success') {
           return result;
@@ -360,22 +422,16 @@ export default class PurchaseOrdersController {
     });
   }
 
-  @Get('/reorder/:inventoryItemId')
+  @Delete('/reorder/:inventoryItemId')
   @QuerySchema('reorder-points')
-  @Permission('read_settings')
+  @Permission('write_settings')
   @Authenticated()
-  async getReorderPoint(
-    req: Request<{ inventoryItemId: string }, unknown, unknown, ReorderPoints>,
-    res: Response<ReorderPointResponse>,
-  ) {
+  async deleteReorderPoint(req: Request<{ inventoryItemId: string }, unknown, unknown, ReorderPoints>, res: Response) {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
-    const { inventoryItemId } = req.params;
     const { locationId } = req.query;
 
-    if (!isGid(inventoryItemId)) {
-      throw new HttpError('Invalid inventory item id', 400);
-    }
+    const inventoryItemId = createGid('InventoryItem', req.params.inventoryItemId);
 
     const locationIds = locationId
       ? [locationId]
@@ -392,7 +448,50 @@ export default class PurchaseOrdersController {
     const [reorderPoint] = await getReorderPoints({
       shop: session.shop,
       inventoryItemIds: [inventoryItemId],
-      ...(locationId ? { locationIds: [locationId] } : {}),
+      locationIds,
+      locationId,
+    });
+
+    if (!reorderPoint) {
+      throw new HttpError('Reorder point not found', 404);
+    }
+
+    await deleteReorderPoints(session.shop, [{ locationId: locationId ?? null, inventoryItemId }]);
+
+    return res.sendStatus(200);
+  }
+
+  @Get('/reorder/:inventoryItemId')
+  @QuerySchema('reorder-points')
+  @Permission('read_settings')
+  @Authenticated()
+  async getReorderPoint(
+    req: Request<{ inventoryItemId: string }, unknown, unknown, ReorderPoints>,
+    res: Response<ReorderPointResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { locationId } = req.query;
+
+    const inventoryItemId = createGid('InventoryItem', req.params.inventoryItemId);
+
+    const locationIds = locationId
+      ? [locationId]
+      : await getLocations(session, user.user.allowedLocationIds).then(locations =>
+          locations.map(location => location.id),
+        );
+
+    await assertLocationsPermitted({
+      shop: session.shop,
+      staffMemberId: user.staffMember.id,
+      locationIds,
+    });
+
+    const [reorderPoint] = await getReorderPoints({
+      shop: session.shop,
+      inventoryItemIds: [inventoryItemId],
+      locationIds,
+      locationId,
     });
 
     if (!reorderPoint) {
@@ -426,26 +525,20 @@ export default class PurchaseOrdersController {
       locationIds,
     });
 
-    if (max <= min) {
+    if (max < min) {
       throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
     }
 
     await Promise.all([
       syncInventoryQuantities(session, [inventoryItemId]),
-      upsertReorderPoints(session.shop, [
-        {
-          inventoryItemId,
-          locationId: locationId || null,
-          min,
-          max,
-        },
-      ]),
+      upsertReorderPoints(session.shop, [{ inventoryItemId, locationId: locationId ?? null, min, max }]),
     ]);
 
     const [reorderPoint] = await getReorderPoints({
       shop: session.shop,
       inventoryItemIds: [inventoryItemId],
-      ...(locationId ? { locationIds: [locationId] } : {}),
+      locationIds,
+      locationId,
     });
 
     if (!reorderPoint) {
@@ -482,6 +575,21 @@ export type PlanReorderResponse = {
 }[];
 
 export type BulkCreatePurchaseOrdersResponse = {
+  purchaseOrders: (
+    | {
+        type: 'success';
+        purchaseOrder: {
+          name: string;
+        };
+      }
+    | {
+        type: 'error';
+        error: string;
+      }
+  )[];
+};
+
+export type BulkDeletePurchaseOrdersResponse = {
   purchaseOrders: (
     | {
         type: 'success';

@@ -58,6 +58,7 @@ export function PrintTemplateGroup({
       '{{ items[*].charges[y].totalPrice }}': 'The total price of the charge at index y of the item at index x',
       '{{ items[*].charges[y].fullyPaid }}':
         'Whether the charge at index y of the item at index x has been fully paid for',
+      '{{ items[*].customFields[y] }}': 'The value of the custom field with key y of the item at index x',
       '{{ tax }}': 'The total tax of the work order',
       '{{ subtotal }}': 'The total subtotal of the work order',
       '{{ total }}': 'The total of the work order',
@@ -91,6 +92,7 @@ export function PrintTemplateGroup({
       '{{ lineItems[*].unitCost }}': 'The unit cost of the line item at index x',
       '{{ lineItems[*].quantity }}': 'The quantity of the line item at index x',
       '{{ lineItems[*].totalCost }}': 'The total cost of the line item at index x',
+      '{{ lineItems[*].customFields[y] }}': 'The value of the custom field with key y of the item at index x',
     },
   }[templateType];
 

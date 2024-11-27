@@ -22,10 +22,10 @@ import {
   getWorkOrderItems,
   insertWorkOrderCustomFields,
   insertWorkOrderItemCustomFields,
-  removeWorkOrderCharges,
-  removeWorkOrderCustomFields,
-  removeWorkOrderItemCustomFields,
-  removeWorkOrderItems,
+  deleteWorkOrderChargesByUuids,
+  deleteWorkOrderCustomFields,
+  deleteWorkOrderItemCustomFields,
+  deleteWorkOrderItemsByUuids,
   upsertWorkOrderCharges,
   upsertWorkOrderItems,
 } from './queries.js';
@@ -60,7 +60,7 @@ export async function upsertWorkOrder(session: Session, user: LocalsTeifiUser, c
         name: createWorkOrder.name,
         locationId: createWorkOrder.locationId,
       },
-      user.user.allowedLocationIds,
+      user,
     );
   }
 
@@ -71,14 +71,14 @@ export async function upsertWorkOrder(session: Session, user: LocalsTeifiUser, c
       name: createWorkOrder.name,
       locationId: createWorkOrder.locationId,
     },
-    user.user.allowedLocationIds,
+    user,
   );
 }
 
 async function createNewWorkOrder(
   session: Session,
   createWorkOrder: CreateWorkOrder & { name: null; locationId: ID },
-  locationIds: ID[] | null,
+  user: LocalsTeifiUser,
 ) {
   return await unit(async () => {
     await ensureRequiredDatabaseDataExists(session, createWorkOrder);
@@ -100,9 +100,10 @@ async function createNewWorkOrder(
       paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
       paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
       locationId: createWorkOrder.locationId,
+      staffMemberId: user.staffMember.id,
     });
 
-    await upsertItems(session, createWorkOrder, workOrder.id, [], locationIds);
+    await upsertItems(session, createWorkOrder, workOrder.id, [], user.user.allowedLocationIds);
     await upsertCharges(session, createWorkOrder, workOrder.id, []);
 
     await Promise.all([
@@ -119,7 +120,7 @@ async function createNewWorkOrder(
 async function updateWorkOrder(
   session: Session,
   createWorkOrder: CreateWorkOrder & { name: string; locationId: ID },
-  locationIds: ID[] | null,
+  user: LocalsTeifiUser,
 ) {
   const workOrder = await getWorkOrder({ shop: session.shop, name: createWorkOrder.name, locationIds: null });
 
@@ -173,6 +174,7 @@ async function updateWorkOrder(
         paymentFixedDueDate: createWorkOrder.paymentTerms?.date,
         paymentTermsTemplateId: createWorkOrder.paymentTerms?.templateId,
         locationId: createWorkOrder.locationId,
+        staffMemberId: workOrder.staffMemberId ?? user.staffMember.id,
       });
 
       const [currentItems, currentCharges] = await Promise.all([
@@ -180,9 +182,12 @@ async function updateWorkOrder(
         getWorkOrderCharges(workOrderId),
       ]);
 
-      await Promise.all([removeWorkOrderCustomFields(workOrderId), removeWorkOrderItemCustomFields(workOrderId)]);
+      await Promise.all([
+        deleteWorkOrderCustomFields({ workOrderIds: [workOrderId] }),
+        deleteWorkOrderItemCustomFields({ workOrderIds: [workOrderId] }),
+      ]);
 
-      await upsertItems(session, createWorkOrder, workOrderId, currentItems, locationIds);
+      await upsertItems(session, createWorkOrder, workOrderId, currentItems, user.user.allowedLocationIds);
       await upsertCharges(session, createWorkOrder, workOrderId, currentCharges);
 
       await deleteCharges(createWorkOrder, workOrderId, currentCharges);
@@ -353,7 +358,7 @@ async function deleteItems(createWorkOrder: CreateWorkOrder, workOrderId: number
   const newItemUuids = new Set(createWorkOrder.items.map(item => item.uuid));
   const deletedItemUuids = currentItems.map(item => item.uuid as UUID).filter(uuid => !newItemUuids.has(uuid));
 
-  await removeWorkOrderItems(workOrderId, deletedItemUuids);
+  await deleteWorkOrderItemsByUuids(workOrderId, deletedItemUuids);
 }
 
 async function deleteCharges(
@@ -364,5 +369,5 @@ async function deleteCharges(
   const newChargeUuids = new Set(createWorkOrder.charges.map(charge => charge.uuid));
   const deletedChargeUuids = currentCharges.map(charge => charge.uuid).filter(uuid => !newChargeUuids.has(uuid));
 
-  await removeWorkOrderCharges(workOrderId, deletedChargeUuids);
+  await deleteWorkOrderChargesByUuids(workOrderId, deletedChargeUuids);
 }

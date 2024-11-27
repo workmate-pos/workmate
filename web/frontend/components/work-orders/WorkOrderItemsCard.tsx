@@ -1,6 +1,7 @@
 import { CreateWorkOrderDispatchProxy, WIPCreateWorkOrder } from '@work-orders/common/create-work-order/reducer.js';
 import {
   Badge,
+  Banner,
   BlockStack,
   Box,
   Button,
@@ -63,6 +64,7 @@ export function WorkOrderItemsCard({
           </Text>
           <Box>{isLoading && <Spinner size={'small'} />}</Box>
         </InlineStack>
+
         <ProductsList
           createWorkOrder={createWorkOrder}
           dispatch={dispatch}

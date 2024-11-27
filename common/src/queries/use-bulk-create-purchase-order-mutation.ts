@@ -18,7 +18,7 @@ export const useBulkCreatePurchaseOrderMutation = (
         headers: { 'Content-Type': 'application/json' },
       });
 
-      if (![200, 207, 500].includes(response.status)) {
+      if (!response.ok) {
         throw await response.json();
       }
 
@@ -26,8 +26,6 @@ export const useBulkCreatePurchaseOrderMutation = (
       return result;
     },
     async onSuccess(...args) {
-      const bulkCreatePurchaseOrder = args[1];
-
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['purchase-order-info'] }),
         queryClient.invalidateQueries({ queryKey: ['inventory-item'] }),

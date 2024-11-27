@@ -7,7 +7,7 @@ import {
   Button,
   List,
   ListRow,
-  SegmentedControl,
+  Stack,
   Text,
   useApi,
 } from '@shopify/ui-extensions-react/point-of-sale';
@@ -21,14 +21,14 @@ import { useCycleCountQuery } from '@work-orders/common/queries/use-cycle-count-
 import { sum, unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { CycleCountApplicationStatus, DetailedCycleCount } from '@web/services/cycle-count/types.js';
 import { getCreateCycleCountFromDetailedCycleCount } from '../create-cycle-count/get-create-cycle-count-from-detailed-cycle-count.js';
-import { getDefaultCreateCycleCount } from '../create-cycle-count/default.js';
+import { defaultCreateCycleCount } from '@work-orders/common/create-cycle-count/default.js';
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
 import { useLocationQueries } from '@work-orders/common/queries/use-location-query.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useEmployeeQueries } from '@work-orders/common/queries/use-employee-query.js';
-import { titleCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { SortMode, SortOrder } from './Filters.js';
+import { useSettingsQuery } from '@work-orders/common/queries/use-settings-query.js';
 
 export const DEFAULT_SORT_MODE: SortMode = 'created-date';
 export const DEFAULT_SORT_ORDER: SortOrder = 'descending';
@@ -62,8 +62,10 @@ export function Entry() {
   const [selectedCycleCountName, setSelectedCycleCountName] = useState<string>();
   const selectedCycleCountQuery = useCycleCountQuery({ fetch, name: selectedCycleCountName ?? null }, { staleTime: 0 });
 
+  const settingsQuery = useSettingsQuery({ fetch });
+
   const screen = useScreen();
-  screen.setIsLoading(selectedCycleCountQuery.isFetching);
+  screen.setIsLoading(selectedCycleCountQuery.isFetching || settingsQuery.isLoading);
 
   const { session } = useApi<'pos.home.modal.render'>();
 
@@ -76,6 +78,22 @@ export function Entry() {
   }, [selectedCycleCountQuery.data, selectedCycleCountQuery.isFetching]);
 
   const rows = useListRows(cycleCountPageQuery.data?.pages.flat() ?? [], setSelectedCycleCountName);
+
+  if (settingsQuery.isError) {
+    return (
+      <Stack direction="horizontal" alignment="center" paddingVertical="ExtraLarge">
+        <Text color="TextCritical" variant="body">
+          {extractErrorMessage(settingsQuery.error, 'An error occurred while loading settings')}
+        </Text>
+      </Stack>
+    );
+  }
+
+  if (!settingsQuery.data) {
+    return null;
+  }
+
+  const defaultStatus = settingsQuery.data.settings.cycleCount.defaultStatus;
 
   return (
     <ResponsiveStack direction={'vertical'} spacing={2}>
@@ -94,8 +112,9 @@ export function Entry() {
             type={'primary'}
             onPress={() =>
               router.push('CycleCount', {
-                initial: getDefaultCreateCycleCount(
+                initial: defaultCreateCycleCount(
                   createGid('Location', session.currentSession.locationId.toString()),
+                  defaultStatus,
                 ),
               })
             }

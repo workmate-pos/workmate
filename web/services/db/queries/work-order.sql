@@ -6,14 +6,14 @@ INSERT INTO "WorkOrder" (shop, name, status, "dueDate", "customerId", "companyId
                          "discountAmount",
                          "discountType",
                          "paymentTermsTemplateId",
-                         "paymentFixedDueDate", "locationId")
+                         "paymentFixedDueDate", "locationId", "staffMemberId")
 VALUES (:shop!, :name!, :status!, :dueDate!, :customerId!, :companyId, :companyLocationId, :companyContactId,
         :derivedFromOrderId, :note!,
         :internalNote!,
         :discountAmount,
         :discountType,
         :paymentTermsTemplateId,
-        :paymentFixedDueDate, :locationId!)
+        :paymentFixedDueDate, :locationId!, :staffMemberId!)
 ON CONFLICT ("shop", "name") DO UPDATE SET status                   = EXCLUDED.status,
                                            "dueDate"                = EXCLUDED."dueDate",
                                            "customerId"             = EXCLUDED."customerId",
@@ -27,7 +27,8 @@ ON CONFLICT ("shop", "name") DO UPDATE SET status                   = EXCLUDED.s
                                            "discountType"           = EXCLUDED."discountType",
                                            "paymentTermsTemplateId" = EXCLUDED."paymentTermsTemplateId",
                                            "paymentFixedDueDate"    = EXCLUDED."paymentFixedDueDate",
-                                           "locationId"             = EXCLUDED."locationId"
+                                           "locationId"             = EXCLUDED."locationId",
+                                           "staffMemberId"          = EXCLUDED."staffMemberId"
 RETURNING *;
 
 /* @name updateDiscount */
@@ -64,6 +65,7 @@ WHERE wo.shop = :shop!
   wo."locationId" = ANY (COALESCE(:locationIds, ARRAY [wo."locationId"]))
     OR (wo."locationId" IS NULL AND :locationIds :: text[] IS NULL)
   )
+  AND wo."staffMemberId" IS NOT DISTINCT FROM COALESCE(:staffMemberId, wo."staffMemberId")
   AND (
   wo.status ILIKE COALESCE(:query, '%')
     OR wo.name ILIKE COALESCE(:query, '%')
@@ -94,7 +96,10 @@ HAVING (
           NOT :partiallyPaid!) AND
          (COALESCE(BOOL_AND(so."fullyPaid"), FALSE) OR NOT :fullyPaid!)
          ) != :inverseOrderConditions!
-   AND ((SUM((SELECT r.quantity FROM "PurchaseOrderReceiptLineItem" r WHERE r."purchaseOrderId" = poli."purchaseOrderId" AND r."lineItemUuid" = poli.uuid)) IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled
+   AND ((SUM((SELECT r.quantity
+              FROM "PurchaseOrderReceiptLineItem" r
+              WHERE r."purchaseOrderId" = poli."purchaseOrderId"
+                AND r."lineItemUuid" = poli.uuid)) IS NOT DISTINCT FROM SUM(poli."quantity")) = :purchaseOrdersFulfilled
   OR :purchaseOrdersFulfilled IS NULL)
 ORDER BY wo.id DESC
 LIMIT :limit! OFFSET :offset;

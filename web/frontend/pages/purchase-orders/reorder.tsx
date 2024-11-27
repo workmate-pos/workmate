@@ -394,17 +394,19 @@ function BulkCreatePurchaseOrdersModal({
         shipTo,
         lineItems: lineItems
           .filter(lineItem => lineItem.vendor === vendorName)
-          .map(lineItem => ({
-            uuid: uuid(),
-            customFields: lineItemCustomFieldsPresetsQuery.data.defaultCustomFields,
-            productVariantId: lineItem.productVariantId,
-            serialNumber: null,
-            specialOrderLineItem: null,
-            quantity: lineItem.quantity,
-            availableQuantity: 0,
-            unitCost: (productVariantQueries[lineItem.productVariantId]?.data?.inventoryItem.unitCost?.amount ??
-              '0.00') as Money,
-          })),
+          .map(
+            lineItem =>
+              ({
+                uuid: uuid(),
+                customFields: lineItemCustomFieldsPresetsQuery.data.defaultCustomFields,
+                productVariantId: lineItem.productVariantId,
+                serialNumber: null,
+                specialOrderLineItem: null,
+                quantity: lineItem.quantity,
+                unitCost: (productVariantQueries[lineItem.productVariantId]?.data?.inventoryItem.unitCost?.amount ??
+                  '0.00') as Money,
+              }) satisfies BulkCreatePurchaseOrders['purchaseOrders'][number]['lineItems'][number],
+          ),
         customFields: purchaseOrderCustomFieldsPresetsQuery.data.defaultCustomFields,
         employeeAssignments: [],
         placedDate: null,

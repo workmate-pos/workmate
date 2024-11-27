@@ -237,7 +237,6 @@ export async function getDraftOrderInputForWorkOrder(
   const graphql = new Graphql(session);
   const [{ workOrders }, { billingAddress = null, shippingAddress = null } = {}, response] = await Promise.all([
     getShopSettings(session.shop),
-    // TODO: Use customer location if customer
     companyLocationId
       ? getMailingAddressInputsForCompanyLocation(session, companyLocationId)
       : customerId

@@ -32,6 +32,10 @@ export default function App() {
                     destination: '/special-orders',
                   },
                   {
+                    label: 'Stock transfers',
+                    destination: '/stock-transfers',
+                  },
+                  {
                     label: 'Serials',
                     destination: '/serials',
                   },
@@ -42,6 +46,10 @@ export default function App() {
                   {
                     label: 'Services and labour',
                     destination: '/services-and-labour',
+                  },
+                  {
+                    label: 'Cycle count',
+                    destination: '/cycle-count',
                   },
                   {
                     label: 'Employees',

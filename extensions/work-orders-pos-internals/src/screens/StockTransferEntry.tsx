@@ -16,10 +16,9 @@ import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authen
 import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { useRouter } from '../routes.js';
-import { defaultCreateStockTransfer } from '../create-stock-transfer/default.js';
+import { defaultCreateStockTransfer } from '@work-orders/common/create-stock-transfer/default.js';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { useStockTransferPageQuery } from '@work-orders/common/queries/use-stock-transfer-page-query.js';
-import { Int } from '@web/schemas/generated/create-stock-transfer.js';
 import { useDebouncedState } from '@work-orders/common-pos/hooks/use-debounced-state.js';
 import { DetailedStockTransfer } from '@web/services/stock-transfers/types.js';
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
@@ -139,7 +138,7 @@ function Transfers({ fromLocationId, toLocationId }: { fromLocationId?: ID; toLo
     query,
     toLocationId,
     fromLocationId,
-    limit: 25 as Int,
+    limit: 50,
   });
 
   const rows = useStockTransferRows(incomingStockTransfersQuery.data?.pages?.flat() ?? []);

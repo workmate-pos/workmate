@@ -1,5 +1,5 @@
 import { Fetch } from './fetch.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { skipToken, useQuery } from '@tanstack/react-query';
 import { FetchOrderLineItemSerialsResponse } from '@web/controllers/api/order.js';
 
@@ -9,7 +9,7 @@ export const useOrderLineItemSerialsQuery = ({ fetch, id }: { fetch: Fetch; id: 
     queryFn: !id
       ? skipToken
       : async () => {
-          const response = await fetch(`/api/order/${encodeURIComponent(id)}/line-items/serials`);
+          const response = await fetch(`/api/order/${encodeURIComponent(parseGid(id).id)}/line-items/serials`);
 
           if (response.status === 404) {
             const result: FetchOrderLineItemSerialsResponse = [];

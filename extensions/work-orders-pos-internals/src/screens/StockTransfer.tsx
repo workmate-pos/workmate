@@ -17,7 +17,7 @@ import {
   CreateStockTransferDispatchProxy,
   useCreateStockTransferReducer,
   WIPCreateStockTransfer,
-} from '../create-stock-transfer/reducer.js';
+} from '@work-orders/common/create-stock-transfer/reducer.js';
 import { useRouter } from '../routes.js';
 import { useScreen } from '@teifi-digital/pos-tools/router';
 import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsaved-changes-dialog.js';

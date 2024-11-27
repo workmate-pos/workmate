@@ -248,7 +248,7 @@ export function AddProductModal({
                         getProductServiceType(pv.productVariant.product.serviceType?.value) ===
                         QUANTITY_ADJUSTING_SERVICE,
                       serial: null,
-                    } as const;
+                    } as const satisfies CreateWorkOrder['items'][number];
                   });
 
                   onAdd(items, charges);
