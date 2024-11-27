@@ -9,6 +9,7 @@ import { CreateSerial } from '../../schemas/generated/create-serial.js';
 import { upsertSerial } from '../../services/serials/upsert.js';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { LocalsTeifiUser, Permission } from '../../decorators/permission.js';
+import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 
 @Authenticated()
 @Permission('none')
