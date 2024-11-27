@@ -1,19 +1,11 @@
 import { Session } from '@shopify/shopify-api';
 import { CreateSupplier } from '../../schemas/generated/create-supplier.js';
-import {
-  deleteSupplierProductVariants,
-  deleteSupplierVendors,
-  getSupplier,
-  insertSupplier,
-  insertSupplierProductVariants,
-  insertSupplierVendors,
-  updateSupplier,
-} from './queries.js';
+import { setSupplierVendors, getSupplier, insertSupplier, updateSupplier } from './queries.js';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
 
 export async function upsertSupplier(session: Session, id: number | null, createSupplier: CreateSupplier) {
   const { shop } = session;
-  const { name, address, vendors, productVariantIds } = createSupplier;
+  const { name, address, vendors } = createSupplier;
 
   const existingSupplier = await getSupplier(shop, { name });
 
@@ -37,11 +29,7 @@ export async function upsertSupplier(session: Session, id: number | null, create
     }
   }
 
-  await Promise.all([
-    updateSupplier(shop, { id, name, address }),
-    deleteSupplierVendors(id).then(() => insertSupplierVendors(id, vendors)),
-    deleteSupplierProductVariants(id).then(() => insertSupplierProductVariants(id, productVariantIds)),
-  ]);
+  await Promise.all([updateSupplier(shop, { id, name, address }), setSupplierVendors(id, vendors)]);
 
   return id;
 }

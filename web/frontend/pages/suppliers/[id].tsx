@@ -18,13 +18,12 @@ import { VendorSelectorModal } from '@web/frontend/components/selectors/VendorSe
 import { DetailedSupplier } from '@web/services/suppliers/get.js';
 import { useStaticPagination } from '@work-orders/common/util/pagination.js';
 
-const defaultCreateSupplier: CreateSupplier = { name: '', address: '', vendors: [], productVariantIds: [] };
+const defaultCreateSupplier: CreateSupplier = { name: '', address: '', vendors: [] };
 const getCreateSupplierFromDetailedSupplier = (supplier: DetailedSupplier): CreateSupplier => ({
   ...defaultCreateSupplier,
   name: supplier.name,
   address: supplier.address ?? '',
   vendors: supplier.vendors,
-  productVariantIds: supplier.productVariantIds,
 });
 
 // page size used for vendors and product variants

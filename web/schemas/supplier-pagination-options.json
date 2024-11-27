@@ -20,12 +20,6 @@
     "sortMode": {
       "enum": ["createdAt", "updatedAt", "name", "relevant"]
     },
-    "productVariantId": {
-      "type": "array",
-      "items": {
-        "$ref": "scalars.json#/definitions/ID"
-      }
-    },
     "vendor": {
       "type": "array",
       "items": {

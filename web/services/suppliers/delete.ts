@@ -15,6 +15,6 @@ export async function deleteSupplier(shop: string, id: number) {
     throw new HttpError('Cannot delete a supplier that is used in purchase orders', 400);
   }
 
-  await Promise.all([queries.deleteSupplierVendors(id), queries.deleteSupplierProductVariants(id)]);
+  await queries.setSupplierVendors(id, []);
   await queries.deleteSupplier(shop, id);
 }

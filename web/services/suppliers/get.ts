@@ -14,17 +14,13 @@ export async function getDetailedSupplier(session: Session, id: number) {
     return null;
   }
 
-  const [vendors, productVariants] = await Promise.all([
-    queries.getSupplierVendors(supplier.id),
-    queries.getSupplierProductVariants(supplier.id),
-  ]);
+  const vendors = await queries.getSupplierVendors(supplier.id);
 
   return {
     id: supplier.id,
     name: supplier.name,
     address: supplier.address,
     vendors: vendors.map(vendor => vendor.vendor),
-    productVariantIds: productVariants.map(row => row.productVariantId),
     createdAt: supplier.createdAt,
     updatedAt: supplier.updatedAt,
     lastUsedAt: supplier.lastUsedAt ?? supplier.updatedAt,

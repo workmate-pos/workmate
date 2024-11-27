@@ -14,14 +14,8 @@
       "items": {
         "type": "string"
       }
-    },
-    "productVariantIds": {
-      "type": "array",
-      "items": {
-        "$ref": "scalars.json#/definitions/ID"
-      }
     }
   },
-  "required": ["name", "address", "vendors", "productVariantIds"],
+  "required": ["name", "address", "vendors"],
   "additionalProperties": false
 }
