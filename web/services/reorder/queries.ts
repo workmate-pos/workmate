@@ -93,7 +93,7 @@ export async function upsertReorderPoints(
       ${min} :: int[],
       ${max} :: int[]
     )
-    ON CONFLICT (shop, COALESCE("locationId", ''), "inventoryItemId")
+    ON CONFLICT (shop, "locationId", "inventoryItemId")
     DO UPDATE SET
       min = EXCLUDED.min,
       max = EXCLUDED.max

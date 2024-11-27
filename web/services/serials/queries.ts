@@ -202,8 +202,7 @@ export async function getSerialsPage(
              CASE WHEN ${order} = 'descending' AND ${sort} = 'serial' THEN pvs.serial END DESC NULLS LAST,
              --
              CASE WHEN ${order} = 'ascending' AND ${sort} = 'product-name' THEN p."title" END ASC NULLS LAST,
-             CASE WHEN ${order} = 'descending' AND ${sort} = 'product-name' THEN p."title" END DESC NULLS LAST
-
+             CASE WHEN ${order} = 'descending' AND ${sort} = 'product-name' THEN p."title" END DESC NULLS LAST,
     LIMIT ${limit + 1} OFFSET ${offset ?? 0};
   `;
 
