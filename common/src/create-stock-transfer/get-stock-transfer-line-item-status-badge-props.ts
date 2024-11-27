@@ -1,9 +1,9 @@
-import { BadgeProps, BadgeVariant } from '@shopify/ui-extensions-react/point-of-sale';
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
+import { BadgeProps } from '@shopify/polaris';
+import { Tone } from '@shopify/polaris/build/ts/src/components/Badge/types.js';
 
-// TODO: Move to common-pos / mono-extension
 export function getStockTransferLineItemStatusBadgeProps({
   status,
   quantity,
@@ -15,15 +15,15 @@ export function getStockTransferLineItemStatusBadgeProps({
 }): BadgeProps {
   const text = [name, quantity, sentenceCase(status)].filter(isNonNullable).join(' • ');
 
-  let variant: BadgeVariant = 'success';
+  let tone: Tone = 'success';
 
   if (status === 'PENDING') {
-    variant = 'warning';
+    tone = 'warning';
   }
 
   if (status === 'IN_TRANSIT') {
-    variant = 'highlight';
+    tone = 'info';
   }
 
-  return { text, variant };
+  return { children: text, tone };
 }
