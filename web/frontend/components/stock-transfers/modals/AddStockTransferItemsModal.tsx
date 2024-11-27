@@ -3,16 +3,13 @@ import {
   WIPCreateStockTransfer,
   CreateStockTransferDispatchProxy,
 } from '@work-orders/common/create-stock-transfer/reducer.js';
-import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
-import { Badge } from '@shopify/polaris';
 import { UUID, uuid } from '@work-orders/common/util/uuid.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { Int } from '@web/schemas/generated/create-stock-transfer.js';
-import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/ProductVariantSelectorModal.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { ProductVariantResourceItemContent } from '@web/frontend/components/ProductVariantResourceList.js';
+import { InventoryItemAvailableQuantityBadge } from '@web/frontend/components/InventoryItemQuantityBadge.js';
 
 type Props = {
   open: boolean;
@@ -64,34 +61,6 @@ export function AddStockTransferItemsModal({ open, onClose, createStockTransfer,
           });
         }}
       />
-
-      {toast}
-    </>
-  );
-}
-
-function InventoryItemAvailableQuantityBadge({
-  inventoryItemId,
-  locationId,
-}: {
-  inventoryItemId: ID;
-  locationId: ID | null;
-}) {
-  const [toast, setToastAction] = useToast();
-  const fetch = useAuthenticatedFetch({ setToastAction });
-
-  const inventoryItemQuery = useInventoryItemQuery({ fetch, id: inventoryItemId, locationId });
-  const availableQuantity = inventoryItemQuery.data?.inventoryLevel?.quantities.find(
-    q => q.name === 'available',
-  )?.quantity;
-
-  const nbsp = '\u00A0';
-
-  return (
-    <>
-      {availableQuantity !== undefined && (
-        <Badge tone={availableQuantity >= 0 ? 'success' : 'warning'}>{`${availableQuantity}${nbsp}available`}</Badge>
-      )}
 
       {toast}
     </>

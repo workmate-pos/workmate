@@ -6,7 +6,6 @@ import { useCreatePurchaseOrderReducer } from '@work-orders/common/create-purcha
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import {
-  Badge,
   BlockStack,
   Box,
   Card,
@@ -17,7 +16,6 @@ import {
   Layout,
   Page,
   Select,
-  Spinner,
   Text,
   Tooltip,
 } from '@shopify/polaris';
@@ -62,9 +60,8 @@ import { uuid } from '@work-orders/common/util/uuid.js';
 import { ImportSpecialOrderModal } from '@web/frontend/components/purchase-orders/modals/ImportSpecialOrderModal.js';
 import { SupplierSelectorModal } from '@web/frontend/components/selectors/SupplierSelectorModal.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
-import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
-import { useInventoryItemQuery } from '@work-orders/common/queries/use-inventory-item-query.js';
 import { ProductVariantResourceItemContent } from '@web/frontend/components/ProductVariantResourceList.js';
+import { InventoryItemAvailableQuantityBadge } from '@web/frontend/components/InventoryItemQuantityBadge.js';
 
 export default function () {
   return (
@@ -563,46 +560,5 @@ function PurchaseOrder({
 
       {toast}
     </Box>
-  );
-}
-
-// TODO: Dedup with tommy branch
-function InventoryItemAvailableQuantityBadge({
-  inventoryItemId,
-  locationId,
-  delta = 0,
-}: {
-  inventoryItemId: ID;
-  locationId: ID | null;
-  /**
-   * Optional delta to change the available quantity by.
-   * Can be used to account for unsaved changes
-   */
-  delta?: number;
-}) {
-  const [toast, setToastAction] = useToast();
-  const fetch = useAuthenticatedFetch({ setToastAction });
-
-  const inventoryItemQuery = useInventoryItemQuery({ fetch, id: inventoryItemId, locationId });
-  const availableQuantity = inventoryItemQuery.data?.inventoryLevel?.quantities.find(
-    q => q.name === 'available',
-  )?.quantity;
-  const adjustedAvailableQuantity = availableQuantity !== undefined ? availableQuantity + delta : undefined;
-
-  // 🤠
-  const nbsp = '\u00A0';
-
-  return (
-    <InlineStack align="end">
-      {adjustedAvailableQuantity !== undefined && (
-        <Badge
-          tone={adjustedAvailableQuantity > 0 ? 'success' : 'warning'}
-        >{`${adjustedAvailableQuantity}${nbsp}available`}</Badge>
-      )}
-
-      {inventoryItemQuery.isLoading && <Spinner size="small" />}
-
-      {toast}
-    </InlineStack>
   );
 }
