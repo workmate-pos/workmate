@@ -31,7 +31,7 @@ export type ProductVariantSelectorModalProps = {
   open: boolean;
   onClose: () => void;
   filters?: {
-    type?: 'product' | 'serial' | 'service';
+    type?: ('product' | 'serial' | 'service')[];
     status?: ('draft' | 'active')[];
   };
 };
@@ -56,20 +56,23 @@ export function ProductVariantSelectorModal({ onSelect, filters, open, onClose }
       query: [
         query,
         status.map(status => `product_status:${status}`).join(' OR ') ?? '',
-        match(type)
-          .with('product', () =>
-            Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
-              .map(tag => `tag_not:"${escapeQuotationMarks(tag)}"`)
-              .join(' AND '),
+        type
+          ?.map(type =>
+            match(type)
+              .with('product', () =>
+                Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
+                  .map(tag => `tag_not:"${escapeQuotationMarks(tag)}"`)
+                  .join(' AND '),
+              )
+              .with('service', () =>
+                Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
+                  .map(tag => `tag:"${escapeQuotationMarks(tag)}"`)
+                  .join(' OR '),
+              )
+              .with('serial', () => `tag:"${escapeQuotationMarks(USES_SERIAL_NUMBERS_TAG)}"`)
+              .exhaustive(),
           )
-          .with('service', () =>
-            Object.values(SERVICE_METAFIELD_VALUE_TAG_NAME)
-              .map(tag => `tag:"${escapeQuotationMarks(tag)}"`)
-              .join(' OR '),
-          )
-          .with('serial', () => `tag:"${escapeQuotationMarks(USES_SERIAL_NUMBERS_TAG)}"`)
-          .with(undefined, () => '')
-          .exhaustive(),
+          .join(' OR ') ?? '',
       ]
         .filter(x => !!x.trim())
         .map(q => `(${q})`)
