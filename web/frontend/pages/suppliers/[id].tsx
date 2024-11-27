@@ -1,16 +1,4 @@
-import {
-  Banner,
-  BlockStack,
-  Box,
-  Button,
-  Card,
-  Frame,
-  InlineStack,
-  Page,
-  Spinner,
-  Text,
-  TextField,
-} from '@shopify/polaris';
+import { Banner, BlockStack, Box, Button, Card, Frame, Page, Spinner, Text, TextField } from '@shopify/polaris';
 import { useParams } from 'react-router-dom';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
@@ -18,16 +6,8 @@ import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query
 import { ReactNode, useEffect, useState } from 'react';
 import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CreateSupplier } from '@web/schemas/generated/create-supplier.js';
-import { ContextualSaveBar, Loading, TitleBar } from '@shopify/app-bridge-react';
-import { useVendorsQuery } from '@work-orders/common/queries/use-vendors-query.js';
-import { SearchableChoiceList } from '@web/frontend/components/form/SearchableChoiceList.js';
-import {
-  ProductVariantResourceItemContent,
-  ProductVariantResourceList,
-  ProductVariantResourceListEmptyState,
-} from '@web/frontend/components/ProductVariantResourceList.js';
+import { ContextualSaveBar, TitleBar } from '@shopify/app-bridge-react';
 import { MinusMinor, PlusMinor } from '@shopify/polaris-icons';
-import { ProductVariantSelectorModal } from '@web/frontend/components/selectors/ProductVariantSelectorModal.js';
 import { useSupplierMutation } from '@work-orders/common/queries/use-supplier-mutation.js';
 import {
   VendorResourceItemContent,
@@ -91,14 +71,8 @@ export default function Supplier() {
   }, [supplierQuery.data]);
 
   const [isVendorSelectorModalOpen, setIsVendorSelectorModalOpen] = useState(false);
-  const [isProductVariantSelectorModalOpen, setIsProductVariantSelectorModalOpen] = useState(false);
 
   const { page: vendorPage, ...vendorsPagination } = useStaticPagination(createSupplier.vendors, PAGE_SIZE);
-
-  const { page: productVariantPage, ...productVariantPagination } = useStaticPagination(
-    createSupplier.productVariantIds,
-    PAGE_SIZE,
-  );
 
   if (supplierQuery.isLoading) {
     return (
@@ -128,12 +102,6 @@ export default function Supplier() {
   const addVendorsButton = (
     <Button variant="plain" icon={PlusMinor} onClick={() => setIsVendorSelectorModalOpen(true)}>
       Add vendors
-    </Button>
-  );
-
-  const addProductsButton = (
-    <Button variant="plain" icon={PlusMinor} onClick={() => setIsProductVariantSelectorModalOpen(true)}>
-      Add products
     </Button>
   );
 
@@ -223,83 +191,11 @@ export default function Supplier() {
             )}
           </BlockStack>
 
-          <BlockStack gap="400">
-            <BlockStack gap="050">
-              <Text as="h2" variant="headingLg" fontWeight="bold">
-                Products
-              </Text>
-
-              <Text as="p" variant="bodyMd" tone="subdued">
-                You can select individual products to be supplied by this supplier. This list does not include products
-                associated with selected vendors
-              </Text>
-            </BlockStack>
-
-            {createSupplier.productVariantIds.length > 0 && addProductsButton}
-
-            {!createSupplier.productVariantIds.length ? (
-              <ProductVariantResourceListEmptyState verb="selected">
-                {addProductsButton}
-              </ProductVariantResourceListEmptyState>
-            ) : (
-              <ProductVariantResourceList
-                productVariantIds={productVariantPage}
-                onClick={() => {}}
-                pagination={productVariantPagination}
-                render={productVariant => (
-                  <ProductVariantResourceItemContent
-                    productVariant={productVariant}
-                    right={
-                      <Button
-                        variant="plain"
-                        tone="critical"
-                        icon={MinusMinor}
-                        onClick={() =>
-                          setCreateSupplier(current => ({
-                            ...current,
-                            productVariantIds: current.productVariantIds.filter(id => id !== productVariant.id),
-                          }))
-                        }
-                      >
-                        Remove
-                      </Button>
-                    }
-                  />
-                )}
-                emptyState={
-                  <ProductVariantResourceListEmptyState verb="selected">
-                    {addProductsButton}
-                  </ProductVariantResourceListEmptyState>
-                }
-              />
-            )}
-          </BlockStack>
-
           <Button variant="primary" onClick={() => save()} loading={supplierMutation.isPending}>
             Save
           </Button>
         </BlockStack>
       </Card>
-
-      <ProductVariantSelectorModal
-        onSelect={productVariant =>
-          setCreateSupplier(current => ({
-            ...current,
-            productVariantIds: [productVariant.id, ...current.productVariantIds.filter(id => id !== productVariant.id)],
-          }))
-        }
-        closeOnSelect={false}
-        filters={{ type: ['product', 'serial'] }}
-        open={isProductVariantSelectorModalOpen}
-        onClose={() => setIsProductVariantSelectorModalOpen(false)}
-        selectedProductVariantIds={createSupplier.productVariantIds}
-        onSelectedProductVariantIdsChange={productVariantIds =>
-          setCreateSupplier(current => ({
-            ...current,
-            productVariantIds,
-          }))
-        }
-      />
 
       <VendorSelectorModal
         open={isVendorSelectorModalOpen}
@@ -332,51 +228,5 @@ function Shell({ title, children, toast }: { title?: string; children: ReactNode
         {toast}
       </Page>
     </Frame>
-  );
-}
-
-function Vendors({ vendors, setVendors }: { vendors: string[]; setVendors: (vendors: string[]) => void }) {
-  const [toast, setToastAction] = useToast();
-  const fetch = useAuthenticatedFetch({ setToastAction });
-
-  const vendorsQuery = useVendorsQuery({ fetch });
-
-  if (vendorsQuery.isError) {
-    return (
-      <Banner
-        title="Error loading vendors"
-        tone="critical"
-        action={{
-          content: 'Retry',
-          onAction: () => vendorsQuery.refetch(),
-        }}
-      >
-        {extractErrorMessage(vendorsQuery.error, 'An error occurred while loading vendors')}
-      </Banner>
-    );
-  }
-
-  if (vendorsQuery.isPending) {
-    return (
-      <InlineStack align="center" blockAlign="center">
-        <Loading />
-        <Spinner />
-      </InlineStack>
-    );
-  }
-
-  return (
-    <>
-      <SearchableChoiceList
-        choices={vendorsQuery.data.map(vendor => ({
-          label: vendor.name,
-          value: vendor.name,
-        }))}
-        selected={vendors}
-        onChange={setVendors}
-        searchable
-        resourceName={{ singular: 'vendor', plural: 'vendors' }}
-      />
-    </>
   );
 }
