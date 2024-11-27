@@ -54,9 +54,11 @@ export type PurchaseOrderTemplateData = {
 
 export type PurchaseOrderLineItemTemplateData = {
   name: string;
+  sku: string;
   description: string;
   unitCost: string;
   quantity: number;
+  receivedQuantity: number;
   totalCost: string;
   customFields: Record<string, string>;
 };
@@ -107,10 +109,17 @@ export async function getPurchaseOrderTemplateData(
       const totalCost = BigDecimal.fromString(lineItem.unitCost)
         .multiply(BigDecimal.fromString(lineItem.quantity.toFixed(0)))
         .toString();
+      const receivedQuantity = purchaseOrder.receipts
+        .flatMap(receipt => receipt.lineItems)
+        .filter(receiptLineItem => receiptLineItem.uuid === lineItem.uuid)
+        .reduce((total, receiptLineItem) => total + receiptLineItem.quantity, 0);
+
       return {
         name: getProductVariantName(lineItem.productVariant) ?? never('fk'),
+        sku: lineItem.productVariant.sku ?? '',
         description: lineItem.productVariant.product.description,
         quantity: lineItem.quantity,
+        receivedQuantity,
         unitCost: lineItem.unitCost,
         totalCost,
         customFields: lineItem.customFields,

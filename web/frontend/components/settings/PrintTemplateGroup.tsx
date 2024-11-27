@@ -89,6 +89,7 @@ export function PrintTemplateGroup({
       '{{ status }}': 'The status of the purchase order',
       '{{ customFields.x }}': 'The value of the custom field with key x',
       '{{ lineItems[*].name }}': 'The name of the line item at index x',
+      '{{ lineItems[*].sku }}': 'The sku of the line item at index x',
       '{{ lineItems[*].unitCost }}': 'The unit cost of the line item at index x',
       '{{ lineItems[*].quantity }}': 'The quantity of the line item at index x',
       '{{ lineItems[*].totalCost }}': 'The total cost of the line item at index x',
