@@ -85,9 +85,9 @@ import {
 import { EmployeeSelector, EmployeeSelectorProps } from '@work-orders/common-pos/screens/selector/EmployeeSelector.js';
 import { VendorSelector, VendorSelectorProps } from '@work-orders/common-pos/screens/selector/VendorSelector.js';
 import {
-  NotFullyOrderedSpecialOrderVendorSelector,
-  NotFullyOrderedSpecialOrderVendorSelectorProps,
-} from '@work-orders/common-pos/screens/selector/NotFullyOrderedSpecialOrderVendorSelector.js';
+  NotFullyOrderedSpecialOrderSupplierSelector,
+  NotFullyOrderedSpecialOrderSupplierSelectorProps,
+} from '@work-orders/common-pos/screens/selector/NotFullyOrderedSpecialOrderSupplierSelector.js';
 import {
   SpecialOrderSelector,
   SpecialOrderSelectorProps,
@@ -214,10 +214,10 @@ export const { RouterProvider, Modals, useRouter, getComponent } = createModalRo
     title: 'Select vendor',
     Component: (props: Omit<VendorSelectorProps, 'useRouter'>) => <VendorSelector {...props} useRouter={useRouter} />,
   },
-  NotFullyOrderedSpecialOrderVendorSelector: {
+  NotFullyOrderedSpecialOrderSupplierSelector: {
     title: 'Select vendor',
-    Component: (props: Omit<NotFullyOrderedSpecialOrderVendorSelectorProps, 'useRouter'>) => (
-      <NotFullyOrderedSpecialOrderVendorSelector {...props} useRouter={useRouter} />
+    Component: (props: Omit<NotFullyOrderedSpecialOrderSupplierSelectorProps, 'useRouter'>) => (
+      <NotFullyOrderedSpecialOrderSupplierSelector {...props} useRouter={useRouter} />
     ),
   },
   DiscountSelector: {

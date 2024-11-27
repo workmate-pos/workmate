@@ -27,21 +27,47 @@ import { extractErrorMessage } from '@teifi-digital/shopify-app-toolbox/error';
 import { CreatePurchaseOrder } from '@web/schemas/generated/create-purchase-order.js';
 import { isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { uuid } from '@work-orders/common/util/uuid.js';
+import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query.js';
 
 export function CreatePurchaseOrderSpecialOrderSelector() {
   const { session, toast } = useApi<'pos.home.modal.render'>();
 
+  const fetch = useAuthenticatedFetch();
+
   const [locationId, setLocationId] = useState<ID>(createGid('Location', session.currentSession.locationId));
-  const [vendorName, setVendorName] = useState<string>();
+  const [supplierId, setSupplierId] = useState<number>();
   const [query, setQuery] = useDebouncedState('');
 
-  const fetch = useAuthenticatedFetch();
   const locationQuery = useLocationQuery({ fetch, id: locationId ?? null });
   const location = locationQuery.data;
+
+  const supplierQuery = useSupplierQuery({ fetch, id: supplierId ?? null });
+  const supplier = supplierQuery.data;
+
+  const specialOrdersQuery = useSpecialOrdersQuery({
+    fetch,
+    params: {
+      query,
+      locationId,
+      lineItemVendorName: supplier?.vendors ?? [],
+      lineItemOrderState: 'not-fully-ordered',
+      limit: 25,
+    },
+  });
 
   const settingsQuery = useSettingsQuery({ fetch });
   const purchaseOrderCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
   const lineItemCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
+
+  const purchaseOrderMutation = usePurchaseOrderMutation({ fetch });
+
+  const productVariantIds = unique(
+    specialOrdersQuery.data?.pages
+      .flat()
+      .flatMap(specialOrder => specialOrder.lineItems)
+      .map(lineItem => lineItem.productVariantId) ?? [],
+  );
+  const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
   const screen = useScreen();
   screen.setIsLoading(
@@ -50,33 +76,13 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
       lineItemCustomFieldsPresetsQuery.isLoading,
   );
 
-  const specialOrdersQuery = useSpecialOrdersQuery({
-    fetch,
-    params: {
-      query,
-      locationId,
-      lineItemVendorName: [vendorName].filter(isNonNullable),
-      lineItemOrderState: 'not-fully-ordered',
-      limit: 25,
-    },
-    options: {
-      enabled: !!locationId && !!vendorName,
-    },
-  });
-
-  const purchaseOrderMutation = usePurchaseOrderMutation({ fetch });
-
   const [selectedSpecialOrders, setSelectedSpecialOrders] = useState<DetailedSpecialOrder[]>([]);
   const specialOrders = specialOrdersQuery.data?.pages.flat() ?? [];
 
   useEffect(() => {
     setSelectedSpecialOrders([]);
-  }, [locationId, vendorName]);
+  }, [locationId, supplierId]);
 
-  const productVariantIds = unique(
-    selectedSpecialOrders.flatMap(specialOrder => specialOrder.lineItems).map(lineItem => lineItem.productVariantId),
-  );
-  const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
   const isLoadingProductVariants = Object.values(productVariantQueries).some(query => query.isLoading);
   const errorProductVariantQueries = Object.values(productVariantQueries).filter(query => query.isError);
 
@@ -93,22 +99,25 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
         />
 
         <FormStringField
-          label={'Vendor'}
-          value={vendorName}
+          label={'Supplier'}
+          value={
+            !supplierId ? undefined : supplierQuery.isLoading ? 'Loading...' : (supplier?.name ?? 'Unknown supplier')
+          }
           onFocus={() =>
-            router.push('NotFullyOrderedSpecialOrderVendorSelector', {
+            router.push('NotFullyOrderedSpecialOrderSupplierSelector', {
               locationId,
-              onSelect: vendor => setVendorName(vendor),
+              onSelect: supplier => setSupplierId(supplier.id),
             })
           }
           required
         />
 
-        {!!locationId && !!vendorName && (
+        {!!locationId && !!supplierId && (
           <ListPopup
             title={'Select special orders'}
             useRouter={useRouter}
             query={{ query, setQuery }}
+            resourceName={{ singular: 'special order', plural: 'special orders' }}
             isLoadingMore={specialOrdersQuery.isFetching}
             onEndReached={() => specialOrdersQuery.fetchNextPage()}
             selection={{
@@ -158,8 +167,8 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
                 return;
               }
 
-              if (!vendorName) {
-                toast.show('You must select a vendor');
+              if (!supplierId) {
+                toast.show('Please select a supplier');
                 return;
               }
 
@@ -187,8 +196,7 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
               const createPurchaseOrder: CreatePurchaseOrder = {
                 name: null,
                 type: 'NORMAL',
-                // TODO: Fix this
-                supplierId: null,
+                supplierId,
                 status,
                 placedDate: null,
                 locationId,
@@ -210,10 +218,6 @@ export function CreatePurchaseOrderSpecialOrderSelector() {
                       if (!productVariant) {
                         toast.show('Product variant not found');
                         throw new Error('Product variant not found');
-                      }
-
-                      if (productVariant.product.vendor !== vendorName) {
-                        return null;
                       }
 
                       const inventoryItem = productVariant.inventoryItem;

@@ -2,7 +2,6 @@ import { skipToken, useQuery } from '@tanstack/react-query';
 import { Fetch } from './fetch.js';
 import { FetchSupplierResponse } from '@web/controllers/api/suppliers.js';
 import { NestedDateToDateTime } from '@web/util/types.js';
-import { Supplier } from '@web/services/suppliers/queries.js';
 import { DetailedSupplier } from '@web/services/suppliers/get.js';
 
 export const useSupplierQuery = ({ fetch, id }: { fetch: Fetch; id: number | null }) =>

@@ -39,7 +39,6 @@ export function ImportSpecialOrderLineItemsButton({
   const supplierQuery = useSupplierQuery({ fetch, id: createPurchaseOrder.supplierId ?? null });
   const vendors = supplierQuery.data?.vendors ?? [];
 
-  // TODO: Fix this throwing - do at home with usb c cable !!
   const { toast } = useApi<'pos.home.modal.render'>();
   const screen = useScreen();
   const isLoading =

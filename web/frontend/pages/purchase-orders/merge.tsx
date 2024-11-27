@@ -93,6 +93,7 @@ function Merge() {
       limit: 25,
     },
   });
+
   const settingsQuery = useSettingsQuery({ fetch });
   const purchaseOrderCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'PURCHASE_ORDER' });
   const lineItemCustomFieldsPresetsQuery = useCustomFieldsPresetsQuery({ fetch, type: 'LINE_ITEM' });
