@@ -19,7 +19,7 @@ import { Dispatch, ReactNode, SetStateAction, useCallback, useEffect, useMemo, u
 import { StockTransferLineItemStatus } from '@web/services/db/queries/generated/stock-transfers.sql.js';
 import { getStockTransferLineItemStatusBadgeProps } from '../../util/stock-transfer-line-item-status-badge-props.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';
 import { useProductVariantByBarcodeQuery } from '@work-orders/common/queries/use-product-variant-by-barcode-query.js';
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
@@ -32,7 +32,7 @@ import {
   CreateStockTransferDispatchProxy,
   createStockTransferReducer,
   WIPCreateStockTransfer,
-} from '../../create-stock-transfer/reducer.js';
+} from '@work-orders/common/create-stock-transfer/reducer.js';
 import {
   CreateStockTransferLineItemStatus,
   Int,

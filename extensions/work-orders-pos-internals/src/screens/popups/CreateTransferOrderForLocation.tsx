@@ -3,7 +3,7 @@ import { ScrollView, Stack, Text, useApi } from '@shopify/ui-extensions-react/po
 import { hasPropertyValue } from '@teifi-digital/shopify-app-toolbox/guards';
 import { useRouter } from '../../routes.js';
 import { UnsourcedWorkOrderItem } from './WorkOrderItemSourcing.js';
-import { defaultCreateStockTransfer } from '../../create-stock-transfer/default.js';
+import { defaultCreateStockTransfer } from '@work-orders/common/create-stock-transfer/default.js';
 import { ListPopup, ListPopupItem } from '@work-orders/common-pos/screens/ListPopup.js';
 import { useTransferOrderLocationItems } from '@work-orders/common/queries/use-transfer-order-location-items.js';
 import { useAuthenticatedFetch } from '@teifi-digital/pos-tools/hooks/use-authenticated-fetch.js';

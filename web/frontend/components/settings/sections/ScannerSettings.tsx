@@ -143,6 +143,11 @@ export function ScannerSettings({
           Metafields
         </Text>
 
+        <Banner title="Indexing paused" tone="info">
+          We have temporarily paused metafield indexing due to throttling. Please manually re-index your metafields
+          while we work on a solution
+        </Banner>
+
         <Text as="p" variant="bodyMd" tone="subdued">
           WorkMate indexes product metafields to allow you to scan products by their metafield values. We currently
           support single line text product metafields.

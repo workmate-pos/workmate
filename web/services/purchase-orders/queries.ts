@@ -37,6 +37,7 @@ export async function getPurchaseOrder(
     updatedAt: Date;
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
+    staffMemberId: string | null;
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -76,6 +77,7 @@ export async function getPurchaseOrdersByIds(purchaseOrderIds: number[]) {
     updatedAt: Date;
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
+    staffMemberId: string | null;
   }>`
     SELECT *
     FROM "PurchaseOrder"
@@ -103,15 +105,17 @@ function mapPurchaseOrder(purchaseOrder: {
   updatedAt: Date;
   placedDate: Date | null;
   type: PurchaseOrderType;
+  staffMemberId: string | null;
 }) {
   try {
-    const { locationId, discount, tax, shipping, deposited, paid } = purchaseOrder;
+    const { locationId, discount, tax, shipping, deposited, paid, staffMemberId } = purchaseOrder;
     assertGidOrNull(locationId);
     assertMoneyOrNull(discount);
     assertMoneyOrNull(tax);
     assertMoneyOrNull(shipping);
     assertMoneyOrNull(deposited);
     assertMoneyOrNull(paid);
+    assertGidOrNull(staffMemberId);
 
     return {
       ...purchaseOrder,
@@ -121,6 +125,7 @@ function mapPurchaseOrder(purchaseOrder: {
       shipping,
       deposited,
       paid,
+      staffMemberId,
     };
   } catch (error) {
     sentryErr(error, { purchaseOrder });
@@ -144,6 +149,7 @@ export async function upsertPurchaseOrder({
   paid,
   locationId,
   type,
+  staffMemberId,
 }: {
   shop: string;
   locationId: ID | null;
@@ -160,6 +166,7 @@ export async function upsertPurchaseOrder({
   vendorName: string | null;
   placedDate: DateTime | null;
   type: PurchaseOrderType;
+  staffMemberId: ID;
 }) {
   const _locationId: string | null = locationId;
   const _discount: string | null = discount;
@@ -168,10 +175,12 @@ export async function upsertPurchaseOrder({
   const _deposited: string | null = deposited;
   const _paid: string | null = paid;
   const _placedDate: string | null = placedDate;
+  const _staffMemberId: string = staffMemberId;
 
   return await sqlOne<{ id: number }>`
-    INSERT INTO "PurchaseOrder" (shop, "locationId", discount, tax, shipping, deposited, paid, name, status, "shipFrom",
-                                 "shipTo", note, "vendorName", "placedDate", type)
+    INSERT INTO "PurchaseOrder" AS po (shop, "locationId", discount, tax, shipping, deposited, paid, name, status,
+                                       "shipFrom",
+                                       "shipTo", note, "vendorName", "placedDate", type, "staffMemberId")
     VALUES (${shop},
             ${_locationId},
             ${_discount},
@@ -186,21 +195,22 @@ export async function upsertPurchaseOrder({
             ${note},
             ${vendorName},
             ${_placedDate} :: timestamptz,
-            ${type} :: "PurchaseOrderType"
-           )
+            ${type} :: "PurchaseOrderType",
+            ${_staffMemberId} :: text)
     ON CONFLICT (shop, name) DO UPDATE
-      SET "locationId" = EXCLUDED."locationId",
-          "discount"   = EXCLUDED."discount",
-          "tax"        = EXCLUDED."tax",
-          "shipping"   = EXCLUDED."shipping",
-          "deposited"  = EXCLUDED."deposited",
-          "paid"       = EXCLUDED."paid",
-          "status"     = EXCLUDED."status",
-          "shipFrom"   = EXCLUDED."shipFrom",
-          "shipTo"     = EXCLUDED."shipTo",
-          "note"       = EXCLUDED."note",
-          "vendorName" = EXCLUDED."vendorName",
-          "placedDate" = EXCLUDED."placedDate"
+      SET "locationId"    = EXCLUDED."locationId",
+          "discount"      = EXCLUDED."discount",
+          "tax"           = EXCLUDED."tax",
+          "shipping"      = EXCLUDED."shipping",
+          "deposited"     = EXCLUDED."deposited",
+          "paid"          = EXCLUDED."paid",
+          "status"        = EXCLUDED."status",
+          "shipFrom"      = EXCLUDED."shipFrom",
+          "shipTo"        = EXCLUDED."shipTo",
+          "note"          = EXCLUDED."note",
+          "vendorName"    = EXCLUDED."vendorName",
+          "placedDate"    = EXCLUDED."placedDate",
+          "staffMemberId" = EXCLUDED."staffMemberId"
     RETURNING id;`;
 }
 
@@ -554,6 +564,7 @@ export async function getPurchaseOrdersForSpecialOrder(specialOrderId: number) {
     updatedAt: Date;
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
+    staffMemberId: string | null;
   }>`
     SELECT DISTINCT po.*
     FROM "PurchaseOrder" po
@@ -725,6 +736,7 @@ export async function getPurchaseOrdersForSerial({
     updatedAt: Date;
     placedDate: Date | null;
     type: 'NORMAL' | 'DROPSHIP';
+    staffMemberId: string | null;
   }>`
     SELECT DISTINCT po.*
     FROM "ProductVariantSerial" pvs

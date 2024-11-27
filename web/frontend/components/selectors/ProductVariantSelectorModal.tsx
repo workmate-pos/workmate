@@ -2,7 +2,7 @@ import { ProductVariant, useProductVariantsQuery } from '@work-orders/common/que
 import { SERVICE_METAFIELD_VALUE_TAG_NAME } from '@work-orders/common/metafields/product-service-type.js';
 import { useAuthenticatedFetch } from '@web/frontend/hooks/use-authenticated-fetch.js';
 import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { useToast } from '@teifi-digital/shopify-app-react';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
@@ -23,6 +23,7 @@ import { emptyState } from '@web/frontend/assets/index.js';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { match } from 'ts-pattern';
 import { USES_SERIAL_NUMBERS_TAG } from '@work-orders/common/metafields/uses-serial-numbers.js';
+import { ID, parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
 
 // TODO: More selectors just like this (same with pos)
 
@@ -33,15 +34,28 @@ export type ProductVariantSelectorModalProps = {
   filters?: {
     type?: ('product' | 'serial' | 'service')[];
     status?: ('draft' | 'active')[];
+    locationId?: ID;
   };
+  renderItem?: (productVariant: ProductVariant) => ReactNode;
+  /**
+   * TODO: Remove this in the future - default should be false
+   */
+  closeOnSelect?: boolean;
 };
 
 const defaultFilters = {
   status: ['active'],
 } as const satisfies ProductVariantSelectorModalProps['filters'];
 
-export function ProductVariantSelectorModal({ onSelect, filters, open, onClose }: ProductVariantSelectorModalProps) {
-  const { status, type } = {
+export function ProductVariantSelectorModal({
+  onSelect,
+  filters,
+  open,
+  onClose,
+  renderItem = productVariant => <ProductVariantSelectorItemContent productVariant={productVariant} />,
+  closeOnSelect = true,
+}: ProductVariantSelectorModalProps) {
+  const { status, type, locationId } = {
     ...defaultFilters,
     ...filters,
   };
@@ -56,6 +70,7 @@ export function ProductVariantSelectorModal({ onSelect, filters, open, onClose }
       query: [
         query,
         status.map(status => `product_status:${status}`).join(' OR ') ?? '',
+        locationId ? `location_id:${parseGid(locationId).id}` : '',
         type
           ?.map(type =>
             match(type)
@@ -114,36 +129,53 @@ export function ProductVariantSelectorModal({ onSelect, filters, open, onClose }
             onClearAll={() => setQuery('', true)}
           />
         }
-        renderItem={productVariant => {
-          const imageUrl = productVariant.image?.url ?? productVariant.product.featuredImage?.url;
-          const label = getProductVariantName(productVariant) ?? 'Unknown product variant';
-
-          return (
-            <ResourceItem
-              id={productVariant.id}
-              onClick={() => {
-                onSelect(productVariant);
+        renderItem={productVariant => (
+          <ResourceItem
+            id={productVariant.id}
+            onClick={() => {
+              onSelect(productVariant);
+              if (closeOnSelect) {
                 onClose();
-              }}
-            >
-              <InlineStack gap={'400'} wrap={false}>
-                {imageUrl && <Thumbnail source={imageUrl} alt={label} />}
-                {!imageUrl && <SkeletonThumbnail />}
-                <BlockStack gap={'200'}>
-                  <Text as="p" variant="bodyMd" fontWeight="bold">
-                    {label}
-                  </Text>
-                  <Text as="p" variant="bodyMd" tone="subdued">
-                    {productVariant.sku}
-                  </Text>
-                </BlockStack>
-              </InlineStack>
-            </ResourceItem>
-          );
-        }}
+              }
+            }}
+            verticalAlignment="center"
+          >
+            {renderItem(productVariant)}
+          </ResourceItem>
+        )}
       />
 
       {toast}
     </Modal>
+  );
+}
+
+export function ProductVariantSelectorItemContent({
+  productVariant,
+  right,
+}: {
+  productVariant: ProductVariant;
+  right?: ReactNode;
+}) {
+  const imageUrl = productVariant.image?.url ?? productVariant.product.featuredImage?.url;
+  const label = getProductVariantName(productVariant) ?? 'Unknown product variant';
+
+  return (
+    <InlineStack gap="200" wrap={false} align="space-between">
+      <InlineStack gap="400" wrap={false}>
+        {imageUrl && <Thumbnail source={imageUrl} alt={label} />}
+        {!imageUrl && <SkeletonThumbnail />}
+        <BlockStack gap={'050'}>
+          <Text as="p" variant="bodyMd" fontWeight="bold">
+            {label}
+          </Text>
+          <Text as="p" variant="bodyMd" tone="subdued">
+            {productVariant.sku}
+          </Text>
+        </BlockStack>
+      </InlineStack>
+
+      {right}
+    </InlineStack>
   );
 }

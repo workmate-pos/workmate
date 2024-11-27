@@ -28,6 +28,10 @@
     },
     "type": {
       "enum": ["NORMAL", "DROPSHIP"]
+    },
+    "staffMemberId": {
+      "description": "The staff member id of the employee who created the purchase order",
+      "$ref": "scalars.json#/definitions/ID"
     }
   },
   "required": ["limit", "offset"],

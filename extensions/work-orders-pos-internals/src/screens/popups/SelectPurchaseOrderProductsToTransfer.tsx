@@ -12,7 +12,7 @@ import { useProductVariantQueries } from '@work-orders/common/queries/use-produc
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { useRouter } from '../../routes.js';
-import { defaultCreateStockTransfer } from '../../create-stock-transfer/default.js';
+import { defaultCreateStockTransfer } from '@work-orders/common/create-stock-transfer/default.js';
 import { UUID } from '@work-orders/common/util/uuid.js';
 import { ListPopup, ListPopupItem } from '@work-orders/common-pos/screens/ListPopup.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
