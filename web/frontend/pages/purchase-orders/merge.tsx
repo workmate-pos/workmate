@@ -72,9 +72,6 @@ function Merge() {
     },
   });
 
-  console.log('vendors', vendorsQuery.data);
-  console.log('suppliers', suppliersQuery.data);
-
   useEffect(() => {
     if (!suppliersQuery.isFetching && suppliersQuery.hasNextPage) {
       suppliersQuery.fetchNextPage();
