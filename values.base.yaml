@@ -5,9 +5,6 @@ migration:
   volumeMounts:
     - name: npm
       mountPath: /home/node/.npm
-  extraEnv:
-    - name: PRISMA_SCHEMA_DISABLE_ADVISORY_LOCK
-      value: "1"
 
 gotenberg:
   enabled: true
