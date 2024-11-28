@@ -1,4 +1,4 @@
-import { CreateStockTransferDispatchProxy } from '../../create-stock-transfer/reducer.js';
+import { CreateStockTransferDispatchProxy } from '@work-orders/common/create-stock-transfer/reducer.js';
 import { useState } from 'react';
 import { Badge, ScrollView, Selectable, Stack, Stepper, Text } from '@shopify/ui-extensions-react/point-of-sale';
 import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
@@ -10,7 +10,7 @@ import { useUnsavedChangesDialog } from '@teifi-digital/pos-tools/hooks/use-unsa
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { ResponsiveStack } from '@teifi-digital/pos-tools/components/ResponsiveStack.js';
 import { ResponsiveGrid } from '@teifi-digital/pos-tools/components/ResponsiveGrid.js';
-import { sentenceCase, titleCase } from '@teifi-digital/shopify-app-toolbox/string';
+import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { FormButton } from '@teifi-digital/pos-tools/components/form/FormButton.js';
 import { Form } from '@teifi-digital/pos-tools/components/form/Form.js';
 import { useRouter } from '../../routes.js';

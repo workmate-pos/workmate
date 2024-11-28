@@ -10,7 +10,7 @@ import { uuid } from '../util/uuid.js';
 
 export function getCreatePurchaseOrderForSpecialOrders({
   location,
-  vendorName,
+  supplierId,
   status,
   purchaseOrderCustomFields,
   lineItemCustomFields,
@@ -18,7 +18,7 @@ export function getCreatePurchaseOrderForSpecialOrders({
   specialOrders,
 }: {
   location: Location;
-  vendorName: string;
+  supplierId: number | null;
   status: string;
   purchaseOrderCustomFields: Record<string, string>;
   lineItemCustomFields: Record<string, string>;
@@ -32,7 +32,7 @@ export function getCreatePurchaseOrderForSpecialOrders({
     status,
     placedDate: null,
     locationId: location.id,
-    vendorName,
+    supplierId,
     shipFrom: '',
     shipTo: location?.address?.formatted.join('\n') ?? '',
     note: '',
@@ -52,9 +52,10 @@ export function getCreatePurchaseOrderForSpecialOrders({
             throw new Error('Product variant not found');
           }
 
-          if (productVariant.product.vendor !== vendorName) {
-            return null;
-          }
+          // TODO: fix this somehow? complain in backend?
+          // if (productVariant.product.vendor !== vendorName) {
+          //   return null;
+          // }
 
           const inventoryItem = productVariant.inventoryItem;
 

@@ -56,12 +56,9 @@ export const useStockTransferPageQuery = ({
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage, pages) => {
-      if (lastPage.length === 0) return undefined;
+      // TODO: backend should return hasNextPage - not urgent
+      if (lastPage.length === 0 || lastPage.length < paginationOptions.limit) return undefined;
       return pages.flat(1).length;
     },
-    select: ({ pages, pageParams }) => ({
-      pages: pages.flat(1),
-      pageParams,
-    }),
   });
 };

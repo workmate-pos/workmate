@@ -4,7 +4,7 @@ import { FetchStockTransferResponse } from '@web/controllers/api/stock-transfers
 
 export const useStockTransferQuery = (
   { fetch, name }: { fetch: Fetch; name: string | null },
-  options?: { staleTime?: number },
+  options?: { staleTime?: number; enabled?: boolean },
 ) => {
   return useQuery({
     ...options,

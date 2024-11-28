@@ -1,5 +1,7 @@
 import {
   Badge,
+  Box,
+  Button,
   Card,
   ChoiceList,
   EmptyState,
@@ -10,6 +12,7 @@ import {
   InlineStack,
   Modal,
   Page,
+  SkeletonBodyText,
   Text,
   useIndexResourceState,
 } from '@shopify/polaris';
@@ -29,6 +32,9 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { sentenceCase } from '@teifi-digital/shopify-app-toolbox/string';
 import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useBulkDeletePurchaseOrderMutation } from '@work-orders/common/queries/use-bulk-delete-purchase-order-mutation.js';
+import { useEmployeeQueries, useEmployeeQuery } from '@work-orders/common/queries/use-employee-query.js';
+import { ID } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { StaffMemberSelectorModal } from '@web/frontend/components/selectors/StaffMemberSelectorModal.js';
 
 export default function () {
   return (
@@ -48,8 +54,12 @@ function PurchaseOrders() {
   const [status, setStatus] = useState<string>();
   const [type, setType] = useState<'NORMAL' | 'DROPSHIP'>();
   const [query, setQuery, optimisticQuery] = useDebouncedState('');
+  const [staffMemberId, setStaffMemberId] = useState<ID>();
+
   const [mode, setMode] = useState<IndexFiltersMode>(IndexFiltersMode.Default);
+
   const [isCsvUploadDropZoneModalOpen, setIsCsvUploadDropZoneModalOpen] = useState(false);
+  const [isStaffMemberSelectorModalOpen, setIsStaffMemberSelectorModalOpen] = useState(false);
 
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
@@ -60,6 +70,7 @@ function PurchaseOrders() {
     customFieldFilters: [],
     status,
     type,
+    staffMemberId,
   });
 
   const [pageIndex, setPageIndex] = useState(0);
@@ -67,6 +78,11 @@ function PurchaseOrders() {
 
   const allPurchaseOrders = purchaseOrderInfoQuery.data?.pages?.flat() ?? [];
   const purchaseOrders = purchaseOrderInfoQuery.data?.pages?.[pageIndex] ?? [];
+
+  const staffMemberIds = unique(purchaseOrders.map(po => po.staffMemberId).filter(isNonNullable));
+  const staffMemberQueries = useEmployeeQueries({ fetch, ids: staffMemberIds });
+
+  const staffMemberQuery = useEmployeeQuery({ fetch, id: staffMemberId ?? null });
 
   const settingsQuery = useSettingsQuery({ fetch });
 
@@ -90,6 +106,10 @@ function PurchaseOrders() {
       <TitleBar
         title="Purchase orders"
         secondaryActions={[
+          {
+            content: 'Suppliers',
+            onAction: () => Redirect.create(app).dispatch(Redirect.Action.APP, '/suppliers'),
+          },
           {
             content: 'Re-order',
             onAction: () => redirectToPurchaseOrder('reorder'),
@@ -156,6 +176,21 @@ function PurchaseOrders() {
               />
             ),
           },
+          {
+            key: 'staff-member',
+            label: 'Staff member',
+            filter: (
+              <Box paddingBlock="200">
+                <InlineStack align="center" blockAlign="center">
+                  <Button variant="plain" onClick={() => setIsStaffMemberSelectorModalOpen(true)}>
+                    Select staff member
+                  </Button>
+                </InlineStack>
+              </Box>
+            ),
+            shortcut: true,
+            pinned: true,
+          },
         ]}
         appliedFilters={[
           ...(status
@@ -167,6 +202,24 @@ function PurchaseOrders() {
                 },
               ]
             : []),
+          ...(type
+            ? [
+                {
+                  key: 'type',
+                  label: `Type is ${sentenceCase(type).toLowerCase()}`,
+                  onRemove: () => setType(undefined),
+                },
+              ]
+            : []),
+          ...(!staffMemberId
+            ? []
+            : [
+                {
+                  key: 'staff-member',
+                  label: staffMemberQuery.data?.name ?? 'Unknown staff member',
+                  onRemove: () => setStaffMemberId(undefined),
+                },
+              ]),
         ]}
         onQueryChange={query => setQuery(query)}
         onQueryClear={() => setQuery('', true)}
@@ -188,6 +241,7 @@ function PurchaseOrders() {
           { title: 'Type' },
           { title: 'Location' },
           { title: 'Customer' },
+          { title: 'Staff member' },
           { title: 'SPO #' },
           { title: 'SO #' },
           { title: 'WO #' },
@@ -254,6 +308,25 @@ function PurchaseOrders() {
               </Text>
             </IndexTable.Cell>
             <IndexTable.Cell>
+              {(() => {
+                if (!purchaseOrder.staffMemberId) {
+                  return null;
+                }
+
+                const staffMemberQuery = staffMemberQueries[purchaseOrder.staffMemberId];
+
+                if (!staffMemberQuery) {
+                  return null;
+                }
+
+                if (staffMemberQuery.isLoading) {
+                  return <SkeletonBodyText lines={1} />;
+                }
+
+                return staffMemberQuery.data?.name;
+              })()}
+            </IndexTable.Cell>
+            <IndexTable.Cell>
               <InlineStack gap="100">
                 {unique(
                   purchaseOrder.lineItems.map(lineItem => lineItem.specialOrderLineItem?.name).filter(isNonNullable),
@@ -295,6 +368,12 @@ function PurchaseOrders() {
         onClose={() => setShouldShowBulkDeleteModal(false)}
         onDelete={() => clearSelection()}
         names={selectedResources}
+      />
+
+      <StaffMemberSelectorModal
+        open={isStaffMemberSelectorModalOpen}
+        onClose={() => setIsStaffMemberSelectorModalOpen(false)}
+        onSelect={staffMember => setStaffMemberId(staffMember.id)}
       />
 
       {toast}

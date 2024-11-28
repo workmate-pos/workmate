@@ -7,8 +7,8 @@ import { getAverageUnitCostForProductVariant } from './average-unit-cost.js';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import fetch from 'node-fetch';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
-import { getVendors } from '../vendors/get.js';
 import { getPurchaseOrder } from './queries.js';
+import { getSupplier } from '../suppliers/queries.js';
 
 export async function sendPurchaseOrderWebhook(session: Session, name: string) {
   const purchaseOrder = await getDetailedPurchaseOrder(session, name, null);
@@ -17,11 +17,12 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
     throw new Error(`Purchase order with name ${name} not found`);
   }
 
-  const [{ purchaseOrders }, { id, createdAt, updatedAt }, vendors] = await Promise.all([
+  const [{ purchaseOrders }, { id, supplierId, createdAt, updatedAt }] = await Promise.all([
     getShopSettings(session.shop),
     getPurchaseOrder({ shop: session.shop, name, locationIds: null }).then(po => po ?? never()),
-    getVendors(session),
   ]);
+
+  const supplier = supplierId ? await getSupplier(session.shop, { id: supplierId }) : null;
 
   if (!purchaseOrders.webhook.enabled) {
     return;
@@ -71,16 +72,7 @@ export async function sendPurchaseOrderWebhook(session: Session, name: string) {
       tax: purchaseOrder.tax,
       subtotal: subtotal.toMoney(),
       total,
-      vendor: purchaseOrder.vendorName
-        ? {
-            name: purchaseOrder.vendorName,
-            metafields: Object.fromEntries(
-              vendors
-                .find(vendor => vendor.name === purchaseOrder.vendorName)
-                ?.customer?.metafields?.nodes?.map(({ namespace, key, value }) => [`${namespace}.${key}`, value]) ?? [],
-            ),
-          }
-        : null,
+      supplier: !supplier ? null : { id: supplier.id, name: supplier.name },
       lineItems: await Promise.all(
         purchaseOrder.lineItems.map(async lineItem => {
           const productVariant = lineItem.productVariant;

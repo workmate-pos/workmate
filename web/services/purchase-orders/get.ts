@@ -27,6 +27,7 @@ import { getProductVariants } from '../product-variants/queries.js';
 import { getProducts } from '../products/queries.js';
 import { getSerialsByIds } from '../serials/queries.js';
 import { getStaffMembers } from '../staff-members/queries.js';
+import { getSupplier } from '../suppliers/queries.js';
 
 export async function getDetailedPurchaseOrder(
   { shop }: Pick<Session, 'shop'>,
@@ -60,10 +61,11 @@ export async function getDetailedPurchaseOrder(
   return await awaitNested({
     name: purchaseOrder.name,
     type: purchaseOrder.type,
+    staffMemberId: purchaseOrder.staffMemberId,
     status: purchaseOrder.status,
     placedDate: purchaseOrder.placedDate ? (purchaseOrder.placedDate.toISOString() as DateTime) : null,
     location: getLocation(purchaseOrder.locationId),
-    vendorName: purchaseOrder.vendorName,
+    supplier: getPurchaseOrderSupplier(shop, purchaseOrder.supplierId),
     shipFrom: purchaseOrder.shipFrom,
     shipTo: purchaseOrder.shipTo,
     note: purchaseOrder.note,
@@ -121,6 +123,7 @@ export async function getPurchaseOrderInfoPage(
     // the first filter is always skipped by the sql to ensure we can run this query without running into the empty record error
     requiredCustomFieldFilters: [{ inverse: false, key: null, value: null }, ...requireCustomFieldFilters],
     type: paginationOptions.type,
+    staffMemberId: paginationOptions.staffMemberId,
     shop,
     locationIds,
   });
@@ -252,6 +255,23 @@ async function getDetailedPurchaseOrderLineItems(purchaseOrderId: number) {
 async function getPurchaseOrderCustomFieldsRecord(purchaseOrderId: number) {
   const customFields = await getPurchaseOrderCustomFields(purchaseOrderId);
   return Object.fromEntries(customFields.map(({ key, value }) => [key, value]));
+}
+
+async function getPurchaseOrderSupplier(shop: string, supplierId: number | null) {
+  if (supplierId === null) {
+    return null;
+  }
+
+  const supplier = await getSupplier(shop, { id: supplierId });
+
+  if (!supplier) {
+    return null;
+  }
+
+  return {
+    id: supplier.id,
+    name: supplier.name,
+  };
 }
 
 async function getDetailedPurchaseOrderEmployeeAssignments(shop: string, purchaseOrderId: number) {

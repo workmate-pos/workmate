@@ -23,9 +23,9 @@ export type PurchaseOrderWebhookBody = {
       id: ID;
       name: string;
     } | null;
-    vendor: {
+    supplier: {
+      id: number;
       name: string;
-      metafields: Record<string, string>;
     } | null;
     note: string;
     subtotal: Money;

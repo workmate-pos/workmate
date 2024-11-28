@@ -21,6 +21,7 @@ export const permissions = [
   'read_special_orders',
   'write_special_orders',
   'manage_schedules',
+  'write_suppliers',
 ] as const;
 
 export type Permission = (typeof permissions)[number];

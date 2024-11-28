@@ -10,7 +10,7 @@
     "limit": {
       "type": "integer",
       "minimum": 1,
-      "maximum": 25
+      "maximum": 50
     },
     "query": {
       "type": "string"
@@ -34,7 +34,10 @@
       "enum": ["fully-ordered", "not-fully-ordered"]
     },
     "lineItemVendorName": {
-      "type": "string"
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": ["limit", "offset"],

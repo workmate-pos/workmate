@@ -24,6 +24,7 @@ export type DetailedWorkOrder = {
   companyContactId: ID | null;
   paymentTerms: WorkOrderPaymentTerms | null;
   locationId: ID | null;
+  staffMemberId: ID | null;
 };
 
 export type WorkOrderSerial = {

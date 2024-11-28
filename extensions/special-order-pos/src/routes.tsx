@@ -1,5 +1,4 @@
 import { createRouter } from '@teifi-digital/pos-tools/router';
-import { ScrollView } from '@shopify/ui-extensions-react/point-of-sale';
 import { ScreenPermissionBoundary } from '@work-orders/common-pos/components/ScreenPermissionBoundary.js';
 import { ListPopup, ListPopupProps } from '@work-orders/common-pos/screens/ListPopup.js';
 import { Entry } from './screens/Entry.js';
@@ -16,6 +15,12 @@ import {
   CompanyLocationSelectorProps,
 } from '@work-orders/common-pos/screens/selector/CompanyLocationSelector.js';
 import { SpecialOrderFilters } from './screens/special-order/SpecialOrderFilters.js';
+import { TaskInfo, TaskInfoProps } from '@work-orders/common-pos/screens/tasks/TaskInfo.js';
+import {
+  MultiEmployeeSelector,
+  MultiEmployeeSelectorProps,
+} from '@work-orders/common-pos/screens/selector/MultiEmployeeSelector.js';
+import { TaskModal, TaskModalProps } from '@work-orders/common-pos/screens/tasks/TaskModal.js';
 
 export const { Router, useRouter } = createRouter({
   Entry: {
@@ -78,5 +83,20 @@ export const { Router, useRouter } = createRouter({
   SpecialOrderFilters: {
     title: 'Special order filters',
     Component: SpecialOrderFilters,
+  },
+
+  TaskInfo: {
+    title: 'Task',
+    Component: (props: Omit<TaskInfoProps, 'useRouter'>) => <TaskInfo {...props} useRouter={useRouter} />,
+  },
+  MultiEmployeeSelector: {
+    title: 'Select employee',
+    Component: (props: Omit<MultiEmployeeSelectorProps, 'useRouter'>) => (
+      <MultiEmployeeSelector {...props} useRouter={useRouter} />
+    ),
+  },
+  TaskModal: {
+    title: 'Task',
+    Component: (props: Omit<TaskModalProps, 'useRouter'>) => <TaskModal {...props} useRouter={useRouter} />,
   },
 });

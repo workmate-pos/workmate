@@ -3,7 +3,6 @@ import { MergeUnion } from '../../util/types.js';
 import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { assertGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { HttpError } from '@teifi-digital/shopify-app-express/errors';
-import { StockTransferLineItemStatus } from '@prisma/client';
 import { nest } from '../../util/db.js';
 import { isNonEmptyArray, mapNonEmptyArray } from '@teifi-digital/shopify-app-toolbox/array';
 import { unit } from '../db/unit-of-work.js';
@@ -11,6 +10,7 @@ import { getPurchaseOrderLineItemsByNameAndUuid } from '../purchase-orders/queri
 import { hasPropertyValue, isNonNullable } from '@teifi-digital/shopify-app-toolbox/guards';
 import { never } from '@teifi-digital/shopify-app-toolbox/util';
 import { UUID } from '@work-orders/common/util/uuid.js';
+import { StockTransferLineItemStatus } from '../db/queries/generated/stock-transfers.sql.js';
 
 export type StockTransfer = NonNullable<Awaited<ReturnType<typeof getStockTransfer>>>;
 export type StockTransferLineItem = Awaited<ReturnType<typeof getStockTransferLineItems>>[number];

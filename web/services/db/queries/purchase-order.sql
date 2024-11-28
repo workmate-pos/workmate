@@ -18,6 +18,7 @@ FROM "PurchaseOrder" po
        LEFT JOIN "Customer" c ON so."customerId" = c."customerId"
        LEFT JOIN "WorkOrderItem" woi ON soli."lineItemId" = woi."shopifyOrderLineItemId"
        LEFT JOIN "WorkOrder" wo ON woi."workOrderId" = wo."id"
+       LEFT JOIN "Supplier" s ON po."supplierId" = s.id
 WHERE po.shop = :shop!
   AND po.type = COALESCE(:type, po.type)
   AND po.status ILIKE COALESCE(:status, po.status)
@@ -26,10 +27,11 @@ WHERE po.shop = :shop!
   po."locationId" = ANY (COALESCE(:locationIds, ARRAY [po."locationId"]))
     OR (wo."locationId" IS NULL AND :locationIds :: text[] IS NULL)
   )
+  AND po."staffMemberId" IS NOT DISTINCT FROM COALESCE(:staffMemberId, po."staffMemberId")
   AND (
   po.name ILIKE COALESCE(:query, '%')
     OR po.note ILIKE COALESCE(:query, '%')
-    OR po."vendorName" ILIKE COALESCE(:query, '%')
+    OR s.name ILIKE COALESCE(:query, '%')
     OR c."displayName" ILIKE COALESCE(:query, '%')
     OR l.name ILIKE COALESCE(:query, '%')
     OR so.name ILIKE COALESCE(:query, '%')

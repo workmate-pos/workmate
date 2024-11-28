@@ -21,6 +21,24 @@ export async function getLongRunningTask(name: string) {
   return task;
 }
 
+export async function getLongRunningTasksLike(name: string) {
+  const tasks = await sql<{
+    id: number;
+    name: string;
+    progress: number;
+    progressMax: number | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }>`
+    SELECT *
+    FROM "LongRunningTask"
+    WHERE name LIKE ${name}
+    ORDER BY "createdAt" DESC
+  `;
+
+  return tasks;
+}
+
 export async function insertLongRunningTask({
   name,
   progress,

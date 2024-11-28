@@ -21,6 +21,7 @@ import {
 import { ProductVariantSelectorProps } from './ProductVariantSelector.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { ProductVariant } from '@work-orders/common/queries/use-product-variants-query.js';
+import { Button } from '@shopify/ui-extensions-react/point-of-sale';
 
 export type SerialSelectorProps = {
   onSelect: (serial: DetailedSerial) => void;
@@ -139,7 +140,7 @@ export function SerialSelector({
             onAction: () =>
               router.push('ProductVariantSelector', {
                 onSelect: productVariant => setProductVariantId(productVariant.id),
-                onClear: () => setProductVariantId(undefined),
+                header: <Button title="Clear" onPress={() => setProductVariantId(undefined)} type="plain" />,
                 useRouter,
               }),
           },

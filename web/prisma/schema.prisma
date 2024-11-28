@@ -66,6 +66,9 @@ model WorkOrder {
   // Either an absolute amount, or a percentage (range 0-100)
   discountAmount String?
 
+  // whoever created it
+  staffMemberId String?
+
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
@@ -258,7 +261,7 @@ model Employee {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
 
-  locations EmployeeLocation[]
+  locations         EmployeeLocation[]
   defaultLocationId String?
 
   @@index([shop, staffMemberId])
@@ -400,7 +403,9 @@ model PurchaseOrder {
   location   Location? @relation(fields: [locationId], references: [locationId])
   locationId String?
 
-  vendorName String?
+  // optional for backwards compatibility (vendors were optional), but required in practice
+  supplierId Int?
+  supplier   Supplier? @relation(fields: [supplierId], references: [id])
 
   note       String
   /// The date the purchase order was placed.
@@ -411,6 +416,9 @@ model PurchaseOrder {
   shipping  String?
   deposited String?
   paid      String?
+
+  // whoever created the PO
+  staffMemberId String?
 
   /// Shop specific name
   name   String
@@ -1048,6 +1056,8 @@ model LongRunningTask {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([name])
 }
 
 // Employees can mark themselves as available or unavailable for datetime ranges
@@ -1397,4 +1407,38 @@ model InventoryMutationItem {
 
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @default(now()) @db.Timestamptz(3)
+}
+
+model Supplier {
+  id Int @id @default(autoincrement())
+
+  shop    String
+  name    String
+  address String?
+
+  // TODO: Capture other data, eg shipping data
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  purchaseOrders PurchaseOrder[]
+  vendors        SupplierVendor[]
+
+  @@unique([shop, name])
+}
+
+// Suppliers can be linked to vendors. Such a link means that the supplier can supply any product belonging to the vendor.
+model SupplierVendor {
+  id Int @id @default(autoincrement())
+
+  supplierId Int
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+
+  // Shopify vendor name
+  vendor String
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@unique([supplierId, vendor])
 }

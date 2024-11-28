@@ -1,0 +1,16 @@
+{
+  "name": "reorder-point-admin-variant",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Admin block extensions enable app developers to build custom functionality into the context of Shopify Admin. These extensions surface as cards at various extension targets and enhance the merchant experience. Developers can build the content of these extensions using Shopify's UI Extension components for Admin.",
+  "dependencies": {
+    "@shopify/ui-extensions-react": "2024.10",
+    "@work-orders/reorder-point-admin": "file:../reorder-point-admin",
+    "react": "^18.3.1"
+  },
+  "scripts": {
+    "clean": "rm -fr node_modules",
+    "build": "tsc"
+  }
+}

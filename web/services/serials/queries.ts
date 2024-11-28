@@ -202,8 +202,7 @@ export async function getSerialsPage(
              CASE WHEN ${order} = 'descending' AND ${sort} = 'serial' THEN pvs.serial END DESC NULLS LAST,
              --
              CASE WHEN ${order} = 'ascending' AND ${sort} = 'product-name' THEN p."title" END ASC NULLS LAST,
-             CASE WHEN ${order} = 'descending' AND ${sort} = 'product-name' THEN p."title" END DESC NULLS LAST
-
+             CASE WHEN ${order} = 'descending' AND ${sort} = 'product-name' THEN p."title" END DESC NULLS LAST,
     LIMIT ${limit + 1} OFFSET ${offset ?? 0};
   `;
 
@@ -263,11 +262,16 @@ export async function updateSerialSoldState(
   const _productVariantId: string[] = productVariantId;
 
   await sql`
-    UPDATE "ProductVariantSerial"
-    SET "sold" = ${sold}
-    WHERE "serial" = ${serial}
-      AND "productVariantId" = ${_productVariantId}
-      AND "shop" = ${shop};
+    UPDATE "ProductVariantSerial" pvs
+    SET "sold" = x.sold
+    FROM UNNEST(
+      ${serial} :: text[],
+      ${_productVariantId} :: text[],
+      ${sold} :: boolean[]
+      ) AS x(serial, "productVariantId", sold)
+    WHERE pvs.shop = ${shop}
+    AND pvs."serial" = x."serial"
+    AND pvs."productVariantId" = x."productVariantId";
   `;
 }
 

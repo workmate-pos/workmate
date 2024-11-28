@@ -88,7 +88,6 @@ export function WorkOrderItemsCard({
 
       {isAddProductModalOpen && (
         <AddProductModal
-          outputType="WORK_ORDER"
           companyLocationId={createWorkOrder.companyLocationId}
           productType="PRODUCT"
           open={isAddProductModalOpen}
@@ -119,7 +118,7 @@ export function WorkOrderItemsCard({
       <ProductVariantSelectorModal
         onSelect={productVariant => setSerialProductVariantId(productVariant.id)}
         open={isAddSerialModalOpen}
-        filters={{ type: 'serial', status: ['active'] }}
+        filters={{ type: ['serial'], status: ['active'] }}
         onClose={() => setIsAddSerialModalOpen(false)}
       />
 
@@ -152,7 +151,6 @@ export function WorkOrderItemsCard({
       />
 
       <AddProductModal
-        outputType="WORK_ORDER"
         productType="SERVICE"
         open={isAddServiceModalOpen}
         setToastAction={setToastAction}

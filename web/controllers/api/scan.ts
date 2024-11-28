@@ -7,6 +7,12 @@ import { escapeQuotationMarks } from '@work-orders/common/util/escape.js';
 import { getShopSettings } from '../../services/settings/settings.js';
 import { getProductVariantIdsByMetafieldValue } from '../../services/scanner/variants.js';
 import { parseGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import {
+  addProductVariantComponents,
+  parseProductVariantMetafields,
+  ProductVariantFragmentWithComponents,
+  ProductVariantFragmentWithMetafields,
+} from '../../services/product-variant.js';
 
 @Authenticated()
 export default class ScanController {
@@ -35,7 +41,13 @@ export default class ScanController {
     const graphql = new Graphql(session);
     const { productVariants } = await gql.products.getPage.run(graphql, { first: 25, query });
 
-    return res.json({ variants: productVariants.nodes });
+    return res.json({
+      variants: await Promise.all(
+        productVariants.nodes
+          .map(pv => (pv ? parseProductVariantMetafields(pv) : pv))
+          .map(pv => (pv ? addProductVariantComponents(graphql, pv) : pv)),
+      ),
+    });
   }
 
   @Get('/scannable-metafields')
@@ -59,7 +71,7 @@ export default class ScanController {
 }
 
 export type ScanVariantResponse = {
-  variants: gql.products.ProductVariantFragment.Result[];
+  variants: (ProductVariantFragmentWithMetafields & ProductVariantFragmentWithComponents)[];
 };
 
 export type FetchScannableMetafieldsResponse = {

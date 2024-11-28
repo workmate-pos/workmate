@@ -13,7 +13,7 @@ export const defaultCreatePurchaseOrder = (base: BaseCreatePurchaseOrder): Creat
   locationId: null,
   customFields: {},
   employeeAssignments: [],
-  vendorName: null,
+  supplierId: null,
   shipTo: '',
   shipFrom: '',
   deposited: null,

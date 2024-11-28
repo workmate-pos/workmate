@@ -14,7 +14,7 @@ export async function getAppId(session: Session): Promise<ID> {
   const { currentAppInstallation } = await gql.app.getAppId.run(graphql, {});
 
   appId = currentAppInstallation.app.id;
-
+ 
   return appId;
 }
 

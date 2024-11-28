@@ -26,20 +26,17 @@ import { getInfiniteQueryPagination } from '@web/frontend/util/pagination.js';
 import { useDebouncedState } from '@web/frontend/hooks/use-debounced-state.js';
 import { emptyState } from '@web/frontend/assets/index.js';
 import { uuid } from '@work-orders/common/util/uuid.js';
+import { useSupplierQuery } from '@work-orders/common/queries/use-supplier-query.js';
 
 export function ImportSpecialOrderModal({
   open,
   onClose,
-  locationId,
-  vendorName,
   createPurchaseOrder,
   onSelect,
 }: {
   open: boolean;
   onClose: () => void;
-  locationId: ID;
-  vendorName: string;
-  createPurchaseOrder: Pick<CreatePurchaseOrder, 'name' | 'lineItems'>;
+  createPurchaseOrder: Pick<CreatePurchaseOrder, 'name' | 'lineItems' | 'locationId' | 'supplierId'>;
   onSelect: (lineItems: CreatePurchaseOrder['lineItems']) => void;
 }) {
   const [selectedSpecialOrder, setSelectedSpecialOrder] = useState<DetailedSpecialOrder>();
@@ -52,13 +49,16 @@ export function ImportSpecialOrderModal({
   const productVariantIds = unique(createPurchaseOrder.lineItems.map(li => li.productVariantId).filter(isNonNullable));
   const productVariantQueries = useProductVariantQueries({ fetch, ids: productVariantIds });
 
+  const supplierQuery = useSupplierQuery({ fetch, id: createPurchaseOrder.supplierId ?? null });
+  const vendors = supplierQuery.data?.vendors ?? [];
+
   const specialOrdersQuery = useSpecialOrdersQuery({
     fetch,
     params: {
       query,
-      locationId,
+      locationId: createPurchaseOrder.locationId ?? undefined,
       lineItemOrderState: 'not-fully-ordered',
-      lineItemVendorName: vendorName,
+      lineItemVendorName: vendors,
       limit: 25,
     },
   });
@@ -169,67 +169,71 @@ export function ImportSpecialOrderModal({
   const page = specialOrdersQuery.data?.pages[pageIndex] ?? [];
 
   return (
-    <Modal open={open} title={'Select special order'} onClose={onClose}>
-      <ResourceList
-        filterControl={
-          <Filters
-            queryPlaceholder="Search special orders"
-            queryValue={optimisticQuery}
-            onQueryChange={query => setQuery(query, !query)}
-            onQueryClear={() => setQuery('', true)}
-            onClearAll={() => setQuery('', true)}
-            filters={[]}
-          />
-        }
-        items={page}
-        emptyState={
-          <EmptyState image={emptyState}>
-            <Text as="p" variant="bodyMd" fontWeight="bold">
-              No special orders available for this location and vendor
-            </Text>
-          </EmptyState>
-        }
-        loading={isLoading}
-        resolveItemId={item => item.name}
-        pagination={{
-          hasNext: pagination.hasNextPage,
-          onNext: pagination.next,
-          hasPrevious: pagination.hasPreviousPage,
-          onPrevious: pagination.previous,
-        }}
-        renderItem={specialOrder => {
-          const purchaseOrderNames = specialOrder.purchaseOrders.map(po => po.name);
-          const orderNames = specialOrder.orders.map(order => order.name);
-          const workOrderNames = specialOrder.workOrders.map(order => order.name);
+    <>
+      <Modal open={open} title={'Select special order'} onClose={onClose}>
+        <ResourceList
+          filterControl={
+            <Filters
+              queryPlaceholder="Search special orders"
+              queryValue={optimisticQuery}
+              onQueryChange={query => setQuery(query, !query)}
+              onQueryClear={() => setQuery('', true)}
+              onClearAll={() => setQuery('', true)}
+              filters={[]}
+            />
+          }
+          items={page}
+          emptyState={
+            <EmptyState image={emptyState}>
+              <Text as="p" variant="bodyMd" fontWeight="bold">
+                No special orders available for this location and vendor
+              </Text>
+            </EmptyState>
+          }
+          loading={isLoading}
+          resolveItemId={item => item.name}
+          pagination={{
+            hasNext: pagination.hasNextPage,
+            onNext: pagination.next,
+            hasPrevious: pagination.hasPreviousPage,
+            onPrevious: pagination.previous,
+          }}
+          renderItem={specialOrder => {
+            const purchaseOrderNames = specialOrder.purchaseOrders.map(po => po.name);
+            const orderNames = specialOrder.orders.map(order => order.name);
+            const workOrderNames = specialOrder.workOrders.map(order => order.name);
 
-          return (
-            <ResourceItem id={specialOrder.name} onClick={() => setSelectedSpecialOrder(specialOrder)}>
-              <Box paddingInline={'400'}>
-                <BlockStack gap={'100'}>
-                  <BlockStack>
-                    <Text as="p" variant="bodyMd" fontWeight="bold">
-                      {specialOrder.name}
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      {specialOrder.customer.displayName}
-                    </Text>
-                    <Text as="p" variant="bodyMd" tone="subdued">
-                      {specialOrder.location.name}
-                    </Text>
+            return (
+              <ResourceItem id={specialOrder.name} onClick={() => setSelectedSpecialOrder(specialOrder)}>
+                <Box paddingInline={'400'}>
+                  <BlockStack gap={'100'}>
+                    <BlockStack>
+                      <Text as="p" variant="bodyMd" fontWeight="bold">
+                        {specialOrder.name}
+                      </Text>
+                      <Text as="p" variant="bodyMd" tone="subdued">
+                        {specialOrder.customer.displayName}
+                      </Text>
+                      <Text as="p" variant="bodyMd" tone="subdued">
+                        {specialOrder.location.name}
+                      </Text>
+                    </BlockStack>
+                    <InlineStack gap={'200'}>
+                      {[...workOrderNames, ...orderNames, ...purchaseOrderNames].map(name => (
+                        <Badge key={name} tone="info">
+                          {name}
+                        </Badge>
+                      ))}
+                    </InlineStack>
                   </BlockStack>
-                  <InlineStack gap={'200'}>
-                    {[...workOrderNames, ...orderNames, ...purchaseOrderNames].map(name => (
-                      <Badge key={name} tone="info">
-                        {name}
-                      </Badge>
-                    ))}
-                  </InlineStack>
-                </BlockStack>
-              </Box>
-            </ResourceItem>
-          );
-        }}
-      />
-    </Modal>
+                </Box>
+              </ResourceItem>
+            );
+          }}
+        />
+      </Modal>
+
+      {toast}
+    </>
   );
 }

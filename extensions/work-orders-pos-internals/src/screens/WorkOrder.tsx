@@ -576,7 +576,7 @@ function WorkOrderItems({
           action="button"
           onPress={() =>
             router.push('ProductVariantSelector', {
-              filters: { type: 'serial', status: ['active'] },
+              filters: { type: ['serial'], status: ['active'] },
               onSelect: productVariant =>
                 router.push('ProductVariantSerialSelector', {
                   filters: {

@@ -7,10 +7,7 @@ export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: DetailedPurc
     lineItems: purchaseOrder.lineItems.map(lineItem => ({
       uuid: lineItem.uuid,
       specialOrderLineItem: lineItem.specialOrderLineItem
-        ? {
-            name: lineItem.specialOrderLineItem.name,
-            uuid: lineItem.specialOrderLineItem.uuid,
-          }
+        ? { name: lineItem.specialOrderLineItem.name, uuid: lineItem.specialOrderLineItem.uuid }
         : null,
       serialNumber: lineItem.serial?.serial ?? null,
       productVariantId: lineItem.productVariant.id,
@@ -29,7 +26,7 @@ export function createPurchaseOrderFromPurchaseOrder(purchaseOrder: DetailedPurc
     deposited: purchaseOrder.deposited,
     customFields: purchaseOrder.customFields,
     note: purchaseOrder.note,
-    vendorName: purchaseOrder.vendorName,
+    supplierId: purchaseOrder.supplier?.id ?? null,
     status: purchaseOrder.status,
     locationId: purchaseOrder.location?.id ?? null,
     employeeAssignments: purchaseOrder.employeeAssignments.map(employeeAssignment => ({

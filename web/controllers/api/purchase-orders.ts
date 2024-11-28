@@ -41,9 +41,14 @@ import { sentryErr } from '@teifi-digital/shopify-app-express/services';
 import { getReorderPointCsvTemplatesZip, readReorderPointCsvImport } from '../../services/reorder/csv-import.js';
 import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getLocations } from '../../services/locations/get.js';
-import { ID, isGid } from '@teifi-digital/shopify-app-toolbox/shopify';
+import { createGid, ID } from '@teifi-digital/shopify-app-toolbox/shopify';
 import { assertLocationsPermitted } from '../../services/franchises/assert-locations-permitted.js';
-import { getReorderPoints, ReorderPoint, upsertReorderPoints } from '../../services/reorder/queries.js';
+import {
+  deleteReorderPoints,
+  getReorderPoints,
+  ReorderPoint,
+  upsertReorderPoints,
+} from '../../services/reorder/queries.js';
 import { ReorderPoints } from '../../schemas/generated/reorder-points.js';
 import { CreateReorderPoint } from '../../schemas/generated/create-reorder-point.js';
 import { syncInventoryQuantities } from '../../services/inventory/sync.js';
@@ -319,7 +324,7 @@ export default class PurchaseOrdersController {
     ]);
 
     for (const { min, max } of createReorderPoints) {
-      if (max <= min) {
+      if (max < min) {
         throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
       }
     }
@@ -417,22 +422,16 @@ export default class PurchaseOrdersController {
     });
   }
 
-  @Get('/reorder/:inventoryItemId')
+  @Delete('/reorder/:inventoryItemId')
   @QuerySchema('reorder-points')
-  @Permission('read_settings')
+  @Permission('write_settings')
   @Authenticated()
-  async getReorderPoint(
-    req: Request<{ inventoryItemId: string }, unknown, unknown, ReorderPoints>,
-    res: Response<ReorderPointResponse>,
-  ) {
+  async deleteReorderPoint(req: Request<{ inventoryItemId: string }, unknown, unknown, ReorderPoints>, res: Response) {
     const session: Session = res.locals.shopify.session;
     const user: LocalsTeifiUser = res.locals.teifi.user;
-    const { inventoryItemId } = req.params;
     const { locationId } = req.query;
 
-    if (!isGid(inventoryItemId)) {
-      throw new HttpError('Invalid inventory item id', 400);
-    }
+    const inventoryItemId = createGid('InventoryItem', req.params.inventoryItemId);
 
     const locationIds = locationId
       ? [locationId]
@@ -449,7 +448,50 @@ export default class PurchaseOrdersController {
     const [reorderPoint] = await getReorderPoints({
       shop: session.shop,
       inventoryItemIds: [inventoryItemId],
-      ...(locationId ? { locationIds: [locationId] } : {}),
+      locationIds,
+      locationId,
+    });
+
+    if (!reorderPoint) {
+      throw new HttpError('Reorder point not found', 404);
+    }
+
+    await deleteReorderPoints(session.shop, [{ locationId: locationId ?? null, inventoryItemId }]);
+
+    return res.sendStatus(200);
+  }
+
+  @Get('/reorder/:inventoryItemId')
+  @QuerySchema('reorder-points')
+  @Permission('read_settings')
+  @Authenticated()
+  async getReorderPoint(
+    req: Request<{ inventoryItemId: string }, unknown, unknown, ReorderPoints>,
+    res: Response<ReorderPointResponse>,
+  ) {
+    const session: Session = res.locals.shopify.session;
+    const user: LocalsTeifiUser = res.locals.teifi.user;
+    const { locationId } = req.query;
+
+    const inventoryItemId = createGid('InventoryItem', req.params.inventoryItemId);
+
+    const locationIds = locationId
+      ? [locationId]
+      : await getLocations(session, user.user.allowedLocationIds).then(locations =>
+          locations.map(location => location.id),
+        );
+
+    await assertLocationsPermitted({
+      shop: session.shop,
+      staffMemberId: user.staffMember.id,
+      locationIds,
+    });
+
+    const [reorderPoint] = await getReorderPoints({
+      shop: session.shop,
+      inventoryItemIds: [inventoryItemId],
+      locationIds,
+      locationId,
     });
 
     if (!reorderPoint) {
@@ -483,26 +525,20 @@ export default class PurchaseOrdersController {
       locationIds,
     });
 
-    if (max <= min) {
+    if (max < min) {
       throw new HttpError('Maximum stock level must be greater than minimum stock level', 400);
     }
 
     await Promise.all([
       syncInventoryQuantities(session, [inventoryItemId]),
-      upsertReorderPoints(session.shop, [
-        {
-          inventoryItemId,
-          locationId: locationId || null,
-          min,
-          max,
-        },
-      ]),
+      upsertReorderPoints(session.shop, [{ inventoryItemId, locationId: locationId ?? null, min, max }]),
     ]);
 
     const [reorderPoint] = await getReorderPoints({
       shop: session.shop,
       inventoryItemIds: [inventoryItemId],
-      ...(locationId ? { locationIds: [locationId] } : {}),
+      locationIds,
+      locationId,
     });
 
     if (!reorderPoint) {
