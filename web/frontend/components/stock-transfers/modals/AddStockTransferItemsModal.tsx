@@ -31,7 +31,7 @@ export function AddStockTransferItemsModal({ open, onClose, createStockTransfer,
         open={open}
         onClose={onClose}
         filters={{
-          type: 'product',
+          type: ['product'],
           locationId: createStockTransfer.fromLocationId ?? undefined,
         }}
         closeOnSelect={false}
