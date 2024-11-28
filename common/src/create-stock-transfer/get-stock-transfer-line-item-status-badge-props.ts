@@ -25,5 +25,9 @@ export function getStockTransferLineItemStatusBadgeProps({
     tone = 'info';
   }
 
+  if (status === 'REJECTED') {
+    tone = 'critical';
+  }
+
   return { children: text, tone };
 }
