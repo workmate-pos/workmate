@@ -23,6 +23,7 @@ import { unique } from '@teifi-digital/shopify-app-toolbox/array';
 import { getProductVariantName } from '@work-orders/common/util/product-variant-name.js';
 import { StockTransferLineItem } from '@web/schemas/generated/create-stock-transfer.js';
 import { getStockTransferLineItemStatusBadgeProps } from '@work-orders/common/create-stock-transfer/get-stock-transfer-line-item-status-badge-props.js';
+import { StockTransferLineItemScannerModal } from './modals/StockTransferLineItemScannerModal.js';
 
 type Props = {
   createStockTransfer: WIPCreateStockTransfer;
@@ -34,6 +35,7 @@ export function StockTransferLineItemsCard({ createStockTransfer, dispatch, disa
   const [toast, setToastAction] = useToast();
   const fetch = useAuthenticatedFetch({ setToastAction });
   const [isAddItemsModalOpen, setIsAddItemsModalOpen] = useState(false);
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [selectedLineItem, setSelectedLineItem] = useState<StockTransferLineItem | null>(null);
 
   const canAddItems = !!(createStockTransfer.fromLocationId && createStockTransfer.toLocationId);
@@ -110,6 +112,9 @@ export function StockTransferLineItemsCard({ createStockTransfer, dispatch, disa
               <Button onClick={() => setIsAddItemsModalOpen(true)} disabled={!canAddItems || disabled}>
                 Add items
               </Button>
+              <Button onClick={() => setIsScannerModalOpen(true)} disabled={!canAddItems || disabled}>
+                Scan items
+              </Button>
             </ButtonGroup>
           </Tooltip>
         </BlockStack>
@@ -128,6 +133,13 @@ export function StockTransferLineItemsCard({ createStockTransfer, dispatch, disa
         lineItem={selectedLineItem}
         fromLocationId={createStockTransfer.fromLocationId}
         toLocationId={createStockTransfer.toLocationId}
+        dispatch={dispatch}
+      />
+
+      <StockTransferLineItemScannerModal
+        open={isScannerModalOpen}
+        onClose={() => setIsScannerModalOpen(false)}
+        createStockTransfer={createStockTransfer}
         dispatch={dispatch}
       />
 
