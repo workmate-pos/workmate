@@ -277,7 +277,6 @@ function LineItemSerialInput({
   const serialsQuery = useSerialsQuery({
     fetch,
     params: {
-      sold: false,
       productVariantId: lineItem?.variant?.id,
       limit: 100,
       sort: 'product-name',
@@ -295,7 +294,30 @@ function LineItemSerialInput({
     }
   }, [serialsQuery.isFetching, serialsQuery.hasNextPage]);
 
-  const serials = serialsQuery.data?.pages.flat() ?? [];
+  const serials = (serialsQuery.data?.pages.flat() ?? []).filter(
+    serial => !Object.values(selectedSerials[lineItemId] ?? {}).includes(serial.serial),
+  );
+
+  // Filter and sort serials based on availability and sale date
+  const availableSerials = serials.filter(serial => !serial.sold);
+  const unavailableSerials = serials
+    .filter(serial => serial.sold)
+    .map(serial => {
+      const orderHistory = serial.history.find(history => history.type === 'shopify-order');
+      const orderDate = orderHistory ? new Date(orderHistory.date) : null;
+      return { ...serial, orderDate, orderName: orderHistory?.name };
+    })
+    .sort((a, b) => {
+      if (!a.orderDate || !b.orderDate) return 0;
+      return a.orderDate.getTime() - b.orderDate.getTime();
+    });
+
+  const recentUnavailableSerials = unavailableSerials.filter(serial => {
+    if (!serial.orderDate) return false;
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    return serial.orderDate > oneYearAgo;
+  });
 
   if (!order || !lineItem) {
     return <ProgressIndicator size="base" />;
@@ -333,39 +355,52 @@ function LineItemSerialInput({
             value={Object.values(selectedSerials[lineItemId] ?? {})}
             onChange={selectedValues => {
               const values = Array.isArray(selectedValues) ? selectedValues : [selectedValues];
-              const newSerials: Record<number, string> = {};
-              values.forEach((serial, index) => {
-                if (index < lineItem.quantity) {
-                  newSerials[index] = serial;
+              const currentSerials = selectedSerials[lineItemId] ?? {};
+
+              Object.entries(currentSerials).forEach(([index, serial]) => {
+                if (!values.includes(serial)) {
+                  onSelect(Number(index), '');
                 }
               });
 
-              // Update all indices at once
-              Object.entries(newSerials).forEach(([index, serial]) => {
-                onSelect(Number(index), serial);
-              });
+              const existingSerials = new Set(Object.values(currentSerials));
+              values
+                .filter(serial => !existingSerials.has(serial))
+                .forEach(serial => {
+                  const nextIndex = Object.keys(currentSerials).length;
+                  if (nextIndex < lineItem.quantity) {
+                    onSelect(nextIndex, serial);
+                  }
+                });
             }}
             choices={[
               // Show selected serials first
-              ...Object.values(selectedSerials[lineItemId] ?? {}).map(serial => ({
-                id: serial,
-                label: serial,
-                checked: true,
-              })),
-              // Show search results, excluding already selected serials
-              ...serials
-                .filter(serial => !Object.values(selectedSerials[lineItemId] ?? {}).includes(serial.serial))
+              ...Object.values(selectedSerials[lineItemId] ?? {})
+                .filter(Boolean)
                 .map(serial => ({
-                  id: serial.serial,
-                  label: serial.serial,
-                  checked: false,
-                  disabled: productVariantUsedSerials.includes(serial.serial),
+                  id: serial,
+                  label: serial,
+                  checked: true,
                 })),
+              // Show available serials
+              ...availableSerials.map(serial => ({
+                id: serial.serial,
+                label: serial.serial,
+                checked: false,
+                disabled: productVariantUsedSerials.includes(serial.serial),
+              })),
+              // Show recent year unavailable serials with order number
+              ...recentUnavailableSerials.map(serial => ({
+                id: serial.serial,
+                label: `${serial.serial} (Sold, Order: ${serial.orderName})`,
+                checked: false,
+                disabled: true,
+              })),
             ]}
             multiple
           />
         ) : (
-          !serialsQuery.isFetching && <Text appearance="subdued">No serial numbers found</Text>
+          !serialsQuery.isFetching && <Text>No serial numbers found</Text>
         )}
 
         {serialsQuery.isFetching && <ProgressIndicator size="small-200" />}

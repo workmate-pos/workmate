@@ -166,7 +166,7 @@ export async function getSerialsPage(
   const _query = query ? `%${escapeLike(query)}%` : null;
 
   const serials = await sql<{ productVariantId: string; serial: string }>`
-    SELECT pvs."productVariantId", pvs.serial
+    SELECT pvs."productVariantId", pvs.serial, pvs.sold
     FROM "ProductVariantSerial" pvs
            INNER JOIN "ProductVariant" pv ON pvs."productVariantId" = pv."productVariantId"
            INNER JOIN "Product" p ON pv."productId" = p."productId"
@@ -204,6 +204,7 @@ export async function getSerialsPage(
              --
              CASE WHEN ${order} = 'ascending' AND ${sort} = 'product-name' THEN p."title" END ASC NULLS LAST,
              CASE WHEN ${order} = 'descending' AND ${sort} = 'product-name' THEN p."title" END DESC NULLS LAST,
+             pvs.sold DESC
     LIMIT ${limit + 1} OFFSET ${offset ?? 0};
   `;
 
